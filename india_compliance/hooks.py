@@ -8,6 +8,7 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "india.compliance@resilient.tech"
 app_license = "GNU General Public License (v3)"
+required_apps = ["erpnext"]
 
 # Includes in <head>
 # ------------------
