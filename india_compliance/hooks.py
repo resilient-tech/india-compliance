@@ -10,6 +10,24 @@ app_email = "india.compliance@resilient.tech"
 app_license = "GNU General Public License (v3)"
 required_apps = ["erpnext"]
 
+doctype_js = {
+    "Item": "india_compliance/gst_india/client_script/item.js",
+    "Supplier": "india_compliance/gst_india/client_script/supplier.js",
+    "Customer": "india_compliance/gst_india/client_script/customer.js",
+    "Sales Order": "india_compliance/gst_india/client_script/sales_order.js",
+    "Delivery Note": "india_compliance/gst_india/client_script/delivery_note.js",
+    "Purchase Order": "india_compliance/gst_india/client_script/purchase_order.js",
+    "Journal Entry": "india_compliance/gst_india/client_script/journal_entry.js",
+    "Payment Entry": "india_compliance/gst_india/client_script/payment_entry.js",
+    "Sales Invoice": "india_compliance/gst_india/client_script/sales_invoice.js",
+    "Purchase Receipt": "india_compliance/gst_india/client_script/purchase_receipt.js",
+    "Purchase Invoice": "india_compliance/gst_india/client_script/purchase_invoice.js",
+}
+
+doctype_list_js = {
+    "Sales Invoice": "india_compliance/gst_india/client_script/sales_invoice_list.js",
+}
+
 # Includes in <head>
 # ------------------
 
@@ -45,7 +63,7 @@ required_apps = ["erpnext"]
 
 # website user home page (by Role)
 # role_home_page = {
-#	"Role": "home_page"
+# 	"Role": "home_page"
 # }
 
 # Generators
@@ -110,7 +128,7 @@ required_apps = ["erpnext"]
 # 		"on_update": "method",
 # 		"on_cancel": "method",
 # 		"on_trash": "method"
-#	}
+# 	}
 # }
 
 # Scheduled Tasks
@@ -188,4 +206,3 @@ required_apps = ["erpnext"]
 # auth_hooks = [
 # 	"india_compliance.auth.validate"
 # ]
-
