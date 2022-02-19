@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 {% include "erpnext/accounts/report/item_wise_sales_register/item_wise_sales_register.js" %}
-{% include "erpnext/regional/report/india_gst_common/india_gst_common.js" %}
+{% include "india_compliance/gst_india/report/utils.js" %}
 
 let filters = frappe.query_reports["Item-wise Sales Register"]["filters"];
 

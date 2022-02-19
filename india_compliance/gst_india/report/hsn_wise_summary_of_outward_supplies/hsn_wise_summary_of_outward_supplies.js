@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-{% include "erpnext/regional/report/india_gst_common/india_gst_common.js" %}
+{% include "india_compliance/gst_india/report/utils.js" %}
 
 frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 	"filters": [
