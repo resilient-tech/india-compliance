@@ -6,7 +6,7 @@ import frappe
 from erpnext.regional.india.utils import validate_document_name
 
 
-class TestIndiaUtils(unittest.TestCase):
+class TestUtils(unittest.TestCase):
 	@patch("frappe.get_cached_value")
 	def test_validate_document_name(self, mock_get_cached):
 		mock_get_cached.return_value = "India"  # mock country

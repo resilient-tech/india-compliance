@@ -28,7 +28,50 @@ doctype_list_js = {
     "Sales Invoice": "india_compliance/gst_india/client_scripts/sales_invoice_list.js",
 }
 
-doc_events = {}
+doc_events = {
+    "Tax Category": {
+		"validate": "india_compliance.gst_india.overrides.validate"
+	},
+    "Sales Invoice": {
+        "validate": [
+			"india_compliance.gst_india.overrides.sales_invoice.validate_document_name",
+			"india_compliance.gst_india.overrides.invoice.update_taxable_values"
+		]
+    },
+    "Purchase Invoice": {
+        "validate": [
+            "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
+			"india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
+            "india_compliance.gst_india.overrides.invoice.update_taxable_values"
+        ]
+    },
+    "Payment Entry": {
+        "validate": "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
+    },
+    "Address": {
+        "validate": [
+            'india_compliance.gst_india.overrides.address.validate_gstin_for_india',
+			'india_compliance.gst_india.overrides.address.update_gst_category',
+        ]
+    },
+    'Supplier': {
+		'validate': 'india_compliance.gst_india.overrides.supplier.validate_pan_for_india'
+	},
+    (
+        'Purchase Order',
+        'Purchase Receipt',
+        'Purchase Invoice',
+        'Sales Order',
+        'Delivery Note',
+        'Sales Invoice',
+    ): {
+		'validate': 'india_compliance.gst_india.overrides.transaction.set_place_of_supply'
+	},
+    'Company': {
+        'on_trash': 'india_compliance.gst_india.overrides.company.delete_gst_settings_for_company'
+    }
+}
+
 
 # Includes in <head>
 # ------------------
