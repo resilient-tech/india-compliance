@@ -41,13 +41,6 @@ def validate_gstin_check_digit(gstin, label='GSTIN'):
 	if gstin[-1] != code_point_chars[((mod - (total % mod)) % mod)]:
 		frappe.throw(_("""Invalid {0}! The check digit validation has failed. Please ensure you've typed the {0} correctly.""").format(label))
 
-def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
-	hsn_wise_in_gst_settings = frappe.db.get_single_value('GST Settings','hsn_wise_tax_breakup')
-	if frappe.get_meta(item_doctype).has_field('gst_hsn_code') and hsn_wise_in_gst_settings:
-		return [_("HSN/SAC"), _("Taxable Amount")] + tax_accounts
-	else:
-		return [_("Item"), _("Taxable Amount")] + tax_accounts
-
 def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
 	itemised_tax = get_itemised_tax(doc.taxes, with_tax_account=account_wise)
 
