@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import frappe
 
-from erpnext.regional.india.utils import validate_document_name
+from ..overrides.sales_invoice import validate_document_name
 
 
 class TestUtils(unittest.TestCase):

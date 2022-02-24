@@ -11,7 +11,7 @@ erpnext.setup_gst_reminder_button = (doctype) => {
 				frm.add_custom_button('Send GST Update Reminder', () => {
 					return new Promise((resolve) => {
 						return frappe.call({
-							method: 'erpnext.regional.doctype.gst_settings.gst_settings.send_gstin_reminder',
+							method: 'india_compliance.gst_india.doctype.gst_settings.gst_settings.send_gstin_reminder',
 							args: {
 								party_type: frm.doc.doctype,
 								party: frm.doc.name,

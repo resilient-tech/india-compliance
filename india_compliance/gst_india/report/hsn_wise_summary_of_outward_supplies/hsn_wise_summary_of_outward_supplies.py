@@ -4,14 +4,14 @@
 
 import json
 
+import erpnext
 import frappe
 from frappe import _
 from frappe.model.meta import get_field_precision
 from frappe.utils import cstr, flt, getdate
 
-import erpnext
-from erpnext.regional.india.utils import get_gst_accounts
-from erpnext.regional.report.gstr_1.gstr_1 import get_company_gstin_number
+from ...utils import get_gst_accounts
+from ..gstr_1.gstr_1 import get_company_gstin_number
 
 
 def execute(filters=None):

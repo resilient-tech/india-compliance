@@ -1,4 +1,5 @@
 {
+ "actions": [],
  "autoname": "field:hsn_code",
  "creation": "2017-06-21 10:48:56.422086",
  "doctype": "DocType",
@@ -31,16 +32,19 @@
    "options": "Item Tax"
   }
  ],
- "modified": "2019-11-01 11:18:59.556931",
+ "links": [],
+ "modified": "2022-02-24 17:08:11.824554",
  "modified_by": "Administrator",
- "module": "Regional",
+ "module": "GST India",
  "name": "GST HSN Code",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
  "search_fields": "hsn_code, description",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "hsn_code",
  "track_changes": 1
 }

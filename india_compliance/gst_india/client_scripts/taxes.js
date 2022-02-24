@@ -31,7 +31,7 @@ erpnext.setup_auto_gst_taxation = (doctype) => {
 			};
 
 			frappe.call({
-				method: 'erpnext.regional.india.utils.get_regional_address_details',
+				method: 'india_compliance.gst_india.overrides.transaction.get_regional_address_details',
 				args: {
 					party_details: JSON.stringify(party_details),
 					doctype: frm.doc.doctype,

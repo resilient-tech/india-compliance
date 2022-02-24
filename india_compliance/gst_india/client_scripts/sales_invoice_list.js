@@ -17,7 +17,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 		}
 
 		frappe.call({
-			method: 'erpnext.regional.india.utils.generate_ewb_json',
+			method: 'india_compliance.gst_india.utils.e_waybill.generate_ewb_json',
 			args: {
 				'dt': list_view.doctype,
 				'dn': docnames
@@ -25,7 +25,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 			callback: function(r) {
 				if (r.message) {
 					const args = {
-						cmd: 'erpnext.regional.india.utils.download_ewb_json',
+						cmd: 'india_compliance.gst_india.utils.e_waybill.download_ewb_json',
 						data: r.message,
 						docname: docnames
 					};
@@ -41,7 +41,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 		const docnames = list_view.get_checked_items(true);
 		if (docnames && docnames.length) {
 			frappe.call({
-				method: 'erpnext.regional.india.e_invoice.utils.generate_einvoices',
+				method: 'india_compliance.gst_india.utils.e_invoice.generate_einvoices',
 				args: { docnames },
 				freeze: true,
 				freeze_message: __('Generating E-Invoices...')
@@ -81,7 +81,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 			primary_action: function() {
 				const data = d.get_values();
 				frappe.call({
-					method: 'erpnext.regional.india.e_invoice.utils.cancel_irns',
+					method: 'india_compliance.gst_india.utils.e_invoice.cancel_irns',
 					args: {
 						doctype: list_view.doctype,
 						docnames,

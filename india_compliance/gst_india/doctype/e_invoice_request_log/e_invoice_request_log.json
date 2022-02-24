@@ -63,10 +63,11 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2021-01-13 12:06:57.253111",
+ "modified": "2022-02-24 17:08:21.891573",
  "modified_by": "Administrator",
- "module": "Regional",
+ "module": "GST India",
  "name": "E Invoice Request Log",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
@@ -98,5 +99,6 @@
   }
  ],
  "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_order": "DESC",
+ "states": []
 }

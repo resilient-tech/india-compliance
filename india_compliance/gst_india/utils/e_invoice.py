@@ -16,22 +16,13 @@ from frappe import _, bold
 from frappe.core.page.background_jobs.background_jobs import get_info
 from frappe.integrations.utils import make_get_request, make_post_request
 from frappe.utils.background_jobs import enqueue
-from frappe.utils.data import (
-	add_to_date,
-	cint,
-	cstr,
-	flt,
-	format_date,
-	get_link_to_form,
-	getdate,
-	now_datetime,
-	time_diff_in_hours,
-	time_diff_in_seconds,
-)
+from frappe.utils.data import (add_to_date, cint, cstr, flt, format_date,
+                               get_link_to_form, getdate, now_datetime,
+                               time_diff_in_hours, time_diff_in_seconds)
 from frappe.utils.scheduler import is_scheduler_inactive
 from pyqrcode import create as qrcreate
 
-from erpnext.regional.india.utils import get_gst_accounts, get_place_of_supply
+from . import get_gst_accounts, get_place_of_supply
 
 
 @frappe.whitelist()
@@ -98,7 +89,7 @@ def raise_document_name_too_long_error():
 	frappe.throw(msg, title=title)
 
 def read_json(name):
-	file_path = os.path.join(os.path.dirname(__file__), '{name}.json'.format(name=name))
+	file_path = frappe.get_app_path("india_compliance", "gst_india", "data", f"{name}.json")
 	with open(file_path, 'r') as f:
 		return cstr(f.read())
 

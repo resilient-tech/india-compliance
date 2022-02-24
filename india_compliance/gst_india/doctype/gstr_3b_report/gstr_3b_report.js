@@ -9,7 +9,7 @@ frappe.ui.form.on('GSTR 3B Report', {
 			frm.add_custom_button(__('Download JSON'), function() {
 				var w = window.open(
 					frappe.urllib.get_full_url(
-						"/api/method/erpnext.regional.doctype.gstr_3b_report.gstr_3b_report.make_json?"
+						"/api/method/india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.make_json?"
 						+"name="+encodeURIComponent(frm.doc.name)));
 
 				if(!w) {
@@ -18,7 +18,7 @@ frappe.ui.form.on('GSTR 3B Report', {
 			});
 			frm.add_custom_button(__('View Form'), function() {
 				frappe.call({
-					"method" : "erpnext.regional.doctype.gstr_3b_report.gstr_3b_report.view_report",
+					"method" : "india_compliance.gst_india.doctype.gstr_3b_report.gstr_3b_report.view_report",
 					"args" : {
 						name : frm.doc.name,
 					},

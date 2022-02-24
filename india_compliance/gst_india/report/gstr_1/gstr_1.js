@@ -68,7 +68,7 @@ frappe.query_reports["GSTR-1"] = {
 		let filters = report.get_values();
 
 		frappe.call({
-			method: 'erpnext.regional.report.gstr_1.gstr_1.get_company_gstins',
+			method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_company_gstins',
 			args: {
 				company: filters.company
 			},
@@ -81,7 +81,7 @@ frappe.query_reports["GSTR-1"] = {
 
 		report.page.add_inner_button(__("Download as JSON"), function () {
 			frappe.call({
-				method: 'erpnext.regional.report.gstr_1.gstr_1.get_json',
+				method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_json',
 				args: {
 					data: report.data,
 					report_name: report.report_name,
@@ -90,7 +90,7 @@ frappe.query_reports["GSTR-1"] = {
 				callback: function(r) {
 					if (r.message) {
 						const args = {
-							cmd: 'erpnext.regional.report.gstr_1.gstr_1.download_json_file',
+							cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
 							data: r.message.data,
 							report_name: r.message.report_name,
 							report_type: r.message.report_type
