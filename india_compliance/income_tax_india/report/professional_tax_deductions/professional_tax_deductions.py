@@ -5,9 +5,8 @@
 import frappe
 from frappe import _
 
-from erpnext.regional.report.provident_fund_deductions.provident_fund_deductions import (
-	get_conditions,
-)
+from ..provident_fund_deductions.provident_fund_deductions import \
+    get_conditions
 
 
 def execute(filters=None):

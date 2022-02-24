@@ -13,7 +13,7 @@ frappe.ui.form.on('GST HSN Code', {
 								taxes: frm.doc.taxes,
 								hsn_code: frm.doc.name
 							},
-							method: 'erpnext.regional.doctype.gst_hsn_code.gst_hsn_code.update_taxes_in_item_master',
+							method: 'india_compliance.gst_india.doctype.gst_hsn_code.gst_hsn_code.update_taxes_in_item_master',
 							callback: function(r) {
 								if(r.message){
 									frappe.show_alert(__('Item taxes updated'));

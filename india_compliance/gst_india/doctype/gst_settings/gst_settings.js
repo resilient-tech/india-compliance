@@ -6,7 +6,7 @@ frappe.ui.form.on('GST Settings', {
 		frm.add_custom_button('Send GST Update Reminder', () => {
 			return new Promise((resolve) => {
 				return frappe.call({
-					method: 'erpnext.regional.doctype.gst_settings.gst_settings.send_reminder'
+					method: 'india_compliance.gst_india.doctype.gst_settings.gst_settings.send_reminder'
 				}).always(() => { resolve(); });
 			});
 		});

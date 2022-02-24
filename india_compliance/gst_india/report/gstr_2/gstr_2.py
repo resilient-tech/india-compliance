@@ -6,7 +6,7 @@ from datetime import date
 
 import frappe
 
-from erpnext.regional.report.gstr_1.gstr_1 import Gstr1Report
+from ..gstr_1.gstr_1 import Gstr1Report
 
 
 def execute(filters=None):
