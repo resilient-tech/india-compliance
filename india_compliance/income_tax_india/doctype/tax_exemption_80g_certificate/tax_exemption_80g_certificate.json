@@ -270,10 +270,11 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2021-02-22 00:03:34.215633",
+ "modified": "2022-02-24 17:10:54.121348",
  "modified_by": "Administrator",
- "module": "Regional",
+ "module": "Income Tax India",
  "name": "Tax Exemption 80G Certificate",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -292,6 +293,7 @@
  "search_fields": "member, member_name",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "title",
  "track_changes": 1
 }

@@ -50,13 +50,15 @@
   }
  ],
  "links": [],
- "modified": "2020-04-04 19:32:30.772908",
+ "modified": "2022-02-24 17:08:32.779824",
  "modified_by": "Administrator",
- "module": "Regional",
+ "module": "GST India",
  "name": "GSTR 3B Report",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [],
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }
