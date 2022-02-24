@@ -10,7 +10,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
-from erpnext.regional.india import state_numbers
+from ...constants import state_numbers
 
 
 class GSTR3BReport(Document):

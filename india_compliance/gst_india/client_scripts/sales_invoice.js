@@ -29,7 +29,7 @@ frappe.ui.form.on("Sales Invoice", {
 
 			frm.add_custom_button('E-Way Bill JSON', () => {
 				frappe.call({
-					method: 'erpnext.regional.india.utils.generate_ewb_json',
+					method: 'india_compliance.gst_india.utils.e_waybill.generate_ewb_json',
 					args: {
 						'dt': frm.doc.doctype,
 						'dn': [frm.doc.name]
@@ -37,7 +37,7 @@ frappe.ui.form.on("Sales Invoice", {
 					callback: function(r) {
 						if (r.message) {
 							const args = {
-								cmd: 'erpnext.regional.india.utils.download_ewb_json',
+								cmd: 'india_compliance.gst_india.utils.e_waybill.download_ewb_json',
 								data: r.message,
 								docname: frm.doc.name
 							};

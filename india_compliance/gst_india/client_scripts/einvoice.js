@@ -4,9 +4,9 @@ erpnext.setup_einvoice_actions = (doctype) => {
 			if (frm.doc.docstatus == 2) return;
 
 			const res = await frappe.call({
-				method: 'erpnext.regional.india.e_invoice.utils.validate_eligibility',
-				args: { doc: frm.doc }
-			});
+                method: "india_compliance.gst_india.utils.e_invoice.validate_eligibility",
+                args: { doc: frm.doc },
+            });
 			const invoice_eligible = res.message;
 
 			if (!invoice_eligible) return;
@@ -25,7 +25,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 						frappe.throw(__('Please save the document to generate IRN.'));
 					}
 					frappe.call({
-						method: 'erpnext.regional.india.e_invoice.utils.get_einvoice',
+						method: 'india_compliance.gst_india.utils.e_invoice.get_einvoice',
 						args: { doctype, docname: name },
 						freeze: true,
 						callback: (res) => {
@@ -62,7 +62,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 						primary_action: function() {
 							const data = d.get_values();
 							frappe.call({
-								method: 'erpnext.regional.india.e_invoice.utils.cancel_irn',
+								method: 'india_compliance.gst_india.utils.e_invoice.cancel_irn',
 								args: {
 									doctype,
 									docname: name,
@@ -91,7 +91,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 						primary_action: function() {
 							const data = d.get_values();
 							frappe.call({
-								method: 'erpnext.regional.india.e_invoice.utils.generate_eway_bill',
+								method: 'india_compliance.gst_india.utils.e_invoice.generate_eway_bill',
 								args: {
 									doctype,
 									docname: name,
@@ -124,7 +124,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 						primary_action: {
 							action: function() {
 								frappe.call({
-									method: 'erpnext.regional.india.e_invoice.utils.cancel_eway_bill',
+									method: 'india_compliance.gst_india.utils.e_invoice.cancel_eway_bill',
 									args: { doctype, docname: name },
 									freeze: true,
 									callback: () => frm.reload_doc() || dialog.hide()
@@ -227,7 +227,7 @@ const get_ewaybill_fields = (frm) => {
 
 const request_irn_generation = (frm) => {
 	frappe.call({
-		method: 'erpnext.regional.india.e_invoice.utils.generate_irn',
+		method: 'india_compliance.gst_india.utils.e_invoice.generate_irn',
 		args: { doctype: frm.doc.doctype, docname: frm.doc.name },
 		freeze: true,
 		callback: () => frm.reload_doc()

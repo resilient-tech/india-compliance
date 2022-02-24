@@ -3,7 +3,7 @@ function fetch_gstins(report) {
 	var company = report.get_filter_value('company');
 	if (company) {
 		frappe.call({
-			method:'erpnext.regional.india.utils.get_gstins_for_company',
+			method:'india_compliance.gst_india.utils.get_gstins_for_company',
 			async: false,
 			args: {
 				company: company

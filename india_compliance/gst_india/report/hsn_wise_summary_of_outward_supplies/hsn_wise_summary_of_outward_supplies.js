@@ -51,7 +51,7 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 			var filters = report.get_values();
 
 			frappe.call({
-				method: 'erpnext.regional.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies.get_json',
+				method: 'india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies.get_json',
 				args: {
 					data: report.data,
 					report_name: report.report_name,
@@ -60,7 +60,7 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 				callback: function(r) {
 					if (r.message) {
 						const args = {
-							cmd: 'erpnext.regional.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies.download_json_file',
+							cmd: 'india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies.download_json_file',
 							data: r.message.data,
 							report_name: r.message.report_name
 						};

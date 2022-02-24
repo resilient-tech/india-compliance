@@ -1,10 +1,11 @@
 import frappe
 from erpnext.controllers.taxes_and_totals import (get_itemised_tax,
                                                   get_itemised_taxable_amount)
-from erpnext.regional.india import number_state_mapping, state_numbers, states
 from frappe import _
 from frappe.model.utils import get_fetch_values
 from frappe.utils import cstr
+
+from ..constants import number_state_mapping, state_numbers, states
 
 
 def set_gst_state_and_state_number(doc):

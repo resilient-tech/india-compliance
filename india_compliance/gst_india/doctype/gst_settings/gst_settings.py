@@ -47,7 +47,7 @@ def send_reminder():
 	frappe.db.set_value('GST Settings', 'GST Settings', 'gstin_email_sent_on', nowdate())
 
 	# enqueue if large number of customers, suppliser
-	frappe.enqueue('erpnext.regional.doctype.gst_settings.gst_settings.send_gstin_reminder_to_all_parties')
+	frappe.enqueue('india_compliance.gst_india.doctype.gst_settings.gst_settings.send_gstin_reminder_to_all_parties')
 	frappe.msgprint(_('Email Reminders will be sent to all parties with email contacts'))
 
 def send_gstin_reminder_to_all_parties():

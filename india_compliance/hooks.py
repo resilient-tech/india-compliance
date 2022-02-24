@@ -81,7 +81,7 @@ regional_overrides = {
         "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
         "erpnext.hr.utils.calculate_annual_eligible_hra_exemption": "india_compliance.income_tax_india.overrides.calculate_annual_eligible_hra_exemption",
         "erpnext.hr.utils.calculate_hra_exemption_for_period": "india_compliance.income_tax_india.overrides.calculate_hra_exemption_for_period",
-        "erpnext.assets.doctype.asset.asset.get_depreciation_amount": "erpnext.regional.india.utils.get_depreciation_amount",
+        "erpnext.assets.doctype.asset.asset.get_depreciation_amount": "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount",
     }
 }
 

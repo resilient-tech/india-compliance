@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, formatdate, getdate
 
-from erpnext.regional.india.utils import get_gst_accounts
+from ...utils import get_gst_accounts
 
 
 def execute(filters=None):

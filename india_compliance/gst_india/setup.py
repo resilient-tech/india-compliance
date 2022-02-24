@@ -6,7 +6,7 @@ import frappe, os, json
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.permissions import add_permission, update_permission_property
-from erpnext.regional.india import states
+from .constants import states
 from erpnext.accounts.utils import get_fiscal_year, FiscalYearError
 from frappe.utils import today
 
@@ -24,7 +24,7 @@ def setup_company_independent_fixtures(patch=False):
 	make_property_setters(patch=patch)
 	add_permissions()
 	add_custom_roles_for_reports()
-	frappe.enqueue('erpnext.regional.india.setup.add_hsn_sac_codes', now=frappe.flags.in_test)
+	frappe.enqueue('india_compliance.gst_india.setup.add_hsn_sac_codes', now=frappe.flags.in_test)
 	create_gratuity_rule()
 	add_print_formats()
 	update_accounts_settings_for_taxes()
