@@ -3,10 +3,10 @@ import json
 import frappe
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _
+from frappe.model.utils import get_fetch_values
 
-from ..utils import (get_gst_accounts, get_place_of_supply, get_tax_template,
-                     get_tax_template_based_on_category, is_internal_transfer,
-                     update_party_details)
+from ..constants import number_state_mapping
+from ..utils import get_gst_accounts, get_place_of_supply
 
 
 def set_place_of_supply(doc, method=None):
@@ -24,12 +24,6 @@ def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
         return [_("HSN/SAC"), _("Taxable Amount")] + tax_accounts
     else:
         return [_("Item"), _("Taxable Amount")] + tax_accounts
-
-
-def get_itemised_tax_breakup_data(*args, **kwargs):
-    from india_compliance.gst_india.utils import get_itemised_tax_breakup_data
-
-    return get_itemised_tax_breakup_data(*args, **kwargs)
 
 
 @frappe.whitelist()
@@ -139,3 +133,69 @@ def validate_einvoice_fields(doc):
         validate_einvoice_fields
 
     return validate_einvoice_fields(doc)
+
+
+def update_party_details(party_details, doctype):
+    for address_field in [
+        "shipping_address",
+        "company_address",
+        "supplier_address",
+        "shipping_address_name",
+        "customer_address",
+    ]:
+        if party_details.get(address_field):
+            party_details.update(
+                get_fetch_values(
+                    doctype, address_field, party_details.get(address_field)
+                )
+            )
+
+
+def is_internal_transfer(party_details, doctype):
+    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
+        destination_gstin = party_details.company_gstin
+    elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
+        destination_gstin = party_details.supplier_gstin
+
+    if not destination_gstin or party_details.gstin:
+        return False
+
+    if party_details.gstin == destination_gstin:
+        return True
+    else:
+        False
+
+
+def get_tax_template_based_on_category(master_doctype, company, party_details):
+    if not party_details.get("tax_category"):
+        return
+
+    default_tax = frappe.db.get_value(
+        master_doctype,
+        {"company": company, "tax_category": party_details.get("tax_category")},
+        "name",
+    )
+
+    return default_tax
+
+
+def get_tax_template(master_doctype, company, is_inter_state, state_code):
+    tax_categories = frappe.get_all(
+        "Tax Category",
+        fields=["name", "is_inter_state", "gst_state"],
+        filters={"is_inter_state": is_inter_state, "is_reverse_charge": 0},
+    )
+
+    default_tax = ""
+
+    for tax_category in tax_categories:
+        if tax_category.gst_state == number_state_mapping[state_code] or (
+            not default_tax and not tax_category.gst_state
+        ):
+            default_tax = frappe.db.get_value(
+                master_doctype,
+                {"company": company, "disabled": 0, "tax_category": tax_category.name},
+                "name",
+            )
+    return default_tax
+
