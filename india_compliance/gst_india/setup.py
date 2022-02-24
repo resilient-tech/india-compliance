@@ -34,13 +34,13 @@ def add_hsn_sac_codes():
 		return
 
 	# HSN codes
-	with open(os.path.join(os.path.dirname(__file__), 'hsn_code_data.json'), 'r') as f:
+	with open(frappe.get_app_path("india_compliance", "gst_india", "data", 'hsn_code_data.json'), 'r') as f:
 		hsn_codes = json.loads(f.read())
 
 	create_hsn_codes(hsn_codes, code_field="hsn_code")
 
 	# SAC Codes
-	with open(os.path.join(os.path.dirname(__file__), 'sac_code_data.json'), 'r') as f:
+	with open(frappe.get_app_path("india_compliance", "gst_india", "data", 'sac_code_data.json'), 'r') as f:
 		sac_codes = json.loads(f.read())
 	create_hsn_codes(sac_codes, code_field="sac_code")
 

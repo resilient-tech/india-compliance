@@ -89,7 +89,7 @@ def raise_document_name_too_long_error():
 	frappe.throw(msg, title=title)
 
 def read_json(name):
-	file_path = os.path.join(os.path.dirname(__file__), '{name}.json'.format(name=name))
+	file_path = frappe.get_app_path("india_compliance", "gst_india", "data", f"{name}.json")
 	with open(file_path, 'r') as f:
 		return cstr(f.read())
 
