@@ -4,9 +4,9 @@ erpnext.setup_einvoice_actions = (doctype) => {
 			if (frm.doc.docstatus == 2) return;
 
 			const res = await frappe.call({
-                method: "india_compliance.gst_india.utils.e_invoice.validate_eligibility",
-                args: { doc: frm.doc },
-            });
+				method: "india_compliance.gst_india.utils.e_invoice.validate_eligibility",
+				args: { doc: frm.doc },
+			});
 			const invoice_eligible = res.message;
 
 			if (!invoice_eligible) return;
