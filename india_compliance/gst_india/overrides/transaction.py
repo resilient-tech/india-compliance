@@ -128,13 +128,6 @@ def set_item_tax_from_hsn_code(item):
             )
 
 
-def validate_einvoice_fields(doc):
-    from india_compliance.gst_india.utils.e_invoice import \
-        validate_einvoice_fields
-
-    return validate_einvoice_fields(doc)
-
-
 def update_party_details(party_details, doctype):
     for address_field in [
         "shipping_address",
