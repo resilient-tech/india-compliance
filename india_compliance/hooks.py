@@ -29,20 +29,18 @@ doctype_list_js = {
 }
 
 doc_events = {
-    "Tax Category": {
-		"validate": "india_compliance.gst_india.overrides.validate"
-	},
+    "Tax Category": {"validate": "india_compliance.gst_india.overrides.validate"},
     "Sales Invoice": {
         "validate": [
-			"india_compliance.gst_india.overrides.sales_invoice.validate_document_name",
-			"india_compliance.gst_india.overrides.invoice.update_taxable_values"
-		]
+            "india_compliance.gst_india.overrides.sales_invoice.validate_document_name",
+            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
+        ]
     },
     "Purchase Invoice": {
         "validate": [
             "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
-			"india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
-            "india_compliance.gst_india.overrides.invoice.update_taxable_values"
+            "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
+            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
         ]
     },
     "Payment Entry": {
@@ -50,41 +48,41 @@ doc_events = {
     },
     "Address": {
         "validate": [
-            'india_compliance.gst_india.overrides.address.validate_gstin_for_india',
-			'india_compliance.gst_india.overrides.address.update_gst_category',
+            "india_compliance.gst_india.overrides.address.validate_gstin_for_india",
+            "india_compliance.gst_india.overrides.address.update_gst_category",
         ]
     },
-    'Supplier': {
-		'validate': 'india_compliance.gst_india.overrides.supplier.validate_pan_for_india'
-	},
+    "Supplier": {
+        "validate": "india_compliance.gst_india.overrides.supplier.validate_pan_for_india"
+    },
     (
-        'Purchase Order',
-        'Purchase Receipt',
-        'Purchase Invoice',
-        'Sales Order',
-        'Delivery Note',
-        'Sales Invoice',
+        "Purchase Order",
+        "Purchase Receipt",
+        "Purchase Invoice",
+        "Sales Order",
+        "Delivery Note",
+        "Sales Invoice",
     ): {
-		'validate': 'india_compliance.gst_india.overrides.transaction.set_place_of_supply'
-	},
-    'Company': {
-        'on_trash': 'india_compliance.gst_india.overrides.company.delete_gst_settings_for_company'
-    }
+        "validate": "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
+    },
+    "Company": {
+        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company"
+    },
 }
 
 
 regional_overrides = {
-	'India': {
-		'erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header': 'india_compliance.gst_india.overrides.taxes_and_totals.get_itemised_tax_breakup_header',
-		'erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data': 'erpnext.regional.india.utils.get_itemised_tax_breakup_data',
-		'erpnext.accounts.party.get_regional_address_details': 'erpnext.regional.india.utils.get_regional_address_details',
-		'erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts': 'erpnext.regional.india.utils.get_regional_round_off_accounts',
-		'erpnext.hr.utils.calculate_annual_eligible_hra_exemption': 'erpnext.regional.india.utils.calculate_annual_eligible_hra_exemption',
-		'erpnext.hr.utils.calculate_hra_exemption_for_period': 'erpnext.regional.india.utils.calculate_hra_exemption_for_period',
-		'erpnext.controllers.accounts_controller.validate_einvoice_fields': 'erpnext.regional.india.e_invoice.utils.validate_einvoice_fields',
-		'erpnext.assets.doctype.asset.asset.get_depreciation_amount': 'erpnext.regional.india.utils.get_depreciation_amount',
-		'erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code': 'erpnext.regional.india.utils.set_item_tax_from_hsn_code'
-	}
+    "India": {
+        "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header",
+        "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
+        "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
+        "erpnext.accounts.party.get_regional_address_details": "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
+        "erpnext.controllers.accounts_controller.validate_einvoice_fields": "india_compliance.gst_india.overrides.transaction.validate_einvoice_fields",
+        "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
+        "erpnext.hr.utils.calculate_annual_eligible_hra_exemption": "india_compliance.income_tax_india.overrides.calculate_annual_eligible_hra_exemption",
+        "erpnext.hr.utils.calculate_hra_exemption_for_period": "india_compliance.income_tax_india.overrides.calculate_hra_exemption_for_period",
+        "erpnext.assets.doctype.asset.asset.get_depreciation_amount": "erpnext.regional.india.utils.get_depreciation_amount",
+    }
 }
 
 # Includes in <head>
