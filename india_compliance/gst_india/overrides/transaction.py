@@ -191,4 +191,3 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
                 "name",
             )
     return default_tax
-
