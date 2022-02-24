@@ -4,21 +4,23 @@ from erpnext.controllers.taxes_and_totals import (get_itemised_tax,
 from frappe import _
 from frappe.utils import cstr
 
-from ..constants import number_state_mapping, state_numbers, states
+from ..constants import STATE_NUMBERS
 
 
 def set_gst_state_and_state_number(doc):
     if not doc.gst_state:
         if not doc.state:
             return
-        state = doc.state.lower()
-        states_lowercase = {s.lower(): s for s in states}
-        if state in states_lowercase:
-            doc.gst_state = states_lowercase[state]
-        else:
+
+        state = doc.state.lower().strip()
+        states_lowercase = {s.lower(): s for s in STATE_NUMBERS}
+
+        if state not in states_lowercase:
             return
 
-    doc.gst_state_number = state_numbers[doc.gst_state]
+        doc.gst_state = states_lowercase[state]
+
+    doc.gst_state_number = STATE_NUMBERS[doc.gst_state]
 
 
 def validate_gstin_check_digit(gstin, label="GSTIN"):

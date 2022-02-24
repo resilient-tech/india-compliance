@@ -6,7 +6,7 @@ import frappe, os, json
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.permissions import add_permission, update_permission_property
-from .constants import states
+from .constants import STATE_NUMBERS
 from erpnext.accounts.utils import get_fiscal_year, FiscalYearError
 from frappe.utils import today
 
@@ -137,6 +137,8 @@ def make_custom_fields(update=True):
 	create_custom_fields(custom_fields, update=update)
 
 def get_custom_fields():
+	state_options = '\n' + '\n'.join(STATE_NUMBERS)
+
 	hsn_sac_field = dict(fieldname='gst_hsn_code', label='HSN/SAC',
 		fieldtype='Data', fetch_from='item_code.gst_hsn_code', insert_after='description',
 		allow_on_submit=1, print_hide=1, fetch_if_empty=1)
@@ -284,7 +286,7 @@ def get_custom_fields():
 		dict(fieldname='tax_category_column_break', fieldtype='Column Break',
 			insert_after='is_reverse_charge'),
 		dict(fieldname='gst_state', label='Source State', fieldtype='Select',
-			options='\n'.join(states), insert_after='company')
+			options=state_options, insert_after='company')
 	]
 
 	ewaybill_fields = [
@@ -528,7 +530,7 @@ def get_custom_fields():
 			dict(fieldname='gstin', label='Party GSTIN', fieldtype='Data',
 				insert_after='fax'),
 			dict(fieldname='gst_state', label='GST State', fieldtype='Select',
-				options='\n'.join(states), insert_after='gstin'),
+				options=state_options, insert_after='gstin'),
 			dict(fieldname='gst_state_number', label='GST State Number',
 				fieldtype='Data', insert_after='gst_state', read_only=1),
 		],

@@ -5,7 +5,7 @@ from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _
 from frappe.model.utils import get_fetch_values
 
-from ..constants import number_state_mapping
+from ..constants import STATE_NUMBERS
 from ..utils import get_gst_accounts, get_place_of_supply
 
 
@@ -189,7 +189,7 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
     default_tax = ""
 
     for tax_category in tax_categories:
-        if tax_category.gst_state == number_state_mapping[state_code] or (
+        if STATE_NUMBERS.get(tax_category.gst_state) == state_code or (
             not default_tax and not tax_category.gst_state
         ):
             default_tax = frappe.db.get_value(

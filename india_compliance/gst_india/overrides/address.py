@@ -3,7 +3,7 @@ import re
 import frappe
 from frappe import _
 
-from ..constants import state_numbers
+from ..constants import STATE_NUMBERS
 from ..utils import set_gst_state_and_state_number, validate_gstin_check_digit
 
 GSTIN_FORMAT = re.compile(
@@ -14,7 +14,8 @@ GSTIN_UIN_FORMAT = re.compile("^[0-9]{4}[A-Z]{3}[0-9]{5}[0-9A-Z]{3}")
 
 def validate_gstin_for_india(doc, method):
     if hasattr(doc, "gst_state") and doc.gst_state:
-        doc.gst_state_number = state_numbers[doc.gst_state]
+        doc.gst_state_number = STATE_NUMBERS[doc.gst_state]
+
     if not hasattr(doc, "gstin") or not doc.gstin:
         return
 

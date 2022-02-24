@@ -10,8 +10,6 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
-from ...constants import state_numbers
-
 
 class GSTR3BReport(Document):
 	def validate(self):
@@ -424,10 +422,6 @@ def get_json(template):
 	with open(file_path, 'r') as f:
 		return cstr(f.read())
 
-def get_state_code(state):
-	state_code = state_numbers.get(state)
-
-	return state_code
 
 def get_period(month, year=None):
 	month_no = {
