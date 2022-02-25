@@ -1,0 +1,36 @@
+#body {
+    height: calc(100vh - 60px);
+}
+
+.page-head {
+    display: none;
+}
+
+.asp-login {
+    padding: max(15vh, 70px) 0;
+    min-width: 10em;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.frappe-card-head {
+    text-align: center;
+}
+
+.frappe-card {
+    padding: 3em;
+}
+
+.frappe-card-head .logo {
+    max-height: 42px;
+}
+
+.frappe-card-head .title {
+    margin: 1.5em 0 2em 0;
+}
+
+.frappe-card-actions .toggle-view-text {
+    color: var(--text-light);
+    font-size: var(--text-sm);
+    margin-top: 0.8em;
+}
