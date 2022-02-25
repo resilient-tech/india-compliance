@@ -1,6 +1,8 @@
 // Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
+let account_fields_list = ["is_reverse_charge_account", "is_input_account", "is_output_account", "is_cash_ledger_account", "is_credit_ledger_account"];
+
 frappe.ui.form.on('GST Settings', {
 	refresh: function(frm) {
 		frm.add_custom_button('Send GST Update Reminder', () => {
@@ -27,6 +29,14 @@ frappe.ui.form.on('GST Settings', {
 		$.each(["cgst_account", "sgst_account", "igst_account", "cess_account"], function(i, field) {
 			frm.events.filter_accounts(frm, field);
 		});
+		
+		frm.set_query('company', "gst_accounts", function() {
+			return {
+				filters: {
+					country: "India"
+				}
+			}
+		});
 	},
 
 	filter_accounts: function(frm, account_field) {
@@ -40,5 +50,42 @@ frappe.ui.form.on('GST Settings', {
 				}
 			};
 		});
-	}
+	},
+
 });
+
+
+frappe.ui.form.on("GST Account", {
+	is_reverse_charge_account: function (frm, cdt, cdn) {
+		uncheck_other_fields(frm, cdt, cdn, 'is_reverse_charge_account');
+	},
+	is_input_account: function (frm, cdt, cdn) {
+		uncheck_other_fields(frm, cdt, cdn, 'is_input_account');
+	},
+	is_output_account: function (frm, cdt, cdn) {
+		uncheck_other_fields(frm, cdt, cdn, 'is_output_account');
+	},
+	is_cash_ledger_account: function (frm, cdt, cdn) {
+		uncheck_other_fields(frm, cdt, cdn, 'is_cash_ledger_account');
+	},
+	is_credit_ledger_account: function (frm, cdt, cdn) {
+		uncheck_other_fields(frm, cdt, cdn, 'is_credit_ledger_account');
+	},
+	
+})
+
+var remove_checked_item = function (arr, value) { 
+    
+	return arr.filter(function(ele){ 
+		return ele != value; 
+	});
+}
+
+var uncheck_other_fields = function (frm, cdt, cdn, selected_field) {
+	if (selected_field) {
+		var filtered_check_list = remove_checked_item(account_fields_list, selected_field)
+		$.each(filtered_check_list, function(i, field) {
+			frappe.model.set_value(cdt, cdn, field, 0);
+		});
+	}
+}
