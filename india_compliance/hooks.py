@@ -66,7 +66,8 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
     },
     "Company": {
-        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company"
+        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
+        "on_update": "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
     },
 }
 
@@ -79,6 +80,7 @@ regional_overrides = {
         "erpnext.accounts.party.get_regional_address_details": "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
         "erpnext.controllers.accounts_controller.validate_einvoice_fields": "india_compliance.gst_india.utils.e_invoice.validate_einvoice_fields",
         "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
+        "erpnext.setup.setup_wizard.operations.taxes_setup.setup_taxes_and_charges": "india_compliance.gst_india.overrides.setup_taxes.setup_taxes_and_charges",
         "erpnext.hr.utils.calculate_annual_eligible_hra_exemption": "india_compliance.income_tax_india.overrides.salary_slip.calculate_annual_eligible_hra_exemption",
         "erpnext.hr.utils.calculate_hra_exemption_for_period": "india_compliance.income_tax_india.overrides.salary_slip.calculate_hra_exemption_for_period",
         "erpnext.assets.doctype.asset.asset.get_depreciation_amount": "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount",
@@ -142,7 +144,7 @@ regional_overrides = {
 # ------------
 
 # before_install = "india_compliance.install.before_install"
-# after_install = "india_compliance.install.after_install"
+after_install = "india_compliance.install.after_install"
 
 # Uninstallation
 # ------------
