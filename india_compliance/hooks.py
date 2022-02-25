@@ -11,21 +11,21 @@ app_license = "GNU General Public License (v3)"
 required_apps = ["erpnext"]
 
 doctype_js = {
-    "Item": "india_compliance/gst_india/client_scripts/item.js",
-    "Supplier": "india_compliance/gst_india/client_scripts/supplier.js",
-    "Customer": "india_compliance/gst_india/client_scripts/customer.js",
-    "Sales Order": "india_compliance/gst_india/client_scripts/sales_order.js",
-    "Delivery Note": "india_compliance/gst_india/client_scripts/delivery_note.js",
-    "Purchase Order": "india_compliance/gst_india/client_scripts/purchase_order.js",
-    "Journal Entry": "india_compliance/gst_india/client_scripts/journal_entry.js",
-    "Payment Entry": "india_compliance/gst_india/client_scripts/payment_entry.js",
-    "Sales Invoice": "india_compliance/gst_india/client_scripts/sales_invoice.js",
-    "Purchase Receipt": "india_compliance/gst_india/client_scripts/purchase_receipt.js",
-    "Purchase Invoice": "india_compliance/gst_india/client_scripts/purchase_invoice.js",
+    "Item": "gst_india/client_scripts/item.js",
+    "Supplier": "gst_india/client_scripts/supplier.js",
+    "Customer": "gst_india/client_scripts/customer.js",
+    "Sales Order": "gst_india/client_scripts/sales_order.js",
+    "Delivery Note": "gst_india/client_scripts/delivery_note.js",
+    "Purchase Order": "gst_india/client_scripts/purchase_order.js",
+    "Journal Entry": "gst_india/client_scripts/journal_entry.js",
+    "Payment Entry": "gst_india/client_scripts/payment_entry.js",
+    "Sales Invoice": "gst_india/client_scripts/sales_invoice.js",
+    "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
+    "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
 }
 
 doctype_list_js = {
-    "Sales Invoice": "india_compliance/gst_india/client_scripts/sales_invoice_list.js",
+    "Sales Invoice": "gst_india/client_scripts/sales_invoice_list.js",
 }
 
 doc_events = {
