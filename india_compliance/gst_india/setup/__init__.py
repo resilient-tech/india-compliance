@@ -16,6 +16,7 @@ def setup_gst_india():
     add_permissions()
     add_custom_roles_for_reports()
     add_print_formats()
+    add_address_template()
     update_accounts_settings_for_taxes()
     frappe.enqueue(add_hsn_sac_codes, now=frappe.flags.in_test)
 
@@ -115,6 +116,26 @@ def add_print_formats():
     for format in ["GST POS Invoice", "GST Tax Invoice", "GST E-Invoice"]:
         frappe.reload_doc("gst_india", "print_format", format)
         frappe.db.set_value("Print Format", format, "disabled", 0)
+
+
+def add_address_template():
+    if frappe.db.exists("Address Template", "India"):
+        return
+
+    path = frappe.get_app_path(
+        "india_compliance", "gst_india", "data", "address_template.html"
+    )
+    with open(path, "r") as f:
+        address_html = f.read()
+
+    frappe.get_doc(
+        {
+            "doctype": "Address Template",
+            "country": "India",
+            "is_default": 1,
+            "template": address_html,
+        }
+    ).insert(ignore_permissions=True)
 
 
 def update_accounts_settings_for_taxes():
