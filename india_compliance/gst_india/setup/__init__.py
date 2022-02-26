@@ -157,14 +157,15 @@ def add_hsn_sac_codes():
 
 def create_hsn_codes(data, code_field):
     for d in data:
-        hsn_code = frappe.new_doc("GST HSN Code")
-        hsn_code.description = d["description"]
-        hsn_code.hsn_code = d[code_field]
-        hsn_code.name = d[code_field]
-        try:
-            hsn_code.db_insert()
-        except frappe.DuplicateEntryError:
-            pass
+        hsn_code = frappe.get_doc(
+            {
+                "doctype": "GST HSN Code",
+                "description": d["description"],
+                "hsn_code": d[code_field],
+                "name": d[code_field],
+            }
+        )
+        hsn_code.db_insert(ignore_if_duplicate=True)
 
 
 def update_regional_tax_settings(company):

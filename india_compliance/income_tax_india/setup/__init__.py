@@ -11,7 +11,6 @@ from .tds_details import TDS_RULES
 
 def setup_income_tax_india():
     add_custom_fields(CUSTOM_FIELDS, update=True)
-    add_gratuity_rule()
 
     companies = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
     if not companies:
@@ -19,29 +18,6 @@ def setup_income_tax_india():
 
     for company in companies:
         add_company_fixtures(company)
-
-
-def add_gratuity_rule():
-    # Standard Indain Gratuity Rule
-    if not frappe.db.exists("DocType", "Gratuity Rule") or frappe.db.exists(
-        "Gratuity Rule", "Indian Standard Gratuity Rule"
-    ):
-        return
-
-    rule = frappe.new_doc("Gratuity Rule")
-    rule.name = "Indian Standard Gratuity Rule"
-    rule.calculate_gratuity_amount_based_on = "Current Slab"
-    rule.work_experience_calculation_method = "Round Off Work Experience"
-    rule.minimum_year_for_gratuity = 5
-
-    fraction = 15 / 26
-    rule.append(
-        "gratuity_rule_slabs",
-        {"from_year": 0, "to_year": 0, "fraction_of_applicable_earnings": fraction},
-    )
-
-    rule.flags.ignore_mandatory = True
-    rule.save()
 
 
 def add_company_fixtures(company=None):
