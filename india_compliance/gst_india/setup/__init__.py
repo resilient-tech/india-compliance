@@ -7,6 +7,7 @@ from frappe.custom.doctype.property_setter.property_setter import \
     make_property_setter
 from frappe.permissions import add_permission, update_permission_property
 
+from ..utils import read_data_file
 from .custom_fields import CUSTOM_FIELDS
 
 
@@ -122,11 +123,7 @@ def add_address_template():
     if frappe.db.exists("Address Template", "India"):
         return
 
-    path = frappe.get_app_path(
-        "india_compliance", "gst_india", "data", "address_template.html"
-    )
-    with open(path, "r") as f:
-        address_html = f.read()
+    address_html = read_data_file("address_template.html")
 
     frappe.get_doc(
         {
@@ -151,11 +148,7 @@ def add_hsn_sac_codes():
 
     codes = ["hsn_code", "sac_code"]
     for code in codes:
-        path = frappe.get_app_path(
-            "india_compliance", "gst_india", "data", f"{code}_data.json"
-        )
-        with open(path, "r") as f:
-            hsn_sac_codes = json.loads(f.read())
+        hsn_sac_codes = json.loads(read_data_file(f"{code}_data.json"))
         create_hsn_codes(hsn_sac_codes, code_field=code)
 
     if frappe.flags.in_test:

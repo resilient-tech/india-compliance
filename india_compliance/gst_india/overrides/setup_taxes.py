@@ -6,6 +6,7 @@ from erpnext.setup.setup_wizard.operations.taxes_setup import \
 from frappe import _
 
 from ..setup import update_regional_tax_settings
+from ..utils import read_data_file
 
 
 def setup_taxes_and_charges(company_name: str, country: str):
@@ -16,11 +17,7 @@ def setup_taxes_and_charges(company_name: str, country: str):
             )
         )
 
-    file_path = file_path = frappe.get_app_path(
-        "india_compliance", "gst_india", "data", "india_tax.json"
-    )
-    with open(file_path, "r") as json_file:
-        tax_data = json.load(json_file)
+    tax_data = json.load(read_data_file("india_tax.json"))
 
     country_wise_tax = tax_data.get(country)
 

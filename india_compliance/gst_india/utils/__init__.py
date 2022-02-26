@@ -1,3 +1,5 @@
+import os
+
 import frappe
 from erpnext.controllers.taxes_and_totals import (get_itemised_tax,
                                                   get_itemised_taxable_amount)
@@ -5,6 +7,14 @@ from frappe import _
 from frappe.utils import cstr
 
 from ..constants import STATE_NUMBERS
+
+
+def read_data_file(file_name):
+    file_path = frappe.get_site_path("india_compliance", "gst_india", "data", file_name)
+    if not os.path.exists(file_path):
+        raise IOError(f"File not found: {file_path}")
+    with open(file_path, "r") as f:
+        return f.read()
 
 
 def set_gst_state_and_state_number(doc):
