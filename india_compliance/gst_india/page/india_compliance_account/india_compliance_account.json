@@ -4,17 +4,17 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2022-02-26 12:35:31.928396",
+ "modified": "2022-02-26 12:43:51.136111",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "login",
+ "name": "india-compliance-account",
  "owner": "Administrator",
- "page_name": "Login",
+ "page_name": "india-compliance-account",
  "restrict_to_domain": "",
  "roles": [],
  "script": null,
  "standard": "Yes",
  "style": null,
  "system_page": 1,
- "title": "Login/account"
+ "title": "India Compliance Account"
 }

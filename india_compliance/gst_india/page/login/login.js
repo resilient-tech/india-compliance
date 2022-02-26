@@ -20,6 +20,4 @@ class AspLogin {
     show() {
         this.main_section.empty().append(frappe.render_template("login"));
     }
-
-
 }
