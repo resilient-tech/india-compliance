@@ -11,8 +11,6 @@ from ..constants import STATE_NUMBERS
 
 def read_data_file(file_name):
     file_path = frappe.get_site_path("india_compliance", "gst_india", "data", file_name)
-    if not os.path.exists(file_path):
-        raise IOError(f"File not found: {file_path}")
     with open(file_path, "r") as f:
         return f.read()
 
