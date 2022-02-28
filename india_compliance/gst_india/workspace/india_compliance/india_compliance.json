@@ -1,0 +1,68 @@
+{
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">India Compliance</span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR Download Log\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inward Supply\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Reports &amp; Master\",\"col\":4}}]",
+ "creation": "2022-02-28 19:04:58.655348",
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "idx": 0,
+ "label": "India Compliance",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Settings",
+   "link_count": 0,
+   "link_to": "GST Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports &amp; Master",
+   "link_count": 1,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GSTR-1 Report",
+   "link_count": 0,
+   "link_to": "GSTR-1",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2022-02-28 19:30:49.224940",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "India Compliance",
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 31.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "GSTR Download Log",
+   "link_to": "GSTR Download Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Inward Supply",
+   "link_to": "Inward Supply",
+   "type": "DocType"
+  }
+ ],
+ "title": "India Compliance"
+}
