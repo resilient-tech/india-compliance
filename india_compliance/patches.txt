@@ -1,1 +1,1 @@
-india_compliance.patches.v14_0.remove_update_gst_category
+india_compliance.patches.v14_0.remove_consumer_gst_category
