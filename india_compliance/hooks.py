@@ -70,7 +70,7 @@ doc_events = {
         "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
         "on_update": [
             "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
-            "india_compliance.gst_india.overrides.company.make_gst_settings_for_company",
+            "india_compliance.gst_india.overrides.company.create_default_tax_templates",
         ],
     },
     "DocType": {

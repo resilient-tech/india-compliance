@@ -1,10 +1,9 @@
 import frappe
 
 
-def create_gratuity_rule_for_india():
+def create_gratuity_rule_for_india(doc, method=None):
     if (
-        not frappe.db.exists("DocType", "Gratuity Rule")
-        or not frappe.db.exists("Company", {"country": "India"})
+        doc.name != "Gratuity Rule"
         or frappe.db.exists("Gratuity Rule", "Indian Standard Gratuity Rule")
     ):
         return

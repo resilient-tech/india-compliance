@@ -1,8 +1,7 @@
 import json
 
 import frappe
-from erpnext.setup.setup_wizard.operations.taxes_setup import \
-    from_detailed_data
+from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
 from frappe import _
 
 from ..setup import update_regional_tax_settings
@@ -16,24 +15,22 @@ def delete_gst_settings_for_company(doc, method):
     gst_settings = frappe.get_doc("GST Settings")
     records_to_delete = []
 
-    for d in reversed(gst_settings.get("gst_accounts")):
-        if d.company == doc.name:
-            records_to_delete.append(d)
-
-    for d in records_to_delete:
-        gst_settings.remove(d)
+    gst_settings.gst_accounts = [
+        row for row in gst_settings.get("gst_accounts", []) if row.company != doc.name
+    ]
 
     gst_settings.save()
 
 
-def make_default_tax_templates(doc, method=None):
+def create_default_tax_templates(doc, method=None):
     if not frappe.flags.country_change:
         return
-    _make_default_tax_templates(doc.name, doc.country)
+
+    make_default_tax_templates(doc.name, doc.country)
 
 
 @frappe.whitelist()
-def _make_default_tax_templates(company: str, country: str):
+def make_default_tax_templates(company: str, country: str):
     if country != "India":
         return
 
