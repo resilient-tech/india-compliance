@@ -5,13 +5,15 @@
       <MarketingInfo class="marketing-info" />
       <div class="v-divider"></div>
       <div class="auth-form">
-        <AuthForm :haveAccount="haveAccount" />
+        <AuthForm :isAccountRegisted="isAccountRegisted" />
         <p class="change-view-btn">
           {{
-            haveAccount ? "Don't Have an Account?" : "Already Have an Account?"
+            isAccountRegisted
+              ? "Don't have an Account?"
+              : "Already have an Account?"
           }}
-          <a @click.prevent="changeAuthView">
-            {{ haveAccount ? "Signup Now" : "Login Here" }}
+          <a @click.prevent="toggleAuthView">
+            {{ isAccountRegisted ? "Signup Now" : "Login Here" }}
           </a>
         </p>
       </div>
@@ -26,17 +28,23 @@ import Signup from "./Signup.vue";
 export default {
   data() {
     return {
-      haveAccount: false,
+      isAccountRegisted: false,
     };
   },
   computed: {
     title() {
-      return this.haveAccount ? "Namste!" : "Welcome, Let's get you started!";
+      return this.isAccountRegisted
+        ? "Namste!"
+        : "Welcome, Let's get you started!";
     },
   },
   methods: {
-    changeAuthView() {
-      this.haveAccount = !this.haveAccount;
+    toggleAuthView() {
+      this.isAccountRegisted = !this.isAccountRegisted;
+    },
+
+    async checkAccountRegisted(value) {
+      this.isAccountRegisted = await _isEmailRegistered(value);
     },
   },
   components: {
