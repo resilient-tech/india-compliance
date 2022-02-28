@@ -17,4 +17,3 @@ class IndiaComplianceAccountPage {
 
 frappe.provide("india_compliance.page");
 india_compliance.page.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
-india_compliance.utils;
