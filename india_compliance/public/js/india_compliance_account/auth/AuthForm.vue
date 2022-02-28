@@ -29,7 +29,7 @@
       :class="actionDisabled && 'disabled'"
       type="submit"
       href="#"
-      @click.stop.prevent="onSubmit"
+      @click.stop.prevent="isAccountRegisted ? login : signup"
     >
       {{ submitLabel }}
     </a>
@@ -40,6 +40,8 @@
 import FormField from "../components/FormField.vue";
 import Loading from "../components/Loading.vue";
 import { UiState } from "../constants";
+import authService from "../services/AuthService";
+
 export default {
   props: { isAccountRegisted: Boolean },
 
@@ -79,22 +81,25 @@ export default {
   },
 
   methods: {
-    async onSubmit() {
-      this.validteForm();
+    async login() {
+      this.validateEmail(this.email);
       if (this.hasError) return;
+      const response = await authService.login(email);
     },
 
-    validteForm() {
+    async signup() {
       this.validateEmail(this.email);
-      if (!this.isAccountRegisted) this.validateGstin(this.gstin);
+      this.validateGstin(this.gstin);
+      if (this.hasError) return;
+      const response = await authService.signup(email, gstin);
     },
 
     async validateEmail(value) {
       this.setFieldState("email", UiState.loading);
 
-      if (!value) this.emailError = "Email is required!";
+      if (!value) this.emailError = "Email is required";
       else if (!window.validate_email(value))
-        this.emailError = "Invalid Email Address!";
+        this.emailError = "Invalid Email Address";
       else this.emailError = null;
 
       this.setFieldState(
@@ -106,21 +111,15 @@ export default {
     async validateGstin(value) {
       this.setFieldState("gstin", UiState.loading);
 
-      if (!value) this.gstinError = "GSTIN is required!";
-      else this.gstinError = await this._validateGstin(value);
+      if (!value) this.gstinError = "GSTIN is required";
+      else if (!validate_gst_number(value))
+        this.gstinError = "Invalid GSTIN detected";
+      else this.gstinError = await authService.validateGstin(value);
 
       this.setFieldState(
         "gstin",
         this.gstinError ? UiState.error : UiState.success
       );
-    },
-
-    _validateGstin(value) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(null);
-        }, 1000);
-      });
     },
 
     setFieldState(field, state) {
