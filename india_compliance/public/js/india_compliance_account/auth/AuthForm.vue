@@ -1,7 +1,7 @@
 <template>
-  <form action="POST" class="auth-form">
+  <form class="auth-form" @submit.prevent="submitAuthForm">
     <FormField
-      inputType="email"
+      input-type="email"
       name="email"
       label="Email"
       placeholder="john@example.com"
@@ -14,7 +14,7 @@
     <transition name="slide">
       <FormField
         v-if="!isAccountRegisted"
-        inputType="text"
+        input-type="text"
         name="gstin"
         label="GSTIN"
         v-model.trim="gstin.value"
@@ -23,15 +23,14 @@
         :state="gstin.state"
       />
     </transition>
-    <a
-      href
+    <button
       class="btn btn-primary btn-sm btn-block"
-      :class="actionDisabled && 'disabled'"
+      :disabled="actionDisabled"
       type="submit"
-      @click.stop.prevent="isAccountRegisted ? login : signup"
     >
       {{ submitLabel }}
-    </a>
+    </button>
+    <p class="server-error" v-if="error" v-html="error"></p>
   </form>
 </template>
 
@@ -58,22 +57,32 @@ export default {
         error: null,
         state: UiState.initial,
       },
+
+      isLoading: false,
+      error: null,
     };
   },
 
   computed: {
     submitLabel() {
+      if (this.isLoading) return "Loading...";
       return this.isAccountRegisted ? "Login" : "Continue";
     },
 
     actionDisabled() {
-      let _actionDisabled = !this.email.value;
-      if (!this.isAccountRegisted)
-        _actionDisabled = _actionDisabled || !this.gstin.value;
-      return _actionDisabled || this.hasError;
+      if (this.isLoading || this.hasInputError || !this.isSucess) return true;
+      if (this.isAccountRegisted) return !this.email.value;
+      return !this.email.value || !this.gstin.value;
     },
 
-    hasError() {
+    isSucess() {
+      let _isSucess = this.email.state === UiState.success;
+      if (!this.isAccountRegisted)
+        _isSucess = _isSucess && this.gstin.state === UiState.success;
+      return !!_isSucess;
+    },
+
+    hasInputError() {
       let _hasError = this.email.error;
       if (!this.isAccountRegisted) _hasError = _hasError || this.gstin.error;
       return !!_hasError;
@@ -84,21 +93,37 @@ export default {
     "gstin.value"(value) {
       this.validateGstin(value);
     },
+
+    isAccountRegisted() {
+      this.error = false;
+    },
   },
 
   methods: {
-    async login() {
-      this.validateEmail();
+    async submitAuthForm() {
+      this.isLoading = true;
+      this.error = false;
+      try {
+        if (this.isAccountRegisted) await this.login();
+        else await this.signup();
+      } catch (e) {
+        this.error =
+          e.message || "Something went wrong, Please try again later.";
+      } finally {
+        this.isLoading = false;
+      }
+    },
 
-      if (this.hasError) return;
+    async login() {
+      if (this.hasInputError) return;
       const response = await authService.login(email);
+      throw new Error("No Account found, please sign up instead.");
     },
 
     async signup() {
-      this.validateEmail();
-      this.validateGstin();
-      if (this.hasError) return;
+      if (this.hasInputError) return;
       const response = await authService.signup(email, gstin);
+      throw new Error("Account is already exists, please login instead.");
     },
 
     validateEmail(value) {
@@ -115,7 +140,7 @@ export default {
 
     async validateGstin(value) {
       const field = this.gstin;
-
+      if (!value) value = field.value;
       field.state = UiState.loading;
 
       field.error = null;
@@ -147,5 +172,12 @@ export default {
 .slide-leave-to {
   max-height: 0;
   margin: 0;
+}
+
+.server-error {
+  color: var(--red-500);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  margin: 0.5em 0 0 0;
 }
 </style>

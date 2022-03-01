@@ -73,7 +73,7 @@ export default {
 }
 
 .auth-form {
-  min-width: 400px;
+  width: 400px;
 }
 .v-divider {
   background-color: var(--gray-200);
