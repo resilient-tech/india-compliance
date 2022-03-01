@@ -1,7 +1,7 @@
 frappe.provide("india_compliance.utils");
 
 // GSTIN Validation
-// taken from: gitlab.com/srikanthlogic/gstin -validator/-/blob/master/src/index.js
+// taken from: https://gitlab.com/srikanthlogic/gstin-validator/-/blob/master/src/index.js
 
 function calcCheckSum(gstin) {
     var GSTN_CODEPOINT_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -46,5 +46,5 @@ function isValidGSTNumber(gstin) {
     return false;
 }
 
-india_compliance.utils.validate_gst_number = isValidGSTNumber;
-window.validate_gst_number = india_compliance.utils.validate_gst_number;
+window.validate_gst_number = india_compliance.utils.validate_gst_number =
+    isValidGSTNumber;
