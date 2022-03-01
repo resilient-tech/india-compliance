@@ -13,7 +13,23 @@
   "gstin_email_sent_on",
   "section_break_4",
   "gst_accounts",
-  "b2c_limit"
+  "b2c_limit",
+  "api_settings_tab",
+  "api_id",
+  "sandbox",
+  "column_break_13",
+  "api_secret",
+  "section_break_15",
+  "gstn_public_api",
+  "column_break_17",
+  "gstn_ewb_api",
+  "supplier_compliance_report_settings_section",
+  "section_break_1",
+  "gst_credentials",
+  "bulk_update_tab",
+  "update_party_info",
+  "column_break_24",
+  "mark_unregistered"
  ],
  "fields": [
   {
@@ -67,12 +83,95 @@
   {
    "fieldname": "column_break_4",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_id",
+   "fieldtype": "Data",
+   "label": "API ID"
+  },
+  {
+   "default": "0",
+   "fieldname": "sandbox",
+   "fieldtype": "Check",
+   "label": "Sandbox"
+  },
+  {
+   "fieldname": "column_break_13",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret"
+  },
+  {
+   "fieldname": "section_break_15",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "gstn_public_api",
+   "fieldtype": "Check",
+   "label": "Enable GSTN Public API"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "gstn_ewb_api",
+   "fieldtype": "Check",
+   "label": "Enable GSTN Eway Bill API"
+  },
+  {
+   "fieldname": "supplier_compliance_report_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Supplier Compliance Report Settings"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "GST Credentials"
+  },
+  {
+   "fieldname": "gst_credentials",
+   "fieldtype": "Table",
+   "label": "GST Credentials",
+   "options": "GST Credentials"
+  },
+  {
+   "fieldname": "bulk_update_tab",
+   "fieldtype": "Tab Break",
+   "label": "Bulk Update"
+  },
+  {
+   "description": "This will update all GST related information including PAN for all parties. This will not update address or party names.",
+   "fieldname": "update_party_info",
+   "fieldtype": "Button",
+   "label": "Update Party Info"
+  },
+  {
+   "fieldname": "column_break_24",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "This will mark all address without GSTIN as URP and set GST Category as Unregistered.",
+   "fieldname": "mark_unregistered",
+   "fieldtype": "Check",
+   "label": "Mark address without GSTIN as Unregistered"
+  },
+  {
+   "fieldname": "api_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "API Settings"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-02-24 17:06:17.255536",
+ "modified": "2022-03-01 18:13:33.983267",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
