@@ -237,22 +237,6 @@ CUSTOM_FIELDS = {
             "insert_after": "customer_type",
         }
     ],
-    "Member": [
-        {
-            "fieldname": "pan_number",
-            "label": "PAN Details",
-            "fieldtype": "Data",
-            "insert_after": "email_id",
-        }
-    ],
-    "Donor": [
-        {
-            "fieldname": "pan_number",
-            "label": "PAN Details",
-            "fieldtype": "Data",
-            "insert_after": "email",
-        }
-    ],
     "Finance Book": [
         {
             "fieldname": "for_income_tax",
