@@ -84,9 +84,6 @@ export default {
     "gstin.value"(value) {
       this.validateGstin(value);
     },
-    "email.value"(value) {
-      console.log(value);
-    },
   },
 
   methods: {
@@ -121,7 +118,6 @@ export default {
 
       field.state = UiState.loading;
 
-      console.log("validation value", value);
       field.error = null;
       if (!value) field.error = "GSTIN is required";
       else if (
