@@ -4,12 +4,12 @@
       inputType="email"
       name="email"
       label="Email"
-      v-model="email"
       placeholder="john@example.com"
+      v-model.trim="email.value"
       :required="true"
-      :error="emailError"
-      :state="states.email"
-      :validator="validateEmail"
+      :error="email.error"
+      :state="email.state"
+      @blur="validateEmail"
     />
     <transition name="slide">
       <FormField
@@ -17,18 +17,17 @@
         inputType="text"
         name="gstin"
         label="GSTIN"
-        v-model="gstin"
+        v-model.trim="gstin.value"
         :required="true"
-        :error="gstinError"
-        :state="states.gstin"
+        :error="gstin.error"
+        :state="gstin.state"
       />
     </transition>
-
     <a
+      href
       class="btn btn-primary btn-sm btn-block"
       :class="actionDisabled && 'disabled'"
       type="submit"
-      href="#"
       @click.stop.prevent="isAccountRegisted ? login : signup"
     >
       {{ submitLabel }}
@@ -49,14 +48,15 @@ export default {
 
   data() {
     return {
-      email: "",
-      gstin: "",
-      isLoading: false,
-      emailError: "",
-      gstinError: "",
-      states: {
-        email: UiState.initial,
-        gstin: UiState.initial,
+      email: {
+        value: "",
+        error: null,
+        state: UiState.initial,
+      },
+      gstin: {
+        value: "",
+        error: null,
+        state: UiState.initial,
       },
     };
   },
@@ -67,70 +67,69 @@ export default {
     },
 
     actionDisabled() {
-      let _actionDisabled = !this.email;
+      let _actionDisabled = !this.email.value;
       if (!this.isAccountRegisted)
-        _actionDisabled = _actionDisabled || !this.gstin;
+        _actionDisabled = _actionDisabled || !this.gstin.value;
       return _actionDisabled || this.hasError;
     },
 
     hasError() {
-      let _hasError = this.emailError;
-      if (this.isAccountRegisted) _hasError = _hasError || this.gstinError;
+      let _hasError = this.email.error;
+      if (!this.isAccountRegisted) _hasError = _hasError || this.gstin.error;
       return !!_hasError;
+    },
+  },
+
+  watch: {
+    "gstin.value"(value) {
+      this.validateGstin(value);
+    },
+    "email.value"(value) {
+      console.log(value);
     },
   },
 
   methods: {
     async login() {
-      this.validateEmail(this.email);
+      this.validateEmail();
+
       if (this.hasError) return;
       const response = await authService.login(email);
     },
 
     async signup() {
-      this.validateEmail(this.email);
-      this.validateGstin(this.gstin);
+      this.validateEmail();
+      this.validateGstin();
       if (this.hasError) return;
       const response = await authService.signup(email, gstin);
     },
 
-    async validateEmail(value) {
-      this.setFieldState("email", UiState.loading);
+    validateEmail(value) {
+      const field = this.email;
+      if (!value) value = field.value;
+      field.state = UiState.loading;
 
-      if (!value) this.emailError = "Email is required";
-      else if (!window.validate_email(value))
-        this.emailError = "Invalid Email Address";
-      else this.emailError = null;
+      field.error = null;
+      if (!value) field.error = "Email is required";
+      else if (!validate_email(value)) field.error = "Invalid Email Address";
 
-      this.setFieldState(
-        "email",
-        this.emailError ? UiState.error : UiState.success
-      );
+      field.state = field.error ? UiState.error : UiState.success;
     },
 
     async validateGstin(value) {
-      this.setFieldState("gstin", UiState.loading);
+      const field = this.gstin;
 
-      if (!value) this.gstinError = "GSTIN is required";
-      else if (!validate_gst_number(value))
-        this.gstinError = "Invalid GSTIN detected";
-      else this.gstinError = await authService.validateGstin(value);
+      field.state = UiState.loading;
 
-      this.setFieldState(
-        "gstin",
-        this.gstinError ? UiState.error : UiState.success
-      );
-    },
-
-    setFieldState(field, state) {
-      if (this.states[field] !== state) this.$set(this.states, field, state);
-    },
-  },
-
-  watch: {
-    gstin(value) {
-      if (!value) return;
-      this.validateGstin(value);
+      console.log("validation value", value);
+      field.error = null;
+      if (!value) field.error = "GSTIN is required";
+      else if (
+        !validate_gst_number(value) ||
+        !(await authService.validateGstin(value))
+      )
+        field.error = "Invalid GSTIN detected";
+      field.state = field.error ? UiState.error : UiState.success;
     },
   },
 };

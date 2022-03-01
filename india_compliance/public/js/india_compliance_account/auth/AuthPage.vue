@@ -24,13 +24,19 @@
 <script>
 import AuthForm from "./AuthForm.vue";
 import MarketingInfo from "./MarketingInfo.vue";
-import Signup from "./Signup.vue";
+
 export default {
+  components: {
+    AuthForm,
+    MarketingInfo,
+  },
+
   data() {
     return {
       isAccountRegisted: false,
     };
   },
+
   computed: {
     title() {
       return this.isAccountRegisted
@@ -38,6 +44,7 @@ export default {
         : "Welcome, Let's get you started!";
     },
   },
+
   methods: {
     toggleAuthView() {
       this.isAccountRegisted = !this.isAccountRegisted;
@@ -46,11 +53,6 @@ export default {
     async checkAccountRegisted(value) {
       this.isAccountRegisted = await _isEmailRegistered(value);
     },
-  },
-  components: {
-    AuthForm,
-    Signup,
-    MarketingInfo,
   },
 };
 </script>

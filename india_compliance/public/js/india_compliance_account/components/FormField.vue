@@ -1,5 +1,5 @@
 <template>
-  <div class="form-group frappe-control" :class="formGroupClasses">
+  <div class="form-group frappe-control" :class="this.hasError && 'has-error'">
     <label
       :for="name"
       class="control-label"
@@ -19,38 +19,9 @@
         :placeholder="placeholder"
         :required="required"
         v-if="['text', 'email'].includes(inputType)"
-        @input="updateInputValue"
-        @blur="validateField"
+        @input="$emit('input', $event.target.value)"
+        @blur="$emit('blur', $event.target.value.trim())"
       />
-      <span v-if="inputType === 'select'">
-        <select
-          :name="name"
-          :id="name"
-          class="form-control"
-          :class="inputClass"
-          :value="value"
-          @input="updateInputValue"
-          :required="required"
-        >
-          <option :value="option" v-for="option in options" :key="option">
-            {{ option }}
-          </option>
-        </select>
-      </span>
-      <textarea
-        :name="name"
-        :id="name"
-        class="form-control"
-        :class="inputClass"
-        :value="value"
-        @input="updateInputValue"
-        :placeholder="placeholder"
-        :required="required"
-        :rows="rows || 5"
-        v-if="inputType === 'textarea'"
-      >
-      </textarea>
-
       <div class="sufix-icon">
         <Loading
           radius="15"
@@ -58,13 +29,20 @@
           stroke="1.8"
           v-if="isLoading"
         />
-        <div v-else v-html="suffixIcon"></div>
+        <i
+          class="fa fa-times-circle"
+          style="color: var(--red-500)"
+          v-else-if="hasError"
+        ></i>
+        <i
+          class="fa fa-check-circle"
+          style="color: var(--green-500)"
+          v-else-if="isValid"
+        ></i>
       </div>
     </div>
     <div class="input-error" v-if="error">
-      <small>
-        {{ error }}
-      </small>
+      {{ error }}
     </div>
   </div>
 </template>
@@ -74,19 +52,13 @@ import Loading from "./Loading.vue";
 import { UiState } from "../constants";
 export default {
   components: { Loading },
+
   props: {
-    value: null,
+    value: String,
     inputType: {
       type: String,
       validator(value) {
-        return [
-          "text",
-          "email",
-          "select",
-          "textarea",
-          "file",
-          "checkbox",
-        ].includes(value);
+        return ["text", "email"].includes(value);
       },
       required: true,
     },
@@ -101,7 +73,6 @@ export default {
     label: String,
     placeholder: String,
     inputClass: String,
-    fieldClass: String,
     error: String,
     rows: Number,
     options: [Object, Array],
@@ -113,60 +84,16 @@ export default {
   },
 
   computed: {
-    formGroupClasses() {
-      if (!this.hasError) {
-        return this.fieldClass;
-      }
-      return "has-error " + this.fieldClass;
-    },
-
     isLoading() {
       return this.state === UiState.loading;
     },
-
     hasError() {
       return this.state === UiState.error || this.error;
     },
 
-    suffixIcon() {
-      if (this.state === UiState.success) {
-        return '<i class="fa fa-check-circle" style="color: var(--green-500)"></i>';
-      }
-      if (this.state === UiState.error) {
-        return '<i class="fa fa-times-circle" style="color: var(--red-500)"></i>';
-      }
+    isValid() {
+      return this.state === UiState.success;
     },
-  },
-
-  methods: {
-    updateInputValue(event) {
-      this.$emit("input", event.target.value);
-    },
-    validateField() {
-      if (this.validator) {
-        this.validator(this.value);
-      }
-    },
-  },
-
-  updateInputValue(e, value) {
-    this.$emit("input", value || e.target.value);
-  },
-
-  openFileSelector(name) {
-    this.removeFile(name);
-    this.$refs[name].click();
-  },
-
-  onFileChange(e) {
-    const files = e.target.files || (e.dataTransfer && e.dataTransfer.files);
-    this.$emit("validate", this.name, files[0]);
-    this.updateInputValue(e, files[0]);
-  },
-
-  removeFile(name) {
-    this.$refs[name].value = "";
-    this.$emit("input", null);
   },
 };
 </script>
