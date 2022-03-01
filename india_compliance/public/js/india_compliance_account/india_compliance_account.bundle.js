@@ -1,4 +1,4 @@
-import IndiaComplianceAccount from "./IndiaComplianceAccount.vue";
+import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 
 class IndiaComplianceAccountPage {
     constructor(options) {
@@ -9,7 +9,7 @@ class IndiaComplianceAccountPage {
     show() {
         const $vm = new Vue({
             el: this.wrapper,
-            render: (h) => h(IndiaComplianceAccount),
+            render: (h) => h(IndiaComplianceAccountApp),
         });
         this.$component = $vm.$children[0];
     }
