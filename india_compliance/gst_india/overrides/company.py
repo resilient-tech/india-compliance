@@ -1,7 +1,8 @@
 import json
 
 import frappe
-from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
+from erpnext.setup.setup_wizard.operations.taxes_setup import \
+    from_detailed_data
 from frappe import _
 
 from ..setup import update_regional_tax_settings
@@ -13,7 +14,6 @@ def delete_gst_settings_for_company(doc, method):
         return
 
     gst_settings = frappe.get_doc("GST Settings")
-    records_to_delete = []
 
     gst_settings.gst_accounts = [
         row for row in gst_settings.get("gst_accounts", []) if row.company != doc.name

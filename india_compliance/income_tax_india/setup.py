@@ -21,7 +21,7 @@ def after_install():
         add_company_fixtures(company)
 
 
-def add_company_fixtures(company=None):
+def add_company_fixtures(company):
     docs = []
     company = company or frappe.db.get_value("Global Defaults", None, "default_company")
     docs.extend(json.loads(read_data_file("salary_components.json")))
@@ -64,7 +64,7 @@ def set_tax_withholding_category(company):
     tds_account = frappe.get_value("Account", "TDS Payable - {0}".format(abbr), "name")
 
     if company and tds_account:
-        accounts = [dict(company=company, account=tds_account)]
+        accounts.append({"company": company, "account": tds_account})
 
     try:
         fiscal_year_details = get_fiscal_year(today(), verbose=0)

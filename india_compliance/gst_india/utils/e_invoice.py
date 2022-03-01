@@ -88,8 +88,6 @@ def raise_document_name_too_long_error():
 	msg += _('Please account for ammended documents too.')
 	frappe.throw(msg, title=title)
 
-def read_json(name):
-	return cstr(read_data_file(f"{name}.json"))
 
 def get_transaction_details(invoice):
 	supply_type = ''
@@ -187,7 +185,7 @@ def get_item_list(invoice):
 	item_list = []
 
 	for d in invoice.items:
-		einvoice_item_schema = read_json('einv_item_template')
+		einvoice_item_schema = read_data_file("einv_item_template.json")
 		item = frappe._dict({})
 		item.update(d.as_dict())
 
@@ -416,7 +414,7 @@ def validate_totals(einvoice):
 def make_einvoice(invoice):
 	validate_mandatory_fields(invoice)
 
-	schema = read_json('einv_template')
+	schema = read_data_file("einv_template.json")
 
 	transaction_details = get_transaction_details(invoice)
 	item_list = get_item_list(invoice)
