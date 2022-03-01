@@ -3,16 +3,18 @@
     <p class="title">Why you should opt in?</p>
     <ul class="features">
       <li :key="index" v-for="(feature, index) in features" class="feature">
-        <CheckIcon class="feature-icon" />
+        <MarketingInfoCheckIcon class="feature-icon" />
         {{ feature }}
       </li>
     </ul>
   </div>
 </template>
 <script>
-import CheckIcon from "../components/icons/CheckIcon.vue";
+import MarketingInfoCheckIcon from "./MarketingInfoCheckIcon.vue";
+
 export default {
-  components: { CheckIcon },
+  components: { MarketingInfoCheckIcon },
+
   created() {
     this.features = [
       "File GST from ERP",

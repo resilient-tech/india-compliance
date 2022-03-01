@@ -21,7 +21,7 @@ export default {
         // either returns null or error message
         return new Promise((resolve) => {
             setTimeout(() => {
-                resolve(null);
+                resolve(true);
             }, 1000);
         });
     },

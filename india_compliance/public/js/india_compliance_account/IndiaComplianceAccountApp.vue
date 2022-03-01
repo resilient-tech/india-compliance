@@ -4,6 +4,7 @@
     <AuthPage v-else />
   </div>
 </template>
+
 <script>
 import AccountPage from "./account/AccountPage.vue";
 import AuthPage from "./auth/AuthPage.vue";
