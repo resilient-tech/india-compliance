@@ -1,17 +1,17 @@
 import json
 
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import \
-    create_custom_fields as add_custom_fields
-from frappe.custom.doctype.property_setter.property_setter import \
-    make_property_setter
+from frappe.custom.doctype.custom_field.custom_field import (
+    create_custom_fields as add_custom_fields,
+)
+from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.permissions import add_permission, update_permission_property
 
-from ..utils import read_data_file
-from .custom_fields import CUSTOM_FIELDS
+from .utils import read_data_file
+from .constants.custom_fields import CUSTOM_FIELDS
 
 
-def setup_gst_india():
+def after_install():
     add_custom_fields(CUSTOM_FIELDS, update=True)
     add_property_setters()
     add_permissions()
@@ -23,21 +23,29 @@ def setup_gst_india():
 
 
 def add_property_setters():
-    options_to_update = [
-        ["Journal Entry", "voucher_type", ["Reversal Of ITC"], []],
-        ["Sales Invoice", "naming_series", [], ["SINV-.YY.-", "SRET-.YY.-", ""]],
-        ["Purchase Invoice", "naming_series", [], ["PINV-.YY.-", "PRET-.YY.-", ""]],
+    options_to_add = [
+        {
+            "doctype": "Journal Entry",
+            "fieldname": "voucher_type",
+            "options_after": ["Reversal Of ITC"],
+        },
+        {
+            "doctype": "Sales Invoice",
+            "fieldname": "naming_series",
+            "options_before": ["SINV-.YY.-", "SRET-.YY.-", ""],
+        },
     ]
 
-    for doc in options_to_update:
+    for doc in options_to_add:
+        existing_options = (
+            frappe.meta(doc["doctype"]).get_options(doc["fieldname"]).split("\n")
+        )
         make_property_setter(
-            doc[0],
-            doc[1],
+            doc["doctype"],
+            doc["fieldname"],
             "options",
             "\n".join(
-                doc[2]
-                + frappe.get_meta(doc[0]).get_options(doc[1]).split("\n")
-                + doc[3]
+                doc.get("options_before") + existing_options + doc.get("options_after")
             ),
         )
 

@@ -1,5 +1,3 @@
-import os
-
 import frappe
 from erpnext.controllers.taxes_and_totals import (get_itemised_tax,
                                                   get_itemised_taxable_amount)
@@ -10,7 +8,7 @@ from ..constants import STATE_NUMBERS
 
 
 def read_data_file(file_name):
-    file_path = frappe.get_site_path("india_compliance", "gst_india", "data", file_name)
+    file_path = frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
     with open(file_path, "r") as f:
         return f.read()
 

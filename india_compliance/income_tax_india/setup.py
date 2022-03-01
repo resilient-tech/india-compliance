@@ -1,15 +1,16 @@
 import frappe
+import json
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
-from frappe.custom.doctype.custom_field.custom_field import \
-    create_custom_fields as add_custom_fields
+from frappe.custom.doctype.custom_field.custom_field import (
+    create_custom_fields as add_custom_fields,
+)
 from frappe.utils import today
 
-from .custom_fields import CUSTOM_FIELDS
-from .salary_components import SALARY_COMPONENTS
-from .tds_details import TDS_RULES
+from .constants.custom_fields import CUSTOM_FIELDS
+from .utils import read_data_file
 
 
-def setup_income_tax_india():
+def after_install():
     add_custom_fields(CUSTOM_FIELDS, update=True)
 
     companies = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
@@ -23,8 +24,7 @@ def setup_income_tax_india():
 def add_company_fixtures(company=None):
     docs = []
     company = company or frappe.db.get_value("Global Defaults", None, "default_company")
-
-    docs.extend(SALARY_COMPONENTS)
+    docs.extend(json.loads(read_data_file("salary_components.json")))
     set_tds_account(docs, company)
 
     for d in docs:
@@ -108,11 +108,12 @@ def set_tax_withholding_category(company):
 
 def get_tds_details(accounts, fiscal_year_details):
     tds_details = []
-    for category in TDS_RULES:
-        for i in TDS_RULES[category]:
+    tds_rules = json.loads(read_data_file("tds_rules.json"))
+    for category in tds_rules:
+        for rule in tds_rules[category]:
             tds_details.append(
                 {
-                    "name": i[0],
+                    "name": rule[0],
                     "category_name": category,
                     "doctype": "Tax Withholding Category",
                     "accounts": accounts,
@@ -120,9 +121,9 @@ def get_tds_details(accounts, fiscal_year_details):
                         {
                             "from_date": fiscal_year_details[1],
                             "to_date": fiscal_year_details[2],
-                            "tax_withholding_rate": i[1],
-                            "single_threshold": i[2],
-                            "cumulative_threshold": i[3],
+                            "tax_withholding_rate": rule[1],
+                            "single_threshold": rule[2],
+                            "cumulative_threshold": rule[3],
                         }
                     ],
                 }

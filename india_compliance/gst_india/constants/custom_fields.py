@@ -1,4 +1,4 @@
-from ..constants import STATE_NUMBERS
+from . import STATE_NUMBERS
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
 

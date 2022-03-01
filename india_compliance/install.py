@@ -1,7 +1,7 @@
 import frappe
 
-from .gst_india.setup import setup_gst_india
-from .income_tax_india.setup import setup_income_tax_india
+from .gst_india.setup import after_install as setup_gst_india
+from .income_tax_india.setup import after_install as setup_income_tax_india
 
 
 def after_install():
