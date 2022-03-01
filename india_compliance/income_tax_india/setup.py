@@ -108,7 +108,7 @@ def set_tax_withholding_category(company):
 
 def get_tds_details(accounts, fiscal_year_details):
     tds_details = []
-    tds_rules = json.loads(read_data_file("tds_rules.json"))
+    tds_rules = json.loads(read_data_file("tds_details.json"))
     for category in tds_rules:
         for rule in tds_rules[category]:
             tds_details.append(

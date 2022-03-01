@@ -34,15 +34,16 @@ def add_property_setters():
 
     for doc in options_to_add:
         existing_options = (
-            frappe.meta(doc["doctype"]).get_options(doc["fieldname"]).split("\n")
+            frappe.get_meta(doc["doctype"]).get_options(doc["fieldname"]).split("\n")
         )
         make_property_setter(
             doc["doctype"],
             doc["fieldname"],
             "options",
             "\n".join(
-                doc.get("options_before") + existing_options + doc.get("options_after")
+                doc.get("options_before", []) + existing_options + doc.get("options_after", [])
             ),
+            "Text",
         )
 
 
@@ -75,7 +76,7 @@ def add_hsn_sac_codes():
 
     codes = ["hsn_code", "sac_code"]
     for code in codes:
-        hsn_sac_codes = json.loads(read_data_file(f"{code}_data.json"))
+        hsn_sac_codes = json.loads(read_data_file(f"{code}s.json"))
         create_hsn_codes(hsn_sac_codes, code_field=code)
 
     if frappe.flags.in_test:
