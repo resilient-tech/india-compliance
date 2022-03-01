@@ -3,13 +3,13 @@
  "columns": [],
  "creation": "2017-06-22 15:25:04.101930",
  "disable_prepared_report": 0,
- "disabled": 1,
+ "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2022-02-24 17:26:05.075600",
+ "modified": "2022-03-01 15:45:14.325388",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Itemised Purchase Register",
@@ -18,5 +18,12 @@
  "ref_doctype": "Purchase Invoice",
  "report_name": "GST Itemised Purchase Register",
  "report_type": "Script Report",
- "roles": []
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
+  }
+ ]
 }

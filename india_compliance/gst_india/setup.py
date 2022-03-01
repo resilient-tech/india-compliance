@@ -5,7 +5,6 @@ from frappe.custom.doctype.custom_field.custom_field import (
     create_custom_fields as add_custom_fields,
 )
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
-from frappe.permissions import add_permission, update_permission_property
 
 from .utils import read_data_file
 from .constants.custom_fields import CUSTOM_FIELDS
@@ -14,9 +13,6 @@ from .constants.custom_fields import CUSTOM_FIELDS
 def after_install():
     add_custom_fields(CUSTOM_FIELDS, update=True)
     add_property_setters()
-    add_permissions()
-    add_custom_roles_for_reports()
-    add_print_formats()
     add_address_template()
     update_accounts_settings_for_taxes()
     frappe.enqueue(add_hsn_sac_codes, now=frappe.flags.in_test)
@@ -48,83 +44,6 @@ def add_property_setters():
                 doc.get("options_before") + existing_options + doc.get("options_after")
             ),
         )
-
-
-def add_permissions():
-    for doctype in (
-        "GST HSN Code",
-        "GST Settings",
-        "GSTR 3B Report",
-        "Lower Deduction Certificate",
-        "E Invoice Settings",
-    ):
-        add_permission(doctype, "All", 0)
-        for role in ("Accounts Manager", "Accounts User", "System Manager"):
-            add_permission(doctype, role, 0)
-            update_permission_property(doctype, role, 0, "write", 1)
-            update_permission_property(doctype, role, 0, "create", 1)
-
-        if doctype == "GST HSN Code":
-            for role in ("Item Manager", "Stock Manager"):
-                add_permission(doctype, role, 0)
-                update_permission_property(doctype, role, 0, "write", 1)
-                update_permission_property(doctype, role, 0, "create", 1)
-
-
-def add_custom_roles_for_reports():
-    for report_name in (
-        "GST Sales Register",
-        "GST Purchase Register",
-        "GST Itemised Sales Register",
-        "GST Itemised Purchase Register",
-        "Eway Bill",
-        "E-Invoice Summary",
-    ):
-
-        if not frappe.db.get_value("Custom Role", dict(report=report_name)):
-            frappe.get_doc(
-                dict(
-                    doctype="Custom Role",
-                    report=report_name,
-                    roles=[dict(role="Accounts User"), dict(role="Accounts Manager")],
-                )
-            ).insert()
-
-    for report_name in ("Professional Tax Deductions", "Provident Fund Deductions"):
-
-        if not frappe.db.get_value("Custom Role", dict(report=report_name)):
-            frappe.get_doc(
-                dict(
-                    doctype="Custom Role",
-                    report=report_name,
-                    roles=[
-                        dict(role="HR User"),
-                        dict(role="HR Manager"),
-                        dict(role="Employee"),
-                    ],
-                )
-            ).insert()
-
-    for report_name in ("HSN-wise-summary of outward supplies", "GSTR-1", "GSTR-2"):
-
-        if not frappe.db.get_value("Custom Role", dict(report=report_name)):
-            frappe.get_doc(
-                dict(
-                    doctype="Custom Role",
-                    report=report_name,
-                    roles=[
-                        dict(role="Accounts User"),
-                        dict(role="Accounts Manager"),
-                        dict(role="Auditor"),
-                    ],
-                )
-            ).insert()
-
-
-def add_print_formats():
-    for format in ["GST POS Invoice", "GST Tax Invoice", "GST E-Invoice"]:
-        frappe.reload_doc("gst_india", "print_format", format)
-        frappe.db.set_value("Print Format", format, "disabled", 0)
 
 
 def add_address_template():
