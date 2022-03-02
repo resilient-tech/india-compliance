@@ -2,7 +2,7 @@ import frappe
 import json
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 from frappe.custom.doctype.custom_field.custom_field import (
-    create_custom_fields as add_custom_fields,
+    create_custom_fields,
 )
 from frappe.utils import today
 
@@ -11,9 +11,11 @@ from .utils import read_data_file
 
 
 def after_install():
-    add_custom_fields(CUSTOM_FIELDS, update=True)
+    create_custom_fields(CUSTOM_FIELDS, update=True)
+    create_gratuity_rule_for_india()
 
-def add_company_fixtures(company):
+
+def create_company_fixtures(company):
     docs = []
     company = company or frappe.db.get_value("Global Defaults", None, "default_company")
     docs.extend(json.loads(read_data_file("salary_components.json")))
@@ -121,3 +123,33 @@ def get_tds_details(accounts, fiscal_year_details):
                 }
             )
     return tds_details
+
+
+def create_gratuity_rule_for_india():
+    if not frappe.db.exists("DocType", "Gratuity Rule") or frappe.db.exists(
+        "Gratuity Rule", "Indian Standard Gratuity Rule"
+    ):
+        return
+
+    _create_gratuity_rule_for_india()
+
+
+def _create_gratuity_rule_for_india():
+    rule = frappe.get_doc(
+        {
+            "doctype": "Gratuity Rule",
+            "name": "Indian Standard Gratuity Rule",
+            "calculate_gratuity_amount_based_on": "Current Slab",
+            "work_experience_calculation_method": "Round Off Work Experience",
+            "minimum_year_for_gratuity": 5,
+            "gratuity_rule_slabs": [
+                {
+                    "from_year": 0,
+                    "to_year": 0,
+                    "fraction_of_applicable_earnings": 15 / 26,
+                }
+            ],
+        }
+    )
+    rule.flags.ignore_mandatory = True
+    rule.save()

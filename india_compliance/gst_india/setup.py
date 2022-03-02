@@ -2,7 +2,7 @@ import json
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import (
-    create_custom_fields as add_custom_fields,
+    create_custom_fields,
 )
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 
@@ -11,14 +11,14 @@ from .constants.custom_fields import CUSTOM_FIELDS
 
 
 def after_install():
-    add_custom_fields(CUSTOM_FIELDS, update=True)
-    add_property_setters()
-    add_address_template()
+    create_custom_fields(CUSTOM_FIELDS, update=True)
+    create_property_setters()
+    create_address_template()
     update_accounts_settings_for_taxes()
     frappe.enqueue(add_hsn_sac_codes, now=frappe.flags.in_test)
 
 
-def add_property_setters():
+def create_property_setters():
     options_to_add = [
         {
             "doctype": "Journal Entry",
@@ -41,13 +41,15 @@ def add_property_setters():
             doc["fieldname"],
             "options",
             "\n".join(
-                doc.get("options_before", []) + existing_options + doc.get("options_after", [])
+                doc.get("options_before", [])
+                + existing_options
+                + doc.get("options_after", [])
             ),
             "Text",
         )
 
 
-def add_address_template():
+def create_address_template():
     if frappe.db.exists("Address Template", "India"):
         return
 
@@ -152,7 +154,7 @@ def add_accounts_in_gst_settings(
     accounts_not_added = 1
 
     for account in account_names:
-        # Default Account Added does not exists
+        # Default Account Added does not exist
         if not gst_accounts.get(account):
             accounts_not_added = 0
 

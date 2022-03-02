@@ -1,10 +1,10 @@
 import frappe
 
-from ..setup import add_company_fixtures
+from ..setup import create_company_fixtures
 
 
 def make_company_fixtures(doc, method=None):
     if not frappe.flags.country_change or doc.country != "India":
         return
 
-    add_company_fixtures(doc.name)
+    create_company_fixtures(doc.name)
