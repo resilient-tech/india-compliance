@@ -15,7 +15,7 @@ def after_install():
     create_property_setters()
     create_address_template()
     update_accounts_settings_for_taxes()
-    frappe.enqueue(add_hsn_sac_codes, now=frappe.flags.in_test)
+    frappe.enqueue(create_hsn_codes, now=frappe.flags.in_test)
 
 
 def create_property_setters():
@@ -72,30 +72,18 @@ def update_accounts_settings_for_taxes():
         )
 
 
-def add_hsn_sac_codes():
-    if frappe.flags.in_test and frappe.flags.created_hsn_codes:
-        return
-
-    codes = ["hsn_code", "sac_code"]
-    for code in codes:
-        hsn_sac_codes = json.loads(read_data_file(f"{code}s.json"))
-        create_hsn_codes(hsn_sac_codes, code_field=code)
-
-    if frappe.flags.in_test:
-        frappe.flags.created_hsn_codes = True
-
-
-def create_hsn_codes(data, code_field):
-    for d in data:
-        hsn_code = frappe.get_doc(
-            {
-                "doctype": "GST HSN Code",
-                "description": d["description"],
-                "hsn_code": d[code_field],
-                "name": d[code_field],
-            }
-        )
-        hsn_code.db_insert(ignore_if_duplicate=True)
+def create_hsn_codes():
+    for code_type in ("hsn_code", "sac_code"):
+        codes = json.loads(read_data_file(f"{code_type}s.json"))
+        for code in codes:
+            frappe.get_doc(
+                {
+                    "doctype": "GST HSN Code",
+                    "description": code["description"],
+                    "hsn_code": code[code_type],
+                    "name": code[code_type],
+                }
+            ).db_insert(ignore_if_duplicate=True)
 
 
 def update_regional_tax_settings(company):

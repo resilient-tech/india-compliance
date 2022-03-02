@@ -126,15 +126,15 @@ def get_tds_details(accounts, fiscal_year_details):
 
 
 def create_gratuity_rule_for_india():
-    if not frappe.db.exists("DocType", "Gratuity Rule") or frappe.db.exists(
-        "Gratuity Rule", "Indian Standard Gratuity Rule"
-    ):
+    if not frappe.db.exists("DocType", "Gratuity Rule"):
         return
 
     _create_gratuity_rule_for_india()
 
 
 def _create_gratuity_rule_for_india():
+    if frappe.db.exists("Gratuity Rule", "Indian Standard Gratuity Rule"):
+        return
     rule = frappe.get_doc(
         {
             "doctype": "Gratuity Rule",
