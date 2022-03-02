@@ -1,6 +1,6 @@
-{
+git {
  "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">India Compliance</span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR Download Log\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inward Supply\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Reports &amp; Master\",\"col\":4}}]",
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">India Compliance</span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR Download Log\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Inward Supply\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR 3B Report\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"E Invoice Request Log\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Reports &amp; Master\",\"col\":4}}]",
  "creation": "2022-02-28 19:04:58.655348",
  "docstatus": 0,
  "doctype": "Workspace",
@@ -12,18 +12,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "GST Settings",
-   "link_count": 0,
-   "link_to": "GST Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Reports &amp; Master",
-   "link_count": 1,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -36,9 +26,29 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GSTR-2 Report",
+   "link_count": 0,
+   "link_to": "GSTR-2",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Purchase Register",
+   "link_count": 0,
+   "link_to": "GST Purchase Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2022-02-28 19:30:49.224940",
+ "modified": "2022-03-02 09:26:53.907616",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "India Compliance",
@@ -54,6 +64,20 @@
    "doc_view": "List",
    "label": "GSTR Download Log",
    "link_to": "GSTR Download Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "GSTR 3B Report",
+   "link_to": "GSTR 3B Report",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "E Invoice Request Log",
+   "link_to": "E Invoice Request Log",
    "type": "DocType"
   },
   {
