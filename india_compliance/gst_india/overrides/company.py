@@ -5,7 +5,7 @@ from erpnext.setup.setup_wizard.operations.taxes_setup import \
     from_detailed_data
 from frappe import _
 
-from ..utils import read_data_file
+from india_compliance.gst_india.utils import read_data_file
 
 
 def delete_gst_settings_for_company(doc, method):

@@ -22,7 +22,7 @@ from frappe.utils.data import (add_to_date, cint, cstr, flt, format_date,
 from frappe.utils.scheduler import is_scheduler_inactive
 from pyqrcode import create as qrcreate
 
-from . import get_gst_accounts, get_place_of_supply, read_data_file
+from india_compliance.gst_india.utils import get_gst_accounts, get_place_of_supply, read_data_file
 
 
 @frappe.whitelist()
