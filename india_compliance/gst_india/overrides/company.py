@@ -42,3 +42,12 @@ def make_default_tax_templates(company: str, country: str):
     default_taxes = json.loads(read_data_file("tax_defaults.json"))
     from_detailed_data(company, default_taxes)
     update_regional_tax_settings(company)
+
+
+def update_accounts_settings_for_taxes(doc, method=None):
+    if doc.country != "India" or frappe.db.count("Company") > 1:
+        return
+
+    frappe.db.set_value(
+        "Accounts Settings", None, "add_taxes_from_item_tax_template", 0
+    )

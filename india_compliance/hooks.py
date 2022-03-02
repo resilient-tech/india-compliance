@@ -30,7 +30,9 @@ doctype_list_js = {
 }
 
 doc_events = {
-    "Tax Category": {"validate": "india_compliance.gst_india.overrides.tax_category.validate"},
+    "Tax Category": {
+        "validate": "india_compliance.gst_india.overrides.tax_category.validate"
+    },
     "Sales Invoice": {
         "validate": [
             "india_compliance.gst_india.overrides.sales_invoice.validate_document_name",
@@ -72,6 +74,7 @@ doc_events = {
             "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
             "india_compliance.gst_india.overrides.company.create_default_tax_templates",
         ],
+        "after_insert": "india_compliance.gst_india.overrides.company.update_accounts_settings_for_taxes",
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india",

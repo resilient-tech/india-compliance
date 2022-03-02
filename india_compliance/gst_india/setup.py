@@ -14,7 +14,6 @@ def after_install():
     create_custom_fields(CUSTOM_FIELDS, update=True)
     create_property_setters()
     create_address_template()
-    update_accounts_settings_for_taxes()
     frappe.enqueue(create_hsn_codes, now=frappe.flags.in_test)
 
 
@@ -63,13 +62,6 @@ def create_address_template():
             "template": address_html,
         }
     ).insert(ignore_permissions=True)
-
-
-def update_accounts_settings_for_taxes():
-    if frappe.db.count("Company") == 1:
-        frappe.db.set_value(
-            "Accounts Settings", None, "add_taxes_from_item_tax_template", 0
-        )
 
 
 def create_hsn_codes():
