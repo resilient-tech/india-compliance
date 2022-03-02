@@ -35,12 +35,10 @@ def make_default_tax_templates(company: str, country: str):
         return
 
     if not frappe.db.exists("Company", company):
-        frappe.throw(_(f"Company {company} does not exist yet. Taxes setup aborted."))
+        frappe.throw(
+            _("Company {0} does not exist yet. Taxes setup aborted.").format(company)
+        )
 
-    tax_data = json.loads(read_data_file("india_tax.json"))
-    country_wise_tax = tax_data.get(country)
-    if not country_wise_tax:
-        return
-
-    from_detailed_data(company, country_wise_tax)
+    default_taxes = json.loads(read_data_file("tax_defaults.json"))
+    from_detailed_data(company, default_taxes)
     update_regional_tax_settings(company)

@@ -1,5 +1,7 @@
 from . import STATE_NUMBERS
 
+# TODO: Imporve variable naming
+
 state_options = "\n" + "\n".join(STATE_NUMBERS)
 
 hsn_sac_field = {
