@@ -30,7 +30,7 @@ doctype_list_js = {
 }
 
 doc_events = {
-    "Tax Category": {"validate": "india_compliance.gst_india.overrides.validate"},
+    "Tax Category": {"validate": "india_compliance.gst_india.overrides.tax_category.validate"},
     "Sales Invoice": {
         "validate": [
             "india_compliance.gst_india.overrides.sales_invoice.validate_document_name",
