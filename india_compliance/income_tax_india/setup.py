@@ -13,14 +13,6 @@ from .utils import read_data_file
 def after_install():
     add_custom_fields(CUSTOM_FIELDS, update=True)
 
-    companies = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
-    if not companies:
-        return
-
-    for company in companies:
-        add_company_fixtures(company)
-
-
 def add_company_fixtures(company):
     docs = []
     company = company or frappe.db.get_value("Global Defaults", None, "default_company")
