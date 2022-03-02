@@ -16,11 +16,6 @@ class GstnEwbApi(AuthApi):
                 self.password = creds.get_password("password")
                 break
 
-        # sandbox
-        if self.settings.sandbox:
-            self.comp_gstin = self.username = "05AAACG2115R1ZN"
-            self.password = "abc123@@"
-
         if not self.username:
             frappe.throw(
                 "You have not set credentials in GST Settings. Kindly set your EwayBill credentials to use API service.",
