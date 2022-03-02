@@ -16,7 +16,6 @@
   "b2c_limit",
   "api_settings_tab",
   "api_id",
-  "sandbox",
   "column_break_13",
   "api_secret",
   "section_break_15",
@@ -86,12 +85,6 @@
    "label": "API ID"
   },
   {
-   "default": "0",
-   "fieldname": "sandbox",
-   "fieldtype": "Check",
-   "label": "Sandbox"
-  },
-  {
    "fieldname": "column_break_13",
    "fieldtype": "Column Break"
   },
@@ -118,7 +111,7 @@
    "default": "0",
    "fieldname": "gstn_ewb_api",
    "fieldtype": "Check",
-   "label": "Enable GSTN E-Way bill API"
+   "label": "Enable GSTN e-Waybill API"
   },
   {
    "fieldname": "supplier_compliance_report_settings_section",
@@ -145,7 +138,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-02 10:14:52.844169",
+ "modified": "2022-03-02 16:59:17.515354",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

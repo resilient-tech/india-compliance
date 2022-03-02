@@ -492,13 +492,13 @@ def get_custom_fields():
 		dict(fieldname='irn_cancelled', label='IRN Cancelled', fieldtype='Check', no_copy=1, print_hide=1,
 			depends_on='eval: doc.irn', allow_on_submit=1, insert_after='customer'),
 
-		dict(fieldname='eway_bill_validity', label='E-Way Bill Validity', fieldtype='Data', no_copy=1, print_hide=1,
+		dict(fieldname='eway_bill_validity', label='e-Waybill Validity', fieldtype='Data', no_copy=1, print_hide=1,
 			depends_on='ewaybill', read_only=1, allow_on_submit=1, insert_after='ewaybill'),
 
-		dict(fieldname='eway_bill_cancelled', label='E-Way Bill Cancelled', fieldtype='Check', no_copy=1, print_hide=1,
+		dict(fieldname='eway_bill_cancelled', label='e-Waybill Cancelled', fieldtype='Check', no_copy=1, print_hide=1,
 			depends_on='eval:(doc.eway_bill_cancelled === 1)', read_only=1, allow_on_submit=1, insert_after='customer'),
 
-		dict(fieldname='einvoice_section', label='E-Invoice Fields', fieldtype='Section Break', insert_after='gst_vehicle_type',
+		dict(fieldname='einvoice_section', label='e-Invoice Fields', fieldtype='Section Break', insert_after='gst_vehicle_type',
 			print_hide=1, hidden=1),
 
 		dict(fieldname='ack_no', label='Ack. No.', fieldtype='Data', read_only=1, hidden=1, insert_after='einvoice_section',
@@ -509,7 +509,7 @@ def get_custom_fields():
 		dict(fieldname='irn_cancel_date', label='Cancel Date', fieldtype='Data', read_only=1, hidden=1, insert_after='ack_date',
 			no_copy=1, print_hide=1),
 
-		dict(fieldname='signed_einvoice', label='Signed E-Invoice', fieldtype='Code', options='JSON', hidden=1, insert_after='irn_cancel_date',
+		dict(fieldname='signed_einvoice', label='Signed e-Invoice', fieldtype='Code', options='JSON', hidden=1, insert_after='irn_cancel_date',
 			no_copy=1, print_hide=1, read_only=1),
 
 		dict(fieldname='signed_qr_code', label='Signed QRCode', fieldtype='Code', options='JSON', hidden=1, insert_after='signed_einvoice',
@@ -518,10 +518,10 @@ def get_custom_fields():
 		dict(fieldname='qrcode_image', label='QRCode', fieldtype='Attach Image', hidden=1, insert_after='signed_qr_code',
 			no_copy=1, print_hide=1, read_only=1),
 
-		dict(fieldname='einvoice_status', label='E-Invoice Status', fieldtype='Select', insert_after='qrcode_image',
+		dict(fieldname='einvoice_status', label='e-Invoice Status', fieldtype='Select', insert_after='qrcode_image',
 			options='\nPending\nGenerated\nCancelled\nFailed', default=None, hidden=1, no_copy=1, print_hide=1, read_only=1),
 
-		dict(fieldname='failure_description', label='E-Invoice Failure Description', fieldtype='Code', options='JSON',
+		dict(fieldname='failure_description', label='e-Invoice Failure Description', fieldtype='Code', options='JSON',
 			hidden=1, insert_after='einvoice_status', no_copy=1, print_hide=1, read_only=1)
 	]
 
