@@ -19,12 +19,12 @@ def validate_filters(filters=None):
 	filters = frappe._dict(filters)
 
 	if not filters.company:
-		frappe.throw(_('{} is mandatory for generating E-Invoice Summary Report').format(_('Company')), title=_('Invalid Filter'))
+		frappe.throw(_('{} is mandatory for generating e-Invoice Summary Report').format(_('Company')), title=_('Invalid Filter'))
 	if filters.company:
 		# validate if company has e-invoicing enabled
 		pass
 	if not filters.from_date or not filters.to_date:
-		frappe.throw(_('From Date & To Date is mandatory for generating E-Invoice Summary Report'), title=_('Invalid Filter'))
+		frappe.throw(_('From Date & To Date is mandatory for generating e-Invoice Summary Report'), title=_('Invalid Filter'))
 	if filters.from_date > filters.to_date:
 		frappe.throw(_('From Date must be before To Date'), title=_('Invalid Filter'))
 
