@@ -1,7 +1,7 @@
 import json
 import frappe
 
-from india_compliance.apis.auth_api import AuthApi
+from india_compliance.asp_connectors.auth_api import AuthApi
 
 
 class GstnEwbApi(AuthApi):
@@ -33,7 +33,7 @@ class GstnEwbApi(AuthApi):
             "gstin": self.comp_gstin,
             "username": self.username,
             "password": self.password,
-            "x-api-key": self.settings.api_secret,
+            "x-api-key": self.settings.get_password('api_secret'),
         }
 
     def get_ewaybill(self, ewbNo):

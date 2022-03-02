@@ -12,16 +12,16 @@ class AuthApi:
     def __init__(self):
         self.settings = frappe.get_doc("GST Settings")
         self.test_url = "test/" if self.settings.sandbox else ""
-        self.api_secret = self.settings.api_secret
+        self.api_secret = self.settings.get_password("api_secret")
 
     def log_response(
-        self, response=None, data=None, doctype=None, docname=None, error=None
+        self, response=None, data=None, doctype=None, docname=None, error=None, request_id=None
     ):
         request_log = frappe.get_doc(
             {
                 "doctype": "Integration Request",
                 "integration_type": "Remote",
-                "integration_request_service": "GST India",
+                "integration_request_service": f"GST India - {request_id}",
                 "reference_doctype": doctype,
                 "reference_docname": docname,
                 "data": json.dumps(data, indent=4) if isinstance(data, dict) else data,
@@ -57,9 +57,15 @@ class AuthApi:
         # api calls
         url = self.BASE_URL + self.test_url + self.api_name + url_suffix
         if method == "get":
-            response = api.get(url, params=params, headers=headers).json()
+            response = api.get(url, params=params, headers=headers)
         else:
-            response = api.post(url, params=params, headers=headers, data=data).json()
+            response = api.post(url, params=params, headers=headers, data=data)
+
+        self.mask_secret(headers)
+
+        x_amzn_requestid = response.headers.get('x-amzn-RequestId')
+
+        response = response.json()
 
         result = ""
         if self.no_error_found(response):
@@ -68,13 +74,21 @@ class AuthApi:
             **{
                 ("response" if result else "error"): response,
                 "data": {
+                    "url": url,
                     "headers": headers,
                     "body": data or "",
                     "params": params,
+                    "x-amzn-RequestId": x_amzn_requestid
                 },
+                "request_id": x_amzn_requestid
             }
         )
         return result
+
+    def mask_secret(self, headers):
+        for key in headers:
+            if key in ('x-api-key','password'):
+                headers.update({key: '*' * len(headers.get(key))})
 
     def generate_request_id(self, length=12):
         return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))

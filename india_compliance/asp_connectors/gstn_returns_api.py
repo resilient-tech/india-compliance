@@ -1,7 +1,7 @@
 import frappe
 
 from frappe.utils import now
-from india_compliance.apis.auth_api import AuthApi
+from india_compliance.asp_connectors.auth_api import AuthApi
 
 
 class GstnReturnsApi(AuthApi):
@@ -43,7 +43,7 @@ class GstnReturnsApi(AuthApi):
             "gstin": self.comp_gstin,
             "ret_period": ret_period,
             "otp": otp,
-            "x-api-key": self.settings.api_secret,
+            "x-api-key": self.settings.get_password('api_secret'),
         }
 
     def make_get_request(self, action, ret_period, otp, rtnprd=None):
