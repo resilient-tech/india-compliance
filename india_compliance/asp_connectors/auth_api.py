@@ -11,7 +11,6 @@ class AuthApi:
 
     def __init__(self):
         self.settings = frappe.get_doc("GST Settings")
-        self.test_url = "test/" if self.settings.sandbox else ""
         self.api_secret = self.settings.get_password("api_secret")
 
     def log_response(
@@ -55,7 +54,7 @@ class AuthApi:
             frappe.throw("Invalid method", method.upper())
 
         # api calls
-        url = self.BASE_URL + self.test_url + self.api_name + url_suffix
+        url = self.BASE_URL + self.api_name + url_suffix
         if method == "get":
             response = api.get(url, params=params, headers=headers)
         else:

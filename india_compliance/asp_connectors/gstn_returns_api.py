@@ -16,11 +16,6 @@ class GstnReturnsApi(AuthApi):
                 self.company = creds.company
                 break
 
-        # sandbox
-        if self.settings.sandbox:
-            self.comp_gstin = "33ANSPV5075F1ZH"
-            self.username = "TN_NT2.1186"
-
         if not self.username:
             frappe.throw(
                 "You have not set credentials in GST Settings. Kindly set your GST credentials to use API service.",
