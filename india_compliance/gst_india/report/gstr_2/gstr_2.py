@@ -6,7 +6,7 @@ from datetime import date
 
 import frappe
 
-from ..gstr_1.gstr_1 import Gstr1Report
+from india_compliance.gst_india.report.gstr_1.gstr_1 import Gstr1Report
 
 
 def execute(filters=None):

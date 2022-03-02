@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import frappe
 
-from ..overrides.sales_invoice import validate_document_name
+from india_compliance.gst_india.overrides.sales_invoice import validate_document_name
 
 
 class TestUtils(unittest.TestCase):

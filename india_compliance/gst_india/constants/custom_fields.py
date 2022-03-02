@@ -1,4 +1,4 @@
-from . import STATE_NUMBERS
+from india_compliance.gst_india.constants import STATE_NUMBERS
 
 # TODO: Imporve variable naming
 

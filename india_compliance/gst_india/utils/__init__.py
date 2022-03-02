@@ -4,7 +4,7 @@ from erpnext.controllers.taxes_and_totals import (get_itemised_tax,
 from frappe import _
 from frappe.utils import cstr
 
-from ..constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import STATE_NUMBERS
 
 
 def read_data_file(file_name):
