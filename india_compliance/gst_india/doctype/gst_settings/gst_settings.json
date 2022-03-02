@@ -72,12 +72,35 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-02-24 17:06:17.255536",
+ "modified": "2022-03-01 15:36:20.762304",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
  "owner": "Administrator",
- "permissions": [],
+ "permissions": [
+  {
+   "read": 1,
+   "role": "All"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Accounts User",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
  "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",

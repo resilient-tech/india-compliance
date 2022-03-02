@@ -22,6 +22,7 @@ doctype_js = {
     "Sales Invoice": "gst_india/client_scripts/sales_invoice.js",
     "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
     "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
+    "Company": "gst_india/client_scripts/company.js",
 }
 
 doctype_list_js = {
@@ -29,7 +30,9 @@ doctype_list_js = {
 }
 
 doc_events = {
-    "Tax Category": {"validate": "india_compliance.gst_india.overrides.validate"},
+    "Tax Category": {
+        "validate": "india_compliance.gst_india.overrides.tax_category.validate"
+    },
     "Sales Invoice": {
         "validate": [
             "india_compliance.gst_india.overrides.sales_invoice.validate_document_name",
@@ -66,7 +69,15 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
     },
     "Company": {
-        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company"
+        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
+        "on_update": [
+            "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
+            "india_compliance.gst_india.overrides.company.create_default_tax_templates",
+        ],
+        "after_insert": "india_compliance.gst_india.overrides.company.update_accounts_settings_for_taxes",
+    },
+    "DocType": {
+        "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india",
     },
 }
 
@@ -142,7 +153,7 @@ regional_overrides = {
 # ------------
 
 # before_install = "india_compliance.install.before_install"
-# after_install = "india_compliance.install.after_install"
+after_install = "india_compliance.install.after_install"
 
 # Uninstallation
 # ------------

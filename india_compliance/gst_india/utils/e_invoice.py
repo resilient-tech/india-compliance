@@ -22,7 +22,7 @@ from frappe.utils.data import (add_to_date, cint, cstr, flt, format_date,
 from frappe.utils.scheduler import is_scheduler_inactive
 from pyqrcode import create as qrcreate
 
-from . import get_gst_accounts, get_place_of_supply
+from . import get_gst_accounts, get_place_of_supply, read_data_file
 
 
 @frappe.whitelist()
@@ -88,10 +88,6 @@ def raise_document_name_too_long_error():
 	msg += _('Please account for ammended documents too.')
 	frappe.throw(msg, title=title)
 
-def read_json(name):
-	file_path = frappe.get_app_path("india_compliance", "gst_india", "data", f"{name}.json")
-	with open(file_path, 'r') as f:
-		return cstr(f.read())
 
 def get_transaction_details(invoice):
 	supply_type = ''
@@ -189,7 +185,7 @@ def get_item_list(invoice):
 	item_list = []
 
 	for d in invoice.items:
-		einvoice_item_schema = read_json('einv_item_template')
+		einvoice_item_schema = read_data_file("einv_item_template.json")
 		item = frappe._dict({})
 		item.update(d.as_dict())
 
@@ -418,7 +414,7 @@ def validate_totals(einvoice):
 def make_einvoice(invoice):
 	validate_mandatory_fields(invoice)
 
-	schema = read_json('einv_template')
+	schema = read_data_file("einv_template.json")
 
 	transaction_details = get_transaction_details(invoice)
 	item_list = get_item_list(invoice)

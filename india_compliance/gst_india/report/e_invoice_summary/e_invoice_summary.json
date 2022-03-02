@@ -11,7 +11,7 @@
  "is_standard": "Yes",
  "json": "{}",
  "letter_head": "",
- "modified": "2022-02-24 17:25:08.499704",
+ "modified": "2022-03-01 15:49:12.868970",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "E-Invoice Summary",
@@ -22,7 +22,10 @@
  "report_type": "Script Report",
  "roles": [
   {
-   "role": "Administrator"
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
   }
  ]
 }

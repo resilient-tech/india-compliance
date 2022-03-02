@@ -9,7 +9,7 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2022-02-24 17:26:04.842900",
+ "modified": "2022-03-01 15:46:30.974086",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1",
@@ -18,5 +18,15 @@
  "ref_doctype": "GL Entry",
  "report_name": "GSTR-1",
  "report_type": "Script Report",
- "roles": []
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Auditor"
+  }
+ ]
 }
