@@ -5,7 +5,6 @@ from erpnext.setup.setup_wizard.operations.taxes_setup import \
     from_detailed_data
 from frappe import _
 
-from ..setup import update_regional_tax_settings
 from ..utils import read_data_file
 
 
@@ -41,7 +40,7 @@ def make_default_tax_templates(company: str, country: str):
 
     default_taxes = json.loads(read_data_file("tax_defaults.json"))
     from_detailed_data(company, default_taxes)
-    update_regional_tax_settings(company)
+    update_gst_settings(company)
 
 
 def update_accounts_settings_for_taxes(doc, method=None):
@@ -51,3 +50,80 @@ def update_accounts_settings_for_taxes(doc, method=None):
     frappe.db.set_value(
         "Accounts Settings", None, "add_taxes_from_item_tax_template", 0
     )
+
+
+def update_gst_settings(company):
+    # Will only add default GST accounts if present
+    input_account_names = ["Input Tax CGST", "Input Tax SGST", "Input Tax IGST"]
+    output_account_names = ["Output Tax CGST", "Output Tax SGST", "Output Tax IGST"]
+    rcm_accounts = ["Input Tax CGST RCM", "Input Tax SGST RCM", "Input Tax IGST RCM"]
+    gst_settings = frappe.get_single("GST Settings")
+    existing_account_list = []
+
+    for account in gst_settings.get("gst_accounts"):
+        for key in ["cgst_account", "sgst_account", "igst_account"]:
+            existing_account_list.append(account.get(key))
+
+    gst_accounts = frappe._dict(
+        frappe.get_all(
+            "Account",
+            {
+                "company": company,
+                "account_name": (
+                    "in",
+                    input_account_names + output_account_names + rcm_accounts,
+                ),
+            },
+            ["account_name", "name"],
+            as_list=1,
+        )
+    )
+
+    add_accounts_in_gst_settings(
+        company, input_account_names, gst_accounts, existing_account_list, gst_settings
+    )
+    add_accounts_in_gst_settings(
+        company, output_account_names, gst_accounts, existing_account_list, gst_settings
+    )
+    add_accounts_in_gst_settings(
+        company,
+        rcm_accounts,
+        gst_accounts,
+        existing_account_list,
+        gst_settings,
+        is_reverse_charge=1,
+    )
+
+    gst_settings.save()
+
+
+def add_accounts_in_gst_settings(
+    company,
+    account_names,
+    gst_accounts,
+    existing_account_list,
+    gst_settings,
+    is_reverse_charge=0,
+):
+    accounts_not_added = 1
+
+    for account in account_names:
+        # Default Account Added does not exist
+        if not gst_accounts.get(account):
+            accounts_not_added = 0
+
+        # Check if already added in GST Settings
+        if gst_accounts.get(account) in existing_account_list:
+            accounts_not_added = 0
+
+    if accounts_not_added:
+        gst_settings.append(
+            "gst_accounts",
+            {
+                "company": company,
+                "cgst_account": gst_accounts.get(account_names[0]),
+                "sgst_account": gst_accounts.get(account_names[1]),
+                "igst_account": gst_accounts.get(account_names[2]),
+                "is_reverse_charge_account": is_reverse_charge,
+            },
+        )
