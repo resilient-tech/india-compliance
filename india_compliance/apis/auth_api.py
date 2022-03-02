@@ -12,7 +12,7 @@ class AuthApi:
     def __init__(self):
         self.settings = frappe.get_doc("GST Settings")
         self.test_url = "test/" if self.settings.sandbox else ""
-        self.api_secret = self.settings.api_secret
+        self.api_secret = self.settings.get_password("api_secret")
 
     def log_response(
         self, response=None, data=None, doctype=None, docname=None, error=None
