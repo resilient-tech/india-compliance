@@ -63,12 +63,9 @@ class AuthApi:
         self.mask_secret(headers)
 
         x_amzn_requestid = response.headers.get('x-amzn-RequestId')
-
         response = response.json()
 
-        result = ""
-        if self.no_error_found(response):
-            result = response.get("result") or response
+        result = response.get("result") or response
         self.log_response(
             **{
                 ("response" if result else "error"): response,
@@ -82,41 +79,11 @@ class AuthApi:
                 "request_id": x_amzn_requestid
             }
         )
-        return result
+        return response
 
     def mask_secret(self, headers):
-        for key in headers:
-            if key in ('x-api-key','password'):
-                headers.update({key: '*' * len(headers.get(key))})
+        headers.update({key: "*****" for key in headers if key in ("x-api-key","password")})
 
     def generate_request_id(self, length=12):
         return "".join(random.choices(string.ascii_uppercase + string.digits, k=length))
-
-    def no_error_found(self, r):
-        return self.success(r) or self.otp_required(r) or self.no_docs_found(r)
-
-    def success(self, r):
-        return (
-            True
-            if r.get("result") or r.get("success") not in ["false", "False", False]
-            else False
-        )
-
-    def otp_required(self, r):
-        return r.get("errorCode") == "RETOTPREQUEST"
-
-    def no_docs_found(self, r):
-        if not r.get("errorCode"):
-            return
-
-        no_docs_found = {
-            "gstr_2b": ["RET2B1023", "RET2B1016"],
-            "gstr_2a": ["RET13508", "RET13509", "RET13510"],
-            "gstr_1": ["RET11416"],
-            "gstr_3b": ["RT-3BAS1009"],
-        }
-
-        for ret in no_docs_found:
-            if r.get("errorCode") in no_docs_found[ret]:
-                return True
-        return False
+        
