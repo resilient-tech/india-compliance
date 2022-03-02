@@ -25,7 +25,11 @@ class GstnPublicApi(AuthApi):
             params=self.get_params(*args, **kwargs),
             headers=self.get_headers(),
         )
-        return frappe._dict(response)
+
+        result = ""
+        if self.no_error_found(response):
+            result = response.get("result") or response
+        return frappe._dict(result)
 
     def get_gstin_info(self, gstin):
         return self.make_get_request("search?", "TP", gstin)
@@ -35,3 +39,13 @@ class GstnPublicApi(AuthApi):
             start, end = fy.split("-")
             fy = f"{start}-{end[-2:]}"
         return self.make_get_request("returns?", "RETTRACK", gstin, fy=fy)
+
+    def no_error_found(self, r):
+        return self.success(r)
+
+    def success(self, r):
+        return (
+            True
+            if r.get("result") or r.get("success") not in ["false", "False", False]
+            else False
+        )

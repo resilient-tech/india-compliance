@@ -48,7 +48,11 @@ class GstnReturnsApi(AuthApi):
             params=self.get_params(action, ret_period, rtnprd),
             headers=self.get_headers(ret_period or rtnprd, otp),
         )
-        return frappe._dict(response)
+
+        result = ""
+        if self.no_error_found(response):
+            result = response.get("result") or response
+        return frappe._dict(result)
 
     def create_or_update_download_log(
         self, gst_return, classification, return_period, no_data_found=0
@@ -79,6 +83,35 @@ class GstnReturnsApi(AuthApi):
             )
             doc.last_updated_on = now()
             doc.save(ignore_permissions=True)
+
+    def no_error_found(self, r):
+        return self.success(r) or self.otp_required(r) or self.no_docs_found(r)
+
+    def success(self, r):
+        return (
+            True
+            if r.get("result") or r.get("success") not in ["false", "False", False]
+            else False
+        )
+
+    def otp_required(self, r):
+        return r.get("errorCode") == "RETOTPREQUEST"
+
+    def no_docs_found(self, r):
+        if not r.get("errorCode"):
+            return
+
+        no_docs_found = {
+            "gstr_2b": ["RET2B1023", "RET2B1016"],
+            "gstr_2a": ["RET13508", "RET13509", "RET13510"],
+            "gstr_1": ["RET11416"],
+            "gstr_3b": ["RT-3BAS1009"],
+        }
+
+        for ret in no_docs_found:
+            if r.get("errorCode") in no_docs_found[ret]:
+                return True
+        return False
 
 
 class Gstr2bApi(GstnReturnsApi):

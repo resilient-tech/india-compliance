@@ -38,7 +38,11 @@ class GstnEwbApi(AuthApi):
             params={"ewbNo": ewbNo},
             headers=self.get_headers(),
         )
-        return frappe._dict(response)
+
+        result = ""
+        if self.no_error_found(response):
+            result = response.get("result") or response
+        return frappe._dict(result)
 
     # generate post methods with different actions.
     def make_post_request(self, action, data):
@@ -50,7 +54,11 @@ class GstnEwbApi(AuthApi):
             headers=self.get_headers(),
             data=data,
         )
-        return frappe._dict(response)
+
+        result = ""
+        if self.no_error_found(response):
+            result = response.get("result") or response
+        return frappe._dict(result)
 
     def generate_ewaybill(self, data):
         return self.make_post_request("GENEWAYBILL", data)
@@ -66,3 +74,13 @@ class GstnEwbApi(AuthApi):
 
     def cancel_ewaybill(self, data):
         return self.make_post_request("CANEWB", data)
+
+    def no_error_found(self, r):
+        return self.success(r)
+
+    def success(self, r):
+        return (
+            True
+            if r.get("result") or r.get("success") not in ["false", "False", False]
+            else False
+        )
