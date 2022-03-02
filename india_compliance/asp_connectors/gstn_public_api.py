@@ -1,5 +1,5 @@
 import frappe
-from india_compliance.apis.auth_api import AuthApi
+from india_compliance.asp_connectors.auth_api import AuthApi
 
 
 class GstnPublicApi(AuthApi):
@@ -16,7 +16,7 @@ class GstnPublicApi(AuthApi):
         }
 
     def get_headers(self):
-        return {"x-api-key": self.settings.api_secret, "gstin": self.comp_gstin}
+        return {"x-api-key": self.settings.get_password('api_secret'), "gstin": self.comp_gstin}
 
     def make_get_request(self, urlsuffix, *args, **kwargs):
         response = self.make_request(
