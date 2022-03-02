@@ -27,7 +27,7 @@ frappe.ui.form.on("Sales Invoice", {
 		if(frm.doc.docstatus == 1 && !frm.is_dirty()
 			&& !frm.doc.is_return && !frm.doc.ewaybill) {
 
-			frm.add_custom_button('E-Way Bill JSON', () => {
+			frm.add_custom_button('e-Waybill JSON', () => {
 				frappe.call({
 					method: 'india_compliance.gst_india.utils.e_waybill.generate_ewb_json',
 					args: {

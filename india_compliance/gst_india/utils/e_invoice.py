@@ -332,7 +332,7 @@ def get_return_doc_reference(invoice):
 
 def get_eway_bill_details(invoice):
 	if invoice.is_return:
-		frappe.throw(_('E-Way Bill cannot be generated for Credit Notes & Debit Notes. Please clear fields in the Transporter Section of the invoice.'),
+		frappe.throw(_('e-Waybill cannot be generated for Credit Notes & Debit Notes. Please clear fields in the Transporter Section of the invoice.'),
 			title=_('Invalid Fields'))
 
 
@@ -489,9 +489,9 @@ def show_link_to_error_log(invoice, einvoice):
 	err_log = log_error(einvoice)
 	link_to_error_log = get_link_to_form('Error Log', err_log.name, 'Error Log')
 	frappe.throw(
-		_('An error occurred while creating e-invoice for {}. Please check {} for more information.').format(
+		_('An error occurred while creating e-Invoice for {}. Please check {} for more information.').format(
 			invoice.name, link_to_error_log),
-		title=_('E Invoice Creation Failed')
+		title=_('e-Invoice Creation Failed')
 	)
 
 def log_error(data=None):
@@ -508,7 +508,7 @@ def log_error(data=None):
 		"Data:", data, seperator,
 		"Exception:", err_tb
 	])
-	return frappe.log_error(title=_('E Invoice Request Failed'), message=message)
+	return frappe.log_error(title=_('e-Invoice Request Failed'), message=message)
 
 def santize_einvoice_fields(einvoice):
 	int_fields = ["Pin","Distance","CrDay"]
@@ -587,7 +587,7 @@ class GSPConnector():
 		self.e_invoice_settings = frappe.get_cached_doc('E Invoice Settings')
 
 		if not self.e_invoice_settings.enable:
-			frappe.throw(_("E-Invoicing is disabled. Please enable it from {} to generate e-invoices.").format(get_link_to_form("E Invoice Settings", "E Invoice Settings")))
+			frappe.throw(_("E-Invoicing is disabled. Please enable it from {} to generate e-Invoices.").format(get_link_to_form("E Invoice Settings", "E Invoice Settings")))
 
 		if self.invoice:
 			gstin = self.get_seller_gstin()
@@ -595,7 +595,7 @@ class GSPConnector():
 			if credentials_for_gstin:
 				self.credentials = credentials_for_gstin[0]
 			else:
-				frappe.throw(_('Cannot find e-invoicing credentials for selected Company GSTIN. Please check E-Invoice Settings'))
+				frappe.throw(_('Cannot find e-invoicing credentials for selected Company GSTIN. Please check e-Invoice Settings'))
 		else:
 			self.credentials = self.e_invoice_settings.credentials[0] if self.e_invoice_settings.credentials else None
 
@@ -781,7 +781,7 @@ class GSPConnector():
 		try:
 			# validate cancellation
 			if time_diff_in_hours(now_datetime(), self.invoice.ack_date) > 24:
-				frappe.throw(_('E-Invoice cannot be cancelled after 24 hours of IRN generation.'), title=_('Not Allowed'), exc=CancellationNotAllowed)
+				frappe.throw(_('e-Invoice cannot be cancelled after 24 hours of IRN generation.'), title=_('Not Allowed'), exc=CancellationNotAllowed)
 			if not irn:
 				frappe.throw(_('IRN not found. You must generate IRN before cancelling.'), title=_('Not Allowed'), exc=CancellationNotAllowed)
 
@@ -871,7 +871,7 @@ class GSPConnector():
 				self.invoice.flags.updater_reference = {
 					'doctype': self.invoice.doctype,
 					'docname': self.invoice.name,
-					'label': _('E-Way Bill Generated')
+					'label': _('e-Waybill Generated')
 				}
 				self.update_invoice()
 
@@ -903,7 +903,7 @@ class GSPConnector():
 				self.invoice.flags.updater_reference = {
 					'doctype': self.invoice.doctype,
 					'docname': self.invoice.name,
-					'label': _('E-Way Bill Cancelled - {}').format(remark)
+					'label': _('e-Waybill Cancelled - {}').format(remark)
 				}
 				self.update_invoice()
 
@@ -947,7 +947,7 @@ class GSPConnector():
 	def raise_error(self, raise_exception=False, errors=None):
 		if errors is None:
 			errors = []
-		title = _('E Invoice Request Failed')
+		title = _('e-Invoice Request Failed')
 		if errors:
 			frappe.throw(errors, title=title, as_list=1)
 		else:
@@ -1069,8 +1069,8 @@ def generate_einvoices(docnames):
 
 		success = len(docnames) - len(failures)
 		frappe.msgprint(
-			_('{} e-invoices generated successfully').format(success),
-			title=_('Bulk E-Invoice Generation Complete')
+			_('{} e-Invoices generated successfully').format(success),
+			title=_('Bulk e-Invoice Generation Complete')
 		)
 
 	else:
@@ -1100,7 +1100,7 @@ def show_bulk_action_failure_message(failures):
 
 		frappe.msgprint(
 			message,
-			title=_('Bulk E-Invoice Generation Complete'),
+			title=_('Bulk e-Invoice Generation Complete'),
 			indicator='red'
 		)
 
@@ -1117,8 +1117,8 @@ def cancel_irns(docnames, reason, remark):
 
 		success = len(docnames) - len(failures)
 		frappe.msgprint(
-			_('{} e-invoices cancelled successfully').format(success),
-			title=_('Bulk E-Invoice Cancellation Complete')
+			_('{} e-Invoices cancelled successfully').format(success),
+			title=_('Bulk e-Invoice Cancellation Complete')
 		)
 	else:
 		enqueue_bulk_action(schedule_bulk_cancel_irn, docnames=docnames, reason=reason, remark=remark)
@@ -1146,9 +1146,9 @@ def enqueue_bulk_action(job, **kwargs):
 	)
 
 	if job == schedule_bulk_generate_irn:
-		msg = _('E-Invoices will be generated in a background process.')
+		msg = _('e-Invoices will be generated in a background process.')
 	else:
-		msg = _('E-Invoices will be cancelled in a background process.')
+		msg = _('e-Invoices will be cancelled in a background process.')
 
 	frappe.msgprint(msg, alert=1)
 

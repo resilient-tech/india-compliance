@@ -11,14 +11,14 @@ class GstnEwbApi(AuthApi):
         self.url_suffix = "ewayapi?"
         self.comp_gstin = company_gstin
         for creds in self.settings.gst_credentials:
-            if creds.gstin == company_gstin and creds.service == "EwayBill":
+            if creds.gstin == company_gstin and creds.service == "e-Waybill":
                 self.username = creds.username
                 self.password = creds.get_password("password")
                 break
 
         if not self.username:
             frappe.throw(
-                "You have not set credentials in GST Settings. Kindly set your EwayBill credentials to use API service.",
+                "You have not set credentials in GST Settings. Kindly set your e-Waybill credentials to use API service.",
                 title="Credentials unavailable",
             )
 
