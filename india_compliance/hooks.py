@@ -12,8 +12,6 @@ required_apps = ["erpnext"]
 
 doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
-    "Supplier": "gst_india/client_scripts/supplier.js",
-    "Customer": "gst_india/client_scripts/customer.js",
     "Sales Order": "gst_india/client_scripts/sales_order.js",
     "Delivery Note": "gst_india/client_scripts/delivery_note.js",
     "Purchase Order": "gst_india/client_scripts/purchase_order.js",
