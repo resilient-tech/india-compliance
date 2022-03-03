@@ -65,7 +65,9 @@ class AuthApi:
         x_amzn_requestid = response.headers.get('x-amzn-RequestId')
         response = response.json()
 
-        result = response.get("result") or response
+        result = ""
+        if self.no_error_found(response):
+            result = response.get("result") or response
         self.log_response(
             **{
                 ("response" if result else "error"): response,
@@ -79,7 +81,7 @@ class AuthApi:
                 "request_id": x_amzn_requestid
             }
         )
-        return response
+        return result
 
     def mask_secret(self, headers):
         headers.update({key: "*****" for key in headers if key in ("x-api-key","password")})
