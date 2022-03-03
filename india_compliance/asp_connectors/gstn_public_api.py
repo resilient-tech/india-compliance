@@ -25,11 +25,7 @@ class GstnPublicApi(AuthApi):
             params=self.get_params(*args, **kwargs),
             headers=self.get_headers(),
         )
-
-        result = ""
-        if self.no_error_found(response):
-            result = response.get("result") or response
-        return frappe._dict(result)
+        return frappe._dict(response)
 
     def get_gstin_info(self, gstin):
         return self.make_get_request("search?", "TP", gstin)

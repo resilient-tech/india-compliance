@@ -38,11 +38,7 @@ class GstnEwbApi(AuthApi):
             params={"ewbNo": ewbNo},
             headers=self.get_headers(),
         )
-
-        result = ""
-        if self.no_error_found(response):
-            result = response.get("result") or response
-        return frappe._dict(result)
+        return frappe._dict(response)
 
     # generate post methods with different actions.
     def make_post_request(self, action, data):
@@ -54,11 +50,7 @@ class GstnEwbApi(AuthApi):
             headers=self.get_headers(),
             data=data,
         )
-
-        result = ""
-        if self.no_error_found(response):
-            result = response.get("result") or response
-        return frappe._dict(result)
+        return frappe._dict(response)
 
     def generate_ewaybill(self, data):
         return self.make_post_request("GENEWAYBILL", data)

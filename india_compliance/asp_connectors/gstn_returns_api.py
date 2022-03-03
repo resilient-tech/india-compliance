@@ -48,11 +48,7 @@ class GstnReturnsApi(AuthApi):
             params=self.get_params(action, ret_period, rtnprd),
             headers=self.get_headers(ret_period or rtnprd, otp),
         )
-
-        result = ""
-        if self.no_error_found(response):
-            result = response.get("result") or response
-        return frappe._dict(result)
+        return frappe._dict(response)
 
     def create_or_update_download_log(
         self, gst_return, classification, return_period, no_data_found=0
