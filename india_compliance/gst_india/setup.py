@@ -171,7 +171,7 @@ def get_custom_fields():
 			insert_after='language', print_hide=1, collapsible=1),
 		dict(fieldname='gst_category', label='GST Category',
 			fieldtype='Select', insert_after='gst_section', print_hide=1,
-			options='\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders',
+			options='\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders',
 			fetch_from='customer.gst_category', fetch_if_empty=1, length=25),
 		dict(fieldname='export_type', label='Export Type',
 			fieldtype='Select', insert_after='gst_category', print_hide=1,
@@ -183,7 +183,7 @@ def get_custom_fields():
 	delivery_note_gst_category = [
 		dict(fieldname='gst_category', label='GST Category',
 			fieldtype='Select', insert_after='gst_vehicle_type', print_hide=1,
-			options='\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders',
+			options='\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders',
 			fetch_from='customer.gst_category', fetch_if_empty=1),
 	]
 
@@ -702,7 +702,7 @@ def get_custom_fields():
 				'label': 'GST Category',
 				'fieldtype': 'Select',
 				'insert_after': 'pan',
-				'options': 'Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders',
+				'options': 'Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders',
 				'default': 'Unregistered'
 			},
 			{
