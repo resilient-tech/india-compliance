@@ -15,11 +15,12 @@ def execute():
 				'fieldtype': 'Select'
 				},['name','options'], as_dict=True)
 
-			options = custom_field.options.split('\n')
-			if "Consumer" in options:
-				options.remove("Consumer")
-				options_string = "\n".join(option for option in options)
-				frappe.db.set_value("Custom Field", custom_field.name, 'options', options_string)
+			if custom_field:
+				options = custom_field.options.split('\n')
+				if "Consumer" in options:
+					options.remove("Consumer")
+					options_string = "\n".join(option for option in options)
+					frappe.db.set_value("Custom Field", custom_field.name, 'options', options_string)
 
 
 			
