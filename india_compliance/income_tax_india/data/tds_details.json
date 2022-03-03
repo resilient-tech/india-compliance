@@ -1,0 +1,48 @@
+{
+    "Payment to Contractors (Single / Aggregate)": [
+        ["TDS - 194C - Company", 2, 30000, 100000],
+        ["TDS - 194C - Individual", 1, 30000, 100000],
+        ["TDS - 194C - No PAN / Invalid PAN", 20, 30000, 100000]
+    ],
+    "Insurance Commission": [
+        ["TDS - 194D - Company", 5, 15000, 0],
+        ["TDS - 194D - Company Assessee", 10, 15000, 0],
+        ["TDS - 194D - Individual", 5, 15000, 0],
+        ["TDS - 194D - No PAN / Invalid PAN", 20, 15000, 0]
+    ],
+    "Non-exempt payments made under a life insurance policy": [
+        ["TDS - 194DA - Company", 1, 100000, 0],
+        ["TDS - 194DA - Individual", 1, 100000, 0],
+        ["TDS - 194DA - No PAN / Invalid PAN", 20, 100000, 0]
+    ],
+    "Commission / Brokerage": [
+        ["TDS - 194H - Company", 5, 15000, 0],
+        ["TDS - 194H - Individual", 5, 15000, 0],
+        ["TDS - 194H - No PAN / Invalid PAN", 20, 15000, 0]
+    ],
+    "Rent": [
+        ["TDS - 194I - Rent - Company", 10, 180000, 0],
+        ["TDS - 194I - Rent - Individual", 10, 180000, 0],
+        ["TDS - 194I - Rent - No PAN / Invalid PAN", 20, 180000, 0]
+    ],
+    "Rent-Plant / Machinery": [
+        ["TDS - 194I - Rent/Machinery - Company", 2, 180000, 0],
+        ["TDS - 194I - Rent/Machinery - Individual", 2, 180000, 0],
+        ["TDS - 194I - Rent/Machinery - No PAN / Invalid PAN", 20, 180000, 0]
+    ],
+    "Professional Fees": [
+        ["TDS - 194J - Professional Fees - Company", 10, 30000, 0],
+        ["TDS - 194J - Professional Fees - Individual", 10, 30000, 0],
+        ["TDS - 194J - Professional Fees - No PAN / Invalid PAN", 20, 30000, 0]
+    ],
+    "Director Fees": [
+        ["TDS - 194J - Director Fees - Company", 10, 0, 0],
+        ["TDS - 194J - Director Fees - Individual", 10, 0, 0],
+        ["TDS - 194J - Director Fees - No PAN / Invalid PAN", 20, 0, 0]
+    ],
+    "Dividends": [
+        ["TDS - 194 - Dividends - Company", 10, 2500, 0],
+        ["TDS - 194 - Dividends - Individual", 10, 2500, 0],
+        ["TDS - 194 - Dividends - No PAN / Invalid PAN", 20, 2500, 0]
+    ]
+}

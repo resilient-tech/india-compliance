@@ -5,7 +5,7 @@
 import frappe
 from frappe import _
 
-from ..provident_fund_deductions.provident_fund_deductions import \
+from india_compliance.income_tax_india.report.provident_fund_deductions.provident_fund_deductions import \
     get_conditions
 
 
