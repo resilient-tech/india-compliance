@@ -36,41 +36,6 @@ class GSTSettings(Document):
 				if account.get(fieldname):
 					account_list.append(account.get(fieldname))
 
-@frappe.whitelist()
-def send_reminder():
-	frappe.has_permission('GST Settings', throw=True)
-
-	last_sent = frappe.db.get_single_value('GST Settings', 'gstin_email_sent_on')
-	if last_sent and date_diff(nowdate(), last_sent) < 3:
-		frappe.throw(_("Please wait 3 days before resending the reminder."))
-
-	frappe.db.set_value('GST Settings', 'GST Settings', 'gstin_email_sent_on', nowdate())
-
-	# enqueue if large number of customers, suppliser
-	frappe.enqueue('india_compliance.gst_india.doctype.gst_settings.gst_settings.send_gstin_reminder_to_all_parties')
-	frappe.msgprint(_('Email Reminders will be sent to all parties with email contacts'))
-
-def send_gstin_reminder_to_all_parties():
-	parties = []
-	for address_name in frappe.db.sql('''select name
-		from tabAddress where country = "India" and ifnull(gstin, '')='' '''):
-		address = frappe.get_doc('Address', address_name[0])
-		for link in address.links:
-			party = frappe.get_doc(link.link_doctype, link.link_name)
-			if link.link_doctype in ('Customer', 'Supplier'):
-				t = (link.link_doctype, link.link_name, address.email_id)
-				if not t in parties:
-					parties.append(t)
-
-	sent_to = []
-	for party in parties:
-		# get email from default contact
-		try:
-			email_id = _send_gstin_reminder(party[0], party[1], party[2], sent_to)
-			sent_to.append(email_id)
-		except EmailMissing:
-			pass
-
 
 @frappe.whitelist()
 def send_gstin_reminder(party_type, party):

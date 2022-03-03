@@ -5,28 +5,15 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "gst_summary",
   "gst_tax_settings_section",
   "round_off_gst_values",
   "column_break_4",
   "hsn_wise_tax_breakup",
-  "gstin_email_sent_on",
   "section_break_4",
   "gst_accounts",
   "b2c_limit"
  ],
  "fields": [
-  {
-   "fieldname": "gst_summary",
-   "fieldtype": "HTML",
-   "label": "GST Summary"
-  },
-  {
-   "fieldname": "gstin_email_sent_on",
-   "fieldtype": "Date",
-   "label": "GSTIN Email Sent On",
-   "read_only": 1
-  },
   {
    "fieldname": "section_break_4",
    "fieldtype": "Section Break"
@@ -72,7 +59,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-01 15:36:20.762304",
+ "modified": "2022-03-03 16:46:19.412013",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
