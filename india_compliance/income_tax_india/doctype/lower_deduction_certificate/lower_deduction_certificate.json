@@ -127,13 +127,36 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-02-24 17:11:33.821752",
+ "modified": "2022-03-01 15:38:38.942335",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "Lower Deduction Certificate",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
- "permissions": [],
+ "permissions": [
+  {
+   "read": 1,
+   "role": "All"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Accounts User",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

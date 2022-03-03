@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from . import (get_gst_accounts, get_itemised_tax_breakup_data,
+from india_compliance.gst_india.utils import (get_gst_accounts, get_itemised_tax_breakup_data,
                set_gst_state_and_state_number, validate_gstin_check_digit)
 
 
