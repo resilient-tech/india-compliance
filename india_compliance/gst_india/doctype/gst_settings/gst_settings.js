@@ -64,14 +64,7 @@ frappe.ui.form.on("GST Account", {
 	},
 	is_output_account: function (frm, cdt, cdn) {
 		uncheck_other_fields(frm, cdt, cdn, 'is_output_account');
-	},
-	is_cash_ledger_account: function (frm, cdt, cdn) {
-		uncheck_other_fields(frm, cdt, cdn, 'is_cash_ledger_account');
-	},
-	is_credit_ledger_account: function (frm, cdt, cdn) {
-		uncheck_other_fields(frm, cdt, cdn, 'is_credit_ledger_account');
-	},
-	
+	}
 })
 
 var remove_checked_item = function (arr, value) { 

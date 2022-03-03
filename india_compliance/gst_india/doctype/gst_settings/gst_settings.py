@@ -24,6 +24,7 @@ class GSTSettings(Document):
 	def validate(self):
 		# Validate duplicate accounts
 		self.validate_duplicate_accounts()
+		self.validate_multiple_accounts()
 
 	def validate_duplicate_accounts(self):
 		account_list = []
@@ -35,6 +36,18 @@ class GSTSettings(Document):
 
 				if account.get(fieldname):
 					account_list.append(account.get(fieldname))
+
+	def validate_multiple_accounts(self):
+		selected_accounts_list = []
+		for index, account in enumerate(self.get('gst_accounts'), 1):
+			for fields in ['is_reverse_charge_account','is_input_account', 'is_output_account']:
+				if account.get(fields):
+					selected_accounts_list.append(account.get(fields))
+
+			if len(selected_accounts_list) > 1:
+				selected_accounts_list.clear()
+				frappe.throw(_(f"Can select only one account per row #{index}"))
+			selected_accounts_list.clear()
 
 @frappe.whitelist()
 def send_reminder():
