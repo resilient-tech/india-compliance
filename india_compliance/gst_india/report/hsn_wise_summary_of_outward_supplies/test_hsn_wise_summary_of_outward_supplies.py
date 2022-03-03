@@ -9,13 +9,13 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import \
     create_sales_invoice
 from erpnext.stock.doctype.item.test_item import make_item
 
-from ...doctype.gstr_3b_report.test_gstr_3b_report import \
+from india_compliance.gst_india.doctype.gstr_3b_report.test_gstr_3b_report import \
     make_company as setup_company
-from ...doctype.gstr_3b_report.test_gstr_3b_report import \
+from india_compliance.gst_india.doctype.gstr_3b_report.test_gstr_3b_report import \
     make_customers as setup_customers
-from ...doctype.gstr_3b_report.test_gstr_3b_report import \
+from india_compliance.gst_india.doctype.gstr_3b_report.test_gstr_3b_report import \
     set_account_heads as setup_gst_settings
-from ...report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import \
+from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import \
     execute as run_report
 
 

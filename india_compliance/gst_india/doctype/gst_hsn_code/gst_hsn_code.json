@@ -33,13 +33,48 @@
   }
  ],
  "links": [],
- "modified": "2022-02-24 17:08:11.824554",
+ "modified": "2022-03-01 15:35:07.689101",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST HSN Code",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
- "permissions": [],
+ "permissions": [
+  {
+   "read": 1,
+   "role": "All"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Accounts User",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Item Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Stock Manager",
+   "write": 1
+  }
+ ],
  "quick_entry": 1,
  "search_fields": "hsn_code, description",
  "sort_field": "modified",

@@ -5,8 +5,8 @@ from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _
 from frappe.model.utils import get_fetch_values
 
-from ..constants import STATE_NUMBERS
-from ..utils import get_gst_accounts, get_place_of_supply
+from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.utils import get_gst_accounts, get_place_of_supply
 
 
 def set_place_of_supply(doc, method=None):

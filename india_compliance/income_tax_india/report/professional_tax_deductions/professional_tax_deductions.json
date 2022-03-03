@@ -9,7 +9,7 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2022-02-24 17:28:43.213784",
+ "modified": "2022-03-01 15:49:44.055769",
  "modified_by": "Administrator",
  "module": "Income Tax India",
  "name": "Professional Tax Deductions",
@@ -18,5 +18,15 @@
  "ref_doctype": "Salary Slip",
  "report_name": "Professional Tax Deductions",
  "report_type": "Script Report",
- "roles": []
+ "roles": [
+  {
+   "role": "HR Manager"
+  },
+  {
+   "role": "HR User"
+  },
+  {
+   "role": "Employee"
+  }
+ ]
 }
