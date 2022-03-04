@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 
+import json
 import os
 
 import frappe
@@ -59,7 +60,7 @@ def send_gstin_reminder_to_all_parties():
 			party = frappe.get_doc(link.link_doctype, link.link_name)
 			if link.link_doctype in ('Customer', 'Supplier'):
 				t = (link.link_doctype, link.link_name, address.email_id)
-				if not t in parties:
+				if t not in parties:
 					parties.append(t)
 
 	sent_to = []
@@ -113,3 +114,44 @@ def _send_gstin_reminder(party_type, party, default_email_id=None, sent_to=None)
 	)
 
 	return email_id
+
+@frappe.whitelist()
+def validate_hsn_code(items):
+	hsn_digits, hsn_missing, hsn_invalid = _validate_hsn_code(items)
+
+	hsn_valid = True
+	if hsn_missing:
+		frappe.msgprint(_("Please enter HSN code for item with index {0}").format(", ".join(hsn_missing)))
+		hsn_valid = False
+	if hsn_invalid:
+		frappe.msgprint(_("HSN Code of item with index {0} should be atleast {1} digits").format(", ".join(hsn_invalid), hsn_digits))
+		hsn_valid = False
+
+	return hsn_valid
+
+@frappe.whitelist()
+def validate_hsn_code_before_submit(items):
+	hsn_digits, hsn_missing, hsn_invalid = _validate_hsn_code(items)
+	invalid_hsn = [*hsn_missing, *hsn_invalid]
+	if invalid_hsn:
+		frappe.throw(_("Please ensure valid HSN code for item with index {0}").format(", ".join(invalid_hsn)))
+
+
+def _validate_hsn_code(items):
+	items = json.loads(items)
+	settings = frappe.get_single('GST Settings')
+	if not settings.hsn_validation:
+		return
+
+	hsn_digits = settings.hsn_digits
+	hsn_missing = []
+	hsn_invalid = []
+	print(items)
+	for item in items:
+		print(item)
+		if not item.get('gst_hsn_code'):
+			hsn_missing.append(item.get('idx'))
+		elif len(item.get('gst_hsn_code')) < int(hsn_digits):
+			hsn_invalid.append(item.get('idx'))
+
+	return hsn_digits, hsn_missing, hsn_invalid

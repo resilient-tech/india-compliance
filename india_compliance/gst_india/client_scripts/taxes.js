@@ -1,3 +1,5 @@
+frappe.provide("hsn_valid");
+
 erpnext.setup_auto_gst_taxation = (doctype) => {
 	frappe.ui.form.on(doctype, {
 		company_address: function(frm) {
@@ -48,4 +50,40 @@ erpnext.setup_auto_gst_taxation = (doctype) => {
 			});
 		}
 	});
+}
+
+function validate_hsn_code(doctype){
+	frappe.ui.form.on(doctype, {
+		after_save: function(frm) {
+			call_validate_hsn_code(frm, 'validate_hsn_code');
+		},
+		before_submit: function(frm) {
+			call_validate_hsn_code(frm, 'validate_hsn_code_before_submit');
+		}
+	});
+
+	frappe.ui.form.on(doctype + " Item", {
+		item_code: function(frm, cdt, cdn) {
+			hsn_valid[frm.docname] = false;
+		},
+		gst_hsn_code: function(frm, cdt, cdn) {
+			hsn_valid[frm.docname] = false;
+		}
+	});
+}
+
+function call_validate_hsn_code (frm, func){
+	if (hsn_valid[frm.docname]) return;
+	frappe.call({
+		method: 'india_compliance.gst_india.doctype.gst_settings.gst_settings.' + func,
+		args: {
+			items: frm.doc.items,
+		},
+		callback: function(r){
+			console.log(r)
+			if (r) {
+				hsn_valid[frm.docname] = r.message;
+			}
+		}
+	})
 }
