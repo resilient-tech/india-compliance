@@ -2,6 +2,7 @@
 
 erpnext.setup_auto_gst_taxation('Delivery Note');
 validate_hsn_code('Delivery Note');
+highlight_gst_category('Delivery Note', 'customer');
 
 frappe.ui.form.on('Delivery Note', {
 	refresh: function(frm) {

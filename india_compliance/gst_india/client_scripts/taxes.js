@@ -86,3 +86,19 @@ function call_validate_hsn_code (frm, func){
 		}
 	})
 }
+
+function highlight_gst_category(doctype, party_type) {
+	frappe.ui.form.on(doctype, {
+		refresh: function(frm) {
+			_highlight_gst_category(frm, party_type);
+		},
+		gst_category: function(frm) {
+			_highlight_gst_category(frm, party_type);
+		}
+	});
+}
+
+function _highlight_gst_category(frm, party_type) {
+	if (!frm.doc[party_type] || !frm.doc.gst_category) return;
+	frm.fields_dict.customer.set_description('<i>' + frm.doc.gst_category+ '</i>');
+}
