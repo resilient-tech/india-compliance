@@ -121,10 +121,10 @@ def validate_hsn_code(items):
 
 	hsn_valid = True
 	if hsn_missing:
-		frappe.msgprint(_("Please enter HSN code for item with index {0}").format(", ".join(hsn_missing)))
+		frappe.msgprint(_("Please enter HSN code for <b>item no {0}</b>").format(", ".join(hsn_missing)))
 		hsn_valid = False
 	if hsn_invalid:
-		frappe.msgprint(_("HSN Code of item with index {0} should be atleast {1} digits").format(", ".join(hsn_invalid), hsn_digits))
+		frappe.msgprint(_("HSN Code of <b>item no {0}</b> should be atleast {1} digits").format(", ".join(hsn_invalid), hsn_digits))
 		hsn_valid = False
 
 	return hsn_valid
@@ -134,7 +134,7 @@ def validate_hsn_code_before_submit(items):
 	hsn_digits, hsn_missing, hsn_invalid = _validate_hsn_code(items)
 	invalid_hsn = [*hsn_missing, *hsn_invalid]
 	if invalid_hsn:
-		frappe.throw(_("Please ensure valid HSN code for item with index {0}").format(", ".join(invalid_hsn)))
+		frappe.throw(_("Please ensure valid HSN code for <b>item no {0}</b>").format(", ".join(invalid_hsn)))
 
 
 def _validate_hsn_code(items):
@@ -148,8 +148,8 @@ def _validate_hsn_code(items):
 	hsn_invalid = []
 	for item in items:
 		if not item.get('gst_hsn_code'):
-			hsn_missing.append(item.get('idx'))
+			hsn_missing.append(str(item.get('idx')))
 		elif len(item.get('gst_hsn_code')) < int(hsn_digits):
-			hsn_invalid.append(item.get('idx'))
+			hsn_invalid.append(str(item.get('idx')))
 
 	return hsn_digits, hsn_missing, hsn_invalid
