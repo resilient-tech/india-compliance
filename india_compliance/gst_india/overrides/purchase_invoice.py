@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from ..utils import get_gst_accounts
+from india_compliance.gst_india.utils import get_gst_accounts
 
 
 def validate_reverse_charge_transaction(doc, method):

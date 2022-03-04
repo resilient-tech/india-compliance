@@ -5,8 +5,10 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from . import (get_gst_accounts, get_itemised_tax_breakup_data,
-               set_gst_state_and_state_number, validate_gstin_check_digit)
+from india_compliance.gst_india.utils import (get_gst_accounts,
+                                              get_itemised_tax_breakup_data,
+                                              set_gst_state_and_state_number,
+                                              validate_gstin_check_digit)
 
 
 @frappe.whitelist()
@@ -40,7 +42,7 @@ def get_ewb_data(dt, dn):
         elif doc.gst_category in ["Overseas", "Deemed Export"]:
             data.subSupplyType = 3
         else:
-            frappe.throw(_("Unsupported GST Category for E-Way Bill JSON generation"))
+            frappe.throw(_("Unsupported GST Category for e-Waybill JSON generation"))
 
         data.docType = "INV"
         data.docDate = frappe.utils.formatdate(doc.posting_date, "dd/mm/yyyy")
@@ -238,15 +240,15 @@ def get_transport_details(data, doc):
 
 def validate_doc(doc):
     if doc.docstatus != 1:
-        frappe.throw(_("E-Way Bill JSON can only be generated from submitted document"))
+        frappe.throw(_("e-Waybill JSON can only be generated from submitted document"))
 
     if doc.is_return:
         frappe.throw(
-            _("E-Way Bill JSON cannot be generated for Sales Return as of now")
+            _("e-Waybill JSON cannot be generated for Sales Return as of now")
         )
 
     if doc.ewaybill:
-        frappe.throw(_("e-Way Bill already exists for this document"))
+        frappe.throw(_("e-Waybill already exists for this document"))
 
     reqd_fields = [
         "company_gstin",
@@ -260,13 +262,13 @@ def validate_doc(doc):
     for fieldname in reqd_fields:
         if not doc.get(fieldname):
             frappe.throw(
-                _("{} is required to generate E-Way Bill JSON").format(
+                _("{} is required to generate e-Waybill JSON").format(
                     doc.meta.get_label(fieldname)
                 )
             )
 
     if len(doc.company_gstin) < 15:
-        frappe.throw(_("You must be a registered supplier to generate e-Way Bill"))
+        frappe.throw(_("You must be a registered supplier to generate e-Waybill"))
 
 
 def validate_pincode(pincode, address):
@@ -311,6 +313,6 @@ def download_ewb_json():
             # removes characters not allowed in a filename (https://stackoverflow.com/a/38766141/4767738)
             filename_prefix = re.sub(r"[^\w_.)( -]", "", docname)
 
-    frappe.local.response.filename = "{0}_e-WayBill_Data_{1}.json".format(
+    frappe.local.response.filename = "{0}_e-Waybill_Data_{1}.json".format(
         filename_prefix, frappe.utils.random_string(5)
     )
