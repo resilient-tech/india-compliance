@@ -85,7 +85,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 			if (irn && !irn_cancelled && !ewaybill) {
 				const action = () => {
 					const d = new frappe.ui.Dialog({
-						title: __('Generate E-Way Bill'),
+						title: __('Generate e-Waybill'),
 						size: "large",
 						fields: get_ewaybill_fields(frm),
 						primary_action: function() {
@@ -108,17 +108,17 @@ erpnext.setup_einvoice_actions = (doctype) => {
 					d.show();
 				};
 
-				add_custom_button(__("Generate E-Way Bill"), action);
+				add_custom_button(__("Generate e-Waybill"), action);
 			}
 
 			if (irn && ewaybill && !irn_cancelled && !eway_bill_cancelled) {
 				const action = () => {
-					let message = __('Cancellation of e-way bill is currently not supported.') + ' ';
+					let message = __('Cancellation of e-Waybill is currently not supported.') + ' ';
 					message += '<br><br>';
-					message += __('You must first use the portal to cancel the e-way bill and then update the cancelled status in the ERPNext system.');
+					message += __('You must first use the portal to cancel the e-Waybill and then update the cancelled status in the ERPNext system.');
 
 					const dialog = frappe.msgprint({
-						title: __('Update E-Way Bill Cancelled Status?'),
+						title: __('Update e-Waybill Cancelled Status?'),
 						message: message,
 						indicator: 'orange',
 						primary_action: {
@@ -134,7 +134,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 						primary_action_label: __('Yes')
 					});
 				};
-				add_custom_button(__("Cancel E-Way Bill"), action);
+				add_custom_button(__("Cancel e-Waybill"), action);
 			}
 		}
 	});

@@ -411,7 +411,7 @@ ewaybill_fields = [
     },
     {
         "fieldname": "ewaybill",
-        "label": "E-Way Bill No.",
+        "label": "e-Waybill No.",
         "fieldtype": "Data",
         "depends_on": "eval:(doc.docstatus === 1}",
         "allow_on_submit": 1,
@@ -537,7 +537,7 @@ si_ewaybill_fields = [
     },
     {
         "fieldname": "ewaybill",
-        "label": "E-Way Bill No.",
+        "label": "e-Waybill No.",
         "fieldtype": "Data",
         "depends_on": "eval:((doc.docstatus === 1 || doc.ewaybill} && doc.eway_bill_cancelled === 0}",
         "allow_on_submit": 1,
@@ -629,7 +629,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "eway_bill_validity",
-        "label": "E-Way Bill Validity",
+        "label": "e-Waybill Validity",
         "fieldtype": "Data",
         "no_copy": 1,
         "print_hide": 1,
@@ -640,7 +640,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "eway_bill_cancelled",
-        "label": "E-Way Bill Cancelled",
+        "label": "e-Waybill Cancelled",
         "fieldtype": "Check",
         "no_copy": 1,
         "print_hide": 1,
@@ -651,7 +651,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "einvoice_section",
-        "label": "E-Invoice Fields",
+        "label": "e-Invoice Fields",
         "fieldtype": "Section Break",
         "insert_after": "gst_vehicle_type",
         "print_hide": 1,
@@ -689,7 +689,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "signed_einvoice",
-        "label": "Signed E-Invoice",
+        "label": "Signed e-Invoice",
         "fieldtype": "Code",
         "options": "JSON",
         "hidden": 1,
@@ -721,7 +721,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "einvoice_status",
-        "label": "E-Invoice Status",
+        "label": "e-Invoice Status",
         "fieldtype": "Select",
         "insert_after": "qrcode_image",
         "options": "\nPending\nGenerated\nCancelled\nFailed",
@@ -733,7 +733,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "failure_description",
-        "label": "E-Invoice Failure Description",
+        "label": "e-Invoice Failure Description",
         "fieldtype": "Code",
         "options": "JSON",
         "hidden": 1,
