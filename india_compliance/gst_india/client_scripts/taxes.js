@@ -80,7 +80,6 @@ function call_validate_hsn_code (frm, func){
 			items: frm.doc.items,
 		},
 		callback: function(r){
-			console.log(r)
 			if (r) {
 				hsn_valid[frm.docname] = r.message;
 			}

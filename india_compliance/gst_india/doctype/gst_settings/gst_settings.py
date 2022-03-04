@@ -146,9 +146,7 @@ def _validate_hsn_code(items):
 	hsn_digits = settings.hsn_digits
 	hsn_missing = []
 	hsn_invalid = []
-	print(items)
 	for item in items:
-		print(item)
 		if not item.get('gst_hsn_code'):
 			hsn_missing.append(item.get('idx'))
 		elif len(item.get('gst_hsn_code')) < int(hsn_digits):
