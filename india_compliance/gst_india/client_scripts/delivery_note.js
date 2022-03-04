@@ -1,6 +1,6 @@
 {% include "india_compliance/gst_india/client_scripts/taxes.js" %}
 
-erpnext.setup_auto_gst_taxation('Delivery Note');
+setup_auto_gst_taxation('Delivery Note');
 validate_hsn_code('Delivery Note');
 highlight_gst_category('Delivery Note', 'customer');
 

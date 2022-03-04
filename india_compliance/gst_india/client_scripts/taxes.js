@@ -1,6 +1,6 @@
 frappe.provide("hsn_valid");
 
-erpnext.setup_auto_gst_taxation = (doctype) => {
+function setup_auto_gst_taxation (doctype) {
 	frappe.ui.form.on(doctype, {
 		company_address: function(frm) {
 			frm.trigger('get_tax_template');

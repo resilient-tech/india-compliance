@@ -1,10 +1,10 @@
 {% include "india_compliance/gst_india/client_scripts/taxes.js" %}
 {% include "india_compliance/gst_india/client_scripts/einvoice.js" %}
 
-erpnext.setup_auto_gst_taxation('Sales Invoice');
+setup_auto_gst_taxation('Sales Invoice');
 validate_hsn_code('Sales Invoice');
 highlight_gst_category('Sales Invoice', 'customer');
-erpnext.setup_einvoice_actions('Sales Invoice')
+setup_einvoice_actions('Sales Invoice')
 
 frappe.ui.form.on("Sales Invoice", {
 	setup: function(frm) {
