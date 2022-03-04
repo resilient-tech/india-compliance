@@ -1,4 +1,9 @@
+import Vue from "vue/dist/vue.js";
+import VueRouter from "vue-router/dist/vue-router.js";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
+import AuthPage from "./pages/AuthPage.vue";
+import AccountPage from "./pages/AccountPage.vue";
+import Startup from "./pages/Startup.vue";
 
 class IndiaComplianceAccountPage {
     constructor(wrapper) {
@@ -13,8 +18,34 @@ class IndiaComplianceAccountPage {
     }
 
     show() {
+        Vue.use(VueRouter);
+        const routes = [
+            {
+                name: "account",
+                path: "/account",
+                component: AccountPage,
+            },
+            {
+                name: "auth",
+                path: "/authentication",
+                component: AuthPage,
+            },
+            {
+                name: "startup",
+                path: "/",
+                component: Startup,
+            },
+        ];
+
+        const router = new VueRouter({
+            mode: "history",
+            base: "/app/india-compliance-account",
+            routes: routes,
+        });
+
         new Vue({
             el: `#${this.containerId}`,
+            router,
             render: (h) => h(IndiaComplianceAccountApp),
         });
     }

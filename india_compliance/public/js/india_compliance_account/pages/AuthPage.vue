@@ -22,8 +22,8 @@
 </template>
 
 <script>
-import AuthForm from "./AuthForm.vue";
-import MarketingInfo from "./MarketingInfo.vue";
+import AuthForm from "../auth/AuthForm.vue";
+import MarketingInfo from "../auth/MarketingInfo.vue";
 
 export default {
   components: {
