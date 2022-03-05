@@ -95,35 +95,42 @@ export default {
     },
 
     isAccountRegisted() {
-      this.error = false;
+      this.error = null;
     },
   },
 
   methods: {
     async submitAuthForm() {
       this.isLoading = true;
-      this.error = false;
-      try {
-        if (this.isAccountRegisted) await this.login();
-        else await this.signup();
-      } catch (e) {
-        this.error =
-          e.message || "Something went wrong, Please try again later.";
-      } finally {
-        this.isLoading = false;
-      }
+      this.error = null;
+      if (this.hasInputError) return;
+
+      if (this.isAccountRegisted) await this.login();
+      else await this.signup();
+      this.isLoading = false;
     },
 
     async login() {
-      if (this.hasInputError) return;
-      const response = await authService.login(email);
-      throw new Error("No Account found, please sign up instead.");
+      const response = await authService.login(this.email.value);
+      if (!response.success) {
+        this.error = response.error;
+        return;
+      }
+      // TODO: redirect to email sent page
     },
 
     async signup() {
-      if (this.hasInputError) return;
-      const response = await authService.signup(email, gstin);
-      throw new Error("Account is already exists, please login instead.");
+      const response = await authService.signup(
+        this.email.value,
+        this.gstin.value
+      );
+
+      if (!response.success) {
+        this.error = response.error;
+        return;
+      }
+
+      // TODO: redirect to email sent page
     },
 
     validateEmail(value) {
