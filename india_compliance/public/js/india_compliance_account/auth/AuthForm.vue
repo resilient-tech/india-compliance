@@ -60,17 +60,25 @@ export default {
 
       isLoading: false,
       error: null,
+      isRedirecting: false,
     };
   },
 
   computed: {
     submitLabel() {
       if (this.isLoading) return "Loading...";
+      if (this.isRedirecting) return "Redirecting...";
       return this.isAccountRegisted ? "Login" : "Continue";
     },
 
     actionDisabled() {
-      if (this.isLoading || this.hasInputError || !this.isSucess) return true;
+      if (
+        this.isLoading ||
+        this.isRedirecting ||
+        this.hasInputError ||
+        !this.isSucess
+      )
+        return true;
       if (this.isAccountRegisted) return !this.email.value;
       return !this.email.value || !this.gstin.value;
     },
@@ -107,16 +115,22 @@ export default {
 
       if (this.isAccountRegisted) await this.login();
       else await this.signup();
-      this.isLoading = false;
     },
 
     async login() {
       const response = await authService.login(this.email.value);
+      this.isLoading = false;
+
       if (!response.success) {
         this.error = response.error;
         return;
       }
-      // TODO: redirect to email sent page
+      this.isRedirecting = true;
+      this.$store.dispatch("setIsAuthEmailSent", true);
+      this.$router.replace({
+        name: "mailSent",
+        query: { email: this.email.value },
+      });
     },
 
     async signup() {
@@ -124,12 +138,14 @@ export default {
         this.email.value,
         this.gstin.value
       );
+      this.isLoading = false;
 
       if (!response.success) {
         this.error = response.error;
         return;
       }
 
+      this.isRedirecting = true;
       // TODO: redirect to email sent page
     },
 

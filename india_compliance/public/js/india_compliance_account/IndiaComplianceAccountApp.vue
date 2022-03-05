@@ -1,10 +1,32 @@
 <template>
   <div class="india-compliance-account">
-    <transition name="fade" mode="out-in">
-      <router-view></router-view>
+    <transition name="fade">
+      <Startup v-if="isLoading" />
+      <transition name="fade" mode="out-in" v-else>
+        <router-view></router-view>
+      </transition>
     </transition>
   </div>
 </template>
+
+<script>
+import Startup from "./pages/Startup.vue";
+
+export default {
+  components: { Startup },
+
+  data() {
+    return {
+      isLoading: true,
+    };
+  },
+
+  async mounted() {
+    await this.$store.dispatch("initAuth");
+    this.isLoading = false;
+  },
+};
+</script>
 
 <style scoped>
 .fade-enter-active,
