@@ -38,7 +38,7 @@ export default {
     next(async (vm) => {
       if (vm.$store.getters.isLoggedIn) return next({ name: "account" });
       if (!vm.$store.state.auth.is_auth_email_sent)
-        return next({ name: "auth" });
+        return next({ name: "auth", replace: true });
       return next();
     });
   },

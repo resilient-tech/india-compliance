@@ -57,7 +57,9 @@ export default {
 
   beforeRouteEnter(to, from, next) {
     next((vm) => {
-      vm.$store.getters.isLoggedIn ? next({ name: "account" }) : next();
+      vm.$store.getters.isLoggedIn
+        ? next({ name: "account", replace: true })
+        : next();
     });
   },
 };

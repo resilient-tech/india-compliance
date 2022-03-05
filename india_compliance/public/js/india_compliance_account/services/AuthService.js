@@ -18,8 +18,15 @@ export default {
         });
     },
 
-    isEmailValidated(email) {
-        return this.mockApiCall(true);
+    async isEmailValidated(email) {
+        const response = await india_compliance.gst_api.call(
+            "is_email_validated",
+            {
+                body: { email },
+            }
+        );
+
+        if (!response.success) return response;
     },
 
     validateGstin(value) {

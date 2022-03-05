@@ -6,7 +6,9 @@
 export default {
   beforeRouteEnter(to, from, next) {
     next((vm) => {
-      vm.$store.getters.isLoggedIn ? next() : next({ name: "auth" });
+      vm.$store.getters.isLoggedIn
+        ? next()
+        : next({ name: "auth", replace: true });
     });
   },
 };
