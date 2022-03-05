@@ -18,12 +18,19 @@ export default {
         });
     },
 
+    isEmailValidated(email) {
+        return this.mockApiCall(true);
+    },
+
     validateGstin(value) {
-        // either returns null or error message
+        mockApiCall();
+    },
+
+    mockApiCall(response = {}, seconds = 1) {
         return new Promise((resolve) => {
             setTimeout(() => {
-                resolve(true);
-            }, 1000);
+                resolve(response);
+            }, 1000 * seconds);
         });
     },
 };

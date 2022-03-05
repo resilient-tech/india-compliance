@@ -2,6 +2,7 @@ import VueRouter from "vue-router";
 
 import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
+import MailSentPage from "./pages/MailSentPage.vue";
 import Startup from "./pages/Startup.vue";
 
 const routes = [
@@ -16,9 +17,13 @@ const routes = [
         component: AuthPage,
     },
     {
-        name: "startup",
+        name: "mailSent",
+        path: "/mail-sent",
+        component: MailSentPage,
+    },
+    {
         path: "/",
-        component: Startup,
+        redirect: "account",
     },
 ];
 

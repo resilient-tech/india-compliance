@@ -10,17 +10,7 @@
 import Loading from "../components/Loading.vue";
 
 export default {
-  components: {
-    Loading,
-  },
-
-  async mounted() {
-    await this.$store.dispatch("authenticate");
-    this.isLoading = false;
-    this.$router.replace({
-      name: this.$store.getters.isLoggedIn ? "account" : "auth",
-    });
-  },
+  components: { Loading },
 };
 </script>
 
