@@ -24,7 +24,7 @@ class GSTSettings(Document):
 	def validate(self):
 		# Validate duplicate accounts
 		self.validate_duplicate_accounts()
-		self.validate_multiple_accounts()
+		self.validate_selected_accounts()
 
 	def validate_duplicate_accounts(self):
 		account_list = []
@@ -37,16 +37,27 @@ class GSTSettings(Document):
 				if account.get(fieldname):
 					account_list.append(account.get(fieldname))
 
-	def validate_multiple_accounts(self):
+	def validate_selected_accounts(self):
 		selected_accounts_list = []
+		company_account_list = []
+
 		for index, account in enumerate(self.get('gst_accounts'), 1):
-			for fields in ['is_reverse_charge_account','is_input_account', 'is_output_account']:
-				if account.get(fields):
-					selected_accounts_list.append(account.get(fields))
+			for field in ['is_reverse_charge_account','is_input_account', 'is_output_account']:
+				if account.get(field):
+					selected_accounts_list.append(account.get(field))
+					company_account_list.append({
+						'company': account.company, 
+						field: account.get(field)
+					})
+
+				dict_to_check = {'company': account.company, field: account.get(field)}
+
+				if company_account_list.count(dict_to_check) > 1:
+					frappe.throw(_("{0} selected multiple times at Row: #{1}").format(frappe.bold(field), frappe.bold(index)))
 
 			if len(selected_accounts_list) > 1:
 				selected_accounts_list.clear()
-				frappe.throw(_(f"Can select only one account per row #{index}"))
+				frappe.throw(_(f"Can select only one account per Row: #{index}"))
 			selected_accounts_list.clear()
 
 @frappe.whitelist()

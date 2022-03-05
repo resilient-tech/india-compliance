@@ -15,5 +15,24 @@ class TestGSTSettings(unittest.TestCase):
 
 		self.assertRaises(frappe.ValidationError, gst_settings_doc.save)
 
+		company = frappe.new_doc("Company")
+		company.company_name='Test Company 1'
+		company.abbr='TC1'
+		company.default_currency='INR'
+		company.country='India'
+		company.insert()
+
+		gst_settings_doc.append('gst_accounts', {
+			'company': company.name,
+			'cgst_account': 'Input Additional VAT 1% - SMC',
+			'sgst_account': 'Input Additional VAT 2.5% - SMC',
+			'igst_account': 'Input Additional VAT 3.75% - SMC'})
+
+		self.assertRaises(frappe.ValidationError, gst_settings_doc.save)
+
+		# company.delete()
+
+		
+
 
 

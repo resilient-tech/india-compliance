@@ -2,17 +2,41 @@ import frappe
 
 
 def execute():
-    gst_settings_doc = frappe.get_doc("GST Settings")
+    gst_settings = frappe.get_doc("GST Settings")
+
+    company_account_list = []
     
-    for row in gst_settings_doc.gst_accounts:
-        gst_accounts = (row.cgst_account and row.sgst_account and row.igst_account)
+    if frappe.db.exists("GST Account", {'is_output_account':1}):
+        row_exists = False
+        
+        for row in gst_settings.gst_accounts:
+            gst_accounts = (row.cgst_account.lower(), row.sgst_account.lower(), row.igst_account.lower())
 
-        if not row.is_reverse_charge_account:
-            if "Output" in gst_accounts:
-                row.is_output_account = True
+            if not row.is_reverse_charge_account:
+                if "output" in str(gst_accounts):
+                    row.is_output_account = True
 
-            if "Input" in gst_accounts:
-                row.is_input_account = True
+                if "input" in str(gst_accounts):
+                    row.is_input_account = True
+                
+                for field in ['is_input_account', 'is_output_account']:
+                    if row.get(field):
+                        company_account_list.append({
+                            'company': row.company, 
+                            field: row.get(field)
+                        })
 
-    gst_settings_doc.save()
-    frappe.db.commit()
+                    dict_to_check = {'company': row.company, field: row.get(field)}
+
+                    if company_account_list.count(dict_to_check) > 1:
+                        if field == 'is_input_account':
+                            row.is_input_account = False
+                        elif field == 'is_output_account':
+                            row.is_output_account = False
+            row_exists = True
+                            
+        gst_settings.save()
+        frappe.db.commit()
+        
+        if not row_exists:
+            return
