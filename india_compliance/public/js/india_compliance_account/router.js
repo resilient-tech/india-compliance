@@ -1,4 +1,4 @@
-import VueRouter from "vue-router/dist/vue-router.js";
+import VueRouter from "vue-router";
 
 import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";

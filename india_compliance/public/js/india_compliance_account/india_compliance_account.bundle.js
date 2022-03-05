@@ -1,7 +1,9 @@
-import Vue from "vue/dist/vue.js";
-import VueRouter from "vue-router/dist/vue-router.js";
+import Vue from "vue";
+import VueRouter from "vue-router";
+import Vuex from "vuex";
 
-import router from "./router.js";
+import router from "./router";
+import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 
 class IndiaComplianceAccountPage {
@@ -18,10 +20,12 @@ class IndiaComplianceAccountPage {
 
     show() {
         Vue.use(VueRouter);
+        Vue.use(Vuex);
 
         new Vue({
             el: `#${this.containerId}`,
             router,
+            store,
             render: (h) => h(IndiaComplianceAccountApp),
         });
     }
