@@ -5,6 +5,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "api_secret",
   "gst_summary",
   "gst_tax_settings_section",
   "round_off_gst_values",
@@ -67,12 +68,17 @@
   {
    "fieldname": "column_break_4",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-02-24 17:06:17.255536",
+ "modified": "2022-03-05 10:52:32.075331",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

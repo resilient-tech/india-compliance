@@ -1,0 +1,17 @@
+{
+    "name": "india_compliance",
+    "description": "ERPNext app to simplify compliance with Indian Rules and Regulations",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/resilient-tech/india-compliance.git"
+    },
+    "homepage": "https://erpnext.com",
+    "author": "Resilient Tech",
+    "license": "GPL-3.0",
+    "bugs": {
+        "url": "https://github.com/resilient-tech/india-compliance/issues"
+    },
+    "dependencies": {
+        "vuex": "^3.6.2"
+    }
+}

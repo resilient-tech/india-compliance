@@ -7,7 +7,6 @@
 </template>
 
 <script>
-import authService from "../services/AuthService";
 import Loading from "../components/Loading.vue";
 
 export default {
@@ -16,9 +15,10 @@ export default {
   },
 
   async mounted() {
-    this.$router.push({
-      name: (await authService.isLoggedIn()) ? "account" : "auth",
-      replace: true,
+    await this.$store.dispatch("authenticate");
+    this.isLoading = false;
+    this.$router.replace({
+      name: this.$store.getters.isLoggedIn ? "account" : "auth",
     });
   },
 };

@@ -3,5 +3,7 @@
 *.egg-info
 *.swp
 tags
-india_compliance/docs/current
+.vscode/
 dist/
+node_modules/
+india_compliance/docs/current

@@ -1,10 +1,4 @@
 export default {
-    isLoggedIn() {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => resolve(true), 1000);
-        });
-    },
-
     login(email) {
         return new Promise((resolve, reject) => {
             setTimeout(() => resolve(true), 1000);
