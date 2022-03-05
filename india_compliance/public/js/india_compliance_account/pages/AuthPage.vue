@@ -54,6 +54,11 @@ export default {
       this.isAccountRegisted = await _isEmailRegistered(value);
     },
   },
+
+  beforeRouteEnter(to, from, next) {
+    // TODO: redirect to account page if already logged in
+    next();
+  },
 };
 </script>
 
