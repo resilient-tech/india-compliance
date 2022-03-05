@@ -1,13 +1,20 @@
 export default {
+    async get_api_secret() {
+        return frappe
+            .call("india_compliance.gst_india.get_gst_api_secret")
+            .then(({ message }) => message)
+            .catch(() => null);
+    },
+
     login(email) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => resolve(true), 1000);
+        return india_compliance.gst_api.call("login", {
+            body: { email },
         });
     },
 
     signup(email, gstin) {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => resolve(true), 1000);
+        return india_compliance.gst_api.call("signup", {
+            body: { email, gstin },
         });
     },
 

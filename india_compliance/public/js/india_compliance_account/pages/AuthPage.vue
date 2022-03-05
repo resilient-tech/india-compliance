@@ -56,8 +56,9 @@ export default {
   },
 
   beforeRouteEnter(to, from, next) {
-    // TODO: redirect to account page if already logged in
-    next();
+    next((vm) => {
+      vm.$store.getters.isLoggedIn ? next({ name: "account" }) : next();
+    });
   },
 };
 </script>
