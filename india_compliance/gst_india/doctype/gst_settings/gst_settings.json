@@ -72,10 +72,10 @@
   },
   {
    "default": "0",
-   "description": "This will validate for items of all sales transaction to ensure minimum HSN digits are reported. ",
+   "description": "As per <a href=\"https://www.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification no. 78/2020</a> it is mandatory to have HSN/SAC code as a part of your invoice based on your turnover",
    "fieldname": "hsn_validation",
    "fieldtype": "Check",
-   "label": "Make HSN/SAC mandatory"
+   "label": "Validate HSN/SAC in Sales Transactions"
   },
   {
    "default": "6",
@@ -90,7 +90,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-04 10:26:57.454647",
+ "modified": "2022-03-05 11:25:56.138430",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
