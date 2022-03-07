@@ -11,7 +11,7 @@ def execute():
         for row in gst_settings.gst_accounts:
             gst_accounts = (row.cgst_account.lower(), row.sgst_account.lower(), row.igst_account.lower())
 
-            if not row.is_reverse_charge_account:
+            if row.gst_account_type != 'Reverse Charge':
                 if "output" in str(gst_accounts):
                     row.gst_account_type = 'Output'
 
@@ -29,8 +29,6 @@ def execute():
                     print(company_account_list.count(data))
                     if company_account_list.count(data) > 1:
                         row.gst_account_type = ''
-            else:
-                row.gst_account_type = 'Reverse Charge'
 
             row_exists = True
 

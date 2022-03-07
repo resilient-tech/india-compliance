@@ -1,8 +1,6 @@
 // Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-const account_fields_list = ["is_reverse_charge_account", "is_input_account", "is_output_account", "is_cash_ledger_account", "is_credit_ledger_account"];
-
 frappe.ui.form.on('GST Settings', {
 	refresh: function(frm) {
 		frm.add_custom_button('Send GST Update Reminder', () => {
@@ -53,11 +51,3 @@ frappe.ui.form.on('GST Settings', {
 	},
 
 });
-
-
-frappe.ui.form.on("GST Account", {
-	is_reverse_charge_account: function (frm, cdt, cdn) {
-		var row = locals[cdt][cdn];
-		frappe.model.set_value(cdt, cdn, 'gst_account_type', row.is_reverse_charge_account ? 'Reverse Charge' : '');
-	}
-})
