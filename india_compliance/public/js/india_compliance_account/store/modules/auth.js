@@ -2,6 +2,8 @@ import {
     get_api_secret,
     get_session as get_session,
     validate_session,
+    set_session,
+    set_api_secret,
 } from "../../services/authService";
 
 export default {
@@ -35,16 +37,22 @@ export default {
             }
 
             if (!api_secret) return;
-            commit("SET_API_SECRET", api_secret);
-            dispatch("setSession", null);
+            await dispatch("setApiSecret", api_secret);
+            await dispatch("setSession", null);
         },
 
-        setSession({ commit }, session) {
+        async setSession({ commit }, session) {
+            await set_session(session);
             commit("SET_SESSION", session);
         },
 
-        async fetchSession({ dispatch }) {
-            dispatch("setSession", await get_session());
+        async setApiSecret({ commit }, api_secret) {
+            await set_api_secret(api_secret);
+            commit("SET_API_SECRET", api_secret);
+        },
+
+        async fetchSession({ commit }) {
+            commit("SET_SESSION", await get_session());
         },
     },
 

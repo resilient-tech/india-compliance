@@ -121,13 +121,12 @@ export default {
       const response = await login(this.email.value);
       this.isLoading = false;
 
-      console.log(response);
       if (response.error) {
         this.error = response.error;
         return;
       }
 
-      this.$store.dispatch("setSession", response.session);
+      await this.$store.dispatch("setSession", response.session);
       this.$router.push({
         name: "mailSent",
         query: { email: this.email.value },
