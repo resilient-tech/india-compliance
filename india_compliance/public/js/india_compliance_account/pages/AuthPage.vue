@@ -57,9 +57,20 @@ export default {
 
   beforeRouteEnter(to, from, next) {
     next((vm) => {
-      vm.$store.getters.isLoggedIn
-        ? next({ name: "account", replace: true })
-        : next();
+      if (vm.$store.getters.isLoggedIn) {
+        return next({ name: "account", replace: true });
+      }
+
+      const { session } = vm.$store.state.auth;
+      if (session) {
+        return next({
+          name: "mailSent",
+          replace: true,
+          query: { email: session.email },
+        });
+      }
+
+      next();
     });
   },
 };

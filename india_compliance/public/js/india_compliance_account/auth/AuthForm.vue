@@ -38,7 +38,7 @@
 import FormField from "../components/FormField.vue";
 import Loading from "../components/Loading.vue";
 import { UiState } from "../constants";
-import authService from "../services/AuthService";
+import { login, signup } from "../services/authService";
 
 export default {
   props: { isAccountRegisted: Boolean },
@@ -113,34 +113,31 @@ export default {
       this.error = null;
       if (this.hasInputError) return;
 
-      if (this.isAccountRegisted) await this.login();
-      else await this.signup();
+      if (this.isAccountRegisted) await this.performLogin();
+      else await this.performSignup();
     },
 
-    async login() {
-      const response = await authService.login(this.email.value);
+    async performLogin() {
+      const response = await login(this.email.value);
       this.isLoading = false;
 
-      if (!response.success) {
+      if (response.error) {
         this.error = response.error;
         return;
       }
-      this.isRedirecting = true;
-      this.$store.dispatch("setIsAuthEmailSent", true);
-      this.$router.replace({
+
+      this.$store.dispatch("setSession", response.session);
+      this.$router.push({
         name: "mailSent",
         query: { email: this.email.value },
       });
     },
 
-    async signup() {
-      const response = await authService.signup(
-        this.email.value,
-        this.gstin.value
-      );
+    async performSignup() {
+      const response = await signup(this.email.value, this.gstin.value);
       this.isLoading = false;
 
-      if (!response.success) {
+      if (response.error) {
         this.error = response.error;
         return;
       }
@@ -168,10 +165,7 @@ export default {
 
       field.error = null;
       if (!value) field.error = "GSTIN is required";
-      else if (
-        !validate_gst_number(value) ||
-        !(await authService.validateGstin(value))
-      )
+      else if (!validate_gst_number(value) || !(await validateGstin(value)))
         field.error = "Invalid GSTIN detected";
       field.state = field.error ? UiState.error : UiState.success;
     },

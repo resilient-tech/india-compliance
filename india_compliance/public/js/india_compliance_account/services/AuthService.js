@@ -1,43 +1,75 @@
-export default {
-    async get_api_secret() {
-        return frappe
-            .call("india_compliance.gst_india.get_gst_api_secret")
-            .then(({ message }) => message)
-            .catch(() => null);
-    },
+export async function get_api_secret() {
+    return call_server_method(
+        "india_compliance.gst_india.api.get_gst_api_secret"
+    );
+}
 
-    login(email) {
-        return india_compliance.gst_api.call("login", {
-            body: { email },
-        });
-    },
+async function set_api_secret(api_secret) {
+    return call_server_method(
+        "india_compliance.gst_india.api.set_gst_api_secret",
+        { api_secret }
+    );
+}
 
-    signup(email, gstin) {
-        return india_compliance.gst_api.call("signup", {
-            body: { email, gstin },
-        });
-    },
+export async function login(email) {
+    const response = await india_compliance.gst_api.call("login", {
+        body: { email },
+    });
 
-    async isEmailValidated(email) {
-        const response = await india_compliance.gst_api.call(
-            "is_email_validated",
-            {
-                body: { email },
-            }
-        );
+    if (response.message.session_id) {
+        const session = { id: response.message.session_id, email };
+        response.session = session;
+        set_session(session);
+    }
 
-        if (!response.success) return response;
-    },
+    return response;
+}
 
-    validateGstin(value) {
-        mockApiCall();
-    },
+export function signup(email, gstin) {
+    return india_compliance.gst_api.call("signup", {
+        body: { email, gstin },
+    });
+}
 
-    mockApiCall(response = {}, seconds = 1) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve(response);
-            }, 1000 * seconds);
-        });
-    },
-};
+export function validateGstin(value) {
+    mockApiCall();
+}
+
+export function get_session() {
+    return call_server_method("india_compliance.gst_india.api.get_session");
+}
+
+function set_session(session) {
+    call_server_method("india_compliance.gst_india.api.set_session", {
+        session,
+    });
+}
+
+export async function validate_session(session_id) {
+    const api_secret = await india_compliance.gst_api
+        .call("validate_session", { body: { session_id } })
+        .then((response) => response.message && response.message.api_secret);
+
+    if (!api_secret) return;
+    await set_api_secret(api_secret);
+    return api_secret;
+}
+
+function mockApiCall(response = {}, seconds = 1) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(response);
+        }, 1000 * seconds);
+    });
+}
+
+function call_server_method(method, args) {
+    return frappe
+        .call({
+            method: method,
+            args: args,
+            silent: true,
+        })
+        .then((response) => response.message || null)
+        .catch(() => null);
+}
