@@ -1,9 +1,9 @@
 <template>
   <div class="container auth-page">
     <h3 class="title text-center">{{ title }}</h3>
-    <div class="main-content">
+    <div class="main-content row">
       <MarketingInfo class="marketing-info" />
-      <div class="v-divider"></div>
+      <div class="v-divider d-none d-lg-block"></div>
       <div class="auth-form">
         <AuthForm :isAccountRegisted="isAccountRegisted" />
         <p class="change-view-btn">
@@ -22,8 +22,8 @@
 </template>
 
 <script>
-import AuthForm from "../auth/AuthForm.vue";
-import MarketingInfo from "../auth/MarketingInfo.vue";
+import AuthForm from "../components/auth/AuthForm.vue";
+import MarketingInfo from "../components/auth/MarketingInfo.vue";
 
 export default {
   components: {
@@ -89,6 +89,17 @@ export default {
 .main-content {
   display: flex;
   justify-content: center;
+}
+
+@media (max-width: 991px) {
+  .main-content {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .main-content * {
+    margin: 1em 0;
+  }
 }
 
 .auth-form {
