@@ -38,7 +38,7 @@
 import FormField from "../FormField.vue";
 import Loading from "../Loading.vue";
 import { UiState } from "../../constants";
-import { login, signup } from "../../services/authService";
+import { login, signup, validateGstin } from "../../services/authService";
 
 export default {
   props: { isAccountRegisted: Boolean },
@@ -121,6 +121,7 @@ export default {
       const response = await login(this.email.value);
       this.isLoading = false;
 
+      console.log(response);
       if (response.error) {
         this.error = response.error;
         return;
