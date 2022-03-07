@@ -1,12 +1,13 @@
 {% include "india_compliance/gst_india/client_scripts/taxes.js" %}
 {% include "india_compliance/gst_india/client_scripts/einvoice.js" %}
 
-setup_auto_gst_taxation('Sales Invoice');
-validate_hsn_code('Sales Invoice');
-highlight_gst_category('Sales Invoice', 'customer');
-setup_einvoice_actions('Sales Invoice')
+const DOCTYPE = "Sales Invoice";
 
-frappe.ui.form.on("Sales Invoice", {
+setup_auto_gst_taxation(DOCTYPE);
+highlight_gst_category(DOCTYPE);
+setup_einvoice_actions(DOCTYPE);
+
+frappe.ui.form.on(DOCTYPE, {
 	setup: function(frm) {
 		frm.set_query('transporter', function() {
 			return {
