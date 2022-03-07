@@ -65,7 +65,6 @@ def validate_hsn_code(doc, method=None):
         )
 
 
-
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
     hsn_wise_in_gst_settings = frappe.db.get_single_value(
         "GST Settings", "hsn_wise_tax_breakup"
