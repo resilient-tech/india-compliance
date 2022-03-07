@@ -4,7 +4,7 @@ export async function get_api_secret() {
     );
 }
 
-async function set_api_secret(api_secret) {
+export async function set_api_secret(api_secret) {
     return call_server_method(
         "india_compliance.gst_india.api.set_gst_api_secret",
         { api_secret }
@@ -17,9 +17,7 @@ export async function login(email) {
     });
 
     if (response.message && response.message.session_id) {
-        const session = { id: response.message.session_id, email };
-        response.session = session;
-        set_session(session);
+        response.session = { id: response.message.session_id, email };
     }
 
     return response;
@@ -39,7 +37,7 @@ export function get_session() {
     return call_server_method("india_compliance.gst_india.api.get_session");
 }
 
-function set_session(session) {
+export function set_session(session) {
     call_server_method("india_compliance.gst_india.api.set_session", {
         session,
     });
