@@ -4,7 +4,7 @@ from frappe import _
 
 def validate_hsn_code(doc, method=None):
     # HSN Code is being validated only for sales items
-    if not doc.is_sales_item or True:
+    if not doc.is_sales_item:
         return
 
     gst_settings = frappe.db.get_value(
