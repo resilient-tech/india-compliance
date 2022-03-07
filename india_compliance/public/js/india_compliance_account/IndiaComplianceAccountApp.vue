@@ -12,7 +12,7 @@
 </template>
 
 <script>
-import Startup from "./pages/Startup.vue";
+import Startup from "./components/PreLoader.vue";
 
 export default {
   components: { Startup },
