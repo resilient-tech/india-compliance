@@ -57,28 +57,7 @@ frappe.ui.form.on('GST Settings', {
 
 frappe.ui.form.on("GST Account", {
 	is_reverse_charge_account: function (frm, cdt, cdn) {
-		uncheck_other_fields(frm, cdt, cdn, 'is_reverse_charge_account');
-	},
-	is_input_account: function (frm, cdt, cdn) {
-		uncheck_other_fields(frm, cdt, cdn, 'is_input_account');
-	},
-	is_output_account: function (frm, cdt, cdn) {
-		uncheck_other_fields(frm, cdt, cdn, 'is_output_account');
+		var row = locals[cdt][cdn];
+		frappe.model.set_value(cdt, cdn, 'gst_account_type', row.is_reverse_charge_account ? 'Reverse Charge' : '');
 	}
 })
-
-var remove_checked_item = function (arr, value) { 
-    
-	return arr.filter(function(ele){ 
-		return ele != value; 
-	});
-}
-
-var uncheck_other_fields = function (frm, cdt, cdn, selected_field) {
-	if (selected_field) {
-		var filtered_check_list = remove_checked_item(account_fields_list, selected_field)
-		$.each(filtered_check_list, function(i, field) {
-			frappe.model.set_value(cdt, cdn, field, 0);
-		});
-	}
-}

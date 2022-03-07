@@ -1,12 +1,11 @@
 import frappe
 
 
-def execute():
-    gst_settings = frappe.get_doc("GST Settings")
+def execute():    
+    if frappe.db.exists("GST Account", {'gst_account_type':'Output'}) or frappe.db.exists("GST Account", {'gst_account_type':'Input'}):
+        gst_settings = frappe.get_doc("GST Settings")
 
-    company_account_list = []
-    
-    if frappe.db.exists("GST Account", {'is_output_account':1}):
+        company_account_list = []
         row_exists = False
         
         for row in gst_settings.gst_accounts:
@@ -14,29 +13,30 @@ def execute():
 
             if not row.is_reverse_charge_account:
                 if "output" in str(gst_accounts):
-                    row.is_output_account = True
+                    row.gst_account_type = 'Output'
 
                 if "input" in str(gst_accounts):
-                    row.is_input_account = True
-                
-                for field in ['is_input_account', 'is_output_account']:
-                    if row.get(field):
-                        company_account_list.append({
-                            'company': row.company, 
-                            field: row.get(field)
-                        })
+                    row.gst_account_type = 'Input'
 
-                    dict_to_check = {'company': row.company, field: row.get(field)}
+                if row.gst_account_type:
+                    company_account_list.append({
+                        'company': row.company, 
+                        'gst_account_type': row.gst_account_type
+                    })
 
-                    if company_account_list.count(dict_to_check) > 1:
-                        if field == 'is_input_account':
-                            row.is_input_account = False
-                        elif field == 'is_output_account':
-                            row.is_output_account = False
+                # If duplicate value found set gst account type to None
+                for data in company_account_list:
+                    print(company_account_list.count(data))
+                    if company_account_list.count(data) > 1:
+                        row.gst_account_type = ''
+            else:
+                row.gst_account_type = 'Reverse Charge'
+
             row_exists = True
-                            
+
         gst_settings.save()
-        frappe.db.commit()
         
         if not row_exists:
             return
+
+

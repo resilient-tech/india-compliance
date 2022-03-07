@@ -13,7 +13,17 @@
   "gstin_email_sent_on",
   "section_break_4",
   "gst_accounts",
-  "b2c_limit"
+  "b2c_limit",
+  "api_settings_tab",
+  "api_id",
+  "column_break_13",
+  "api_secret",
+  "section_break_15",
+  "public_api",
+  "column_break_17",
+  "e_waybill_api",
+  "section_break_1",
+  "gst_credentials"
  ],
  "fields": [
   {
@@ -67,12 +77,62 @@
   {
    "fieldname": "column_break_4",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_id",
+   "fieldtype": "Data",
+   "label": "API ID"
+  },
+  {
+   "fieldname": "column_break_13",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_secret",
+   "fieldtype": "Password",
+   "label": "API Secret"
+  },
+  {
+   "fieldname": "section_break_15",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break",
+   "label": "GST Credentials"
+  },
+  {
+   "fieldname": "gst_credentials",
+   "fieldtype": "Table",
+   "label": "GST Credentials",
+   "options": "GST Credentials"
+  },
+  {
+   "fieldname": "api_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "API Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "e_waybill_api",
+   "fieldtype": "Check",
+   "label": "Enable GSTN e-Waybill API"
+  },
+  {
+   "default": "0",
+   "fieldname": "public_api",
+   "fieldtype": "Check",
+   "label": "Enable GSTN Public API"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-01 15:36:20.762304",
+ "modified": "2022-03-07 10:24:49.777786",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

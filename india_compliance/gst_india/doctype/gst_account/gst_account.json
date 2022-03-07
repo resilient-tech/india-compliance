@@ -12,8 +12,7 @@
   "cess_account",
   "column_break_6",
   "is_reverse_charge_account",
-  "is_input_account",
-  "is_output_account"
+  "gst_account_type"
  ],
  "fields": [
   {
@@ -69,26 +68,20 @@
    "label": "Is Reverse Charge Account"
   },
   {
-   "default": "0",
-   "fieldname": "is_input_account",
-   "fieldtype": "Check",
-   "label": "Is Input Account"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_output_account",
-   "fieldtype": "Check",
-   "label": "Is Output Account"
-  },
-  {
    "fieldname": "column_break_6",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gst_account_type",
+   "fieldtype": "Select",
+   "label": "GST Account Type",
+   "options": "Input\nOutput\nReverse Charge"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-03-03 12:07:58.065774",
+ "modified": "2022-03-07 10:23:21.299400",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Account",
