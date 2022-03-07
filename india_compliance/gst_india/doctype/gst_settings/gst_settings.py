@@ -51,10 +51,7 @@ class GSTSettings(Document):
 			
 
 			if account.gst_account_type:
-				company_account_list.append({
-					'company': account.company, 
-					'gst_account_type': account.gst_account_type
-				})
+				company_account_list.append(dict_to_check)
 
 @frappe.whitelist()
 def send_reminder():

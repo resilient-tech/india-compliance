@@ -66,13 +66,14 @@
    "fieldname": "gst_account_type",
    "fieldtype": "Select",
    "label": "GST Account Type",
-   "options": "Input\nOutput\nReverse Charge"
+   "options": "Input\nOutput\nReverse Charge",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-03-07 15:11:33.479946",
+ "modified": "2022-03-07 16:06:43.142975",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Account",
