@@ -3,7 +3,9 @@
     <transition name="fade">
       <Startup v-if="isLoading" />
       <transition name="fade" mode="out-in" v-else>
-        <router-view></router-view>
+        <keep-alive>
+          <router-view />
+        </keep-alive>
       </transition>
     </transition>
   </div>
@@ -19,6 +21,13 @@ export default {
     return {
       isLoading: true,
     };
+  },
+
+  watch: {
+    $route() {
+      frappe.router.current_route = frappe.router.parse();
+      frappe.breadcrumbs.update();
+    },
   },
 
   async mounted() {

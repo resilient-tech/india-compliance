@@ -3,14 +3,8 @@ import VueRouter from "vue-router";
 import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
 import MailSentPage from "./pages/MailSentPage.vue";
-import Startup from "./pages/Startup.vue";
 
 const routes = [
-    {
-        name: "account",
-        path: "/account",
-        component: AccountPage,
-    },
     {
         name: "auth",
         path: "/authentication",
@@ -22,8 +16,10 @@ const routes = [
         component: MailSentPage,
     },
     {
+        name: "home",
         path: "/",
-        redirect: "account",
+        component: AccountPage,
+        alias: "/account",
     },
 ];
 

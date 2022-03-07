@@ -5,7 +5,7 @@ import Vuex from "vuex";
 import router from "./router";
 import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
-import authService from "./services/AuthService";
+import { get_api_secret } from "./services/AuthService";
 
 class IndiaComplianceAccountPage {
     constructor(wrapper) {
@@ -38,15 +38,15 @@ india_compliance.page.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
 frappe.provide("india_compliance.gst_api");
 india_compliance.gst_api.call = async function (endpoint, options) {
     try {
-        const base_url = "http://apiman.localhost:8000/api/method/apiman.api.";
+        const base_url =
+            "http://apiman.localhost:8000/api/method/apiman.api.v1.";
         const url = base_url + endpoint;
 
         const headers = { "Content-Type": "application/json" };
         if (options.headers) Object.assign(headers, options.headers);
 
         if (options.with_api_secret || options.api_secret) {
-            const api_secret =
-                options.api_secret || (await authService.get_api_secret());
+            const api_secret = options.api_secret || (await get_api_secret());
             headers["X-API-KEY"] = api_secret;
         }
 

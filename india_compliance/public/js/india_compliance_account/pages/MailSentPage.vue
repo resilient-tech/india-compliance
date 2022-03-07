@@ -19,8 +19,6 @@
 </template>
 
 <script>
-import authService from "../services/AuthService";
-
 export default {
   computed: {
     email() {
@@ -29,16 +27,14 @@ export default {
   },
   methods: {
     async refresh() {
-      if (!(await authService.isEmailValidated(this.email))) return;
       location.reload();
     },
   },
 
-  async beforeRouteEnter(to, from, next) {
-    next(async (vm) => {
-      if (vm.$store.getters.isLoggedIn) return next({ name: "account" });
-      if (!vm.$store.state.auth.is_auth_email_sent)
-        return next({ name: "auth", replace: true });
+  beforeRouteEnter(to, from, next) {
+    next((vm) => {
+      if (!vm.$route.query.email || !vm.$store.getters.hasSession)
+        return next({ name: "home", replace: true });
       return next();
     });
   },
