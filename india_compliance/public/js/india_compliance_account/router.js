@@ -3,6 +3,7 @@ import VueRouter from "vue-router";
 import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
 import MailSentPage from "./pages/MailSentPage.vue";
+import PageNotFound from "./pages/PageNotFound.vue";
 
 const routes = [
     {
@@ -20,6 +21,10 @@ const routes = [
         path: "/",
         component: AccountPage,
         alias: "/account",
+    },
+    {
+        path: "*",
+        component: PageNotFound,
     },
 ];
 
