@@ -16,7 +16,7 @@ export async function login(email) {
         body: { email },
     });
 
-    if (response.message.session_id) {
+    if (response.message && response.message.session_id) {
         const session = { id: response.message.session_id, email };
         response.session = session;
         set_session(session);
@@ -32,7 +32,7 @@ export function signup(email, gstin) {
 }
 
 export function validateGstin(value) {
-    mockApiCall();
+    return mockApiCall(true);
 }
 
 export function get_session() {
