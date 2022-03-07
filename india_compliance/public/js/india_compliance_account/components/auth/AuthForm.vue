@@ -35,10 +35,10 @@
 </template>
 
 <script>
-import FormField from "../components/FormField.vue";
-import Loading from "../components/Loading.vue";
-import { UiState } from "../constants";
-import { login, signup } from "../services/authService";
+import FormField from "../FormField.vue";
+import Loading from "../Loading.vue";
+import { UiState } from "../../constants";
+import { login, signup } from "../../services/authService";
 
 export default {
   props: { isAccountRegisted: Boolean },
