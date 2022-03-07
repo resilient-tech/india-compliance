@@ -19,10 +19,9 @@
   "column_break_13",
   "api_secret",
   "section_break_15",
-  "gstn_public_api",
+  "public_api",
   "column_break_17",
-  "gstn_ewb_api",
-  "supplier_compliance_report_settings_section",
+  "e_waybill_api",
   "section_break_1",
   "gst_credentials"
  ],
@@ -98,25 +97,8 @@
    "fieldtype": "Section Break"
   },
   {
-   "default": "0",
-   "fieldname": "gstn_public_api",
-   "fieldtype": "Check",
-   "label": "Enable GSTN Public API"
-  },
-  {
    "fieldname": "column_break_17",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "gstn_ewb_api",
-   "fieldtype": "Check",
-   "label": "Enable GSTN e-Waybill API"
-  },
-  {
-   "fieldname": "supplier_compliance_report_settings_section",
-   "fieldtype": "Section Break",
-   "label": "Supplier Compliance Report Settings"
   },
   {
    "fieldname": "section_break_1",
@@ -133,12 +115,24 @@
    "fieldname": "api_settings_tab",
    "fieldtype": "Tab Break",
    "label": "API Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "e_waybill_api",
+   "fieldtype": "Check",
+   "label": "Enable GSTN e-Waybill API"
+  },
+  {
+   "default": "0",
+   "fieldname": "public_api",
+   "fieldtype": "Check",
+   "label": "Enable GSTN Public API"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-02 16:59:17.515354",
+ "modified": "2022-03-07 10:24:49.777786",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
