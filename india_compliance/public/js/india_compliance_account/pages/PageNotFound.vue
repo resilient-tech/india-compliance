@@ -2,9 +2,9 @@
   <div class="page-not-found">
     <h1 class="t-404">404</h1>
     <h1>Page Not Found</h1>
-    <router-link to="/" class="btn btn-primary btn-sm m-2"
-      >Go to Home</router-link
-    >
+    <router-link to="/" class="btn btn-primary btn-sm m-2">
+      Go to Home
+    </router-link>
   </div>
 </template>
 
