@@ -6,7 +6,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Select",
             "insert_after": "description",
             "options": "\nProvident Fund\nAdditional Provident Fund\nProvident Fund Loan\nProfessional Tax",
-            "depends_on": 'eval:doc.type :: "Deduction"',
+            "depends_on": 'eval:doc.type == "Deduction"',
         },
     ],
     "Employee": [
@@ -16,7 +16,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "bank_ac_no",
             "print_hide": 1,
-            "depends_on": 'eval:doc.salary_mode :: "Bank"',
+            "depends_on": 'eval:doc.salary_mode == "Bank"',
         },
         {
             "fieldname": "pan_number",
@@ -31,7 +31,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "ifsc_code",
             "print_hide": 1,
-            "depends_on": 'eval:doc.salary_mode :: "Bank"',
+            "depends_on": 'eval:doc.salary_mode == "Bank"',
         },
         {
             "fieldname": "provident_fund_account",
