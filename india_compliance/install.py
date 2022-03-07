@@ -25,4 +25,4 @@ def run_post_install_patches():
         if not patch.endswith(".py") or patch == "__init__.py":
             continue
 
-        frappe.get_attr(f"{patch}.execute")()
+        frappe.get_attr(f"india_compliance.patches.post_install.{patch[:-3]}.execute")()
