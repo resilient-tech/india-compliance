@@ -57,7 +57,6 @@ purchase_invoice_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
         "fetch_from": "supplier.gst_category",
-        "fetch_if_empty": 1,
     },
     {
         "fieldname": "export_type",
@@ -89,7 +88,6 @@ sales_invoice_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
-        "fetch_if_empty": 1,
         "length": 25,
     },
     {
@@ -115,7 +113,6 @@ delivery_note_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
-        "fetch_if_empty": 1,
     },
 ]
 
