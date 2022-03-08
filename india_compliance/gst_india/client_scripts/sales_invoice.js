@@ -1,10 +1,13 @@
 {% include "india_compliance/gst_india/client_scripts/taxes.js" %}
 {% include "india_compliance/gst_india/client_scripts/einvoice.js" %}
 
-erpnext.setup_auto_gst_taxation('Sales Invoice');
-erpnext.setup_einvoice_actions('Sales Invoice')
+const DOCTYPE = "Sales Invoice";
 
-frappe.ui.form.on("Sales Invoice", {
+setup_auto_gst_taxation(DOCTYPE);
+highlight_gst_category(DOCTYPE);
+setup_einvoice_actions(DOCTYPE);
+
+frappe.ui.form.on(DOCTYPE, {
 	setup: function(frm) {
 		frm.set_query('transporter', function() {
 			return {
