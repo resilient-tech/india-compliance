@@ -83,7 +83,7 @@ def validate_gst_accounts(doc):
         if row.account_head not in accounts_list:
             continue
 
-        if row.account_head not in output_accounts:
+        if row.account_head not in output_accounts and row.tax_amount:
             frappe.throw(
                 "{0} is not an Output Account. Only output accounts should be selected in Sales Transactions".format(
                     row.account_head
