@@ -1,4 +1,4 @@
-erpnext.setup_einvoice_actions = (doctype) => {
+function setup_einvoice_actions (doctype) {
 	frappe.ui.form.on(doctype, {
 		async refresh(frm) {
 			if (frm.doc.docstatus == 2) return;

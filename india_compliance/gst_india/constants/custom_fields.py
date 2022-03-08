@@ -57,7 +57,6 @@ purchase_invoice_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
         "fetch_from": "supplier.gst_category",
-        "fetch_if_empty": 1,
     },
     {
         "fieldname": "export_type",
@@ -65,7 +64,7 @@ purchase_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_category",
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category}',
+        "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
         "fetch_from": "supplier.export_type",
         "fetch_if_empty": 1,
@@ -89,7 +88,6 @@ sales_invoice_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
-        "fetch_if_empty": 1,
         "length": 25,
     },
     {
@@ -98,7 +96,7 @@ sales_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_category",
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category}',
+        "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
         "fetch_from": "customer.export_type",
         "fetch_if_empty": 1,
@@ -115,7 +113,6 @@ delivery_note_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
-        "fetch_if_empty": 1,
     },
 ]
 
@@ -159,7 +156,7 @@ invoice_gst_fields = [
         "fieldtype": "Select",
         "insert_after": "gst_col_break",
         "print_hide": 1,
-        "depends_on": "eval:doc.is_return::1",
+        "depends_on": "eval:doc.is_return == 1",
         "length": 45,
         "options": "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization of Provisional assessment\n07-Others",
     },
@@ -201,7 +198,7 @@ purchase_invoice_itc_fields = [
         "fieldtype": "Select",
         "insert_after": "reason_for_issuing_document",
         "print_hide": 1,
-        "options": "Input Service Distributor\nImport Of Service\nImport Of Capital Goods\nITC on Reverse Charge\nIneligible As Per Section 17(5}\nIneligible Others\nAll Other ITC",
+        "options": "Input Service Distributor\nImport Of Service\nImport Of Capital Goods\nITC on Reverse Charge\nIneligible As Per Section 17(5)\nIneligible Others\nAll Other ITC",
         "default": "All Other ITC",
     },
     {
@@ -286,7 +283,7 @@ sales_invoice_shipping_fields = [
         "fieldtype": "Data",
         "insert_after": "reason_for_issuing_document",
         "print_hide": 1,
-        "depends_on": "eval:doc.gst_category::'Overseas' ",
+        "depends_on": "eval:doc.gst_category == 'Overseas' ",
         "length": 15,
     },
     {
@@ -295,7 +292,7 @@ sales_invoice_shipping_fields = [
         "fieldtype": "Data",
         "insert_after": "port_code",
         "print_hide": 1,
-        "depends_on": "eval:doc.gst_category::'Overseas' ",
+        "depends_on": "eval:doc.gst_category == 'Overseas' ",
         "length": 50,
     },
     {
@@ -304,7 +301,7 @@ sales_invoice_shipping_fields = [
         "fieldtype": "Date",
         "insert_after": "shipping_bill_number",
         "print_hide": 1,
-        "depends_on": "eval:doc.gst_category::'Overseas' ",
+        "depends_on": "eval:doc.gst_category == 'Overseas' ",
     },
 ]
 
@@ -316,8 +313,8 @@ journal_entry_fields = [
         "insert_after": "voucher_type",
         "print_hide": 1,
         "options": "As per rules 42 & 43 of CGST Rules\nOthers",
-        "depends_on": "eval:doc.voucher_type::'Reversal Of ITC'",
-        "mandatory_depends_on": "eval:doc.voucher_type::'Reversal Of ITC'",
+        "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
+        "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
     },
     {
         "fieldname": "company_address",
@@ -326,8 +323,8 @@ journal_entry_fields = [
         "options": "Address",
         "insert_after": "reversal_type",
         "print_hide": 1,
-        "depends_on": "eval:doc.voucher_type::'Reversal Of ITC'",
-        "mandatory_depends_on": "eval:doc.voucher_type::'Reversal Of ITC'",
+        "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
+        "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
     },
     {
         "fieldname": "company_gstin",
@@ -337,8 +334,8 @@ journal_entry_fields = [
         "insert_after": "company_address",
         "print_hide": 1,
         "fetch_from": "company_address.gstin",
-        "depends_on": "eval:doc.voucher_type::'Reversal Of ITC'",
-        "mandatory_depends_on": "eval:doc.voucher_type::'Reversal Of ITC'",
+        "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
+        "mandatory_depends_on": "eval:doc.voucher_type=='Reversal Of ITC'",
     },
 ]
 
@@ -374,7 +371,7 @@ inter_state_gst_field = [
 ewaybill_fields = [
     {
         "fieldname": "distance",
-        "label": "Distance (in km}",
+        "label": "Distance (in km)",
         "fieldtype": "Float",
         "insert_after": "vehicle_no",
         "print_hide": 1,
@@ -402,8 +399,8 @@ ewaybill_fields = [
         "fieldname": "gst_vehicle_type",
         "label": "GST Vehicle Type",
         "fieldtype": "Select",
-        "options": "Regular\nOver Dimensional Cargo (ODC}",
-        "depends_on": 'eval:(doc.mode_of_transport ::: "Road"}',
+        "options": "Regular\nOver Dimensional Cargo (ODC)",
+        "depends_on": 'eval:(doc.mode_of_transport === "Road")',
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
@@ -411,9 +408,9 @@ ewaybill_fields = [
     },
     {
         "fieldname": "ewaybill",
-        "label": "E-Way Bill No.",
+        "label": "e-Waybill No.",
         "fieldtype": "Data",
-        "depends_on": "eval:(doc.docstatus ::: 1}",
+        "depends_on": "eval:(doc.docstatus === 1)",
         "allow_on_submit": 1,
         "insert_after": "customer_name_in_arabic",
         "translatable": 0,
@@ -476,7 +473,7 @@ si_ewaybill_fields = [
     },
     {
         "fieldname": "distance",
-        "label": "Distance (in km}",
+        "label": "Distance (in km)",
         "fieldtype": "Float",
         "insert_after": "vehicle_no",
         "print_hide": 1,
@@ -527,8 +524,8 @@ si_ewaybill_fields = [
         "fieldname": "gst_vehicle_type",
         "label": "GST Vehicle Type",
         "fieldtype": "Select",
-        "options": "Regular\nOver Dimensional Cargo (ODC}",
-        "depends_on": 'eval:(doc.mode_of_transport ::: "Road"}',
+        "options": "Regular\nOver Dimensional Cargo (ODC)",
+        "depends_on": 'eval:(doc.mode_of_transport === "Road")',
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
@@ -537,9 +534,9 @@ si_ewaybill_fields = [
     },
     {
         "fieldname": "ewaybill",
-        "label": "E-Way Bill No.",
+        "label": "e-Waybill No.",
         "fieldtype": "Data",
-        "depends_on": "eval:((doc.docstatus ::: 1 || doc.ewaybill} && doc.eway_bill_cancelled ::: 0}",
+        "depends_on": "eval:((doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled === 0)",
         "allow_on_submit": 1,
         "insert_after": "tax_id",
         "translatable": 0,
@@ -593,7 +590,7 @@ payment_entry_fields = [
         "insert_after": "gst_column_break",
         "print_hide": 1,
         "options": "Address",
-        "depends_on": 'eval:doc.party_type :: "Customer"',
+        "depends_on": 'eval:doc.party_type == "Customer"',
     },
     {
         "fieldname": "customer_gstin",
@@ -615,7 +612,7 @@ si_einvoice_fields = [
         "insert_after": "customer",
         "no_copy": 1,
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"], doc.gst_category} && doc.irn_cancelled ::: 0',
+        "depends_on": 'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"], doc.gst_category) && doc.irn_cancelled === 0',
     },
     {
         "fieldname": "irn_cancelled",
@@ -629,7 +626,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "eway_bill_validity",
-        "label": "E-Way Bill Validity",
+        "label": "e-Waybill Validity",
         "fieldtype": "Data",
         "no_copy": 1,
         "print_hide": 1,
@@ -640,18 +637,18 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "eway_bill_cancelled",
-        "label": "E-Way Bill Cancelled",
+        "label": "e-Waybill Cancelled",
         "fieldtype": "Check",
         "no_copy": 1,
         "print_hide": 1,
-        "depends_on": "eval:(doc.eway_bill_cancelled ::: 1}",
+        "depends_on": "eval:(doc.eway_bill_cancelled === 1)",
         "read_only": 1,
         "allow_on_submit": 1,
         "insert_after": "customer",
     },
     {
         "fieldname": "einvoice_section",
-        "label": "E-Invoice Fields",
+        "label": "e-Invoice Fields",
         "fieldtype": "Section Break",
         "insert_after": "gst_vehicle_type",
         "print_hide": 1,
@@ -689,7 +686,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "signed_einvoice",
-        "label": "Signed E-Invoice",
+        "label": "Signed e-Invoice",
         "fieldtype": "Code",
         "options": "JSON",
         "hidden": 1,
@@ -721,7 +718,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "einvoice_status",
-        "label": "E-Invoice Status",
+        "label": "e-Invoice Status",
         "fieldtype": "Select",
         "insert_after": "qrcode_image",
         "options": "\nPending\nGenerated\nCancelled\nFailed",
@@ -733,7 +730,7 @@ si_einvoice_fields = [
     },
     {
         "fieldname": "failure_description",
-        "label": "E-Invoice Failure Description",
+        "label": "e-Invoice Failure Description",
         "fieldtype": "Code",
         "options": "JSON",
         "hidden": 1,
@@ -855,9 +852,9 @@ CUSTOM_FIELDS = {
             "label": "Export Type",
             "fieldtype": "Select",
             "insert_after": "gst_category",
-            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category}',
+            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
             "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category}',
+            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
         },
     ],
     "Customer": [
@@ -874,9 +871,9 @@ CUSTOM_FIELDS = {
             "label": "Export Type",
             "fieldtype": "Select",
             "insert_after": "gst_category",
-            "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category}',
+            "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
             "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category}',
+            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
         },
     ],
 }

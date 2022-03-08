@@ -5,8 +5,10 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from india_compliance.gst_india.utils import (get_gst_accounts, get_itemised_tax_breakup_data,
-               set_gst_state_and_state_number, validate_gstin_check_digit)
+from india_compliance.gst_india.utils import (get_gst_accounts,
+                                              get_itemised_tax_breakup_data,
+                                              set_gst_state_and_state_number,
+                                              validate_gstin_check_digit)
 
 
 @frappe.whitelist()
@@ -311,6 +313,6 @@ def download_ewb_json():
             # removes characters not allowed in a filename (https://stackoverflow.com/a/38766141/4767738)
             filename_prefix = re.sub(r"[^\w_.)( -]", "", docname)
 
-    frappe.local.response.filename = "{0}_e-WayBill_Data_{1}.json".format(
+    frappe.local.response.filename = "{0}_e-Waybill_Data_{1}.json".format(
         filename_prefix, frappe.utils.random_string(5)
     )
