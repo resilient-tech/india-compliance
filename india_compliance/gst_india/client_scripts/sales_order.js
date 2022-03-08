@@ -2,3 +2,4 @@
 
 const DOCTYPE = "Sales Order";
 setup_auto_gst_taxation(DOCTYPE);
+highlight_gst_category(DOCTYPE);

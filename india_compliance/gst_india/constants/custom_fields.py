@@ -40,7 +40,7 @@ taxable_value = {
     "print_hide": 1,
 }
 
-purchase_invoice_gst_category = [
+purchase_gst_category = [
     {
         "fieldname": "gst_section",
         "label": "GST Details",
@@ -57,6 +57,7 @@ purchase_invoice_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
         "fetch_from": "supplier.gst_category",
+        "hidden": 1,
     },
     {
         "fieldname": "export_type",
@@ -71,7 +72,7 @@ purchase_invoice_gst_category = [
     },
 ]
 
-sales_invoice_gst_category = [
+sales_gst_category = [
     {
         "fieldname": "gst_section",
         "label": "GST Details",
@@ -89,6 +90,7 @@ sales_invoice_gst_category = [
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
         "length": 25,
+        "hidden": 1,
     },
     {
         "fieldname": "export_type",
@@ -113,6 +115,7 @@ delivery_note_gst_category = [
         "print_hide": 1,
         "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
+        "hidden": 1,
     },
 ]
 
@@ -764,13 +767,14 @@ CUSTOM_FIELDS = {
             "read_only": 1,
         },
     ],
-    "Purchase Invoice": purchase_invoice_gst_category
+    "Purchase Invoice": purchase_gst_category
     + invoice_gst_fields
     + purchase_invoice_itc_fields
     + purchase_invoice_gst_fields,
-    "Purchase Order": purchase_invoice_gst_fields,
-    "Purchase Receipt": purchase_invoice_gst_fields,
-    "Sales Invoice": sales_invoice_gst_category
+    "Purchase Order": purchase_invoice_gst_fields
+    + purchase_gst_category,
+    "Purchase Receipt": purchase_gst_category,
+    "Sales Invoice": sales_gst_category
     + invoice_gst_fields
     + sales_invoice_shipping_fields
     + sales_invoice_gst_fields
@@ -783,7 +787,8 @@ CUSTOM_FIELDS = {
     + delivery_note_gst_category,
     "Payment Entry": payment_entry_fields,
     "Journal Entry": journal_entry_fields,
-    "Sales Order": sales_invoice_gst_fields,
+    "Sales Order": sales_invoice_gst_fields
+    + sales_gst_category,
     "Tax Category": inter_state_gst_field,
     "Item": [
         {
