@@ -27,18 +27,21 @@ export default {
             await dispatch("authenticate");
         },
 
-        async authenticate({ commit, state, dispatch }) {
-            let api_secret = await get_api_secret();
+        async authenticate({ state, dispatch }) {
+            const api_secret = await get_api_secret();
+            if (api_secret) return await dispatch("setApiSecret", api_secret);
 
-            if (!api_secret) {
-                await dispatch("fetchSession");
-                if (!state.session) return;
-                api_secret = await validate_session(state.session.id);
+            await dispatch("fetchSession");
+            if (!state.session) return;
+
+            const { message, error } = await validate_session(state.session.id);
+            if (error) {
+                // invalid session -> delete the session
+                await dispatch("setSession", null);
+                return;
             }
-
-            if (!api_secret) return;
-            await dispatch("setApiSecret", api_secret);
-            await dispatch("setSession", null);
+            if (!message || !message.api_secret) return;
+            await dispatch("setApiSecret", message.api_secret);
         },
 
         async setSession({ commit }, session) {
@@ -49,6 +52,7 @@ export default {
         async setApiSecret({ commit }, api_secret) {
             await set_api_secret(api_secret);
             commit("SET_API_SECRET", api_secret);
+            commit("SET_SESSION", null);
         },
 
         async fetchSession({ commit }) {
