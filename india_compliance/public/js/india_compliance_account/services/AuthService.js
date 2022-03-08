@@ -43,14 +43,10 @@ export function set_session(session) {
     });
 }
 
-export async function validate_session(session_id) {
-    const api_secret = await india_compliance.gst_api
-        .call("validate_session", { body: { session_id } })
-        .then((response) => response.message && response.message.api_secret);
-
-    if (!api_secret) return;
-    await set_api_secret(api_secret);
-    return api_secret;
+export function validate_session(session_id) {
+    return india_compliance.gst_api.call("validate_session", {
+        body: { session_id },
+    });
 }
 
 function mockApiCall(response = {}, seconds = 1) {
