@@ -6,7 +6,8 @@ from frappe import _
 from frappe.model.utils import get_fetch_values
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.utils import get_gst_accounts, get_place_of_supply
+from india_compliance.gst_india.utils import (get_gst_accounts,
+                                              get_place_of_supply)
 
 
 def set_place_of_supply(doc, method=None):
@@ -21,7 +22,7 @@ def validate_hsn_code(doc, method=None):
         as_dict=True,
     )
 
-    if not gst_settings.validate_hsn_code:
+    if not gst_settings or gst_settings.validate_hsn_code:
         return
 
     missing_hsn = []
@@ -243,4 +244,3 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
                 "name",
             )
     return default_tax
-

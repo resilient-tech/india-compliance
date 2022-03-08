@@ -166,3 +166,51 @@ def get_gst_accounts(
                 gst_accounts[val] = acc
 
     return gst_accounts
+
+
+def get_gst_accounts_by_type(company, gst_account_type=None, as_list=False):
+    """
+    Returns a dict of GST accounts by type in following sequence:
+    `cgst_account`, `sgst_account`, `igst_account`, `cess_account`
+    or Returns a list of all GST accounts if `as_list` is True
+    """
+
+    filters = {
+        "parent": "GST Settings",
+        "company": company,
+    }
+    if gst_account_type:
+        filters.update({"gst_account_type": gst_account_type})
+
+    all_accounts = frappe.db.get_all(
+        "GST Account",
+        filters=filters,
+        fields=[
+            "gst_account_type",
+            "cgst_account",
+            "sgst_account",
+            "igst_account",
+            "cess_account",
+        ],
+        as_list=1,
+    )
+
+    if as_list:
+        gst_accounts = []
+        for account in all_accounts:
+            gst_accounts.extend(account[1:] or [])
+
+        gst_accounts = [account for account in gst_accounts if account]
+    else:
+        gst_accounts = frappe._dict()
+        for account in all_accounts:
+            gst_accounts.update({account[0]: account[1:]})
+
+    if not gst_accounts:
+        frappe.throw(
+            _(
+                "Could not find {0} GST Accounts for company {1}. Please set GST Accounts in GST Settings"
+            ).format(gst_account_type or "", company)
+        )
+
+    return gst_accounts

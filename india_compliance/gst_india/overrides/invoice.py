@@ -1,7 +1,8 @@
 import frappe
 from frappe.utils import cint, flt
 
-from india_compliance.gst_india.utils import get_gst_accounts
+from india_compliance.gst_india.utils import (get_gst_accounts,
+                                              get_gst_accounts_by_type)
 
 
 def update_taxable_values(doc, method=None):
