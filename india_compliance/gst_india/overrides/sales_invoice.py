@@ -80,34 +80,36 @@ def validate_gst_accounts(doc):
     )
 
     for row in doc.taxes or []:
-        if row.account_head not in accounts_list:
+        account_head = row.account_head
+        tax_amount = row.tax_amount
+        if account_head not in accounts_list:
             continue
 
-        if row.account_head not in output_accounts and row.tax_amount:
+        if account_head not in output_accounts and tax_amount:
             frappe.throw(
                 "{0} is not an Output Account. Only output accounts should be selected in Sales Transactions".format(
-                    row.account_head
+                    account_head
                 )
             )
 
         if no_tax:
-            if row.account_head in output_accounts and row.tax_amount:
+            if account_head in output_accounts and tax_amount:
                 frappe.throw(
                     "{0} should not have any tax amount as you are making supply without payment of tax.".format(
-                        row.account_head
+                        account_head
                     )
                 )
         elif inter_state:
-            if row.account_head in output_accounts[:2] and row.tax_amount:
+            if account_head in output_accounts[:2] and tax_amount:
                 frappe.throw(
                     "{0} should to be IGST Account as you are making inter-state supply.".format(
-                        row.account_head
+                        account_head
                     )
                 )
         else:
-            if row.account_head in output_accounts[2] and row.tax_amount:
+            if account_head in output_accounts[2] and tax_amount:
                 frappe.throw(
                     "{0} should to be CGST/SGST Account as you are making intra-state supply.".format(
-                        row.account_head
+                        account_head
                     )
                 )
