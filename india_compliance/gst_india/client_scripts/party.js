@@ -39,50 +39,46 @@ erpnext.setup_gst_reminder_button = (doctype) => {
 		},
 		validate: function(frm) {
 			if (frm.doc.gstin) {
+				let update_all, multiple_address;
 				if (addresses[0]) {
 					frappe.confirm('We shall update all linked records also, Proceed?',
 					() => {
 						console.log(addresses);
-						frappe.call({
-							'method': 'india_compliance.gst_india.overrides.party.update_gstin',
-							'args': {
-								'gstin': frm.doc.gstin,
-								'gst_category': frm.doc.gst_category,
-								'addresses': addresses[1],
-								'update_all': 1
-							},
-							'callback': function(r) {
-								if (r.message) {
-									frappe.msgprint("Addresses and linked doctypes updated successfully")
-								}
-								else {
-									frappe.msgprint("No chanege in current doc")
-								}
-							}
-						});
+						let msg = "Addresses and linked doctypes updated successfully";
+						update_gstin(frm, addresses, msg, update_all=1, multiple_address=1)
 					}, 
 					() => {
 						// action to perform if No is selected
-						frappe.call({
-							'method': 'india_compliance.gst_india.overrides.party.update_gstin',
-							'args': {
-								'gstin': frm.doc.gstin,
-								'gst_category': frm.doc.gst_category,
-								'addresses': addresses[1],
-								'update_all': 0
-							},
-							'callback': function(r) {
-								if (r.message) {
-									frappe.msgprint("GSTIN in Addresses updated successfully")
-								}
-								else {
-									frappe.msgprint("No chanege in current doc")
-								}
-							}
-						});
+						let msg = "GSTIN in Addresses updated successfully";
+						update_gstin(frm, addresses, msg, update_all=0, multiple_address=1)
 					})
+				}
+				else {
+					let msg = "GSTIN in Addresses updated successfully";
+					update_gstin(frm, addresses, msg, update_all=0, multiple_address=0)
 				}
 			}
 		}
 	});
 };
+
+var update_gstin = function(frm, addresses, msg, update_all=0, multiple_address=0) {
+	frappe.call({
+		'method': 'india_compliance.gst_india.overrides.party.update_gstin',
+		'args': {
+			'gstin': frm.doc.gstin,
+			'gst_category': frm.doc.gst_category,
+			'addresses': addresses[1],
+			'update_all': update_all,
+			'multiple_address': multiple_address
+		},
+		'callback': function(r) {
+			if (r.message) {
+				frappe.msgprint(msg)
+			}
+			else {
+				frappe.msgprint("No chanege in current doc")
+			}
+		}
+	});
+}
