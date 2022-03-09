@@ -68,11 +68,7 @@ doc_events = {
     ): {
         "validate": "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
     },
-    (
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-    ): {
+    ("Sales Order", "Delivery Note", "Sales Invoice",): {
         "validate": "india_compliance.gst_india.overrides.transaction.validate_hsn_code"
     },
     "Company": {
@@ -88,7 +84,7 @@ doc_events = {
     },
     "Item": {
         "validate": "india_compliance.gst_india.overrides.item.validate_hsn_code",
-    }
+    },
 }
 
 

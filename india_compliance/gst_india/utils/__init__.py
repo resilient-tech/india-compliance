@@ -1,8 +1,10 @@
 import frappe
-from erpnext.controllers.taxes_and_totals import (get_itemised_tax,
-                                                  get_itemised_taxable_amount)
 from frappe import _
 from frappe.utils import cstr
+from erpnext.controllers.taxes_and_totals import (
+    get_itemised_tax,
+    get_itemised_taxable_amount,
+)
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 
