@@ -113,37 +113,31 @@ export default {
       this.error = null;
       if (this.hasInputError) return;
 
-      if (this.isAccountRegisted) await this.performLogin();
-      else await this.performSignup();
-    },
+      const email = this.email.value;
+      const gstin = this.email.value;
 
-    async performLogin() {
-      const response = await login(this.email.value);
+      let response;
+      if (this.isAccountRegisted) response = await login(email);
+      else response = await signup(email, gstin);
+
       this.isLoading = false;
-
       if (response.error) {
         this.error = response.error;
         return;
       }
 
-      await this.$store.dispatch("setSession", response.session);
-      this.$router.push({
-        name: "mailSent",
-        query: { email: this.email.value },
-      });
-    },
-
-    async performSignup() {
-      const response = await signup(this.email.value, this.gstin.value);
-      this.isLoading = false;
-
-      if (response.error) {
-        this.error = response.error;
-        return;
+      if (response.message && response.message.session_id) {
+        await this.$store.dispatch("setSession", {
+          id: response.message.session_id,
+          email,
+        });
       }
 
       this.isRedirecting = true;
-      // TODO: redirect to email sent page
+      this.$router.push({
+        name: "mailSent",
+        query: { email },
+      });
     },
 
     validateEmail(value) {

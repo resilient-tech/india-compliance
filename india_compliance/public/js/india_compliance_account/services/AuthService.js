@@ -11,16 +11,10 @@ export async function set_api_secret(api_secret) {
     );
 }
 
-export async function login(email) {
-    const response = await india_compliance.gst_api.call("auth/login", {
+export function login(email) {
+    return india_compliance.gst_api.call("auth/login", {
         body: { email },
     });
-
-    if (response.message && response.message.session_id) {
-        response.session = { id: response.message.session_id, email };
-    }
-
-    return response;
 }
 
 export function signup(email, gstin) {
