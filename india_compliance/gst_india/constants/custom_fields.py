@@ -744,10 +744,27 @@ si_einvoice_fields = [
 CUSTOM_FIELDS = {
     "Address": [
         {
+            "fieldname": "use_different_gstin",
+            "label": "Use Different GSTIN",
+            "fieldtype": "Check",
+            "default": 0,
+            "insert_after": "address_line2"
+        },
+        {
             "fieldname": "gstin",
             "label": "Party GSTIN",
             "fieldtype": "Data",
-            "insert_after": "fax",
+            "insert_after": "use_different_gstin",
+            "read_only_depends_on": "eval: !doc.use_different_gstin"
+        },
+        {
+            "fieldname": "gst_category",
+            "label": "GST Category",
+            "fieldtype": "Select",
+            "insert_after": "gstin",
+            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
+            "default": "Unregistered",
+            "read_only_depends_on": "eval: !doc.use_different_gstin"
         },
         {
             "fieldname": "gst_state",
@@ -840,10 +857,16 @@ CUSTOM_FIELDS = {
             "depends_on": "eval:doc.is_transporter",
         },
         {
+            "fieldname": "gstin",
+            "label": "Party GSTIN",
+            "fieldtype": "Data",
+            "insert_after": "gst_transporter_id"
+        },
+        {
             "fieldname": "gst_category",
             "label": "GST Category",
             "fieldtype": "Select",
-            "insert_after": "gst_transporter_id",
+            "insert_after": "gstin",
             "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
             "default": "Unregistered",
         },
@@ -859,10 +882,16 @@ CUSTOM_FIELDS = {
     ],
     "Customer": [
         {
+            "fieldname": "gstin",
+            "label": "Party GSTIN",
+            "fieldtype": "Data",
+            "insert_after": "pan"
+        },
+        {
             "fieldname": "gst_category",
             "label": "GST Category",
             "fieldtype": "Select",
-            "insert_after": "pan",
+            "insert_after": "gstin",
             "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
             "default": "Unregistered",
         },
@@ -876,4 +905,20 @@ CUSTOM_FIELDS = {
             "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
         },
     ],
+    "Company": [
+        {
+            "fieldname": "gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Data",
+            "insert_after": "is_group"
+        },
+        {
+            "fieldname": "gst_category",
+            "label": "GST Category",
+            "fieldtype": "Select",
+            "insert_after": "gstin",
+            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
+            "default": "Unregistered",
+        },
+    ]
 }

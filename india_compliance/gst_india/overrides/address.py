@@ -79,3 +79,27 @@ def update_gst_category(doc, method):
                     "gst_category",
                     "Registered Regular",
                 )
+
+
+def update_default_gstin_gst_category(doc, method):
+    if doc.is_new():
+        link_doctype = doc.links[0].link_doctype
+        link_name = doc.links[0].link_name
+    
+        gstin, gst_category = frappe.db.get_value(link_doctype, link_name, 
+            ['gstin', 'gst_category'])
+
+        doc.gstin = gstin
+        doc.gst_category = gst_category
+
+def enable_gstin_on_different_addresses(doc, method):
+    gstin_list = []
+    for link in doc.links:
+        gstin = frappe.db.get_value(link.link_doctype, link.link_name, 'gstin')
+        if gstin:
+            gstin_list.append(gstin)
+    
+        if len(set(gstin_list)) != 1:
+            doc.use_different_gstin = True
+        else:
+            doc.use_different_gstin = False
