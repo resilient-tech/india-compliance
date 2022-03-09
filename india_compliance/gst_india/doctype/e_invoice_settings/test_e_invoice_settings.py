@@ -8,4 +8,4 @@ import unittest
 
 
 class TestEInvoiceSettings(unittest.TestCase):
-	pass
+    pass
