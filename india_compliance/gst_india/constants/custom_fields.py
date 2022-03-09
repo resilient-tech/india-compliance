@@ -86,7 +86,7 @@ sales_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_section",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
+        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
         "length": 25,
     },
@@ -111,7 +111,7 @@ delivery_note_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_vehicle_type",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
+        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders",
         "fetch_from": "customer.gst_category",
     },
 ]
