@@ -12,7 +12,7 @@ export async function set_api_secret(api_secret) {
 }
 
 export async function login(email) {
-    const response = await india_compliance.gst_api.call("login", {
+    const response = await india_compliance.gst_api.call("auth/login", {
         body: { email },
     });
 
@@ -24,7 +24,7 @@ export async function login(email) {
 }
 
 export function signup(email, gstin) {
-    return india_compliance.gst_api.call("signup", {
+    return india_compliance.gst_api.call("auth/signup", {
         body: { email, gstin },
     });
 }
@@ -44,8 +44,9 @@ export function set_session(session) {
 }
 
 export function validate_session(session_id) {
-    return india_compliance.gst_api.call("validate_session", {
+    return india_compliance.gst_api.call("auth/validate_session", {
         body: { session_id },
+        fail_silently: true,
     });
 }
 
