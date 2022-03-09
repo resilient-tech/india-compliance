@@ -34,14 +34,16 @@ export default {
             await dispatch("fetchSession");
             if (!state.session) return;
 
-            const { message, error } = await validate_session(state.session.id);
-            if (error) {
-                // invalid session -> delete the session
-                await dispatch("setSession", null);
+            const response = await validate_session(state.session.id);
+            if (response.error) {
+                if (response.response.exc_type === "InvalidSessionError") {
+                    // invalid session -> delete the session
+                    await dispatch("setSession", null);
+                }
                 return;
             }
-            if (!message || !message.api_secret) return;
-            await dispatch("setApiSecret", message.api_secret);
+            if (!response.message || !response.message.api_secret) return;
+            await dispatch("setApiSecret", response.message.api_secret);
         },
 
         async setSession({ commit }, session) {

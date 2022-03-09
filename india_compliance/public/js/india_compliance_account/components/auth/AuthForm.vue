@@ -114,7 +114,7 @@ export default {
       if (this.hasInputError) return;
 
       const email = this.email.value;
-      const gstin = this.email.value;
+      const gstin = this.gstin.value;
 
       let response;
       if (this.isAccountRegisted) response = await login(email);
@@ -126,11 +126,8 @@ export default {
         return;
       }
 
-      if (response.message && response.message.session_id) {
-        await this.$store.dispatch("setSession", {
-          id: response.message.session_id,
-          email,
-        });
+      if (response.message && response.message.session) {
+        await this.$store.dispatch("setSession", response.message.session);
       }
 
       this.isRedirecting = true;

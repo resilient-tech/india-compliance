@@ -61,7 +61,7 @@ india_compliance.gst_api.call = async function (endpoint, options) {
         const data = await response.json();
         if (response.ok) return { success: true, ...data };
 
-        throw new Error(extract_error_message(data));
+        throw new UnsuccessfulResponseError(data);
     } catch (e) {
         const error =
             e.message || "Something went wrong, Please try again later!";
@@ -74,12 +74,12 @@ india_compliance.gst_api.call = async function (endpoint, options) {
             });
         }
 
-        return { success: false, error };
+        return { success: false, error, response: e.response };
     }
 };
 
-function extract_error_message(responseError) {
-    const { exc_type, exception, _server_messages } = responseError;
+function extract_error_message(responseBody) {
+    const { exc_type, exception, _server_messages } = responseBody;
     if (!exception) {
         if (_server_messages) {
             const server_messages = JSON.parse(_server_messages);
@@ -92,4 +92,11 @@ function extract_error_message(responseError) {
     return exception
         .replace(new RegExp(".*" + exc_type + ":", "gi"), "")
         .trim();
+}
+
+class UnsuccessfulResponseError extends Error {
+    constructor(response) {
+        super(extract_error_message(response));
+        this.response = response;
+    }
 }

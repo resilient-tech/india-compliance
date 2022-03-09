@@ -40,7 +40,6 @@ export function set_session(session) {
 export function validate_session(session_id) {
     return india_compliance.gst_api.call("auth/validate_session", {
         body: { session_id },
-        fail_silently: true,
     });
 }
 
