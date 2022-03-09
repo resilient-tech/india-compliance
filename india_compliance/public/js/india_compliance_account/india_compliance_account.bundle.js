@@ -38,6 +38,8 @@ india_compliance.page.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
 frappe.provide("india_compliance.gst_api");
 india_compliance.gst_api.call = async function (endpoint, options) {
     try {
+        // TODO: remove this when we have aws base url
+        endpoint = endpoint.replace("/", ".");
         const base_url =
             "http://apiman.localhost:8000/api/method/apiman.api.v1.";
         const url = base_url + endpoint;
@@ -61,10 +63,18 @@ india_compliance.gst_api.call = async function (endpoint, options) {
 
         throw new Error(extract_error_message(data));
     } catch (e) {
-        return {
-            success: false,
-            error: e.message || "Something went wrong, Please try again later!",
-        };
+        const error =
+            e.message || "Something went wrong, Please try again later!";
+
+        if (!options.fail_silently) {
+            frappe.msgprint({
+                message: error,
+                title: "Error",
+                indicator: "red",
+            });
+        }
+
+        return { success: false, error };
     }
 };
 
