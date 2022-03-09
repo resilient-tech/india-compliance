@@ -1,9 +1,8 @@
 import json
 
 import frappe
-from erpnext.setup.setup_wizard.operations.taxes_setup import \
-    from_detailed_data
 from frappe import _
+from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
 
 from india_compliance.gst_india.utils import read_data_file
 
