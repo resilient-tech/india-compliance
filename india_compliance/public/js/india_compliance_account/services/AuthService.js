@@ -48,14 +48,6 @@ export function validate_session(session_id) {
     });
 }
 
-function mockApiCall(response = {}, seconds = 1) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(response);
-        }, 1000 * seconds);
-    });
-}
-
 function call_server_method(method, args) {
     return frappe
         .call({
