@@ -14,17 +14,22 @@ export async function set_api_secret(api_secret) {
 export function login(email) {
     return india_compliance.gst_api.call("auth/login", {
         body: { email },
+        fail_silently: true,
     });
 }
 
 export function signup(email, gstin) {
     return india_compliance.gst_api.call("auth/signup", {
         body: { email, gstin },
+        fail_silently: true,
     });
 }
 
-export function validateGstin(value) {
-    return mockApiCall(true);
+export function check_free_trial_eligiblity(gstin) {
+    return india_compliance.gst_api.call("auth/is_eligible_for_free_trial", {
+        body: { gstin },
+        fail_silently: true,
+    });
 }
 
 export function get_session() {
