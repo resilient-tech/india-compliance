@@ -9,7 +9,7 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2022-02-24 17:26:05.008389",
+ "modified": "2022-03-01 15:45:47.658452",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Purchase Register",
@@ -18,5 +18,12 @@
  "ref_doctype": "Purchase Invoice",
  "report_name": "GST Purchase Register",
  "report_type": "Script Report",
- "roles": []
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
+  }
+ ]
 }

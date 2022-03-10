@@ -1,7 +1,6 @@
 # Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-
 import os
 
 import frappe
@@ -91,7 +90,7 @@ def send_gstin_reminder_to_all_parties():
             party = frappe.get_doc(link.link_doctype, link.link_name)
             if link.link_doctype in ("Customer", "Supplier"):
                 t = (link.link_doctype, link.link_name, address.email_id)
-                if not t in parties:
+                if t not in parties:
                     parties.append(t)
 
     sent_to = []

@@ -12,7 +12,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 
 		for (let doc of selected_docs) {
 			if (doc.docstatus !== 1) {
-				frappe.throw(__("E-Way Bill JSON can only be generated from a submitted document"));
+				frappe.throw(__("e-Waybill JSON can only be generated from a submitted document"));
 			}
 		}
 
@@ -35,7 +35,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 		});
 	};
 
-	list_view.page.add_actions_menu_item(__('Generate E-Way Bill JSON'), action, false);
+	list_view.page.add_actions_menu_item(__('Generate e-Waybill JSON'), action, false);
 
 	const generate_irns = () => {
 		const docnames = list_view.get_checked_items(true);
@@ -44,7 +44,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 				method: 'india_compliance.gst_india.utils.e_invoice.generate_einvoices',
 				args: { docnames },
 				freeze: true,
-				freeze_message: __('Generating E-Invoices...')
+				freeze_message: __('Generating e-Invoices...')
 			});
 		} else {
 			frappe.msgprint({
@@ -89,7 +89,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 						remark: data.remark
 					},
 					freeze: true,
-					freeze_message: __('Cancelling E-Invoices...'),
+					freeze_message: __('Cancelling e-Invoices...'),
 				});
 				d.hide();
 			},
@@ -125,8 +125,8 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 
 		if (invoices.length != failures.length) {
 			frappe.msgprint({
-				message: __('{0} e-invoices generated successfully', [invoices.length]),
-				title: __('Bulk E-Invoice Generation Complete'),
+				message: __('{0} e-Invoices generated successfully', [invoices.length]),
+				title: __('Bulk e-Invoice Generation Complete'),
 				indicator: 'orange'
 			});
 		}
@@ -140,7 +140,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 			`;
 			frappe.msgprint({
 				message: message,
-				title: __('Bulk E-Invoice Generation Complete'),
+				title: __('Bulk e-Invoice Generation Complete'),
 				indicator: 'orange'
 			});
 		}
@@ -151,8 +151,8 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 
 		if (invoices.length != failures.length) {
 			frappe.msgprint({
-				message: __('{0} e-invoices cancelled successfully', [invoices.length]),
-				title: __('Bulk E-Invoice Cancellation Complete'),
+				message: __('{0} e-Invoices cancelled successfully', [invoices.length]),
+				title: __('Bulk e-Invoice Cancellation Complete'),
 				indicator: 'orange'
 			});
 		}
@@ -166,7 +166,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 			`;
 			frappe.msgprint({
 				message: message,
-				title: __('Bulk E-Invoice Cancellation Complete'),
+				title: __('Bulk e-Invoice Cancellation Complete'),
 				indicator: 'orange'
 			});
 		}
