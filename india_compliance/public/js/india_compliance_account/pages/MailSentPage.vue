@@ -11,9 +11,8 @@
       sign you into the dashboard.
     </p>
     <p>This link expires in 24 hours, so be sure to use it soon.</p>
-    <h4>Click Refresh after validating your account</h4>
-    <button @click.stop="refresh" class="btn btn-primary btn-sm">
-      Refresh
+    <button @click.stop="changeEmail" class="btn btn-primary btn-sm">
+      Change Email
     </button>
   </div>
 </template>
@@ -26,8 +25,9 @@ export default {
     },
   },
   methods: {
-    async refresh() {
-      location.reload();
+    async changeEmail() {
+      await this.$store.dispatch("setSession", null);
+      this.$router.replace({ name: "auth" });
     },
   },
 

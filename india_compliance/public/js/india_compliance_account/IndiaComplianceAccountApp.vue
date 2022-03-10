@@ -3,9 +3,7 @@
     <transition name="fade">
       <Startup v-if="isLoading" />
       <transition name="fade" mode="out-in" v-else>
-        <keep-alive>
-          <router-view />
-        </keep-alive>
+        <router-view />
       </transition>
     </transition>
   </div>
