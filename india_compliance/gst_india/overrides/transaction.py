@@ -1,16 +1,68 @@
 import json
 
 import frappe
-from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from frappe import _
 from frappe.model.utils import get_fetch_values
+from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
-from ..constants import STATE_NUMBERS
-from ..utils import get_gst_accounts, get_place_of_supply
+from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.utils import get_gst_accounts, get_place_of_supply
 
 
 def set_place_of_supply(doc, method=None):
     doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+
+def validate_hsn_code(doc, method=None):
+    gst_settings = frappe.db.get_value(
+        "GST Settings",
+        "GST Settings",
+        ("validate_hsn_code", "min_hsn_digits"),
+        as_dict=True,
+    )
+
+    if not gst_settings.validate_hsn_code:
+        return
+
+    missing_hsn = []
+    invalid_hsn = []
+    min_hsn_digits = int(gst_settings.min_hsn_digits)
+
+    for item in doc.items:
+        if not (hsn_code := item.get("gst_hsn_code")):
+            if doc._action == "submit":
+                invalid_hsn.append(str(item.idx))
+            else:
+                missing_hsn.append(str(item.idx))
+
+        elif len(hsn_code) < min_hsn_digits:
+            invalid_hsn.append(str(item.idx))
+
+    if doc._action == "submit":
+        if not invalid_hsn:
+            return
+
+        frappe.throw(
+            _(
+                "Please enter a valid HSN/SAC code for the following row numbers:"
+                " <br>{0}"
+            ).format(frappe.bold(", ".join(invalid_hsn)))
+        )
+
+    if missing_hsn:
+        frappe.msgprint(
+            _(
+                "Please enter HSN/SAC code for the following row numbers: <br>{0}"
+            ).format(frappe.bold(", ".join(missing_hsn)))
+        )
+
+    if invalid_hsn:
+        frappe.msgprint(
+            _(
+                "HSN/SAC code should be at least {0} digits long for the following"
+                " row numbers: <br>{1}"
+            ).format(min_hsn_digits, frappe.bold(", ".join(invalid_hsn)))
+        )
 
 
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
@@ -191,4 +243,3 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
                 "name",
             )
     return default_tax
-
