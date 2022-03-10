@@ -28,7 +28,7 @@
       :disabled="actionDisabled"
       type="submit"
     >
-      {{ submitLabel }}
+      {{ computedSubmitLabel }}
     </button>
     <p class="server-error" v-if="error" v-html="error"></p>
   </form>
@@ -38,7 +38,11 @@
 import FormField from "../FormField.vue";
 import Loading from "../Loading.vue";
 import { UiState } from "../../constants";
-import { login, signup, validateGstin } from "../../services/authService";
+import {
+  login,
+  signup,
+  check_free_trial_eligiblity,
+} from "../../services/authService";
 
 export default {
   props: { isAccountRegisted: Boolean },
@@ -61,14 +65,17 @@ export default {
       isLoading: false,
       error: null,
       isRedirecting: false,
+      submitLabel: "Continue",
     };
   },
 
   computed: {
-    submitLabel() {
+    computedSubmitLabel() {
       if (this.isLoading) return "Loading...";
       if (this.isRedirecting) return "Redirecting...";
-      return this.isAccountRegisted ? "Login" : "Continue";
+
+      if (this.isAccountRegisted) return "Login";
+      return this.submitLabel;
     },
 
     actionDisabled() {
@@ -99,7 +106,12 @@ export default {
 
   watch: {
     "gstin.value"(value) {
+      this.error = null;
       this.validateGstin(value);
+    },
+
+    "email.value"(_) {
+      this.error = null;
     },
 
     isAccountRegisted() {
@@ -156,8 +168,18 @@ export default {
 
       field.error = null;
       if (!value) field.error = "GSTIN is required";
-      else if (!validate_gst_number(value) || !(await validateGstin(value)))
+      else if (!validate_gst_number(value))
         field.error = "Invalid GSTIN detected";
+      else {
+        const { message, error } = await check_free_trial_eligiblity(value);
+
+        if (error) {
+          field.error = error;
+        } else {
+          this.submitLabel = message ? "Start Free Trial" : "Signup";
+        }
+      }
+
       field.state = field.error ? UiState.error : UiState.success;
     },
   },
