@@ -1,1 +1,0 @@
-india_compliance.patches.v14_0.update_indian_gst_accounts

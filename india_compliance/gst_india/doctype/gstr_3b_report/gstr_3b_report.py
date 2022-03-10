@@ -497,7 +497,7 @@ class GSTR3BReport(Document):
             "GST Account",
             filters={
                 "company": self.company,
-                "gst_account_type": ["!=", "Reverse Charge"],
+                "account_type": ("in", ("Input", "Output")),
             },
             fields=["cgst_account", "sgst_account", "igst_account", "cess_account"],
         )

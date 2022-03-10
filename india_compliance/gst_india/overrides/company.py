@@ -84,7 +84,7 @@ def update_gst_settings(company):
         gst_accounts,
         existing_account_list,
         gst_settings,
-        gst_account_type="Input",
+        "Input",
     )
     add_accounts_in_gst_settings(
         company,
@@ -92,7 +92,7 @@ def update_gst_settings(company):
         gst_accounts,
         existing_account_list,
         gst_settings,
-        gst_account_type="Output",
+        "Output",
     )
     add_accounts_in_gst_settings(
         company,
@@ -100,7 +100,7 @@ def update_gst_settings(company):
         gst_accounts,
         existing_account_list,
         gst_settings,
-        gst_account_type="Reverse Charge",
+        "Reverse Charge",
     )
 
     gst_settings.save()
@@ -112,7 +112,7 @@ def add_accounts_in_gst_settings(
     gst_accounts,
     existing_account_list,
     gst_settings,
-    gst_account_type,
+    account_type,
 ):
     accounts_not_added = 1
     for account in account_names:
@@ -132,6 +132,6 @@ def add_accounts_in_gst_settings(
                 "cgst_account": gst_accounts.get(account_names[0]),
                 "sgst_account": gst_accounts.get(account_names[1]),
                 "igst_account": gst_accounts.get(account_names[2]),
-                "gst_account_type": gst_account_type,
+                "account_type": account_type,
             },
         )

@@ -142,9 +142,9 @@ def get_gst_accounts(
     if company:
         filters.update({"company": company})
     if only_reverse_charge:
-        filters.update({"gst_account_type": "Reverse Charge"})
+        filters.update({"account_type": "Reverse Charge"})
     elif only_non_reverse_charge:
-        filters.update({"gst_account_type": ["!=", "Reverse Charge"]})
+        filters.update({"account_type": ("in", ("Input", "Output"))})
 
     gst_accounts = frappe._dict()
     gst_settings_accounts = frappe.get_all(
