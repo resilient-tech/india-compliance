@@ -14,7 +14,7 @@ def validate_hsn_code(doc, method=None):
         as_dict=True,
     )
 
-    if not gst_settings or gst_settings.validate_hsn_code:
+    if not gst_settings or not gst_settings.validate_hsn_code:
         return
 
     if not doc.gst_hsn_code:
