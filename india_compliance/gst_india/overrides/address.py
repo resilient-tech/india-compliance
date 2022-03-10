@@ -85,24 +85,36 @@ def update_gst_category(doc, method):
 
 
 def update_default_gstin_gst_category(doc, method):
-    if doc.is_new():
-        link_doctype = doc.links[0].link_doctype
-        link_name = doc.links[0].link_name
-    
-        gstin, gst_category = frappe.db.get_value(link_doctype, link_name, 
-            ['gstin', 'gst_category'])
+    if not doc.use_different_gstin:
+        if len(doc.links) >= 1:
+            link_doctype = doc.links[0].link_doctype
+            link_name = doc.links[0].link_name
 
-        doc.gstin = gstin
-        doc.gst_category = gst_category
+            gstin, gst_category = frappe.db.get_value(
+                link_doctype, link_name, ["gstin", "gst_category"]
+            )
 
-def enable_gstin_on_different_addresses(doc, method):
+            doc.gstin = gstin
+            doc.gst_category = gst_category
+
+        if doc.has_value_changed("gstin"):
+            update_linked_party(doc)
+
+    if doc.gstin and len(doc.links) == 0:
+        doc.gstin = ""
+
+    doc.use_different_gstin = True if len(doc.links) > 1 else False
+
+
+def get_gstin_from_linked_party(doc):
     gstin_list = []
     for link in doc.links:
-        gstin = frappe.db.get_value(link.link_doctype, link.link_name, 'gstin')
-        if gstin:
-            gstin_list.append(gstin)
-    
-        if len(set(gstin_list)) != 1:
-            doc.use_different_gstin = True
-        else:
-            doc.use_different_gstin = False
+        gstin = frappe.db.get_value(link.link_doctype, link.link_name, "gstin")
+        gstin_list.append(gstin)
+
+    return gstin_list
+
+
+def update_linked_party(doc):
+    for link in doc.links:
+        frappe.db.set_value(link.link_doctype, link.link_name, "gstin", doc.gstin)
