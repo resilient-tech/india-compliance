@@ -6,7 +6,7 @@ import frappe
 def execute():
     gst_accounts = frappe.get_all(
         "GST Account",
-        # filters={"parent": "GST Settings", "account_type": ("is", "not set")},
+        filters={"parent": "GST Settings", "account_type": ("is", "not set")},
         fields=(
             "name",
             "company",

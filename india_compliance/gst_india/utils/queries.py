@@ -17,5 +17,4 @@ def get_gstin_options(company):
         .run(as_dict=1)
     )
 
-    gstin_list = list(set(d.gstin for d in addresses if d.gstin))
-    return gstin_list
+    return list(set(d.gstin for d in addresses if d.gstin))

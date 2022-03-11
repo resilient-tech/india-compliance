@@ -3,9 +3,6 @@
 
 import unittest
 
-import frappe
-
 
 class TestGSTSettings(unittest.TestCase):
-    def test_validate_multiple_accounts(self):
-        pass
+    pass
