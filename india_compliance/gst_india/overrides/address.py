@@ -97,9 +97,6 @@ def update_default_gstin_gst_category(doc, method):
             doc.gstin = gstin
             doc.gst_category = gst_category
 
-        if doc.has_value_changed("gstin"):
-            update_linked_party(doc)
-
     if doc.gstin and len(doc.links) == 0:
         doc.gstin = ""
 
@@ -113,8 +110,3 @@ def get_gstin_from_linked_party(doc):
         gstin_list.append(gstin)
 
     return gstin_list
-
-
-def update_linked_party(doc):
-    for link in doc.links:
-        frappe.db.set_value(link.link_doctype, link.link_name, "gstin", doc.gstin)
