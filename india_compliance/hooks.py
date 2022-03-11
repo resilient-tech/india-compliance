@@ -66,6 +66,9 @@ doc_events = {
     ): {
         "validate": "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
     },
+    ("Sales Order", "Delivery Note", "Sales Invoice",): {
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_hsn_code"
+    },
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
         "on_update": [
@@ -76,6 +79,9 @@ doc_events = {
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india",
+    },
+    "Item": {
+        "validate": "india_compliance.gst_india.overrides.item.validate_hsn_code",
     },
 }
 

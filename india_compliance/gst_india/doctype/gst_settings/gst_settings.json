@@ -5,32 +5,25 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "gst_tax_settings_section",
+  "general_tab",
   "round_off_gst_values",
-  "column_break_4",
   "hsn_wise_tax_breakup",
-  "section_break_4",
+  "column_break_4",
+  "validate_hsn_code",
+  "min_hsn_digits",
+  "e_waybill_section",
+  "enable_e_waybill_api",
+  "accounts_tab",
   "gst_accounts",
-  "b2c_limit"
+  "credentials_tab",
+  "credentials",
+  "api_secret"
  ],
  "fields": [
   {
-   "fieldname": "section_break_4",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "gst_accounts",
    "fieldtype": "Table",
-   "label": "GST Accounts",
-   "options": "GST Account"
-  },
-  {
-   "default": "250000",
-   "description": "Set Invoice Value for B2C. B2CL and B2CS calculated based on this invoice value.",
-   "fieldname": "b2c_limit",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "B2C Limit",
+   "options": "GST Account",
    "reqd": 1
   },
   {
@@ -47,19 +40,69 @@
    "label": "Tax Breakup Table Based On HSN Code"
   },
   {
-   "fieldname": "gst_tax_settings_section",
-   "fieldtype": "Section Break",
-   "label": "GST Tax Settings"
-  },
-  {
    "fieldname": "column_break_4",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_secret",
+   "fieldtype": "Password",
+   "hidden": 1,
+   "label": "API Secret"
+  },
+  {
+   "default": "0",
+   "description": "As per <a href=\"https://www.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
+   "fieldname": "validate_hsn_code",
+   "fieldtype": "Check",
+   "label": "Validate HSN/SAC Code in Sales Items and Transactions"
+  },
+  {
+   "default": "6",
+   "depends_on": "eval: doc.validate_hsn_code",
+   "fieldname": "min_hsn_digits",
+   "fieldtype": "Select",
+   "label": "Minimum HSN/SAC Code Digits",
+   "mandatory_depends_on": "eval: doc.validate_hsn_code",
+   "options": "4\n6"
+  },
+  {
+   "fieldname": "accounts_tab",
+   "fieldtype": "Tab Break",
+   "label": "Accounts"
+  },
+  {
+   "depends_on": "eval: doc.api_secret",
+   "fieldname": "credentials_tab",
+   "fieldtype": "Tab Break",
+   "label": "Credentials"
+  },
+  {
+   "fieldname": "credentials",
+   "fieldtype": "Table",
+   "options": "GST Credentials"
+  },
+  {
+   "fieldname": "general_tab",
+   "fieldtype": "Tab Break",
+   "label": "General"
+  },
+  {
+   "depends_on": "eval:doc.api_secret",
+   "fieldname": "e_waybill_section",
+   "fieldtype": "Section Break",
+   "label": "e-Waybill"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_waybill_api",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill API"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-03 16:46:19.412013",
+ "modified": "2022-03-10 11:33:23.304519",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

@@ -1,7 +1,6 @@
 # Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-
 import os
 
 import frappe
@@ -10,28 +9,46 @@ from frappe.contacts.doctype.contact.contact import get_default_contact
 from frappe.model.document import Document
 from frappe.utils import date_diff, get_url, nowdate
 
+from india_compliance.gst_india.constants import TAX_ACCOUNT_FIELDS
 
-class EmailMissing(frappe.ValidationError): pass
 
 class GSTSettings(Document):
-	def onload(self):
-		data = frappe._dict()
-		data.total_addresses = frappe.db.sql('''select count(*) from tabAddress where country = "India"''')
-		data.total_addresses_with_gstin = frappe.db.sql('''select distinct count(*)
-			from tabAddress where country = "India" and ifnull(gstin, '')!='' ''')
-		self.set_onload('data', data)
+    def validate(self):
+        self.validate_gst_accounts()
 
-	def validate(self):
-		# Validate duplicate accounts
-		self.validate_duplicate_accounts()
+    def validate_gst_accounts(self):
+        account_list = []
+        company_wise_account_types = {}
 
-	def validate_duplicate_accounts(self):
-		account_list = []
-		for account in self.get('gst_accounts'):
-			for fieldname in ['cgst_account', 'sgst_account', 'igst_account', 'cess_account']:
-				if account.get(fieldname) in account_list:
-					frappe.throw(_("Account {0} appears multiple times").format(
-						frappe.bold(account.get(fieldname))))
+        for row in self.gst_accounts:
 
-				if account.get(fieldname):
-					account_list.append(account.get(fieldname))
+            # Validate Duplicate Accounts
+            for fieldname in TAX_ACCOUNT_FIELDS:
+                account = row.get(fieldname)
+                if not account:
+                    continue
+
+                if account in account_list:
+                    frappe.throw(
+                        _("Row #{0}: Account {1} appears multiple times").format(
+                            row.idx,
+                            frappe.bold(account),
+                        )
+                    )
+
+                account_list.append(account)
+
+            # Validate Duplicate Account Types for each Company
+            account_types = company_wise_account_types.setdefault(row.company, [])
+            if row.account_type in account_types:
+                frappe.throw(
+                    _(
+                        "Row #{0}: Account Type {1} appears multiple times for {2}"
+                    ).format(
+                        row.idx,
+                        frappe.bold(row.account_type),
+                        frappe.bold(row.company),
+                    )
+                )
+
+            account_types.append(row.account_type)
