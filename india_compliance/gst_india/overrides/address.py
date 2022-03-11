@@ -4,7 +4,10 @@ import frappe
 from frappe import _
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.utils import set_gst_state_and_state_number, validate_gstin_check_digit
+from india_compliance.gst_india.utils import (
+    set_gst_state_and_state_number,
+    validate_gstin_check_digit,
+)
 
 GSTIN_FORMAT = re.compile(
     "^[0-9]{2}[A-Z]{4}[0-9A-Z]{1}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}$"

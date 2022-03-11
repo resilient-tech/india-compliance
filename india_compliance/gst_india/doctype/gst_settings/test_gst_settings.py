@@ -5,4 +5,4 @@ import unittest
 
 
 class TestGSTSettings(unittest.TestCase):
-	pass
+    pass
