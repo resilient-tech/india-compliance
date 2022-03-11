@@ -6,15 +6,15 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
+  "account_type",
   "cgst_account",
   "sgst_account",
   "igst_account",
   "cess_account",
-  "is_reverse_charge_account"
+  "cess_non_advol_account"
  ],
  "fields": [
   {
-   "columns": 1,
    "fieldname": "company",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -53,23 +53,29 @@
    "columns": 2,
    "fieldname": "cess_account",
    "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "CESS Account",
+   "label": "Cess Account",
    "options": "Account"
   },
   {
-   "columns": 1,
-   "default": "0",
-   "fieldname": "is_reverse_charge_account",
-   "fieldtype": "Check",
+   "description": "Cess based on quantity of items purchased / sold",
+   "fieldname": "cess_non_advol_account",
+   "fieldtype": "Link",
+   "label": "Cess Non Advol Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "account_type",
+   "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Is Reverse Charge Account"
+   "label": "Account Type",
+   "options": "Input\nOutput\nReverse Charge",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-02-24 17:12:03.283715",
+ "modified": "2022-03-10 10:01:26.109854",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Account",

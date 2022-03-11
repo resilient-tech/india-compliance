@@ -495,7 +495,10 @@ class GSTR3BReport(Document):
         account_heads = {}
         gst_settings_accounts = frappe.get_all(
             "GST Account",
-            filters={"company": self.company, "is_reverse_charge_account": 0},
+            filters={
+                "company": self.company,
+                "account_type": ("in", ("Input", "Output")),
+            },
             fields=["cgst_account", "sgst_account", "igst_account", "cess_account"],
         )
 
