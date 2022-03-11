@@ -1,0 +1,1 @@
+india_compliance.patches.v1_0.update_party_gstin_gst_category.py
