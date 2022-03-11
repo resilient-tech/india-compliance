@@ -12,8 +12,6 @@ required_apps = ["erpnext"]
 
 doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
-    "Supplier": "gst_india/client_scripts/supplier.js",
-    "Customer": "gst_india/client_scripts/customer.js",
     "Sales Order": "gst_india/client_scripts/sales_order.js",
     "Delivery Note": "gst_india/client_scripts/delivery_note.js",
     "Purchase Order": "gst_india/client_scripts/purchase_order.js",
@@ -68,11 +66,7 @@ doc_events = {
     ): {
         "validate": "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
     },
-    (
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-    ): {
+    ("Sales Order", "Delivery Note", "Sales Invoice",): {
         "validate": "india_compliance.gst_india.overrides.transaction.validate_hsn_code"
     },
     "Company": {
@@ -88,7 +82,7 @@ doc_events = {
     },
     "Item": {
         "validate": "india_compliance.gst_india.overrides.item.validate_hsn_code",
-    }
+    },
 }
 
 

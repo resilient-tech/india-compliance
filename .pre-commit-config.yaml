@@ -15,8 +15,13 @@ repos:
           - id: check-merge-conflict
           - id: check-ast
 
+    - repo: https://github.com/psf/black
+      rev: 22.1.0
+      hooks:
+          - id: black
+
     - repo: https://github.com/timothycrosley/isort
-      rev: 5.9.1
+      rev: 5.10.1
       hooks:
           - id: isort
             exclude: ".*setup.py$"

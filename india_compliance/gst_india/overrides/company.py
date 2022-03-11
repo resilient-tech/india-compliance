@@ -1,9 +1,8 @@
 import json
 
 import frappe
-from erpnext.setup.setup_wizard.operations.taxes_setup import \
-    from_detailed_data
 from frappe import _
+from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
 
 from india_compliance.gst_india.utils import read_data_file
 
@@ -80,10 +79,20 @@ def update_gst_settings(company):
     )
 
     add_accounts_in_gst_settings(
-        company, input_account_names, gst_accounts, existing_account_list, gst_settings
+        company,
+        input_account_names,
+        gst_accounts,
+        existing_account_list,
+        gst_settings,
+        "Input",
     )
     add_accounts_in_gst_settings(
-        company, output_account_names, gst_accounts, existing_account_list, gst_settings
+        company,
+        output_account_names,
+        gst_accounts,
+        existing_account_list,
+        gst_settings,
+        "Output",
     )
     add_accounts_in_gst_settings(
         company,
@@ -91,7 +100,7 @@ def update_gst_settings(company):
         gst_accounts,
         existing_account_list,
         gst_settings,
-        is_reverse_charge=1,
+        "Reverse Charge",
     )
 
     gst_settings.save()
@@ -103,10 +112,9 @@ def add_accounts_in_gst_settings(
     gst_accounts,
     existing_account_list,
     gst_settings,
-    is_reverse_charge=0,
+    account_type,
 ):
     accounts_not_added = 1
-
     for account in account_names:
         # Default Account Added does not exist
         if not gst_accounts.get(account):
@@ -124,6 +132,6 @@ def add_accounts_in_gst_settings(
                 "cgst_account": gst_accounts.get(account_names[0]),
                 "sgst_account": gst_accounts.get(account_names[1]),
                 "igst_account": gst_accounts.get(account_names[2]),
-                "is_reverse_charge_account": is_reverse_charge,
+                "account_type": account_type,
             },
         )
