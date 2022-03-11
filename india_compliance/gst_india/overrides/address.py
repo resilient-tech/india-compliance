@@ -35,7 +35,7 @@ def validate_gstin_for_india(doc, method):
                 )
 
     doc.gstin = doc.gstin.upper().strip()
-    if not doc.gstin or doc.gstin == "NA":
+    if not doc.gstin or doc.gstin == "URP":
         return
 
     if len(doc.gstin) != 15:
@@ -101,12 +101,3 @@ def update_default_gstin_gst_category(doc, method):
         doc.gstin = ""
 
     doc.use_different_gstin = True if len(doc.links) > 1 else False
-
-
-def get_gstin_from_linked_party(doc):
-    gstin_list = []
-    for link in doc.links:
-        gstin = frappe.db.get_value(link.link_doctype, link.link_name, "gstin")
-        gstin_list.append(gstin)
-
-    return gstin_list

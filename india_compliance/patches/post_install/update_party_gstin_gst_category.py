@@ -34,7 +34,11 @@ def execute():
             {
                 "name": [
                     "in",
-                    [address.name for address in addresses if not address.gstin],
+                    [
+                        address.name
+                        for address in addresses
+                        if not address.gstin or address.gstin == "URP"
+                    ],
                 ]
             },
             "gst_category",
@@ -42,10 +46,8 @@ def execute():
         )
 
         # Set GSTIN as per party in address
-        print(addresses)
         for address in addresses:
-            if not address.gstin:
-                print(address.name)
+            if not address.gstin or address.gstin == "URP":
                 linked_party = frappe.db.get_value(
                     "Dynamic Link",
                     {
