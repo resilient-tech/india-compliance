@@ -11,6 +11,8 @@ from frappe.utils import flt, formatdate, getdate
 
 from india_compliance.gst_india.utils import get_gst_accounts
 
+B2C_LIMIT = 250000
+
 
 def execute(filters=None):
     return Gstr1Report(filters).run()
@@ -326,31 +328,29 @@ class Gstr1Report(object):
                 conditions += opts[1]
 
         if self.filters.get("type_of_business") == "B2B":
-            conditions += "AND IFNULL(gst_category, '') in ('Registered Regular', 'Registered Composition', 'Deemed Export', 'SEZ') AND is_return != 1 AND is_debit_note !=1"
-
-        if self.filters.get("type_of_business") in ("B2C Large", "B2C Small"):
-            b2c_limit = frappe.db.get_single_value("GST Settings", "b2c_limit")
-            if not b2c_limit:
-                frappe.throw(_("Please set B2C Limit in GST Settings."))
+            conditions += (
+                "AND IFNULL(gst_category, '') in ('Registered Regular', 'Registered"
+                " Composition', 'Deemed Export', 'SEZ') AND is_return != 1 AND"
+                " is_debit_note !=1"
+            )
 
         if self.filters.get("type_of_business") == "B2C Large":
             conditions += """ AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
 				AND grand_total > {0} AND is_return != 1 AND is_debit_note !=1 AND gst_category ='Unregistered' """.format(
-                flt(b2c_limit)
+                B2C_LIMIT
             )
 
         elif self.filters.get("type_of_business") == "B2C Small":
             conditions += """ AND (
 				SUBSTR(place_of_supply, 1, 2) = SUBSTR(company_gstin, 1, 2)
 					OR grand_total <= {0}) and is_return != 1 AND gst_category ='Unregistered' """.format(
-                flt(b2c_limit)
+                B2C_LIMIT
             )
 
         elif self.filters.get("type_of_business") == "CDNR-REG":
             conditions += """ AND (is_return = 1 OR is_debit_note = 1) AND IFNULL(gst_category, '') in ('Registered Regular', 'Deemed Export', 'SEZ')"""
 
         elif self.filters.get("type_of_business") == "CDNR-UNREG":
-            b2c_limit = frappe.db.get_single_value("GST Settings", "b2c_limit")
             conditions += """ AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
 				AND (is_return = 1 OR is_debit_note = 1)
 				AND IFNULL(gst_category, '') in ('Unregistered', 'Overseas')"""
@@ -1351,23 +1351,3 @@ def is_inter_state(invoice_detail):
         return True
     else:
         return False
-
-
-@frappe.whitelist()
-def get_company_gstins(company):
-    address = frappe.qb.DocType("Address")
-    links = frappe.qb.DocType("Dynamic Link")
-
-    addresses = (
-        frappe.qb.from_(address)
-        .inner_join(links)
-        .on(address.name == links.parent)
-        .select(address.gstin)
-        .where(links.link_doctype == "Company")
-        .where(links.link_name == company)
-        .run(as_dict=1)
-    )
-
-    address_list = [""] + [d.gstin for d in addresses]
-
-    return address_list
