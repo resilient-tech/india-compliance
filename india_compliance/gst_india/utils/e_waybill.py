@@ -5,10 +5,12 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from india_compliance.gst_india.utils import (get_gst_accounts,
-                                              get_itemised_tax_breakup_data,
-                                              set_gst_state_and_state_number,
-                                              validate_gstin_check_digit)
+from india_compliance.gst_india.utils import (
+    get_gst_accounts,
+    get_itemised_tax_breakup_data,
+    set_gst_state_and_state_number,
+    validate_gstin_check_digit,
+)
 
 
 @frappe.whitelist()
@@ -243,9 +245,7 @@ def validate_doc(doc):
         frappe.throw(_("e-Waybill JSON can only be generated from submitted document"))
 
     if doc.is_return:
-        frappe.throw(
-            _("e-Waybill JSON cannot be generated for Sales Return as of now")
-        )
+        frappe.throw(_("e-Waybill JSON cannot be generated for Sales Return as of now"))
 
     if doc.ewaybill:
         frappe.throw(_("e-Waybill already exists for this document"))
