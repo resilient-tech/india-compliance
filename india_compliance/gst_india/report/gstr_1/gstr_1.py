@@ -1351,23 +1351,3 @@ def is_inter_state(invoice_detail):
         return True
     else:
         return False
-
-
-@frappe.whitelist()
-def get_company_gstins(company):
-    address = frappe.qb.DocType("Address")
-    links = frappe.qb.DocType("Dynamic Link")
-
-    addresses = (
-        frappe.qb.from_(address)
-        .inner_join(links)
-        .on(address.name == links.parent)
-        .select(address.gstin)
-        .where(links.link_doctype == "Company")
-        .where(links.link_name == company)
-        .run(as_dict=1)
-    )
-
-    address_list = [""] + [d.gstin for d in addresses]
-
-    return address_list
