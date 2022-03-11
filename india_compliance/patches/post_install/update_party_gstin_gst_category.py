@@ -19,7 +19,7 @@ def execute():
                     [
                         address.name
                         for address in addresses
-                        if address.country == "India"
+                        if address.country != "India"
                         and address.gst_category != "Overseas"
                     ],
                 ]
