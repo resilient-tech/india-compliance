@@ -12,10 +12,6 @@ from frappe.utils import date_diff, get_url, nowdate
 from india_compliance.gst_india.constants import TAX_ACCOUNT_FIELDS
 
 
-class EmailMissing(frappe.ValidationError):
-    pass
-
-
 class GSTSettings(Document):
     def validate(self):
         self.validate_gst_accounts()
