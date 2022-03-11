@@ -54,14 +54,11 @@ doc_events = {
             "india_compliance.gst_india.overrides.address.update_default_gstin_gst_category",
         ]
     },
-    "Supplier": {
-        "validate": [
-            "india_compliance.gst_india.overrides.supplier.validate_pan_for_india",
-            "india_compliance.gst_india.overrides.party.update_gstin_in_address",
-        ]
-    },
-    "Customer": {
+    ("Customer", "Supplier", "Company"): {
         "validate": "india_compliance.gst_india.overrides.party.update_gstin_in_address"
+    },
+    "Supplier": {
+        "validate": "india_compliance.gst_india.overrides.supplier.validate_pan_for_india"
     },
     (
         "Purchase Order",
@@ -83,7 +80,6 @@ doc_events = {
             "india_compliance.gst_india.overrides.company.create_default_tax_templates",
         ],
         "after_insert": "india_compliance.gst_india.overrides.company.update_accounts_settings_for_taxes",
-        "validate": "india_compliance.gst_india.overrides.party.update_gstin_in_address",
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india",
