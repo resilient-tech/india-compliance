@@ -5,58 +5,25 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "gst_summary",
-  "gst_tax_settings_section",
+  "general_tab",
   "round_off_gst_values",
+  "hsn_wise_tax_breakup",
+  "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
-  "column_break_4",
-  "hsn_wise_tax_breakup",
-  "gstin_email_sent_on",
-  "section_break_4",
+  "e_waybill_section",
+  "enable_e_waybill_api",
+  "accounts_tab",
   "gst_accounts",
-  "b2c_limit",
-  "api_settings_tab",
-  "api_id",
-  "column_break_13",
-  "api_secret",
-  "section_break_15",
-  "gstn_public_api",
-  "column_break_17",
-  "gstn_ewb_api",
-  "supplier_compliance_report_settings_section",
-  "section_break_1",
-  "gst_credentials"
+  "credentials_tab",
+  "credentials",
+  "api_secret"
  ],
  "fields": [
   {
-   "fieldname": "gst_summary",
-   "fieldtype": "HTML",
-   "label": "GST Summary"
-  },
-  {
-   "fieldname": "gstin_email_sent_on",
-   "fieldtype": "Date",
-   "label": "GSTIN Email Sent On",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_4",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "gst_accounts",
    "fieldtype": "Table",
-   "label": "GST Accounts",
-   "options": "GST Account"
-  },
-  {
-   "default": "250000",
-   "description": "Set Invoice Value for B2C. B2CL and B2CS calculated based on this invoice value.",
-   "fieldname": "b2c_limit",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "B2C Limit",
+   "options": "GST Account",
    "reqd": 1
   },
   {
@@ -73,68 +40,14 @@
    "label": "Tax Breakup Table Based On HSN Code"
   },
   {
-   "fieldname": "gst_tax_settings_section",
-   "fieldtype": "Section Break",
-   "label": "GST Tax Settings"
-  },
-  {
    "fieldname": "column_break_4",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "api_id",
-   "fieldtype": "Data",
-   "label": "API ID"
-  },
-  {
-   "fieldname": "column_break_13",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "api_secret",
    "fieldtype": "Password",
+   "hidden": 1,
    "label": "API Secret"
-  },
-  {
-   "fieldname": "section_break_15",
-   "fieldtype": "Section Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "gstn_public_api",
-   "fieldtype": "Check",
-   "label": "Enable GSTN Public API"
-  },
-  {
-   "fieldname": "column_break_17",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "gstn_ewb_api",
-   "fieldtype": "Check",
-   "label": "Enable GSTN e-Waybill API"
-  },
-  {
-   "fieldname": "supplier_compliance_report_settings_section",
-   "fieldtype": "Section Break",
-   "label": "Supplier Compliance Report Settings"
-  },
-  {
-   "fieldname": "section_break_1",
-   "fieldtype": "Section Break",
-   "label": "GST Credentials"
-  },
-  {
-   "fieldname": "gst_credentials",
-   "fieldtype": "Table",
-   "label": "GST Credentials",
-   "options": "GST Credentials"
-  },
-  {
-   "fieldname": "api_settings_tab",
-   "fieldtype": "Tab Break",
-   "label": "API Settings"
   },
   {
    "default": "0",
@@ -151,11 +64,45 @@
    "label": "Minimum HSN/SAC Code Digits",
    "mandatory_depends_on": "eval: doc.validate_hsn_code",
    "options": "4\n6"
+  },
+  {
+   "fieldname": "accounts_tab",
+   "fieldtype": "Tab Break",
+   "label": "Accounts"
+  },
+  {
+   "depends_on": "eval: doc.api_secret",
+   "fieldname": "credentials_tab",
+   "fieldtype": "Tab Break",
+   "label": "Credentials"
+  },
+  {
+   "fieldname": "credentials",
+   "fieldtype": "Table",
+   "options": "GST Credentials"
+  },
+  {
+   "fieldname": "general_tab",
+   "fieldtype": "Tab Break",
+   "label": "General"
+  },
+  {
+   "depends_on": "eval:doc.api_secret",
+   "fieldname": "e_waybill_section",
+   "fieldtype": "Section Break",
+   "label": "e-Waybill"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_waybill_api",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill API"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
- "modified": "2022-03-07 05:12:46.816452",
+ "links": [],
+ "modified": "2022-03-10 11:33:23.304519",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
