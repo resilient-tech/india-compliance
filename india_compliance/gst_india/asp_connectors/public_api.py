@@ -5,7 +5,6 @@ class PublicAPI(BaseAPI):
     def __init__(self):
         super().__init__()
         self.api_endpoint = "commonapi"
-        self.api_key = self.settings.get_password("api_secret")
 
     def get_gstin_info(self, gstin):
         return self.get(

@@ -9,7 +9,7 @@ BASE_URL = "https://asp.resilient.tech"
 
 
 class BaseAPI:
-    IGNORED_ERROR_CODES = set()
+    IGNORE_ERROR_CODES = set()
 
     def __init__(self):
         self.api_endpoint = None
@@ -100,7 +100,7 @@ class BaseAPI:
         message = error.get("error_description", error.get("message", ""))
         error_code = error.get("errorCode")
         if error_code:
-            if error_code in self.IGNORED_ERROR_CODES:
+            if error_code in self.IGNORE_ERROR_CODES:
                 return
 
             message = message.rstrip(".") + f". Error Code: {error_code}"

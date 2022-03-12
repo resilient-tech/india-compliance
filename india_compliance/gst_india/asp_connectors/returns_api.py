@@ -19,7 +19,7 @@ class ReturnsAPI(BaseAPI):
             "RET2B1016",
             "RT-3BAS1009",
         }
-        self.IGNORED_ERROR_CODES = self.otp_requested_error_codes.union(
+        self.IGNORE_ERROR_CODES = self.otp_requested_error_codes.union(
             self.no_docs_found_error_codes
         )
 
