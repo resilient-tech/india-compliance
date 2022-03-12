@@ -14,19 +14,18 @@ def set_place_of_supply(doc, method=None):
 
 
 def validate_hsn_code(doc, method=None):
-    gst_settings = frappe.db.get_value(
+    validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
         ("validate_hsn_code", "min_hsn_digits"),
-        as_dict=True,
     )
 
-    if not gst_settings or not gst_settings.validate_hsn_code:
+    if not validate_hsn_code:
         return
 
     missing_hsn = []
     invalid_hsn = []
-    min_hsn_digits = int(gst_settings.min_hsn_digits)
+    min_hsn_digits = int(min_hsn_digits)
 
     for item in doc.items:
         if not (hsn_code := item.get("gst_hsn_code")):
