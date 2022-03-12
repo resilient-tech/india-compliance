@@ -5,8 +5,10 @@ from frappe import _
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
-# alphanumeric characters, hyphens, and slashes
-GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[\w]{1}[\w\-\/]{0,15}$")
+# maximum length must be 16 characters
+# first character must be alphanumeric
+# subsequent characters can be alphanumeric, hyphens or slashes
+GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
 
 
 def validate_gst_invoice(doc, method=None):
@@ -29,7 +31,8 @@ def validate_invoice_number(doc):
     if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
         frappe.throw(
             _(
-                "Invoice Number should only contain alphanumeric values, dash(-) and slash(/) and cannot exceed 16 digits."
+                "Invoice Number should only contain alphanumeric values, dash(-) and"
+                " slash(/) and cannot exceed 16 digits."
             ),
             title=_("Invalid GST Invoice Number"),
         )
@@ -105,7 +108,8 @@ def validate_gst_accounts(doc):
         if account_head not in output_accounts and tax_amount:
             frappe.throw(
                 _(
-                    "{0} is not an Output Account. Only output accounts should be selected in Sales Transactions"
+                    "{0} is not an Output Account. Only output accounts should be"
+                    " selected in Sales Transactions"
                 ).format(account_head)
             )
 
@@ -113,20 +117,23 @@ def validate_gst_accounts(doc):
             if account_head in output_accounts and tax_amount:
                 frappe.throw(
                     _(
-                        "{0} should not have any tax amount as you are making supply without payment of tax."
+                        "{0} should not have any tax amount as you are making supply"
+                        " without payment of tax."
                     ).format(account_head)
                 )
         elif inter_state:
             if account_head in output_accounts[:2] and tax_amount:
                 frappe.throw(
                     _(
-                        "{0} should to be IGST Account as you are making inter-state supply."
+                        "{0} should to be IGST Account as you are making inter-state"
+                        " supply."
                     ).format(account_head)
                 )
         else:
             if account_head in output_accounts[2] and tax_amount:
                 frappe.throw(
                     _(
-                        "{0} should to be CGST/SGST Account as you are making intra-state supply."
+                        "{0} should to be CGST/SGST Account as you are making"
+                        " intra-state supply."
                     ).format(account_head)
                 )
