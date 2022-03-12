@@ -3,12 +3,12 @@ from urllib.parse import urljoin
 
 import frappe
 
-from .utils import create_request_log
+from india_compliance.gst_india.asp_connectors.utils import create_request_log
 
 BASE_URL = "https://asp.resilient.tech"
 
 
-class BaseAPI(object):
+class BaseAPI:
     IGNORED_ERROR_CODES = set()
 
     def __init__(self):

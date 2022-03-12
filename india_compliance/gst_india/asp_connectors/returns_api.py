@@ -1,4 +1,4 @@
-from .base_api import BaseAPI
+from india_compliance.gst_india.asp_connectors.base_api import BaseAPI
 
 
 class ReturnsAPI(BaseAPI):
