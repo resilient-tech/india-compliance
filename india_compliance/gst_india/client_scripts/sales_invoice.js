@@ -32,15 +32,15 @@ frappe.ui.form.on(DOCTYPE, {
 
 			frm.add_custom_button('e-Waybill JSON', () => {
 				frappe.call({
-					method: 'india_compliance.gst_india.utils.e_waybill.generate_ewb_json',
+					method: 'india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json',
 					args: {
-						'dt': frm.doc.doctype,
-						'dn': [frm.doc.name]
+						'doctype': frm.doc.doctype,
+						'doclist': [frm.doc.name]
 					},
 					callback: function(r) {
 						if (r.message) {
 							const args = {
-								cmd: 'india_compliance.gst_india.utils.e_waybill.download_ewb_json',
+								cmd: 'india_compliance.gst_india.utils.e_waybill.download_e_waybill_json',
 								data: r.message,
 								docname: frm.doc.name
 							};

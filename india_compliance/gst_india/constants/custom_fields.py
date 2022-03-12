@@ -372,7 +372,7 @@ ewaybill_fields = [
     {
         "fieldname": "distance",
         "label": "Distance (in km)",
-        "fieldtype": "Float",
+        "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
     },
@@ -469,12 +469,12 @@ si_ewaybill_fields = [
         "insert_after": "lr_no",
         "print_hide": 1,
         "translatable": 0,
-        "length": 10,
+        "length": 15,
     },
     {
         "fieldname": "distance",
         "label": "Distance (in km)",
-        "fieldtype": "Float",
+        "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
     },
