@@ -5,9 +5,8 @@ from frappe import _
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
-# maximum length must be 16 characters
-# first character must be alphanumeric
-# subsequent characters can be alphanumeric, hyphens or slashes
+# Maximum length must be 16 characters. First character must be alphanumeric.
+# Subsequent characters can be alphanumeric, hyphens or slashes.
 GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
 
 
