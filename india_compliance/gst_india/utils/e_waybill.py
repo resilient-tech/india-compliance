@@ -3,300 +3,29 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import flt
 
-from india_compliance.gst_india.utils import (
-    get_gst_accounts,
-    get_itemised_tax_breakup_data,
-    set_gst_state_and_state_number,
-    validate_gstin_check_digit,
+from india_compliance.gst_india.constants.e_waybill import (
+    E_WAYBILL_INVOICE,
+    E_WAYBILL_ITEM,
 )
+from india_compliance.gst_india.utils.invoice_data import GSTInvData
 
 
 @frappe.whitelist()
-def generate_ewb_json(dt, dn):
-    dn = json.loads(dn)
-    return get_ewb_data(dt, dn)
+def generate_e_waybill_json(doctype, doclist):
+    doclist = json.loads(doclist)
+    ewb_list = []
+    for doc in doclist:
+        doc = frappe.get_doc(doctype, doc)
+        e_waybill = eWaybill(doc)
+        ewb_list.append(e_waybill.get_e_waybill_data())
 
-
-def get_ewb_data(dt, dn):
-
-    ewaybills = []
-    for doc_name in dn:
-        doc = frappe.get_doc(dt, doc_name)
-
-        validate_doc(doc)
-
-        data = frappe._dict(
-            {
-                "transporterId": "",
-                "TotNonAdvolVal": 0,
-            }
-        )
-
-        data.userGstin = data.fromGstin = doc.company_gstin
-        data.supplyType = "O"
-
-        if dt == "Delivery Note":
-            data.subSupplyType = 1
-        elif doc.gst_category in ["Registered Regular", "SEZ"]:
-            data.subSupplyType = 1
-        elif doc.gst_category in ["Overseas", "Deemed Export"]:
-            data.subSupplyType = 3
-        else:
-            frappe.throw(_("Unsupported GST Category for e-Waybill JSON generation"))
-
-        data.docType = "INV"
-        data.docDate = frappe.utils.formatdate(doc.posting_date, "dd/mm/yyyy")
-
-        company_address = frappe.get_doc("Address", doc.company_address)
-        billing_address = frappe.get_doc("Address", doc.customer_address)
-
-        # added dispatch address
-        dispatch_address = (
-            frappe.get_doc("Address", doc.dispatch_address_name)
-            if doc.dispatch_address_name
-            else company_address
-        )
-        shipping_address = frappe.get_doc("Address", doc.shipping_address_name)
-
-        data = get_address_details(
-            data, doc, company_address, billing_address, dispatch_address
-        )
-
-        data.itemList = []
-        data.totalValue = doc.net_total
-
-        data = get_item_list(data, doc, hsn_wise=True)
-
-        disable_rounded = frappe.db.get_single_value(
-            "Global Defaults", "disable_rounded_total"
-        )
-        data.totInvValue = doc.grand_total if disable_rounded else doc.rounded_total
-
-        data = get_transport_details(data, doc)
-
-        fields = {
-            "/. -": {
-                "docNo": doc.name,
-                "fromTrdName": doc.company,
-                "toTrdName": doc.customer_name,
-                "transDocNo": doc.lr_no,
-            },
-            "@#/,&. -": {
-                "fromAddr1": company_address.address_line1,
-                "fromAddr2": company_address.address_line2,
-                "fromPlace": company_address.city,
-                "toAddr1": shipping_address.address_line1,
-                "toAddr2": shipping_address.address_line2,
-                "toPlace": shipping_address.city,
-                "transporterName": doc.transporter_name,
-            },
-        }
-
-        for allowed_chars, field_map in fields.items():
-            for key, value in field_map.items():
-                if not value:
-                    data[key] = ""
-                else:
-                    data[key] = re.sub(r"[^\w" + allowed_chars + "]", "", value)
-
-        ewaybills.append(data)
-
-    data = {"version": "1.0.0421", "billLists": ewaybills}
-
+    data = {"version": "1.0.0421", "billLists": ewb_list}
     return data
-
-
-def get_address_details(data, doc, company_address, billing_address, dispatch_address):
-    data.fromPincode = validate_pincode(company_address.pincode, "Company Address")
-    data.fromStateCode = validate_state_code(
-        company_address.gst_state_number, "Company Address"
-    )
-    data.actualFromStateCode = validate_state_code(
-        dispatch_address.gst_state_number, "Dispatch Address"
-    )
-
-    if not doc.billing_address_gstin or len(doc.billing_address_gstin) < 15:
-        data.toGstin = "URP"
-        set_gst_state_and_state_number(billing_address)
-    else:
-        data.toGstin = doc.billing_address_gstin
-
-    data.toPincode = validate_pincode(billing_address.pincode, "Customer Address")
-    data.toStateCode = validate_state_code(
-        billing_address.gst_state_number, "Customer Address"
-    )
-
-    if doc.customer_address != doc.shipping_address_name:
-        data.transType = 2
-        shipping_address = frappe.get_doc("Address", doc.shipping_address_name)
-        set_gst_state_and_state_number(shipping_address)
-        data.toPincode = validate_pincode(shipping_address.pincode, "Shipping Address")
-        data.actualToStateCode = validate_state_code(
-            shipping_address.gst_state_number, "Shipping Address"
-        )
-    else:
-        data.transType = 1
-        data.actualToStateCode = data.toStateCode
-        shipping_address = billing_address
-
-    if doc.gst_category == "SEZ":
-        data.toStateCode = 99
-
-    return data
-
-
-def get_item_list(data, doc, hsn_wise=False):
-    for attr in ["cgstValue", "sgstValue", "igstValue", "cessValue", "OthValue"]:
-        data[attr] = 0
-
-    gst_accounts = get_gst_accounts(doc.company, account_wise=True)
-    tax_map = {
-        "sgst_account": ["sgstRate", "sgstValue"],
-        "cgst_account": ["cgstRate", "cgstValue"],
-        "igst_account": ["igstRate", "igstValue"],
-        "cess_account": ["cessRate", "cessValue"],
-    }
-    item_data_attrs = ["sgstRate", "cgstRate", "igstRate", "cessRate", "cessNonAdvol"]
-    hsn_wise_charges, hsn_taxable_amount = get_itemised_tax_breakup_data(
-        doc, account_wise=True, hsn_wise=hsn_wise
-    )
-    for item_or_hsn, taxable_amount in hsn_taxable_amount.items():
-        item_data = frappe._dict()
-        if not item_or_hsn:
-            frappe.throw(_("GST HSN Code does not exist for one or more items"))
-        item_data.hsnCode = int(item_or_hsn) if hsn_wise else item_or_hsn
-        item_data.taxableAmount = taxable_amount
-        item_data.qtyUnit = ""
-        for attr in item_data_attrs:
-            item_data[attr] = 0
-
-        for account, tax_detail in hsn_wise_charges.get(item_or_hsn, {}).items():
-            account_type = gst_accounts.get(account, "")
-            for tax_acc, attrs in tax_map.items():
-                if account_type == tax_acc:
-                    item_data[attrs[0]] = tax_detail.get("tax_rate")
-                    data[attrs[1]] += tax_detail.get("tax_amount")
-                    break
-            else:
-                data.OthValue += tax_detail.get("tax_amount")
-
-        data.itemList.append(item_data)
-
-        # Tax amounts rounded to 2 decimals to avoid exceeding max character limit
-        for attr in ["sgstValue", "cgstValue", "igstValue", "cessValue"]:
-            data[attr] = flt(data[attr], 2)
-
-    return data
-
-
-def get_transport_details(data, doc):
-    if doc.distance > 4000:
-        frappe.throw(_("Distance cannot be greater than 4000 kms"))
-
-    data.transDistance = int(round(doc.distance))
-
-    transport_modes = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4}
-
-    vehicle_types = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
-
-    data.transMode = transport_modes.get(doc.mode_of_transport)
-
-    if doc.mode_of_transport == "Road":
-        if not doc.gst_transporter_id and not doc.vehicle_no:
-            frappe.throw(
-                _(
-                    "Either GST Transporter ID or Vehicle No is required if Mode of Transport is Road"
-                )
-            )
-        if doc.vehicle_no:
-            data.vehicleNo = doc.vehicle_no.replace(" ", "")
-        if not doc.gst_vehicle_type:
-            frappe.throw(_("Vehicle Type is required if Mode of Transport is Road"))
-        else:
-            data.vehicleType = vehicle_types.get(doc.gst_vehicle_type)
-    else:
-        if not doc.lr_no or not doc.lr_date:
-            frappe.throw(
-                _(
-                    "Transport Receipt No and Date are mandatory for your chosen Mode of Transport"
-                )
-            )
-
-    if doc.lr_no:
-        data.transDocNo = doc.lr_no
-
-    if doc.lr_date:
-        data.transDocDate = frappe.utils.formatdate(doc.lr_date, "dd/mm/yyyy")
-
-    if doc.gst_transporter_id:
-        if doc.gst_transporter_id[0:2] != "88":
-            validate_gstin_check_digit(
-                doc.gst_transporter_id, label="GST Transporter ID"
-            )
-        data.transporterId = doc.gst_transporter_id
-
-    return data
-
-
-def validate_doc(doc):
-    if doc.docstatus != 1:
-        frappe.throw(_("e-Waybill JSON can only be generated from submitted document"))
-
-    if doc.is_return:
-        frappe.throw(_("e-Waybill JSON cannot be generated for Sales Return as of now"))
-
-    if doc.ewaybill:
-        frappe.throw(_("e-Waybill already exists for this document"))
-
-    reqd_fields = [
-        "company_gstin",
-        "company_address",
-        "customer_address",
-        "shipping_address_name",
-        "mode_of_transport",
-        "distance",
-    ]
-
-    for fieldname in reqd_fields:
-        if not doc.get(fieldname):
-            frappe.throw(
-                _("{} is required to generate e-Waybill JSON").format(
-                    doc.meta.get_label(fieldname)
-                )
-            )
-
-    if len(doc.company_gstin) < 15:
-        frappe.throw(_("You must be a registered supplier to generate e-Waybill"))
-
-
-def validate_pincode(pincode, address):
-    pin_not_found = "Pin Code doesn't exist for {}"
-    incorrect_pin = (
-        "Pin Code for {} is incorrecty formatted. It must be 6 digits (without spaces)"
-    )
-
-    if not pincode:
-        frappe.throw(_(pin_not_found.format(address)))
-
-    pincode = pincode.replace(" ", "")
-    if not pincode.isdigit() or len(pincode) != 6:
-        frappe.throw(_(incorrect_pin.format(address)))
-    else:
-        return int(pincode)
-
-
-def validate_state_code(state_code, address):
-    no_state_code = "GST State Code not found for {0}. Please set GST State in {0}"
-    if not state_code:
-        frappe.throw(_(no_state_code.format(address)))
-    else:
-        return int(state_code)
 
 
 @frappe.whitelist()
-def download_ewb_json():
+def download_e_waybill_json():
     data = json.loads(frappe.local.form_dict.data)
     frappe.local.response.filecontent = json.dumps(data, indent=4, sort_keys=True)
     frappe.local.response.type = "download"
@@ -316,3 +45,158 @@ def download_ewb_json():
     frappe.local.response.filename = "{0}_e-Waybill_Data_{1}.json".format(
         filename_prefix, frappe.utils.random_string(5)
     )
+
+
+class eWaybill(GSTInvData):
+    def __init__(self, doc):
+        super().__init__(doc)
+        self.item_map = E_WAYBILL_ITEM
+        self.invoice_map = E_WAYBILL_INVOICE
+
+    def get_e_waybill_data(self):
+        doc = self.doc
+        self.validate_invoice_for_ewb(doc)
+        item_list = self.get_item_list()
+        self.get_invoice_details()
+        self.update_invoice_details(doc)
+        self.update_address_details(doc)
+
+        ewb_data = self.map_template(self.invoice_map, doc)
+        ewb_data.update({"itemList": item_list})
+        return ewb_data
+
+    def validate_invoice_for_ewb(self, doc):
+        """
+        Validates:
+        - Ewaybill already exists
+        - Required fields
+        - Atleast one item with HSN for goods is required
+        - Basic transporter details must be present
+        - Max 250 Items
+        """
+
+        # TODO: Validate with e-Waybill settings
+        # TODO: Add Support for Delivery Note
+
+        if doc.get("ewaybill"):
+            frappe.throw(_("E-Waybill already generated for this invoice"))
+
+        reqd_fields = [
+            "company_gstin",
+            "company_address",
+            "customer_address",
+        ]
+
+        for fieldname in reqd_fields:
+            if not doc.get(fieldname):
+                frappe.throw(
+                    _("{} is required to generate e-Waybill JSON").format(
+                        doc.meta.get_label(fieldname)
+                    )
+                )
+
+        # Atleast one item with HSN code of goods is required
+        doc_with_goods = False
+        for item in doc.items:
+            if not item.gst_hsn_code.startswith("99"):
+                doc_with_goods = True
+                break
+        if not doc_with_goods:
+            frappe.throw(
+                msg=_(
+                    "e-Waybill cannot be generated as all items are with service HSN codes."
+                ),
+                title=_("Invalid Data"),
+            )
+
+        if doc.get("is_return") and doc.get("gst_category") == "Overseas":
+            frappe.throw(
+                msg=_("Return/Credit Note is not supported for Overseas e-Waybill."),
+                title=_("Invalid Data"),
+            )
+
+        # check if transporter_id or vehicle number is present
+        transport_mode = doc.get("transport_mode")
+        missing_transport_details = (
+            road_transport := (transport_mode == "Road")
+            and not doc.get("vehicle_number")
+            or transport_mode in ["Rail", "Air", "Ship"]
+            and not doc.get("lr_no")
+        )
+        if not doc.get("gst_transporter_id"):
+            if missing_transport_details:
+                frappe.throw(
+                    msg=_(
+                        "Please enter {0} to generate e-Waybill.".format(
+                            "Vehicle Number" if road_transport else "LR Number"
+                        )
+                    ),
+                    title=_("Invalid Data"),
+                )
+
+        if len(doc.items) > 250:
+            # TODO: Add support for HSN Summary
+            frappe.throw(
+                msg=_("e-Waybill cannot be generated for more than 250 items."),
+                title=_("Invalid Data"),
+            )
+
+    def update_invoice_details(self, doc):
+        doc.supply_type = "O"
+        doc.sub_supply_type = 1
+        doc.document_type = "INV"
+
+        if doc.is_return:
+            doc.supply_type = "I"
+            doc.sub_supply_type = 7
+            doc.document_type = "CHL"
+        elif doc.gst_category == "Overseas":
+            doc.shipping_address = self.get_address_details()
+            doc.sub_supply_type = 3
+            if doc.export_type == "With Payment of Tax":
+                doc.document_type = "BIL"
+
+    def update_address_details(self, doc):
+        doc.transaction_type = 1
+        billTo_shipTo = doc.customer_address != (
+            doc.get("shipping_address_name") or doc.customer_address
+        )
+        billFrom_dispatchFrom = doc.company_address != (
+            doc.get("dispatch_address_name") or doc.company_address
+        )
+        billing_address = shipping_address = self.get_address_details(
+            doc.customer_address
+        )
+        company_address = dispatch_address = self.get_address_details(
+            doc.company_address
+        )
+
+        if billTo_shipTo and billFrom_dispatchFrom:
+            doc.transaction_type = 4
+            shipping_address = self.get_address_details(doc.shipping_address_name)
+            dispatch_address = self.get_address_details(doc.dispatch_address_name)
+        elif billFrom_dispatchFrom:
+            doc.transaction_type = 3
+            dispatch_address = self.get_address_details(doc.dispatch_address_name)
+        elif billTo_shipTo:
+            doc.transaction_type = 2
+            shipping_address = self.get_address_details(doc.shipping_address_name)
+
+        doc.update(
+            {
+                "to_state_code": 99
+                if self.doc.gst_category == "SEZ"
+                else billing_address.state_code,
+                "to_address_1": shipping_address.address_line1,
+                "to_address_2": shipping_address.address_line2,
+                "to_city": shipping_address.city,
+                "to_pincode": shipping_address.pincode,
+                "actual_to_state_code": shipping_address.state_code,
+                "from_state_code": company_address.state_code,
+                "from_address_1": dispatch_address.address_line1,
+                "from_address_2": dispatch_address.address_line2,
+                "from_city": dispatch_address.city,
+                "from_pincode": dispatch_address.pincode,
+                "actual_from_state_code": dispatch_address.state_code,
+            }
+        )
