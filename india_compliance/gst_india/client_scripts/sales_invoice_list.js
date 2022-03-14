@@ -15,23 +15,10 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 				frappe.throw(__("e-Waybill JSON can only be generated from a submitted document"));
 			}
 		}
-
-		frappe.call({
-			method: 'india_compliance.gst_india.utils.e_waybill.generate_ewb_json',
-			args: {
-				'dt': list_view.doctype,
-				'dn': docnames
-			},
-			callback: function(r) {
-				if (r.message) {
-					const args = {
-						cmd: 'india_compliance.gst_india.utils.e_waybill.download_ewb_json',
-						data: r.message,
-						docname: docnames
-					};
-					open_url_post(frappe.request.url, args);
-				}
-			}
+		open_url_post(frappe.request.url, {
+			cmd: "india_compliance.gst_india.utils.e_waybill.download_e_waybill_json",
+			doctype: list_view.doctype,
+			docnames,
 		});
 	};
 

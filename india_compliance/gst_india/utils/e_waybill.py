@@ -4,43 +4,36 @@ import re
 import frappe
 from frappe import _
 
+from india_compliance.gst_india.asp_connectors.utils import pretty_json
 from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_INVOICE
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 
 @frappe.whitelist()
-def generate_e_waybill_json(doctype, doclist):
-    doclist = json.loads(doclist)
-    ewaybills = []
-    for doc in doclist:
-        doc = frappe.get_doc(doctype, doc)
-        ewaybills.append(doc.get_e_waybill_data())
-
-    data = {"version": "1.0.0421", "billLists": ewaybills}
-    return data
+def download_e_waybill_json(doctype, docnames):
+    docnames = json.loads(docnames) if docnames.startswith("[") else [docnames]
+    frappe.response.filecontent = generate_e_waybill_json(doctype, docnames)
+    frappe.response.type = "download"
+    frappe.response.filename = get_file_name(docnames)
 
 
-@frappe.whitelist()
-def download_e_waybill_json():
-    data = json.loads(frappe.local.form_dict.data)
-    frappe.local.response.filecontent = json.dumps(data, indent=4, sort_keys=True)
-    frappe.local.response.type = "download"
-
-    filename_prefix = "Bulk"
-    docname = frappe.local.form_dict.docname
-    if docname:
-        if docname.startswith("["):
-            docname = json.loads(docname)
-            if len(docname) == 1:
-                docname = docname[0]
-
-        if not isinstance(docname, list):
-            # removes characters not allowed in a filename (https://stackoverflow.com/a/38766141/4767738)
-            filename_prefix = re.sub(r"[^\w_.)( -]", "", docname)
-
-    frappe.local.response.filename = "{0}_e-Waybill_Data_{1}.json".format(
-        filename_prefix, frappe.utils.random_string(5)
+def generate_e_waybill_json(doctype, docnames):
+    return pretty_json(
+        {
+            "version": "1.0.0421",
+            "billLists": [
+                frappe.get_doc(doctype, doc).get_e_waybill_data() for doc in docnames
+            ],
+        }
     )
+
+
+def get_file_name(docnames):
+    prefix = "Bulk"
+    if len(docnames) == 1:
+        prefix = re.sub(r"[^\w_.)( -]", "", docnames[0])
+
+    return f"{prefix}_e-Waybill_Data_{frappe.utils.random_string(5)}.json"
 
 
 class EWaybillData(GSTInvoiceData):
