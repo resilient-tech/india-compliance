@@ -1,18 +1,28 @@
-import re
+from email.policy import default
 
 import frappe
 from frappe import _
 
-PAN_NUMBER_FORMAT = re.compile("[A-Z]{5}[0-9]{4}[A-Z]{1}")
+from india_compliance.gst_india.utils import validate_gstin
 
 
-def validate_pan_for_india(doc, method):
-    if doc.get("country") != "India" or not doc.get("pan"):
+def update_transporter_gstin(doc, method=None):
+    """
+    Validate GST Transporter GSTIN with GSTIN if exists.
+    """
+    if not doc.is_transporter:
         return
 
-    if not PAN_NUMBER_FORMAT.match(doc.pan):
-        frappe.throw(
+    gstin = doc.get("gstin", default="")
+    gst_transporter_id = doc.get("gst_transporter_id", default="")
+
+    if not gstin and gst_transporter_id:
+        validate_gstin(gst_transporter_id, "Registered Regular")
+
+    if gst_transporter_id and gst_transporter_id != gstin:
+        frappe.msgprint(
             _(
-                "Invalid PAN No. The input you've entered doesn't match the format of PAN."
-            )
+                "GSTIN has been updated in GST Transporter ID from {0} to {1} as per default GSTIN for this transporter."
+            ).format(frappe.bold(gst_transporter_id), frappe.bold(gstin))
         )
+    doc.gst_transporter_id = gstin

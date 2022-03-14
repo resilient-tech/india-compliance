@@ -11,6 +11,9 @@
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
+  "transaction_configuration_section",
+  "enable_overseas_transactions",
+  "default_without_payment_of_tax",
   "e_waybill_section",
   "enable_e_waybill_api",
   "accounts_tab",
@@ -97,12 +100,30 @@
    "fieldname": "enable_e_waybill_api",
    "fieldtype": "Check",
    "label": "Enable e-Waybill API"
+  },
+  {
+   "fieldname": "transaction_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Transaction Configuration"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_overseas_transactions",
+   "fieldtype": "Check",
+   "label": "Enable SEZ / Overseas Trading"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_overseas_transactions",
+   "fieldname": "default_without_payment_of_tax",
+   "fieldtype": "Check",
+   "label": "Default export under LUT without payment of tax"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-10 11:33:23.304519",
+ "modified": "2022-03-13 18:10:30.053104",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
