@@ -6,7 +6,93 @@ from erpnext.controllers.taxes_and_totals import (
     get_itemised_taxable_amount,
 )
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GSTIN_FORMAT,
+    PAN_NUMBER,
+    STATE_NUMBERS,
+    TCS,
+)
+
+
+def validate_gstin(gstin, gst_category):
+    """
+    Validate GSTIN with following checks:
+    - Length should be 15.
+    - GST Category for parties without GSTIN should be Unregistered or Overseas.
+    - Validate GSTIN Check Digit.
+    - GSTIN of e-Commerce Operator (TCS) is not allowed.
+    - GSTIN should match with the regex pattern as per GST Category of the party.
+    """
+    gstin = gstin.upper().strip()
+    if not gstin:
+        if gst_category and gst_category not in (
+            valid_category := {"Unregistered", "Overseas"}
+        ):
+            frappe.throw(
+                _("GST Category should be one of {0}.").format(
+                    ", ".join(valid_category)
+                ),
+                title=_("Invalid GST Category"),
+            )
+        return
+
+    if not gst_category:
+        frappe.throw(_("Please select GST Category."), title=_("Invalid GST Category"))
+
+    if len(gstin) != 15:
+        frappe.throw(_("GSTIN must have 15 characters."), title=_("Invalid GSTIN"))
+
+    validate_gstin_check_digit(gstin)
+
+    if TCS.match(gstin):
+        frappe.throw(
+            _("GSTIN of e-Commerce Operator (TCS) cannot be used as Party GSTIN."),
+            title=_("Invalid GSTIN"),
+        )
+
+    valid_gstin_format = GSTIN_FORMAT.get(gst_category)
+    if not valid_gstin_format.match(gstin):
+        frappe.throw(
+            _(
+                "GSTIN you have entered doesn't match for category {0}. Please make sure you have entered correct GSTIN and GST Category."
+            ).format(gst_category),
+            title=_("Invalid GSTIN or GST Category"),
+        )
+
+
+def validate_and_update_pan(doc):
+    """
+    If PAN is not set, set it from GSTIN.
+    If PAN is set, validate it with GSTIN and PAN Format.
+    """
+    pan = doc.pan = doc.get("pan", default="").upper().strip()
+    gstin = doc.get("gstin", default="")
+
+    if pan:
+        validate_pan(pan, gstin)
+
+    elif gstin:
+        if PAN_NUMBER.match(pan_from_gstin := gstin[2:12]):
+            doc.pan = pan_from_gstin
+
+
+def validate_pan(pan, gstin):
+
+    pan_match = PAN_NUMBER.match(pan)
+    if not pan_match:
+        frappe.throw(
+            _("Invalid PAN. Please check the PAN and GSTIN."), title=_("Invalid PAN")
+        )
+
+    if (
+        gstin
+        and (pan_from_gstin := gstin[2:12]) != pan
+        and PAN_NUMBER.match(pan_from_gstin)
+    ):
+        frappe.throw(
+            _("There is mismatch in PAN and GSTIN. Please check the PAN and GSTIN."),
+            title=_("Invalid PAN"),
+        )
 
 
 def read_data_file(file_name):
@@ -32,7 +118,9 @@ def set_gst_state_and_state_number(doc):
 
 
 def validate_gstin_check_digit(gstin, label="GSTIN"):
-    """Function to validate the check digit of the GSTIN."""
+    """
+    Function to validate the check digit of the GSTIN.
+    """
     factor = 1
     total = 0
     code_point_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"

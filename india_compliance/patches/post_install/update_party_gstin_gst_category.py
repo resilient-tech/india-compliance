@@ -4,8 +4,21 @@ from frappe.contacts.doctype.address.address import (
     get_preferred_address,
 )
 
+# Ensure that you update use_gstin to address where different GSTIN may be needed.
+
+
+# Set PAN and GST Transporter ID from GSTIN. Improve GSTIN Validation.
+# Fetch from Billing Address if available or Party in all transactions.
+# Get default export type from GST Settings in Sales Transactions.
+
+#
+# Remove Export Type from Party.
+# Make default Export Type from GST Settings. Remove this field from Party Details.
+# Improve GSTIN Validation.
+
 
 def execute():
+    update_pan_for_company()
     addresses = frappe.db.get_all(
         "Address", fields=["name", "country", "gst_category", "gstin"]
     )
@@ -80,3 +93,14 @@ def execute():
                 "gstin",
             )
             frappe.db.set_value(doctype, doc.name, "gstin", address_gstin)
+
+
+# Updated pan_details with pan for consisitency
+def update_pan_for_company():
+    company_pan = frappe.db.get_all(
+        "Company", fields=["name", "pan_details"], filters={"pan_details": ["!=", ""]}
+    )
+    for company in company_pan:
+        frappe.db.set_value(
+            "Company", company.name, {"pan": company.pan_details, "pan_details": None}
+        )

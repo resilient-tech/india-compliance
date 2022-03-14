@@ -1,8 +1,10 @@
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_CATEGORY, STATE_NUMBERS
 
 # TODO: Imporve variable naming
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
+gst_category = "\n" + "\n".join(GST_CATEGORY)
+default_gst_category = "Unregistered"
 
 hsn_sac_field = {
     "fieldname": "gst_hsn_code",
@@ -13,6 +15,7 @@ hsn_sac_field = {
     "allow_on_submit": 1,
     "print_hide": 1,
     "fetch_if_empty": 1,
+    "translatable": 0,
 }
 nil_rated_exempt = {
     "fieldname": "is_nil_exempt",
@@ -55,8 +58,9 @@ purchase_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_section",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
-        "fetch_from": "supplier.gst_category",
+        "options": gst_category,
+        "fetch_from": "supplier_address.gst_category",
+        "translatable": 0,
     },
     {
         "fieldname": "export_type",
@@ -68,6 +72,7 @@ purchase_invoice_gst_category = [
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
         "fetch_from": "supplier.export_type",
         "fetch_if_empty": 1,
+        "translatable": 0,
     },
 ]
 
@@ -86,9 +91,10 @@ sales_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_section",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders",
-        "fetch_from": "customer.gst_category",
+        "options": gst_category,
+        "fetch_from": "customer_address.gst_category",
         "length": 25,
+        "translatable": 0,
     },
     {
         "fieldname": "export_type",
@@ -96,11 +102,12 @@ sales_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_category",
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
+        "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
         "fetch_from": "customer.export_type",
         "fetch_if_empty": 1,
         "length": 25,
+        "translatable": 0,
     },
 ]
 
@@ -111,8 +118,9 @@ delivery_note_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_vehicle_type",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders",
-        "fetch_from": "customer.gst_category",
+        "options": gst_category,
+        "fetch_from": "customer_address.gst_category",
+        "translatable": 0,
     },
 ]
 
@@ -126,6 +134,7 @@ invoice_gst_fields = [
         "print_hide": 1,
         "allow_on_submit": 1,
         "options": "Original for Recipient\nDuplicate for Transporter\nDuplicate for Supplier\nTriplicate for Supplier",
+        "translatable": 0,
     },
     {
         "fieldname": "reverse_charge",
@@ -136,6 +145,7 @@ invoice_gst_fields = [
         "print_hide": 1,
         "options": "Y\nN",
         "default": "N",
+        "translatable": 0,
     },
     {
         "fieldname": "ecommerce_gstin",
@@ -144,6 +154,7 @@ invoice_gst_fields = [
         "fieldtype": "Data",
         "insert_after": "export_type",
         "print_hide": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "gst_col_break",
@@ -159,6 +170,7 @@ invoice_gst_fields = [
         "depends_on": "eval:doc.is_return == 1",
         "length": 45,
         "options": "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization of Provisional assessment\n07-Others",
+        "translatable": 0,
     },
 ]
 
@@ -171,6 +183,7 @@ purchase_invoice_gst_fields = [
         "fetch_from": "supplier_address.gstin",
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "company_gstin",
@@ -180,6 +193,7 @@ purchase_invoice_gst_fields = [
         "fetch_from": "shipping_address.gstin",
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "place_of_supply",
@@ -188,6 +202,7 @@ purchase_invoice_gst_fields = [
         "insert_after": "shipping_address",
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
     },
 ]
 
@@ -200,6 +215,7 @@ purchase_invoice_itc_fields = [
         "print_hide": 1,
         "options": "Input Service Distributor\nImport Of Service\nImport Of Capital Goods\nITC on Reverse Charge\nIneligible As Per Section 17(5)\nIneligible Others\nAll Other ITC",
         "default": "All Other ITC",
+        "translatable": 0,
     },
     {
         "fieldname": "itc_integrated_tax",
@@ -245,6 +261,7 @@ sales_invoice_gst_fields = [
         "fetch_from": "customer_address.gstin",
         "print_hide": 1,
         "length": 15,
+        "translatable": 0,
     },
     {
         "fieldname": "customer_gstin",
@@ -254,6 +271,7 @@ sales_invoice_gst_fields = [
         "fetch_from": "shipping_address_name.gstin",
         "print_hide": 1,
         "length": 15,
+        "translatable": 0,
     },
     {
         "fieldname": "place_of_supply",
@@ -263,6 +281,7 @@ sales_invoice_gst_fields = [
         "print_hide": 1,
         "read_only": 1,
         "length": 50,
+        "translatable": 0,
     },
     {
         "fieldname": "company_gstin",
@@ -273,6 +292,7 @@ sales_invoice_gst_fields = [
         "print_hide": 1,
         "read_only": 1,
         "length": 15,
+        "translatable": 0,
     },
 ]
 
@@ -285,6 +305,7 @@ sales_invoice_shipping_fields = [
         "print_hide": 1,
         "depends_on": "eval:doc.gst_category == 'Overseas' ",
         "length": 15,
+        "translatable": 0,
     },
     {
         "fieldname": "shipping_bill_number",
@@ -294,6 +315,7 @@ sales_invoice_shipping_fields = [
         "print_hide": 1,
         "depends_on": "eval:doc.gst_category == 'Overseas' ",
         "length": 50,
+        "translatable": 0,
     },
     {
         "fieldname": "shipping_bill_date",
@@ -315,6 +337,7 @@ journal_entry_fields = [
         "options": "As per rules 42 & 43 of CGST Rules\nOthers",
         "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
         "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
+        "translatable": 0,
     },
     {
         "fieldname": "company_address",
@@ -336,6 +359,7 @@ journal_entry_fields = [
         "fetch_from": "company_address.gstin",
         "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
         "mandatory_depends_on": "eval:doc.voucher_type=='Reversal Of ITC'",
+        "translatable": 0,
     },
 ]
 
@@ -365,6 +389,7 @@ inter_state_gst_field = [
         "fieldtype": "Select",
         "options": state_options,
         "insert_after": "company",
+        "translatable": 0,
     },
 ]
 
@@ -569,6 +594,7 @@ payment_entry_fields = [
         "fetch_from": "company_address.gstin",
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "place_of_supply",
@@ -577,6 +603,7 @@ payment_entry_fields = [
         "insert_after": "company_gstin",
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "gst_column_break",
@@ -600,6 +627,7 @@ payment_entry_fields = [
         "fetch_from": "customer_address.gstin",
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
     },
 ]
 
@@ -613,6 +641,7 @@ si_einvoice_fields = [
         "no_copy": 1,
         "print_hide": 1,
         "depends_on": 'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"], doc.gst_category) && doc.irn_cancelled === 0',
+        "translatable": 0,
     },
     {
         "fieldname": "irn_cancelled",
@@ -634,6 +663,7 @@ si_einvoice_fields = [
         "read_only": 1,
         "allow_on_submit": 1,
         "insert_after": "ewaybill",
+        "translatable": 0,
     },
     {
         "fieldname": "eway_bill_cancelled",
@@ -663,6 +693,7 @@ si_einvoice_fields = [
         "insert_after": "einvoice_section",
         "no_copy": 1,
         "print_hide": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "ack_date",
@@ -673,6 +704,7 @@ si_einvoice_fields = [
         "insert_after": "ack_no",
         "no_copy": 1,
         "print_hide": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "irn_cancel_date",
@@ -683,6 +715,7 @@ si_einvoice_fields = [
         "insert_after": "ack_date",
         "no_copy": 1,
         "print_hide": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "signed_einvoice",
@@ -727,6 +760,7 @@ si_einvoice_fields = [
         "no_copy": 1,
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
     },
     {
         "fieldname": "failure_description",
@@ -741,6 +775,38 @@ si_einvoice_fields = [
     },
 ]
 
+party_fields = [
+    {
+        "fieldname": "tax_details",
+        "label": "Tax Details",
+        "fieldtype": "Section Break",
+        "insert_after": "companies",
+    },
+    {
+        "fieldname": "gstin",
+        "label": "Party GSTIN",
+        "fieldtype": "Data",
+        "insert_after": "tax_details",
+        "translatable": 0,
+    },
+    {
+        "fieldname": "tax_column_break",
+        "fieldtype": "Column Break",
+        "insert_after": "pan",
+    },
+    {
+        "fieldname": "gst_category",
+        "label": "GST Category",
+        "fieldtype": "Select",
+        "insert_after": "tax_column_break",
+        "options": gst_category,
+        "default": default_gst_category,
+        "translatable": 0,
+    },
+]
+company_fields = party_fields[:]
+company_fields[0].update({"insert_after": "parent_company"})
+
 CUSTOM_FIELDS = {
     "Address": [
         {
@@ -748,23 +814,25 @@ CUSTOM_FIELDS = {
             "label": "Use Different GSTIN",
             "fieldtype": "Check",
             "default": 0,
-            "insert_after": "address_line2"
+            "insert_after": "address_line2",
         },
         {
             "fieldname": "gstin",
             "label": "Party GSTIN",
             "fieldtype": "Data",
             "insert_after": "use_different_gstin",
-            "read_only_depends_on": "eval: !doc.use_different_gstin"
+            "read_only_depends_on": "eval: !doc.use_different_gstin",
+            "translatable": 0,
         },
         {
             "fieldname": "gst_category",
             "label": "GST Category",
             "fieldtype": "Select",
             "insert_after": "gstin",
-            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
-            "default": "Unregistered",
-            "read_only_depends_on": "eval: !doc.use_different_gstin"
+            "options": gst_category,
+            "default": default_gst_category,
+            "read_only_depends_on": "eval: !doc.use_different_gstin",
+            "translatable": 0,
         },
         {
             "fieldname": "gst_state",
@@ -772,6 +840,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Select",
             "options": state_options,
             "insert_after": "gstin",
+            "translatable": 0,
         },
         {
             "fieldname": "gst_state_number",
@@ -779,6 +848,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "gst_state",
             "read_only": 1,
+            "translatable": 0,
         },
     ],
     "Purchase Invoice": purchase_invoice_gst_category
@@ -853,72 +923,13 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_transporter_id",
             "label": "GST Transporter ID",
             "fieldtype": "Data",
-            "insert_after": "pan",
+            "insert_after": "supplier_type",
             "depends_on": "eval:doc.is_transporter",
-        },
-        {
-            "fieldname": "gstin",
-            "label": "Party GSTIN",
-            "fieldtype": "Data",
-            "insert_after": "gst_transporter_id"
-        },
-        {
-            "fieldname": "gst_category",
-            "label": "GST Category",
-            "fieldtype": "Select",
-            "insert_after": "gstin",
-            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
-            "default": "Unregistered",
-        },
-        {
-            "fieldname": "export_type",
-            "label": "Export Type",
-            "fieldtype": "Select",
-            "insert_after": "gst_category",
-            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-        },
-    ],
-    "Customer": [
-        {
-            "fieldname": "gstin",
-            "label": "Party GSTIN",
-            "fieldtype": "Data",
-            "insert_after": "pan"
-        },
-        {
-            "fieldname": "gst_category",
-            "label": "GST Category",
-            "fieldtype": "Select",
-            "insert_after": "gstin",
-            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
-            "default": "Unregistered",
-        },
-        {
-            "fieldname": "export_type",
-            "label": "Export Type",
-            "fieldtype": "Select",
-            "insert_after": "gst_category",
-            "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
-            "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
-        },
-    ],
-    "Company": [
-        {
-            "fieldname": "gstin",
-            "label": "Company GSTIN",
-            "fieldtype": "Data",
-            "insert_after": "is_group"
-        },
-        {
-            "fieldname": "gst_category",
-            "label": "GST Category",
-            "fieldtype": "Select",
-            "insert_after": "gstin",
-            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
-            "default": "Unregistered",
+            "read_only_depends_on": "eval:doc.gstin",
+            "translatable": 0,
         },
     ]
+    + party_fields,
+    "Customer": party_fields,
+    "Company": company_fields,
 }

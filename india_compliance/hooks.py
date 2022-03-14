@@ -49,16 +49,14 @@ doc_events = {
     },
     "Address": {
         "validate": [
-            "india_compliance.gst_india.overrides.address.validate_gstin_for_india",
-            "india_compliance.gst_india.overrides.address.update_gst_category",
-            "india_compliance.gst_india.overrides.address.update_default_gstin_gst_category",
+            "india_compliance.gst_india.overrides.address.validate",
         ]
     },
     ("Customer", "Supplier", "Company"): {
-        "validate": "india_compliance.gst_india.overrides.party.update_gstin_in_address"
+        "validate": "india_compliance.gst_india.overrides.party.validate_party"
     },
     "Supplier": {
-        "validate": "india_compliance.gst_india.overrides.supplier.validate_pan_for_india"
+        "validate": "india_compliance.gst_india.overrides.supplier.update_transporter_gstin"
     },
     (
         "Purchase Order",
@@ -70,7 +68,7 @@ doc_events = {
     ): {
         "validate": "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
     },
-    ("Sales Order", "Delivery Note", "Sales Invoice",): {
+    ("Sales Order", "Delivery Note", "Sales Invoice"): {
         "validate": "india_compliance.gst_india.overrides.transaction.validate_hsn_code"
     },
     "Company": {
