@@ -4,6 +4,10 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import SalesInvoice
+
+from india_compliance.gst_india.utils.e_waybill import EWaybillData
+
 GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[a-zA-Z0-9\-/]+$")  # alphanumeric and - /
 
 
@@ -29,3 +33,8 @@ def validate_document_name(doc, method=None):
                 "Document name should only contain alphanumeric values, dash(-) and slash(/) characters as per GST rules. Please change the naming series."
             )
         )
+
+
+# TODO: naming
+class CustomSalesInvoice(SalesInvoice, EWaybillData):
+    pass
