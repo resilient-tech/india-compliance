@@ -186,13 +186,13 @@ def get_gst_accounts_by_type(company, gst_account_type=None, as_list=False):
         "company": company,
     }
     if gst_account_type:
-        filters.update({"gst_account_type": gst_account_type})
+        filters.update({"account_type": gst_account_type})
 
     all_accounts = frappe.db.get_all(
         "GST Account",
         filters=filters,
         fields=[
-            "gst_account_type",
+            "account_type",
             "cgst_account",
             "sgst_account",
             "igst_account",
