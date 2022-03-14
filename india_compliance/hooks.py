@@ -100,6 +100,9 @@ regional_overrides = {
     }
 }
 
+override_doctype_class = {
+    "Sales Invoice": "india_compliance.gst_india.overrides.sales_invoice.CustomSalesInvoice"
+}
 # Includes in <head>
 # ------------------
 
@@ -187,9 +190,6 @@ after_install = "india_compliance.install.after_install"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
 
 # Document Events
 # ---------------

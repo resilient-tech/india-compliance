@@ -4,23 +4,19 @@ import re
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.constants.e_waybill import (
-    E_WAYBILL_INVOICE,
-    E_WAYBILL_ITEM,
-)
-from india_compliance.gst_india.utils.invoice_data import GSTInvData
+from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_INVOICE
+from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 
 @frappe.whitelist()
 def generate_e_waybill_json(doctype, doclist):
     doclist = json.loads(doclist)
-    ewb_list = []
+    ewaybills = []
     for doc in doclist:
         doc = frappe.get_doc(doctype, doc)
-        e_waybill = eWaybill(doc)
-        ewb_list.append(e_waybill.get_e_waybill_data())
+        ewaybills.append(doc.get_e_waybill_data())
 
-    data = {"version": "1.0.0421", "billLists": ewb_list}
+    data = {"version": "1.0.0421", "billLists": ewaybills}
     return data
 
 
@@ -47,25 +43,19 @@ def download_e_waybill_json():
     )
 
 
-class eWaybill(GSTInvData):
-    def __init__(self, doc):
-        super().__init__(doc)
-        self.item_map = E_WAYBILL_ITEM
-        self.invoice_map = E_WAYBILL_INVOICE
-
+class EWaybillData(GSTInvoiceData):
     def get_e_waybill_data(self):
-        doc = self.doc
-        self.validate_invoice_for_ewb(doc)
+        self.validate_invoice_for_ewb()
         item_list = self.get_item_list()
         self.get_invoice_details()
-        self.update_invoice_details(doc)
-        self.update_address_details(doc)
+        self.update_invoice_details()
+        self.update_address_details()
 
-        ewb_data = self.map_template(self.invoice_map, doc)
+        ewb_data = self.map_template(E_WAYBILL_INVOICE, self)
         ewb_data.update({"itemList": item_list})
         return ewb_data
 
-    def validate_invoice_for_ewb(self, doc):
+    def validate_invoice_for_ewb(self):
         """
         Validates:
         - Ewaybill already exists
@@ -78,7 +68,7 @@ class eWaybill(GSTInvData):
         # TODO: Validate with e-Waybill settings
         # TODO: Add Support for Delivery Note
 
-        if doc.get("ewaybill"):
+        if self.get("ewaybill"):
             frappe.throw(_("E-Waybill already generated for this invoice"))
 
         reqd_fields = [
@@ -88,16 +78,16 @@ class eWaybill(GSTInvData):
         ]
 
         for fieldname in reqd_fields:
-            if not doc.get(fieldname):
+            if not self.get(fieldname):
                 frappe.throw(
                     _("{} is required to generate e-Waybill JSON").format(
-                        doc.meta.get_label(fieldname)
+                        self.meta.get_label(fieldname)
                     )
                 )
 
         # Atleast one item with HSN code of goods is required
         doc_with_goods = False
-        for item in doc.items:
+        for item in self.items:
             if not item.gst_hsn_code.startswith("99"):
                 doc_with_goods = True
                 break
@@ -109,21 +99,21 @@ class eWaybill(GSTInvData):
                 title=_("Invalid Data"),
             )
 
-        if doc.get("is_return") and doc.get("gst_category") == "Overseas":
+        if self.get("is_return") and self.get("gst_category") == "Overseas":
             frappe.throw(
                 msg=_("Return/Credit Note is not supported for Overseas e-Waybill."),
                 title=_("Invalid Data"),
             )
 
         # check if transporter_id or vehicle number is present
-        transport_mode = doc.get("transport_mode")
+        transport_mode = self.get("transport_mode")
         missing_transport_details = (
             road_transport := (transport_mode == "Road")
-            and not doc.get("vehicle_number")
+            and not self.get("vehicle_number")
             or transport_mode in ["Rail", "Air", "Ship"]
-            and not doc.get("lr_no")
+            and not self.get("lr_no")
         )
-        if not doc.get("gst_transporter_id"):
+        if not self.get("gst_transporter_id"):
             if missing_transport_details:
                 frappe.throw(
                     msg=_(
@@ -134,58 +124,58 @@ class eWaybill(GSTInvData):
                     title=_("Invalid Data"),
                 )
 
-        if len(doc.items) > 250:
+        if len(self.items) > 250:
             # TODO: Add support for HSN Summary
             frappe.throw(
                 msg=_("e-Waybill cannot be generated for more than 250 items."),
                 title=_("Invalid Data"),
             )
 
-    def update_invoice_details(self, doc):
-        doc.supply_type = "O"
-        doc.sub_supply_type = 1
-        doc.document_type = "INV"
+    def update_invoice_details(self):
+        self.supply_type = "O"
+        self.sub_supply_type = 1
+        self.document_type = "INV"
 
-        if doc.is_return:
-            doc.supply_type = "I"
-            doc.sub_supply_type = 7
-            doc.document_type = "CHL"
-        elif doc.gst_category == "Overseas":
-            doc.shipping_address = self.get_address_details()
-            doc.sub_supply_type = 3
-            if doc.export_type == "With Payment of Tax":
-                doc.document_type = "BIL"
+        if self.is_return:
+            self.supply_type = "I"
+            self.sub_supply_type = 7
+            self.document_type = "CHL"
+        elif self.gst_category == "Overseas":
+            self.shipping_address = self.get_address_details()
+            self.sub_supply_type = 3
+            if self.export_type == "With Payment of Tax":
+                self.document_type = "BIL"
 
-    def update_address_details(self, doc):
-        doc.transaction_type = 1
-        billTo_shipTo = doc.customer_address != (
-            doc.get("shipping_address_name") or doc.customer_address
+    def update_address_details(self):
+        self.transaction_type = 1
+        billTo_shipTo = self.customer_address != (
+            self.get("shipping_address_name") or self.customer_address
         )
-        billFrom_dispatchFrom = doc.company_address != (
-            doc.get("dispatch_address_name") or doc.company_address
+        billFrom_dispatchFrom = self.company_address != (
+            self.get("dispatch_address_name") or self.company_address
         )
         billing_address = shipping_address = self.get_address_details(
-            doc.customer_address
+            self.customer_address
         )
         company_address = dispatch_address = self.get_address_details(
-            doc.company_address
+            self.company_address
         )
 
         if billTo_shipTo and billFrom_dispatchFrom:
-            doc.transaction_type = 4
-            shipping_address = self.get_address_details(doc.shipping_address_name)
-            dispatch_address = self.get_address_details(doc.dispatch_address_name)
+            self.transaction_type = 4
+            shipping_address = self.get_address_details(self.shipping_address_name)
+            dispatch_address = self.get_address_details(self.dispatch_address_name)
         elif billFrom_dispatchFrom:
-            doc.transaction_type = 3
-            dispatch_address = self.get_address_details(doc.dispatch_address_name)
+            self.transaction_type = 3
+            dispatch_address = self.get_address_details(self.dispatch_address_name)
         elif billTo_shipTo:
-            doc.transaction_type = 2
-            shipping_address = self.get_address_details(doc.shipping_address_name)
+            self.transaction_type = 2
+            shipping_address = self.get_address_details(self.shipping_address_name)
 
-        doc.update(
+        self.update(
             {
                 "to_state_code": 99
-                if self.doc.gst_category == "SEZ"
+                if self.gst_category == "SEZ"
                 else billing_address.state_code,
                 "to_address_1": shipping_address.address_line1,
                 "to_address_2": shipping_address.address_line2,
