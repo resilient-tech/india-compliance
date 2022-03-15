@@ -6,14 +6,13 @@
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
+  "enable_overseas_transactions",
+  "default_without_payment_of_tax",
   "round_off_gst_values",
   "hsn_wise_tax_breakup",
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
-  "transaction_configuration_section",
-  "enable_overseas_transactions",
-  "default_without_payment_of_tax",
   "e_waybill_section",
   "enable_e_waybill_api",
   "accounts_tab",
@@ -102,28 +101,23 @@
    "label": "Enable e-Waybill API"
   },
   {
-   "fieldname": "transaction_configuration_section",
-   "fieldtype": "Section Break",
-   "label": "Transaction Configuration"
-  },
-  {
    "default": "0",
    "fieldname": "enable_overseas_transactions",
    "fieldtype": "Check",
-   "label": "Enable SEZ / Overseas Trading"
+   "label": "Enable SEZ / Overseas Transactions"
   },
   {
    "default": "0",
    "depends_on": "eval: doc.enable_overseas_transactions",
    "fieldname": "default_without_payment_of_tax",
    "fieldtype": "Check",
-   "label": "Default export under LUT without payment of tax"
+   "label": "Default export type to <b>Without Payment of Tax</b> under Letter of Undertaking (LUT)/ Bond"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-13 18:10:30.053104",
+ "modified": "2022-03-15 15:08:55.598460",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

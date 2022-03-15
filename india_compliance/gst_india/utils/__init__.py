@@ -68,7 +68,7 @@ def validate_and_update_pan(doc):
     If PAN is set, validate it with GSTIN and PAN Format.
     """
     gstin = doc.get("gstin", default="")
-    pan = doc.pan = doc.get("pan", default="").upper().strip()
+    pan = doc.pan = (doc.get("pan") or "").upper().strip()
 
     if gstin:
         if PAN_NUMBER.match(pan_from_gstin := gstin[2:12]):
