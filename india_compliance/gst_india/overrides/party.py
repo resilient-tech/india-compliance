@@ -5,7 +5,7 @@ from india_compliance.gst_india.utils import validate_and_update_pan, validate_g
 
 
 def validate_party(doc, method=None):
-    doc.gstin = doc.gstin.upper().strip() if doc.get("gstin") else ""
+    doc.gstin = (doc.get("gstin") or "").upper().strip()
     validate_gstin(doc.gstin, doc.gst_category)
     validate_and_update_pan(doc)
     update_gstin_in_address(doc)

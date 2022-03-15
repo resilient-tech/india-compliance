@@ -10,7 +10,7 @@ from india_compliance.gst_india.utils import (
 def validate(doc, method=None):
     update_default_gst_details(doc)
 
-    doc.gstin = doc.gstin.upper().strip() if doc.get("gstin") else ""
+    doc.gstin = (doc.get("gstin") or "").upper().strip()
     validate_gstin(doc.gstin, doc.gst_category)
     validate_gst_state(doc)
 
@@ -35,7 +35,7 @@ def update_default_gst_details(doc):
 
     if has_more_links := len(doc.links) > 1:
         frappe.msgprint(
-            _("Same GSTIN feature for address with multiple parties is not supported."),
+            _("`Use Party GSTIN` is not supported for address with multiple parties."),
             alert=True,
             indicator="yellow",
         )

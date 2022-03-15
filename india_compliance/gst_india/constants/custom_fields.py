@@ -807,6 +807,7 @@ party_fields = [
         "insert_after": "tax_column_break",
         "options": gst_category,
         "default": default_gst_category,
+        "reqd": 1,
         "translatable": 0,
     },
 ]
@@ -857,6 +858,7 @@ address_fields = [
         "options": gst_category,
         "default": default_gst_category,
         "read_only_depends_on": "eval: doc.use_party_gstin",
+        "reqd": 1,
         "translatable": 0,
     },
     {
