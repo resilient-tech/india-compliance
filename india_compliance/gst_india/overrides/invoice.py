@@ -1,5 +1,6 @@
 import frappe
-from frappe.utils import cint, flt
+from frappe import _
+from frappe.utils import cint, flt, sbool
 
 from india_compliance.gst_india.utils import get_gst_accounts
 
@@ -55,3 +56,20 @@ def update_taxable_values(doc, method=None):
     if total_charges != additional_taxes:
         diff = additional_taxes - total_charges
         doc.get("items")[item_count - 1].taxable_value += diff
+
+
+@frappe.whitelist()
+def get_export_type():
+    settings = frappe.db.get_value(
+        "GST Settings",
+        "GST Settings",
+        ("enable_overseas_transactions", "default_without_payment_of_tax"),
+        as_dict=True,
+    )
+    if not sbool(settings.enable_overseas_transactions):
+        frappe.throw(_("Please enable SEZ / Overseas Transaction in GST Settings."))
+
+    if sbool(settings.default_without_payment_of_tax):
+        return "Without Payment of Tax"
+    else:
+        return "With Payment of Tax"

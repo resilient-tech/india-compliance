@@ -12,12 +12,17 @@ def validate_party(doc, method=None):
 
 
 def update_gstin_in_address(doc):
+    """
+    Identify addresses which uses party's GSTIN and update
+    their GSTIN and GST Category.
+    """
     if not doc.has_value_changed("gstin"):
         return
+
     addresses = frappe.get_all(
         "Address",
         filters=[
-            ["Address", "use_different_gstin", "=", 0],
+            ["Address", "use_party_gstin", "=", 1],
             ["Dynamic Link", "link_doctype", "=", doc.doctype],
             ["Dynamic Link", "link_name", "=", doc.name],
             ["Dynamic Link", "parenttype", "=", "Address"],
@@ -28,12 +33,11 @@ def update_gstin_in_address(doc):
     frappe.db.set_value(
         "Address",
         {"name": ["in", [address["name"] for address in addresses]]},
-        "gstin",
-        doc.gstin,
+        {"gstin": doc.gstin, "gst_category": doc.gst_category},
     )
 
     frappe.msgprint(
         _(
-            "GSTIN has been updated to all linked addresses where you are using same GSTIN."
+            "GSTIN and its Category has been updated to all linked addresses where you are using same GSTIN."
         )
     )
