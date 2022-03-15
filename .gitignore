@@ -3,6 +3,8 @@
 *.egg-info
 *.swp
 tags
-india_compliance/docs/current
 .vscode/
 __pycache__/
+dist/
+node_modules/
+india_compliance/docs/current
