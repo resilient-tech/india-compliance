@@ -1,47 +1,56 @@
+from copy import deepcopy
+
 from india_compliance.gst_india.constants import GST_CATEGORY, STATE_NUMBERS
 
 # TODO: Imporve variable naming
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
-gst_category = "\n" + "\n".join(GST_CATEGORY)
+gst_category = "\n".join(GST_CATEGORY)
 default_gst_category = "Unregistered"
 
-hsn_sac_field = {
-    "fieldname": "gst_hsn_code",
-    "label": "HSN/SAC",
-    "fieldtype": "Data",
-    "fetch_from": "item_code.gst_hsn_code",
-    "insert_after": "description",
-    "allow_on_submit": 1,
-    "print_hide": 1,
-    "fetch_if_empty": 1,
-    "translatable": 0,
-}
-nil_rated_exempt = {
-    "fieldname": "is_nil_exempt",
-    "label": "Is Nil Rated or Exempted",
-    "fieldtype": "Check",
-    "fetch_from": "item_code.is_nil_exempt",
-    "insert_after": "gst_hsn_code",
-    "print_hide": 1,
-}
-is_non_gst = {
-    "fieldname": "is_non_gst",
-    "label": "Is Non GST",
-    "fieldtype": "Check",
-    "fetch_from": "item_code.is_non_gst",
-    "insert_after": "is_nil_exempt",
-    "print_hide": 1,
-}
-taxable_value = {
-    "fieldname": "taxable_value",
-    "label": "Taxable Value",
-    "fieldtype": "Currency",
-    "insert_after": "base_net_amount",
-    "hidden": 1,
-    "options": "Company:company:default_currency",
-    "print_hide": 1,
-}
+
+item_fields = [
+    {
+        "fieldname": "gst_hsn_code",
+        "label": "HSN/SAC",
+        "fieldtype": "Data",
+        "fetch_from": "item_code.gst_hsn_code",
+        "insert_after": "description",
+        "allow_on_submit": 1,
+        "print_hide": 1,
+        "fetch_if_empty": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "is_nil_exempt",
+        "label": "Is Nil Rated or Exempted",
+        "fieldtype": "Check",
+        "fetch_from": "item_code.is_nil_exempt",
+        "insert_after": "gst_hsn_code",
+        "print_hide": 1,
+    },
+    {
+        "fieldname": "is_non_gst",
+        "label": "Is Non GST",
+        "fieldtype": "Check",
+        "fetch_from": "item_code.is_non_gst",
+        "insert_after": "is_nil_exempt",
+        "print_hide": 1,
+    },
+]
+
+item_fields_with_tax_value = item_fields[:]
+item_fields_with_tax_value.append(
+    {
+        "fieldname": "taxable_value",
+        "label": "Taxable Value",
+        "fieldtype": "Currency",
+        "insert_after": "base_net_amount",
+        "hidden": 1,
+        "options": "Company:company:default_currency",
+        "print_hide": 1,
+    }
+)
 
 purchase_invoice_gst_category = [
     {
@@ -70,8 +79,6 @@ purchase_invoice_gst_category = [
         "print_hide": 1,
         "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-        "fetch_from": "supplier.export_type",
-        "fetch_if_empty": 1,
         "translatable": 0,
     },
 ]
@@ -104,12 +111,11 @@ sales_invoice_gst_category = [
         "print_hide": 1,
         "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-        "fetch_from": "customer.export_type",
-        "fetch_if_empty": 1,
         "length": 25,
         "translatable": 0,
     },
 ]
+
 
 delivery_note_gst_category = [
     {
@@ -784,7 +790,7 @@ party_fields = [
     },
     {
         "fieldname": "gstin",
-        "label": "Party GSTIN",
+        "label": "GSTIN / UIN",
         "fieldtype": "Data",
         "insert_after": "tax_details",
         "translatable": 0,
@@ -804,53 +810,67 @@ party_fields = [
         "translatable": 0,
     },
 ]
-company_fields = party_fields[:]
+company_fields = deepcopy(party_fields)
 company_fields[0].update({"insert_after": "parent_company"})
 
+address_fields = [
+    {
+        "fieldname": "tax_details",
+        "label": "Tax Details",
+        "fieldtype": "Section Break",
+        "insert_after": "disabled",
+    },
+    {
+        "fieldname": "use_party_gstin",
+        "label": "Use Party GSTIN",
+        "fieldtype": "Check",
+        "default": 1,
+        "insert_after": "tax_details",
+    },
+    {
+        "fieldname": "gstin",
+        "label": "GSTIN / UIN",
+        "fieldtype": "Data",
+        "insert_after": "use_party_gstin",
+        "read_only_depends_on": "eval: doc.use_party_gstin",
+        "translatable": 0,
+    },
+    {
+        "fieldname": "gst_state",
+        "label": "GST State",
+        "fieldtype": "Select",
+        "options": state_options,
+        "insert_after": "gstin",
+        "read_only": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "tax_column_break",
+        "fieldtype": "Column Break",
+        "insert_after": "gst_state",
+    },
+    {
+        "fieldname": "gst_category",
+        "label": "GST Category",
+        "fieldtype": "Select",
+        "insert_after": "tax_column_break",
+        "options": gst_category,
+        "default": default_gst_category,
+        "read_only_depends_on": "eval: doc.use_party_gstin",
+        "translatable": 0,
+    },
+    {
+        "fieldname": "gst_state_number",
+        "label": "GST State Number",
+        "fieldtype": "Data",
+        "insert_after": "gst_category",
+        "read_only": 1,
+        "translatable": 0,
+    },
+]
+
 CUSTOM_FIELDS = {
-    "Address": [
-        {
-            "fieldname": "use_different_gstin",
-            "label": "Use Different GSTIN",
-            "fieldtype": "Check",
-            "default": 0,
-            "insert_after": "address_line2",
-        },
-        {
-            "fieldname": "gstin",
-            "label": "Party GSTIN",
-            "fieldtype": "Data",
-            "insert_after": "use_different_gstin",
-            "read_only_depends_on": "eval: !doc.use_different_gstin",
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_category",
-            "label": "GST Category",
-            "fieldtype": "Select",
-            "insert_after": "gstin",
-            "options": gst_category,
-            "default": default_gst_category,
-            "read_only_depends_on": "eval: !doc.use_different_gstin",
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_state",
-            "label": "GST State",
-            "fieldtype": "Select",
-            "options": state_options,
-            "insert_after": "gstin",
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_state_number",
-            "label": "GST State Number",
-            "fieldtype": "Data",
-            "insert_after": "gst_state",
-            "read_only": 1,
-            "translatable": 0,
-        },
-    ],
+    "Address": address_fields,
     "Purchase Invoice": purchase_invoice_gst_category
     + invoice_gst_fields
     + purchase_invoice_itc_fields
@@ -893,31 +913,20 @@ CUSTOM_FIELDS = {
             "insert_after": "is_nil_exempt",
         },
     ],
-    "Quotation Item": [hsn_sac_field, nil_rated_exempt, is_non_gst],
-    "Supplier Quotation Item": [hsn_sac_field, nil_rated_exempt, is_non_gst],
-    "Sales Order Item": [hsn_sac_field, nil_rated_exempt, is_non_gst],
-    "Delivery Note Item": [hsn_sac_field, nil_rated_exempt, is_non_gst],
-    "Sales Invoice Item": [
-        hsn_sac_field,
-        nil_rated_exempt,
-        is_non_gst,
-        taxable_value,
-    ],
-    "POS Invoice Item": [
-        hsn_sac_field,
-        nil_rated_exempt,
-        is_non_gst,
-        taxable_value,
-    ],
-    "Purchase Order Item": [hsn_sac_field, nil_rated_exempt, is_non_gst],
-    "Purchase Receipt Item": [hsn_sac_field, nil_rated_exempt, is_non_gst],
-    "Purchase Invoice Item": [
-        hsn_sac_field,
-        nil_rated_exempt,
-        is_non_gst,
-        taxable_value,
-    ],
-    "Material Request Item": [hsn_sac_field, nil_rated_exempt, is_non_gst],
+    (
+        "Quotation Item",
+        "Sales Order Item",
+        "Supplier Quotation Item",
+        "Purchase Order Item",
+        "Purchase Receipt Item",
+        "Material Request Item",
+    ): item_fields,
+    (
+        "Delivery Note Item",
+        "Sales Invoice Item",
+        "POS Invoice Item",
+        "Purchase Invoice Item",
+    ): item_fields_with_tax_value,
     "Supplier": [
         {
             "fieldname": "gst_transporter_id",

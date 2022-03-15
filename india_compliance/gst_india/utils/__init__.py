@@ -1,3 +1,5 @@
+from fuzzywuzzy import process
+
 import frappe
 from frappe import _
 from frappe.utils import cstr
@@ -65,15 +67,15 @@ def validate_and_update_pan(doc):
     If PAN is not set, set it from GSTIN.
     If PAN is set, validate it with GSTIN and PAN Format.
     """
-    pan = doc.pan = doc.get("pan", default="").upper().strip()
     gstin = doc.get("gstin", default="")
+    pan = doc.pan = doc.get("pan", default="").upper().strip()
 
-    if pan:
-        validate_pan(pan, gstin)
-
-    elif gstin:
+    if gstin:
         if PAN_NUMBER.match(pan_from_gstin := gstin[2:12]):
             doc.pan = pan_from_gstin
+
+    elif pan:
+        validate_pan(pan, gstin)
 
 
 def validate_pan(pan, gstin):
@@ -102,18 +104,34 @@ def read_data_file(file_name):
 
 
 def set_gst_state_and_state_number(doc):
-    if not doc.gst_state:
-        if not doc.state:
-            return
+    """
+    Set to State of Address if matched with one from GST State List
+    If Not, Find fuzzy match from GST State List and ask user to update state accordingly.
+    """
+    states_lowercase = {s.lower(): s for s in STATE_NUMBERS}
+    state = doc.state.lower().strip()
 
-        state = doc.state.lower().strip()
-        states_lowercase = {s.lower(): s for s in STATE_NUMBERS}
-
-        if state not in states_lowercase:
-            return
-
-        doc.gst_state = states_lowercase[state]
-
+    if state not in states_lowercase:
+        state_match = process.extractOne(state, states_lowercase.keys())
+        possible_match = states_lowercase[state_match[0]]
+        if state_match[1] < 90:
+            frappe.throw(
+                _(
+                    "Did you mean {0}? Please update the state to appropriate Indian State."
+                ).format(frappe.bold(possible_match)),
+                title=_("Invalid State"),
+            )
+        else:
+            frappe.msgprint(
+                _(
+                    "State value has been updated to {0}. There was minor mismatch in comparision with GST States."
+                ).format(frappe.bold(possible_match)),
+                alert=True,
+                indicator="yellow",
+            )
+            doc.state = doc.gst_state = possible_match
+    else:
+        doc.state = doc.gst_state = states_lowercase[state]
     doc.gst_state_number = STATE_NUMBERS[doc.gst_state]
 
 
@@ -179,16 +197,14 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
     return hsn_tax, hsn_taxable_amount
 
 
-def get_place_of_supply(party_details, doctype):
+def get_place_of_supply(doc, doctype):
     if not frappe.get_meta("Address").has_field("gst_state"):
         return
 
     if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
-        address_name = (
-            party_details.customer_address or party_details.shipping_address_name
-        )
+        address_name = doc.customer_address or doc.company_address
     elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
-        address_name = party_details.shipping_address or party_details.supplier_address
+        address_name = doc.shipping_address or doc.supplier_address
 
     if address_name:
         address = frappe.db.get_value(
@@ -198,7 +214,7 @@ def get_place_of_supply(party_details, doctype):
             as_dict=1,
         )
         if address and address.gst_state and address.gst_state_number:
-            party_details.gstin = address.gstin
+            doc.gstin = address.gstin
             return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
 
 
