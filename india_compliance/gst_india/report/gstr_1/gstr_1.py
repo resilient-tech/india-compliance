@@ -11,7 +11,7 @@ from frappe.utils import flt, formatdate, getdate
 
 from india_compliance.gst_india.utils import get_gst_accounts
 
-B2C_LIMIT = 250000
+B2C_LIMIT = 2_50_000
 
 
 def execute(filters=None):
