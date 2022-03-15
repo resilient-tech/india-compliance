@@ -9,7 +9,7 @@ from frappe.contacts.doctype.contact.contact import get_default_contact
 from frappe.model.document import Document
 from frappe.utils import date_diff, get_url, nowdate
 
-from india_compliance.gst_india.constants import TAX_ACCOUNT_FIELDS
+from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 
 
 class GSTSettings(Document):
@@ -23,7 +23,7 @@ class GSTSettings(Document):
         for row in self.gst_accounts:
 
             # Validate Duplicate Accounts
-            for fieldname in TAX_ACCOUNT_FIELDS:
+            for fieldname in GST_ACCOUNT_FIELDS:
                 account = row.get(fieldname)
                 if not account:
                     continue
