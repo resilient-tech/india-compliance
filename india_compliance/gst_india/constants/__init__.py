@@ -1,6 +1,6 @@
 import re
 
-TAX_ACCOUNT_FIELDS = (
+GST_ACCOUNT_FIELDS = (
     "cgst_account",
     "sgst_account",
     "igst_account",
