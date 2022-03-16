@@ -37,6 +37,21 @@ def validate_hsn_code(doc, method=None):
         elif len(hsn_code) < min_hsn_digits:
             invalid_hsn.append(str(item.idx))
 
+    if missing_hsn:
+        frappe.throw(
+            _(
+                "Please enter HSN/SAC code for the following row numbers: <br>{0}"
+            ).format(frappe.bold(", ".join(missing_hsn)), frappe.MandatoryError)
+        )
+
+    if invalid_hsn:
+        frappe.throw(
+            _(
+                "HSN/SAC code should be at least {0} digits long for the following"
+                " row numbers: <br>{1}"
+            ).format(min_hsn_digits, frappe.bold(", ".join(invalid_hsn)))
+        )
+
     if doc._action == "submit":
         if not invalid_hsn:
             return
@@ -46,21 +61,6 @@ def validate_hsn_code(doc, method=None):
                 "Please enter a valid HSN/SAC code for the following row numbers:"
                 " <br>{0}"
             ).format(frappe.bold(", ".join(invalid_hsn)))
-        )
-
-    if missing_hsn:
-        frappe.msgprint(
-            _(
-                "Please enter HSN/SAC code for the following row numbers: <br>{0}"
-            ).format(frappe.bold(", ".join(missing_hsn)))
-        )
-
-    if invalid_hsn:
-        frappe.msgprint(
-            _(
-                "HSN/SAC code should be at least {0} digits long for the following"
-                " row numbers: <br>{1}"
-            ).format(min_hsn_digits, frappe.bold(", ".join(invalid_hsn)))
         )
 
 
