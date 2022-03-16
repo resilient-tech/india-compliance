@@ -10,6 +10,7 @@ POST_INSTALL_PATCHES = (
     # ERPNext
     "setup_gst_india",
     "sync_india_custom_fields",
+    "set_missing_gst_hsn_code",
     "set_gst_category",
     "update_gst_category",
     "add_export_type_field_in_party_master",
