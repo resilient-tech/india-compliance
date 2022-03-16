@@ -1,5 +1,11 @@
-frappe.ui.form.off("Company", "make_default_tax_template");
-frappe.ui.form.on("Company", {
+{% include "india_compliance/gst_india/client_scripts/party.js" %}
+
+DOCTYPE = "Company";
+
+update_old_gstin(DOCTYPE);
+
+frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
+frappe.ui.form.on(DOCTYPE, {
     make_default_tax_template: function (frm) {
         frappe.call({
             method: "india_compliance.gst_india.override.company.make_default_tax_templates",
