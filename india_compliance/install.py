@@ -9,6 +9,7 @@ from india_compliance.income_tax_india.setup import after_install as setup_incom
 POST_INSTALL_PATCHES = (
     # ERPNext
     "setup_gst_india",
+    "sync_india_custom_fields",
     # India Compliance
     "remove_consumer_gst_category",
     "update_gst_accounts",
