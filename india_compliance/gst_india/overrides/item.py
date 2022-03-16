@@ -7,14 +7,13 @@ def validate_hsn_code(doc, method=None):
     if not doc.is_sales_item:
         return
 
-    gst_settings = frappe.db.get_value(
+    validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
         ("validate_hsn_code", "min_hsn_digits"),
-        as_dict=True,
     )
 
-    if not gst_settings.validate_hsn_code:
+    if not validate_hsn_code:
         return
 
     if not doc.gst_hsn_code:
@@ -25,10 +24,10 @@ def validate_hsn_code(doc, method=None):
             frappe.MandatoryError,
         )
 
-    if len(doc.gst_hsn_code) < int(gst_settings.min_hsn_digits):
+    if len(doc.gst_hsn_code) < int(min_hsn_digits):
         frappe.throw(
             _(
-                "HSN/SAC Code should be atleast {0} digits long. Please enter a valid"
+                "HSN/SAC Code should be at least {0} digits long. Please enter a valid"
                 " HSN/SAC code."
-            ).format(gst_settings.min_hsn_digits)
+            ).format(min_hsn_digits)
         )
