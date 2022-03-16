@@ -10,6 +10,7 @@ POST_INSTALL_PATCHES = (
     # ERPNext
     "setup_gst_india",
     "sync_india_custom_fields",
+    "add_einvoice_status_field",
     "update_export_type_for_gst",
     "update_tax_category_for_rcm",
     "add_company_link_to_einvoice_settings"
