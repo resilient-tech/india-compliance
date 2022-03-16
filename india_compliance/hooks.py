@@ -21,6 +21,9 @@ doctype_js = {
     "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
     "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
     "Company": "gst_india/client_scripts/company.js",
+    "Address": "gst_india/client_scripts/address.js",
+    "Customer": "gst_india/client_scripts/customer.js",
+    "Supplier": "gst_india/client_scripts/supplier.js",
 }
 
 doctype_list_js = {
@@ -50,6 +53,7 @@ doc_events = {
     "Address": {
         "validate": [
             "india_compliance.gst_india.overrides.address.validate",
+            "india_compliance.gst_india.overrides.party.emit_docs_with_old_gstin",
         ]
     },
     ("Customer", "Supplier", "Company"): {

@@ -822,18 +822,10 @@ address_fields = [
         "insert_after": "disabled",
     },
     {
-        "fieldname": "use_party_gstin",
-        "label": "Use Party GSTIN",
-        "fieldtype": "Check",
-        "default": 1,
-        "insert_after": "tax_details",
-    },
-    {
         "fieldname": "gstin",
         "label": "GSTIN / UIN",
         "fieldtype": "Data",
-        "insert_after": "use_party_gstin",
-        "read_only_depends_on": "eval: doc.use_party_gstin",
+        "insert_after": "tax_details",
         "translatable": 0,
     },
     {
@@ -857,7 +849,6 @@ address_fields = [
         "insert_after": "tax_column_break",
         "options": gst_category,
         "default": default_gst_category,
-        "read_only_depends_on": "eval: doc.use_party_gstin",
         "reqd": 1,
         "translatable": 0,
     },

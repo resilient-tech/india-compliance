@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe import _
 
@@ -8,36 +10,46 @@ def validate_party(doc, method=None):
     doc.gstin = (doc.get("gstin") or "").upper().strip()
     validate_gstin(doc.gstin, doc.gst_category)
     validate_and_update_pan(doc)
-    update_gstin_in_address(doc)
+    emit_docs_with_old_gstin(doc)
 
 
-def update_gstin_in_address(doc):
-    """
-    Identify addresses which uses party's GSTIN and update
-    their GSTIN and GST Category.
-    """
+def emit_docs_with_old_gstin(doc):
     if not doc.has_value_changed("gstin"):
         return
 
-    addresses = frappe.get_all(
-        "Address",
-        filters=[
-            ["Address", "use_party_gstin", "=", 1],
-            ["Dynamic Link", "link_doctype", "=", doc.doctype],
-            ["Dynamic Link", "link_name", "=", doc.name],
-            ["Dynamic Link", "parenttype", "=", "Address"],
-        ],
-        fields=["name"],
-    )
+    old_gstin = doc.get_doc_before_save().get("gstin") or ""
+    if not old_gstin:
+        return
 
-    frappe.db.set_value(
-        "Address",
-        {"name": ["in", [address["name"] for address in addresses]]},
-        {"gstin": doc.gstin, "gst_category": doc.gst_category},
-    )
+    docs_with_old_gstin = get_docs_with_old_gstin(old_gstin, doc.doctype, doc.name)
+    if not docs_with_old_gstin:
+        return
 
-    frappe.msgprint(
-        _(
-            "GSTIN and its Category has been updated to all linked addresses where you are using same GSTIN."
-        )
-    )
+    frappe.response.docs_with_old_gstin = {
+        "old_gstin": old_gstin,
+        "docs_with_old_gstin": docs_with_old_gstin,
+    }
+
+
+def get_docs_with_old_gstin(gstin, doctype, docname):
+    docs_with_old_gstin = {}
+    for dt in ("Address", "Supplier", "Customer"):
+        for doc in frappe.get_all(dt, filters={"gstin": gstin}):
+            if doc.name == docname and doctype == dt:
+                continue
+
+            docs_with_old_gstin.setdefault(dt, []).append(doc.name)
+
+    return docs_with_old_gstin
+
+
+@frappe.whitelist()
+def update_docs_with_old_gstin(new_gstin, new_gst_category, docs_with_old_gstin):
+    docs_with_old_gstin = json.loads(docs_with_old_gstin)
+    for doctype, docnames in docs_with_old_gstin.items():
+        for docname in docnames:
+            # TODO: Check permissions and update at all places where it is allowed
+            doc = frappe.get_doc(doctype, docname)
+            doc.gstin = new_gstin
+            doc.gst_category = new_gst_category
+            doc.save()
