@@ -1,5 +1,3 @@
-import os
-
 import click
 
 import frappe
@@ -9,6 +7,9 @@ from india_compliance.income_tax_india.setup import after_install as setup_incom
 
 # list of filenames (without extension) in sequence of execution
 POST_INSTALL_PATCHES = (
+    # ERPNext
+    "setup_gst_india",
+    # India Compliance
     "remove_consumer_gst_category",
     "update_gst_accounts",
 )
