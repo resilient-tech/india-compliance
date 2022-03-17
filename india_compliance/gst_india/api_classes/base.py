@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import sbool
 
-from india_compliance.gst_india.api_classes.utils import enqueue_integration_request
+from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
 
