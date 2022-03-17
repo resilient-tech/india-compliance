@@ -548,6 +548,7 @@ class Gstr1Report(object):
                     "fieldname": "is_reverse_charge",
                     "label": "Is Reverse Charge",
                     "fieldtype": "Check",
+                    "default": 0,
                 },
                 {
                     "fieldname": "gst_category",
@@ -650,6 +651,7 @@ class Gstr1Report(object):
                     "fieldname": "is_reverse_charge",
                     "label": "Is Reverse Charge",
                     "fieldtype": "Check",
+                    "default": 0,
                 },
                 {
                     "fieldname": "export_type",
