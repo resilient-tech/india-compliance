@@ -149,7 +149,7 @@ class BaseAPI:
                 title=_("GSP Connection Error"),
             )
 
-        # ASP Connectivity Issues
+        # ASP connectivity issues
         if status_code == 429:
             frappe.throw(
                 _("Your India Compliance API credits have exhausted"),
