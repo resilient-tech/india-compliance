@@ -1,4 +1,4 @@
-from fuzzywuzzy import process
+from thefuzz import process
 
 import frappe
 from frappe import _
@@ -114,22 +114,12 @@ def set_gst_state_and_state_number(doc):
     if state not in states_lowercase:
         state_match = process.extractOne(state, states_lowercase.keys())
         possible_match = states_lowercase[state_match[0]]
-        if state_match[1] < 90:
-            frappe.throw(
-                _(
-                    "Did you mean {0}? Please update the state to appropriate Indian State."
-                ).format(frappe.bold(possible_match)),
-                title=_("Invalid State"),
-            )
-        else:
-            frappe.msgprint(
-                _(
-                    "State value has been updated to {0}. There was minor mismatch in comparision with GST States."
-                ).format(frappe.bold(possible_match)),
-                alert=True,
-                indicator="yellow",
-            )
-            doc.state = doc.gst_state = possible_match
+        frappe.throw(
+            _(
+                "Did you mean {0}? Please update the state to appropriate Indian State."
+            ).format(frappe.bold(possible_match)),
+            title=_("Invalid State"),
+        )
     else:
         doc.state = doc.gst_state = states_lowercase[state]
     doc.gst_state_number = STATE_NUMBERS[doc.gst_state]

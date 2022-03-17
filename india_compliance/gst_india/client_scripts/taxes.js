@@ -49,7 +49,7 @@ function get_tax_template(frm) {
 	});
 }
 
-function get_gst_category(doctype) {
+function process_gst_category(doctype) {
 	let events = {
 		refresh: _highlight_gst_category,
 		gst_category: _highlight_gst_category,

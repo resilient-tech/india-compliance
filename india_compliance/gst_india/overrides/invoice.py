@@ -60,7 +60,7 @@ def update_taxable_values(doc, method=None):
 
 @frappe.whitelist()
 def get_export_type():
-    settings = frappe.db.get_value(
+    settings = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
         ("enable_overseas_transactions", "default_without_payment_of_tax"),
