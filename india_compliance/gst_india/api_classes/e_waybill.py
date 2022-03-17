@@ -1,27 +1,23 @@
-from india_compliance.gst_india.asp_connectors.base_api import BaseAPI
+from india_compliance.gst_india.api_classes.base import BaseAPI
 
 
 class EWaybillAPI(BaseAPI):
-    def __init__(self, company_gstin):
-        super().__init__()
-
-        self.api_endpoint = "ewb/ewayapi"
-        self.company_gstin = company_gstin
-        self.fetch_credentials(self.company_gstin, "e-Waybill")
+    def setup(self, company_gstin):
+        self.base_path = "ewb/ewayapi"
+        self.fetch_credentials(company_gstin, "e-Waybill")
         self.default_headers.update(
             {
-                "gstin": self.company_gstin,
+                "gstin": company_gstin,
                 "username": self.username,
                 "password": self.password,
-                "attach_request_id": True,
             }
         )
 
-    def post(self, action, body):
-        return super().post(params={"action": action}, body=body)
+    def post(self, action, json):
+        return super().post(params={"action": action}, json=json)
 
     def get_ewaybill(self, ewaybill_number):
-        return self.get(endpoint="getewaybill", params={"ewbNo": ewaybill_number})
+        return self.get("getewaybill", params={"ewbNo": ewaybill_number})
 
     def generate_ewaybill(self, data):
         return self.post("GENEWAYBILL", data)
