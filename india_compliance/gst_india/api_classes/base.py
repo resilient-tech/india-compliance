@@ -89,6 +89,8 @@ class BaseAPI:
 
         try:
             response = requests.request(method, **request_args)
+            if api_request_id := response.headers.get("x-amzn-RequestId"):
+                log.data["API Request ID"] = api_request_id
 
             try:
                 response_json = response.json()
