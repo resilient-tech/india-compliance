@@ -38,14 +38,14 @@ def validate_hsn_code(doc, method=None):
             invalid_hsn.append(str(item.idx))
 
     if missing_hsn:
-        frappe.throw(
+        frappe.msgprint(
             _(
                 "Please enter HSN/SAC code for the following row numbers: <br>{0}"
-            ).format(frappe.bold(", ".join(missing_hsn)), frappe.MandatoryError)
+            ).format(frappe.bold(", ".join(missing_hsn)))
         )
 
     if invalid_hsn:
-        frappe.throw(
+        frappe.msgprint(
             _(
                 "HSN/SAC code should be at least {0} digits long for the following"
                 " row numbers: <br>{1}"
