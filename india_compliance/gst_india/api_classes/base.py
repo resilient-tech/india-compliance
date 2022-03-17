@@ -15,7 +15,6 @@ BASE_URL = "https://asp.resilient.tech"
 class BaseAPI:
     def __init__(self, *args, **kwargs):
         self.base_path = ""
-        self.flags = frappe._dict()
         self.settings = frappe.get_cached_doc("GST Settings")
         self.default_headers = {
             "x-api-key": self.settings.get_password("api_secret"),
