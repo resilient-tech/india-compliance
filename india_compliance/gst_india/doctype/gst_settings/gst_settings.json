@@ -13,6 +13,10 @@
   "min_hsn_digits",
   "e_waybill_section",
   "enable_e_waybill_api",
+  "e_invoice_section",
+  "enable_e_invoice_api",
+  "column_break_11",
+  "applicable_from",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
@@ -97,12 +101,34 @@
    "fieldname": "enable_e_waybill_api",
    "fieldtype": "Check",
    "label": "Enable e-Waybill API"
+  },
+  {
+   "fieldname": "e_invoice_section",
+   "fieldtype": "Section Break",
+   "label": "e-Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_invoice_api",
+   "fieldtype": "Check",
+   "label": "Enable e-Invoice API"
+  },
+  {
+   "fieldname": "column_break_11",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.enable_e_invoice_api",
+   "fieldname": "applicable_from",
+   "fieldtype": "Date",
+   "label": "Applicable From",
+   "mandatory_depends_on": "eval:doc.enable_e_invoice_api"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-10 11:33:23.304519",
+ "modified": "2022-03-17 14:15:56.578400",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
