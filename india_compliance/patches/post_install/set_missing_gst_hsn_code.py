@@ -10,7 +10,8 @@ def execute():
     if not companies:
         return
 
-    doctypes = (
+    companies_str = ", ".join(map(frappe.db.escape, companies))
+    for doctype in (
         "Quotation",
         "Sales Order",
         "Delivery Note",
@@ -19,17 +20,20 @@ def execute():
         "Purchase Order",
         "Purchase Receipt",
         "Purchase Invoice",
-    )
-
-    for dt in doctypes:
+    ):
         date_field = "posting_date"
-        if dt in ("Quotation", "Sales Order", "Supplier Quotation", "Purchase Order"):
+        if doctype in (
+            "Quotation",
+            "Sales Order",
+            "Supplier Quotation",
+            "Purchase Order",
+        ):
             date_field = "transaction_date"
 
         transactions = frappe.db.sql(
             """
             SELECT dt.name, dt_item.name AS child_name
-            FROM `tab{dt}` dt, `tab{dt} Item` dt_item
+            FROM `tab{doctype}` dt, `tab{doctype} Item` dt_item
             WHERE dt.name = dt_item.parent
                 AND dt.`{date_field}` > '2018-06-01'
                 AND dt.docstatus = 1
@@ -37,9 +41,9 @@ def execute():
                 AND IFNULL(dt_item.item_code, '') != ''
                 AND dt.company in ({companies})
         """.format(
-                dt=dt,
+                doctype=doctype,
                 date_field=date_field,
-                companies=", ".join(frappe.db.escape(company) for company in companies),
+                companies=companies_str,
             ),
             as_dict=True,
         )
@@ -49,11 +53,11 @@ def execute():
 
         frappe.db.sql(
             """
-            UPDATE `tab{dt} Item` dt_item
+            UPDATE `tab{doctype} Item` dt_item
             SET dt_item.gst_hsn_code = (SELECT gst_hsn_code FROM tabItem WHERE name=dt_item.item_code)
             WHERE dt_item.name in ({rows_name})
         """.format(
-                dt=dt,
+                doctype=doctype,
                 rows_name=", ".join(
                     frappe.db.escape(d.child_name) for d in transactions
                 ),
@@ -61,7 +65,7 @@ def execute():
         )
 
         for transaction in transactions:
-            doc = frappe.get_doc(dt, transaction.name)
+            doc = frappe.get_doc(doctype, transaction.name)
             doc.db_set(
                 "other_charges_calculation",
                 get_itemised_tax_breakup_html(doc),
