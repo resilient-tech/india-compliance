@@ -39,6 +39,7 @@ def execute(filters=None):
                 fieldtype="Check",
                 label="Is Reverse Charge",
                 fieldname="is_reverse_charge",
+                default=0,
                 width=120,
             ),
             dict(
