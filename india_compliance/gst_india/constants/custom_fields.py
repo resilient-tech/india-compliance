@@ -128,16 +128,6 @@ invoice_gst_fields = [
         "options": "Original for Recipient\nDuplicate for Transporter\nDuplicate for Supplier\nTriplicate for Supplier",
     },
     {
-        "fieldname": "reverse_charge",
-        "label": "Reverse Charge",
-        "length": 2,
-        "fieldtype": "Select",
-        "insert_after": "invoice_copy",
-        "print_hide": 1,
-        "options": "Y\nN",
-        "default": "N",
-    },
-    {
         "fieldname": "ecommerce_gstin",
         "label": "E-commerce GSTIN",
         "length": 15,
@@ -188,6 +178,14 @@ purchase_invoice_gst_fields = [
         "insert_after": "shipping_address",
         "print_hide": 1,
         "read_only": 1,
+    },
+    {
+        "fieldname": "is_reverse_charge",
+        "label": "Is Reverse Charge",
+        "fieldtype": "Check",
+        "insert_after": "apply_tds",
+        "print_hide": 1,
+        "default": 0,
     },
 ]
 
