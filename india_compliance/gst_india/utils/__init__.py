@@ -6,7 +6,7 @@ from erpnext.controllers.taxes_and_totals import (
     get_itemised_taxable_amount,
 )
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, STATE_NUMBERS
 
 
 def read_data_file(file_name):
@@ -170,49 +170,52 @@ def get_gst_accounts(
     return gst_accounts
 
 
-def get_gst_accounts_by_type(company, gst_account_type=None, as_list=False):
+def get_gst_accounts_by_type(company, account_type, throw=True):
     """
-    Returns a dict of GST accounts by type in following sequence:
-    `cgst_account`, `sgst_account`, `igst_account`, `cess_account`
-    or Returns a list of all GST accounts if `as_list` is True
-    """
+    :param company: Company to get GST Accounts for
+    :param account_type: Account Type to get GST Accounts for
 
-    filters = {
-        "parent": "GST Settings",
-        "company": company,
+    Returns a dict of accounts:
+    {
+        "cgst_account": "ABC",
+        ...
     }
-    if gst_account_type:
-        filters.update({"gst_account_type": gst_account_type})
+    """
+    if not company:
+        frappe.throw(_("Please set a Company first"))
 
-    all_accounts = frappe.db.get_all(
-        "GST Account",
-        filters=filters,
-        fields=[
-            "gst_account_type",
-            "cgst_account",
-            "sgst_account",
-            "igst_account",
-            "cess_account",
-        ],
-        as_list=1,
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+    for row in settings.gst_accounts:
+        if row.account_type == account_type and row.company == company:
+            return frappe._dict({key: row.get(key) for key in GST_ACCOUNT_FIELDS})
+
+    if not throw:
+        return {}
+
+    frappe.throw(
+        _(
+            "Could not retrieve GST Accounts of type {0} from GST Settings for"
+            " Company {1}"
+        ).format(frappe.bold(account_type), frappe.bold(company)),
+        frappe.DoesNotExistError,
     )
 
-    if as_list:
-        gst_accounts = []
-        for account in all_accounts:
-            gst_accounts.extend(account[1:] or [])
 
-        gst_accounts = [account for account in gst_accounts if account]
-    else:
-        gst_accounts = frappe._dict()
-        for account in all_accounts:
-            gst_accounts.update({account[0]: account[1:]})
+def get_all_gst_accounts(company):
+    if not company:
+        frappe.throw(_("Please set a Company first"))
 
-    if not gst_accounts:
-        frappe.throw(
-            _(
-                "Could not find {0} GST Accounts for company {1}. Please set GST Accounts in GST Settings"
-            ).format(gst_account_type or "", company)
-        )
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
 
-    return gst_accounts
+    accounts_list = []
+    for row in settings.gst_accounts:
+        if row.company != company:
+            continue
+
+        for account in GST_ACCOUNT_FIELDS:
+            if not row.get(account):
+                continue
+
+            accounts_list.append(row.get(account))
+
+    return accounts_list

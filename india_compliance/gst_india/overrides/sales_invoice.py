@@ -3,7 +3,10 @@ import re
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
+    get_gst_accounts_by_type,
+)
 
 # Maximum length must be 16 characters. First character must be alphanumeric.
 # Subsequent characters can be alphanumeric, hyphens or slashes.
@@ -11,11 +14,10 @@ GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
 
 
 def validate_gst_invoice(doc, method=None):
-    if frappe.get_cached_value("Company", doc.company, "country") != "India":
-        return
-
-    gst_validation = frappe.db.get_single_value("GST Settings", "add_gst_validation")
-    if not gst_validation:
+    country, gst_category = frappe.get_cached_value(
+        "Company", doc.company, ("country", "gst_category")
+    )
+    if country != "India" or gst_category == "Unregistered":
         return
 
     validate_invoice_number(doc)
@@ -88,8 +90,8 @@ def validate_gst_accounts(doc):
     - Intra-State supplies should not have IGST account
     """
 
-    accounts_list = get_gst_accounts_by_type(doc.company, as_list=True)
-    output_accounts = get_gst_accounts_by_type(doc.company, "Output").get("Output")
+    accounts_list = get_all_gst_accounts(doc.company)
+    output_accounts = get_gst_accounts_by_type(doc.company, "Output")
     no_tax = (
         doc.gst_category in ["SEZ", "Overseas"]
         and doc.export_type == "Without Payment of Tax"
@@ -104,16 +106,19 @@ def validate_gst_accounts(doc):
         if account_head not in accounts_list:
             continue
 
-        if account_head not in output_accounts and tax_amount:
+        if (
+            account_head not in (output_account_values := output_accounts.values())
+            and tax_amount
+        ):
             frappe.throw(
                 _(
                     "{0} is not an Output Account. Only output accounts should be"
-                    " selected in Sales Transactions"
+                    " selected in Sales Transactions."
                 ).format(account_head)
             )
 
         if no_tax:
-            if account_head in output_accounts and tax_amount:
+            if account_head in output_account_values and tax_amount:
                 frappe.throw(
                     _(
                         "{0} should not have any tax amount as you are making supply"
@@ -121,7 +126,11 @@ def validate_gst_accounts(doc):
                     ).format(account_head)
                 )
         elif inter_state:
-            if account_head in output_accounts[:2] and tax_amount:
+            if (
+                account_head
+                in (output_accounts.cgst_account, output_accounts.sgst_account)
+                and tax_amount
+            ):
                 frappe.throw(
                     _(
                         "{0} should to be IGST Account as you are making inter-state"
@@ -129,7 +138,7 @@ def validate_gst_accounts(doc):
                     ).format(account_head)
                 )
         else:
-            if account_head in output_accounts[2] and tax_amount:
+            if account_head == output_accounts.igst_account and tax_amount:
                 frappe.throw(
                     _(
                         "{0} should to be CGST/SGST Account as you are making"

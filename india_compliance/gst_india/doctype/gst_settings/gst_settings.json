@@ -7,7 +7,6 @@
  "field_order": [
   "general_tab",
   "round_off_gst_values",
-  "add_gst_validation",
   "hsn_wise_tax_breakup",
   "column_break_4",
   "validate_hsn_code",
@@ -58,13 +57,6 @@
    "label": "Validate HSN/SAC Code in Sales Items and Transactions"
   },
   {
-   "default": "0",
-   "description": "Validations for Registered Businesses to ensure GST Compliant Invoices with few more mandatory fields.",
-   "fieldname": "add_gst_validation",
-   "fieldtype": "Check",
-   "label": "Add GST Validation to Sales Invoice"
-  },
-  {
    "default": "6",
    "depends_on": "eval: doc.validate_hsn_code",
    "fieldname": "min_hsn_digits",
@@ -110,7 +102,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-10 11:33:23.304519",
+ "modified": "2022-03-17 14:43:29.191573",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
