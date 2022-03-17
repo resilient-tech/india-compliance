@@ -36,4 +36,15 @@ frappe.ui.form.on('GST Settings', {
 		});
 	},
 
+	enable_reverse_charge: function (frm) {
+		if (frm.doc.enable_reverse_charge) {
+			frappe.confirm('Do you wish to enable Reverse Charge in Sales Invoice?',
+				() => {
+					return;
+				}, () => {
+					frm.set_value('enable_reverse_charge', false);
+				})
+		}
+	}
+
 });

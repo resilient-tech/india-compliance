@@ -196,7 +196,7 @@ class GSTR3BReport(Document):
         condition = ""
 
         if reverse_charge:
-            condition += "AND reverse_charge = 'Y'"
+            condition += "AND is_reverse_charge = 1"
 
         invoice_details = frappe.db.sql(
             """

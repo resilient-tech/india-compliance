@@ -8,6 +8,7 @@
   "general_tab",
   "round_off_gst_values",
   "hsn_wise_tax_breakup",
+  "enable_reverse_charge",
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
@@ -97,12 +98,19 @@
    "fieldname": "enable_e_waybill_api",
    "fieldtype": "Check",
    "label": "Enable e-Waybill API"
+  },
+  {
+   "default": "0",
+   "description": "On enable, it will create custom field `Reverse Charge` in Sales Invoice. On disable, it will delete the field.",
+   "fieldname": "enable_reverse_charge",
+   "fieldtype": "Check",
+   "label": "Enable Reverse Charge in Sales Transactions"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-10 11:33:23.304519",
+ "modified": "2022-03-17 14:01:13.365059",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

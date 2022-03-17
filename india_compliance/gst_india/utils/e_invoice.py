@@ -170,7 +170,7 @@ def get_transaction_details(invoice):
         dict(
             tax_scheme="GST",
             supply_type=supply_type,
-            reverse_charge=invoice.reverse_charge,
+            reverse_charge=invoice.is_reverse_charge,
         )
     )
 
