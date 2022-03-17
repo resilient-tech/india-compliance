@@ -5,9 +5,8 @@ function update_export_type(doctype) {
                 frappe.call({
                     method: "india_compliance.gst_india.overrides.invoice.get_export_type",
                     callback: function (r) {
-                        if (r.message) {
-                            frm.set_value("export_type", r.message);
-                        }
+                        if (!r.message) return;
+                        frm.set_value("export_type", r.message);
                     },
                 });
             } else {
