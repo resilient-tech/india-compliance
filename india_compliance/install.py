@@ -17,7 +17,7 @@ POST_INSTALL_PATCHES = (
     "add_einvoice_status_field",
     "update_export_type_for_gst",
     "update_tax_category_for_rcm",
-    "add_company_link_to_einvoice_settings"
+    "add_company_link_to_einvoice_settings",
     # India Compliance
     "remove_consumer_gst_category",
     "update_gst_accounts",
