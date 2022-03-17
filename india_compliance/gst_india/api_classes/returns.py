@@ -45,7 +45,7 @@ class ReturnsAPI(BaseAPI):
         return response
 
 
-class GSTR_2B_API(ReturnsAPI):
+class GSTR2bAPI(ReturnsAPI):
     def setup(self, company_gstin):
         super().setup(company_gstin)
         self.base_path = "returns/gstr2b"
@@ -55,7 +55,7 @@ class GSTR_2B_API(ReturnsAPI):
         return self.get("GET2B", return_period, otp, {"rtnprd": return_period})
 
 
-class GSTR_2A_API(ReturnsAPI):
+class GSTR2aAPI(ReturnsAPI):
     def setup(self, company_gstin):
         super().setup(company_gstin)
         self.base_path = "returns/gstr2a"
