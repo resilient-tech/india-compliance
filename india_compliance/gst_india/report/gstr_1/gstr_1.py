@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, formatdate, getdate
 
-from india_compliance.gst_india.utils import get_gst_accounts
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 B2C_LIMIT = 2_50_000
 
@@ -49,9 +49,7 @@ class Gstr1Report(object):
 
     def run(self):
         self.get_columns()
-        self.gst_accounts = get_gst_accounts(
-            self.filters.company, only_non_reverse_charge=1
-        )
+        self.gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
         self.get_invoice_data()
 
         if self.invoices:
@@ -98,8 +96,8 @@ class Gstr1Report(object):
         for entry in advances:
             # only consider IGST and SGST so as to avoid duplication of taxable amount
             if (
-                entry.account_head in self.gst_accounts.igst_account
-                or entry.account_head in self.gst_accounts.sgst_account
+                entry.account_head == self.gst_accounts.igst_account
+                or entry.account_head == self.gst_accounts.sgst_account
             ):
                 advances_data.setdefault(
                     (entry.place_of_supply, entry.rate), [0.0, 0.0]
@@ -107,7 +105,7 @@ class Gstr1Report(object):
                 advances_data[(entry.place_of_supply, entry.rate)][0] += (
                     entry.amount * 100 / entry.rate
                 )
-            elif entry.account_head in self.gst_accounts.cess_account:
+            elif entry.account_head == self.gst_accounts.cess_account:
                 advances_data[(entry.place_of_supply, entry.rate)][1] += entry.amount
 
         for key, value in advances_data.items():
@@ -427,7 +425,7 @@ class Gstr1Report(object):
         unidentified_gst_accounts = []
         unidentified_gst_accounts_invoice = []
         for parent, account, item_wise_tax_detail, tax_amount in self.tax_details:
-            if account in self.gst_accounts.cess_account:
+            if account == self.gst_accounts.cess_account:
                 self.invoice_cess.setdefault(parent, tax_amount)
             else:
                 if item_wise_tax_detail:
@@ -435,13 +433,13 @@ class Gstr1Report(object):
                         item_wise_tax_detail = json.loads(item_wise_tax_detail)
                         cgst_or_sgst = False
                         if (
-                            account in self.gst_accounts.cgst_account
-                            or account in self.gst_accounts.sgst_account
+                            account == self.gst_accounts.cgst_account
+                            or account == self.gst_accounts.sgst_account
                         ):
                             cgst_or_sgst = True
 
                         if not (
-                            cgst_or_sgst or account in self.gst_accounts.igst_account
+                            cgst_or_sgst or account == self.gst_accounts.igst_account
                         ):
                             if (
                                 "gst" in account.lower()
