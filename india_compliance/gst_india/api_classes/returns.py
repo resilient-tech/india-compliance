@@ -16,7 +16,7 @@ class ReturnsAPI(BaseAPI):
 
     def setup(self, company_gstin):
         self.company_gstin = company_gstin
-        self.fetch_credentials(self.company_gstin, "Returns")
+        self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
         self.default_headers.update(
             {
                 "gstin": self.company_gstin,
