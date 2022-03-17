@@ -1,21 +1,15 @@
-import json
-
 import frappe
-from frappe.utils import now
 
 
 def enqueue_integration_request(*args, **kwargs):
+    return create_integration_request(**kwargs)
     frappe.enqueue(
         "india_compliance.gst_india.api_classes.utils.create_integration_request",
         **kwargs
     )
 
 
-def create_integration_request(
-    data=None,
-    output=None,
-    error=None,
-):
+def create_integration_request(data=None, output=None, error=None):
     return frappe.get_doc(
         {
             "doctype": "Integration Request",
