@@ -122,7 +122,7 @@ class BaseAPI:
                     title=_("API Request Failed"),
                 )
 
-            return frappe.as_dict(response_json.get("result", response_json))
+            return frappe._dict(response_json.get("result", response_json))
 
         except Exception as e:
             log.error = str(e)
