@@ -20,8 +20,11 @@ class BaseAPI:
             "x-api-key": self.settings.get_password("api_secret"),
         }
 
-        if hasattr(self, "setup"):
-            self.setup(*args, **kwargs)
+        self.setup(*args, **kwargs)
+
+    def setup(*args, **kwargs):
+        # Override in subclass
+        pass
 
     def fetch_credentials(self, gstin, service, require_password=True):
         for row in self.settings.credentials:
@@ -29,9 +32,8 @@ class BaseAPI:
                 break
         else:
             frappe.throw(
-                "Please set the relevant credentials in GST Settings to use the {0} API".format(
-                    service
-                ),
+                "Please set the relevant credentials in GST Settings to use the {0} API"
+                .format(service),
                 frappe.DoesNotExistError,
                 title="Credentials Unavailable",
             )
@@ -90,7 +92,7 @@ class BaseAPI:
         try:
             response = requests.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
-                log.data["API Request ID"] = api_request_id
+                log.data["api_request_id"] = api_request_id
 
             try:
                 response_json = response.json()
@@ -112,10 +114,7 @@ class BaseAPI:
             if isinstance(success_value, str):
                 success_value = sbool(success_value)
 
-            if not success_value or (
-                hasattr(self, "handle_failed_response")
-                and not self.handle_failed_response(response_json)
-            ):
+            if not success_value or not self.handle_failed_response(response_json):
                 frappe.throw(
                     response_json.get("message")
                     # Fallback to response body if message is not present
@@ -132,6 +131,10 @@ class BaseAPI:
         finally:
             log.output = response_json
             enqueue_integration_request(**log)
+
+    def handle_failed_response(self, response_json):
+        # Override in subclass, return truthy value to stop frappe.throw
+        pass
 
     def handle_http_code(self, status_code, response_json):
         # TODO: add link to account page / support email
