@@ -2,12 +2,6 @@ import click
 
 import frappe
 
-custom_fields_to_delete = {
-    "Company": ["pan_details"],
-    "Customer": ["export_type"],
-    "Supplier": ["export_type"],
-}
-
 
 def execute():
     update_pan_for_company()
@@ -18,24 +12,15 @@ def execute():
 
 def update_pan_for_company():
     # Updated pan_details with pan for consisitency in company
-    company_pan = frappe.db.get_all(
-        "Company", fields=["name", "pan_details"], filters={"pan_details": ["!=", ""]}
-    )
-    for company in company_pan:
-        frappe.db.set_value(
-            "Company", company.name, {"pan": company.pan_details, "pan_details": None}
-        )
+    company = frappe.qb.DocType("Company")
+    frappe.qb.update(company).set(company.pan, company.pan_details).set(
+        company.pan_details, None
+    ).where(company.pan_details != "").run()
 
 
 def update_na_gstin():
-    for doctype in ["Address", "Customer", "Supplier"]:
-        docs = frappe.get_all(doctype, filters={"gstin": "NA"}, fields=["name"])
-        if not docs:
-            continue
-
-        frappe.db.set_value(
-            doctype, {"name": ("in", [doc.name for doc in docs])}, "gstin", ""
-        )
+    for doctype in {"Address", "Customer", "Supplier"}:
+        frappe.db.set_value(doctype, {"gstin": "NA"}, "gstin", "")
 
 
 def update_gstin_gst_category():
@@ -45,23 +30,12 @@ def update_gstin_gst_category():
     Set GST Category in Address.
     """
     # bulk update gst category for overseas
-    overseas_address = frappe.get_all(
+    frappe.db.set_value(
         "Address",
-        filters={
-            "gstin": ("is", "not set"),
-            "country": ("!=", "India"),
-            "gst_category": ("is", "not set"),
-        },
-        fields=("name"),
+        {"gst_category": "", "gstin": "", "country": ("!=", "India")},
+        "gst_category",
+        "Overseas",
     )
-
-    if overseas_address:
-        frappe.db.set_value(
-            "Address",
-            {"name": ("in", [addr.name for addr in overseas_address])},
-            "gst_category",
-            "Overseas",
-        )
 
     # join Address and Party
     dynamic_links = frappe.qb.DocType("Dynamic Link")
@@ -81,14 +55,17 @@ def update_gstin_gst_category():
         .run(as_dict=True)
     )
 
+    # group by doctype, docname
+    address_map = {}
+    for address in all_address_list:
+        address_map.setdefault((address.link_doctype, address.link_name), []).append(
+            address
+        )
+
     print_warning = False
     for doctype in ("Customer", "Supplier", "Company"):
-        for doc in frappe.get_all(doctype, fields=["name", "gstin", "gst_category"]):
-            address_list = [
-                addr
-                for addr in all_address_list
-                if addr.link_doctype == doctype and addr.link_name == doc.name
-            ]
+        for doc in frappe.get_all(doctype, fields=("name", "gstin", "gst_category")):
+            address_list = address_map.get((doctype, doc.name))
             if not address_list:
                 continue
 
@@ -116,15 +93,20 @@ def update_gstin_gst_category():
 
 
 def update_gst_category_for_address(doc, address_list, default_gstin):
-    for addr in address_list:
-        if addr.gstin != default_gstin:
-            if addr.gstin and addr.gst_category == "Unregistered":
-                frappe.db.set_value("Address", addr.name, {"gst_category": ""})
+    for address in address_list:
+        if address.gstin != default_gstin:
+            if address.gstin and address.gst_category == "Unregistered":
+                frappe.db.set_value("Address", address.name, {"gst_category": ""})
         else:
-            frappe.db.set_value("Address", addr.name, "gst_category", doc.gst_category)
+            frappe.db.set_value(
+                "Address", address.name, "gst_category", doc.gst_category
+            )
 
 
 def delete_custom_fields():
-    for doctype, fields in custom_fields_to_delete.items():
-        for field in fields:
-            frappe.delete_doc("Custom Field", f"{doctype}-{field}")
+    for doctype, fields in {
+        "Company": ("gstin_details",),
+        "Customer": ("export_type",),
+        "Supplier": ("export_type",),
+    }.items():
+        frappe.db.delete("Custom Field", {"dt": doctype, "fieldname": ("in", fields)})
