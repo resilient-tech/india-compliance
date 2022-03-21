@@ -32,8 +32,10 @@ class BaseAPI:
                 break
         else:
             frappe.throw(
-                "Please set the relevant credentials in GST Settings to use the {0} API"
-                .format(service),
+                _(
+                    "Please set the relevant credentials in GST Settings to use the"
+                    " {0} API"
+                ).format(service),
                 frappe.DoesNotExistError,
                 title="Credentials Unavailable",
             )
