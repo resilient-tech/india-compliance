@@ -20,7 +20,7 @@ def update_pan_for_company():
 
 def update_na_gstin():
     for doctype in {"Address", "Customer", "Supplier"}:
-        frappe.db.set_value(doctype, {"gstin": "NA"}, "gstin", "")
+        frappe.db.set_value(doctype, {"gstin": "NA"}, "gstin", None)
 
 
 def update_gstin_gst_category():
@@ -62,6 +62,8 @@ def update_gstin_gst_category():
             address
         )
 
+    new_gstins = {}
+    new_gst_categories = {}
     print_warning = False
     for doctype in ("Customer", "Supplier", "Company"):
         for doc in frappe.get_all(doctype, fields=("name", "gstin", "gst_category")):
@@ -69,20 +71,38 @@ def update_gstin_gst_category():
             if not address_list:
                 continue
 
-            if doc.gstin:
-                # in case user has custom gstin field in party
-                update_gst_category_for_address(doc, address_list, doc.gstin)
-                continue
+            # in case user has custom gstin field in party
+            default_gstin = doc.gstin
+            if not doc.gstin:
+                # update gstin in party only where there is one gstin per party
+                gstins = {addr.gstin for addr in address_list}
+                if len(gstins) > 1:
+                    print_warning = True
+                    continue
 
-            # update gstin in party only where there is one gstin per party
-            gstins = {addr.gstin for addr in address_list}
-            if len(gstins) > 1:
-                print_warning = True
-                continue
+                default_gstin = next(iter(gstins), None)
+                new_gstins.setdefault((doctype, default_gstin), []).append(doc.name)
 
-            default_gstin = next(iter(gstins), None)
-            frappe.db.set_value(doctype, doc.name, "gstin", default_gstin)
-            update_gst_category_for_address(doc, address_list, default_gstin)
+            for address in address_list:
+                gst_category = doc.gst_category
+                if (
+                    address.gstin
+                    and address.gstin != default_gstin
+                    and address.gst_category == "Unregistered"
+                ):
+                    gst_category = ""
+
+                new_gst_categories.setdefault((doctype, gst_category), []).append(
+                    doc.name
+                )
+
+    for (doctype, gstin), docnames in new_gstins.items():
+        frappe.db.set_value(doctype, {"name": ("in", docnames)}, "gstin", gstin)
+
+    for (doctype, gst_category), docnames in new_gst_categories.items():
+        frappe.db.set_value(
+            doctype, {"name": ("in", docnames)}, "gst_category", gst_category
+        )
 
     if print_warning:
         click.secho(
@@ -90,17 +110,6 @@ def update_gstin_gst_category():
             "Please check for parties without GSTINs or address without GST Category and set accordingly.",
             fg="yellow",
         )
-
-
-def update_gst_category_for_address(doc, address_list, default_gstin):
-    for address in address_list:
-        if address.gstin != default_gstin:
-            if address.gstin and address.gst_category == "Unregistered":
-                frappe.db.set_value("Address", address.name, {"gst_category": ""})
-        else:
-            frappe.db.set_value(
-                "Address", address.name, "gst_category", doc.gst_category
-            )
 
 
 def delete_custom_fields():
