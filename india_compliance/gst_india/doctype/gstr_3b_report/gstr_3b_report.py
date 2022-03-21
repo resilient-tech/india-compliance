@@ -85,15 +85,15 @@ class GSTR3BReport(Document):
     def get_itc_reversal_entries(self):
         reversal_entries = frappe.db.sql(
             """
-			SELECT ja.account, j.reversal_type, sum(credit_in_account_currency) as amount
-			FROM `tabJournal Entry` j, `tabJournal Entry Account` ja
-			where j.docstatus = 1
-			and j.is_opening = 'No'
-			and ja.parent = j.name
-			and j.voucher_type = 'Reversal Of ITC'
-			and month(j.posting_date) = %s and year(j.posting_date) = %s
-			and j.company = %s and j.company_gstin = %s
-			GROUP BY ja.account, j.reversal_type""",
+            SELECT ja.account, j.reversal_type, sum(credit_in_account_currency) as amount
+            FROM `tabJournal Entry` j, `tabJournal Entry Account` ja
+            where j.docstatus = 1
+            and j.is_opening = 'No'
+            and ja.parent = j.name
+            and j.voucher_type = 'Reversal Of ITC'
+            and month(j.posting_date) = %s and year(j.posting_date) = %s
+            and j.company = %s and j.company_gstin = %s
+            GROUP BY ja.account, j.reversal_type""",
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
             as_dict=1,
         )
@@ -116,17 +116,17 @@ class GSTR3BReport(Document):
     def get_itc_details(self):
         itc_amounts = frappe.db.sql(
             """
-			SELECT eligibility_for_itc, sum(itc_integrated_tax) as itc_integrated_tax,
-			sum(itc_central_tax) as itc_central_tax,
-			sum(itc_state_tax) as itc_state_tax,
-			sum(itc_cess_amount) as itc_cess_amount
-			FROM `tabPurchase Invoice`
-			WHERE docstatus = 1
-			and is_opening = 'No'
-			and month(posting_date) = %s and year(posting_date) = %s and company = %s
-			and company_gstin = %s
-			GROUP BY eligibility_for_itc
-		""",
+            SELECT eligibility_for_itc, sum(itc_integrated_tax) as itc_integrated_tax,
+            sum(itc_central_tax) as itc_central_tax,
+            sum(itc_state_tax) as itc_state_tax,
+            sum(itc_cess_amount) as itc_cess_amount
+            FROM `tabPurchase Invoice`
+            WHERE docstatus = 1
+            and is_opening = 'No'
+            and month(posting_date) = %s and year(posting_date) = %s and company = %s
+            and company_gstin = %s
+            GROUP BY eligibility_for_itc
+        """,
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
             as_dict=1,
         )
@@ -148,15 +148,15 @@ class GSTR3BReport(Document):
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(
             """
-			SELECT p.place_of_supply, sum(i.base_amount) as base_amount, i.is_nil_exempt, i.is_non_gst
-			FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
-			WHERE p.docstatus = 1 and p.name = i.parent
-			and p.is_opening = 'No'
-			and p.gst_category != 'Registered Composition'
-			and (i.is_nil_exempt = 1 or i.is_non_gst = 1 or p.gst_category = 'Registered Composition') and
-			month(p.posting_date) = %s and year(p.posting_date) = %s
-			and p.company = %s and p.company_gstin = %s
-			GROUP BY p.place_of_supply, i.is_nil_exempt, i.is_non_gst""",
+            SELECT p.place_of_supply, sum(i.base_amount) as base_amount, i.is_nil_exempt, i.is_non_gst
+            FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
+            WHERE p.docstatus = 1 and p.name = i.parent
+            and p.is_opening = 'No'
+            and p.gst_category != 'Registered Composition'
+            and (i.is_nil_exempt = 1 or i.is_non_gst = 1 or p.gst_category = 'Registered Composition') and
+            month(p.posting_date) = %s and year(p.posting_date) = %s
+            and p.company = %s and p.company_gstin = %s
+            GROUP BY p.place_of_supply, i.is_nil_exempt, i.is_non_gst""",
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
             as_dict=1,
         )
@@ -200,20 +200,20 @@ class GSTR3BReport(Document):
 
         invoice_details = frappe.db.sql(
             """
-			SELECT
-				name, gst_category, export_type, place_of_supply
-			FROM
-				`tab{doctype}`
-			WHERE
-				docstatus = 1
-				AND month(posting_date) = %s
-				AND year(posting_date) = %s
-				AND company = %s
-				AND company_gstin = %s
-				AND is_opening = 'No'
-				{reverse_charge}
-			ORDER BY name
-		""".format(
+            SELECT
+                name, gst_category, export_type, place_of_supply
+            FROM
+                `tab{doctype}`
+            WHERE
+                docstatus = 1
+                AND month(posting_date) = %s
+                AND year(posting_date) = %s
+                AND company = %s
+                AND company_gstin = %s
+                AND is_opening = 'No'
+                {reverse_charge}
+            ORDER BY name
+        """.format(
                 doctype=doctype, reverse_charge=condition
             ),
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
@@ -232,13 +232,13 @@ class GSTR3BReport(Document):
         if self.get("invoices"):
             item_details = frappe.db.sql(
                 """
-				SELECT
-					item_code, parent, taxable_value, base_net_amount, item_tax_rate,
-					is_nil_exempt, is_non_gst
-				FROM
-					`tab%s Item`
-				WHERE parent in (%s)
-			"""
+                SELECT
+                    item_code, parent, taxable_value, base_net_amount, item_tax_rate,
+                    is_nil_exempt, is_non_gst
+                FROM
+                    `tab%s Item`
+                WHERE parent in (%s)
+            """
                 % (doctype, ", ".join(["%s"] * len(self.invoices))),
                 tuple(self.invoices),
                 as_dict=1,
@@ -272,14 +272,14 @@ class GSTR3BReport(Document):
         if self.get("invoices"):
             tax_details = frappe.db.sql(
                 """
-				SELECT
-					parent, account_head, item_wise_tax_detail, base_tax_amount_after_discount_amount
-				FROM `tab%s`
-				WHERE
-					parenttype = %s and docstatus = 1
-					and parent in (%s)
-				ORDER BY account_head
-			"""
+                SELECT
+                    parent, account_head, item_wise_tax_detail, base_tax_amount_after_discount_amount
+                FROM `tab%s`
+                WHERE
+                    parenttype = %s and docstatus = 1
+                    and parent in (%s)
+                ORDER BY account_head
+            """
                 % (tax_template, "%s", ", ".join(["%s"] * len(self.invoices))),
                 tuple([doctype] + list(self.invoices)),
             )
@@ -517,15 +517,13 @@ class GSTR3BReport(Document):
         for doctype in ["Sales Invoice", "Purchase Invoice"]:
 
             docnames = frappe.db.sql(
-                """
-				SELECT name FROM `tab{doctype}`
-				WHERE docstatus = 1 and is_opening = 'No'
-				and month(posting_date) = %s and year(posting_date) = %s
-				and company = %s and place_of_supply IS NULL and
-				gst_category != 'Overseas'
-			""".format(
-                    doctype=doctype
-                ),
+                f"""
+                SELECT name FROM `tab{doctype}`
+                WHERE docstatus = 1 and is_opening = 'No'
+                and month(posting_date) = %s and year(posting_date) = %s
+                and company = %s and place_of_supply IS NULL and
+                gst_category != 'Overseas'
+            """,
                 (self.month_no, self.year, self.company),
                 as_dict=1,
             )  # nosec
