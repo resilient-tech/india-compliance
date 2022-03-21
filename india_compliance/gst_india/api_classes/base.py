@@ -37,7 +37,7 @@ class BaseAPI:
                     " {0} API"
                 ).format(service),
                 frappe.DoesNotExistError,
-                title="Credentials Unavailable",
+                title=_("Credentials Unavailable"),
             )
 
         self.username = row.username
