@@ -103,26 +103,28 @@ def read_data_file(file_name):
         return f.read()
 
 
-def set_gst_state_and_state_number(doc):
+def get_gst_state_details(state):
     """
-    Set to State of Address if matched with one from GST State List
-    If Not, Find fuzzy match from GST State List and ask user to update state accordingly.
-    """
-    states_lowercase = {s.lower(): s for s in STATE_NUMBERS}
-    state = doc.state.lower().strip()
+    Get state and state number from GST State List.
+    If not found, throws and error with valid state sugession.
 
-    if state not in states_lowercase:
-        state_match = process.extractOne(state, states_lowercase.keys())
-        possible_match = states_lowercase[state_match[0]]
+    returns:
+      A tuple of (state, state_number)
+    """
+    states = {state.lower(): state for state in STATE_NUMBERS}
+    state = state.lower().strip()
+
+    if state not in states:
+        possible_state = process.extractOne(state, states)[0]
         frappe.throw(
             _(
                 "Did you mean {0}? Please update the state to appropriate Indian State."
-            ).format(frappe.bold(possible_match)),
+            ).format(frappe.bold(possible_state)),
             title=_("Invalid State"),
         )
-    else:
-        doc.state = doc.gst_state = states_lowercase[state]
-    doc.gst_state_number = STATE_NUMBERS[doc.gst_state]
+
+    state = states[state]
+    return (state, STATE_NUMBERS[state])
 
 
 def validate_gstin_check_digit(gstin, label="GSTIN"):
@@ -214,14 +216,14 @@ def get_gstins_for_company(company):
     if company:
         company_gstins = frappe.db.sql(
             """select
-			distinct `tabAddress`.gstin
-		from
-			`tabAddress`, `tabDynamic Link`
-		where
-			`tabDynamic Link`.parent = `tabAddress`.name and
-			`tabDynamic Link`.parenttype = 'Address' and
-			`tabDynamic Link`.link_doctype = 'Company' and
-			`tabDynamic Link`.link_name = %(company)s""",
+            distinct `tabAddress`.gstin
+        from
+            `tabAddress`, `tabDynamic Link`
+        where
+            `tabDynamic Link`.parent = `tabAddress`.name and
+            `tabDynamic Link`.parenttype = 'Address' and
+            `tabDynamic Link`.link_doctype = 'Company' and
+            `tabDynamic Link`.link_name = %(company)s""",
             {"company": company},
         )
     return company_gstins
