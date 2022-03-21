@@ -28,7 +28,7 @@ function get_tax_template(frm) {
     ];
 
     const party_details = Object.fromEntries(
-        party_fields.map((field) => [field, frm.doc[field] || ""])
+        party_fields.map((field) => [field, frm.doc[field]])
     );
 
     frappe.call({
