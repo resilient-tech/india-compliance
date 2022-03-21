@@ -1,6 +1,6 @@
 {% include "india_compliance/gst_india/client_scripts/party.js" %}
 
-DOCTYPE = "Company";
+const DOCTYPE = "Company";
 
 update_invalid_gstin(DOCTYPE);
 
