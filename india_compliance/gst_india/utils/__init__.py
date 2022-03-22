@@ -1,10 +1,18 @@
 import frappe
-from erpnext.controllers.taxes_and_totals import (get_itemised_tax,
-                                                  get_itemised_taxable_amount)
 from frappe import _
 from frappe.utils import cstr
+from erpnext.controllers.taxes_and_totals import (
+    get_itemised_tax,
+    get_itemised_taxable_amount,
+)
 
-from ..constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import STATE_NUMBERS
+
+
+def read_data_file(file_name):
+    file_path = frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
+    with open(file_path, "r") as f:
+        return f.read()
 
 
 def set_gst_state_and_state_number(doc):
@@ -134,9 +142,9 @@ def get_gst_accounts(
     if company:
         filters.update({"company": company})
     if only_reverse_charge:
-        filters.update({"is_reverse_charge_account": 1})
+        filters.update({"account_type": "Reverse Charge"})
     elif only_non_reverse_charge:
-        filters.update({"is_reverse_charge_account": 0})
+        filters.update({"account_type": ("in", ("Input", "Output"))})
 
     gst_accounts = frappe._dict()
     gst_settings_accounts = frappe.get_all(

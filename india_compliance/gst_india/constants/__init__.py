@@ -1,3 +1,11 @@
+GST_ACCOUNT_FIELDS = (
+    "cgst_account",
+    "sgst_account",
+    "igst_account",
+    "cess_account",
+    "cess_non_advol_account",
+)
+
 STATE_NUMBERS = {
     "Andaman and Nicobar Islands": "35",
     "Andhra Pradesh": "37",
