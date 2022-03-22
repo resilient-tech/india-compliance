@@ -12,7 +12,7 @@ def validate_party(doc, method=None):
 
     validate_gstin(doc.gstin, doc.gst_category)
     update_or_validate_pan(doc)
-    emit_docs_with_previous_gstin(doc)
+    set_docs_with_previous_gstin(doc)
 
 
 def update_or_validate_pan(doc):
@@ -27,7 +27,7 @@ def update_or_validate_pan(doc):
         frappe.throw(_("Please check the PAN."), title=_("Invalid PAN"))
 
 
-def emit_docs_with_previous_gstin(doc, method=True):
+def set_docs_with_previous_gstin(doc, method=True):
     if not frappe.request:
         return
 
