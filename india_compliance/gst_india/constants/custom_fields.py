@@ -39,19 +39,6 @@ item_fields = [
     },
 ]
 
-item_fields_with_tax_value = item_fields[:]
-item_fields_with_tax_value.append(
-    {
-        "fieldname": "taxable_value",
-        "label": "Taxable Value",
-        "fieldtype": "Currency",
-        "insert_after": "base_net_amount",
-        "hidden": 1,
-        "options": "Company:company:default_currency",
-        "print_hide": 1,
-    }
-)
-
 purchase_invoice_gst_category = [
     {
         "fieldname": "gst_section",
@@ -811,6 +798,7 @@ party_fields = [
         "translatable": 0,
     },
 ]
+
 company_fields = deepcopy(party_fields)
 company_fields[0].update({"insert_after": "parent_company"})
 
@@ -861,6 +849,7 @@ address_fields = [
         "translatable": 0,
     },
 ]
+
 
 CUSTOM_FIELDS = {
     "Address": address_fields,
@@ -919,8 +908,20 @@ CUSTOM_FIELDS = {
         "Sales Invoice Item",
         "POS Invoice Item",
         "Purchase Invoice Item",
-    ): item_fields_with_tax_value,
+    ): [
+        *item_fields,
+        {
+            "fieldname": "taxable_value",
+            "label": "Taxable Value",
+            "fieldtype": "Currency",
+            "insert_after": "base_net_amount",
+            "hidden": 1,
+            "options": "Company:company:default_currency",
+            "print_hide": 1,
+        },
+    ],
     "Supplier": [
+        *party_fields,
         {
             "fieldname": "gst_transporter_id",
             "label": "GST Transporter ID",
@@ -930,8 +931,7 @@ CUSTOM_FIELDS = {
             "read_only_depends_on": "eval:doc.gstin",
             "translatable": 0,
         },
-    ]
-    + party_fields,
+    ],
     "Customer": party_fields,
     "Company": company_fields,
 }
