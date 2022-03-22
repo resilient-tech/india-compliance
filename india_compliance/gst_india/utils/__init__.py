@@ -25,14 +25,14 @@ def validate_gstin(gstin, gst_category):
     - GSTIN of e-Commerce Operator (TCS) is not allowed.
     - GSTIN should match with the regex pattern as per GST Category of the party.
     """
-    gstin = gstin.upper().strip()
+    gstin = gstin and gstin.upper().strip()
     if not gstin:
         if gst_category and gst_category not in (
-            valid_category := {"Unregistered", "Overseas"}
+            valid_categories := {"Unregistered", "Overseas"}
         ):
             frappe.throw(
                 _("GST Category should be one of {0}.").format(
-                    ", ".join(valid_category)
+                    ", ".join(valid_categories)
                 ),
                 title=_("Invalid GST Category"),
             )
@@ -62,39 +62,8 @@ def validate_gstin(gstin, gst_category):
         )
 
 
-def validate_and_update_pan(doc):
-    """
-    If PAN is not set, set it from GSTIN.
-    If PAN is set, validate it with GSTIN and PAN Format.
-    """
-    gstin = doc.get("gstin", default="")
-    pan = doc.pan = (doc.get("pan") or "").upper().strip()
-
-    if gstin:
-        if PAN_NUMBER.match(pan_from_gstin := gstin[2:12]):
-            doc.pan = pan_from_gstin
-
-    elif pan:
-        validate_pan(pan, gstin)
-
-
-def validate_pan(pan, gstin):
-
-    pan_match = PAN_NUMBER.match(pan)
-    if not pan_match:
-        frappe.throw(
-            _("Invalid PAN. Please check the PAN and GSTIN."), title=_("Invalid PAN")
-        )
-
-    if (
-        gstin
-        and (pan_from_gstin := gstin[2:12]) != pan
-        and PAN_NUMBER.match(pan_from_gstin)
-    ):
-        frappe.throw(
-            _("There is mismatch in PAN and GSTIN. Please check the PAN and GSTIN."),
-            title=_("Invalid PAN"),
-        )
+def is_valid_pan(pan):
+    return PAN_NUMBER.match(pan)
 
 
 def read_data_file(file_name):
