@@ -1,4 +1,4 @@
-function update_previous_gstin(doctype) {
+function update_gstin_in_other_documents(doctype) {
     frappe.ui.form.on(doctype, {
         after_save(frm) {
             // docs to be updated attached to previous response (validate)
