@@ -42,7 +42,7 @@ import {
   login,
   signup,
   check_free_trial_eligiblity,
-} from "../../services/authService";
+} from "../../services/AuthService";
 
 export default {
   props: { isAccountRegisted: Boolean },
