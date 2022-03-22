@@ -5,7 +5,7 @@ import Vuex from "vuex";
 import router from "./router";
 import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
-import { get_api_secret } from "./services/authService";
+import { get_api_secret } from "./services/AuthService";
 
 class IndiaComplianceAccountPage {
     constructor(wrapper) {

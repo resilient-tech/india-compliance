@@ -4,7 +4,7 @@ import {
     validate_session,
     set_session,
     set_api_secret,
-} from "../../services/authService";
+} from "../../services/AuthService";
 
 export default {
     state: {
