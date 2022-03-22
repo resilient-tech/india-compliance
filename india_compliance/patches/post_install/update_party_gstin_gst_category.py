@@ -114,7 +114,7 @@ def update_gstin_gst_category():
 
 def delete_custom_fields():
     for doctype, fields in {
-        "Company": ("gstin_details",),
+        "Company": ("pan_details",),
         "Customer": ("export_type",),
         "Supplier": ("export_type",),
     }.items():
