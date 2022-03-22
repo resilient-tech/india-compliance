@@ -12,10 +12,13 @@ def execute():
 
 def update_pan_for_company():
     # Updated pan_details with pan for consisitency in company
+    if not frappe.db.has_column("Company", "pan_details"):
+        return
+
     company = frappe.qb.DocType("Company")
-    frappe.qb.update(company).set(company.pan, company.pan_details).set(
-        company.pan_details, None
-    ).where(company.pan_details != "").run()
+    frappe.qb.update(company).set(company.pan, company.pan_details).where(
+        company.pan_details != ""
+    ).run()
 
 
 def update_na_gstin():
