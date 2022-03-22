@@ -1,5 +1,3 @@
-from email.policy import default
-
 import frappe
 from frappe import _
 
@@ -13,16 +11,13 @@ def update_transporter_gstin(doc, method=None):
     if not doc.is_transporter:
         return
 
-    gstin = doc.get("gstin", default="")
-    gst_transporter_id = doc.get("gst_transporter_id", default="")
-
-    if not gstin and gst_transporter_id:
-        validate_gstin(gst_transporter_id, "Registered Regular")
-
-    if gst_transporter_id and gst_transporter_id != gstin:
+    if doc.gstin and doc.gstin != doc.gst_transporter_id:
+        doc.gst_transporter_id = doc.gstin
         frappe.msgprint(
             _(
                 "GSTIN has been updated in GST Transporter ID from {0} to {1} as per default GSTIN for this transporter."
-            ).format(frappe.bold(gst_transporter_id), frappe.bold(gstin))
+            ).format(frappe.bold(doc.gst_transporter_id), frappe.bold(doc.gstin))
         )
-    doc.gst_transporter_id = gstin
+
+    elif doc.gst_transporter_id:
+        validate_gstin(doc.gst_transporter_id, "Registered Regular")
