@@ -53,7 +53,7 @@ doc_events = {
     "Address": {
         "validate": [
             "india_compliance.gst_india.overrides.address.validate",
-            "india_compliance.gst_india.overrides.party.emit_docs_with_invalid_gstin",
+            "india_compliance.gst_india.overrides.party.emit_docs_with_previous_gstin",
         ]
     },
     ("Customer", "Supplier", "Company"): {

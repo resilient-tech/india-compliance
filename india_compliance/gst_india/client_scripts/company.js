@@ -2,7 +2,7 @@
 
 const DOCTYPE = "Company";
 
-update_invalid_gstin(DOCTYPE);
+update_previous_gstin(DOCTYPE);
 
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
