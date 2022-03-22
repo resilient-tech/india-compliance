@@ -28,7 +28,7 @@ def update_or_validate_pan(doc):
 
 
 def set_docs_with_previous_gstin(doc, method=True):
-    if not frappe.request:
+    if not frappe.request or doc.flags.dont_set_docs_with_previous_gstin:
         return
 
     previous_gstin = (doc.get_doc_before_save() or {}).get("gstin")
@@ -67,6 +67,7 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
                 doc = frappe.get_doc(doctype, docname)
                 doc.gstin = gstin
                 doc.gst_category = gst_category
+                doc.flags.dont_set_docs_with_previous_gstin = True
                 doc.save()
             except frappe.PermissionError:
                 frappe.clear_last_message()
