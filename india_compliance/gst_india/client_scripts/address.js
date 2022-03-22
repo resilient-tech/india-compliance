@@ -2,7 +2,7 @@
 
 const DOCTYPE = "Address";
 
-update_previous_gstin(DOCTYPE);
+update_gstin_in_other_documents(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     async refresh(frm) {

@@ -1,3 +1,3 @@
 {% include "india_compliance/gst_india/client_scripts/party.js" %}
 
-update_previous_gstin("Supplier");
+update_gstin_in_other_documents("Supplier");
