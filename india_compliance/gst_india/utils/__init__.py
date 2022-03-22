@@ -9,7 +9,7 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import (
-    GSTIN_FORMAT,
+    GSTIN_FORMATS,
     PAN_NUMBER,
     STATE_NUMBERS,
     TCS,
@@ -52,7 +52,7 @@ def validate_gstin(gstin, gst_category):
             title=_("Invalid GSTIN"),
         )
 
-    valid_gstin_format = GSTIN_FORMAT.get(gst_category)
+    valid_gstin_format = GSTIN_FORMATS.get(gst_category)
     if not valid_gstin_format.match(gstin):
         frappe.throw(
             _(

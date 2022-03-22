@@ -1,11 +1,11 @@
 from copy import deepcopy
 
-from india_compliance.gst_india.constants import GST_CATEGORY, STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
 
 # TODO: Imporve variable naming
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
-gst_category = "\n".join(GST_CATEGORY)
+gst_category = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
 
 
