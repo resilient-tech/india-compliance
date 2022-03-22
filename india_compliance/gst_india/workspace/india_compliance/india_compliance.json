@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">India Compliance</span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR Download Log\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR 3B Report\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"E Invoice Request Log\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Reports &amp; Master\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Certifications\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Tax Reports\",\"col\":4}}]",
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">India Compliance</span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR Download Log\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR 3B Report\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"E Invoice Request Log\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"GST Reports\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Certifications\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Income Tax Reports\",\"col\":4}}]",
  "creation": "2022-02-28 19:04:58.655348",
  "docstatus": 0,
  "doctype": "Workspace",
@@ -10,64 +10,6 @@
  "idx": 0,
  "label": "India Compliance",
  "links": [
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Reports &amp; Master",
-   "link_count": 5,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GSTR-1 Report",
-   "link_count": 0,
-   "link_to": "GSTR-1",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GSTR-2 Report",
-   "link_count": 0,
-   "link_to": "GSTR-2",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GST Purchase Register",
-   "link_count": 0,
-   "link_to": "GST Purchase Register",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "E-Invoice Summary",
-   "link_count": 0,
-   "link_to": "E-Invoice Summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "HSN-wise-summary of outward supplies",
-   "link_count": 0,
-   "link_to": "HSN-wise-summary of outward supplies",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
   {
    "hidden": 0,
    "is_query_report": 0,
@@ -143,9 +85,105 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Reports",
+   "link_count": 5,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GSTR-1 Report",
+   "link_count": 0,
+   "link_to": "GSTR-1",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GSTR-2 Report",
+   "link_count": 0,
+   "link_to": "GSTR-2",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Purchase Register",
+   "link_count": 0,
+   "link_to": "GST Purchase Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "E-Invoice Summary",
+   "link_count": 0,
+   "link_to": "E-Invoice Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "HSN-wise-summary of outward supplies",
+   "link_count": 0,
+   "link_to": "HSN-wise-summary of outward supplies",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Income Tax Reports",
+   "link_count": 3,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Provident Fund Deductions",
+   "link_count": 0,
+   "link_to": "Provident Fund Deductions",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Professional Tax Deductions",
+   "link_count": 0,
+   "link_to": "Professional Tax Deductions",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Income Tax Deductions",
+   "link_count": 0,
+   "link_to": "Income Tax Deductions",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2022-03-22 13:39:31.276112",
+ "modified": "2022-03-22 13:46:20.587292",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "India Compliance",
