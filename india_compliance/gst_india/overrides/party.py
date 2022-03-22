@@ -72,6 +72,7 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
                 frappe.clear_last_message()
                 ignored_docs.setdefault(doctype, []).append(docname)
             except Exception:
+                # TODO: handle this in better way
                 pass
 
     if not ignored_docs:
@@ -88,4 +89,4 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
 
         message += f"{bold(doctype)}:<br/>{'<br/>'.join(docnames)}"
 
-    frappe.msgprint(message, title=_("Warning"))
+    frappe.msgprint(message, title=_("Insufficient Permission"), indicator="yellow")
