@@ -36,7 +36,7 @@ export default {
 
             const response = await validate_session(state.session.id);
             if (response.error) {
-                if (response.response.exc_type === "InvalidSessionError") {
+                if (response.exc_type === "InvalidSessionError") {
                     // invalid session -> delete the session
                     await dispatch("setSession", null);
                 }
