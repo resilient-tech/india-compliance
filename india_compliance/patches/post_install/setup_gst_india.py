@@ -8,4 +8,3 @@ def execute():
         and dt in ('Sales Order', 'Sales Invoice', 'Delivery Note')"""
     ):
         frappe.delete_doc("Custom Field", field, ignore_permissions=True)
-        frappe.db.commit()
