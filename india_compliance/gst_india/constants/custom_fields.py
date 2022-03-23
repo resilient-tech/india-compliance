@@ -5,7 +5,7 @@ from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
 # TODO: Imporve variable naming
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
-gst_category = "\n".join(GST_CATEGORIES)
+gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
 
 
@@ -54,7 +54,7 @@ purchase_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_section",
         "print_hide": 1,
-        "options": gst_category,
+        "options": gst_category_options,
         "fetch_from": "supplier_address.gst_category",
         "translatable": 0,
     },
@@ -85,7 +85,7 @@ sales_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_section",
         "print_hide": 1,
-        "options": gst_category,
+        "options": gst_category_options,
         "fetch_from": "customer_address.gst_category",
         "length": 25,
         "translatable": 0,
@@ -111,7 +111,7 @@ delivery_note_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_vehicle_type",
         "print_hide": 1,
-        "options": gst_category,
+        "options": gst_category_options,
         "fetch_from": "customer_address.gst_category",
         "translatable": 0,
     },
@@ -792,7 +792,7 @@ party_fields = [
         "label": "GST Category",
         "fieldtype": "Select",
         "insert_after": "tax_column_break",
-        "options": gst_category,
+        "options": gst_category_options,
         "default": default_gst_category,
         "reqd": 1,
         "translatable": 0,
@@ -835,7 +835,7 @@ address_fields = [
         "label": "GST Category",
         "fieldtype": "Select",
         "insert_after": "tax_column_break",
-        "options": gst_category,
+        "options": gst_category_options,
         "default": default_gst_category,
         "reqd": 1,
         "translatable": 0,
