@@ -2,18 +2,33 @@ import frappe
 
 
 def execute():
-    if not frappe.db.count("E Invoice User"):
-        return
+    """
+    update Company of E Invoice User from Dyanamic Link Table in Address
+    """
 
-    for user in frappe.db.get_all("E Invoice User", fields=("name", "gstin")):
-        company_name = frappe.db.sql(
-            """
-            SELECT dl.link_name FROM `tabAddress` a, `tabDynamic Link` dl
-            WHERE a.gstin = %s AND dl.parent = a.name AND dl.link_doctype = 'Company'
-        """,
-            user.gstin,
-        )
-        if company_name and len(company_name) > 0:
-            frappe.db.set_value(
-                "E Invoice User", user.name, "company", company_name[0][0]
-            )
+    frappe.db.sql(
+        """
+        UPDATE `tabE Invoice User` user
+        JOIN `tabAddress` address ON address.gstin = user.gstin
+        JOIN `tabDynamic Link` dynamic_link ON dynamic_link.parent = address.name
+        SET user.company = dynamic_link.link_name
+        WHERE IFNULL(user.company, '') = ''
+        AND dynamic_link.link_doctype = 'Company'
+        """
+    )
+
+    # TODO: convert to query builder after fix of https://github.com/kayak/pypika/issues/675
+    # user = frappe.qb.DocType("E Invoice User")
+    # address = frappe.qb.DocType("Address")
+    # dynamic_link = frappe.qb.DocType("Dynamic Link")
+    # (
+    #     frappe.qb.update(user)
+    #     .join(address)
+    #     .on(address.gstin == user.gstin)
+    #     .join(dynamic_link)
+    #     .on(dynamic_link.parent == address.name)
+    #     .set(user.company, dynamic_link.link_name)
+    #     .where(IfNull(user.company, "") == "")
+    #     .where(dynamic_link.link_doctype == "Company")
+    #     .run()
+    # )
