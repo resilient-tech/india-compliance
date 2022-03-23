@@ -31,7 +31,9 @@ def execute():
 
     # set correct acknowledgement in e-invoices
     for name, signed_einvoice in frappe.get_all(
-        "Sales Invoice", {"irn": ("is", "set")}, ("name", "signed_einvoice")
+        "Sales Invoice",
+        {"ack_no": ("is", "not set"), "irn": ("is", "set")},
+        ("name", "signed_einvoice"),
     ):
         if not signed_einvoice:
             continue
