@@ -33,14 +33,3 @@ def execute():
                 "UPDATE `tabPurchase Invoice` SET eligibility_for_itc = %s where eligibility_for_itc = %s ",
                 (new, old),
             )
-
-    for doctype in ("Customer", "Supplier"):
-        frappe.db.sql(
-            f"""UPDATE `tab{doctype}` t1, `tabAddress` t2, `tabDynamic Link` t3 SET t1.gst_category = "Registered Regular"
-            where t3.link_name = t1.name and t3.parent = t2.name and t2.gstin IS NOT NULL and t2.gstin != '' """
-        )
-
-        frappe.db.sql(
-            f"""UPDATE `tab{doctype}` t1, `tabAddress` t2, `tabDynamic Link` t3 SET t1.gst_category = "Overseas"
-            where t3.link_name = t1.name and t3.parent = t2.name and t2.country != 'India'"""
-        )
