@@ -11,22 +11,27 @@ def execute():
             """
             UPDATE `tabSales Invoice` SET einvoice_status = 'Pending'
             WHERE
-                posting_date >= '2021-04-01'
-                AND ifnull(irn, '') = ''
-                AND ifnull(billing_address_gstin, '') != ifnull(company_gstin, '')
-                AND ifnull(gst_category, '') in ('Registered Regular', 'SEZ', 'Overseas', 'Deemed Export')
+                IFNULL(einvoice_status, '') = ''
+                AND posting_date >= '2021-04-01'
+                AND docstatus = 1
+                AND IFNULL(irn, '') = ''
+                AND IFNULL(billing_address_gstin, '') != IFNULL(company_gstin, '')
+                AND IFNULL(gst_category, '') in ('Registered Regular', 'SEZ', 'Overseas', 'Deemed Export')
         """
         )
 
         # set appropriate statuses
         frappe.db.sql(
             """UPDATE `tabSales Invoice` SET einvoice_status = 'Generated'
-            WHERE ifnull(irn, '') != '' AND ifnull(irn_cancelled, 0) = 0"""
+            WHERE
+                IFNULL(einvoice_status, '') = ''
+                AND IFNULL(irn, '') != ''
+                AND IFNULL(irn_cancelled, 0) = 0"""
         )
 
         frappe.db.sql(
             """UPDATE `tabSales Invoice` SET einvoice_status = 'Cancelled'
-            WHERE ifnull(irn_cancelled, 0) = 1"""
+            WHERE IFNULL(einvoice_status, '') = '' AND IFNULL(irn_cancelled, 0) = 1"""
         )
 
     # set correct acknowledgement in e-invoices
