@@ -4,11 +4,11 @@ import re
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.asp_connectors.utils import pretty_json
 from india_compliance.gst_india.constants.e_waybill import (
     E_WAYBILL_INVOICE,
     E_WAYBILL_ITEM,
 )
+from india_compliance.gst_india.utils.api import pretty_json
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 
@@ -94,7 +94,8 @@ class eWaybill(GSTInvoiceData):
         if not doc_with_goods:
             frappe.throw(
                 msg=_(
-                    "e-Waybill cannot be generated as all items are with service HSN codes."
+                    "e-Waybill cannot be generated as all items are with service HSN"
+                    " codes."
                 ),
                 title=_("Invalid Data"),
             )
