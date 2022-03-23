@@ -13,7 +13,6 @@ POST_INSTALL_PATCHES = (
     "set_missing_gst_hsn_code",
     "set_gst_category",
     "update_gst_category",
-    "add_export_type_field_in_party_master",
     "add_einvoice_status_field",
     "update_tax_category_for_rcm",
     "add_company_link_to_einvoice_settings",
