@@ -2,34 +2,38 @@ import frappe
 
 
 def execute():
-    invoice_type_update_map = {
+    invoice_type_gst_category_map = {
         "Regular": "Registered Regular",
         "Export": "Overseas",
         "SEZ": "SEZ",
         "Deemed Export": "Deemed Export",
     }
+
     for doctype in ("Sales Invoice", "Purchase Invoice"):
-        if not frappe.db.has_column(doctype, "invoice_type"):
+        field_filters = {"dt": doctype, "fieldname": "invoice_type"}
+        if not frappe.db.exists("Custom Field", field_filters):
             continue
 
-        for old, new in invoice_type_update_map.items():
-            frappe.db.sql(
-                f"UPDATE `tab{doctype}` SET gst_category = %s where invoice_type = %s",
-                (new, old),
+        for invoice_type, gst_category in invoice_type_gst_category_map.items():
+            frappe.db.set(
+                doctype,
+                {"gst_category": ("in", (None, "")), "invoice_type": invoice_type},
+                "gst_category",
+                gst_category,
             )
 
-    frappe.delete_doc("Custom Field", "Sales Invoice-invoice_type")
-    frappe.delete_doc("Custom Field", "Purchase Invoice-invoice_type")
+        frappe.db.delete("Custom Field", field_filters)
 
-    itc_update_map = {
+    # update eligibility_for_itc with new options
+    for old_value, new_value in {
         "ineligible": "Ineligible",
         "input service": "Input Service Distributor",
         "capital goods": "Import Of Capital Goods",
         "input": "All Other ITC",
-    }
-    if frappe.db.has_column("Purchase Invoice", "eligibility_for_itc"):
-        for old, new in itc_update_map.items():
-            frappe.db.sql(
-                "UPDATE `tabPurchase Invoice` SET eligibility_for_itc = %s where eligibility_for_itc = %s ",
-                (new, old),
-            )
+    }.items():
+        frappe.db.set_value(
+            "Purchase Invoice",
+            {"eligibility_for_itc": old_value},
+            "eligibility_for_itc",
+            new_value,
+        )
