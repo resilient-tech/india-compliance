@@ -16,59 +16,56 @@ class GSTInvoiceData:
     TAXES = ("cgst", "sgst", "igst", "cess", "cess_non_advol")
     DATE_FORMAT = "dd/mm/yyyy"
 
-    def get_gst_accounts(self):
-        if not self.get("gst_accounts"):
-            self.gst_accounts = get_gst_accounts_by_type(
-                self.company, gst_account_type="Output"
-            ).get("Output")
-
-        return self.gst_accounts
+    def __init__(self, doc):
+        self.doc = doc
+        self.gst_accounts = get_gst_accounts_by_type(
+            self.doc.company, gst_account_type="Output"
+        ).get("Output")
 
     def get_invoice_details(self):
-        self.validate_invoice_dates()
-        self.update(
+        doc = self.doc
+        self.validate_invoice_dates(doc)
+        doc.update(
             {
-                "invoice_type": "CRN" if self.is_return else "INV",
-                "invoice_date": format_date(self.posting_date, self.DATE_FORMAT),
-                "base_total": abs(sum([i.taxable_value for i in self.items])),
-                "rounding_adjustment": -self.rounding_adjustment
-                if self.is_return
-                else self.rounding_adjustment,
-                "base_grand_total": abs(self.base_rounded_total)
-                or abs(self.base_grand_total),
-                "grand_total": abs(self.rounded_total) or abs(self.grand_total),
+                "invoice_type": "CRN" if doc.is_return else "INV",
+                "invoice_date": format_date(doc.posting_date, self.DATE_FORMAT),
+                "base_total": abs(sum([i.taxable_value for i in doc.items])),
+                "rounding_adjustment": -doc.rounding_adjustment
+                if doc.is_return
+                else doc.rounding_adjustment,
+                "base_grand_total": abs(doc.base_rounded_total)
+                or abs(doc.base_grand_total),
+                "grand_total": abs(doc.rounded_total) or abs(doc.grand_total),
                 "discount_amount": 0,
             }
         )
-        self.get_invoice_tax_details()
-        self.validate_invoice_totals()
-        self.get_transporter_details()
+        self.get_invoice_tax_details(doc)
+        self.validate_invoice_totals(doc)
+        self.get_transporter_details(doc)
 
-    def validate_invoice_dates(self):
-        if get_date_str(self.posting_date) > nowdate():
+    def validate_invoice_dates(self, doc):
+        if get_date_str(doc.posting_date) > nowdate():
             frappe.throw(
                 msg=_("Posting Date cannot be greater than Today's Date."),
                 title=_("Invalid Data"),
             )
         # compare posting date and lr date
-        if self.lr_date and get_date_str(self.posting_date) > get_date_str(
-            self.lr_date
-        ):
+        if doc.lr_date and get_date_str(doc.posting_date) > get_date_str(doc.lr_date):
             frappe.throw(
                 msg=_("Posting Date cannot be greater than LR Date."),
                 title=_("Invalid Data"),
             )
 
-    def validate_invoice_totals(self):
+    def validate_invoice_totals(self, doc):
         totals = {"base_total", "rounding_adjustment"}.union(
             f"total_{tax}_amount" for tax in self.TAXES
         )
         base_grand_total = 0
         for total in totals:
-            base_grand_total += self.get(total) or 0
+            base_grand_total += doc.get(total) or 0
 
         # difference of upto Rs. 2 is allowed
-        if abs(self.get("base_grand_total") - base_grand_total) > 2:
+        if abs(doc.get("base_grand_total") - base_grand_total) > 2:
             frappe.throw(
                 msg=_(
                     "Total Invoice value is not matching with sum of taxable-value and taxes."
@@ -76,34 +73,33 @@ class GSTInvoiceData:
                 title=_("Invalid Data"),
             )
 
-    def get_invoice_tax_details(self):
-        gst_accounts = self.get_gst_accounts()
+    def get_invoice_tax_details(self, doc):
         for tax in self.TAXES:
-            self.update({f"total_{tax}_amount": 0})
+            doc.update({f"total_{tax}_amount": 0})
 
-        for row in self.taxes:
-            if not row.tax_amount or row.account_head not in gst_accounts:
+        for row in doc.taxes:
+            if not row.tax_amount or row.account_head not in self.gst_accounts:
                 continue
 
             # TODO: Discuss Post. Assuming only one account per rate of tax.
             # Taxable value is including other charges. Hence, other charges not added.
-            tax = self.TAXES[gst_accounts.index(row.account_head)]
+            tax = self.TAXES[self.gst_accounts.index(row.account_head)]
             tax_amount = row.base_tax_amount_after_discount_amount
-            self.update({f"total_{tax}_amount": tax_amount})
+            doc.update({f"total_{tax}_amount": tax_amount})
 
-    def get_transporter_details(self):
+    def get_transporter_details(self, doc):
         # TODO: Move `generate_pary_a` to generate e-Waybill function.
         # transporterId is mandatory for generating Part A Slip and transDocNo, transMode and vehicleNo should be blank
         generate_pary_a = (
-            self.mode_of_transport == "Road"
-            and not self.vehicle_no
-            or self.mode_of_transport in ("Rail", "Air", "Ship")
-            and not self.lr_no
+            doc.mode_of_transport == "Road"
+            and not doc.vehicle_no
+            or doc.mode_of_transport in ("Rail", "Air", "Ship")
+            and not doc.lr_no
         )
-        distance = self.distance if self.distance and self.distance < 4000 else 0
+        distance = doc.distance if doc.distance and doc.distance < 4000 else 0
 
         if generate_pary_a:
-            self.update(
+            doc.update(
                 {
                     "mode_of_transport": None,
                     "vehicle_type": None,
@@ -111,26 +107,26 @@ class GSTInvoiceData:
                     "lr_no": None,
                     "lr_date_str": None,
                     "distance": distance,
-                    "transporter_gstin": self.get("transporter_gstin", default=""),
+                    "transporter_gstin": doc.get("transporter_gstin", default=""),
                 }
             )
         else:
-            self.update(
+            doc.update(
                 {
-                    "mode_of_transport": TRANSPORT_MODES.get(self.mode_of_transport),
-                    "vehicle_type": VEHICLE_TYPES.get(self.gst_vehicle_type),
-                    "vehicle_no": self.sanitize_data(self.vehicle_no, "vehicle_no"),
-                    "lr_no": self.sanitize_data(self.lr_no, "special_text"),
-                    "lr_date_str": format_date(self.lr_date, self.DATE_FORMAT),
+                    "mode_of_transport": TRANSPORT_MODES.get(doc.mode_of_transport),
+                    "vehicle_type": VEHICLE_TYPES.get(doc.gst_vehicle_type),
+                    "vehicle_no": self.sanitize_data(doc.vehicle_no, "vehicle_no"),
+                    "lr_no": self.sanitize_data(doc.lr_no, "special_text"),
+                    "lr_date_str": format_date(doc.lr_date, self.DATE_FORMAT),
                     "distance": distance,
-                    "transporter_gstin": self.get("transporter_gstin", default=""),
+                    "transporter_gstin": doc.get("transporter_gstin", default=""),
                 }
             )
 
     def get_item_list(self):
         item_list = []
 
-        for row in self.items:
+        for row in self.doc.items:
             if row.batch_no:
                 batch_expiry_date = frappe.db.get_value(
                     "Batch", row.batch_no, "expiry_date"
@@ -164,16 +160,15 @@ class GSTInvoiceData:
         return item_list
 
     def get_item_tax_details(self, item):
-        gst_accounts = self.get_gst_accounts()
         for tax in self.TAXES:
             item.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 
-        for row in self.taxes:
-            if not row.tax_amount or row.account_head not in gst_accounts:
+        for row in self.doc.taxes:
+            if not row.tax_amount or row.account_head not in self.gst_accounts:
                 continue
 
             # Remove '_account' from 'cgst_account'
-            tax = self.TAXES[gst_accounts.index(row.account_head)]
+            tax = self.TAXES[self.gst_accounts.index(row.account_head)]
             tax_rate = json.loads(row.item_wise_tax_detail).get(
                 item.item_code or item.item_name
             )[0]
