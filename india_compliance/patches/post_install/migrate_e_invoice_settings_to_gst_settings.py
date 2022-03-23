@@ -13,6 +13,8 @@ def execute():
         .where(singles.field.isin(("enable", "applicable_from")))
         .run()
     )
+    if not old_settings.enable:
+        return
 
     user = frappe.qb.DocType("E Invoice User")
     auth = frappe.qb.Table("__Auth")
@@ -30,13 +32,12 @@ def execute():
         credential.service = "e-Invoice"
 
     gst_settings = frappe.get_single("GST Settings")
-    gst_settings.applicable_from = old_settings.applicable_from
-    gst_settings.extend(old_credentials)
-    gst_settings.save(ignore_permissions=True)
+    gst_settings.db_set("applicable_from", old_settings.applicable_from)
+    gst_settings.extend("gst_credentials", old_credentials)
+    gst_settings.update_child_table("gst_credentials")
 
-    if old_settings.enable:
-        click.secho(
-            "⚠️  Your E Invoice Settings have been migrated to GST Settings."
-            " Please enable e-Invoice API in GST Settings manually.",
-            fg="yellow",
-        )
+    click.secho(
+        "⚠️  Your E Invoice Settings have been migrated to GST Settings."
+        " Please enable e-Invoice API in GST Settings manually.",
+        fg="yellow",
+    )
