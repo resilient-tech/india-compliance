@@ -32,11 +32,11 @@ class IndiaComplianceAccountPage {
     }
 }
 
-frappe.provide("india_compliance.page");
-india_compliance.page.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
+frappe.provide("ic.page");
+ic.page.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
 
-frappe.provide("india_compliance.gst_api");
-india_compliance.gst_api.call = async function (endpoint, options) {
+frappe.provide("ic.gst_api");
+ic.gst_api.call = async function (endpoint, options) {
     try {
         // TODO: remove this when we have aws base url
         endpoint = endpoint.replace("/", ".");
