@@ -55,7 +55,10 @@ purchase_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_section",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
+        "options": (
+            "\nRegistered Regular\nRegistered"
+            " Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders"
+        ),
         "fetch_from": "supplier.gst_category",
     },
     {
@@ -86,7 +89,10 @@ sales_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_section",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders",
+        "options": (
+            "\nRegistered Regular\nRegistered"
+            " Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders"
+        ),
         "fetch_from": "customer.gst_category",
         "length": 25,
     },
@@ -96,7 +102,9 @@ sales_invoice_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_category",
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
+        "depends_on": (
+            'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)'
+        ),
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
         "fetch_from": "customer.export_type",
         "fetch_if_empty": 1,
@@ -111,7 +119,10 @@ delivery_note_gst_category = [
         "fieldtype": "Select",
         "insert_after": "gst_vehicle_type",
         "print_hide": 1,
-        "options": "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders",
+        "options": (
+            "\nRegistered Regular\nRegistered"
+            " Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders"
+        ),
         "fetch_from": "customer.gst_category",
     },
 ]
@@ -125,7 +136,10 @@ invoice_gst_fields = [
         "insert_after": "export_type",
         "print_hide": 1,
         "allow_on_submit": 1,
-        "options": "Original for Recipient\nDuplicate for Transporter\nDuplicate for Supplier\nTriplicate for Supplier",
+        "options": (
+            "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
+            " Supplier\nTriplicate for Supplier"
+        ),
     },
     {
         "fieldname": "reverse_charge",
@@ -158,7 +172,11 @@ invoice_gst_fields = [
         "print_hide": 1,
         "depends_on": "eval:doc.is_return == 1",
         "length": 45,
-        "options": "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization of Provisional assessment\n07-Others",
+        "options": (
+            "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
+            " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization of"
+            " Provisional assessment\n07-Others"
+        ),
     },
 ]
 
@@ -198,7 +216,11 @@ purchase_invoice_itc_fields = [
         "fieldtype": "Select",
         "insert_after": "reason_for_issuing_document",
         "print_hide": 1,
-        "options": "Input Service Distributor\nImport Of Service\nImport Of Capital Goods\nITC on Reverse Charge\nIneligible As Per Section 17(5)\nIneligible Others\nAll Other ITC",
+        "options": (
+            "Input Service Distributor\nImport Of Service\nImport Of Capital Goods\nITC"
+            " on Reverse Charge\nIneligible As Per Section 17(5)\nIneligible"
+            " Others\nAll Other ITC"
+        ),
         "default": "All Other ITC",
     },
     {
@@ -368,182 +390,6 @@ inter_state_gst_field = [
     },
 ]
 
-ewaybill_fields = [
-    {
-        "fieldname": "distance",
-        "label": "Distance (in km)",
-        "fieldtype": "Int",
-        "insert_after": "vehicle_no",
-        "print_hide": 1,
-    },
-    {
-        "fieldname": "gst_transporter_id",
-        "label": "GST Transporter ID",
-        "fieldtype": "Data",
-        "insert_after": "transporter",
-        "fetch_from": "transporter.gst_transporter_id",
-        "print_hide": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "mode_of_transport",
-        "label": "Mode of Transport",
-        "fieldtype": "Select",
-        "options": "\nRoad\nAir\nRail\nShip",
-        "default": "Road",
-        "insert_after": "transporter_name",
-        "print_hide": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "gst_vehicle_type",
-        "label": "GST Vehicle Type",
-        "fieldtype": "Select",
-        "options": "Regular\nOver Dimensional Cargo (ODC)",
-        "depends_on": 'eval:(doc.mode_of_transport === "Road")',
-        "default": "Regular",
-        "insert_after": "lr_date",
-        "print_hide": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "ewaybill",
-        "label": "e-Waybill No.",
-        "fieldtype": "Data",
-        "depends_on": "eval:(doc.docstatus === 1)",
-        "allow_on_submit": 1,
-        "insert_after": "customer_name_in_arabic",
-        "translatable": 0,
-    },
-]
-
-si_ewaybill_fields = [
-    {
-        "fieldname": "transporter_info",
-        "label": "Transporter Info",
-        "fieldtype": "Section Break",
-        "insert_after": "terms",
-        "collapsible": 1,
-        "collapsible_depends_on": "transporter",
-        "print_hide": 1,
-    },
-    {
-        "fieldname": "transporter",
-        "label": "Transporter",
-        "fieldtype": "Link",
-        "insert_after": "transporter_info",
-        "options": "Supplier",
-        "print_hide": 1,
-    },
-    {
-        "fieldname": "gst_transporter_id",
-        "label": "GST Transporter ID",
-        "fieldtype": "Data",
-        "insert_after": "transporter",
-        "fetch_from": "transporter.gst_transporter_id",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 20,
-    },
-    {
-        "fieldname": "driver",
-        "label": "Driver",
-        "fieldtype": "Link",
-        "insert_after": "gst_transporter_id",
-        "options": "Driver",
-        "print_hide": 1,
-    },
-    {
-        "fieldname": "lr_no",
-        "label": "Transport Receipt No",
-        "fieldtype": "Data",
-        "insert_after": "driver",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 30,
-    },
-    {
-        "fieldname": "vehicle_no",
-        "label": "Vehicle No",
-        "fieldtype": "Data",
-        "insert_after": "lr_no",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 15,
-    },
-    {
-        "fieldname": "distance",
-        "label": "Distance (in km)",
-        "fieldtype": "Int",
-        "insert_after": "vehicle_no",
-        "print_hide": 1,
-    },
-    {
-        "fieldname": "transporter_col_break",
-        "fieldtype": "Column Break",
-        "insert_after": "distance",
-    },
-    {
-        "fieldname": "transporter_name",
-        "label": "Transporter Name",
-        "fieldtype": "Small Text",
-        "insert_after": "transporter_col_break",
-        "fetch_from": "transporter.name",
-        "read_only": 1,
-        "print_hide": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "mode_of_transport",
-        "label": "Mode of Transport",
-        "fieldtype": "Select",
-        "options": "\nRoad\nAir\nRail\nShip",
-        "insert_after": "transporter_name",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 5,
-    },
-    {
-        "fieldname": "driver_name",
-        "label": "Driver Name",
-        "fieldtype": "Small Text",
-        "insert_after": "mode_of_transport",
-        "fetch_from": "driver.full_name",
-        "print_hide": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "lr_date",
-        "label": "Transport Receipt Date",
-        "fieldtype": "Date",
-        "insert_after": "driver_name",
-        "default": "Today",
-        "print_hide": 1,
-    },
-    {
-        "fieldname": "gst_vehicle_type",
-        "label": "GST Vehicle Type",
-        "fieldtype": "Select",
-        "options": "Regular\nOver Dimensional Cargo (ODC)",
-        "depends_on": 'eval:(doc.mode_of_transport === "Road")',
-        "default": "Regular",
-        "insert_after": "lr_date",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 30,
-    },
-    {
-        "fieldname": "ewaybill",
-        "label": "e-Waybill No.",
-        "fieldtype": "Data",
-        "depends_on": "eval:((doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled === 0)",
-        "allow_on_submit": 1,
-        "insert_after": "tax_id",
-        "translatable": 0,
-        "length": 20,
-    },
-]
-
 payment_entry_fields = [
     {
         "fieldname": "gst_section",
@@ -612,7 +458,10 @@ si_einvoice_fields = [
         "insert_after": "customer",
         "no_copy": 1,
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"], doc.gst_category) && doc.irn_cancelled === 0',
+        "depends_on": (
+            'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"],'
+            " doc.gst_category) && doc.irn_cancelled === 0"
+        ),
     },
     {
         "fieldname": "irn_cancelled",
@@ -774,11 +623,9 @@ CUSTOM_FIELDS = {
     + invoice_gst_fields
     + sales_invoice_shipping_fields
     + sales_invoice_gst_fields
-    + si_ewaybill_fields
     + si_einvoice_fields,
     "POS Invoice": sales_invoice_gst_fields,
     "Delivery Note": sales_invoice_gst_fields
-    + ewaybill_fields
     + sales_invoice_shipping_fields
     + delivery_note_gst_category,
     "Payment Entry": payment_entry_fields,
@@ -844,7 +691,10 @@ CUSTOM_FIELDS = {
             "label": "GST Category",
             "fieldtype": "Select",
             "insert_after": "gst_transporter_id",
-            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders",
+            "options": (
+                "Registered Regular\nRegistered"
+                " Composition\nUnregistered\nSEZ\nOverseas\nUIN Holders"
+            ),
             "default": "Unregistered",
         },
         {
@@ -854,7 +704,9 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_category",
             "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
             "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
+            "mandatory_depends_on": (
+                'eval:in_list(["SEZ", "Overseas"], doc.gst_category)'
+            ),
         },
     ],
     "Customer": [
@@ -863,7 +715,10 @@ CUSTOM_FIELDS = {
             "label": "GST Category",
             "fieldtype": "Select",
             "insert_after": "pan",
-            "options": "Registered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders",
+            "options": (
+                "Registered Regular\nRegistered"
+                " Composition\nUnregistered\nSEZ\nOverseas\nDeemed Export\nUIN Holders"
+            ),
             "default": "Unregistered",
         },
         {
@@ -871,9 +726,13 @@ CUSTOM_FIELDS = {
             "label": "Export Type",
             "fieldtype": "Select",
             "insert_after": "gst_category",
-            "depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
+            "depends_on": (
+                'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)'
+            ),
             "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-            "mandatory_depends_on": 'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
+            "mandatory_depends_on": (
+                'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)'
+            ),
         },
     ],
 }
