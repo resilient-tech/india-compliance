@@ -1,0 +1,22 @@
+:root {
+    --page-height: calc(100vh - 60px);
+}
+
+body {
+    background-color: var(--bg-light-gray);
+}
+
+.page-container {
+    background-color: transparent;
+}
+
+.page-center {
+    min-height: var(--page-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-highlight {
+    color: var(--primary-color);
+}

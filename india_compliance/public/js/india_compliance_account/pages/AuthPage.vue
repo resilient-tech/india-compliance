@@ -1,19 +1,20 @@
 <template>
   <div class="container auth-page">
-    <h3 class="title text-center">{{ title }}</h3>
-    <div class="main-content row">
+    <div class="main-content">
       <MarketingInfo class="marketing-info" />
-      <div class="v-divider d-none d-lg-block"></div>
       <div class="auth-form">
-        <AuthForm :isAccountRegisted="isAccountRegisted" />
+        <h3 class="title text-center">
+          {{ title }}<span class="text-highlight">.</span>
+        </h3>
+        <AuthForm :isAccountRegistered="isAccountRegistered" />
         <p class="change-view-btn">
           {{
-            isAccountRegisted
+            isAccountRegistered
               ? "Don't have an Account?"
               : "Already have an Account?"
           }}
           <a @click.prevent="toggleAuthView">
-            {{ isAccountRegisted ? "Signup Now" : "Login Here" }}
+            {{ isAccountRegistered ? "Signup Now" : "Login Here" }}
           </a>
         </p>
       </div>
@@ -33,25 +34,25 @@ export default {
 
   data() {
     return {
-      isAccountRegisted: false,
+      isAccountRegistered: false,
     };
   },
 
   computed: {
     title() {
-      return this.isAccountRegisted
-        ? "Namste!"
-        : "Welcome, Let's get you started!";
+      return this.isAccountRegistered
+        ? "Welcome back"
+        : "Let's get you started";
     },
   },
 
   methods: {
     toggleAuthView() {
-      this.isAccountRegisted = !this.isAccountRegisted;
+      this.isAccountRegistered = !this.isAccountRegistered;
     },
 
     async checkAccountRegisted(value) {
-      this.isAccountRegisted = await _isEmailRegistered(value);
+      this.isAccountRegistered = await _isEmailRegistered(value);
     },
   },
 
@@ -77,38 +78,52 @@ export default {
 </script>
 
 <style scoped>
-.auth-page .title {
-  margin: 5em 0 3em;
+.main-content {
+  width: 100%;
+  margin-top: 10em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 4em;
+  font-size: 1em;
 }
 
 .marketing-info,
 .auth-form {
-  margin: 3em 0;
+  max-width: 50%;
 }
 
-.main-content {
+.marketing-info {
   display: flex;
-  justify-content: center;
-}
-
-@media (max-width: 991px) {
-  .main-content {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .main-content * {
-    margin: 1em 0;
-  }
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .auth-form {
   width: 400px;
+  height: 28em;
+  margin-left: 12em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 45px 0;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-base);
+  background-color: white;
 }
-.v-divider {
-  background-color: var(--gray-200);
-  width: 2px;
-  margin: 0 5em;
+
+.auth-form .title {
+  font-size: 1.7em;
+}
+
+.auth-form .title .text-highlight {
+  font-size: 1.2em;
+}
+
+.auth-form form {
+  width: 100%;
+  max-width: 320px;
 }
 
 .change-view-btn {
@@ -118,5 +133,52 @@ export default {
 
 .change-view-btn a {
   color: var(--primary-color);
+}
+
+@media (max-width: 991px) {
+  .main-content {
+    flex-direction: column;
+    align-items: center;
+    margin-top: 5em;
+    font-size: 0.9em;
+    padding: 0;
+  }
+
+  .main-content > * {
+    margin: 1em 0;
+  }
+
+  .marketing-info,
+  .auth-form {
+    max-width: 100%;
+  }
+
+  .marketing-info {
+    text-align: center;
+    align-items: center;
+  }
+
+  .auth-form {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 575px) {
+  .container {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .auth-form {
+    height: 32em;
+    border-radius: 0;
+    width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .main-content {
+    font-size: 0.75em;
+  }
 }
 </style>
