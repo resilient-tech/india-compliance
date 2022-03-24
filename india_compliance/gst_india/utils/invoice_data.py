@@ -17,7 +17,7 @@ class GSTInvoiceData:
     DATE_FORMAT = "dd/mm/yyyy"
 
     def __init__(self, doc):
-        self.doc = frappe.get_doc("Sales Invoice", doc)
+        self.doc = doc
         self.gst_accounts = get_gst_accounts_by_type(
             self.doc.company, gst_account_type="Output"
         ).get("Output")
@@ -138,7 +138,6 @@ class GSTInvoiceData:
             self.item_details = frappe._dict()
             self.update_item_details(row)
             self.get_item_tax_details(row)
-            print(self.get_item_map(self.item_details))
             self.item_list.append(self.get_item_map(self.item_details) or {})
 
         self.item_list = ", ".join(self.item_list)
