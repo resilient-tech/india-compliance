@@ -12,7 +12,12 @@
   "validate_hsn_code",
   "min_hsn_digits",
   "e_waybill_section",
-  "enable_e_waybill_api",
+  "enable_e_waybill",
+  "e_waybill_criteria",
+  "column_break_10",
+  "generate_e_waybill_on_submit",
+  "get_data_for_print",
+  "attach_e_waybill_print",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
@@ -94,15 +99,52 @@
   },
   {
    "default": "0",
-   "fieldname": "enable_e_waybill_api",
+   "fieldname": "enable_e_waybill",
    "fieldtype": "Check",
-   "label": "Enable e-Waybill API"
+   "label": "Enable e-Waybill"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill",
+   "description": "e-Waybill shall be generated on submit of Sales Invoice if criteria is met, and data is valid and available.",
+   "fieldname": "generate_e_waybill_on_submit",
+   "fieldtype": "Check",
+   "label": "Generate e-Waybill on Submit"
+  },
+  {
+   "default": "50000",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "description": "You would be alerted if you are selling goods with total invoice value above this criteria and e-Waybill is not generated.",
+   "fieldname": "e_waybill_criteria",
+   "fieldtype": "Int",
+   "label": "e-Waybill Criteria"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill",
+   "description": "Would you like to make print for e-Waybill? This will automatically fetch data from NIC immediately after you generate e-Waybill for you to make prints for e-Waybill. This would lead to additional API requests.",
+   "fieldname": "get_data_for_print",
+   "fieldtype": "Check",
+   "label": "Get e-Waybill Data for Manual Print",
+   "read_only_depends_on": "eval: doc.attach_e_waybill_print"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill",
+   "description": "Would you like to save on your storage? Disable this to manually print the e-Waybill. Else, we shall attach the e-Waybill print on its generation automatically to the relevant document.",
+   "fieldname": "attach_e_waybill_print",
+   "fieldtype": "Check",
+   "label": "Attach e-Waybill Print on Generation"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-10 11:33:23.304519",
+ "modified": "2022-03-24 17:31:08.556113",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
