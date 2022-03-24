@@ -5,5 +5,5 @@
 tags
 .vscode/
 dist/
-node_modules/
+node_modules
 india_compliance/docs/current
