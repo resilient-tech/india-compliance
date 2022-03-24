@@ -6,14 +6,16 @@
         <router-view />
       </transition>
     </transition>
+    <TheFooter />
   </div>
 </template>
 
 <script>
 import Startup from "./components/PreLoader.vue";
+import TheFooter from "./components/TheFooter.vue";
 
 export default {
-  components: { Startup },
+  components: { Startup, TheFooter },
 
   data() {
     return {
