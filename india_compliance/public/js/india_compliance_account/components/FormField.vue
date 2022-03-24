@@ -99,8 +99,9 @@ export default {
 </script>
 
 <style scoped>
-.form-control {
-  margin-bottom: 0.5rem;
+.form-control,
+.sufix-icon {
+  /* margin-bottom: 0.3rem; */
 }
 
 .input-error {

@@ -14,7 +14,7 @@
               : "Already have an Account?"
           }}
           <a @click.prevent="toggleAuthView">
-            {{ isAccountRegistered ? "Signup Now" : "Login Here" }}
+            {{ isAccountRegistered ? "Sign Up" : "Login" }}
           </a>
         </p>
       </div>
@@ -109,8 +109,8 @@ export default {
   justify-content: space-between;
   padding: 45px 0;
   border-radius: var(--border-radius-md);
-  box-shadow: var(--shadow-base);
-  background-color: white;
+  box-shadow: var(--card-shadow);
+  background-color: var(--card-bg);
 }
 
 .auth-form .title {
