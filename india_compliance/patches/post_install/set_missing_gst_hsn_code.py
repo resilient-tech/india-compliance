@@ -1,12 +1,9 @@
 import frappe
-
 from erpnext.controllers.taxes_and_totals import get_itemised_tax_breakup_html
 
 
 def execute():
-    companies = frappe.db.sql_list(
-        "select name from tabCompany where country = 'India'"
-    )
+    companies = frappe.db.get_all("Company", filters={"country": "India"}, pluck="name")
     if not companies:
         return
 
