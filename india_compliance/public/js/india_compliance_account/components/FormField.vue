@@ -99,6 +99,10 @@ export default {
 </script>
 
 <style scoped>
+.form-control {
+  margin-bottom: 0.5rem;
+}
+
 .input-error {
   margin-top: 0.2rem;
   color: var(--red-500);

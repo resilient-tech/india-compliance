@@ -1,10 +1,9 @@
 <template>
-  <form class="auth-form" @submit.prevent="submitAuthForm">
+  <form @submit.prevent="submitAuthForm">
     <FormField
       input-type="email"
       name="email"
-      label="Email"
-      placeholder="john@example.com"
+      placeholder="Email"
       v-model.trim="email.value"
       :required="true"
       :error="email.error"
@@ -13,10 +12,10 @@
     />
     <transition name="slide">
       <FormField
-        v-if="!isAccountRegisted"
+        v-if="!isAccountRegistered"
         input-type="text"
         name="gstin"
-        label="GSTIN"
+        placeholder="GSTIN"
         v-model.trim="gstin.value"
         :required="true"
         :error="gstin.error"
@@ -45,7 +44,7 @@ import {
 } from "../../services/AuthService";
 
 export default {
-  props: { isAccountRegisted: Boolean },
+  props: { isAccountRegistered: Boolean },
 
   components: { FormField, Loading },
 
@@ -74,7 +73,7 @@ export default {
       if (this.isLoading) return "Loading...";
       if (this.isRedirecting) return "Redirecting...";
 
-      if (this.isAccountRegisted) return "Login";
+      if (this.isAccountRegistered) return "Login";
       return this.submitLabel;
     },
 
@@ -86,20 +85,20 @@ export default {
         !this.isSucess
       )
         return true;
-      if (this.isAccountRegisted) return !this.email.value;
+      if (this.isAccountRegistered) return !this.email.value;
       return !this.email.value || !this.gstin.value;
     },
 
     isSucess() {
       let _isSucess = this.email.state === UiState.success;
-      if (!this.isAccountRegisted)
+      if (!this.isAccountRegistered)
         _isSucess = _isSucess && this.gstin.state === UiState.success;
       return !!_isSucess;
     },
 
     hasInputError() {
       let _hasError = this.email.error;
-      if (!this.isAccountRegisted) _hasError = _hasError || this.gstin.error;
+      if (!this.isAccountRegistered) _hasError = _hasError || this.gstin.error;
       return !!_hasError;
     },
   },
@@ -114,7 +113,7 @@ export default {
       this.error = null;
     },
 
-    isAccountRegisted() {
+    isAccountRegistered() {
       this.error = null;
     },
   },
@@ -129,7 +128,7 @@ export default {
       const gstin = this.gstin.value;
 
       let response;
-      if (this.isAccountRegisted) response = await login(email);
+      if (this.isAccountRegistered) response = await login(email);
       else response = await signup(email, gstin);
 
       this.isLoading = false;
