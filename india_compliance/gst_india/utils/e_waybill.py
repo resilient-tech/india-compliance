@@ -17,12 +17,18 @@ def download_e_waybill_json(doctype, docnames):
 
 
 def generate_e_waybill_json(doctype, docnames):
-    return pretty_json(
+    ewb_data = frappe._dict(
         {
             "version": "1.0.0421",
-            "billLists": [eWaybill(doc).get_e_waybill_data() for doc in docnames],
+            "billLists": [],
         }
     )
+
+    for doc in docnames:
+        doc = frappe.get_doc(doctype, doc)
+        ewb_data.billLists.append(eWaybill(doc).get_e_waybill_data())
+
+    return pretty_json(ewb_data)
 
 
 def get_file_name(docnames):
@@ -45,7 +51,6 @@ class eWaybill(GSTInvoiceData):
         self.get_party_address_details()
         self.post_validate_invoice()
 
-        print(self.item_list)
         ewb_data = self.get_invoice_map(
             invoice_details=self.invoice_details,
             item_list=self.item_list,
@@ -55,7 +60,6 @@ class eWaybill(GSTInvoiceData):
             dispatch_address=self.dispatch_address,
         )
         ewb_data.replace("'", "")
-        print(ewb_data)
         return json.loads(ewb_data)
 
     def pre_validate_invoice(self):
