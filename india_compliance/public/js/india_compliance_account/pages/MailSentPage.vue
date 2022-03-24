@@ -1,16 +1,18 @@
 <template>
-  <div class="contaier text-center mt-5">
-    <img src="" alt="" />
-    <h2>An email is on its way!</h2>
-    <p>
-      We sent an email to <b>{{ email }}</b
-      >.
+  <div class="mail-sent-page contaier text-center">
+    <img
+      class="mail-box-img"
+      src="/assets/india_compliance/images/mail-box.png"
+      alt=""
+    />
+    <h2 class="title">
+      Verify your email<span class="text-highlight">.</span>
+    </h2>
+    <p class="message">
+      Almost there! We've sent a verification email to
+      <strong>{{ email }}</strong>
     </p>
-    <p>
-      If this email address has an account, you'll find a magic link that will
-      sign you into the dashboard.
-    </p>
-    <p>This link expires in 24 hours, so be sure to use it soon.</p>
+
     <button @click.stop="changeEmail" class="btn btn-primary btn-sm">
       Change Email
     </button>
@@ -21,7 +23,7 @@
 export default {
   computed: {
     email() {
-      return this.$route.query.email;
+      return this.$store.state.auth.session.email;
     },
   },
   methods: {
@@ -33,7 +35,7 @@ export default {
 
   beforeRouteEnter(to, from, next) {
     next((vm) => {
-      if (!vm.$route.query.email || !vm.$store.getters.hasSession)
+      if (!vm.$store.getters.hasSession)
         return next({ name: "home", replace: true });
       return next();
     });
@@ -42,4 +44,28 @@ export default {
 </script>
 
 <style scoped>
+.mail-sent-page {
+  margin: 100px 0;
+}
+
+.mail-box-img {
+  width: 15em;
+  margin-bottom: 2em;
+}
+
+.title {
+  font-weight: 600;
+}
+
+.message {
+  font-weight: 300;
+  font-size: 1.3em;
+  margin-bottom: 2em;
+}
+
+@media screen and (max-width: 768px) {
+  .message {
+    font-size: 1.1em;
+  }
+}
 </style>
