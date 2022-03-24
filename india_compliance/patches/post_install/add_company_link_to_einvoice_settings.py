@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import sbool
 
 
 def execute():
@@ -6,14 +7,17 @@ def execute():
     update Company of E Invoice User from Dyanamic Link Table in Address
     """
 
+    if not sbool(frappe.db.get_value("E Invoice Settings", None, "enable")):
+        return
+
     frappe.db.sql(
         """
         UPDATE `tabE Invoice User` user
         JOIN `tabAddress` address ON address.gstin = user.gstin
-        JOIN `tabDynamic Link` dynamic_link ON dynamic_link.parent = address.name
+        JOIN `tabDynamic Link` dynamic_link
+        ON dynamic_link.parent = address.name AND dynamic_link.link_doctype = 'Company'
         SET user.company = dynamic_link.link_name
         WHERE IFNULL(user.company, '') = ''
-        AND dynamic_link.link_doctype = 'Company'
         """
     )
 
@@ -26,7 +30,10 @@ def execute():
     #     .join(address)
     #     .on(address.gstin == user.gstin)
     #     .join(dynamic_link)
-    #     .on(dynamic_link.parent == address.name)
+    #     .on(
+    #         (dynamic_link.parent == address.name)
+    #         & (dynamic_link.link_doctype == "Company")
+    #     )
     #     .set(user.company, dynamic_link.link_name)
     #     .where(IfNull(user.company, "") == "")
     #     .where(dynamic_link.link_doctype == "Company")

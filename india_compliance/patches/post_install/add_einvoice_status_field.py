@@ -1,12 +1,11 @@
 import json
 
 import frappe
+from frappe.utils import sbool
 
 
 def execute():
-    if frappe.db.exists("E Invoice Settings") and frappe.db.get_single_value(
-        "E Invoice Settings", "enable"
-    ):
+    if not sbool(frappe.db.get_value("E Invoice Settings", None, "enable")):
         frappe.db.sql(
             """
             UPDATE `tabSales Invoice` SET einvoice_status = 'Pending'

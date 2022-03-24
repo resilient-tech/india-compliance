@@ -1,6 +1,7 @@
 import click
 
 import frappe
+from frappe.utils import sbool
 from frappe.utils.password import decrypt
 
 
@@ -13,7 +14,7 @@ def execute():
         .where(singles.field.isin(("enable", "applicable_from")))
         .run()
     )
-    if not old_settings.enable:
+    if not sbool(old_settings.get("enable")):
         return
 
     user = frappe.qb.DocType("E Invoice User")
