@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:e_waybill_number",
+ "creation": "2022-03-24 17:34:14.323812",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_0",
+  "e_waybill_number",
+  "e_waybill_date",
+  "linked_with",
+  "column_break1",
+  "valid_upto",
+  "section_break1",
+  "is_cancelled",
+  "cancel_date",
+  "column_break_2",
+  "cancel_reason_code",
+  "cancel_remark",
+  "section_break_31",
+  "data"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_0",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "e_waybill_number",
+   "fieldtype": "Data",
+   "label": "e-Waybill Number",
+   "unique": 1
+  },
+  {
+   "fieldname": "e_waybill_date",
+   "fieldtype": "Datetime",
+   "label": "Date"
+  },
+  {
+   "fieldname": "linked_with",
+   "fieldtype": "Data",
+   "label": "Linked With"
+  },
+  {
+   "fieldname": "column_break1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valid_upto",
+   "fieldtype": "Datetime",
+   "label": "Valid Upto"
+  },
+  {
+   "depends_on": "eval: doc.is_cancelled == 1",
+   "fieldname": "section_break1",
+   "fieldtype": "Section Break",
+   "label": "Cancellation Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_cancelled",
+   "fieldtype": "Check",
+   "label": "Is Cancelled"
+  },
+  {
+   "fieldname": "cancel_date",
+   "fieldtype": "Datetime",
+   "label": "Cancel Date"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cancel_reason_code",
+   "fieldtype": "Data",
+   "label": "Cancel Reason Code"
+  },
+  {
+   "fieldname": "cancel_remark",
+   "fieldtype": "Data",
+   "label": "Cancel Remark"
+  },
+  {
+   "fieldname": "section_break_31",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "data",
+   "fieldtype": "Code",
+   "label": "Data",
+   "options": "JSON"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-03-24 17:35:13.096573",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "e-Waybill Log",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
