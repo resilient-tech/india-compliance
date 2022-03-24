@@ -4,10 +4,6 @@ import re
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.constants.e_waybill import (
-    E_WAYBILL_INVOICE,
-    E_WAYBILL_ITEM,
-)
 from india_compliance.gst_india.utils.api import pretty_json
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
@@ -40,22 +36,29 @@ def get_file_name(docnames):
 class eWaybill(GSTInvoiceData):
     def __init__(self, doc):
         super().__init__(doc)
-        self.item_map = E_WAYBILL_ITEM
-        self.invoice_map = E_WAYBILL_INVOICE
 
     def get_e_waybill_data(self):
-        doc = self.doc
-        self.validate_invoice_for_ewb(doc)
-        item_list = self.get_item_list()
+        self.pre_validate_invoice()
+        self.get_item_list()
         self.get_invoice_details()
-        self.update_invoice_details(doc)
-        self.update_address_details(doc)
+        self.get_transporter_details()
+        self.get_party_address_details()
+        self.post_validate_invoice()
 
-        ewb_data = self.map_template(self.invoice_map, doc)
-        ewb_data.update({"itemList": item_list})
-        return ewb_data
+        print(self.item_list)
+        ewb_data = self.get_invoice_map(
+            invoice_details=self.invoice_details,
+            item_list=self.item_list,
+            billing_address=self.billing_address,
+            shipping_address=self.shipping_address,
+            company_address=self.company_address,
+            dispatch_address=self.dispatch_address,
+        )
+        ewb_data.replace("'", "")
+        print(ewb_data)
+        return json.loads(ewb_data)
 
-    def validate_invoice_for_ewb(self, doc):
+    def pre_validate_invoice(self):
         """
         Validates:
         - Ewaybill already exists
@@ -64,11 +67,12 @@ class eWaybill(GSTInvoiceData):
         - Basic transporter details must be present
         - Max 250 Items
         """
+        super().pre_validate_invoice()
 
         # TODO: Validate with e-Waybill settings
         # TODO: Add Support for Delivery Note
 
-        if doc.get("ewaybill"):
+        if self.doc.get("ewaybill"):
             frappe.throw(_("E-Waybill already generated for this invoice"))
 
         reqd_fields = [
@@ -78,16 +82,16 @@ class eWaybill(GSTInvoiceData):
         ]
 
         for fieldname in reqd_fields:
-            if not doc.get(fieldname):
+            if not self.doc.get(fieldname):
                 frappe.throw(
                     _("{} is required to generate e-Waybill JSON").format(
-                        doc.meta.get_label(fieldname)
+                        self.doc.meta.get_label(fieldname)
                     )
                 )
 
         # Atleast one item with HSN code of goods is required
         doc_with_goods = False
-        for item in doc.items:
+        for item in self.doc.items:
             if not item.gst_hsn_code.startswith("99"):
                 doc_with_goods = True
                 break
@@ -100,21 +104,21 @@ class eWaybill(GSTInvoiceData):
                 title=_("Invalid Data"),
             )
 
-        if doc.get("is_return") and doc.get("gst_category") == "Overseas":
+        if self.doc.get("is_return") and self.doc.get("gst_category") == "Overseas":
             frappe.throw(
                 msg=_("Return/Credit Note is not supported for Overseas e-Waybill."),
                 title=_("Invalid Data"),
             )
 
         # check if transporter_id or vehicle number is present
-        transport_mode = doc.get("transport_mode")
+        transport_mode = self.doc.get("transport_mode")
         missing_transport_details = (
             road_transport := (transport_mode == "Road")
-            and not doc.get("vehicle_number")
+            and not self.doc.get("vehicle_number")
             or transport_mode in ["Rail", "Air", "Ship"]
-            and not doc.get("lr_no")
+            and not self.doc.get("lr_no")
         )
-        if not doc.get("gst_transporter_id"):
+        if not self.doc.get("gst_transporter_id"):
             if missing_transport_details:
                 frappe.throw(
                     msg=_(
@@ -125,69 +129,140 @@ class eWaybill(GSTInvoiceData):
                     title=_("Invalid Data"),
                 )
 
-        if len(doc.items) > 250:
+        if len(self.doc.items) > 250:
             # TODO: Add support for HSN Summary
             frappe.throw(
                 msg=_("e-Waybill cannot be generated for more than 250 items."),
                 title=_("Invalid Data"),
             )
 
-    def update_invoice_details(self, doc):
-        doc.supply_type = "O"
-        doc.sub_supply_type = 1
-        doc.document_type = "INV"
+    def update_invoice_details(self):
+        super().update_invoice_details()
 
-        if doc.is_return:
-            doc.supply_type = "I"
-            doc.sub_supply_type = 7
-            doc.document_type = "CHL"
-        elif doc.gst_category == "Overseas":
-            doc.shipping_address = self.get_address_details()
-            doc.sub_supply_type = 3
-            if doc.export_type == "With Payment of Tax":
-                doc.document_type = "BIL"
+        self.invoice_details.update(
+            {
+                "supply_type": "O",
+                "sub_supply_type": 1,
+                "document_type": "INV",
+            }
+        )
 
-    def update_address_details(self, doc):
-        doc.transaction_type = 1
-        billTo_shipTo = doc.customer_address != (
-            doc.get("shipping_address_name") or doc.customer_address
+        if self.doc.is_return:
+            self.invoice_details.update(
+                {"supply_type": "I", "sub_supply_type": 7, "document_type": "CHL"}
+            )
+
+        elif self.doc.gst_category == "Overseas":
+            self.invoice_details.sub_supply_type = 3
+
+            if self.doc.export_type == "With Payment of Tax":
+                self.invoice_details.document_type = "BIL"
+
+    def get_party_address_details(self):
+        transaction_type = 1
+        billTo_shipTo = self.doc.customer_address != (
+            self.doc.get("shipping_address_name") or self.doc.customer_address
         )
-        billFrom_dispatchFrom = doc.company_address != (
-            doc.get("dispatch_address_name") or doc.company_address
+        billFrom_dispatchFrom = self.doc.company_address != (
+            self.doc.get("dispatch_address_name") or self.doc.company_address
         )
-        billing_address = shipping_address = self.get_address_details(
-            doc.customer_address
+        self.billing_address = self.shipping_address = self.get_address_details(
+            self.doc.customer_address
         )
-        company_address = dispatch_address = self.get_address_details(
-            doc.company_address
+        self.company_address = self.dispatch_address = self.get_address_details(
+            self.doc.company_address
         )
 
         if billTo_shipTo and billFrom_dispatchFrom:
-            doc.transaction_type = 4
-            shipping_address = self.get_address_details(doc.shipping_address_name)
-            dispatch_address = self.get_address_details(doc.dispatch_address_name)
+            transaction_type = 4
+            self.shipping_address = self.get_address_details(
+                self.doc.shipping_address_name
+            )
+            self.dispatch_address = self.get_address_details(
+                self.doc.dispatch_address_name
+            )
         elif billFrom_dispatchFrom:
-            doc.transaction_type = 3
-            dispatch_address = self.get_address_details(doc.dispatch_address_name)
+            transaction_type = 3
+            self.dispatch_address = self.get_address_details(
+                self.doc.dispatch_address_name
+            )
         elif billTo_shipTo:
-            doc.transaction_type = 2
-            shipping_address = self.get_address_details(doc.shipping_address_name)
+            transaction_type = 2
+            self.shipping_address = self.get_address_details(
+                self.doc.shipping_address_name
+            )
 
-        doc.update(
+        self.invoice_details.update(
             {
-                "to_state_code": 99
-                if self.doc.gst_category == "SEZ"
-                else billing_address.state_code,
-                "to_address_1": shipping_address.address_line1,
-                "to_address_2": shipping_address.address_line2,
-                "to_city": shipping_address.city,
-                "to_pincode": shipping_address.pincode,
-                "actual_to_state_code": shipping_address.state_code,
-                "from_state_code": company_address.state_code,
-                "from_address_1": dispatch_address.address_line1,
-                "from_address_2": dispatch_address.address_line2,
-                "from_city": dispatch_address.city,
-                "from_pincode": dispatch_address.pincode,
-                "actual_from_state_code": dispatch_address.state_code,
+                "transaction_type": transaction_type,
             }
+        )
+
+        if self.doc.gst_category == "SEZ":
+            self.billing_address.state_code = 96
+
+    def get_invoice_map(self, **kwargs):
+        return """
+        {{
+            "userGstin": "{invoice_details.company_gstin}",
+            "supplyType": "{invoice_details.supply_type}",
+            "subSupplyType": {invoice_details.sub_supply_type},
+            "subSupplyDesc":"",
+            "docType": "{invoice_details.document_type}",
+            "docNo": "{invoice_details.invoice_number}",
+            "docDate": "{invoice_details.invoice_date}",
+            "transType": {invoice_details.transaction_type},
+            "fromTrdName": "{company_address.address_title}",
+            "fromGstin": "{company_address.gstin}",
+            "fromAddr1": "{dispatch_address.address_line1}",
+            "fromAddr2": "{dispatch_address.address_line2}",
+            "fromPlace": "{dispatch_address.city}",
+            "fromPincode": {dispatch_address.pincode},
+            "fromStateCode": {company_address.state_code},
+            "actualFromStateCode": {dispatch_address.state_code},
+            "toTrdName": "{billing_address.address_title}",
+            "toGstin": "{billing_address.gstin}",
+            "toAddr1": "{shipping_address.address_line1}",
+            "toAddr2": "{shipping_address.address_line2}",
+            "toPlace": "{shipping_address.city}",
+            "toPincode": {shipping_address.pincode},
+            "toStateCode": {billing_address.state_code},
+            "actualToStateCode": {shipping_address.state_code},
+            "totalValue": {invoice_details.base_total},
+            "cgstValue": {invoice_details.total_cgst_amount},
+            "sgstValue": {invoice_details.total_sgst_amount},
+            "igstValue": {invoice_details.total_igst_amount},
+            "cessValue": {invoice_details.total_cess_amount},
+            "TotNonAdvolVal": {invoice_details.total_cess_non_advol_amount},
+            "OthValue": {invoice_details.rounding_adjustment},
+            "totInvValue": {invoice_details.base_grand_total},
+            "transMode": {invoice_details.mode_of_transport},
+            "transDistance": {invoice_details.distance},
+            "transporterName": "{invoice_details.transporter_name}",
+            "transporterId": "{invoice_details.transporter_gstin}",
+            "transDocNo": "{invoice_details.lr_no}",
+            "transDocDate": "{invoice_details.lr_date_str}",
+            "vehicleNo": "{invoice_details.vehicle_no}",
+            "vehicleType": "{invoice_details.vehicle_type}",
+            "itemList": [{item_list}]
+        }}""".format(
+            **kwargs
+        )
+
+    def get_item_map(self, item_details):
+        return """
+        {{
+            "productName": "",
+            "productDesc": "{item_details.item_name}",
+            "hsnCode": "{item_details.hsn_code}",
+            "qtyUnit": "{item_details.uom}",
+            "quantity": {item_details.qty},
+            "taxableAmount": {item_details.taxable_value},
+            "sgstRate": {item_details.sgst_rate},
+            "cgstRate": {item_details.cgst_rate},
+            "igstRate": {item_details.igst_rate},
+            "cessRate": {item_details.cess_rate},
+            "cessNonAdvol": {item_details.cess_non_advol_rate}
+        }}""".format(
+            item_details=item_details
         )
