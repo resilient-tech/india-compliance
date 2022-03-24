@@ -215,8 +215,34 @@ def get_gst_accounts_by_type(company, gst_account_type=None, as_list=False):
     if not gst_accounts:
         frappe.throw(
             _(
-                "Could not find {0} GST Accounts for company {1}. Please set GST Accounts in GST Settings"
+                "Could not find {0} GST Accounts for company {1}. Please set GST"
+                " Accounts in GST Settings"
             ).format(gst_account_type or "", company)
         )
 
     return gst_accounts
+
+
+def delete_custom_fields(custom_fields):
+    """Delete multiple custom fields
+    :param custom_fields: example `{'Sales Invoice': [dict(fieldname='test')]}`"""
+
+    for doctypes, fields in custom_fields.items():
+        if isinstance(fields, dict):
+            # only one field
+            fields = [fields]
+
+        if isinstance(doctypes, str):
+            # only one doctype
+            doctypes = (doctypes,)
+
+        for doctype in doctypes:
+            for df in fields:
+                try:
+                    frappe.delete_doc(
+                        "Custom Field", doctype + "-" + df.get("fieldname")
+                    )
+                except Exception:
+                    pass
+
+        frappe.clear_cache(doctype=doctype)
