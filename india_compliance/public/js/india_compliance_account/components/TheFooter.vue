@@ -56,4 +56,18 @@ html[data-theme="light"] .footer-logo img {
 html[data-theme="dark"] .footer-logo img {
   content: url("https://www.resilient.tech/_nuxt/img/logo_white.1d040bc.png");
 }
+
+@media screen and (max-width: 768px) {
+  footer {
+    flex-direction: column;
+    align-items: center;
+    padding: 2em 0;
+  }
+  .footer-menu {
+    margin-top: 1em;
+  }
+  .footer-logo {
+    margin-top: 1em;
+  }
+}
 </style>
