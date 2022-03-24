@@ -35,5 +35,9 @@ frappe.ui.form.on('GST Settings', {
 			};
 		});
 	},
+	attach_e_waybill_print: function(frm) {
+		if(!frm.doc.attach_e_waybill_print || frm.doc.get_data_for_print) return;
+		frm.set_value("get_data_for_print", 1);
+	}
 
 });
