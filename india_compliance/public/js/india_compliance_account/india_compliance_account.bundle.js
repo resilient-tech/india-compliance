@@ -49,15 +49,17 @@ ic.gst_api.call = async function (endpoint, options) {
 
         if (options.with_api_secret || options.api_secret) {
             const api_secret = options.api_secret || (await get_api_secret());
-            headers["X-API-KEY"] = api_secret;
+            headers["x-api-key"] = api_secret;
         }
 
-        response = await fetch(url, {
+        const args = {
             method: options.method || "POST",
             headers,
-            body: JSON.stringify(options.body || {}),
-        });
+        };
 
+        if (options.body) args.body = JSON.stringify(options.body);
+
+        response = await fetch(url, args);
         const data = await response.json();
         if (response.ok) return { success: true, ...data };
 
