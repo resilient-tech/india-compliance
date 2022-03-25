@@ -1,14 +1,10 @@
 # Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import os
-
 import frappe
 from frappe import _
-from frappe.contacts.doctype.contact.contact import get_default_contact
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.model.document import Document
-from frappe.utils import date_diff, get_url, nowdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_FIELDS

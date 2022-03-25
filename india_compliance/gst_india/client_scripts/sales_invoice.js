@@ -27,20 +27,15 @@ frappe.ui.form.on(DOCTYPE, {
 	},
 
 	refresh: async function (frm) {
-		// e_waybill_validity is only set when e-waybill is created using API
-		if (frm.doc.ewaybill && frm.doc.ewaybill.length == 12 && frm.doc.e_waybill_validity) {
+		let settings = frappe.boot.gst_settings
+		if (frm.doc.ewaybill && frm.doc.ewaybill.length == 12 && settings.enable_api) {
 			frm.set_df_property('ewaybill', 'allow_on_submit', 0);
 		}
-
-		if(frm.doc.docstatus != 1 || frm.is_dirty() || frm.doc.ewaybill) return;
-
-		let {message} = await frappe.db.get_value("GST Settings", "GST Settings", ("enable_e_waybill", "enable_api", "e_waybill_criteria"));
-		if (message.enable_e_waybill != 1 || !is_e_waybill_applicable(frm, message.e_waybill_criteria)) return;
-
+		if(frm.doc.docstatus != 1 || frm.is_dirty() || frm.doc.ewaybill || !settings.enable_e_waybill || !is_e_waybill_applicable(frm, settings.e_waybill_criteria)) return;
+		// ewaybill is applicable and not created or updated.
 		frm.dashboard.add_comment("e-Waybill is applicable for this invoice and not yet generated or updated.", "yellow");
 
-		if (message.enable_api == 1) return;
-
+		if (settings.enable_api) return;
 		frm.add_custom_button('e-Waybill JSON', () => {
 			open_url_post(frappe.request.url, {
 				cmd: "india_compliance.gst_india.utils.e_waybill.download_e_waybill_json",
