@@ -23,7 +23,8 @@
 export default {
   computed: {
     email() {
-      return this.$store.state.auth.session.email;
+      const { session } = this.$store.state.auth;
+      return session && session.email;
     },
   },
   methods: {
