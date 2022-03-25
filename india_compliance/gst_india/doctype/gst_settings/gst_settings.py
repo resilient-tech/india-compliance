@@ -65,10 +65,5 @@ class GSTSettings(Document):
 
         if self.enable_e_waybill:
             create_custom_fields(E_WAYBILL_FIELDS, update=True)
-
-            if self.api_secret:
-                for field in ("Sales Invoice-ewaybill", "Delivery Note-ewaybill"):
-                    frappe.db.set_value("Custom Field", field, "allow_on_submit", 0)
-
         else:
             delete_custom_fields(E_WAYBILL_FIELDS)

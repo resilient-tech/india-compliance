@@ -26,8 +26,13 @@ frappe.ui.form.on(DOCTYPE, {
 		});
 	},
 
-	refresh: async function(frm) {
-		if(frm.doc.docstatus != 1 || frm.is_dirty()	|| frm.doc.ewaybill) return;
+	refresh: async function (frm) {
+		// e_waybill_validity is only set when e-waybill is created using API
+		if (frm.doc.ewaybill && frm.doc.ewaybill.length == 12 && frm.doc.e_waybill_validity) {
+			frm.set_df_property('ewaybill', 'allow_on_submit', 0);
+		}
+
+		if(frm.doc.docstatus != 1 || frm.is_dirty() || frm.doc.ewaybill) return;
 
 		let {message} = await frappe.db.get_value("GST Settings", "GST Settings", ("enable_e_waybill", "api_secret", "e_waybill_criteria"));
 		if (message.enable_e_waybill != 1 || !is_e_waybill_applicable(frm, message.e_waybill_criteria)) return;
