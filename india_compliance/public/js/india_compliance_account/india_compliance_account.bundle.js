@@ -74,7 +74,7 @@ ic.gst_api.call = async function (endpoint, options) {
             });
         }
 
-        return { success: false, error, response: e.response };
+        return { ...e.response, success: false, error };
     }
 };
 
