@@ -20,6 +20,8 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
 
     def on_update(self):
+        # clear session boot cache
+        frappe.cache().delete_keys("bootinfo")
         frappe.enqueue(self.create_or_delete_fields)
 
     def validate_gst_accounts(self):
