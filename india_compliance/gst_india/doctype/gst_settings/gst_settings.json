@@ -21,6 +21,7 @@
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
+  "enable_api",
   "credentials",
   "api_secret"
  ],
@@ -109,7 +110,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill",
+   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill && doc.enable_api",
    "description": "e-Waybill shall be generated on submit of Sales Invoice if criteria is met, and data is valid and available.",
    "fieldname": "generate_e_waybill_on_submit",
    "fieldtype": "Check",
@@ -125,7 +126,7 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill",
+   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill && doc.enable_api",
    "description": "Would you like to make print for e-Waybill? This will automatically fetch data from NIC immediately after you generate e-Waybill for you to make prints for e-Waybill. This would lead to additional API requests.",
    "fieldname": "get_data_for_print",
    "fieldtype": "Check",
@@ -134,17 +135,24 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill",
+   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill && doc.enable_api",
    "description": "Would you like to save on your storage? Disable this to manually print the e-Waybill. Else, we shall attach the e-Waybill print on its generation automatically to the relevant document.",
    "fieldname": "attach_e_waybill_print",
    "fieldtype": "Check",
    "label": "Attach e-Waybill Print on Generation"
+  },
+  {
+   "default": "0",
+   "description": "Enable this to use API features including e-Waybill, e-Invoice or Autofill using Public APIs",
+   "fieldname": "enable_api",
+   "fieldtype": "Check",
+   "label": "Enable API"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-24 17:31:08.556113",
+ "modified": "2022-03-25 12:21:46.773850",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

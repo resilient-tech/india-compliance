@@ -34,12 +34,12 @@ frappe.ui.form.on(DOCTYPE, {
 
 		if(frm.doc.docstatus != 1 || frm.is_dirty() || frm.doc.ewaybill) return;
 
-		let {message} = await frappe.db.get_value("GST Settings", "GST Settings", ("enable_e_waybill", "api_secret", "e_waybill_criteria"));
+		let {message} = await frappe.db.get_value("GST Settings", "GST Settings", ("enable_e_waybill", "enable_api", "e_waybill_criteria"));
 		if (message.enable_e_waybill != 1 || !is_e_waybill_applicable(frm, message.e_waybill_criteria)) return;
 
 		frm.dashboard.add_comment("e-Waybill is applicable for this invoice and not yet generated or updated.", "yellow");
 
-		if (message.api_secret) return;
+		if (message.enable_api == 1) return;
 
 		frm.add_custom_button('e-Waybill JSON', () => {
 			open_url_post(frappe.request.url, {
