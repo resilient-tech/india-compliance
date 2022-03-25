@@ -4,7 +4,7 @@
       <MarketingInfo class="marketing-info" />
       <div class="auth-form">
         <h3 class="title text-center">
-          {{ title }}<span class="text-highlight">.</span>
+          {{ title }}<span class="full-stop-highlight">.</span>
         </h3>
         <AuthForm :isAccountRegistered="isAccountRegistered" />
         <p class="change-view-btn">
@@ -108,10 +108,6 @@ export default {
 
 .auth-form .title {
   font-size: 1.7em;
-}
-
-.auth-form .title .text-highlight {
-  font-size: 1.2em;
 }
 
 .auth-form form {
