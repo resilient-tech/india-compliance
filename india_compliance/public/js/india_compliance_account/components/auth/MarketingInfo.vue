@@ -47,7 +47,7 @@ export default {
   color: var(--primary-color);
   align-self: flex-end;
   font-size: 1.2em;
-  margin-right: 4em;
+  margin-right: 1em;
 }
 
 .features {

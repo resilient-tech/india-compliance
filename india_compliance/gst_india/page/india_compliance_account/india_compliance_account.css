@@ -4,6 +4,8 @@
 
 body {
     background-color: var(--bg-light-gray);
+    height: unset;
+    min-height: 100vh;
 }
 
 .page-container {
