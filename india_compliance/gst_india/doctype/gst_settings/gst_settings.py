@@ -16,6 +16,10 @@ class GSTSettings(Document):
     def validate(self):
         self.validate_gst_accounts()
 
+    def on_update(self):
+        # clear session boot cache
+        frappe.cache().delete_keys("bootinfo")
+
     def validate_gst_accounts(self):
         account_list = []
         company_wise_account_types = {}
