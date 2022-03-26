@@ -59,21 +59,22 @@ STATE_NUMBERS = {
     "West Bengal": "19",
 }
 
-# REGEX PATTERNS
+# REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
 
-# GSTINs: https://developer.gst.gov.in/apiportal/taxpayer/returns
-NORMAL = r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}(?![C])[Z1-9A-J]{1}[0-9A-Z]{1}$"  # Normal but not TCS
+
+NORMAL = (  # Normal but not TCS
+    r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}(?![C])[Z1-9A-J]{1}[0-9A-Z]{1}$"
+)
 GOVT_DEPTID = r"^[0-9]{2}[A-Z]{4}[0-9]{5}[A-Z]{1}[0-9]{1}[Z]{1}[0-9]{1}$"
-UNBODY = re.compile(r"^[0-9]{4}[A-Z]{3}[0-9]{5}[UO]{1}[N][A-Z0-9]{1}$")
-TDS = re.compile(r"^[0-9]{2}[A-Z]{4}[A-Z0-9]{1}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[D][0-9A-Z]$")
+REGISTERED = re.compile(rf"{NORMAL}|{GOVT_DEPTID}")
+
 # Not allowed in GSTR1 B2B
 NRI_ID = r"^[0-9]{4}[A-Z]{3}[0-9]{5}[N][R][0-9A-Z]{1}$"
 OIDAR = r"^[9][9][0-9]{2}[A-Z]{3}[0-9]{5}[O][S][0-9A-Z]{1}$"
-TCS = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[C]{1}[0-9A-Z]{1}$")
-
-REGISTERED = re.compile(rf"{NORMAL}|{GOVT_DEPTID}")
 OVERSEAS = re.compile(rf"{NRI_ID}|{OIDAR}")
 
+UNBODY = re.compile(r"^[0-9]{4}[A-Z]{3}[0-9]{5}[UO]{1}[N][A-Z0-9]{1}$")
+TDS = re.compile(r"^[0-9]{2}[A-Z]{4}[A-Z0-9]{1}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[D][0-9A-Z]$")
 
 GSTIN_FORMATS = {
     "Registered Regular": REGISTERED,
@@ -85,4 +86,5 @@ GSTIN_FORMATS = {
     "Tax Deductor": TDS,
 }
 
+TCS = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[C]{1}[0-9A-Z]{1}$")
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
