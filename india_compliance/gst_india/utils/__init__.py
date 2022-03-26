@@ -31,7 +31,7 @@ def validate_gstin(gstin, gst_category):
             valid_categories := {"Unregistered", "Overseas"}
         ):
             frappe.throw(
-                _("GST Category should be one of {0}.").format(
+                _("GST Category should be one of {0}").format(
                     ", ".join(valid_categories)
                 ),
                 title=_("Invalid GST Category"),
@@ -39,16 +39,16 @@ def validate_gstin(gstin, gst_category):
         return
 
     if not gst_category:
-        frappe.throw(_("Please select GST Category."), title=_("Invalid GST Category"))
+        frappe.throw(_("Please select a GST Category"), title=_("Invalid GST Category"))
 
     if len(gstin) != 15:
-        frappe.throw(_("GSTIN must have 15 characters."), title=_("Invalid GSTIN"))
+        frappe.throw(_("GSTIN must have 15 characters"), title=_("Invalid GSTIN"))
 
     validate_gstin_check_digit(gstin)
 
     if TCS.match(gstin):
         frappe.throw(
-            _("GSTIN of e-Commerce Operator (TCS) cannot be used as Party GSTIN."),
+            _("GSTIN of e-Commerce Operator (TCS) cannot be used as Party GSTIN"),
             title=_("Invalid GSTIN"),
         )
 
@@ -56,7 +56,8 @@ def validate_gstin(gstin, gst_category):
     if not valid_gstin_format.match(gstin):
         frappe.throw(
             _(
-                "GSTIN you have entered doesn't match for category {0}. Please make sure you have entered correct GSTIN and GST Category."
+                "GSTIN you have entered doesn't match for category {0}. Please make"
+                " sure you have entered the correct GSTIN and GST Category."
             ).format(gst_category),
             title=_("Invalid GSTIN or GST Category"),
         )
