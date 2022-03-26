@@ -7,24 +7,36 @@ from india_compliance.gst_india.utils import is_valid_pan, validate_gstin
 
 
 def validate_party(doc, method=None):
-    doc.gstin = doc.gstin and doc.gstin.upper().strip()
-    doc.pan = doc.pan and doc.pan.upper().strip()
-
-    validate_gstin(doc.gstin, doc.gst_category)
-    update_or_validate_pan(doc)
+    validate_pan_and_gstin(doc, called_from_ui=False)
     set_docs_with_previous_gstin(doc)
 
 
-def update_or_validate_pan(doc):
+@frappe.whitelist()
+def validate_pan_and_gstin(doc, called_from_ui=True):
+    if called_from_ui:
+        doc = frappe.parse_json(doc)
+
+    doc.gstin = validate_gstin(doc.gstin, doc.gst_category)
+    doc.pan = validate_pan(doc)
+
+    if called_from_ui:
+        frappe.response.docs.append(doc)
+
+
+@frappe.whitelist()
+def validate_pan(doc):
     """
     - Set PAN from GSTIN if available.
     - Validate PAN.
     """
-    if doc.gstin and is_valid_pan(pan_from_gstin := doc.gstin[2:12]):
-        doc.pan = pan_from_gstin
+    pan = doc.pan and doc.pan.upper().strip()
+    if doc.gstin:
+        pan = pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
 
-    elif doc.pan and not is_valid_pan(doc.pan):
+    elif pan and not is_valid_pan(pan):
         frappe.throw(_("Please check the PAN."), title=_("Invalid PAN"))
+
+    return pan
 
 
 def set_docs_with_previous_gstin(doc, method=True):

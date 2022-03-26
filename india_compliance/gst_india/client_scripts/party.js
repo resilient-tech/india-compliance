@@ -26,3 +26,28 @@ function update_gstin_in_other_documents(doctype) {
         },
     });
 }
+
+function validate_pan_and_gstin(doctype) {
+    frappe.ui.form.on(doctype, {
+        async gstin(frm) {
+            // TODO: remove below condition once event is changed to on `change`
+            if (!frm.doc.gstin || frm.doc.gstin.length < 15) return;
+
+            await frappe.call(
+                "india_compliance.gst_india.overrides.party.validate_pan_and_gstin",
+                { doc: frm.doc }
+            );
+            frm.refresh();
+        },
+        async pan(frm) {
+            // TODO: remove below condition once event is changed to on `change`
+            if (!frm.doc.pan || frm.doc.pan.length < 10) return;
+
+            const { message } = await frappe.call(
+                "india_compliance.gst_india.overrides.party.validate_pan",
+                { doc: frm.doc }
+            );
+            message && frm.set_value("pan", message);
+        },
+    });
+}
