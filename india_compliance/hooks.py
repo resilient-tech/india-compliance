@@ -10,6 +10,9 @@ app_email = "india.compliance@resilient.tech"
 app_license = "GNU General Public License (v3)"
 required_apps = ["erpnext"]
 
+after_install = "india_compliance.install.after_install"
+boot_session = "india_compliance.boot.set_bootinfo"
+
 doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
     "Sales Order": "gst_india/client_scripts/sales_order.js",
@@ -163,7 +166,6 @@ regional_overrides = {
 # ------------
 
 # before_install = "india_compliance.install.before_install"
-after_install = "india_compliance.install.after_install"
 
 # Uninstallation
 # ------------
