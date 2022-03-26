@@ -38,6 +38,12 @@ def validate_gstin(gstin, gst_category):
             )
         return
 
+    if gst_category == "Unregistered":
+        frappe.throw(
+            "GST Category seems to be incorrect. It cannot be Unregistered for party"
+            " with GSTIN",
+        )
+
     if not gst_category:
         frappe.throw(_("Please select a GST Category"), title=_("Invalid GST Category"))
 
@@ -61,6 +67,7 @@ def validate_gstin(gstin, gst_category):
             ).format(gst_category),
             title=_("Invalid GSTIN or GST Category"),
         )
+    return gstin
 
 
 def is_valid_pan(pan):
