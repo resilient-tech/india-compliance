@@ -37,7 +37,7 @@
 export default {
   computed: {
     subscription_details() {
-      return this.$store.state.account.subscription_details;
+      return this.$store.state.account.subscription_details || {};
     },
     balance_credits() {
       return this.subscription_details.balance_credits;
