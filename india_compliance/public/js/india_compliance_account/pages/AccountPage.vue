@@ -22,11 +22,11 @@
       <div class="card">
         <h3 class="title">Actions</h3>
         <ul class="links">
-          <li><a href="#">Show Usage</a></li>
-          <li><a href="#">Check API Status</a></li>
-          <li><a href="#">Community Forum</a></li>
-          <li><a href="#">Report a Bug</a></li>
-          <li><a href="#">Get API Suppor</a></li>
+          <a href="#"><li>Show Usage</li></a>
+          <a href="#"><li>Check API Status</li></a>
+          <a href="#"><li>Community Forum</li></a>
+          <a href="#"><li>Report a Bug</li></a>
+          <a href="#"><li>Get API Suppor</li></a>
         </ul>
       </div>
     </div>
@@ -120,12 +120,22 @@ export default {
 }
 
 .links li {
-  margin: 1.35em 0;
+  margin: 1.2em 0;
+  transition-duration: 0.3s;
 }
-.links li a {
+
+.links a {
   font-size: 1.3em;
   font-weight: 500;
   color: var(--text-light);
+}
+.links a:hover {
+  color: var(--text-color);
+  color: var(--primary);
+  text-decoration: none;
+}
+.links a:hover li {
+  margin-left: 0.3em;
 }
 
 @media (max-width: 992px) {
