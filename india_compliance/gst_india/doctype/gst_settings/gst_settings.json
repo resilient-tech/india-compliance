@@ -74,7 +74,8 @@
   {
    "fieldname": "api_secret",
    "fieldtype": "Password",
-   "label": "API Secret"
+   "label": "API Secret",
+   "read_only": 1
   },
   {
    "default": "0",
@@ -96,7 +97,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-07 05:12:46.816452",
+ "modified": "2022-03-26 15:09:26.535232",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
