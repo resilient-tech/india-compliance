@@ -47,7 +47,7 @@ frappe.ui.form.on(DOCTYPE, {
 
 	on_submit(frm) {
 		let settings = frappe.boot.gst_settings
-		if (frm.doc.ewaybill || !is_e_waybill_applicable(frm, settings.e_waybill_criteria)) return;
+		if (frm.doc.ewaybill || !settings.enable_api || !settings.generate_e_waybill_on_submit || !is_e_waybill_applicable(frm, settings.e_waybill_criteria)) return;
 		frappe.call({
 			method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_if_possible",
 			args: {
@@ -58,12 +58,3 @@ frappe.ui.form.on(DOCTYPE, {
 	}
 
 });
-
-
-function is_e_waybill_applicable(frm, e_waybill_criteria) {
-	if (frm.doc.base_grand_total < e_waybill_criteria) return false;
-	for (let item of frm.doc.items) {
-		if (!item.gst_hsn_code.startsWith("99")) return true;
-	}
-	return false;
-}

@@ -1,7 +1,6 @@
 function e_waybill_actions(doctype) {
     frappe.ui.form.on(doctype, {
         setup(frm) {
-            console.log("setup realtime");
             frappe.realtime.on("e_waybill_generated", function (data) {
                 if (
                     data.docname != frm.doc.name ||
@@ -20,7 +19,8 @@ function e_waybill_actions(doctype) {
             let settings = frappe.boot.gst_settings;
             if (
                 !settings.enable_api ||
-                !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+                !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) ||
+                !is_e_waybill_applicable(frm, settings.e_waybill_criteria)
             )
                 return;
 
@@ -470,3 +470,11 @@ Date.prototype.addHours = function (h) {
     this.setTime(this.getTime() + h * 60 * 60 * 1000);
     return this;
 };
+
+function is_e_waybill_applicable(frm, e_waybill_criteria) {
+    if (frm.doc.base_grand_total < e_waybill_criteria) return false;
+    for (let item of frm.doc.items) {
+        if (!item.gst_hsn_code.startsWith("99")) return true;
+    }
+    return false;
+}
