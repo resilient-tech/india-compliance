@@ -1,5 +1,3 @@
-from thefuzz import process
-
 import frappe
 from frappe import _
 from frappe.utils import cstr
@@ -16,58 +14,72 @@ from india_compliance.gst_india.constants import (
 )
 
 
-def validate_gstin(gstin, gst_category):
+def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
     Validate GSTIN with following checks:
     - Length should be 15.
-    - GST Category for parties without GSTIN should be Unregistered or Overseas.
     - Validate GSTIN Check Digit.
-    - GSTIN of e-Commerce Operator (TCS) is not allowed.
+    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin parameter).
+    """
+
+    if not gstin:
+        return
+
+    gstin = gstin.upper().strip()
+
+    if len(gstin) != 15:
+        frappe.throw(
+            _("{0} must have 15 characters").format(label),
+            title=_("Invalid {0}").format(label),
+        )
+
+    validate_gstin_check_digit(gstin, label)
+
+    if is_tcs_gstin and not TCS.match(gstin):
+        frappe.throw(
+            _("Invalid format for e-Commerce Operator (TCS) GSTIN"),
+            title=_("Invalid GSTIN"),
+        )
+
+    return gstin
+
+
+def validate_gst_category(gst_category, gstin):
+    """
+    Validate GST Category with following checks:
+    - GST Category for parties without GSTIN should be Unregistered or Overseas.
     - GSTIN should match with the regex pattern as per GST Category of the party.
     """
-    gstin = gstin and gstin.upper().strip()
+
     if not gstin:
-        if gst_category and gst_category not in (
-            valid_categories := {"Unregistered", "Overseas"}
+        if gst_category not in (
+            categories_without_gstin := {"Unregistered", "Overseas"}
         ):
             frappe.throw(
                 _("GST Category should be one of {0}").format(
-                    ", ".join(valid_categories)
+                    " or ".join(
+                        frappe.bold(category) for category in categories_without_gstin
+                    )
                 ),
                 title=_("Invalid GST Category"),
             )
+
         return
 
     if gst_category == "Unregistered":
         frappe.throw(
-            "GST Category seems to be incorrect. It cannot be Unregistered for party"
-            " with GSTIN",
-        )
-
-    if not gst_category:
-        frappe.throw(_("Please select a GST Category"), title=_("Invalid GST Category"))
-
-    if len(gstin) != 15:
-        frappe.throw(_("GSTIN must have 15 characters"), title=_("Invalid GSTIN"))
-
-    validate_gstin_check_digit(gstin)
-
-    if TCS.match(gstin):
-        frappe.throw(
-            _("GSTIN of e-Commerce Operator (TCS) cannot be used as Party GSTIN"),
-            title=_("Invalid GSTIN"),
+            "GST Category cannot be Unregistered for party with GSTIN",
         )
 
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
     if not valid_gstin_format.match(gstin):
         frappe.throw(
             _(
-                "GSTIN you have entered doesn't match for category {0}. Please make"
-                " sure you have entered the correct GSTIN and GST Category."
-            ).format(gst_category),
+                "The GSTIN you've entered doesn't match the format for GST Category"
+                " {0}. Please ensure you've entered the correct GSTIN and GST Category."
+            ).format(frappe.bold(gst_category)),
             title=_("Invalid GSTIN or GST Category"),
         )
-    return gstin
 
 
 def is_valid_pan(pan):
@@ -78,30 +90,6 @@ def read_data_file(file_name):
     file_path = frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
     with open(file_path, "r") as f:
         return f.read()
-
-
-def get_gst_state_details(state):
-    """
-    Get state and state number from GST State List.
-    If not found, throws and error with valid state sugession.
-
-    returns:
-      A tuple of (state, state_number)
-    """
-    states = {state.lower(): state for state in STATE_NUMBERS}
-    state = state.lower().strip()
-
-    if state not in states:
-        possible_state = process.extractOne(state, states)[0]
-        frappe.throw(
-            _(
-                "Did you mean {0}? Please update the state to appropriate Indian State."
-            ).format(frappe.bold(possible_state)),
-            title=_("Invalid State"),
-        )
-
-    state = states[state]
-    return (state, STATE_NUMBERS[state])
 
 
 def validate_gstin_check_digit(gstin, label="GSTIN"):

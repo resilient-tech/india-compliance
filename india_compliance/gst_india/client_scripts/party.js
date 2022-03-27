@@ -1,7 +1,9 @@
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
 function update_gstin_in_other_documents(doctype) {
     frappe.ui.form.on(doctype, {
         after_save(frm) {
-            // docs to be updated attached to previous response (validate)
+            // docs to be updated attached to previous response
             const { docs_with_previous_gstin, previous_gstin } = frappe.last_response;
             if (!docs_with_previous_gstin) return;
 
@@ -27,27 +29,52 @@ function update_gstin_in_other_documents(doctype) {
     });
 }
 
-function validate_pan_and_gstin(doctype) {
+function validate_gstin(doctype) {
     frappe.ui.form.on(doctype, {
-        async gstin(frm) {
-            // TODO: remove below condition once event is changed to on `change`
-            if (!frm.doc.gstin || frm.doc.gstin.length < 15) return;
+        gstin(frm) {
+            const { gstin } = frm.doc;
 
-            await frappe.call(
-                "india_compliance.gst_india.overrides.party.validate_pan_and_gstin",
-                { doc: frm.doc }
-            );
-            frm.refresh();
-        },
-        async pan(frm) {
-            // TODO: remove below condition once event is changed to on `change`
-            if (!frm.doc.pan || frm.doc.pan.length < 10) return;
+            // TODO: remove below condition once event is fixed in frappe
+            if (!gstin || gstin.length < 15) return;
 
-            const { message } = await frappe.call(
-                "india_compliance.gst_india.overrides.party.validate_pan",
-                { doc: frm.doc }
-            );
-            message && frm.set_value("pan", message);
-        },
+            if (gstin.length > 15) {
+                frappe.throw(__("GSTIN/UIN should be 15 characters long"));
+            }
+
+            frm.doc.gstin = gstin.trim().toUpperCase();
+            frm.refresh_field("gstin");
+
+            if (!frm.fields_dict.pan) return;
+
+            // extract PAN from GSTIN
+            const pan = frm.doc.gstin.slice(2, 12);
+
+            if (PAN_REGEX.test(pan)) {
+                frm.doc.pan = pan;
+                frm.refresh_field("pan");
+            }
+        }
+    });
+}
+
+function validate_pan(doctype) {
+    frappe.ui.form.on(doctype, {
+        pan(frm) {
+            let { pan } = frm.doc;
+            if (!pan || pan.length < 10) return;
+
+            if (pan.length > 10) {
+                frappe.throw(__("PAN should be 10 characters long"));
+            }
+
+            pan = pan.trim().toUpperCase();
+
+            if (!PAN_REGEX.test(pan)) {
+                frappe.throw(__("Invalid PAN format"));
+            }
+
+            frm.doc.pan = pan;
+            frm.refresh_field("pan");
+        }
     });
 }

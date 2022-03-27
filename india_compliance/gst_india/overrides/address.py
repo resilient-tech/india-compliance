@@ -1,39 +1,55 @@
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.utils import get_gst_state_details, validate_gstin
+from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.utils import validate_gst_category, validate_gstin
 
 
 def validate(doc, method=None):
-    doc.gstin = doc.gstin.upper().strip()
-    validate_gstin(doc.gstin, doc.gst_category)
-    validate_gst_state(doc)
+    doc.gstin = validate_gstin(doc.gstin)
+    validate_gst_category(doc.gst_category, doc.gstin)
+    validate_overseas_category(doc)
+    validate_state(doc)
 
 
-def validate_gst_state(doc):
+def validate_overseas_category(doc):
+    if doc.country == "India" and doc.gst_category == "Overseas":
+        frappe.throw(
+            _("Cannot set GST Category as Overseas for Indian Address"),
+            title=_("Invalid GST Category"),
+        )
+
+
+def validate_state(doc):
     """
     - Validate State to be a mandatory field.
     - Set GST State and State Number.
     - Update State with GST State.
     - Validate GST State Number with GSTIN.
     """
-    if doc.gst_category == "Overseas" or doc.country != "India":
+    if doc.country != "India":
         return
 
     if not doc.state:
         frappe.throw(
-            _("State is Mandatory in Address for India."),
+            _("State is a required field for Indian Address"),
             title=_("Missing Mandatory Field"),
         )
 
-    state, state_number = get_gst_state_details(doc.state)
-    doc.state = doc.gst_state = state
-    doc.gst_state_number = state_number
+    if doc.state not in STATE_NUMBERS:
+        frappe.throw(
+            _("Please select a valid State from available options"),
+            title=_("Invalid State"),
+        )
+
+    # TODO: deprecate these fields
+    doc.gst_state = doc.state
+    doc.gst_state_number = STATE_NUMBERS[doc.state]
 
     if doc.gstin and doc.gst_state_number != doc.gstin[:2]:
         frappe.throw(
-            _("First 2 digits of GSTIN should match with State number {0}.").format(
-                doc.gst_state_number
-            ),
+            _(
+                "First 2 digits of GSTIN should match with State Number for {0} ({1})"
+            ).format(frappe.bold(doc.gst_state), doc.gst_state_number),
             title=_("Invalid GSTIN or State"),
         )

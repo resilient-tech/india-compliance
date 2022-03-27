@@ -126,7 +126,10 @@ invoice_gst_fields = [
         "insert_after": "export_type",
         "print_hide": 1,
         "allow_on_submit": 1,
-        "options": "Original for Recipient\nDuplicate for Transporter\nDuplicate for Supplier\nTriplicate for Supplier",
+        "options": (
+            "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
+            " Supplier\nTriplicate for Supplier"
+        ),
         "translatable": 0,
     },
     {
@@ -162,7 +165,11 @@ invoice_gst_fields = [
         "print_hide": 1,
         "depends_on": "eval:doc.is_return == 1",
         "length": 45,
-        "options": "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization of Provisional assessment\n07-Others",
+        "options": (
+            "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
+            " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization of"
+            " Provisional assessment\n07-Others"
+        ),
         "translatable": 0,
     },
 ]
@@ -206,7 +213,11 @@ purchase_invoice_itc_fields = [
         "fieldtype": "Select",
         "insert_after": "reason_for_issuing_document",
         "print_hide": 1,
-        "options": "Input Service Distributor\nImport Of Service\nImport Of Capital Goods\nITC on Reverse Charge\nIneligible As Per Section 17(5)\nIneligible Others\nAll Other ITC",
+        "options": (
+            "Input Service Distributor\nImport Of Service\nImport Of Capital Goods\nITC"
+            " on Reverse Charge\nIneligible As Per Section 17(5)\nIneligible"
+            " Others\nAll Other ITC"
+        ),
         "default": "All Other ITC",
         "translatable": 0,
     },
@@ -554,7 +565,10 @@ si_ewaybill_fields = [
         "fieldname": "ewaybill",
         "label": "e-Waybill No.",
         "fieldtype": "Data",
-        "depends_on": "eval:((doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled === 0)",
+        "depends_on": (
+            "eval:((doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled"
+            " === 0)"
+        ),
         "allow_on_submit": 1,
         "insert_after": "tax_id",
         "translatable": 0,
@@ -633,7 +647,10 @@ si_einvoice_fields = [
         "insert_after": "customer",
         "no_copy": 1,
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"], doc.gst_category) && doc.irn_cancelled === 0',
+        "depends_on": (
+            'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"],'
+            " doc.gst_category) && doc.irn_cancelled === 0"
+        ),
         "translatable": 0,
     },
     {
@@ -770,7 +787,7 @@ si_einvoice_fields = [
 
 party_fields = [
     {
-        "fieldname": "tax_details",
+        "fieldname": "tax_details_section",
         "label": "Tax Details",
         "fieldtype": "Section Break",
         "insert_after": "companies",
@@ -779,11 +796,11 @@ party_fields = [
         "fieldname": "gstin",
         "label": "GSTIN / UIN",
         "fieldtype": "Data",
-        "insert_after": "tax_details",
+        "insert_after": "tax_details_section",
         "translatable": 0,
     },
     {
-        "fieldname": "tax_column_break",
+        "fieldname": "tax_details_column_break",
         "fieldtype": "Column Break",
         "insert_after": "pan",
     },
@@ -791,7 +808,7 @@ party_fields = [
         "fieldname": "gst_category",
         "label": "GST Category",
         "fieldtype": "Select",
-        "insert_after": "tax_column_break",
+        "insert_after": "tax_details_column_break",
         "options": gst_category_options,
         "default": default_gst_category,
         "reqd": 1,
@@ -826,7 +843,7 @@ address_fields = [
         "translatable": 0,
     },
     {
-        "fieldname": "tax_column_break",
+        "fieldname": "tax_details_column_break",
         "fieldtype": "Column Break",
         "insert_after": "gst_state",
     },
@@ -926,7 +943,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_transporter_id",
             "label": "GST Transporter ID",
             "fieldtype": "Data",
-            "insert_after": "supplier_type",
+            "insert_after": "gst_category",
             "depends_on": "eval:doc.is_transporter",
             "read_only_depends_on": "eval:doc.gstin",
             "translatable": 0,
