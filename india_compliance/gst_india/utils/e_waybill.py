@@ -33,7 +33,7 @@ def download_e_waybill_json(doctype, docnames):
 def generate_e_waybill_json(doctype, docnames):
     ewb_data = frappe._dict(
         {
-            "version": "1.0.0421",
+            "version": "1.0.0621",
             "billLists": [],
         }
     )
@@ -453,7 +453,6 @@ class EWaybillData(GSTInvoiceData):
         self.post_validate_invoice()
 
         ewb_data = self.get_invoice_map(json_download, sandbox)
-        ewb_data.replace("'", "")
         return json.loads(ewb_data)
 
     def pre_validate_invoice(self):
@@ -483,7 +482,7 @@ class EWaybillData(GSTInvoiceData):
             if not self.doc.get(fieldname):
                 frappe.throw(
                     _("{} is required to generate e-Waybill JSON").format(
-                        self.doc.meta.get_label(fieldname)
+                        frappe.unscrub(fieldname)
                     ),
                     exc=frappe.MandatoryError,
                 )
@@ -498,45 +497,66 @@ class EWaybillData(GSTInvoiceData):
             frappe.throw(
                 msg=_(
                     "e-Waybill cannot be generated as all items are with service HSN"
-                    " codes."
+                    " codes"
                 ),
                 title=_("Invalid Data"),
             )
 
         if self.doc.get("is_return") and self.doc.get("gst_category") == "Overseas":
             frappe.throw(
-                msg=_("Return/Credit Note is not supported for Overseas e-Waybill."),
+                msg=_("Return/Credit Note is not supported for Overseas e-Waybill"),
                 title=_("Invalid Data"),
             )
 
-        # check if transporter_id or vehicle number is present
         transport_mode = self.doc.get("mode_of_transport")
-        missing_transport_details = (
-            road_transport := (transport_mode == "Road")
-            and not self.doc.get("vehicle_number")
-            or (transport_mode == "Ship")
-            and not self.doc.get("vehicle_number")
-            and not self.doc.get("lr_no")
-            or transport_mode in ["Rail", "Air"]
-            and not self.doc.get("lr_no")
-        )
-        if missing_transport_details:
-            if not self.doc.get("gst_transporter_id"):
+        if not self.doc.get("gst_transporter_id"):
+            if not transport_mode:
                 frappe.throw(
                     msg=_(
-                        "Please enter {0} to generate e-Waybill.".format(
-                            "Vehicle Number" if road_transport else "LR Number"
-                        )
+                        "Transporter or Mode of Transport is required to generate"
+                        " e-Waybill"
                     ),
                     title=_("Invalid Data"),
                 )
-            else:
+            elif transport_mode == "Road" and not self.doc.get("vehicle_no"):
+                frappe.throw(
+                    msg=_("Vehicle Number is required to generate e-Waybill"),
+                    title=_("Invalid Data"),
+                )
+            elif (
+                transport_mode == "Ship"
+                and not self.doc.get("vehicle_no")
+                and not self.doc.get("lr_no")
+            ):
+                frappe.throw(
+                    msg=_(
+                        "Vehicle Number and L/R No is required to generate e-Waybill"
+                    ),
+                    title=_("Invalid Data"),
+                )
+            elif transport_mode in ["Rail", "Air"] and not self.doc.get("lr_no"):
+                frappe.throw(
+                    msg=_("L/R No. is required to generate e-Waybill"),
+                    title=_("Invalid Data"),
+                )
+        else:
+            missing_transport_details = (
+                not transport_mode
+                or transport_mode == "Road"
+                and not self.doc.get("vehicle_no")
+                or (transport_mode == "Ship")
+                and not self.doc.get("vehicle_no")
+                and not self.doc.get("lr_no")
+                or transport_mode in ["Rail", "Air"]
+                and not self.doc.get("lr_no")
+            )
+            if missing_transport_details:
                 self.generate_part_a = True
 
         if len(self.doc.items) > 250:
             # TODO: Add support for HSN Summary
             frappe.throw(
-                msg=_("e-Waybill cannot be generated for more than 250 items."),
+                msg=_("e-Waybill cannot be generated for more than 250 items"),
                 title=_("Invalid Data"),
             )
 
@@ -548,6 +568,9 @@ class EWaybillData(GSTInvoiceData):
                 "supply_type": "O",
                 "sub_supply_type": 1,
                 "document_type": "INV",
+                "main_hsn_code": self.doc.items[0].get(
+                    "gst_hsn_code"
+                ),  # instead get first HSN code with goods
             }
         )
 
@@ -653,12 +676,13 @@ class EWaybillData(GSTInvoiceData):
             "transMode": {self.invoice_details.mode_of_transport},
             "transDistance": {self.invoice_details.distance},
             "transporterName": "{self.invoice_details.transporter_name}",
-            "transporterId": "{self.invoice_details.transporter_gstin}",
+            "transporterId": "{self.invoice_details.gst_transporter_id}",
             "transDocNo": "{self.invoice_details.lr_no}",
             "transDocDate": "{self.invoice_details.lr_date_str}",
             "vehicleNo": "{self.invoice_details.vehicle_no}",
             "vehicleType": "{self.invoice_details.vehicle_type}",
-            "itemList": [{self.item_list}]
+            "itemList": [{self.item_list}],
+            "mainHsnCode": "{self.invoice_details.main_hsn_code}"
         }}"""
 
         if json_download:
@@ -675,6 +699,7 @@ class EWaybillData(GSTInvoiceData):
     def get_item_map(self):
         return f"""
         {{
+            "itemNo": {self.item_details.item_no},
             "productName": "",
             "productDesc": "{self.item_details.item_name}",
             "hsnCode": "{self.item_details.hsn_code}",
