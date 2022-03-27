@@ -51,7 +51,8 @@ frappe.ui.form.on(DOCTYPE, {
 		frappe.call({
 			method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_if_possible",
 			args: {
-				doc: frm.doc
+				doctype: frm.doc.doctype,
+				docname: frm.doc.name
 			},
 			callback: () => frm.reload_doc()
 		})
