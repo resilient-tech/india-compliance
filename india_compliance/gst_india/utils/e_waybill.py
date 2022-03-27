@@ -64,8 +64,8 @@ DATE_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 
 
 @frappe.whitelist()
-def generate_e_waybill_if_possible(doc):
-    doc = frappe._dict(json.loads(doc))
+def generate_e_waybill_if_possible(doctype, docname):
+    doc = frappe.get_doc(doctype, docname)
     _generate_e_waybill(doc, throw=False)
 
 
@@ -99,7 +99,7 @@ def _generate_e_waybill(doc, throw=True):
         )
         return False
 
-    result = EWaybillAPI(doc.company_gstin).generate_ewaybill(data)
+    result = EWaybillAPI(doc.company_gstin).generate_e_waybill(data)
     frappe.publish_realtime(
         "e_waybill_generated",
         {"doctype": doc.doctype, "docname": doc.name, "alert": result.alert},
@@ -108,17 +108,19 @@ def _generate_e_waybill(doc, throw=True):
     e_waybill = str(result.get("ewayBillNo"))
     e_waybill_date = datetime.strptime(result.get("ewayBillDate"), DATE_FORMAT)
     valid_upto = datetime.strptime(result.get("validUpto"), DATE_FORMAT)
-    doc_values = {
-        "ewaybill": e_waybill,
-        "e_waybill_validity": valid_upto,
-    }
+    doc.db_set(
+        {
+            "ewaybill": e_waybill,
+            "e_waybill_validity": valid_upto,
+        }
+    )
     log_values = {
         "e_waybill_number": e_waybill,
         "e_waybill_date": e_waybill_date,
         "valid_upto": valid_upto,
         "linked_with": doc.name,
     }
-    create_or_update_e_waybill_log(doc, doc_values, log_values)
+    create_or_update_e_waybill_log(doc, None, log_values)
     print_e_waybill_as_per_settings(doc)
 
 
@@ -258,7 +260,7 @@ def update_transporter(doc, dialog):
 
 def print_e_waybill_as_per_settings(doc, force_get_data=False):
     get_data, attach = frappe.get_cached_value(
-        "GST Settings", ("get_data_for_print", "attach_ewaybill_print")
+        "GST Settings", "GST Settings", ("get_data_for_print", "attach_ewaybill_print")
     )
     if attach:
         _attach_or_print_e_waybill(doc, "attach")
@@ -308,10 +310,10 @@ def get_e_waybill_data(e_waybill, company_gstin):
     )
     qr_base64 = pyqrcode.create(qr_text).png_as_base64_str(scale=5, quiet_zone=1)
     frappe.db.set_value(
-        "Ewaybill Log",
+        "e-Waybill Log",
         e_waybill,
         {
-            "ewaybill_result": json.dumps(result, indent=4),
+            "data": json.dumps(result, indent=4),
             "qr_base64": qr_base64,
             "is_latest_data": 1,
         },
@@ -351,12 +353,13 @@ def delete_e_waybill_pdf(doctype, docname, e_waybill):
 
 
 def create_or_update_e_waybill_log(doc, doc_values, log_values, comment=None):
-    frappe.db.set_value(doc.doctype, doc.name, doc_values)
+    if doc_values:
+        frappe.db.set_value(doc.doctype, doc.name, doc_values)
 
     if "name" in log_values:
-        e_waybill_doc = frappe.get_doc("Ewaybill Log", log_values.pop("name"))
+        e_waybill_doc = frappe.get_doc("e-Waybill Log", log_values.pop("name"))
     else:
-        e_waybill_doc = frappe.get_doc({"doctype": "Ewaybill Log"})
+        e_waybill_doc = frappe.get_doc({"doctype": "e-Waybill Log"})
     e_waybill_doc.update(log_values)
     e_waybill_doc.save(ignore_permissions=True)
 

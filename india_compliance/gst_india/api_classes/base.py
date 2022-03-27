@@ -59,7 +59,7 @@ class BaseAPI:
     def _make_request(
         self,
         method,
-        endpoint=None,
+        endpoint="",
         params=None,
         headers=None,
         json=None,
@@ -116,7 +116,7 @@ class BaseAPI:
             if isinstance(success_value, str):
                 success_value = sbool(success_value)
 
-            if not success_value or not self.handle_failed_response(response_json):
+            if not success_value and not self.handle_failed_response(response_json):
                 frappe.throw(
                     response_json.get("message")
                     # Fallback to response body if message is not present
