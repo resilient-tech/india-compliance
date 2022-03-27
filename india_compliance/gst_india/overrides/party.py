@@ -57,7 +57,7 @@ def set_docs_with_previous_gstin(doc, method=True):
 
 def get_docs_with_previous_gstin(gstin, doctype, docname):
     docs_with_previous_gstin = {}
-    for dt in ("Address", "Supplier", "Customer"):
+    for dt in ("Address", "Supplier", "Customer", "Company"):
         for doc in frappe.get_all(dt, filters={"gstin": gstin}):
             if doc.name == docname and doctype == dt:
                 continue
