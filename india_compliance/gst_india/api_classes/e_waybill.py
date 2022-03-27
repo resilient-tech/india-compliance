@@ -16,13 +16,13 @@ class EWaybillAPI(BaseAPI):
     def post(self, action, json):
         return super().post(params={"action": action}, json=json)
 
-    def get_ewaybill(self, ewaybill_number):
+    def get_e_waybill(self, ewaybill_number):
         return self.get("getewaybill", params={"ewbNo": ewaybill_number})
 
-    def generate_ewaybill(self, data):
+    def generate_e_waybill(self, data):
         return self.post("GENEWAYBILL", data)
 
-    def cancel_ewaybill(self, data):
+    def cancel_e_waybill(self, data):
         return self.post("CANEWB", data)
 
     def update_vehicle_info(self, data):

@@ -21,6 +21,7 @@ class GSTInvoiceData:
         self.gst_accounts = get_gst_accounts_by_type(
             self.doc.company, gst_account_type="Output"
         ).get("Output")
+        self.generate_part_a = False
 
     def get_invoice_details(self):
         self.invoice_details = frappe._dict()
@@ -56,7 +57,7 @@ class GSTInvoiceData:
             tax_amount = row.base_tax_amount_after_discount_amount
             self.invoice_details.update({f"total_{tax}_amount": tax_amount})
 
-    def get_transporter_details(self, generate_pary_a=False):
+    def get_transporter_details(self):
         # TODO: Move `generate_pary_a` to generate e-Waybill function.
         # transporterId is mandatory for generating Part A Slip and transDocNo, transMode and vehicleNo should be blank
         # generate_pary_a = (
@@ -71,7 +72,7 @@ class GSTInvoiceData:
             else 0
         )
 
-        if generate_pary_a:
+        if self.generate_part_a:
             self.invoice_details.update(
                 {
                     "mode_of_transport": None,
@@ -138,7 +139,7 @@ class GSTInvoiceData:
             self.item_details = frappe._dict()
             self.update_item_details(row)
             self.get_item_tax_details(row)
-            self.item_list.append(self.get_item_map(self.item_details) or {})
+            self.item_list.append(self.get_item_map() or {})
 
         self.item_list = ", ".join(self.item_list)
 

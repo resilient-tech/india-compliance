@@ -7,7 +7,10 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.model.document import Document
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
-from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_FIELDS
+from india_compliance.gst_india.constants.e_waybill import (
+    E_WAYBILL_API_FIELDS,
+    E_WAYBILL_FIELDS,
+)
 from india_compliance.gst_india.utils import delete_custom_fields
 
 
@@ -16,9 +19,10 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
 
     def on_update(self):
+        frappe.enqueue(self.create_or_delete_fields)
+
         # clear session boot cache
         frappe.cache().delete_keys("bootinfo")
-        frappe.enqueue(self.create_or_delete_fields)
 
     def validate_gst_accounts(self):
         account_list = []
@@ -63,5 +67,8 @@ class GSTSettings(Document):
 
         if self.enable_e_waybill:
             create_custom_fields(E_WAYBILL_FIELDS, update=True)
+            if self.enable_api:
+                create_custom_fields(E_WAYBILL_API_FIELDS, update=True)
         else:
             delete_custom_fields(E_WAYBILL_FIELDS)
+            delete_custom_fields(E_WAYBILL_API_FIELDS)

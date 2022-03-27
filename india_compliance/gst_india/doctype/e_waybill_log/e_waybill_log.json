@@ -20,7 +20,9 @@
   "cancel_reason_code",
   "cancel_remark",
   "section_break_31",
-  "data"
+  "is_latest_data",
+  "data",
+  "qr_base64"
  ],
  "fields": [
   {
@@ -92,11 +94,23 @@
    "fieldtype": "Code",
    "label": "Data",
    "options": "JSON"
+  },
+  {
+   "fieldname": "qr_base64",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "QR Text"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_latest_data",
+   "fieldtype": "Check",
+   "label": "Is Latest Data"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-03-24 17:35:13.096573",
+ "modified": "2022-03-26 17:22:46.366825",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
