@@ -3,44 +3,42 @@ import json
 import frappe
 from frappe import _, bold
 
-from india_compliance.gst_india.utils import is_valid_pan, validate_gstin
+from india_compliance.gst_india.utils import (
+    is_valid_pan,
+    validate_gst_category,
+    validate_gstin,
+)
 
 
 def validate_party(doc, method=None):
-    validate_pan_and_gstin(doc, called_from_ui=False)
+    doc.gstin = validate_gstin(doc.gstin)
+    validate_gst_category(doc.gst_category, doc.gstin)
+    validate_pan(doc)
     set_docs_with_previous_gstin(doc)
 
 
-@frappe.whitelist()
-def validate_pan_and_gstin(doc, called_from_ui=True):
-    if called_from_ui:
-        doc = frappe.parse_json(doc)
-
-    doc.gstin = validate_gstin(doc.gstin, doc.gst_category)
-    doc.pan = validate_pan(doc)
-
-    if called_from_ui:
-        frappe.response.docs.append(doc)
-
-
-@frappe.whitelist()
 def validate_pan(doc):
     """
     - Set PAN from GSTIN if available.
     - Validate PAN.
     """
-    pan = doc.pan and doc.pan.upper().strip()
+
     if doc.gstin:
-        pan = pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
+        doc.pan = (
+            pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
+        )
+        return
 
-    elif pan and not is_valid_pan(pan):
-        frappe.throw(_("Please check the PAN."), title=_("Invalid PAN"))
+    if not doc.pan:
+        return
 
-    return pan
+    doc.pan = doc.pan.upper().strip()
+    if not is_valid_pan(doc.pan):
+        frappe.throw(_("Invalid PAN format"))
 
 
 def set_docs_with_previous_gstin(doc, method=True):
-    if not frappe.request or frappe.flags.dont_set_docs_with_previous_gstin:
+    if not frappe.request or frappe.flags.in_update_docs_with_previous_gstin:
         return
 
     previous_gstin = (doc.get_doc_before_save() or {}).get("gstin")
@@ -71,9 +69,10 @@ def get_docs_with_previous_gstin(gstin, doctype, docname):
 
 @frappe.whitelist()
 def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gstin):
-    frappe.flags.dont_set_docs_with_previous_gstin = True
+    frappe.flags.in_update_docs_with_previous_gstin = True
     docs_with_previous_gstin = json.loads(docs_with_previous_gstin)
     ignored_docs = {}
+
     for doctype, docnames in docs_with_previous_gstin.items():
         for docname in docnames:
             try:
@@ -84,9 +83,12 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
             except frappe.PermissionError:
                 frappe.clear_last_message()
                 ignored_docs.setdefault(doctype, []).append(docname)
-            except Exception:
+            except Exception as e:
                 # TODO: handle this in better way
-                pass
+                frappe.clear_last_message()
+                frappe.throw(
+                    "Error updating {0} {1}:<br/> {2}".format(doctype, docname, str(e))
+                )
 
     if not ignored_docs:
         return frappe.msgprint(
@@ -94,8 +96,10 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
         )
 
     message = _(
-        "Following documents are not updated due to lack of Permission:<br/><br/>"
+        "Following documents could not be updated due to insufficient"
+        " permission:<br/><br/>"
     )
+
     for doctype, docnames in ignored_docs.items():
         if not docnames:
             continue

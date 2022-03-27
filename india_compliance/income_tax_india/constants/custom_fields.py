@@ -16,7 +16,10 @@ CUSTOM_FIELDS = {
             "label": "Component Type",
             "fieldtype": "Select",
             "insert_after": "description",
-            "options": "\nProvident Fund\nAdditional Provident Fund\nProvident Fund Loan\nProfessional Tax",
+            "options": (
+                "\nProvident Fund\nAdditional Provident Fund\nProvident Fund"
+                " Loan\nProfessional Tax"
+            ),
             "depends_on": 'eval:doc.type == "Deduction"',
             "translatable": 0,
         },
@@ -236,7 +239,10 @@ CUSTOM_FIELDS = {
             "label": "For Income Tax",
             "fieldtype": "Check",
             "insert_after": "finance_book_name",
-            "description": "If the asset is put to use for less than 180 days, the first Depreciation Rate will be reduced by 50%.",
+            "description": (
+                "If the asset is put to use for less than 180 days, the first"
+                " Depreciation Rate will be reduced by 50%."
+            ),
         }
     ],
 }

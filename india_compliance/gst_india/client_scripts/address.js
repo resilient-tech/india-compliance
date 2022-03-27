@@ -2,10 +2,17 @@
 
 const DOCTYPE = "Address";
 
+validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
+    country(frm) {
+        set_state_options(frm);
+    },
     async refresh(frm) {
+        set_state_options(frm);
+
+        // set default values for GST fields
         if (!frm.is_new() || !frm.doc.links || frm.doc.gstin) return;
 
         const row = frm.doc.links[0];
@@ -33,3 +40,13 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("gst_category", doc.gst_category || "");
     },
 });
+
+function set_state_options(frm) {
+    const state_field = frm.get_field("state");
+    if (frm.doc.country !== "India") {
+        state_field.set_data([]);
+        return;
+    }
+
+    state_field.set_data(state_field.df.options_for_india || []);
+}
