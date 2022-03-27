@@ -58,14 +58,6 @@ class GSTInvoiceData:
             self.invoice_details.update({f"total_{tax}_amount": tax_amount})
 
     def get_transporter_details(self):
-        # TODO: Move `generate_pary_a` to generate e-Waybill function.
-        # transporterId is mandatory for generating Part A Slip and transDocNo, transMode and vehicleNo should be blank
-        # generate_pary_a = (
-        #     self.doc.mode_of_transport == "Road"
-        #     and not self.doc.vehicle_no
-        #     or self.doc.mode_of_transport in ("Rail", "Air", "Ship")
-        #     and not self.doc.lr_no
-        # )
         distance = (
             cint(self.doc.distance)
             if self.doc.distance and self.doc.distance < 4000
@@ -75,27 +67,30 @@ class GSTInvoiceData:
         if self.generate_part_a:
             self.invoice_details.update(
                 {
-                    "mode_of_transport": None,
-                    "vehicle_type": None,
-                    "vehicle_no": None,
-                    "lr_no": None,
-                    "lr_date_str": None,
+                    "mode_of_transport": 1,
+                    "vehicle_type": "R",
+                    "vehicle_no": "",
+                    "lr_no": "",
+                    "lr_date_str": "",
                     "distance": distance,
-                    "transporter_gstin": self.doc.get("transporter_gstin", default=""),
+                    "gst_transporter_id": self.doc.get("gst_transporter_id"),
+                    "transporter_name": self.doc.get("transporter_name", default=""),
                 }
             )
         else:
             self.invoice_details.update(
                 {
-                    "mode_of_transport": TRANSPORT_MODES.get(
-                        self.doc.mode_of_transport
-                    ),
-                    "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type),
+                    "mode_of_transport": TRANSPORT_MODES.get(self.doc.mode_of_transport)
+                    or 1,
+                    "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
                     "vehicle_no": self.sanitize_data(self.doc.vehicle_no, "vehicle_no"),
                     "lr_no": self.sanitize_data(self.doc.lr_no, "special_text"),
                     "lr_date_str": format_date(self.doc.lr_date, self.DATE_FORMAT),
                     "distance": distance,
-                    "transporter_gstin": self.doc.get("transporter_gstin", default=""),
+                    "gst_transporter_id": self.doc.get(
+                        "gst_transporter_id", default=""
+                    ),
+                    "transporter_name": self.doc.get("transporter_name", default=""),
                 }
             )
 
@@ -146,6 +141,7 @@ class GSTInvoiceData:
     def update_item_details(self, row):
         self.item_details.update(
             {
+                "item_no": row.idx,
                 "qty": abs(row.qty),
                 "taxable_value": abs(row.taxable_value),
                 "hsn_code": int(row.gst_hsn_code),
