@@ -1,14 +1,14 @@
 {% include "india_compliance/gst_india/client_scripts/taxes.js" %}
 {% include "india_compliance/gst_india/client_scripts/einvoice.js" %}
-
 const DOCTYPE = "Sales Invoice";
 
 setup_auto_gst_taxation(DOCTYPE);
 highlight_gst_category(DOCTYPE);
 setup_einvoice_actions(DOCTYPE);
+e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
-	setup: function(frm) {
+	setup(frm) {
 		frm.set_query('transporter', function() {
 			return {
 				filters: {
@@ -26,7 +26,7 @@ frappe.ui.form.on(DOCTYPE, {
 		});
 	},
 
-	refresh: async function (frm) {
+	async refresh (frm) {
 		let settings = frappe.boot.gst_settings
 		if (frm.doc.ewaybill && frm.doc.ewaybill.length == 12 && settings.enable_api) {
 			frm.set_df_property('ewaybill', 'allow_on_submit', 0);
@@ -43,6 +43,18 @@ frappe.ui.form.on(DOCTYPE, {
 				docnames: frm.doc.name,
 			});
 		}, __("Create"));
+	},
+
+	on_submit(frm) {
+		let settings = frappe.boot.gst_settings
+		if (frm.doc.ewaybill || !is_e_waybill_applicable(frm, settings.e_waybill_criteria)) return;
+		frappe.call({
+			method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_if_possible",
+			args: {
+				doc: frm.doc
+			},
+			callback: () => frm.reload_doc()
+		})
 	}
 
 });

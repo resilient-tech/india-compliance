@@ -20,7 +20,10 @@ doctype_js = {
     "Purchase Order": "gst_india/client_scripts/purchase_order.js",
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
-    "Sales Invoice": "gst_india/client_scripts/sales_invoice.js",
+    "Sales Invoice": [
+        "public/js/e_waybill.js",
+        "gst_india/client_scripts/sales_invoice.js",
+    ],
     "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
     "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
     "Company": "gst_india/client_scripts/company.js",
