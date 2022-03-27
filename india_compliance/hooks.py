@@ -121,11 +121,11 @@ regional_overrides = {
     }
 }
 
-jenv = {
+jinja = {
     "methods": [
-        "add_spacing:india_compliance.gst_india.utils.add_spacing",
-        "get_state:india_compliance.gst_india.utils.get_state",
-        "get_sub_supply_type:india_compliance.gst_india.utils.get_sub_supply_type",
+        "india_compliance.gst_india.utils.add_spacing",
+        "india_compliance.gst_india.utils.get_state",
+        "india_compliance.gst_india.utils.get_sub_supply_type",
     ],
 }
 
