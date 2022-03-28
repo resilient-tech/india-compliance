@@ -5,7 +5,7 @@
 const DOCTYPE = "Sales Invoice";
 
 setup_auto_gst_taxation(DOCTYPE);
-fetch_and_highlight_gst_category(DOCTYPE);
+fetch_gst_category(DOCTYPE);
 setup_einvoice_actions(DOCTYPE);
 update_export_type(DOCTYPE);
 
