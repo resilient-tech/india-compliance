@@ -9,7 +9,11 @@ from india_compliance.gst_india.utils import read_data_file
 
 
 def after_install():
-    create_custom_fields(CUSTOM_FIELDS)
+    # Validation ignored for faster creation
+    # Will not fail if a core field with same name already exists (!)
+    # Will update a custom field if it already exists
+    create_custom_fields(CUSTOM_FIELDS, ignore_validate=True, update=True)
+
     create_property_setters()
     create_address_template()
     frappe.enqueue(create_hsn_codes, now=frappe.flags.in_test)
