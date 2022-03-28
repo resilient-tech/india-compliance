@@ -7,9 +7,9 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import (
+    GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
-    STATE_NUMBERS,
     TCS,
 )
 
@@ -222,7 +222,7 @@ def get_gst_accounts(
     gst_settings_accounts = frappe.get_all(
         "GST Account",
         filters=filters,
-        fields=["cgst_account", "sgst_account", "igst_account", "cess_account"],
+        fields=GST_ACCOUNT_FIELDS,
     )
 
     if (
@@ -240,3 +240,52 @@ def get_gst_accounts(
                 gst_accounts[val] = acc
 
     return gst_accounts
+
+
+def get_gst_accounts_by_type(company, account_type, throw=True):
+    """
+    :param company: Company to get GST Accounts for
+    :param account_type: Account Type to get GST Accounts for
+
+    Returns a dict of accounts:
+    {
+        "cgst_account": "ABC",
+        ...
+    }
+    """
+    if not company:
+        frappe.throw(_("Please set Company first"))
+
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+    for row in settings.gst_accounts:
+        if row.account_type == account_type and row.company == company:
+            return frappe._dict((key, row.get(key)) for key in GST_ACCOUNT_FIELDS)
+
+    if not throw:
+        return frappe._dict()
+
+    frappe.throw(
+        _(
+            "Could not retrieve GST Accounts of type {0} from GST Settings for"
+            " Company {1}"
+        ).format(frappe.bold(account_type), frappe.bold(company)),
+        frappe.DoesNotExistError,
+    )
+
+
+def get_all_gst_accounts(company):
+    if not company:
+        frappe.throw(_("Please set Company first"))
+
+    settings = frappe.get_cached_doc("GST Settings")
+
+    accounts_list = []
+    for row in settings.gst_accounts:
+        if row.company != company:
+            continue
+
+        for account in GST_ACCOUNT_FIELDS:
+            if gst_account := row.get(account):
+                accounts_list.append(gst_account)
+
+    return accounts_list
