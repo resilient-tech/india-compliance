@@ -16,8 +16,10 @@ class GSTInvoiceData:
     TAXES = ("cgst", "sgst", "igst", "cess", "cess_non_advol")
     DATE_FORMAT = "dd/mm/yyyy"
 
-    def __init__(self, doc):
+    def __init__(self, doc, json_download=False, sandbox=False):
         self.doc = doc
+        self.json_download = json_download
+        self.sandbox = sandbox
         self.gst_accounts = get_gst_accounts_by_type(
             self.doc.company, gst_account_type="Output"
         ).get("Output")
@@ -67,8 +69,8 @@ class GSTInvoiceData:
         if self.generate_part_a:
             self.invoice_details.update(
                 {
-                    "mode_of_transport": 1,
-                    "vehicle_type": "R",
+                    "mode_of_transport": 1 if self.json_download else '""',
+                    "vehicle_type": "R" if self.json_download else "",
                     "vehicle_no": "",
                     "lr_no": "",
                     "lr_date_str": "",
