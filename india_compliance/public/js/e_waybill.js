@@ -33,7 +33,8 @@ function e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
             }
-            let now = new Date();
+            const now = frappe.datetime.now_datetime(true);
+
             if (
                 frm.doc.docstatus == 1 &&
                 frm.doc.ewaybill &&
@@ -89,7 +90,11 @@ function attach_or_print_e_waybill(frm, action) {
             doc: frm.doc,
             action: action,
         },
-        callback: function (r) {
+        callback: function () {
+            if (action == "print"){
+                frappe.set_route("print", "e-waybill-log", frm.doc.ewaybill);
+                return;
+            }
             frm.reload_doc();
             if (action == "attach") {
                 frappe.msgprint(
@@ -418,8 +423,7 @@ function dialog_update_transporter(frm) {
                 label: "Update e-Waybill Print/Data",
                 fieldname: "update_e_waybill_data",
                 fieldtype: "Check",
-                default:
-                    frappe.boot.gst_settings.get_data_for_print == 1 ? 1 : 0,
+                default: frappe.boot.gst_settings.get_data_for_print || 0,
             },
         ],
         primary_action_label: "Update Transporter",
@@ -449,21 +453,11 @@ async function get_gst_tranporter_id(d) {
         transporter,
         "gst_transporter_id"
     );
-    d.fields_dict.gst_transporter_id.value = r.gst_transporter_id;
-    d.refresh();
+    d.set_value("gst_transporter_id", r.gst_transporter_id);
 }
 
 function get_date(text) {
-    text = text.split(/[\s:\/]+/);
-    let add_hours = text[6] == "PM" ? 12 : 0;
-    return new Date(
-        text[2],
-        parseInt(text[1]) - 1,
-        text[0],
-        parseInt(text[3]) + add_hours,
-        text[4],
-        text[5]
-    );
+  return moment(text, frappe.datetime.get_user_date_fmt() + " " + frappe.datetime.get_user_time_fmt())._d;
 }
 
 Date.prototype.addHours = function (h) {
