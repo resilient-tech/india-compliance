@@ -51,16 +51,14 @@ function get_tax_template(frm) {
 
 function fetch_and_highlight_gst_category(doctype) {
     const party_type = get_party_type(doctype);
-
-    let events = {
+    frappe.ui.form.on(doctype, {
         setup(frm) {
             // set gst category from party first, can be overwritten from address
             frm.add_fetch(party_type, "gst_category", "gst_category");
         },
         refresh: _highlight_gst_category,
         gst_category: _highlight_gst_category,
-    };
-    frappe.ui.form.on(doctype, events);
+    });
 }
 
 function _highlight_gst_category(frm) {
