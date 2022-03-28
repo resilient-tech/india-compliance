@@ -1,4 +1,4 @@
-function update_export_type(doctype) {
+export function update_export_type(doctype) {
     frappe.ui.form.on(doctype, {
         async gst_category(frm) {
             if (!["SEZ", "Overseas"].includes(frm.doc.gst_category)) {

@@ -1,5 +1,3 @@
-from . import __version__ as app_version
-
 app_name = "india_compliance"
 app_title = "India Compliance"
 app_publisher = "Resilient Tech"
@@ -13,20 +11,22 @@ required_apps = ["erpnext"]
 after_install = "india_compliance.install.after_install"
 boot_session = "india_compliance.boot.set_bootinfo"
 
+app_include_js = "india_compliance.bundle.js"
+
 doctype_js = {
-    "Item": "gst_india/client_scripts/item.js",
-    "Sales Order": "gst_india/client_scripts/sales_order.js",
-    "Delivery Note": "gst_india/client_scripts/delivery_note.js",
-    "Purchase Order": "gst_india/client_scripts/purchase_order.js",
-    "Journal Entry": "gst_india/client_scripts/journal_entry.js",
-    "Payment Entry": "gst_india/client_scripts/payment_entry.js",
-    "Sales Invoice": "gst_india/client_scripts/sales_invoice.js",
-    "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
-    "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
-    "Company": "gst_india/client_scripts/company.js",
-    "Address": "gst_india/client_scripts/address.js",
-    "Customer": "gst_india/client_scripts/customer.js",
-    "Supplier": "gst_india/client_scripts/supplier.js",
+    "Item": "item.bundle.js",
+    "Sales Order": "sales_order.bundle.js",
+    "Delivery Note": "delivery_note.bundle.js",
+    "Purchase Order": "purchase_order.bundle.js",
+    "Journal Entry": "journal_entry.bundle.js",
+    "Payment Entry": "payment_entry.bundle.js",
+    "Sales Invoice": "sales_invoice.bundle.js",
+    "Purchase Receipt": "purchase_receipt.bundle.js",
+    "Purchase Invoice": "purchase_invoice.bundle.js",
+    "Company": "company.bundle.js",
+    "Address": "address.bundle.js",
+    "Customer": "customer.bundle.js",
+    "Supplier": "supplier.bundle.js",
 }
 
 doctype_list_js = {
@@ -126,7 +126,6 @@ regional_overrides = {
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/india_compliance/css/india_compliance.css"
-# app_include_js = "/assets/india_compliance/js/india_compliance.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/india_compliance/css/india_compliance.css"

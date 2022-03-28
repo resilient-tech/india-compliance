@@ -1,4 +1,4 @@
-{% include "india_compliance/gst_india/client_scripts/party.js" %}
+import { validate_pan, validate_gstin, update_gstin_in_other_documents } from "./party";
 
 const DOCTYPE = "Supplier";
 
@@ -8,7 +8,8 @@ update_gstin_in_other_documents(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     gstin(frm) {
-        if (!frm.doc.is_transporter || !frm.doc.gstin || frm.doc.gstin.length < 15) return;
+        if (!frm.doc.is_transporter || !frm.doc.gstin || frm.doc.gstin.length < 15)
+            return;
         frm.set_value("gst_transporter_id", frm.doc.gstin);
-    }
-})
+    },
+});

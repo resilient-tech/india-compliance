@@ -1,4 +1,4 @@
-{% include "india_compliance/gst_india/client_scripts/party.js" %}
+import { validate_pan, validate_gstin, update_gstin_in_other_documents } from "./party";
 
 const DOCTYPE = "Company";
 

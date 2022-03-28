@@ -1,4 +1,4 @@
-function setup_auto_gst_taxation(doctype) {
+export function setup_auto_gst_taxation(doctype) {
     const events = Object.fromEntries(
         [
             "company_address",
@@ -6,7 +6,7 @@ function setup_auto_gst_taxation(doctype) {
             "customer_address",
             "supplier_address",
             "tax_category",
-        ].map((field) => [field, get_tax_template])
+        ].map(field => [field, get_tax_template])
     );
 
     frappe.ui.form.on(doctype, events);
@@ -28,7 +28,7 @@ function get_tax_template(frm) {
     ];
 
     const party_details = Object.fromEntries(
-        party_fields.map((field) => [field, frm.doc[field]])
+        party_fields.map(field => [field, frm.doc[field]])
     );
 
     frappe.call({
@@ -61,13 +61,7 @@ function fetch_gst_category(doctype) {
 
 function get_party_type(doctype) {
     return in_list(
-        [
-            "Quotation",
-            "Sales Order",
-            "Delivery Note",
-            "Sales Invoice",
-            "POS Invoice",
-        ],
+        ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"],
         doctype
     )
         ? "customer"

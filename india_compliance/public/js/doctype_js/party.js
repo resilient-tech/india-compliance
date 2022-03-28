@@ -1,6 +1,6 @@
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
-function update_gstin_in_other_documents(doctype) {
+export function update_gstin_in_other_documents(doctype) {
     frappe.ui.form.on(doctype, {
         after_save(frm) {
             // docs to be updated attached to previous response
@@ -29,7 +29,7 @@ function update_gstin_in_other_documents(doctype) {
     });
 }
 
-function validate_gstin(doctype) {
+export function validate_gstin(doctype) {
     frappe.ui.form.on(doctype, {
         gstin(frm) {
             const { gstin } = frm.doc;
@@ -53,11 +53,11 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
             }
-        }
+        },
     });
 }
 
-function validate_pan(doctype) {
+export function validate_pan(doctype) {
     frappe.ui.form.on(doctype, {
         pan(frm) {
             let { pan } = frm.doc;
@@ -75,6 +75,6 @@ function validate_pan(doctype) {
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
-        }
+        },
     });
 }
