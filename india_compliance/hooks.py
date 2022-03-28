@@ -27,6 +27,9 @@ doctype_js = {
     "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
     "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
     "Company": "gst_india/client_scripts/company.js",
+    "Address": "gst_india/client_scripts/address.js",
+    "Customer": "gst_india/client_scripts/customer.js",
+    "Supplier": "gst_india/client_scripts/supplier.js",
 }
 
 doctype_list_js = {
@@ -60,13 +63,16 @@ doc_events = {
     },
     "Address": {
         "validate": [
-            "india_compliance.gst_india.overrides.address.validate_gstin_for_india",
-            "india_compliance.gst_india.overrides.address.update_gst_category",
-        ]
+            "india_compliance.gst_india.overrides.address.validate",
+            "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
+        ],
+    },
+    ("Customer", "Supplier", "Company"): {
+        "validate": "india_compliance.gst_india.overrides.party.validate_party"
     },
     "Supplier": {
         "validate": (
-            "india_compliance.gst_india.overrides.supplier.validate_pan_for_india"
+            "india_compliance.gst_india.overrides.supplier.update_transporter_gstin"
         )
     },
     (
@@ -81,7 +87,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
         )
     },
-    ("Sales Order", "Delivery Note", "Sales Invoice",): {
+    ("Sales Order", "Delivery Note", "Sales Invoice"): {
         "validate": "india_compliance.gst_india.overrides.transaction.validate_hsn_code"
     },
     "Company": {
