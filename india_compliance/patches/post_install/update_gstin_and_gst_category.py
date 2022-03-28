@@ -6,7 +6,7 @@ import frappe
 def execute():
     update_pan_for_company()
     update_na_gstin()
-    update_gstin_gst_category()
+    update_gstin_and_gst_category()
     delete_custom_fields()
 
 
@@ -17,50 +17,52 @@ def update_pan_for_company():
 
     company = frappe.qb.DocType("Company")
     frappe.qb.update(company).set(company.pan, company.pan_details).where(
-        company.pan_details != ""
+        company.pan_details.notin(("", None))
     ).run()
 
 
 def update_na_gstin():
-    for doctype in {"Address", "Customer", "Supplier"}:
-        frappe.db.set_value(doctype, {"gstin": "NA"}, "gstin", None)
+    for doctype in ("Address", "Customer", "Supplier"):
+        frappe.db.set_value(doctype, {"gstin": "NA"}, "gstin", "")
 
 
-def update_gstin_gst_category():
+def update_gstin_and_gst_category():
     """
-    Bulk Update gst category for overseas in address.
-    Set GSTIN in Party where there is same gstin across all address.
+    Bulk Update GST Category for Overseas in Address.
+    Set GSTIN in Party where the GSTIN is same across all Addresses.
     Set GST Category in Address.
     """
-    # bulk update gst category for overseas
+
+    # bulk update GST Category for Overseas
     frappe.db.set_value(
         "Address",
-        {"gst_category": "", "gstin": "", "country": ("!=", "India")},
+        {
+            "gst_category": ("in", ("", None, "Unregistered")),
+            "country": ("!=", "India"),
+        },
         "gst_category",
         "Overseas",
     )
 
-    # join Address and Party
-    dynamic_links = frappe.qb.DocType("Dynamic Link")
-    address = frappe.qb.DocType("Address")
-    all_address_list = (
-        frappe.qb.from_(address)
-        .join(dynamic_links)
-        .on(address.name == dynamic_links.parent)
-        .where(dynamic_links.parenttype == "Address")
-        .select(
-            address.name,
-            address.gstin,
-            address.gst_category,
-            dynamic_links.link_doctype,
-            dynamic_links.link_name,
-        )
-        .run(as_dict=True)
+    # get all Addresses with linked party
+    all_addresses = frappe.get_all(
+        "Address",
+        fields=(
+            "name",
+            "gstin",
+            "gst_category",
+            "`tabDynamic Link`.link_doctype",
+            "`tabDynamic Link`.link_name",
+        ),
+        filters={
+            "link_doctype": ("!=", ""),
+            "link_name": ("!=", ""),
+        },
     )
 
-    # group by doctype, docname
+    # party-wise addresses
     address_map = {}
-    for address in all_address_list:
+    for address in all_addresses:
         address_map.setdefault((address.link_doctype, address.link_name), []).append(
             address
         )
@@ -68,35 +70,43 @@ def update_gstin_gst_category():
     new_gstins = {}
     new_gst_categories = {}
     print_warning = False
+
     for doctype in ("Customer", "Supplier", "Company"):
-        for doc in frappe.get_all(doctype, fields=("name", "gstin", "gst_category")):
-            address_list = address_map.get((doctype, doc.name))
+        for party in frappe.get_all(doctype, fields=("name", "gstin", "gst_category")):
+            address_list = address_map.get((doctype, party.name))
             if not address_list:
                 continue
 
             # in case user has custom gstin field in party
-            default_gstin = doc.gstin
-            if not doc.gstin:
-                # update gstin in party only where there is one gstin per party
-                gstins = {addr.gstin for addr in address_list}
-                if len(gstins) > 1:
-                    print_warning = True
-                    continue
+            default_gstin = party.gstin
 
-                default_gstin = next(iter(gstins), None)
-                new_gstins.setdefault((doctype, default_gstin), []).append(doc.name)
+            if not default_gstin and (
+                gstins := {address.gstin for address in address_list}
+            ):
+                # update gstin in party only where there is one gstin per party
+                if len(gstins) == 1:
+                    default_gstin = next(iter(gstins))
+                    new_gstins.setdefault((doctype, default_gstin), []).append(
+                        party.name
+                    )
+                else:
+                    print_warning = True
 
             for address in address_list:
-                gst_category = doc.gst_category
-                if (
-                    address.gstin
-                    and address.gstin != default_gstin
-                    and address.gst_category == "Unregistered"
-                ):
+                # User may have already set GST category in Address
+                if address.gst_category != "Unregistered":
+                    continue
+
+                # update GST Category in Address from party
+                gst_category = party.gst_category
+
+                # GST category may be incorrect, set to empty
+                if address.gstin and address.gstin != default_gstin:
                     gst_category = ""
+                    print_warning = True
 
                 new_gst_categories.setdefault((doctype, gst_category), []).append(
-                    doc.name
+                    party.name
                 )
 
     for (doctype, gstin), docnames in new_gstins.items():
@@ -109,9 +119,10 @@ def update_gstin_gst_category():
 
     if print_warning:
         click.secho(
-            "We have identified multiple GSTINs for a few parties and couldnot set"
-            " default GSTIN/GST Category there. Please check for parties without GSTINs"
-            " or address without GST Category and set accordingly.",
+            "We have identified multiple GSTINs for a few parties and couldn't set"
+            " newly created fields automatically for these. Please check for parties"
+            " without GSTINs or addresses without GST Category and set approporiate"
+            " values.",
             fg="yellow",
         )
 

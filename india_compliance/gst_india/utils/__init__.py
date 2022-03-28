@@ -154,14 +154,22 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
     return hsn_tax, hsn_taxable_amount
 
 
-def get_place_of_supply(doc, doctype):
+def get_place_of_supply(party_details, doctype=None):
+    """
+    :param party_details: A frappe._dict or document containing fields related to party
+    """
+
+    if not doctype:
+        # Expect document object
+        doctype = party_details.doctype
+
     if not frappe.get_meta("Address").has_field("gst_state"):
         return
 
     if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
-        address_name = doc.customer_address or doc.company_address
+        address_name = party_details.customer_address or party_details.company_address
     elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
-        address_name = doc.shipping_address or doc.supplier_address
+        address_name = party_details.shipping_address or party_details.supplier_address
 
     if address_name:
         address = frappe.db.get_value(
@@ -170,8 +178,11 @@ def get_place_of_supply(doc, doctype):
             ["gst_state", "gst_state_number", "gstin"],
             as_dict=1,
         )
+
         if address and address.gst_state and address.gst_state_number:
-            doc.gstin = address.gstin
+            # TODO: bad idea to set value in getter
+            party_details.gstin = address.gstin
+
             return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
 
 

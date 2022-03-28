@@ -8,14 +8,20 @@ from india_compliance.gst_india.utils import validate_gst_category, validate_gst
 def validate(doc, method=None):
     doc.gstin = validate_gstin(doc.gstin)
     validate_gst_category(doc.gst_category, doc.gstin)
-    validate_overseas_category(doc)
+    validate_overseas_gst_category(doc)
     validate_state(doc)
 
 
-def validate_overseas_category(doc):
+def validate_overseas_gst_category(doc):
     if doc.country == "India" and doc.gst_category == "Overseas":
         frappe.throw(
             _("Cannot set GST Category as Overseas for Indian Address"),
+            title=_("Invalid GST Category"),
+        )
+
+    if doc.country != "India" and doc.gst_category != "Overseas":
+        frappe.throw(
+            _("GST Category should be set to Overseas for Address outside India"),
             title=_("Invalid GST Category"),
         )
 

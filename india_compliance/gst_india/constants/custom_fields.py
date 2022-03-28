@@ -9,7 +9,7 @@ gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
 
 
-item_fields = [
+transaction_item_fields = [
     {
         "fieldname": "gst_hsn_code",
         "label": "HSN/SAC",
@@ -569,8 +569,8 @@ si_ewaybill_fields = [
         "label": "e-Waybill No.",
         "fieldtype": "Data",
         "depends_on": (
-            "eval:((doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled"
-            " === 0)"
+            "eval: "
+            "(doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled === 0"
         ),
         "allow_on_submit": 1,
         "insert_after": "tax_id",
@@ -820,59 +820,56 @@ party_fields = [
 ]
 
 company_fields = deepcopy(party_fields)
-company_fields[0].update({"insert_after": "parent_company"})
-
-address_fields = [
-    {
-        "fieldname": "tax_details",
-        "label": "Tax Details",
-        "fieldtype": "Section Break",
-        "insert_after": "disabled",
-    },
-    {
-        "fieldname": "gstin",
-        "label": "GSTIN / UIN",
-        "fieldtype": "Data",
-        "insert_after": "tax_details",
-        "translatable": 0,
-    },
-    {
-        "fieldname": "gst_state",
-        "label": "GST State",
-        "fieldtype": "Select",
-        "options": state_options,
-        "insert_after": "gstin",
-        "read_only": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "tax_details_column_break",
-        "fieldtype": "Column Break",
-        "insert_after": "gst_state",
-    },
-    {
-        "fieldname": "gst_category",
-        "label": "GST Category",
-        "fieldtype": "Select",
-        "insert_after": "tax_column_break",
-        "options": gst_category_options,
-        "default": default_gst_category,
-        "reqd": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "gst_state_number",
-        "label": "GST State Number",
-        "fieldtype": "Data",
-        "insert_after": "gst_category",
-        "read_only": 1,
-        "translatable": 0,
-    },
-]
-
+company_fields[0]["insert_after"] = "parent_company"
 
 CUSTOM_FIELDS = {
-    "Address": address_fields,
+    "Address": [
+        {
+            "fieldname": "tax_details",
+            "label": "Tax Details",
+            "fieldtype": "Section Break",
+            "insert_after": "disabled",
+        },
+        {
+            "fieldname": "gstin",
+            "label": "GSTIN / UIN",
+            "fieldtype": "Data",
+            "insert_after": "tax_details",
+            "translatable": 0,
+        },
+        {
+            "fieldname": "gst_state",
+            "label": "GST State",
+            "fieldtype": "Select",
+            "options": state_options,
+            "insert_after": "gstin",
+            "read_only": 1,
+            "translatable": 0,
+        },
+        {
+            "fieldname": "tax_details_column_break",
+            "fieldtype": "Column Break",
+            "insert_after": "gst_state",
+        },
+        {
+            "fieldname": "gst_category",
+            "label": "GST Category",
+            "fieldtype": "Select",
+            "insert_after": "tax_column_break",
+            "options": gst_category_options,
+            "default": default_gst_category,
+            "reqd": 1,
+            "translatable": 0,
+        },
+        {
+            "fieldname": "gst_state_number",
+            "label": "GST State Number",
+            "fieldtype": "Data",
+            "insert_after": "gst_category",
+            "read_only": 1,
+            "translatable": 0,
+        },
+    ],
     "Purchase Invoice": purchase_invoice_gst_category
     + invoice_gst_fields
     + purchase_invoice_itc_fields
@@ -922,14 +919,14 @@ CUSTOM_FIELDS = {
         "Purchase Order Item",
         "Purchase Receipt Item",
         "Material Request Item",
-    ): item_fields,
+    ): transaction_item_fields,
     (
         "Delivery Note Item",
         "Sales Invoice Item",
         "POS Invoice Item",
         "Purchase Invoice Item",
     ): [
-        *item_fields,
+        *transaction_item_fields,
         {
             "fieldname": "taxable_value",
             "label": "Taxable Value",
