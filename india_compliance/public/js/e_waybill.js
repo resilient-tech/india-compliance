@@ -38,8 +38,9 @@ function e_waybill_actions(doctype) {
             if (
                 frm.doc.docstatus == 1 &&
                 frm.doc.ewaybill &&
-                frm.doc.e_waybill_validity &&
-                get_date(frm.doc.e_waybill_validity) > now
+                ((frm.doc.e_waybill_validity &&
+                    get_date(frm.doc.e_waybill_validity) > now) ||
+                    !frm.doc.e_waybill_validity) // e-Waybill validitiy not set for Part A
             ) {
                 frm.add_custom_button(
                     "Update Vehicle Info",
@@ -91,7 +92,7 @@ function attach_or_print_e_waybill(frm, action) {
             action: action,
         },
         callback: function () {
-            if (action == "print"){
+            if (action == "print") {
                 frappe.set_route("print", "e-waybill-log", frm.doc.ewaybill);
                 return;
             }
@@ -457,7 +458,12 @@ async function get_gst_tranporter_id(d) {
 }
 
 function get_date(text) {
-  return moment(text, frappe.datetime.get_user_date_fmt() + " " + frappe.datetime.get_user_time_fmt())._d;
+    return moment(
+        text,
+        frappe.datetime.get_user_date_fmt() +
+            " " +
+            frappe.datetime.get_user_time_fmt()
+    )._d;
 }
 
 Date.prototype.addHours = function (h) {

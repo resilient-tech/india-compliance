@@ -41,7 +41,7 @@ def generate_e_waybill_json(doctype, docnames):
     for doc in docnames:
         doc = frappe.get_doc(doctype, doc)
         ewb_data.billLists.append(
-            EWaybillData(doc).get_e_waybill_data(json_download=True)
+            EWaybillData(doc, json_download=True).get_e_waybill_data()
         )
 
     return pretty_json(ewb_data)
@@ -107,7 +107,9 @@ def _generate_e_waybill(doc, throw=True):
 
     e_waybill = str(result.get("ewayBillNo"))
     e_waybill_date = datetime.strptime(result.get("ewayBillDate"), DATE_FORMAT)
-    valid_upto = datetime.strptime(result.get("validUpto"), DATE_FORMAT)
+    valid_upto = None
+    if result.get("validUpto"):
+        valid_upto = datetime.strptime(result.get("validUpto"), DATE_FORMAT)
     doc.db_set(
         {
             "ewaybill": e_waybill,
@@ -411,7 +413,7 @@ def validate_if_e_waybill_is_available(doc, dia=None, available=True):
 
 
 def validate_e_waybill_validity(doc):
-    if doc.e_waybill_validity < today():
+    if doc.e_waybill_validity and doc.e_waybill_validity < today():
         frappe.throw(
             _("e-Waybill cannot be cancelled/modified after its validity is over")
         )
@@ -444,7 +446,7 @@ class EWaybillData(GSTInvoiceData):
     def __init__(self, doc):
         super().__init__(doc)
 
-    def get_e_waybill_data(self, json_download=False, sandbox=False):
+    def get_e_waybill_data(self):
         self.pre_validate_invoice()
         self.get_item_list()
         self.get_invoice_details()
@@ -452,7 +454,7 @@ class EWaybillData(GSTInvoiceData):
         self.get_party_address_details()
         self.post_validate_invoice()
 
-        ewb_data = self.get_invoice_map(json_download, sandbox)
+        ewb_data = self.get_invoice_map()
         return json.loads(ewb_data)
 
     def pre_validate_invoice(self):
@@ -628,8 +630,8 @@ class EWaybillData(GSTInvoiceData):
         if self.doc.gst_category == "SEZ":
             self.billing_address.state_code = 96
 
-    def get_invoice_map(self, json_download, sandbox):
-        if sandbox:
+    def get_invoice_map(self):
+        if self.sandbox:
             self.invoice_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
@@ -685,7 +687,7 @@ class EWaybillData(GSTInvoiceData):
             "mainHsnCode": "{self.invoice_details.main_hsn_code}"
         }}"""
 
-        if json_download:
+        if self.json_download:
             different_keys = {  # keys that are different in json_download
                 "transactionType": "transType",
                 "actFromStateCode": "actualFromStateCode",
