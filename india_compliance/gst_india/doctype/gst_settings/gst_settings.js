@@ -40,6 +40,8 @@ frappe.ui.form.on('GST Settings', {
 		frm.set_value("get_data_for_print", 1);
 	},
 	after_save(frm) {
+		// sets latest values in frappe.boot for current user
+		// other users will still need to refresh page
 		frappe.boot.gst_settings = frm.doc;
 	}
 });
