@@ -49,28 +49,14 @@ function get_tax_template(frm) {
     });
 }
 
-function fetch_and_highlight_gst_category(doctype) {
+function fetch_gst_category(doctype) {
     const party_type = get_party_type(doctype);
     frappe.ui.form.on(doctype, {
         setup(frm) {
             // set gst category from party first, can be overwritten from address
             frm.add_fetch(party_type, "gst_category", "gst_category");
         },
-        refresh: _highlight_gst_category,
-        gst_category: _highlight_gst_category,
     });
-}
-
-function _highlight_gst_category(frm) {
-    const party_type = get_party_type(frm.doctype);
-    const party_field = frm.fields_dict[party_type];
-
-    if (!frm.doc[party_type] || !frm.doc.gst_category) {
-        party_field.set_description("");
-        return;
-    }
-
-    party_field.set_description(`<em>${frm.doc.gst_category}</em>`);
 }
 
 function get_party_type(doctype) {
