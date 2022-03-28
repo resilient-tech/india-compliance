@@ -9,7 +9,7 @@ from india_compliance.gst_india.utils import read_data_file
 
 
 def after_install():
-    create_custom_fields(CUSTOM_FIELDS, update=True)
+    create_custom_fields(CUSTOM_FIELDS)
     create_property_setters()
     create_address_template()
     frappe.enqueue(create_hsn_codes, now=frappe.flags.in_test)
