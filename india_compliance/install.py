@@ -11,6 +11,7 @@ from india_compliance.income_tax_india.setup import after_install as setup_incom
 POST_INSTALL_PATCHES = (
     "remove_consumer_gst_category",
     "update_gst_accounts",
+    "update_gstin_and_gst_category",
 )
 
 

@@ -1,3 +1,14 @@
+party_fields = [
+    {
+        "fieldname": "pan",
+        "label": "PAN",
+        "fieldtype": "Data",
+        "insert_after": "gstin",
+        "read_only_depends_on": "eval: doc.gstin",
+        "translatable": 0,
+    },
+]
+
 CUSTOM_FIELDS = {
     "Salary Component": [
         {
@@ -5,8 +16,12 @@ CUSTOM_FIELDS = {
             "label": "Component Type",
             "fieldtype": "Select",
             "insert_after": "description",
-            "options": "\nProvident Fund\nAdditional Provident Fund\nProvident Fund Loan\nProfessional Tax",
+            "options": (
+                "\nProvident Fund\nAdditional Provident Fund\nProvident Fund"
+                " Loan\nProfessional Tax"
+            ),
             "depends_on": 'eval:doc.type == "Deduction"',
+            "translatable": 0,
         },
     ],
     "Employee": [
@@ -17,6 +32,7 @@ CUSTOM_FIELDS = {
             "insert_after": "bank_ac_no",
             "print_hide": 1,
             "depends_on": 'eval:doc.salary_mode == "Bank"',
+            "translatable": 0,
         },
         {
             "fieldname": "pan_number",
@@ -24,6 +40,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "payroll_cost_center",
             "print_hide": 1,
+            "translatable": 0,
         },
         {
             "fieldname": "micr_code",
@@ -32,12 +49,14 @@ CUSTOM_FIELDS = {
             "insert_after": "ifsc_code",
             "print_hide": 1,
             "depends_on": 'eval:doc.salary_mode == "Bank"',
+            "translatable": 0,
         },
         {
             "fieldname": "provident_fund_account",
             "label": "Provident Fund Account",
             "fieldtype": "Data",
             "insert_after": "pan_number",
+            "translatable": 0,
         },
     ],
     "Company": [
@@ -86,6 +105,7 @@ CUSTOM_FIELDS = {
             "label": "80G Number",
             "fieldtype": "Data",
             "insert_after": "non_profit_section",
+            "translatable": 0,
         },
         {
             "fieldname": "with_effect_from",
@@ -93,18 +113,8 @@ CUSTOM_FIELDS = {
             "fieldtype": "Date",
             "insert_after": "company_80g_number",
         },
-        {
-            "fieldname": "non_profit_column_break",
-            "fieldtype": "Column Break",
-            "insert_after": "with_effect_from",
-        },
-        {
-            "fieldname": "pan_details",
-            "label": "PAN Number",
-            "fieldtype": "Data",
-            "insert_after": "non_profit_column_break",
-        },
-    ],
+    ]
+    + party_fields,
     "Employee Tax Exemption Declaration": [
         {
             "fieldname": "hra_section",
@@ -221,29 +231,18 @@ CUSTOM_FIELDS = {
             "depends_on": "house_rent_payment_amount",
         },
     ],
-    "Supplier": [
-        {
-            "fieldname": "pan",
-            "label": "PAN",
-            "fieldtype": "Data",
-            "insert_after": "supplier_type",
-        },
-    ],
-    "Customer": [
-        {
-            "fieldname": "pan",
-            "label": "PAN",
-            "fieldtype": "Data",
-            "insert_after": "customer_type",
-        }
-    ],
+    "Supplier": party_fields,
+    "Customer": party_fields,
     "Finance Book": [
         {
             "fieldname": "for_income_tax",
             "label": "For Income Tax",
             "fieldtype": "Check",
             "insert_after": "finance_book_name",
-            "description": "If the asset is put to use for less than 180 days, the first Depreciation Rate will be reduced by 50%.",
+            "description": (
+                "If the asset is put to use for less than 180 days, the first"
+                " Depreciation Rate will be reduced by 50%."
+            ),
         }
     ],
 }
