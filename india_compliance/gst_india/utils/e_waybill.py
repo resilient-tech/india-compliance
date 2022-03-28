@@ -125,7 +125,7 @@ def _generate_e_waybill(doc, throw=True):
 
 
 @frappe.whitelist()
-def cancel_ewaybill(doc, dialog):
+def cancel_e_waybill(doc, dialog):
     doc = frappe._dict(json.loads(doc))
     dialog = json.loads(dialog)
 
@@ -154,7 +154,7 @@ def cancel_ewaybill(doc, dialog):
         "cancel_date": datetime.strptime(result.get("cancelDate"), DATE_FORMAT),
     }
 
-    create_or_update_e_waybill_log(doc.doctype, doc.name, dt_values, log_values)
+    create_or_update_e_waybill_log(doc, dt_values, log_values)
 
 
 @frappe.whitelist()
@@ -205,11 +205,9 @@ def update_vehicle_info(doc, dialog):
         f" {dialog.get('mode_of_transport')} \n GST Vehicle Type:"
         f" {dialog.get('gst_vehicle_type')}"
     )
-    create_or_update_e_waybill_log(
-        doc.doctype, doc.name, doc_values, log_values, comment
-    )
+    create_or_update_e_waybill_log(doc, doc_values, log_values, comment)
 
-    if dialog.update_e_waybill_data:
+    if dialog.get("update_e_waybill_data"):
         print_e_waybill_as_per_settings(doc, force_get_data=True)
 
 
@@ -223,14 +221,14 @@ def update_transporter(doc, dialog):
     validate_e_waybill_validity(doc)
 
     data = {
-        "ewbNo": doc.company_gstin,
+        "ewbNo": doc.ewaybill,
         "transporterId": dialog.get("gst_transporter_id"),
     }
     result = EWaybillAPI(doc.company_gstin).update_transporter(data)
 
     # transporter_name can be different from transporter
     transporter_name = (
-        frappe.db.get_value("Supplier", dialog.transporter, "supplier_name")
+        frappe.db.get_value("Supplier", dialog.get("transporter"), "supplier_name")
         if dialog.get("transporter")
         else None
     )
@@ -249,7 +247,7 @@ def update_transporter(doc, dialog):
     )
     create_or_update_e_waybill_log(doc, doc_values, log_values, comment)
 
-    if dialog.update_e_waybill_data:
+    if dialog.get("update_e_waybill_data"):
         print_e_waybill_as_per_settings(doc, force_get_data=True)
 
 
@@ -260,7 +258,7 @@ def update_transporter(doc, dialog):
 
 def print_e_waybill_as_per_settings(doc, force_get_data=False):
     get_data, attach = frappe.get_cached_value(
-        "GST Settings", "GST Settings", ("get_data_for_print", "attach_ewaybill_print")
+        "GST Settings", "GST Settings", ("get_data_for_print", "attach_e_waybill_print")
     )
     if attach:
         _attach_or_print_e_waybill(doc, "attach")
@@ -270,7 +268,7 @@ def print_e_waybill_as_per_settings(doc, force_get_data=False):
 
 @frappe.whitelist()
 def attach_or_print_e_waybill(doc, action):
-    doc = json.loads(doc)
+    doc = frappe._dict(json.loads(doc))
     validate_doctype_for_e_waybill(doc)
     validate_if_e_waybill_is_available(doc)
     e_waybill_doc = validate_e_waybill_log(doc)
@@ -294,8 +292,6 @@ def _attach_or_print_e_waybill(doc, action=None, e_waybill_doc=None):
 
     if action == "attach":
         generate_e_waybill_pdf(doc.doctype, doc.name, doc.ewaybill, e_waybill_doc)
-    elif action == "print":
-        frappe.set_route("print", "e-waybill-log", doc.ewaybill)
 
 
 def get_e_waybill_data(e_waybill, company_gstin):
@@ -326,10 +322,9 @@ def generate_e_waybill_pdf(doctype, docname, e_waybill, e_waybill_doc=None):
     if not e_waybill_doc:
         e_waybill_doc = frappe.get_doc("e-Waybill Log", e_waybill)
 
-    html = frappe.get_print(
-        "e-Waybill Log", e_waybill, "Ewaybill", doc=e_waybill_doc, no_letterhead=1
+    pdf = frappe.get_print(
+        "e-Waybill Log", e_waybill, "e-Waybill", no_letterhead=True, as_pdf=True
     )
-    pdf = frappe.utils.pdf.get_pdf(html)
     save_file(f"{e_waybill}-{docname}.pdf", pdf, doctype, docname, is_private=1)
 
 
@@ -364,7 +359,7 @@ def create_or_update_e_waybill_log(doc, doc_values, log_values, comment=None):
     e_waybill_doc.save(ignore_permissions=True)
 
     if comment:
-        e_waybill_doc.add_comment(comment)
+        e_waybill_doc.add_comment(text=comment)
 
 
 def update_invoice(doc, dialog):
@@ -434,6 +429,8 @@ def validate_e_waybill_log(doc):
         frappe.throw(
             _("e-Waybill not found. Did you generate it using e-Waybill API's?")
         )
+
+    e_waybill_doc.doctype = doc.doctype
 
     return e_waybill_doc
 
