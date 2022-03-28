@@ -5,5 +5,5 @@
 const DOCTYPE = "Purchase Invoice";
 
 setup_auto_gst_taxation(DOCTYPE);
-process_gst_category(DOCTYPE);
+fetch_and_highlight_gst_category(DOCTYPE);
 update_export_type(DOCTYPE);

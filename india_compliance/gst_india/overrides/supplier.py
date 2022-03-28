@@ -23,16 +23,20 @@ def update_transporter_gstin(doc, method=None):
                 alert=True,
             )
 
-    elif doc.gst_transporter_id:
-        doc.gst_transporter_id = validate_gstin(
-            doc.gst_transporter_id, _("GST Transporter ID")
-        )
+        return
 
-        if not REGISTERED.match(doc.gst_transporter_id):
-            frappe.throw(
-                _(
-                    "The GST Transporter ID you've entered doesn't match the required"
-                    " format"
-                ),
-                title=_("Invalid GST Transporter ID"),
-            )
+    if not doc.gst_transporter_id:
+        return
+
+    doc.gst_transporter_id = validate_gstin(
+        doc.gst_transporter_id, _("GST Transporter ID")
+    )
+
+    if not REGISTERED.match(doc.gst_transporter_id):
+        frappe.throw(
+            _(
+                "The GST Transporter ID you've entered doesn't match the required"
+                " format"
+            ),
+            title=_("Invalid GST Transporter ID"),
+        )

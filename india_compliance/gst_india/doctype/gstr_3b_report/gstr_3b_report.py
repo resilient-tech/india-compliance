@@ -514,16 +514,15 @@ class GSTR3BReport(Document):
     def get_missing_field_invoices(self):
         missing_field_invoices = []
 
-        for doctype in ["Sales Invoice", "Purchase Invoice"]:
-
+        for doctype in ("Sales Invoice", "Purchase Invoice"):
             docnames = frappe.db.sql(
                 f"""
-                SELECT name FROM `tab{doctype}`
-                WHERE docstatus = 1 and is_opening = 'No'
-                and month(posting_date) = %s and year(posting_date) = %s
-                and company = %s and place_of_supply IS NULL and
-                gst_category != 'Overseas'
-            """,
+                    SELECT name FROM `tab{doctype}`
+                    WHERE docstatus = 1 and is_opening = 'No'
+                    and month(posting_date) = %s and year(posting_date) = %s
+                    and company = %s and place_of_supply IS NULL
+                    and gst_category != 'Overseas'
+                """,
                 (self.month_no, self.year, self.company),
                 as_dict=1,
             )  # nosec

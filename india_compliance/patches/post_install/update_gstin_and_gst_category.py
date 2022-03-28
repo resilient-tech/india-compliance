@@ -109,8 +109,9 @@ def update_gstin_gst_category():
 
     if print_warning:
         click.secho(
-            "We have identified multiple GSTINs for a few parties and couldnot set default GSTIN/GST Category there. "
-            "Please check for parties without GSTINs or address without GST Category and set accordingly.",
+            "We have identified multiple GSTINs for a few parties and couldnot set"
+            " default GSTIN/GST Category there. Please check for parties without GSTINs"
+            " or address without GST Category and set accordingly.",
             fg="yellow",
         )
 

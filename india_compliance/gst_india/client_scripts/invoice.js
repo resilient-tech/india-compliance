@@ -5,12 +5,21 @@ function update_export_type(doctype) {
                 return frm.set_value("export_type", "");
             }
 
-            const { message } = await frappe.call(
-                "india_compliance.gst_india.overrides.invoice.get_export_type"
-            );
+            // TODO: categories should not be visible if not enabled
+            const { gst_settings } = frappe.boot;
+            if (!gst_settings.enable_overseas_transactions) {
+                frappe.throw(
+                    // prettier-ignore
+                    __("Please enable SEZ / Overseas transactions in GST Settings first")
+                );
+            }
 
-            if (!message) return;
-            frm.set_value("export_type", message);
+            frm.set_value(
+                "export_type",
+                gst_settings.default_without_payment_of_tax
+                    ? "Without Payment of Tax"
+                    : "With Payment of Tax"
+            );
         },
     });
 }
