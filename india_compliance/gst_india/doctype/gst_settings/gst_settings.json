@@ -101,7 +101,7 @@
    "label": "Enable e-Waybill API"
   },
   {
-   "default": "0",
+   "default": "1",
    "description": "Fields and validations for these transactions will apply based on this setting",
    "fieldname": "enable_overseas_transactions",
    "fieldtype": "Check",
@@ -119,7 +119,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-27 01:06:39.750473",
+ "modified": "2022-03-28 03:13:52.982127",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
