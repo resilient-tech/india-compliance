@@ -10,7 +10,7 @@ from india_compliance.gst_india.utils import get_all_gst_accounts, get_place_of_
 
 
 def set_place_of_supply(doc, method=None):
-    doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+    doc.place_of_supply = get_place_of_supply(doc)
 
 
 def validate_hsn_code(doc, method=None):
@@ -96,10 +96,7 @@ def get_regional_round_off_accounts(company, account_list):
 
 @frappe.whitelist()
 def get_regional_address_details(party_details, doctype, company):
-    if isinstance(party_details, str):
-        party_details = json.loads(party_details)
-        party_details = frappe._dict(party_details)
-
+    party_details = frappe.parse_json(party_details)
     update_party_details(party_details, doctype)
 
     party_details.place_of_supply = get_place_of_supply(party_details, doctype)
