@@ -222,7 +222,7 @@ def get_gst_accounts(
     gst_settings_accounts = frappe.get_all(
         "GST Account",
         filters=filters,
-        fields=["cgst_account", "sgst_account", "igst_account", "cess_account"],
+        fields=GST_ACCOUNT_FIELDS,
     )
 
     if (
@@ -254,15 +254,15 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
     }
     """
     if not company:
-        frappe.throw(_("Please set a Company first"))
+        frappe.throw(_("Please set Company first"))
 
     settings = frappe.get_cached_doc("GST Settings", "GST Settings")
     for row in settings.gst_accounts:
         if row.account_type == account_type and row.company == company:
-            return frappe._dict({key: row.get(key) for key in GST_ACCOUNT_FIELDS})
+            return frappe._dict((key, row.get(key)) for key in GST_ACCOUNT_FIELDS)
 
     if not throw:
-        return {}
+        return frappe._dict()
 
     frappe.throw(
         _(
@@ -275,9 +275,9 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
 
 def get_all_gst_accounts(company):
     if not company:
-        frappe.throw(_("Please set a Company first"))
+        frappe.throw(_("Please set Company first"))
 
-    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+    settings = frappe.get_cached_doc("GST Settings")
 
     accounts_list = []
     for row in settings.gst_accounts:
@@ -285,9 +285,7 @@ def get_all_gst_accounts(company):
             continue
 
         for account in GST_ACCOUNT_FIELDS:
-            if not row.get(account):
-                continue
-
-            accounts_list.append(row.get(account))
+            if gst_account := row.get(account):
+                accounts_list.append(gst_account)
 
     return accounts_list

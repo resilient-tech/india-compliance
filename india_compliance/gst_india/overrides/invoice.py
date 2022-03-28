@@ -12,13 +12,11 @@ def update_taxable_values(doc, method=None):
 
     gst_accounts = get_gst_accounts(doc.company)
 
+    # fmt: off
     # Only considering sgst account to avoid inflating taxable value
-    gst_account_list = (
-        gst_accounts.get("sgst_account", [])
-        + gst_accounts.get("sgst_account", [])
-        + gst_accounts.get("igst_account", [])
-    )
+    gst_account_list = gst_accounts.get("sgst_account", []) + gst_accounts.get("igst_account", [])
 
+    # fmt: on
     additional_taxes = 0
     total_charges = 0
     item_count = 0
