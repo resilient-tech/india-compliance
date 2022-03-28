@@ -39,7 +39,7 @@ function get_tax_template(frm) {
             company: frm.doc.company,
         },
         debounce: 2000,
-        callback: function (r) {
+        callback(r) {
             if (r.message) {
                 frm.set_value("taxes_and_charges", r.message.taxes_and_charges);
                 frm.set_value("taxes", r.message.taxes);
@@ -49,21 +49,16 @@ function get_tax_template(frm) {
     });
 }
 
-function process_gst_category(doctype) {
+function fetch_and_highlight_gst_category(doctype) {
+    const party_type = get_party_type(doctype);
+
     let events = {
+        setup(frm) {
+            // set gst category from party first, can be overwritten from address
+            frm.add_fetch(party_type, "gst_category", "gst_category");
+        },
         refresh: _highlight_gst_category,
         gst_category: _highlight_gst_category,
-    };
-
-    const party_type = get_party_type(doctype);
-    events[party_type] = function (frm) {
-        if (frm.doc.gst_category || frm.doc[`${party_type}_address`]) return;
-        update_gst_category(party_type, frm);
-    };
-
-    events[`${party_type}_address`] = function (frm) {
-        if (frm.doc.gst_category || !frm.doc[party_type]) return;
-        update_gst_category(party_type, frm);
     };
     frappe.ui.form.on(doctype, events);
 }
@@ -79,6 +74,7 @@ function _highlight_gst_category(frm) {
 
     party_field.set_description(`<em>${frm.doc.gst_category}</em>`);
 }
+
 function get_party_type(doctype) {
     return in_list(
         [
@@ -92,15 +88,4 @@ function get_party_type(doctype) {
     )
         ? "customer"
         : "supplier";
-}
-
-function update_gst_category(party_type, frm) {
-    frappe.model.get_value(
-        frappe.unscrub(party_type),
-        frm.doc[party_type],
-        "gst_category",
-        function (r) {
-            frm.set_value("gst_category", r.gst_category);
-        }
-    );
 }
