@@ -39,8 +39,8 @@ doc_events = {
     },
     "Sales Invoice": {
         "validate": [
-            "india_compliance.gst_india.overrides.sales_invoice.validate_document_name",
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
+            "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",
         ]
     },
     "Purchase Invoice": {

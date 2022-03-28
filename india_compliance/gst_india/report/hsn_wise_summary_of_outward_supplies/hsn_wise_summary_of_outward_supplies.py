@@ -11,7 +11,7 @@ from frappe.utils import cstr, flt, getdate
 import erpnext
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
-from india_compliance.gst_india.utils import get_gst_accounts
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def execute(filters=None):
@@ -296,7 +296,7 @@ def download_json_file():
 def get_hsn_wise_json_data(filters, report_data):
 
     filters = frappe._dict(filters)
-    gst_accounts = get_gst_accounts(filters.company)
+    gst_accounts = get_gst_accounts_by_type(filters.company, "Output")
     data = []
     count = 1
 
@@ -315,17 +315,21 @@ def get_hsn_wise_json_data(filters, report_data):
             "csamt": 0.0,
         }
 
-        for account in gst_accounts.get("igst_account"):
-            row["iamt"] += flt(hsn.get(frappe.scrub(cstr(account)), 0.0), 2)
+        row["iamt"] += flt(
+            hsn.get(frappe.scrub(cstr(gst_accounts.get("igst_account"))), 0.0), 2
+        )
 
-        for account in gst_accounts.get("cgst_account"):
-            row["camt"] += flt(hsn.get(frappe.scrub(cstr(account)), 0.0), 2)
+        row["camt"] += flt(
+            hsn.get(frappe.scrub(cstr(gst_accounts.get("cgst_account"))), 0.0), 2
+        )
 
-        for account in gst_accounts.get("sgst_account"):
-            row["samt"] += flt(hsn.get(frappe.scrub(cstr(account)), 0.0), 2)
+        row["samt"] += flt(
+            hsn.get(frappe.scrub(cstr(gst_accounts.get("sgst_account"))), 0.0), 2
+        )
 
-        for account in gst_accounts.get("cess_account"):
-            row["csamt"] += flt(hsn.get(frappe.scrub(cstr(account)), 0.0), 2)
+        row["csamt"] += flt(
+            hsn.get(frappe.scrub(cstr(gst_accounts.get("cess_account"))), 0.0), 2
+        )
 
         data.append(row)
         count += 1

@@ -6,7 +6,7 @@ from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.utils import (
-    get_gst_accounts,
+    get_gst_accounts_by_type,
     get_itemised_tax_breakup_data,
     set_gst_state_and_state_number,
     validate_gstin_check_digit,
@@ -151,7 +151,9 @@ def get_item_list(data, doc, hsn_wise=False):
     for attr in ["cgstValue", "sgstValue", "igstValue", "cessValue", "OthValue"]:
         data[attr] = 0
 
-    gst_accounts = get_gst_accounts(doc.company, account_wise=True)
+    gst_accounts = get_gst_accounts_by_type(doc.company, "Output")
+    gst_accounts = {v: k for k, v in gst_accounts.items()}
+
     tax_map = {
         "sgst_account": ["sgstRate", "sgstValue"],
         "cgst_account": ["cgstRate", "cgstValue"],
@@ -207,7 +209,8 @@ def get_transport_details(data, doc):
         if not doc.gst_transporter_id and not doc.vehicle_no:
             frappe.throw(
                 _(
-                    "Either GST Transporter ID or Vehicle No is required if Mode of Transport is Road"
+                    "Either GST Transporter ID or Vehicle No is required if Mode of"
+                    " Transport is Road"
                 )
             )
         if doc.vehicle_no:
@@ -220,7 +223,8 @@ def get_transport_details(data, doc):
         if not doc.lr_no or not doc.lr_date:
             frappe.throw(
                 _(
-                    "Transport Receipt No and Date are mandatory for your chosen Mode of Transport"
+                    "Transport Receipt No and Date are mandatory for your chosen Mode"
+                    " of Transport"
                 )
             )
 
