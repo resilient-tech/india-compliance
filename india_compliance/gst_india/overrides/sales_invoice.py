@@ -30,7 +30,7 @@ def validate_gst_invoice(doc, method=None):
 def validate_invoice_number(doc):
     """Validate GST invoice number requirements."""
 
-    if len(doc.name > 16):
+    if len(doc.name) > 16:
         frappe.throw(
             _("GST Invoice Number cannot exceed 16 characters"),
             title=_("Invalid GST Invoice Number"),

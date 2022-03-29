@@ -452,7 +452,6 @@ class EWaybillData(GSTInvoiceData):
         self.get_invoice_details()
         self.get_transporter_details()
         self.get_party_address_details()
-        self.post_validate_invoice()
 
         ewb_data = self.get_invoice_map()
         return json.loads(ewb_data)
@@ -673,7 +672,7 @@ class EWaybillData(GSTInvoiceData):
             "igstValue": {self.invoice_details.total_igst_amount},
             "cessValue": {self.invoice_details.total_cess_amount},
             "TotNonAdvolVal": {self.invoice_details.total_cess_non_advol_amount},
-            "OthValue": {self.invoice_details.rounding_adjustment},
+            "OthValue": {self.invoice_details.rounding_adjustment + self.invoice_details.other_charges},
             "totInvValue": {self.invoice_details.base_grand_total},
             "transMode": {self.invoice_details.mode_of_transport},
             "transDistance": {self.invoice_details.distance},
