@@ -20,9 +20,10 @@ class GSTInvoiceData:
         self.doc = doc
         self.json_download = json_download
         self.sandbox = sandbox
-        self.gst_accounts = get_gst_accounts_by_type(
-            self.doc.company, gst_account_type="Output"
-        ).get("Output")
+        self.gst_accounts = {
+            v: k
+            for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
+        }
         self.generate_part_a = False
 
     def get_invoice_details(self):
@@ -54,10 +55,23 @@ class GSTInvoiceData:
             if not row.tax_amount or row.account_head not in self.gst_accounts:
                 continue
 
-            # Taxable value is including other charges. Hence, other charges not added.
-            tax = self.TAXES[self.gst_accounts.index(row.account_head)]
+            tax = self.gst_accounts[row.account_head][:-8]
             tax_amount = row.base_tax_amount_after_discount_amount
             self.invoice_details.update({f"total_{tax}_amount": tax_amount})
+
+        self.get_other_charges()
+
+    def get_other_charges(self):
+        totals = {"base_total", "rounding_adjustment"}.union(
+            f"total_{tax}_amount" for tax in self.TAXES
+        )
+        base_grand_total = 0
+        for total in totals:
+            base_grand_total += self.invoice_details.get(total)
+
+        self.invoice_details.other_charges = (
+            self.invoice_details.base_grand_total - base_grand_total
+        )
 
     def get_transporter_details(self):
         distance = (
@@ -111,24 +125,6 @@ class GSTInvoiceData:
                 title=_("Invalid Data"),
             )
 
-    def post_validate_invoice(self):
-        totals = {"base_total", "rounding_adjustment"}.union(
-            f"total_{tax}_amount" for tax in self.TAXES
-        )
-        base_grand_total = 0
-        for total in totals:
-            base_grand_total += self.invoice_details.get(total) or 0
-
-        # difference of upto Rs. 2 is allowed
-        if abs(self.invoice_details.get("base_grand_total") - base_grand_total) > 2:
-            frappe.throw(
-                msg=_(
-                    "Total Invoice value is not matching with sum of taxable-value and"
-                    " taxes."
-                ),
-                title=_("Invalid Data"),
-            )
-
     def get_item_list(self):
         self.item_list = []
 
@@ -161,7 +157,7 @@ class GSTInvoiceData:
                 continue
 
             # Remove '_account' from 'cgst_account'
-            tax = self.TAXES[self.gst_accounts.index(row.account_head)]
+            tax = self.gst_accounts[row.account_head][:-8]
             tax_rate = json.loads(row.item_wise_tax_detail).get(
                 item.item_code or item.item_name
             )[0]
