@@ -443,8 +443,8 @@ def validate_e_waybill_log(doc):
 
 
 class EWaybillData(GSTInvoiceData):
-    def __init__(self, doc):
-        super().__init__(doc)
+    def __init__(self, doc, json_download=False, sandbox=False):
+        super().__init__(doc, json_download, sandbox)
 
     def get_e_waybill_data(self):
         self.pre_validate_invoice()
