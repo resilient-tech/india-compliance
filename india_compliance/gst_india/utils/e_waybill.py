@@ -78,6 +78,7 @@ def generate_e_waybill(doctype, docname, dialog):
 
 
 def _generate_e_waybill(doc, throw=True):
+    validate_company(doc)
     validate_doctype_for_e_waybill(doc)
     validate_if_e_waybill_is_available(doc, available=False)
 
@@ -131,6 +132,7 @@ def cancel_e_waybill(doc, dialog):
     doc = frappe._dict(json.loads(doc))
     dialog = json.loads(dialog)
 
+    validate_company(doc)
     validate_doctype_for_e_waybill(doc)
     validate_if_e_waybill_is_available(doc, dialog)
     validate_e_waybill_validity(doc)
@@ -164,6 +166,7 @@ def update_vehicle_info(doc, dialog):
     doc = frappe._dict(json.loads(doc))
     dialog = json.loads(dialog)
 
+    validate_company(doc)
     validate_doctype_for_e_waybill(doc)
     validate_if_e_waybill_is_available(doc, dialog)
     validate_e_waybill_validity(doc)
@@ -218,6 +221,7 @@ def update_transporter(doc, dialog):
     doc = frappe._dict(json.loads(doc))
     dialog = json.loads(dialog)
 
+    validate_company(doc)
     validate_doctype_for_e_waybill(doc)
     validate_if_e_waybill_is_available(doc, dialog)
     validate_e_waybill_validity(doc)
@@ -386,6 +390,18 @@ def update_invoice(doc, dialog):
             "export_type": dialog.get("export_type"),
         },
     )
+
+
+def validate_company(doc):
+    country, gst_category = frappe.get_cached_value(
+        "Company", doc.company, ("country", "gst_category")
+    )
+    if country != "India":
+        frappe.throw(
+            _("Company selected is not an Indian Company"), title=_("Invalid Company")
+        )
+    if gst_category == "Unregistered":
+        frappe.throw(_("Please set the GST Category in the company master"))
 
 
 def validate_doctype_for_e_waybill(doc):

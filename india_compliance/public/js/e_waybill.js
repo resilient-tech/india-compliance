@@ -20,7 +20,8 @@ function e_waybill_actions(doctype) {
             if (
                 !settings.enable_api ||
                 !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) ||
-                !is_e_waybill_applicable(frm, settings.e_waybill_criteria)
+                !is_e_waybill_applicable(frm, settings.e_waybill_criteria) ||
+                !frm.company_gstin // means company is Indian and not Unregistered
             )
                 return;
 
@@ -346,8 +347,7 @@ function dialog_update_vehicle_info(frm) {
                 label: "Update e-Waybill Print/Data",
                 fieldname: "update_e_waybill_data",
                 fieldtype: "Check",
-                default:
-                    frappe.boot.gst_settings.get_data_for_print == 1 ? 1 : 0,
+                default: frappe.boot.gst_settings.get_data_for_print == 1 ? 1 : 0,
             },
             {
                 fieldtype: "Column Break",
@@ -369,9 +369,7 @@ function dialog_update_vehicle_info(frm) {
                 },
                 callback: function () {
                     frm.reload_doc();
-                    frappe.msgprint(
-                        __("Vehicle Information Updated Successfully.")
-                    );
+                    frappe.msgprint(__("Vehicle Information Updated Successfully."));
                 },
             });
             d.hide();
@@ -460,9 +458,7 @@ async function get_gst_tranporter_id(d) {
 function get_date(text) {
     return moment(
         text,
-        frappe.datetime.get_user_date_fmt() +
-            " " +
-            frappe.datetime.get_user_time_fmt()
+        frappe.datetime.get_user_date_fmt() + " " + frappe.datetime.get_user_time_fmt()
     )._d;
 }
 
