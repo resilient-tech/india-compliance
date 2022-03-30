@@ -8,16 +8,21 @@ GST_ACCOUNT_FIELDS = (
     "cess_non_advol_account",
 )
 
-GST_CATEGORIES = [
-    "Registered Regular",
-    "Registered Composition",
-    "Unregistered",
-    "SEZ",
-    "Overseas",
-    "Deemed Export",
-    "UIN Holders",
-    "Tax Deductor",
-]
+GST_CATEGORIES = {
+    "Registered Regular": "B2B",
+    "Registered Composition": "B2B",
+    "Unregistered": "B2C",
+    "SEZ": "SEZ",
+    "Overseas": "EXP",
+    "Deemed Export": "DEXP",
+    "UIN Holders": "B2B",
+    "Tax Deductor": "B2B",
+}
+
+EXPORT_TYPES = {
+    "With Payment of Tax": "WP",
+    "Without Payment of Tax": "WOP",
+}
 
 STATE_NUMBERS = {
     "Andaman and Nicobar Islands": "35",

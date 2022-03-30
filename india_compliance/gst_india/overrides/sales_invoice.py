@@ -1,3 +1,4 @@
+import imp
 import re
 
 import frappe
@@ -7,6 +8,7 @@ from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
 )
+from india_compliance.gst_india.utils.e_invoice import EInvoiceData
 
 # Maximum length must be 16 characters. First character must be alphanumeric.
 # Subsequent characters can be alphanumeric, hyphens or slashes.
@@ -24,7 +26,10 @@ def validate_gst_invoice(doc, method=None):
     validate_invoice_number(doc)
     validate_mandatory_fields(doc)
     validate_item_tax_template(doc)
+    validate_same_billing_company_gstin(doc)
+    validate_non_gst_items_with_gst_items(doc)
     validate_gst_accounts(doc)
+    validate_e_invoice_mandatory_fields(doc)
 
 
 def validate_invoice_number(doc):
@@ -47,7 +52,7 @@ def validate_invoice_number(doc):
 
 
 def validate_mandatory_fields(doc):
-    for field in ("company_gstin", "place_of_supply"):
+    for field in ("company_gstin", "place_of_supply", "gst_category"):
         if not doc.get(field):
             frappe.throw(
                 _(
@@ -82,6 +87,45 @@ def validate_item_tax_template(doc):
                 " following items:<br> {0}"
             ).format("<br>".join(items_with_duplicate_taxes)),
             title="Inconsistent Item Tax Templates",
+        )
+
+
+def validate_same_billing_company_gstin(doc):
+    if doc.company_gstin == doc.billing_address_gstin:
+        frappe.throw(
+            _(
+                "Billing Address GSTIN and Company GSTIN cannot be same. Please"
+                " change the Billing Address"
+            ),
+            title=_("Invalid Billing Address GSTIN"),
+        )
+
+
+def validate_non_gst_items_with_gst_items(doc):
+    """
+    Validate that non-GST items are not used with GST items
+    """
+
+    non_gst_items = []
+    gst_items = []
+
+    for row in doc.items:
+        if not row.item_code:
+            continue
+
+        if row.is_non_gst:
+            non_gst_items.append(bold(row.item_code))
+        else:
+            gst_items.append(row.item_code)
+
+    if non_gst_items and gst_items:
+        frappe.throw(
+            _(
+                "You should ideally create seperate invoice for GST Items and Non GST"
+                " Items. We have identified following Non GST Items in this"
+                " invoice:<br> {0}"
+            ).format("<br>".join(non_gst_items)),
+            title=_("Invalid Items"),
         )
 
 
@@ -146,5 +190,21 @@ def validate_gst_accounts(doc):
             frappe.throw(
                 _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
                     row.idx
+                )
+            )
+
+
+def validate_e_invoice_mandatory_fields(doc):
+    try:
+        EInvoiceData(doc).check_e_invoice_applicability()
+    except frappe.ValidationError:
+        frappe.clear_last_message()
+        return
+
+    for field in ("customer_address",):
+        if not doc.get(field):
+            frappe.throw(
+                _("{0} is a mandatory field for creating a e-Invoice").format(
+                    bold(_(doc.meta.get_label(field))),
                 )
             )

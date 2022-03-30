@@ -17,6 +17,7 @@ from india_compliance.gst_india.utils import delete_custom_fields
 class GSTSettings(Document):
     def validate(self):
         self.validate_gst_accounts()
+        self.validate_e_invoice_applicability_date()
 
     def on_update(self):
         frappe.enqueue(self.create_or_delete_fields)
@@ -72,3 +73,13 @@ class GSTSettings(Document):
         else:
             delete_custom_fields(E_WAYBILL_FIELDS)
             delete_custom_fields(E_WAYBILL_API_FIELDS)
+
+    def validate_e_invoice_applicability_date(self):
+        if not self.enable_api or not self.enable_e_invoice:
+            return
+
+        if not self.e_invoice_applicable_from:
+            frappe.throw(_("Applicable from date is mandatory for enabling e-Invoice"))
+
+        if self.e_invoice_applicable_from < "2021-01-01":
+            frappe.throw(_("Applicable from date cannot be before 2021-01-01"))

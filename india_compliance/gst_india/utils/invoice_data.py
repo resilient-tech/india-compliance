@@ -7,6 +7,7 @@ from frappe.utils import cint, flt, format_date, get_date_str, nowdate
 
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
+    UOMS,
     VEHICLE_TYPES,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -113,7 +114,7 @@ class GSTInvoiceData:
     def pre_validate_invoice(self):
         if get_date_str(self.doc.posting_date) > nowdate():
             frappe.throw(
-                msg=_("Posting Date cannot be greater than Today's Date."),
+                msg=_("Posting Date cannot be greater than Today's Date"),
                 title=_("Invalid Data"),
             )
         # compare posting date and lr date
@@ -121,7 +122,17 @@ class GSTInvoiceData:
             self.doc.lr_date
         ):
             frappe.throw(
-                msg=_("Posting Date cannot be greater than LR Date."),
+                msg=_("Posting Date cannot be greater than LR Date"),
+                title=_("Invalid Data"),
+            )
+
+    def validate_non_gst_items(self):
+        if self.doc.items[0].is_non_gst:
+            frappe.throw(
+                msg=_(
+                    "You have Non GST Items in this Invoice for which e-Waybill is not"
+                    " applicable"
+                ),
                 title=_("Invalid Data"),
             )
 
@@ -144,7 +155,7 @@ class GSTInvoiceData:
                 "taxable_value": abs(row.taxable_value),
                 "hsn_code": int(row.gst_hsn_code),
                 "item_name": self.sanitize_data(row.item_name, "text"),
-                "uom": "",
+                "uom": row.uom if UOMS.get(row.uom) else "OTH",
             }
         )
 

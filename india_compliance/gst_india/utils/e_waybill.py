@@ -473,6 +473,12 @@ class EWaybillData(GSTInvoiceData):
         return json.loads(ewb_data)
 
     def pre_validate_invoice(self):
+        super().pre_validate_invoice()
+        self.validate_e_waybill_applicability()
+        # TODO: Validate with e-Waybill settings
+        # TODO: Add Support for Delivery Note
+
+    def validate_e_waybill_applicability(self):
         """
         Validates:
         - Ewaybill already exists
@@ -481,11 +487,6 @@ class EWaybillData(GSTInvoiceData):
         - Basic transporter details must be present
         - Max 250 Items
         """
-        super().pre_validate_invoice()
-
-        # TODO: Validate with e-Waybill settings
-        # TODO: Add Support for Delivery Note
-
         if self.doc.get("ewaybill"):
             frappe.throw(_("E-Waybill already generated for this invoice"))
 
@@ -576,6 +577,8 @@ class EWaybillData(GSTInvoiceData):
                 msg=_("e-Waybill cannot be generated for more than 250 items"),
                 title=_("Invalid Data"),
             )
+
+        super().validate_non_gst_items()
 
     def update_invoice_details(self):
         super().update_invoice_details()
