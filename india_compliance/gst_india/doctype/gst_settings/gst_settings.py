@@ -84,7 +84,7 @@ class GSTSettings(Document):
             )
 
     def validate_e_invoice_applicability_date(self):
-        if not self.enable_api or not self.enable_e_invoicing:
+        if not self.enable_api or not self.enable_e_invoice:
             return
 
         if not self.e_invoice_applicable_from:

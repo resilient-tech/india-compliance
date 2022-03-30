@@ -19,7 +19,7 @@
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "e_invoice_section",
-  "enable_e_invoicing",
+  "enable_e_invoice",
   "auto_generate_e_invoice",
   "column_break_17",
   "e_invoice_applicable_from",
@@ -134,12 +134,12 @@
    "label": "e-Invoice"
   },
   {
-   "depends_on": "eval: doc.enable_e_invoicing",
+   "depends_on": "eval: doc.enable_e_invoice",
    "description": "Posting Date from which e-Invoicing features should be enabled",
    "fieldname": "e_invoice_applicable_from",
    "fieldtype": "Date",
    "label": "e-Invoice Applicable From",
-   "mandatory_depends_on": "eval: doc.enable_e_invoicing"
+   "mandatory_depends_on": "eval: doc.enable_e_invoice"
   },
   {
    "fieldname": "column_break_17",
@@ -172,23 +172,23 @@
   },
   {
    "default": "0",
-   "fieldname": "enable_e_invoicing",
-   "fieldtype": "Check",
-   "label": "Enable e-Invoicing"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval: doc.enable_e_invoicing",
+   "depends_on": "eval: doc.enable_e_invoice",
    "description": "e-Invoice will be automatically generated after Sales Invoice submission if applicable",
    "fieldname": "auto_generate_e_invoice",
    "fieldtype": "Check",
    "label": "Automatically Generate e-Invoice on Invoice Submission"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_invoice",
+   "fieldtype": "Check",
+   "label": "Enable e-Invoicing"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-30 06:17:50.827943",
+ "modified": "2022-03-30 09:45:39.559086",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
