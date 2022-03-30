@@ -13,22 +13,22 @@
   "min_hsn_digits",
   "e_waybill_section",
   "enable_e_waybill",
-  "e_waybill_criteria",
+  "e_waybill_threshold",
   "column_break_10",
-  "generate_e_waybill_on_submit",
-  "get_data_for_print",
+  "auto_generate_e_waybill",
+  "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "e_invoice_section",
-  "enable_e_invoice",
-  "generate_e_invoice_on_submit",
+  "enable_e_invoicing",
+  "auto_generate_e_invoice",
   "column_break_17",
   "e_invoice_applicable_from",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
+  "api_secret",
   "enable_api",
-  "credentials",
-  "api_secret"
+  "credentials"
  ],
  "fields": [
   {
@@ -98,7 +98,6 @@
    "label": "General"
   },
   {
-   "depends_on": "eval:doc.api_secret",
    "fieldname": "e_waybill_section",
    "fieldtype": "Section Break",
    "label": "e-Waybill"
@@ -107,7 +106,7 @@
    "default": "0",
    "fieldname": "enable_e_waybill",
    "fieldtype": "Check",
-   "label": "Enable e-Waybill"
+   "label": "Enable e-Waybill Features"
   },
   {
    "fieldname": "column_break_10",
@@ -115,43 +114,18 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill && doc.enable_api",
-   "description": "e-Waybill shall be generated on submit of Sales Invoice if criteria is met, and data is valid and available.",
-   "fieldname": "generate_e_waybill_on_submit",
-   "fieldtype": "Check",
-   "label": "Generate e-Waybill on Submit"
-  },
-  {
-   "default": "50000",
-   "depends_on": "eval: doc.enable_e_waybill",
-   "description": "You would be alerted if you are selling goods with total invoice value above this criteria and e-Waybill is not generated.",
-   "fieldname": "e_waybill_criteria",
-   "fieldtype": "Int",
-   "label": "e-Waybill Criteria"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill && doc.enable_api",
-   "description": "Would you like to make print for e-Waybill? This will automatically fetch data from NIC immediately after you generate e-Waybill for you to make prints for e-Waybill. This would lead to additional API requests.",
-   "fieldname": "get_data_for_print",
-   "fieldtype": "Check",
-   "label": "Get e-Waybill Data for Manual Print",
-   "read_only_depends_on": "eval: doc.attach_e_waybill_print"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval: doc.api_secret && doc.enable_e_waybill && doc.enable_api",
-   "description": "Would you like to save on your storage? Disable this to manually print the e-Waybill. Else, we shall attach the e-Waybill print on its generation automatically to the relevant document.",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "If checked, a PDF of e-Waybill will be automatically attached to the Invoice after generation",
    "fieldname": "attach_e_waybill_print",
    "fieldtype": "Check",
-   "label": "Attach e-Waybill Print on Generation"
+   "label": "Attach e-Waybill Print After Generation"
   },
   {
    "default": "0",
    "description": "Enable this to use API features including e-Waybill, e-Invoice or Autofill using Public APIs",
    "fieldname": "enable_api",
    "fieldtype": "Check",
-   "label": "Enable API"
+   "label": "Enable API Features"
   },
   {
    "depends_on": "eval: doc.enable_api",
@@ -160,35 +134,61 @@
    "label": "e-Invoice"
   },
   {
-   "default": "0",
-   "fieldname": "enable_e_invoice",
-   "fieldtype": "Check",
-   "label": "Enable e-Invoice"
-  },
-  {
-   "depends_on": "eval: doc.enable_e_invoice",
+   "depends_on": "eval: doc.enable_e_invoicing",
+   "description": "Posting Date from which e-Invoicing features should be enabled",
    "fieldname": "e_invoice_applicable_from",
    "fieldtype": "Date",
-   "label": "Applicable From",
-   "mandatory_depends_on": "eval: doc.enable_e_invoice"
-  },
-  {
-   "default": "0",
-   "depends_on": "eval: doc.enable_e_invoice",
-   "description": "e-Invoice shall be generated on submit of Sales Invoice if criteria is met, and data is valid and available.",
-   "fieldname": "generate_e_invoice_on_submit",
-   "fieldtype": "Check",
-   "label": "Generate e-Invoice on Submit"
+   "label": "e-Invoice Applicable From",
+   "mandatory_depends_on": "eval: doc.enable_e_invoicing"
   },
   {
    "fieldname": "column_break_17",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "50000",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "description": "When selling goods with total Sales Invoice value greater than this amount, a prompt will be displayed if e-Waybill hasn't been generated upon submission",
+   "fieldname": "e_waybill_threshold",
+   "fieldtype": "Currency",
+   "label": "Invoice Value Threshold for e-Waybill Generation"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "e-Waybill will be automatically generated after Sales Invoice submission if the invoice value threshold is met, and data is available and valid",
+   "fieldname": "auto_generate_e_waybill",
+   "fieldtype": "Check",
+   "label": "Automatically Generate e-Waybill on Invoice Submission"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "Automatically fetch e-Waybill data after e-Waybill generation for printing or logging purposes. This will lead to one additional API request.",
+   "fieldname": "fetch_e_waybill_data",
+   "fieldtype": "Check",
+   "label": "Fetch e-Waybill Data After Generation",
+   "read_only_depends_on": "eval: doc.attach_e_waybill_print"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_invoicing",
+   "fieldtype": "Check",
+   "label": "Enable e-Invoicing"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_invoicing",
+   "description": "e-Invoice will be automatically generated after Sales Invoice submission if applicable",
+   "fieldname": "auto_generate_e_invoice",
+   "fieldtype": "Check",
+   "label": "Automatically Generate e-Invoice on Invoice Submission"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-29 19:00:18.162546",
+ "modified": "2022-03-30 06:17:50.827943",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

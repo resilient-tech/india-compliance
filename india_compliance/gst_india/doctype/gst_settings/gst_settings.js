@@ -22,22 +22,9 @@ frappe.ui.form.on('GST Settings', {
 			return get_gstin_query(row.company);
 		});
 	},
-
-	filter_accounts: function(frm, account_field) {
-		frm.set_query(account_field, "gst_accounts", function(doc, cdt, cdn) {
-			var row = locals[cdt][cdn];
-			return {
-				filters: {
-					company: row.company,
-					account_type: "Tax",
-					is_group: 0
-				}
-			};
-		});
-	},
-	attach_e_waybill_print: function(frm) {
-		if(!frm.doc.attach_e_waybill_print || frm.doc.get_data_for_print) return;
-		frm.set_value("get_data_for_print", 1);
+	attach_e_waybill_print(frm) {
+		if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
+		frm.set_value("fetch_e_waybill_data", 1);
 	},
 	after_save(frm) {
 		// sets latest values in frappe.boot for current user

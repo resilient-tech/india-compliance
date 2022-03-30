@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.model.document import Document
+from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 from india_compliance.gst_india.constants.e_waybill import (
@@ -18,9 +19,17 @@ class GSTSettings(Document):
     def validate(self):
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
+        self.update_dependant_fields()
+
+    def update_dependant_fields(self):
+        if not self.api_secret:
+            self.enable_api = 0
+
+        if self.attach_e_waybill_print:
+            self.fetch_e_waybill_data = 1
 
     def on_update(self):
-        frappe.enqueue(self.create_or_delete_fields)
+        frappe.enqueue(self.update_custom_fields)
 
         # clear session boot cache
         frappe.cache().delete_keys("bootinfo")
@@ -62,24 +71,39 @@ class GSTSettings(Document):
 
             account_types.append(row.account_type)
 
-    def create_or_delete_fields(self):
-        if not self.has_value_changed("enable_e_waybill"):
-            return
+    def update_custom_fields(self):
+        if self.has_value_changed("enable_e_waybill"):
+            _update_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
+            _update_custom_fields(
+                E_WAYBILL_API_FIELDS, self.enable_api and self.enable_e_waybill
+            )
 
-        if self.enable_e_waybill:
-            create_custom_fields(E_WAYBILL_FIELDS, update=True)
-            if self.enable_api:
-                create_custom_fields(E_WAYBILL_API_FIELDS, update=True)
-        else:
-            delete_custom_fields(E_WAYBILL_FIELDS)
-            delete_custom_fields(E_WAYBILL_API_FIELDS)
+        if self.has_value_changed("enable_api"):
+            _update_custom_fields(
+                E_WAYBILL_API_FIELDS, self.enable_api and self.enable_e_waybill
+            )
 
     def validate_e_invoice_applicability_date(self):
-        if not self.enable_api or not self.enable_e_invoice:
+        if not self.enable_api or not self.enable_e_invoicing:
             return
 
         if not self.e_invoice_applicable_from:
-            frappe.throw(_("Applicable from date is mandatory for enabling e-Invoice"))
+            frappe.throw(
+                _("{0} is mandatory for enabling e-Invoice").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
+                )
+            )
 
-        if self.e_invoice_applicable_from < "2021-01-01":
-            frappe.throw(_("Applicable from date cannot be before 2021-01-01"))
+        if getdate(self.e_invoice_applicable_from) < getdate("2021-01-01"):
+            frappe.throw(
+                _("{0} cannot be before 2021-01-01").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
+                )
+            )
+
+
+def _update_custom_fields(fields, condition):
+    if condition:
+        create_custom_fields(fields)
+    else:
+        delete_custom_fields(fields)

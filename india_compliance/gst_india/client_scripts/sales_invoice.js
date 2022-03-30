@@ -32,7 +32,7 @@ frappe.ui.form.on(DOCTYPE, {
 		if (frm.doc.ewaybill && frm.doc.ewaybill.length == 12 && settings.enable_api) {
 			frm.set_df_property('ewaybill', 'allow_on_submit', 0);
 		}
-		if(frm.doc.docstatus != 1 || frm.is_dirty() || frm.doc.ewaybill || !settings.enable_e_waybill || !is_e_waybill_applicable(frm, settings.e_waybill_criteria)) return;
+		if(frm.doc.docstatus != 1 || frm.is_dirty() || frm.doc.ewaybill || !settings.enable_e_waybill || !is_e_waybill_applicable(frm, settings.e_waybill_threshold)) return;
 		// ewaybill is applicable and not created or updated.
 		frm.dashboard.add_comment("e-Waybill is applicable for this invoice and not yet generated or updated.", "yellow");
 
@@ -48,7 +48,7 @@ frappe.ui.form.on(DOCTYPE, {
 
 	on_submit(frm) {
 		let settings = frappe.boot.gst_settings
-		if (frm.doc.ewaybill || !settings.enable_api || !settings.generate_e_waybill_on_submit || !is_e_waybill_applicable(frm, settings.e_waybill_criteria)) return;
+		if (frm.doc.ewaybill || !settings.enable_api || !settings.auto_generate_e_waybill || !is_e_waybill_applicable(frm, settings.e_waybill_threshold)) return;
 		frappe.call({
 			method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_if_possible",
 			args: {
