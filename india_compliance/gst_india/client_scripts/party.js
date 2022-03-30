@@ -90,7 +90,7 @@ function validate_overseas_gst_category(doctype) {
 
             if (in_list(["SEZ", "Overseas"], frm.doc.gst_category)) {
                 if (!overseas_enabled) {
-                    frappe.msgprint(__("GST Category is set to {0} and not enabled SEZ/Overseas in GST Settings.", [frm.doc.gst_category]))
+                    frappe.show_alert({message:__("GST Category is set to {0} and not enabled SEZ/Overseas in GST Settings.", [frm.doc.gst_category]), indicator:'orange'})
                 }
             }
         }
