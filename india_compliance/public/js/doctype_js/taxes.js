@@ -49,7 +49,7 @@ function get_tax_template(frm) {
     });
 }
 
-function fetch_gst_category(doctype) {
+export function fetch_gst_category(doctype) {
     const party_type = get_party_type(doctype);
     frappe.ui.form.on(doctype, {
         setup(frm) {
