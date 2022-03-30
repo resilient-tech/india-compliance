@@ -16,7 +16,10 @@ function update_gstin_in_other_documents(doctype) {
                 docs_with_previous_gstin
             )) {
                 message += `<br/><br/><strong>${__(doctype)}</strong>:<br/>`;
-                message += docnames.join("<br/>");
+                message += `<a href= "${frappe.utils.get_form_link(
+                    doctype,
+                    docnames
+                )}" target="_blank">${__(docnames)}</a><br/>`;
             }
 
             frappe.confirm(message, function () {
