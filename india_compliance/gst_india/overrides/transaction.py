@@ -8,6 +8,15 @@ from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.utils import get_all_gst_accounts, get_place_of_supply
 
+TRANSACTION_DOCS = (
+    "Sales Invoice",
+    "Delivery Note",
+    "Sales Order",
+    "Purchase Invoice",
+    "Purchase Order",
+    "Purchase Receipt",
+)
+
 
 def set_place_of_supply(doc, method=None):
     doc.place_of_supply = get_place_of_supply(doc)
@@ -62,6 +71,21 @@ def validate_hsn_code(doc, method=None):
                 " row numbers: <br>{1}"
             ).format(min_hsn_digits, frappe.bold(", ".join(invalid_hsn)))
         )
+
+
+def validate_overseas_gst_category(doc, method):
+    overseas_enabled = frappe.get_cached_value(
+        "GST Settings", "GST Settings", "enable_overseas_transactions"
+    )
+
+    if doc.doctype in TRANSACTION_DOCS and doc.meta.has_field("gst_category"):
+        if doc.gst_category in ("SEZ", "Overseas") and not overseas_enabled:
+            frappe.throw(
+                _(
+                    "GST Category is set to {0} and not enabled SEZ/Overseas in GST"
+                    " Settings."
+                ).format(frappe.bold(doc.gst_category))
+            )
 
 
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
