@@ -2,7 +2,7 @@ from email.utils import formatdate
 
 import frappe
 from frappe import _
-from frappe.utils import format_date
+from frappe.utils import format_date, getdate
 
 from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
 from india_compliance.gst_india.utils.e_waybill import validate_company
@@ -11,6 +11,47 @@ from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 def _generate_e_invoice():
     pass
+
+
+def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
+    if doc.gst_category == "Unregistered":
+        if throw:
+            frappe.throw(
+                _(
+                    "e-Invoice is not applicable for invoices with Unregistered"
+                    " Customers"
+                )
+            )
+
+        return
+
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not gst_settings.enable_api:
+        if throw:
+            frappe.throw(_("Enable API in GST Settings to generate e-Invoice"))
+
+        return
+
+    if not gst_settings.enable_e_invoice:
+        if throw:
+            frappe.throw(_("Enable e-Invoicing in GST Settings to generate e-Invoice"))
+
+        return
+
+    if getdate(gst_settings.e_invoice_applicable_from) > getdate(doc.posting_date):
+        if throw:
+            frappe.throw(
+                _(
+                    "e-Invoice is not applicable for invoices before {0} as per your"
+                    " GST Settings"
+                ).format(format_date(gst_settings.e_invoice_applicable_from))
+            )
+
+        return
+
+    return True
 
 
 class EInvoiceData(GSTInvoiceData):
@@ -27,29 +68,7 @@ class EInvoiceData(GSTInvoiceData):
     def check_e_invoice_applicability(self):
         self.validate_company()
         self.validate_non_gst_items()
-
-        if self.doc.doctype != "Sales Invoice":
-            frappe.throw(_("e-Invoice can only be created for Sales Invoice"))
-
-        if self.doc.gst_category == "Unregistered":
-            frappe.throw(
-                _(
-                    "e-Invoice is not applicable for invoices with Unregistered"
-                    " Customers"
-                )
-            )
-
-        if not self.settings.enable_api:
-            frappe.throw(_("Enable GST API in GST Settings"))
-        if not self.settings.enable_e_invoicing:
-            frappe.throw(_("Enable e-Invoice in GST Settings"))
-        if self.settings.e_invoice_applicable_from > self.doc.posting_date:
-            frappe.throw(
-                _(
-                    "e-Invoice is not applicable for invoices before {0} as per GST"
-                    " Settings"
-                ).format(format_date(self.settings.e_invoice_applicable_from))
-            )
+        validate_e_invoice_applicability(self.doc, self.settings)
 
     def update_item_details(self, row):
         super().update_item_details(row)

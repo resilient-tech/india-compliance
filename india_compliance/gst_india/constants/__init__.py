@@ -93,3 +93,7 @@ GSTIN_FORMATS = {
 
 TCS = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[C]{1}[0-9A-Z]{1}$")
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
+
+# Maximum length must be 16 characters. First character must be alphanumeric.
+# Subsequent characters can be alphanumeric, hyphens or slashes.
+GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
