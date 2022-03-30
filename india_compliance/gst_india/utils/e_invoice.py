@@ -10,7 +10,6 @@ from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 
 def _generate_e_invoice():
-
     pass
 
 
@@ -26,7 +25,8 @@ class EInvoiceData(GSTInvoiceData):
         self.check_e_invoice_applicability()
 
     def check_e_invoice_applicability(self):
-        validate_company(self.doc)
+        self.validate_company()
+        self.validate_non_gst_items()
 
         if self.doc.doctype != "Sales Invoice":
             frappe.throw(_("e-Invoice can only be created for Sales Invoice"))
@@ -39,20 +39,17 @@ class EInvoiceData(GSTInvoiceData):
                 )
             )
 
-        settings = frappe.get_cached_doc("GST Settings")
-        if not settings.enable_api:
+        if not self.settings.enable_api:
             frappe.throw(_("Enable GST API in GST Settings"))
-        if not settings.enable_e_invoice:
+        if not self.settings.enable_e_invoice:
             frappe.throw(_("Enable e-Invoice in GST Settings"))
-        if settings.e_invoice_applicable_from > self.doc.posting_date:
+        if self.settings.e_invoice_applicable_from > self.doc.posting_date:
             frappe.throw(
                 _(
                     "e-Invoice is not applicable for invoices before {0} as per GST"
                     " Settings"
-                ).format(format_date(settings.e_invoice_applicable_from))
+                ).format(format_date(self.settings.e_invoice_applicable_from))
             )
-
-        super().validate_non_gst_items()
 
     def update_item_details(self, row):
         super().update_item_details(row)

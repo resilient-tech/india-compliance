@@ -1,19 +1,28 @@
 function e_waybill_actions(doctype) {
     frappe.ui.form.on(doctype, {
         setup(frm) {
-            frappe.realtime.on("e_waybill_generated", function (data) {
-                if (
-                    data.docname != frm.doc.name ||
-                    data.doctype != doctype ||
-                    !data.alert
-                )
-                    return;
+            const event_obj = {
+                e_waybill_generated: "blue",
+                e_waybill_not_generated: "yellow",
+                e_waybill_cancelled: "blue",
+                vehicle_info_updated: "blue",
+                transporter_info_updated: "blue",
+            };
+            for (let event in event_obj) {
+                frappe.realtime.on(event, function (data) {
+                    if (
+                        data.docname != frm.doc.name ||
+                        data.doctype != doctype ||
+                        !data.alert
+                    )
+                        return;
 
-                frappe.show_alert({
-                    message: data.alert,
-                    indicator: "yellow",
+                    frappe.show_alert({
+                        message: data.alert,
+                        indicator: event_obj[event],
+                    });
                 });
-            });
+            }
         },
         refresh(frm) {
             let settings = frappe.boot.gst_settings;
@@ -270,7 +279,6 @@ function dialog_cancel_e_waybill(frm) {
                 },
                 callback: function () {
                     frm.reload_doc();
-                    frappe.msgprint(__("E-waybill Cancelled Successfully."));
                 },
             });
             d.hide();
@@ -369,7 +377,6 @@ function dialog_update_vehicle_info(frm) {
                 },
                 callback: function () {
                     frm.reload_doc();
-                    frappe.msgprint(__("Vehicle Information Updated Successfully."));
                 },
             });
             d.hide();
@@ -435,7 +442,6 @@ function dialog_update_transporter(frm) {
                 },
                 callback: function () {
                     frm.reload_doc();
-                    frappe.msgprint(__("Transporter Updated Successfully."));
                 },
             });
             d.hide();

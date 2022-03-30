@@ -26,6 +26,7 @@ class GSTInvoiceData:
             for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
         }
         self.generate_part_a = False
+        self.settings = frappe.get_cached_doc("GST Settings")
 
     def get_invoice_details(self):
         self.invoice_details = frappe._dict()
@@ -125,6 +126,18 @@ class GSTInvoiceData:
                 msg=_("Posting Date cannot be greater than LR Date"),
                 title=_("Invalid Data"),
             )
+
+    def validate_company(self):
+        country, gst_category = frappe.get_cached_value(
+            "Company", self.doc.company, ("country", "gst_category")
+        )
+        if country != "India":
+            frappe.throw(
+                _("Company selected is not an Indian Company"),
+                title=_("Invalid Company"),
+            )
+        if gst_category == "Unregistered":
+            frappe.throw(_("Please set the GST Category in the company master"))
 
     def validate_non_gst_items(self):
         if self.doc.items[0].is_non_gst:
