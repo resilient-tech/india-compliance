@@ -15,11 +15,16 @@ function update_gstin_in_other_documents(doctype) {
             for (const [doctype, docnames] of Object.entries(
                 docs_with_previous_gstin
             )) {
-                message += `<br/><br/><strong>${__(doctype)}</strong>:<br/>`;
-                message += `<a href= "${frappe.utils.get_form_link(
+                let form_link = frappe.urllib.get_full_url(
+                    frappe.utils.get_form_link(
                     doctype,
-                    docnames
-                )}" target="_blank">${__(docnames)}</a><br/>`;
+                    docnames))
+
+                message += `<br/><br/><strong>${__(doctype)}</strong>:<br/>`;
+
+                // Used onclick to render link form in a new tab. default not works.
+                // TODO: change this after fixing the issue in frappe
+                message += `<a href="#" onclick="window.open('${form_link}', '_blank').focus();">${__(docnames)}</a><br/>`;
             }
 
             frappe.confirm(message, function () {
