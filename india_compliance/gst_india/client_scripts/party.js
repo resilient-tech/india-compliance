@@ -78,3 +78,21 @@ function validate_pan(doctype) {
         }
     });
 }
+
+function validate_overseas_gst_category(doctype) {
+    frappe.ui.form.on(doctype, {
+        validate(frm) {
+
+            let overseas_enabled = false;
+            frappe.db.get_single_value('GST Settings', 'enable_overseas_transactions').then(enabled => {
+                overseas_enabled = enabled;
+            });
+
+            if (in_list(["SEZ", "Overseas"], frm.doc.gst_category)) {
+                if (!overseas_enabled) {
+                    frappe.msgprint(__("GST Category is set to {0} and not enabled SEZ/Overseas in GST Settings.", [frm.doc.gst_category]))
+                }
+            }
+        }
+    })
+}

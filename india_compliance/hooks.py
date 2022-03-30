@@ -77,9 +77,10 @@ doc_events = {
         "Delivery Note",
         "Sales Invoice",
     ): {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
-        )
+        "validate": [
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
+            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+        ]
     },
     ("Sales Order", "Delivery Note", "Sales Invoice"): {
         "validate": "india_compliance.gst_india.overrides.transaction.validate_hsn_code"
