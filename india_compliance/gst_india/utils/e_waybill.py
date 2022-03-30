@@ -78,10 +78,6 @@ def generate_e_waybill(doctype, docname, dialog):
 
 
 def _generate_e_waybill(doc, throw=True):
-    validate_company(doc)
-    validate_doctype_for_e_waybill(doc)
-    validate_if_e_waybill_is_available(doc, available=False)
-
     try:
         data = EWaybillData(doc).get_e_waybill_data()
 
@@ -91,7 +87,7 @@ def _generate_e_waybill(doc, throw=True):
 
         frappe.clear_last_message()
         frappe.publish_realtime(
-            "e_waybill_generated",
+            "e_waybill_not_generated",
             {
                 "doctype": doc.doctype,
                 "docname": doc.name,
@@ -132,19 +128,16 @@ def cancel_e_waybill(doc, dialog):
     doc = frappe._dict(json.loads(doc))
     dialog = json.loads(dialog)
 
-    validate_company(doc)
-    validate_doctype_for_e_waybill(doc)
-    validate_if_e_waybill_is_available(doc, dialog)
-    validate_e_waybill_validity(doc)
-
-    delete_e_waybill_pdf(doc.doctype, doc.name, doc.ewaybill)
-
-    data = {
-        "ewbNo": doc.ewaybill,
-        "cancelRsnCode": dialog.get("reason").split("-")[0],
-        "cancelRmrk": dialog.get("remark"),
-    }
+    data = EWaybillData(doc).get_e_waybill_cancel_data(dialog)
     result = EWaybillAPI(doc.company_gstin).cancel_e_waybill(data)
+    frappe.publish_realtime(
+        "e_waybill_cancelled",
+        {
+            "doctype": doc.doctype,
+            "docname": doc.name,
+            "alert": "e-waybill Cancelled Successfully",
+        },
+    )
 
     dt_values = {
         "ewaybill": None,
@@ -166,29 +159,16 @@ def update_vehicle_info(doc, dialog):
     doc = frappe._dict(json.loads(doc))
     dialog = json.loads(dialog)
 
-    validate_company(doc)
-    validate_doctype_for_e_waybill(doc)
-    validate_if_e_waybill_is_available(doc, dialog)
-    validate_e_waybill_validity(doc)
-
-    dispatch_address = (
-        doc.dispatch_address_name if doc.dispatch_address_name else doc.company_address
-    )
-    dispatch_address = frappe.get_doc("Address", dispatch_address)
-
-    data = {
-        "ewbNo": doc.ewaybill,
-        "vehicleNo": dialog.get("vehicle_no").replace(" ", ""),
-        "fromPlace": dispatch_address.city,
-        "fromState": dispatch_address.gst_state_number,
-        "reasonCode": dialog.get("reason").split("-")[0],
-        "reasonRem": dialog.get("remark"),
-        "transDocNo": dialog.get("lr_no"),
-        "transDocDate": frappe.utils.formatdate(dialog.get("lr_date"), "dd/mm/yyyy"),
-        "transMode": TRANSPORT_MODES.get(dialog.get("mode_of_transport")),
-        "vehicleType": VEHICLE_TYPES.get(dialog.get("gst_vehicle_type")),
-    }
+    data = EWaybillData(doc).get_update_vehicle_data(dialog)
     result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
+    frappe.publish_realtime(
+        "vehicle_info_updated",
+        {
+            "doctype": doc.doctype,
+            "docname": doc.name,
+            "alert": "Vehicle Information Updated Successfully",
+        },
+    )
 
     doc_values = {
         "e_waybill_validity": datetime.strptime(result.get("validUpto"), DATE_FORMAT),
@@ -221,16 +201,16 @@ def update_transporter(doc, dialog):
     doc = frappe._dict(json.loads(doc))
     dialog = json.loads(dialog)
 
-    validate_company(doc)
-    validate_doctype_for_e_waybill(doc)
-    validate_if_e_waybill_is_available(doc, dialog)
-    validate_e_waybill_validity(doc)
-
-    data = {
-        "ewbNo": doc.ewaybill,
-        "transporterId": dialog.get("gst_transporter_id"),
-    }
+    data = EWaybillData(doc).get_update_transporter_data(dialog)
     result = EWaybillAPI(doc.company_gstin).update_transporter(data)
+    frappe.publish_realtime(
+        "transporter_info_updated",
+        {
+            "doctype": doc.doctype,
+            "docname": doc.name,
+            "alert": "Transporter Updated Successfully",
+        },
+    )
 
     # transporter_name can be different from transporter
     transporter_name = (
@@ -275,9 +255,11 @@ def print_e_waybill_as_per_settings(doc, force_get_data=False):
 @frappe.whitelist()
 def attach_or_print_e_waybill(doc, action):
     doc = frappe._dict(json.loads(doc))
-    validate_doctype_for_e_waybill(doc)
-    validate_if_e_waybill_is_available(doc)
-    e_waybill_doc = validate_e_waybill_log(doc)
+    ewb = EWaybillData(doc)
+    ewb.validate_e_waybill_settings()
+    ewb.validate_doctype_for_e_waybill()
+    ewb.validate_if_e_waybill_is_available()
+    e_waybill_doc = ewb.validate_e_waybill_log(doc)
     _attach_or_print_e_waybill(doc, action, e_waybill_doc)
 
 
@@ -349,7 +331,7 @@ def delete_e_waybill_pdf(doctype, docname, e_waybill):
 
 
 ########################################################################################################################
-### Other Utility and Validation Functions ############################################################################
+### Other Utility Functions ############################################################################
 ########################################################################################################################
 
 
@@ -392,67 +374,6 @@ def update_invoice(doc, dialog):
     )
 
 
-def validate_company(doc):
-    country, gst_category = frappe.get_cached_value(
-        "Company", doc.company, ("country", "gst_category")
-    )
-    if country != "India":
-        frappe.throw(
-            _("Company selected is not an Indian Company"), title=_("Invalid Company")
-        )
-    if gst_category == "Unregistered":
-        frappe.throw(_("Please set the GST Category in the company master"))
-
-
-def validate_doctype_for_e_waybill(doc):
-    if doc.doctype not in ("Sales Invoice", "Delivery Note"):
-        frappe.throw(
-            _(
-                "Only Sales Invoice and Delivery Note are supported for generating"
-                " e-Waybill"
-            )
-        )
-
-
-def validate_if_e_waybill_is_available(doc, dia=None, available=True):
-    if not available:
-        if doc.ewaybill:
-            frappe.throw(_("e-Waybill already generated for this document"))
-        return
-
-    # e-Waybill should be available
-    if not doc.get("ewaybill"):
-        frappe.throw(_("No e-Waybill found for this document"))
-
-    if dia and doc.ewaybill != dia.get("ewaybill"):
-        frappe.throw(_("Invalid e-Waybill"))
-
-
-def validate_e_waybill_validity(doc):
-    if doc.e_waybill_validity and doc.e_waybill_validity < today():
-        frappe.throw(
-            _("e-Waybill cannot be cancelled/modified after its validity is over")
-        )
-
-
-def validate_e_waybill_log(doc):
-    e_waybill_doc = frappe.db.get_value(
-        "e-Waybill Log",
-        doc.ewaybill,
-        ["is_latest_data", "data", "qr_base64", "e_waybill_number"],
-        as_dict=1,
-    )
-
-    if not e_waybill_doc:
-        frappe.throw(
-            _("e-Waybill not found. Did you generate it using e-Waybill API's?")
-        )
-
-    e_waybill_doc.doctype = doc.doctype
-
-    return e_waybill_doc
-
-
 ########################################################################################################################
 ### e-Waybill Data Generation ##########################################################################################
 ########################################################################################################################
@@ -472,31 +393,84 @@ class EWaybillData(GSTInvoiceData):
         ewb_data = self.get_invoice_map()
         return json.loads(ewb_data)
 
+    def get_e_waybill_cancel_data(self, dialog):
+        self.validate_company()
+        self.validate_doctype_for_e_waybill()
+        self.validate_if_e_waybill_is_available(dialog)
+        self.validate_e_waybill_validity()
+
+        return {
+            "ewbNo": self.doc.ewaybill,
+            "cancelRsnCode": dialog.get("reason").split("-")[0],
+            "cancelRmrk": dialog.get("remark"),
+        }
+
+    def get_update_vehicle_data(self, dialog):
+        self.validate_company()
+        self.validate_e_waybill_settings()
+        self.validate_doctype_for_e_waybill()
+        self.validate_if_e_waybill_is_available(dialog)
+        self.validate_e_waybill_validity()
+
+        dispatch_address = (
+            self.doc.dispatch_address_name
+            if self.doc.dispatch_address_name
+            else self.doc.company_address
+        )
+        dispatch_address = frappe.get_doc("Address", dispatch_address)
+
+        return {
+            "ewbNo": self.doc.ewaybill,
+            "vehicleNo": dialog.get("vehicle_no").replace(" ", ""),
+            "fromPlace": dispatch_address.city,
+            "fromState": dispatch_address.gst_state_number,
+            "reasonCode": dialog.get("reason").split("-")[0],
+            "reasonRem": dialog.get("remark"),
+            "transDocNo": dialog.get("lr_no"),
+            "transDocDate": frappe.utils.formatdate(
+                dialog.get("lr_date"), "dd/mm/yyyy"
+            ),
+            "transMode": TRANSPORT_MODES.get(dialog.get("mode_of_transport")),
+            "vehicleType": VEHICLE_TYPES.get(dialog.get("gst_vehicle_type")),
+        }
+
+    def get_update_transporter_data(self, dialog):
+        self.validate_company()
+        self.validate_e_waybill_settings()
+        self.validate_doctype_for_e_waybill()
+        self.validate_if_e_waybill_is_available(dialog)
+        self.validate_e_waybill_validity()
+        return {
+            "ewbNo": self.doc.ewaybill,
+            "transporterId": dialog.get("gst_transporter_id"),
+        }
+
     def pre_validate_invoice(self):
         super().pre_validate_invoice()
-        self.validate_e_waybill_applicability()
-        # TODO: Validate with e-Waybill settings
+        self.validate_company()
+        self.validate_if_e_waybill_is_available(available=False)
+        self.validate_e_waybill_settings()
+        self.validate_e_waybill_criteria()
         # TODO: Add Support for Delivery Note
 
-    def validate_e_waybill_applicability(self):
+    def validate_e_waybill_settings(self):
+        if not self.settings.enable_e_waybill:
+            frappe.throw(_("Please enable e-Waybill in GST Settings"))
+
+        if not self.json_download and not self.settings.enable_api:
+            frappe.throw(_("Please enable API in GST Settings"))
+
+    def validate_e_waybill_criteria(self):
         """
         Validates:
-        - Ewaybill already exists
         - Required fields
         - Atleast one item with HSN for goods is required
+        - Overseas Returns are not allowed
         - Basic transporter details must be present
+        - Grand Total Amount must be greater than Criteria
         - Max 250 Items
         """
-        if self.doc.get("ewaybill"):
-            frappe.throw(_("E-Waybill already generated for this invoice"))
-
-        reqd_fields = [
-            "company_gstin",
-            "company_address",
-            "customer_address",
-        ]
-
-        for fieldname in reqd_fields:
+        for fieldname in ("company_gstin", "company_address", "customer_address"):
             if not self.doc.get(fieldname):
                 frappe.throw(
                     _("{} is required to generate e-Waybill JSON").format(
@@ -571,6 +545,13 @@ class EWaybillData(GSTInvoiceData):
             if missing_transport_details:
                 self.generate_part_a = True
 
+        if self.doc.base_grand_total < self.settings.e_waybill_criteria:
+            frappe.throw(
+                _("e-Waybill is only applicable for invoices above {0}").format(
+                    self.settings.e_waybill_criteria
+                )
+            )
+
         if len(self.doc.items) > 250:
             # TODO: Add support for HSN Summary
             frappe.throw(
@@ -579,6 +560,51 @@ class EWaybillData(GSTInvoiceData):
             )
 
         super().validate_non_gst_items()
+
+    def validate_doctype_for_e_waybill(self):
+        if self.doc.doctype not in ("Sales Invoice", "Delivery Note"):
+            frappe.throw(
+                _(
+                    "Only Sales Invoice and Delivery Note are supported for generating"
+                    " e-Waybill"
+                )
+            )
+
+    def validate_if_e_waybill_is_available(self, dia=None, available=True):
+        if not available:
+            if self.doc.ewaybill:
+                frappe.throw(_("e-Waybill already generated for this document"))
+            return
+
+        # e-Waybill should be available
+        if not self.doc.get("ewaybill"):
+            frappe.throw(_("No e-Waybill found for this document"))
+
+        if dia and self.doc.ewaybill != dia.get("ewaybill"):
+            frappe.throw(_("Invalid e-Waybill"))
+
+    def validate_e_waybill_validity(self):
+        if self.doc.e_waybill_validity and self.doc.e_waybill_validity < today():
+            frappe.throw(
+                _("e-Waybill cannot be cancelled/modified after its validity is over")
+            )
+
+    def validate_e_waybill_log(self):
+        e_waybill_doc = frappe.db.get_value(
+            "e-Waybill Log",
+            self.doc.ewaybill,
+            ["is_latest_data", "data", "qr_base64", "e_waybill_number"],
+            as_dict=1,
+        )
+
+        if not e_waybill_doc:
+            frappe.throw(
+                _("e-Waybill not found. Did you generate it using e-Waybill API's?")
+            )
+
+        e_waybill_doc.doctype = self.doc.doctype
+
+        return e_waybill_doc
 
     def update_invoice_details(self):
         super().update_invoice_details()
