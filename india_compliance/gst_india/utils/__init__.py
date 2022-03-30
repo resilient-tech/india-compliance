@@ -310,15 +310,15 @@ def delete_custom_fields(custom_fields):
             doctypes = (doctypes,)
 
         for doctype in doctypes:
-            for df in fields:
-                try:
-                    frappe.delete_doc(
-                        "Custom Field", doctype + "-" + df.get("fieldname")
-                    )
-                except Exception:
-                    pass
+            frappe.db.delete(
+                "Custom Field",
+                {
+                    "fieldname": ("in", [field.fieldname for field in fields]),
+                    "dt": doctype,
+                },
+            )
 
-        frappe.clear_cache(doctype=doctype)
+            frappe.clear_cache(doctype=doctype)
 
 
 def add_spacing(value, num):

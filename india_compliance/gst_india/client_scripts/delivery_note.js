@@ -14,7 +14,12 @@ frappe.ui.form.on(DOCTYPE, {
 		});
 	},
 	refresh(frm) {
-		if(frm.doc.docstatus != 1 || frm.is_dirty() || frm.doc.ewaybill || !frappe.boot.gst_settings.enable_e_waybill) return;
+		if (
+			!frappe.boot.gst_settings.enable_e_waybill
+			||frm.doc.docstatus != 1
+			|| frm.is_dirty()
+			|| frm.doc.ewaybill
+		) return;
 
 		frm.add_custom_button('e-Waybill JSON', () => {
 			open_url_post(frappe.request.url, {

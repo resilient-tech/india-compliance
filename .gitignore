@@ -5,6 +5,10 @@
 tags
 .vscode/
 __pycache__/
-dist/
-node_modules/
+
+# docs
 india_compliance/docs/current
+
+# JS
+dist/
+node_modules

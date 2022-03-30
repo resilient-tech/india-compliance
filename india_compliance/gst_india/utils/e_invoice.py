@@ -41,7 +41,7 @@ class EInvoiceData(GSTInvoiceData):
 
         if not self.settings.enable_api:
             frappe.throw(_("Enable GST API in GST Settings"))
-        if not self.settings.enable_e_invoice:
+        if not self.settings.enable_e_invoicing:
             frappe.throw(_("Enable e-Invoice in GST Settings"))
         if self.settings.e_invoice_applicable_from > self.doc.posting_date:
             frappe.throw(

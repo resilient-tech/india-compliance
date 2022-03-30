@@ -244,7 +244,9 @@ def update_transporter(doc, dialog):
 
 def print_e_waybill_as_per_settings(doc, force_get_data=False):
     get_data, attach = frappe.get_cached_value(
-        "GST Settings", "GST Settings", ("get_data_for_print", "attach_e_waybill_print")
+        "GST Settings",
+        "GST Settings",
+        ("fetch_e_waybill_data", "attach_e_waybill_print"),
     )
     if attach:
         _attach_or_print_e_waybill(doc, "attach")
@@ -450,7 +452,7 @@ class EWaybillData(GSTInvoiceData):
         self.validate_company()
         self.validate_if_e_waybill_is_available(available=False)
         self.validate_e_waybill_settings()
-        self.validate_e_waybill_criteria()
+        self.validate_e_waybill_threshold()
         # TODO: Add Support for Delivery Note
 
     def validate_e_waybill_settings(self):
@@ -460,7 +462,7 @@ class EWaybillData(GSTInvoiceData):
         if not self.json_download and not self.settings.enable_api:
             frappe.throw(_("Please enable API in GST Settings"))
 
-    def validate_e_waybill_criteria(self):
+    def validate_e_waybill_threshold(self):
         """
         Validates:
         - Required fields
@@ -545,10 +547,10 @@ class EWaybillData(GSTInvoiceData):
             if missing_transport_details:
                 self.generate_part_a = True
 
-        if self.doc.base_grand_total < self.settings.e_waybill_criteria:
+        if self.doc.base_grand_total < self.settings.e_waybill_threshold:
             frappe.throw(
                 _("e-Waybill is only applicable for invoices above {0}").format(
-                    self.settings.e_waybill_criteria
+                    self.settings.e_waybill_threshold
                 )
             )
 
