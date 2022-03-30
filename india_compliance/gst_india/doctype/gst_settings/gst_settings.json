@@ -1,13 +1,11 @@
 {
  "actions": [],
- "creation": "2022-03-27 00:51:09.831504",
+ "creation": "2017-06-27 15:09:01.318003",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
-  "enable_overseas_transactions",
-  "default_without_payment_of_tax",
   "round_off_gst_values",
   "hsn_wise_tax_breakup",
   "column_break_4",
@@ -20,6 +18,11 @@
   "generate_e_waybill_on_submit",
   "get_data_for_print",
   "attach_e_waybill_print",
+  "e_invoice_section",
+  "enable_e_invoice",
+  "generate_e_invoice_on_submit",
+  "column_break_17",
+  "e_invoice_applicable_from",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
@@ -42,7 +45,7 @@
    "label": "Round Off GST Values"
   },
   {
-   "default": "1",
+   "default": "0",
    "fieldname": "hsn_wise_tax_breakup",
    "fieldtype": "Check",
    "label": "Tax Breakup Table Based On HSN Code"
@@ -58,7 +61,7 @@
    "label": "API Secret"
   },
   {
-   "default": "1",
+   "default": "0",
    "description": "As per <a href=\"https://www.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
@@ -151,25 +154,41 @@
    "label": "Enable API"
   },
   {
-   "default": "1",
-   "description": "Fields and validations for these transactions will apply based on this setting",
-   "fieldname": "enable_overseas_transactions",
-   "fieldtype": "Check",
-   "label": "Enable SEZ / Overseas Transactions"
+   "depends_on": "eval: doc.enable_api",
+   "fieldname": "e_invoice_section",
+   "fieldtype": "Section Break",
+   "label": "e-Invoice"
   },
   {
    "default": "0",
-   "depends_on": "eval: doc.enable_overseas_transactions",
-   "description": "Supply without payment of tax can be made under bond or Letter of Undertaking (LUT)",
-   "fieldname": "default_without_payment_of_tax",
+   "fieldname": "enable_e_invoice",
    "fieldtype": "Check",
-   "label": "Default Export Type to Without Payment of Tax"
+   "label": "Enable e-Invoice"
+  },
+  {
+   "depends_on": "eval: doc.enable_e_invoice",
+   "fieldname": "e_invoice_applicable_from",
+   "fieldtype": "Date",
+   "label": "Applicable From",
+   "mandatory_depends_on": "eval: doc.enable_e_invoice"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "e-Invoice shall be generated on submit of Sales Invoice if criteria is met, and data is valid and available.",
+   "fieldname": "generate_e_invoice_on_submit",
+   "fieldtype": "Check",
+   "label": "Generate e-Invoice on Submit"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-28 03:13:52.982127",
+ "modified": "2022-03-29 19:00:18.162546",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
