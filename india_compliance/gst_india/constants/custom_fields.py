@@ -39,7 +39,7 @@ transaction_item_fields = [
     },
 ]
 
-purchase_invoice_gst_category = [
+gst_section_fields = [
     {
         "fieldname": "gst_section",
         "label": "GST Details",
@@ -49,21 +49,10 @@ purchase_invoice_gst_category = [
         "collapsible": 1,
     },
     {
-        "fieldname": "gst_category",
-        "label": "GST Category",
-        "fieldtype": "Select",
-        "insert_after": "gst_section",
-        "read_only": 1,
-        "print_hide": 1,
-        "options": gst_category_options,
-        "fetch_from": "supplier_address.gst_category",
-        "translatable": 0,
-    },
-    {
         "fieldname": "export_type",
         "label": "Export Type",
         "fieldtype": "Select",
-        "insert_after": "gst_category",
+        "insert_after": "gst_section",
         "print_hide": 1,
         "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
         "options": "\nWith Payment of Tax\nWithout Payment of Tax",
@@ -71,56 +60,7 @@ purchase_invoice_gst_category = [
     },
 ]
 
-sales_invoice_gst_category = [
-    {
-        "fieldname": "gst_section",
-        "label": "GST Details",
-        "fieldtype": "Section Break",
-        "insert_after": "language",
-        "print_hide": 1,
-        "collapsible": 1,
-    },
-    {
-        "fieldname": "gst_category",
-        "label": "GST Category",
-        "fieldtype": "Select",
-        "insert_after": "gst_section",
-        "read_only": 1,
-        "print_hide": 1,
-        "options": gst_category_options,
-        "fetch_from": "customer_address.gst_category",
-        "length": 25,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "export_type",
-        "label": "Export Type",
-        "fieldtype": "Select",
-        "insert_after": "gst_category",
-        "print_hide": 1,
-        "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-        "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-        "length": 25,
-        "translatable": 0,
-    },
-]
-
-
-delivery_note_gst_category = [
-    {
-        "fieldname": "gst_category",
-        "label": "GST Category",
-        "fieldtype": "Select",
-        "insert_after": "gst_vehicle_type",
-        "read_only": 1,
-        "print_hide": 1,
-        "options": gst_category_options,
-        "fetch_from": "customer_address.gst_category",
-        "translatable": 0,
-    },
-]
-
-invoice_gst_fields = [
+pi_si_common_fields = [
     {
         "fieldname": "invoice_copy",
         "label": "Invoice Copy",
@@ -177,7 +117,7 @@ invoice_gst_fields = [
     },
 ]
 
-purchase_invoice_gst_fields = [
+purchase_gst_fields = [
     {
         "fieldname": "supplier_gstin",
         "label": "Supplier GSTIN",
@@ -205,6 +145,17 @@ purchase_invoice_gst_fields = [
         "insert_after": "shipping_address",
         "print_hide": 1,
         "read_only": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "gst_category",
+        "label": "GST Category",
+        "fieldtype": "Select",
+        "insert_after": "supplier_name",
+        "read_only": 1,
+        "print_hide": 1,
+        "options": gst_category_options,
+        "fetch_from": "supplier_address.gst_category",
         "translatable": 0,
     },
 ]
@@ -258,7 +209,7 @@ purchase_invoice_itc_fields = [
     },
 ]
 
-sales_invoice_gst_fields = [
+sales_gst_fields = [
     {
         "fieldname": "billing_address_gstin",
         "label": "Billing Address GSTIN",
@@ -299,6 +250,17 @@ sales_invoice_gst_fields = [
         "print_hide": 1,
         "read_only": 1,
         "length": 15,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "gst_category",
+        "label": "GST Category",
+        "fieldtype": "Select",
+        "insert_after": "customer_name",
+        "read_only": 1,
+        "print_hide": 1,
+        "options": gst_category_options,
+        "fetch_from": "customer_address.gst_category",
         "translatable": 0,
     },
 ]
@@ -647,7 +609,7 @@ si_einvoice_fields = [
         "label": "IRN",
         "fieldtype": "Data",
         "read_only": 1,
-        "insert_after": "customer",
+        "insert_after": "irn_cancelled",
         "no_copy": 1,
         "print_hide": 1,
         "depends_on": (
@@ -664,7 +626,7 @@ si_einvoice_fields = [
         "print_hide": 1,
         "depends_on": "eval: doc.irn",
         "allow_on_submit": 1,
-        "insert_after": "customer",
+        "insert_after": "customer_name",
     },
     {
         "fieldname": "eway_bill_validity",
@@ -687,7 +649,7 @@ si_einvoice_fields = [
         "depends_on": "eval:(doc.eway_bill_cancelled === 1)",
         "read_only": 1,
         "allow_on_submit": 1,
-        "insert_after": "customer",
+        "insert_after": "customer_name",
     },
     {
         "fieldname": "einvoice_section",
@@ -870,26 +832,31 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
-    "Purchase Invoice": purchase_invoice_gst_category
-    + invoice_gst_fields
-    + purchase_invoice_itc_fields
-    + purchase_invoice_gst_fields,
-    "Purchase Order": purchase_invoice_gst_fields,
-    "Purchase Receipt": purchase_invoice_gst_fields,
-    "Sales Invoice": sales_invoice_gst_category
-    + invoice_gst_fields
-    + sales_invoice_shipping_fields
-    + sales_invoice_gst_fields
-    + si_ewaybill_fields
-    + si_einvoice_fields,
-    "POS Invoice": sales_invoice_gst_fields,
-    "Delivery Note": sales_invoice_gst_fields
-    + ewaybill_fields
-    + sales_invoice_shipping_fields
-    + delivery_note_gst_category,
+    "Purchase Invoice": [
+        *pi_si_common_fields,
+        *gst_section_fields,
+        *purchase_invoice_itc_fields,
+        *purchase_gst_fields,
+    ],
+    "Purchase Order": purchase_gst_fields,
+    "Purchase Receipt": purchase_gst_fields,
+    "Sales Invoice": [
+        *pi_si_common_fields,
+        *gst_section_fields,
+        *sales_invoice_shipping_fields,
+        *sales_gst_fields,
+        *si_ewaybill_fields,
+        *si_einvoice_fields,
+    ],
+    "POS Invoice": sales_gst_fields,
+    "Delivery Note": [
+        *sales_gst_fields,
+        *ewaybill_fields,
+        *sales_invoice_shipping_fields,
+    ],
     "Payment Entry": payment_entry_fields,
     "Journal Entry": journal_entry_fields,
-    "Sales Order": sales_invoice_gst_fields,
+    "Sales Order": sales_gst_fields,
     "Tax Category": inter_state_gst_field,
     "Item": [
         {
