@@ -80,11 +80,14 @@ def validate_overseas_gst_category(doc, method):
 
     if doc.doctype in TRANSACTION_DOCS and doc.meta.has_field("gst_category"):
         if doc.gst_category in ("SEZ", "Overseas") and not overseas_enabled:
-            frappe.throw(
+            frappe.msgprint(
                 _(
                     "GST Category is set to {0} and not enabled SEZ/Overseas in GST"
                     " Settings."
-                ).format(frappe.bold(doc.gst_category))
+                ).format(frappe.bold(doc.gst_category)),
+                indicator="red",
+                raise_exception=True,
+                alert=True,
             )
 
 
