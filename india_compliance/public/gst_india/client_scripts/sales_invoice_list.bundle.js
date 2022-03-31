@@ -1,9 +1,9 @@
-var globalOnload = frappe.listview_settings['Sales Invoice'].onload;
+const erpnext_onload = frappe.listview_settings['Sales Invoice'].onload;
 frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 
-	// Provision in case onload event is added to sales_invoice.js in future
-	if (globalOnload) {
-		globalOnload(list_view);
+	// Provision in case onload event is added to ERPNext in future
+	if (erpnext_onload) {
+		erpnext_onload(list_view);
 	}
 
 	const action = () => {

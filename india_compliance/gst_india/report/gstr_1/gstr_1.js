@@ -32,7 +32,7 @@ frappe.query_reports["GSTR-1"] = {
             fieldtype: "Autocomplete",
             get_query: function () {
                 const company = frappe.query_report.get_filter_value("company");
-                return ic.utils.queries.get_gstin_query(company);
+                return ic.utils.get_gstin_query(company);
             },
         },
         {

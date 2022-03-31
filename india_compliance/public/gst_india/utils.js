@@ -1,6 +1,6 @@
-frappe.provide("ic.utils.queries");
+frappe.provide("ic.utils");
 
-ic.utils.queries.get_gstin_query = company => {
+ic.utils.get_gstin_query = company => {
     if (!company) {
         frappe.show_alert({
             message: __("Please select Company to get GSTIN options"),

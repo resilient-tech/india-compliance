@@ -17,7 +17,7 @@ frappe.ui.form.on("GST Settings", {
         frm.set_query("company", "credentials", company_query);
         frm.set_query("gstin", "credentials", (_, cdt, cdn) => {
             const row = frappe.get_doc(cdt, cdn);
-            return ic.utils.queries.get_gstin_query(row.company);
+            return ic.utils.get_gstin_query(row.company);
         });
     },
 
