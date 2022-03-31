@@ -18,6 +18,10 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
         self.enable_disable_reverse_charge_feature()
 
+    def on_update(self):
+        # clear session boot cache
+        frappe.cache().delete_keys("bootinfo")
+
     def validate_gst_accounts(self):
         account_list = []
         company_wise_account_types = {}

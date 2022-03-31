@@ -1,11 +1,9 @@
 import frappe
 
 
-def enqueue_integration_request(*args, **kwargs):
-    return create_integration_request(**kwargs)
+def enqueue_integration_request(**kwargs):
     frappe.enqueue(
-        "india_compliance.gst_india.api_classes.utils.create_integration_request",
-        **kwargs
+        "india_compliance.gst_india.utils.api.create_integration_request", **kwargs
     )
 
 

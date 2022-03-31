@@ -6,7 +6,84 @@ from erpnext.controllers.taxes_and_totals import (
     get_itemised_taxable_amount,
 )
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GST_ACCOUNT_FIELDS,
+    GSTIN_FORMATS,
+    PAN_NUMBER,
+    TCS,
+)
+
+
+def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
+    """
+    Validate GSTIN with following checks:
+    - Length should be 15.
+    - Validate GSTIN Check Digit.
+    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin parameter).
+    """
+
+    if not gstin:
+        return
+
+    gstin = gstin.upper().strip()
+
+    if len(gstin) != 15:
+        frappe.throw(
+            _("{0} must have 15 characters").format(label),
+            title=_("Invalid {0}").format(label),
+        )
+
+    validate_gstin_check_digit(gstin, label)
+
+    if is_tcs_gstin and not TCS.match(gstin):
+        frappe.throw(
+            _("Invalid format for e-Commerce Operator (TCS) GSTIN"),
+            title=_("Invalid GSTIN"),
+        )
+
+    return gstin
+
+
+def validate_gst_category(gst_category, gstin):
+    """
+    Validate GST Category with following checks:
+    - GST Category for parties without GSTIN should be Unregistered or Overseas.
+    - GSTIN should match with the regex pattern as per GST Category of the party.
+    """
+
+    if not gstin:
+        if gst_category not in (
+            categories_without_gstin := {"Unregistered", "Overseas"}
+        ):
+            frappe.throw(
+                _("GST Category should be one of {0}").format(
+                    " or ".join(
+                        frappe.bold(category) for category in categories_without_gstin
+                    )
+                ),
+                title=_("Invalid GST Category"),
+            )
+
+        return
+
+    if gst_category == "Unregistered":
+        frappe.throw(
+            "GST Category cannot be Unregistered for party with GSTIN",
+        )
+
+    valid_gstin_format = GSTIN_FORMATS.get(gst_category)
+    if not valid_gstin_format.match(gstin):
+        frappe.throw(
+            _(
+                "The GSTIN you've entered doesn't match the format for GST Category"
+                " {0}. Please ensure you've entered the correct GSTIN and GST Category."
+            ).format(frappe.bold(gst_category)),
+            title=_("Invalid GSTIN or GST Category"),
+        )
+
+
+def is_valid_pan(pan):
+    return PAN_NUMBER.match(pan)
 
 
 def read_data_file(file_name):
@@ -15,24 +92,10 @@ def read_data_file(file_name):
         return f.read()
 
 
-def set_gst_state_and_state_number(doc):
-    if not doc.gst_state:
-        if not doc.state:
-            return
-
-        state = doc.state.lower().strip()
-        states_lowercase = {s.lower(): s for s in STATE_NUMBERS}
-
-        if state not in states_lowercase:
-            return
-
-        doc.gst_state = states_lowercase[state]
-
-    doc.gst_state_number = STATE_NUMBERS[doc.gst_state]
-
-
 def validate_gstin_check_digit(gstin, label="GSTIN"):
-    """Function to validate the check digit of the GSTIN."""
+    """
+    Function to validate the check digit of the GSTIN.
+    """
     factor = 1
     total = 0
     code_point_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -91,14 +154,20 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
     return hsn_tax, hsn_taxable_amount
 
 
-def get_place_of_supply(party_details, doctype):
+def get_place_of_supply(party_details, doctype=None):
+    """
+    :param party_details: A frappe._dict or document containing fields related to party
+    """
+
+    if not doctype:
+        # Expect document object
+        doctype = party_details.doctype
+
     if not frappe.get_meta("Address").has_field("gst_state"):
         return
 
     if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
-        address_name = (
-            party_details.customer_address or party_details.shipping_address_name
-        )
+        address_name = party_details.customer_address or party_details.company_address
     elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
         address_name = party_details.shipping_address or party_details.supplier_address
 
@@ -109,8 +178,11 @@ def get_place_of_supply(party_details, doctype):
             ["gst_state", "gst_state_number", "gstin"],
             as_dict=1,
         )
+
         if address and address.gst_state and address.gst_state_number:
+            # TODO: bad idea to set value in getter
             party_details.gstin = address.gstin
+
             return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
 
 
@@ -120,14 +192,14 @@ def get_gstins_for_company(company):
     if company:
         company_gstins = frappe.db.sql(
             """select
-			distinct `tabAddress`.gstin
-		from
-			`tabAddress`, `tabDynamic Link`
-		where
-			`tabDynamic Link`.parent = `tabAddress`.name and
-			`tabDynamic Link`.parenttype = 'Address' and
-			`tabDynamic Link`.link_doctype = 'Company' and
-			`tabDynamic Link`.link_name = %(company)s""",
+            distinct `tabAddress`.gstin
+        from
+            `tabAddress`, `tabDynamic Link`
+        where
+            `tabDynamic Link`.parent = `tabAddress`.name and
+            `tabDynamic Link`.parenttype = 'Address' and
+            `tabDynamic Link`.link_doctype = 'Company' and
+            `tabDynamic Link`.link_name = %(company)s""",
             {"company": company},
         )
     return company_gstins
@@ -150,7 +222,7 @@ def get_gst_accounts(
     gst_settings_accounts = frappe.get_all(
         "GST Account",
         filters=filters,
-        fields=["cgst_account", "sgst_account", "igst_account", "cess_account"],
+        fields=GST_ACCOUNT_FIELDS,
     )
 
     if (
@@ -168,3 +240,52 @@ def get_gst_accounts(
                 gst_accounts[val] = acc
 
     return gst_accounts
+
+
+def get_gst_accounts_by_type(company, account_type, throw=True):
+    """
+    :param company: Company to get GST Accounts for
+    :param account_type: Account Type to get GST Accounts for
+
+    Returns a dict of accounts:
+    {
+        "cgst_account": "ABC",
+        ...
+    }
+    """
+    if not company:
+        frappe.throw(_("Please set Company first"))
+
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+    for row in settings.gst_accounts:
+        if row.account_type == account_type and row.company == company:
+            return frappe._dict((key, row.get(key)) for key in GST_ACCOUNT_FIELDS)
+
+    if not throw:
+        return frappe._dict()
+
+    frappe.throw(
+        _(
+            "Could not retrieve GST Accounts of type {0} from GST Settings for"
+            " Company {1}"
+        ).format(frappe.bold(account_type), frappe.bold(company)),
+        frappe.DoesNotExistError,
+    )
+
+
+def get_all_gst_accounts(company):
+    if not company:
+        frappe.throw(_("Please set Company first"))
+
+    settings = frappe.get_cached_doc("GST Settings")
+
+    accounts_list = []
+    for row in settings.gst_accounts:
+        if row.company != company:
+            continue
+
+        for account in GST_ACCOUNT_FIELDS:
+            if gst_account := row.get(account):
+                accounts_list.append(gst_account)
+
+    return accounts_list
