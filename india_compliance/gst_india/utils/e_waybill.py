@@ -503,10 +503,8 @@ class EWaybillData(GSTInvoiceData):
                     msg=_("Vehicle Number is required to generate e-Waybill"),
                     title=_("Invalid Data"),
                 )
-            elif (
-                transport_mode == "Ship"
-                and not self.doc.get("vehicle_no")
-                and not self.doc.get("lr_no")
+            elif transport_mode == "Ship" and not (
+                self.doc.get("vehicle_no") and self.doc.get("lr_no")
             ):
                 frappe.throw(
                     msg=_(
