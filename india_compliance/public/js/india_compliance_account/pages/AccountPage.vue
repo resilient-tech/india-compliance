@@ -1,14 +1,9 @@
 <template>
   <div class="container account-page">
-    <h2 class="page-heading">
-      India Compliance Account<span class="full-stop-highlight">.</span>
-    </h2>
+    <PageTitle title="India Compliance Account" />
     <div class="main-content">
       <div class="card subscription-info">
-        <p class="last-updated-text">
-          Last Updated On 25-05-2022 11:23 PM
-          <a href="#"> Refesh </a>
-        </p>
+        <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
         <div class="subscription-details-item">
           <p class="label">Available Credits</p>
           <p class="value">{{ balance_credits }}</p>
@@ -17,7 +12,12 @@
           <p class="label">Valid Upto</p>
           <p class="value">{{ valid_upto }}</p>
         </div>
-        <button class="btn btn-primary btn-sm btn-block">Buy Credits</button>
+        <router-link
+          class="btn btn-primary btn-sm btn-block"
+          to="/purchase-credits"
+        >
+          Purchase Credits
+        </router-link>
       </div>
       <div class="card">
         <h3 class="title">Actions</h3>
@@ -26,7 +26,7 @@
           <a href="#"><li>Check API Status</li></a>
           <a href="#"><li>Community Forum</li></a>
           <a href="#"><li>Report a Bug</li></a>
-          <a href="#"><li>Get API Suppor</li></a>
+          <a href="#"><li>Get API Support</li></a>
         </ul>
       </div>
     </div>
@@ -34,8 +34,21 @@
 </template>
 
 <script>
+import PageTitle from "../components/PageTitle.vue";
+
 export default {
+  components: {
+    PageTitle,
+  },
   computed: {
+    last_synced_on() {
+      //TODO: confirm the format
+      const { last_usage_synced_on } = this.subscription_details;
+      return (
+        last_usage_synced_on &&
+        moment.unix(last_usage_synced_on).format("DD-MM-YYYY HH:mm A")
+      );
+    },
     subscription_details() {
       return this.$store.state.account.subscription_details || {};
     },

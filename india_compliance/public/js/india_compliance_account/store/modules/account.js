@@ -18,7 +18,13 @@ export default {
 
         async fetchSubscriptionDetails({ commit }) {
             const response = await get_subscription_details();
-            if (response.error) return this.dispatch("setApiSecret", null);
+            if (response.error) {
+                if (response.exc_type?.includes("InvalidAuthorizationToken")) {
+                    // invalid secret -> delete the secret
+                    await this.dispatch("setApiSecret", null);
+                }
+                return;
+            }
             if (!response.success || !response.message) return;
             commit("SET_SUBSCRIPTION_DETAILS", response.message);
         },

@@ -3,6 +3,7 @@ import VueRouter from "vue-router";
 import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
 import MailSentPage from "./pages/MailSentPage.vue";
+import PurchaseCreditsPage from "./pages/purchaseCreditsPage.vue";
 import PageNotFound from "./pages/PageNotFound.vue";
 
 const routes = [
@@ -15,6 +16,11 @@ const routes = [
         name: "mailSent",
         path: "/mail-sent",
         component: MailSentPage,
+    },
+    {
+        name: "purchaseCredits",
+        path: "/purchase-credits",
+        component: PurchaseCreditsPage,
     },
     {
         name: "home",
