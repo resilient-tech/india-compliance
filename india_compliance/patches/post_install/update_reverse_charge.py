@@ -3,27 +3,19 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 def execute():
-    update_reverse_charge_in_sales_transaction()
-    enable_reverse_charge_in_gst_settings()
-
-
-def update_reverse_charge_in_sales_transaction():
     column = "reverse_charge"
-    to_remove = ["Sales Invoice", "Purchase Invoice"]
-    field_to_create = "is_reverse_charge"
 
-    for doctype in to_remove:
+    for doctype in ("Purchase Invoice", "Sales Invoice"):
         if frappe.db.table_exists(doctype):
             if column in frappe.db.get_table_columns(doctype):
-                invoices_to_update = frappe.db.get_all(doctype, {column: "Y"}, ["name"])
+                if enable_reverse_charge_in_gst_settings(doctype):
+                    create_custom_fields(doctype, "is_reverse_charge")
 
-                frappe.db.sql(
-                    "alter table `tab{0}` drop column {1}".format(doctype, column)
+                frappe.db.set_value(
+                    doctype, {"reverse_charge": "Y"}, "is_reverse_charge", 1
                 )
-
-                create_custom_fields(doctype, field_to_create)
-                update_reverse_charge_in_invoices(
-                    doctype, invoices_to_update, field_to_create
+                frappe.db.sql(
+                    "alter table `tab{0}` drop column 'reverse_charge'".format(doctype)
                 )
 
     frappe.reload_doc("accounts", "doctype", "sales_invoice", force=True)
@@ -49,33 +41,18 @@ def create_custom_field(doctype, field_to_create):
     create_custom_fields(REVERSE_CHARGE_FIELD, update=True)
 
 
-def update_reverse_charge_in_invoices(doctype, invoices_to_update, field_to_create):
-    frappe.db.set_value(
-        doctype,
-        {
-            "name": [
-                "in",
-                [invoice["name"] for invoice in invoices_to_update],
-            ]
-        },
-        field_to_create,
-        1,
-    )
+def enable_reverse_charge_in_gst_settings(doctype):
+    if doctype == "Sales Invoice" and not reverse_charge_applicable(doctype):
+        return
+
+    if doctype == "Purchase Invoice":
+        return
+
+    return frappe.db.set_value("GST Settings", None, "enable_reverse_charge", 1)
 
 
-def enable_reverse_charge_in_gst_settings():
-    doctype = "Sales Invoice"
-    if reverse_charge_applied(doctype):
-        frappe.db.set_value("GST Settings", None, "enable_reverse_charge", 1)
-    else:
-        frappe.db.set_value("GST Settings", None, "enable_reverse_charge", 0)
-        frappe.db.delete(
-            "Custom Field", {"dt": doctype, "fieldname": "is_reverse_charge"}
-        )
-
-
-def reverse_charge_applied(doctype):
-    condition = " where is_reverse_charge = 1"
+def reverse_charge_applicable(doctype):
+    condition = " where reverse_charge = 'Y'"
 
     return frappe.db.sql(
         "select name from `tab{doctype}` {condition} limit 1".format(

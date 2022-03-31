@@ -78,20 +78,10 @@ class GSTSettings(Document):
         }
 
         create_custom_fields(REVERSE_CHARGE_FIELD, update=True)
-        frappe.msgprint(
-            _("`Is Reverse Charge` has been created in Sales Invoice"),
-            indicator="green",
-            alert=True,
-        )
 
     def delete_reverse_charge_field_from_si(self):
-        doctype = "Sales Invoice"
-        frappe.db.delete(
-            "Custom Field", {"dt": doctype, "fieldname": "is_reverse_charge"}
-        )
-
-        frappe.msgprint(
-            _("`Is Reverse Charge` has been deleted from Sales Invoice"),
-            indicator="green",
-            alert=True,
-        )
+        if frappe.get_meta("Sales Invoice").has_field("is_reverse_charge"):
+            frappe.db.delete(
+                "Custom Field",
+                {"dt": "Sales Invoice", "fieldname": "is_reverse_charge"},
+            )
