@@ -38,7 +38,10 @@ ic.page.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
 frappe.provide("ic.gst_api");
 ic.gst_api.call = async function (endpoint, options) {
     try {
-        const base_url = "https://asp.resilient.tech/v1/";
+        // const base_url = "https://asp.resilient.tech/v1/";
+        endpoint = endpoint.replace("/", ".");
+        const base_url =
+            "http://apiman.localhost:8000/api/method/apiman.api.v1.";
         const url = base_url + endpoint;
 
         const headers = { "Content-Type": "application/json" };
@@ -52,6 +55,7 @@ ic.gst_api.call = async function (endpoint, options) {
         const args = {
             method: options.method || "POST",
             headers,
+            mode: "cors",
         };
 
         if (options.body) args.body = JSON.stringify(options.body);

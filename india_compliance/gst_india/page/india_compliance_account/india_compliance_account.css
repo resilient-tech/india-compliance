@@ -22,8 +22,3 @@ body {
 .text-highlight {
     color: var(--primary-color);
 }
-
-.full-stop-highlight {
-    color: var(--primary-color);
-    font-size: 1.2em;
-}
