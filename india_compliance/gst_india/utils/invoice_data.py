@@ -6,6 +6,7 @@ from frappe import _
 from frappe.utils import cint, flt, format_date, get_date_str, nowdate
 
 from india_compliance.gst_india.constants.e_waybill import (
+    GST_TAX_TYPES,
     TRANSPORT_MODES,
     UOMS,
     VEHICLE_TYPES,
@@ -14,7 +15,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 class GSTInvoiceData:
-    TAXES = ("cgst", "sgst", "igst", "cess", "cess_non_advol")
+    TAXES = GST_TAX_TYPES
     DATE_FORMAT = "dd/mm/yyyy"
 
     def __init__(self, doc, json_download=False, sandbox=False):
@@ -89,8 +90,7 @@ class GSTInvoiceData:
             or transport_mode == "Road"
             and not self.doc.get("vehicle_no")
             or (transport_mode == "Ship")
-            and not self.doc.get("vehicle_no")
-            and not self.doc.get("lr_no")
+            and not (self.doc.get("vehicle_no") and self.doc.get("lr_no"))
             or transport_mode in ["Rail", "Air"]
             and not self.doc.get("lr_no")
         )

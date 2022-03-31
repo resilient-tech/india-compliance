@@ -1,14 +1,15 @@
-function e_waybill_actions(doctype) {
+function setup_e_waybill_actions(doctype) {
     frappe.ui.form.on(doctype, {
         setup(frm) {
-            const event_obj = {
+            const events = {
                 e_waybill_generated: "blue",
                 e_waybill_not_generated: "yellow",
                 e_waybill_cancelled: "blue",
                 vehicle_info_updated: "blue",
                 transporter_info_updated: "blue",
             };
-            for (let event in event_obj) {
+
+            for (const event in events) {
                 frappe.realtime.on(event, function (data) {
                     if (
                         data.docname != frm.doc.name ||
@@ -19,7 +20,7 @@ function e_waybill_actions(doctype) {
 
                     frappe.show_alert({
                         message: data.alert,
-                        indicator: event_obj[event],
+                        indicator: events[event],
                     });
                 });
             }
@@ -29,7 +30,7 @@ function e_waybill_actions(doctype) {
             if (
                 !settings.enable_api ||
                 !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) ||
-                !is_e_waybill_applicable(frm, settings.e_waybill_threshold) ||
+                !is_e_waybill_applicable(frm) ||
                 !frm.company_gstin // means company is Indian and not Unregistered
             )
                 return;
@@ -468,13 +469,9 @@ function get_date(text) {
     )._d;
 }
 
-Date.prototype.addHours = function (h) {
-    this.setTime(this.getTime() + h * 60 * 60 * 1000);
-    return this;
-};
-
-function is_e_waybill_applicable(frm, e_waybill_threshold) {
-    if (frm.doc.base_grand_total < e_waybill_threshold) return false;
+function is_e_waybill_applicable(frm) {
+    if (frm.doc.base_grand_total < frappe.boot.gst_settings.e_waybill_threshold)
+        return false;
     for (let item of frm.doc.items) {
         if (!item.gst_hsn_code.startsWith("99")) return true;
     }

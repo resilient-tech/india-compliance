@@ -8,6 +8,8 @@ GST_ACCOUNT_FIELDS = (
     "cess_non_advol_account",
 )
 
+GST_TAX_TYPES = tuple(field[:-8] for field in GST_ACCOUNT_FIELDS)
+
 GST_CATEGORIES = {
     "Registered Regular": "B2B",
     "Registered Composition": "B2B",

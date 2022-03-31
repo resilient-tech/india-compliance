@@ -8,7 +8,7 @@ setup_auto_gst_taxation(DOCTYPE);
 fetch_gst_category(DOCTYPE);
 setup_einvoice_actions(DOCTYPE);
 update_export_type(DOCTYPE);
-e_waybill_actions(DOCTYPE);
+setup_e_waybill_actions(DOCTYPE);
 
 const gst_settings = frappe.boot.gst_settings;
 
@@ -40,7 +40,7 @@ frappe.ui.form.on(DOCTYPE, {
 			|| frm.is_dirty()
 			|| frm.doc.ewaybill
 			|| !gst_settings.enable_e_waybill
-			|| !is_e_waybill_applicable(frm, gst_settings.e_waybill_threshold)
+			|| !is_e_waybill_applicable(frm)
 		) return;
 
 		// ewaybill is applicable and not created or updated.
@@ -61,7 +61,7 @@ frappe.ui.form.on(DOCTYPE, {
 	},
 
 	on_submit(frm) {
-		if (frm.doc.ewaybill || !gst_settings.enable_api || !gst_settings.auto_generate_e_waybill || !is_e_waybill_applicable(frm, gst_settings.e_waybill_threshold)) return;
+		if (frm.doc.ewaybill || !gst_settings.enable_api || !gst_settings.auto_generate_e_waybill || !is_e_waybill_applicable(frm)) return;
 		frappe.call({
 			method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_if_possible",
 			args: {
