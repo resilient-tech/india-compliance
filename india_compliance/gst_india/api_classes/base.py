@@ -15,12 +15,13 @@ BASE_URL = "https://asp.resilient.tech"
 class BaseAPI:
     def __init__(self, *args, **kwargs):
         self.base_path = ""
+        self.sandbox = kwargs.pop("sandbox", False)
         self.settings = frappe.get_cached_doc("GST Settings")
         self.default_headers = {
             "x-api-key": self.settings.get_password("api_secret"),
         }
+
         self.setup(*args, **kwargs)
-        self.sandbox = kwargs.pop("sandbox", False)
 
     def setup(*args, **kwargs):
         # Override in subclass
@@ -45,13 +46,15 @@ class BaseAPI:
         self.password = row.get_password(raise_exception=require_password)
 
     def get_url(self, *parts):
-        if self.sandbox:
-            parts = ("test",) + parts
+        parts = list(parts)
 
         if self.base_path:
-            parts = (self.base_path,) + parts
+            parts.insert(0, self.base_path)
 
-        return urljoin(f"{BASE_URL}/", "/".join(part.strip("/") for part in parts))
+        if self.sandbox:
+            parts.insert(0, "test")
+
+        return urljoin(BASE_URL, "/".join(part.strip("/") for part in parts))
 
     def get(self, *args, **kwargs):
         return self._make_request("GET", *args, **kwargs)

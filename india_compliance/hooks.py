@@ -16,12 +16,16 @@ boot_session = "india_compliance.boot.set_bootinfo"
 doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
     "Sales Order": "gst_india/client_scripts/sales_order.js",
-    "Delivery Note": "gst_india/client_scripts/delivery_note.js",
+    "Delivery Note": [
+        "gst_india/client_scripts/e_waybill_utils.js",
+        "gst_india/client_scripts/delivery_note.js",
+    ],
     "Purchase Order": "gst_india/client_scripts/purchase_order.js",
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
     "Sales Invoice": [
-        "public/js/e_waybill.js",
+        "gst_india/client_scripts/e_waybill_utils.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",

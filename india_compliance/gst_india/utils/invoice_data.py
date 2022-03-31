@@ -77,6 +77,7 @@ class GSTInvoiceData:
         )
 
     def get_transporter_details(self):
+        generate_part_a = False
         distance = (
             cint(self.doc.distance)
             if self.doc.distance and self.doc.distance < 4000
