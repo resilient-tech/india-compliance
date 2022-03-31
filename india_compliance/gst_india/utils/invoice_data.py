@@ -25,7 +25,6 @@ class GSTInvoiceData:
             v: k
             for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
         }
-        self.generate_part_a = False
         self.settings = frappe.get_cached_doc("GST Settings")
 
     def get_invoice_details(self):
@@ -37,12 +36,14 @@ class GSTInvoiceData:
         self.invoice_details.update(
             {
                 "invoice_date": format_date(self.doc.posting_date, self.DATE_FORMAT),
-                "base_total": abs(sum([i.taxable_value for i in self.doc.items])),
-                "rounding_adjustment": -self.doc.rounding_adjustment
+                "base_total": abs(
+                    round(sum([i.taxable_value for i in self.doc.items]), 2)
+                ),
+                "rounding_adjustment": round(-self.doc.rounding_adjustment, 2)
                 if self.doc.is_return
-                else self.doc.rounding_adjustment,
-                "base_grand_total": abs(self.doc.base_rounded_total)
-                or abs(self.doc.base_grand_total),
+                else round(self.doc.rounding_adjustment, 2),
+                "base_grand_total": round(abs(self.doc.base_rounded_total), 2)
+                or round(abs(self.doc.base_grand_total), 2),
                 "discount_amount": 0,
                 "company_gstin": self.doc.company_gstin,
                 "invoice_number": self.doc.name,
@@ -58,7 +59,7 @@ class GSTInvoiceData:
                 continue
 
             tax = self.gst_accounts[row.account_head][:-8]
-            tax_amount = row.base_tax_amount_after_discount_amount
+            tax_amount = round(abs(row.base_tax_amount_after_discount_amount), 2)
             self.invoice_details.update({f"total_{tax}_amount": tax_amount})
 
         self.get_other_charges()
@@ -71,8 +72,8 @@ class GSTInvoiceData:
         for total in totals:
             base_grand_total += self.invoice_details.get(total)
 
-        self.invoice_details.other_charges = (
-            self.invoice_details.base_grand_total - base_grand_total
+        self.invoice_details.other_charges = round(
+            (self.invoice_details.base_grand_total - base_grand_total), 2
         )
 
     def get_transporter_details(self):
@@ -81,11 +82,27 @@ class GSTInvoiceData:
             if self.doc.distance and self.doc.distance < 4000
             else 0
         )
+        transport_mode = self.doc.get("mode_of_transport")
+        missing_transport_details = (
+            not transport_mode
+            or transport_mode == "Road"
+            and not self.doc.get("vehicle_no")
+            or (transport_mode == "Ship")
+            and not self.doc.get("vehicle_no")
+            and not self.doc.get("lr_no")
+            or transport_mode in ["Rail", "Air"]
+            and not self.doc.get("lr_no")
+        )
+        if missing_transport_details:
+            if not self.doc.get("gst_transporter_id"):
+                self.invoice_details.distance = distance
+                return
+            generate_part_a = True
 
-        if self.generate_part_a:
+        if generate_part_a:
             self.invoice_details.update(
                 {
-                    "mode_of_transport": 1 if self.json_download else '""',
+                    "mode_of_transport": 1 if self.json_download else "",
                     "vehicle_type": "R" if self.json_download else "",
                     "vehicle_no": "",
                     "lr_no": "",
@@ -98,8 +115,9 @@ class GSTInvoiceData:
         else:
             self.invoice_details.update(
                 {
-                    "mode_of_transport": TRANSPORT_MODES.get(self.doc.mode_of_transport)
-                    or 1,
+                    "mode_of_transport": TRANSPORT_MODES.get(
+                        self.doc.mode_of_transport
+                    ),
                     "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
                     "vehicle_no": self.sanitize_data(self.doc.vehicle_no, "vehicle_no"),
                     "lr_no": self.sanitize_data(self.doc.lr_no, "special_text"),
@@ -164,8 +182,8 @@ class GSTInvoiceData:
         self.item_details.update(
             {
                 "item_no": row.idx,
-                "qty": abs(row.qty),
-                "taxable_value": abs(row.taxable_value),
+                "qty": round(abs(row.qty), 2),
+                "taxable_value": round(abs(row.taxable_value), 2),
                 "hsn_code": int(row.gst_hsn_code),
                 "item_name": self.sanitize_data(row.item_name, "text"),
                 "uom": row.uom if UOMS.get(row.uom) else "OTH",
@@ -187,10 +205,13 @@ class GSTInvoiceData:
             )[0]
 
             # considers senarios where same item is there multiple times
-            tax_amount = (
-                tax_rate * item.qty
-                if row.charge_type == "On Item Quantity"
-                else tax_rate * item.taxable_value / 100
+            tax_amount = round(
+                abs(
+                    tax_rate * item.qty
+                    if row.charge_type == "On Item Quantity"
+                    else tax_rate * item.taxable_value / 100
+                ),
+                2,
             )
             self.item_details.update(
                 {
@@ -206,14 +227,17 @@ class GSTInvoiceData:
                         for tax in self.TAXES[:3]
                     ]
                 ),
-                "total_value": abs(
-                    self.item_details.taxable_value
-                    + sum(
-                        [
-                            flt(self.item_details.get(f"{tax}_amount", 0))
-                            for tax in self.TAXES
-                        ]
-                    )
+                "total_value": round(
+                    abs(
+                        self.item_details.taxable_value
+                        + sum(
+                            [
+                                flt(self.item_details.get(f"{tax}_amount", 0))
+                                for tax in self.TAXES
+                            ]
+                        )
+                    ),
+                    2,
                 ),
             }
         )
@@ -258,10 +282,10 @@ class GSTInvoiceData:
                 title=_("Missing Address Fields"),
             )
 
-    def get_invoice_map(self, **kwargs):
+    def get_invoice_map(self):
         pass
 
-    def get_item_map(self, item_details):
+    def get_item_map(self):
         pass
 
     def map_template(self, map, data):
@@ -270,6 +294,32 @@ class GSTInvoiceData:
             for key, value in map.items()
             if value and data.get(value) is not None
         }
+
+    def sanitize_invoice_map(self, invoice_data):
+        copy = invoice_data.copy()
+        for key, value in copy.items():
+            if isinstance(value, list):
+                for idx, d in enumerate(value):
+                    santized_dict = self.sanitize_invoice_map(d)
+                    if santized_dict:
+                        invoice_data[key][idx] = santized_dict
+                    else:
+                        invoice_data[key].pop(idx)
+
+                if not invoice_data[key]:
+                    invoice_data.pop(key, None)
+
+            elif isinstance(value, dict):
+                santized_dict = self.sanitize_invoice_map(value)
+                if santized_dict:
+                    invoice_data[key] = santized_dict
+                else:
+                    invoice_data.pop(key, None)
+
+            elif not value and value != 0 or value == "None":
+                invoice_data.pop(key, None)
+
+        return invoice_data
 
     def sanitize_data(self, data, method, min_length=0, max_length=100):
         if not data or len(data) < min_length:

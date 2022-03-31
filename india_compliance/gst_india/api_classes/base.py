@@ -19,8 +19,8 @@ class BaseAPI:
         self.default_headers = {
             "x-api-key": self.settings.get_password("api_secret"),
         }
-
         self.setup(*args, **kwargs)
+        self.sandbox = kwargs.pop("sandbox", False)
 
     def setup(*args, **kwargs):
         # Override in subclass
@@ -45,10 +45,13 @@ class BaseAPI:
         self.password = row.get_password(raise_exception=require_password)
 
     def get_url(self, *parts):
+        if self.sandbox:
+            parts = ("test",) + parts
+
         if self.base_path:
             parts = (self.base_path,) + parts
 
-        return urljoin(BASE_URL, "/".join(part.strip("/") for part in parts))
+        return urljoin(f"{BASE_URL}/", "/".join(part.strip("/") for part in parts))
 
     def get(self, *args, **kwargs):
         return self._make_request("GET", *args, **kwargs)
