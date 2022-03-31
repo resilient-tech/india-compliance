@@ -4,78 +4,79 @@
       Purchase API Credits<span class="full-stop-highlight">.</span>
     </h2>
     <div class="main-content">
-      <div class="row">
-        <div class="col-md-7">
-          
-          <div class="card card-calculator">
-            <p class="title">
-              Calculator
-            </p>
-            <div class="calculator-input">
-              <form>
-                <FormField
-                  input-type="email"
-                  name="email"
-                  placeholder="Email"
-                />
-                <p>
-                  Credits to be purchased (to be entered in multiple of 2500)
-                </p>
-                <button class="btn btn-primary btn-sm btn-block">
-                  Calculate
-                </button>
-              </form>
+      <div class="content-wrapper-left">
+        <div class="card card-calculator">
+          <p class="title">
+            Calculator
+          </p>
+          <div class="calculator-input">
+            <form>
+              <FormField
+                input-type="text"
+                inputClass="py-3"
+                name="credits"
+                placeholder="Credits"
+              />
+              <p class="caculator-input-footer">
+                Credits to be purchased (to be entered in multiple of 2500)
+              </p>
+              <button class="btn btn-primary btn-sm btn-block btn-tall">
+                Calculate
+              </button>
+            </form>
+          </div>
+          <div>
+            <div class="row">
+              <p class="col">Net Amount</p>
+              <p class="col caculator-net-value">₹ 1,000.00</p>
             </div>
-            <div class="net-amount-small">
-              <div class="row">
-                <p class="col">Net Amount</p>
-                <p class="col">₹ 1,000.00</p>
-              </div>
-              <div class="row">
-                <p class="col">GST @ 18%</p>
-                <p class="col">₹ 180.00</p>
-              </div>
+            <div class="row">
+              <p class="col">GST @ 18%</p>
+              <p class="col caculator-net-value">₹ 180.00</p>
             </div>
-            <div class="net-amount-large row">
-                <p class="col">Amount Payable</p>
-                <p class="col">₹ 1,180.00</p>
+            <div class="calculator-total row">
+              <p class="col">Amount Payable</p>
+              <p class="col caculator-net-value">₹ 1,180.00</p>
             </div>
           </div>
         </div>
-        <div class="col-md-5">
-          <div class="card card-pricing">
-            <p class="title">
-              Simple, Predictable Pricing
-            </p>
-            <div class="plan-header">
-              <p>Price per Credit</p>
-              <p>(excl. GST)</p>
+      </div>
+      <div class="content-wrapper-right">
+        <div class="card card-pricing">
+          <p class="title">
+            Simple, Predictable Pricing
+          </p>
+          <table class="plan-detail">
+            <tr>
+              <td></td>
+              <td class="plan-header">
+                <p>Price per Credit</p>
+                <p>(excl. GST)</p>
+              </td>
+            </tr>
+            <tr>
+              <td class="plan-list">First 10,000 Credits</td>
+              <td class="plan-list plan-price">₹ 0.50</td>
+            </tr>
+            <tr>
+              <td class="plan-list">Next 40,000 Credits</td>
+              <td class="plan-list plan-price">₹ 0.40</td>
+            </tr>
+            <tr>
+              <td class="plan-list">Any Additional Credits</td>
+              <td class="plan-list plan-price">₹ 0.30</td>
+            </tr>
+          </table>
+          <div>
+            <div >
+              <p class="validity-header">Lifetime Validity*</p>
+              <p class="validity-footer">Initial validity of two years. Gets extended whenever you make the next purchase.</p>
             </div>
-            <table class="plan-detail">
-              <tr>
-                <td>First 10,000 Credits</td>
-                <td class="plan-price">₹ 0.50</td>
-              </tr>
-              <tr>
-                <td>Next 40,000 Credits</td>
-                <td class="plan-price">₹ 0.40</td>
-              </tr>
-              <tr>
-                <td>Any Additional Credits</td>
-                <td class="plan-price">₹ 0.30</td>
-              </tr>
-            </table>
-            <div>
-              <div class="col">
-                <p class="row validity-head">Lifetime Validity *</p>
-                <p class="row validity-footer">Initial validity of two years. Gets extended whenever you make the next purchase.</p>
-              </div>
-            </div>
-            <div class="content-bottom">
-                <a href="#">learn more...</a>
-            </div>
+          </div>
+          <div class="content-bottom">
+              <a href="#" class="text-highlight">learn more...</a>
+          </div>
 
-         </div>
         </div>
       </div>
     </div>
@@ -97,16 +98,32 @@ export default {
   width: 100%;
   margin-top: 4em;
   display: flex;
-  /* justify-content: center; */
-  /* align-items: center; */
+  flex-direction: row;
+  flex-wrap: wrap;
   padding: 0 4em;
   font-size: 1em;
 }
-
+.content-wrapper-right{
+  flex-grow: 4;
+  max-width: 45%;
+}
+.content-wrapper-left{
+  flex-grow: 9;
+}
+.page-heading {
+  margin-top: 1.7em;
+  font-size: 2em;
+  text-align: left ;
+}
+.content-bottom{
+  text-align: end;
+  color: blue;
+}
+.btn-tall{
+  font-size: 1.2em;
+}
 .card {
-  height: 30em;
-  /* display: flex; */
-  /* flex-direction: column; */
+  height: 35em;
   justify-content: space-between;
   padding: 2em 3em;
   border-radius: var(--border-radius-md);
@@ -117,29 +134,61 @@ export default {
   font-size: 1.7em;
   font-weight: 600;
 }
+/* Card Calculator*/
+
 .card-calculator{
-  margin-right: 4em;
+  margin-right: 2.5em;
+}
+.caculator-input-footer{
+  margin-bottom: 2em;
+}
+.caculator-net-value{
+  font-weight: 600;
+  text-align: end;
+  font-size: 1.1em;
+}
+.calculator-total{
+  font-size: 1.3em;
+  font-weight: 600;
+  margin-top: 0.9em;
+}
+.credits-input{
+  padding: 22em;
 }
 
-.page-heading {
-  margin-top: 1.7em;
-  font-size: 2em;
-  text-align: left ;
-}
-.content-bottom{
-  text-align: end;
-}
+/* Card Plan*/
+
 .plan-header{
   text-align: end;
-  font-size: 1em;
+  font-size: 0.6em;
+  margin-bottom:1.6em ;
+  font-weight: 400;
 }
 .plan-detail{
-  font-size: 1.5em;
+  font-size: 1.2em;
   font-weight: 500;
+  margin-top: 2em;
+
 }
 .plan-price{
   text-align: end;
   font-weight: 600;
-
 }
+.plan-list{
+  padding-bottom:0.9em ;
+}
+.validity-header{
+  font-size: 1.4em;
+  font-weight: 500;
+}
+.validity-footer{
+  font-size: 1em;
+}
+
+
+
+
+/* .font-grey{
+  color : #505050;
+} */
 </style>
