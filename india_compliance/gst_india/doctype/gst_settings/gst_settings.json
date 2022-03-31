@@ -103,7 +103,7 @@
   },
   {
    "default": "0",
-   "description": "On enable, it will create custom field `Reverse Charge` in Sales Invoice. On disable, it will delete the field.",
+   "description": "Enable if reverse charge is applicable on goods/services that you provide.",
    "fieldname": "enable_reverse_charge",
    "fieldtype": "Check",
    "label": "Enable Reverse Charge in Sales Transactions"
@@ -127,7 +127,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-28 03:13:52.982127",
+ "modified": "2022-03-31 14:19:39.654144",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
