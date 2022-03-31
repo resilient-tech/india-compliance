@@ -5,7 +5,7 @@ from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
 # TODO: Imporve variable naming
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
-gst_category_options = "\n".join(GST_CATEGORIES.keys())
+gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
 
 

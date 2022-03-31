@@ -23,14 +23,8 @@ from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 
 @frappe.whitelist()
-def download_e_waybill_json(doctype, docnames):
+def generate_e_waybill_json(doctype: str, docnames):
     docnames = json.loads(docnames) if docnames.startswith("[") else [docnames]
-    frappe.response.filecontent = generate_e_waybill_json(doctype, docnames)
-    frappe.response.type = "download"
-    frappe.response.filename = get_file_name(docnames)
-
-
-def generate_e_waybill_json(doctype, docnames):
     ewb_data = frappe._dict(
         {
             "version": "1.0.0621",
@@ -45,14 +39,6 @@ def generate_e_waybill_json(doctype, docnames):
         )
 
     return pretty_json(ewb_data)
-
-
-def get_file_name(docnames):
-    prefix = "Bulk"
-    if len(docnames) == 1:
-        prefix = re.sub(r"[^\w_.)( -]", "", docnames[0])
-
-    return f"{prefix}_e-Waybill_Data_{frappe.utils.random_string(5)}.json"
 
 
 ########################################################################################################################
