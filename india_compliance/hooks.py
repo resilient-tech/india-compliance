@@ -14,23 +14,23 @@ boot_session = "india_compliance.boot.set_bootinfo"
 app_include_js = "gst_india.bundle.js"
 
 doctype_js = {
-    "Item": "public/gst_india/client_scripts/item.bundle.js",
-    "Sales Order": "public/gst_india/client_scripts/sales_order.bundle.js",
-    "Delivery Note": "public/gst_india/client_scripts/delivery_note.bundle.js",
-    "Purchase Order": "public/gst_india/client_scripts/purchase_order.bundle.js",
-    "Journal Entry": "public/gst_india/client_scripts/journal_entry.bundle.js",
-    "Payment Entry": "public/gst_india/client_scripts/payment_entry.bundle.js",
-    "Sales Invoice": "public/gst_india/client_scripts/sales_invoice.bundle.js",
-    "Purchase Receipt": "public/gst_india/client_scripts/purchase_receipt.bundle.js",
-    "Purchase Invoice": "public/gst_india/client_scripts/purchase_invoice.bundle.js",
-    "Company": "public/gst_india/client_scripts/company.bundle.js",
-    "Address": "public/gst_india/client_scripts/address.bundle.js",
-    "Customer": "public/gst_india/client_scripts/customer.bundle.js",
-    "Supplier": "public/gst_india/client_scripts/supplier.bundle.js",
+    "Item": "item.bundle.js",
+    "Sales Order": "sales_order.bundle.js",
+    "Delivery Note": "delivery_note.bundle.js",
+    "Purchase Order": "purchase_order.bundle.js",
+    "Journal Entry": "journal_entry.bundle.js",
+    "Payment Entry": "payment_entry.bundle.js",
+    "Sales Invoice": "sales_invoice.bundle.js",
+    "Purchase Receipt": "purchase_receipt.bundle.js",
+    "Purchase Invoice": "purchase_invoice.bundle.js",
+    "Company": "company.bundle.js",
+    "Address": "address.bundle.js",
+    "Customer": "customer.bundle.js",
+    "Supplier": "supplier.bundle.js",
 }
 
 doctype_list_js = {
-    "Sales Invoice": "public/gst_india/client_scripts/sales_invoice_list.js",
+    "Sales Invoice": "sales_invoice_list.bundle.js",
 }
 
 doc_events = {
