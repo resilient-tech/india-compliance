@@ -452,7 +452,7 @@ class EWaybillData(GSTInvoiceData):
         self.validate_company()
         self.validate_if_e_waybill_is_available(available=False)
         self.validate_e_waybill_settings()
-        self.validate_e_waybill_threshold()
+        self.validate_e_waybill_applicability()
         # TODO: Add Support for Delivery Note
 
     def validate_e_waybill_settings(self):
@@ -462,7 +462,7 @@ class EWaybillData(GSTInvoiceData):
         if not self.json_download and not self.settings.enable_api:
             frappe.throw(_("Please enable API in GST Settings"))
 
-    def validate_e_waybill_threshold(self):
+    def validate_e_waybill_applicability(self):
         """
         Validates:
         - Required fields
@@ -533,19 +533,6 @@ class EWaybillData(GSTInvoiceData):
                     msg=_("L/R No. is required to generate e-Waybill"),
                     title=_("Invalid Data"),
                 )
-        else:
-            missing_transport_details = (
-                not transport_mode
-                or transport_mode == "Road"
-                and not self.doc.get("vehicle_no")
-                or (transport_mode == "Ship")
-                and not self.doc.get("vehicle_no")
-                and not self.doc.get("lr_no")
-                or transport_mode in ["Rail", "Air"]
-                and not self.doc.get("lr_no")
-            )
-            if missing_transport_details:
-                self.generate_part_a = True
 
         if self.doc.base_grand_total < self.settings.e_waybill_threshold:
             frappe.throw(
@@ -676,12 +663,18 @@ class EWaybillData(GSTInvoiceData):
         if self.doc.gst_category == "SEZ":
             self.billing_address.state_code = 96
 
+    def get_transporter_details(self):
+        super().get_transporter_details()
+
+        if self.invoice_details.mode_of_transport == "":
+            self.invoice_details.mode_of_transport = '""'
+
     def get_invoice_map(self):
         if self.sandbox:
             self.invoice_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
-                    "docNo": random_string(6),
+                    "invoice_number": random_string(6),
                 }
             )
             self.company_address.gstin = "05AAACG2115R1ZN"

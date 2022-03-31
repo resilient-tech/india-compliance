@@ -15,17 +15,17 @@ class EInvoiceAPI(BaseAPI):
 
     def handle_failed_response(self, response_json):
         # Don't fail in case of Duplicate IRN
-        if response_json.get("message").starts_with("2150"):
+        if response_json.get("message").startswith("2150"):
             return True
 
     def get_e_invoice_by_irn(self, irn):
         return self.get(endpoint="invoice/irn", params={"irn": irn})
 
     def generate_irn(self, data):
-        return self.post(endpoint="invoice", body=data)
+        return self.post(endpoint="invoice", json=data)
 
     def cancel_irn(self, data):
-        return self.post(endpoint="invoice/cancel", body=data)
+        return self.post(endpoint="invoice/cancel", json=data)
 
     def generate_eway_bill(self, data):
-        return self.post(endpoint="ewaybill", body=data)
+        return self.post(endpoint="ewaybill", json=data)
