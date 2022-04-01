@@ -9,6 +9,7 @@ from frappe import _
 from frappe.utils import random_string, today
 from frappe.utils.file_manager import save_file
 
+from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -65,7 +66,10 @@ def generate_e_waybill(doctype, docname, dialog):
 
 def _generate_e_waybill(doc, throw=True):
     try:
-        data = EWaybillData(doc).get_e_waybill_data()
+        if doc.irn:
+            data = EWaybillData(doc).get_e_waybill_data()
+        else:
+            data = EWaybillData(doc).get_e_waybill_data()
 
     except frappe.ValidationError as e:
         if throw:
@@ -82,7 +86,11 @@ def _generate_e_waybill(doc, throw=True):
         )
         return False
 
-    result = EWaybillAPI(doc.company_gstin).generate_e_waybill(data)
+    if doc.irn:
+        result = EInvoiceAPI(doc.company_gstin).generate_e_waybill(data)
+    else:
+        result = EWaybillAPI(doc.company_gstin).generate_e_waybill(data)
+
     frappe.publish_realtime(
         "e_waybill_generated",
         {"doctype": doc.doctype, "docname": doc.name, "alert": result.alert},
@@ -327,10 +335,14 @@ def create_or_update_e_waybill_log(doc, doc_values, log_values, comment=None):
     if doc_values:
         frappe.db.set_value(doc.doctype, doc.name, doc_values)
 
-    if "name" in log_values:
+    if frappe.db.exists("e-Waybill Log", doc.ewaybill):
+        # Handle Duplicate IRN
+        return
+    elif "name" in log_values:
         e_waybill_doc = frappe.get_doc("e-Waybill Log", log_values.pop("name"))
     else:
         e_waybill_doc = frappe.get_doc({"doctype": "e-Waybill Log"})
+
     e_waybill_doc.update(log_values)
     e_waybill_doc.save(ignore_permissions=True)
 
@@ -379,6 +391,22 @@ class EWaybillData(GSTInvoiceData):
         self.get_party_address_details()
 
         return self.get_invoice_map()
+
+    def get_e_waybill_data_with_irn(self):
+        self.pre_validate_invoice()
+        self.get_transporter_details()
+
+        return {
+            "Irn": self.doc.irn,
+            "Distance": self.invoice_details.distance,
+            "TransMode": self.invoice_details.mode_of_transport,
+            "TransId": self.invoice_details.gst_transporter_id,
+            "TransName": self.invoice_details.transporter_name,
+            "TransDocDt": self.invoice_details.lr_date,
+            "TransDocNo": self.invoice_details.lr_no,
+            "VehNo": self.invoice_details.vehicle_no,
+            "VehType": self.invoice_details.vehicle_type,
+        }
 
     def get_e_waybill_cancel_data(self, dialog):
         self.validate_company()

@@ -27,5 +27,8 @@ class EInvoiceAPI(BaseAPI):
     def cancel_irn(self, data):
         return self.post(endpoint="invoice/cancel", json=data)
 
-    def generate_eway_bill(self, data):
+    def generate_e_waybill(self, data):
         return self.post(endpoint="ewaybill", json=data)
+
+    def cancel_e_waybill(self, data):
+        return self.post(endpoint="ewayapi", json=data)
