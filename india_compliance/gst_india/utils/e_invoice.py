@@ -14,8 +14,7 @@ def generate_e_invoice(doc, sandbox=False):
     data = EInvoiceData(doc, sandbox=sandbox).get_e_invoice_data()
 
     if sandbox:
-        api = EInvoiceAPI("01AMBPG7773M002")
-        api.BASE_URL = "https://asp.resilient.tech/test"
+        api = EInvoiceAPI("01AMBPG7773M002", sandbox=sandbox)
     else:
         api = EInvoiceAPI(doc.company_gstin)
 
@@ -81,7 +80,6 @@ class EInvoiceData(GSTInvoiceData):
         self.get_party_address_details()
 
         einv_data = self.get_invoice_map()
-        einv_data = json.loads(einv_data)
         return self.sanitize_invoice_map(einv_data)
 
     def pre_validate_invoice(self):
@@ -224,12 +222,12 @@ class EInvoiceData(GSTInvoiceData):
             seller = {
                 "gstin": "01AMBPG7773M002",
                 "state_code": "01",
-                "pincode": "193501",
+                "pincode": 193501,
             }
             buyer = {
                 "gstin": "36AMBPG7773M002",
                 "state_code": "36",
-                "pincode": "500055",
+                "pincode": 500055,
             }
             self.company_address.update(seller)
             self.dispatch_address.update(seller)
@@ -241,127 +239,124 @@ class EInvoiceData(GSTInvoiceData):
             else:
                 self.invoice_details.place_of_supply = "01"
 
-        return f"""
-        {{
+        return {
             "Version": "1.1",
-            "TranDtls": {{
-                "TaxSch": "{self.invoice_details.tax_scheme}",
-                "SupTyp": "{self.invoice_details.supply_type}",
-                "RegRev": "{self.invoice_details.reverse_charge}",
-                "EcmGstin": "{self.invoice_details.ecommerce_gstin}"
-            }},
-            "DocDtls": {{
-                "Typ": "{self.invoice_details.invoice_type}",
-                "No": "{self.invoice_details.invoice_number}",
-                "Dt": "{self.invoice_details.invoice_date}"
-            }},
-            "SellerDtls": {{
-                "Gstin": "{self.company_address.gstin}",
-                "LglNm": "{self.company_address.legal_name}",
-                "TrdNm": "{self.company_address.address_title}",
-                "Loc": "{self.company_address.city}",
-                "Pin": {self.company_address.pincode},
-                "Stcd": "{self.company_address.state_code}",
-                "Addr1": "{self.company_address.address_line1}",
-                "Addr2": "{self.company_address.address_line2}"
-            }},
-            "BuyerDtls": {{
-                "Gstin": "{self.billing_address.gstin}",
-                "LglNm": "{self.billing_address.legal_name}",
-                "TrdNm": "{self.billing_address.address_title}",
-                "Addr1": "{self.billing_address.address_line1}",
-                "Addr2": "{self.billing_address.address_line2}",
-                "Loc": "{self.billing_address.city}",
-                "Pin": {self.billing_address.pincode},
-                "Stcd": "{self.billing_address.state_code}",
-                "Pos": "{self.invoice_details.place_of_supply}"
-            }},
-            "DispDtls": {{
-                "Nm": "{self.dispatch_address.address_title}",
-                "Addr1": "{self.dispatch_address.address_line1}",
-                "Addr2": "{self.dispatch_address.address_line2}",
-                "Loc": "{self.dispatch_address.city}",
-                "Pin": {self.dispatch_address.pincode},
-                "Stcd": "{self.dispatch_address.state_code}"
-            }},
-            "ShipDtls": {{
-                "Gstin": "{self.shipping_address.gstin}",
-                "LglNm": "{self.shipping_address.address_title}",
-                "TrdNm": "{self.shipping_address.address_title}",
-                "Addr1": "{self.shipping_address.address_line1}",
-                "Addr2": "{self.shipping_address.address_line2}",
-                "Loc": "{self.shipping_address.city}",
-                "Pin": {self.shipping_address.pincode},
-                "Stcd": "{self.shipping_address.state_code}"
-            }},
-            "ItemList": [
-                {self.item_list}
-            ],
-            "ValDtls": {{
-                "AssVal": {self.invoice_details.base_total},
-                "CgstVal": {self.invoice_details.total_cgst_amount},
-                "SgstVal": {self.invoice_details.total_sgst_amount},
-                "IgstVal": {self.invoice_details.total_igst_amount},
-                "CesVal": {self.invoice_details.total_cess_amount + self.invoice_details.total_cess_non_advol_amount},
-                "Discount": {self.invoice_details.discount_amount},
-                "RndOffAmt": {self.invoice_details.rounding_adjustment},
-                "OthChrg": {self.invoice_details.other_charges},
-                "TotInvVal": {self.invoice_details.base_grand_total},
-                "TotInvValFc": {self.invoice_details.grand_total}
-            }},
-            "PayDtls": {{
-                "Nm": "{self.invoice_details.payee_name}",
-                "Mode": "{self.invoice_details.mode_of_payment}",
-                "PayTerm": "{self.invoice_details.payment_terms}",
-                "PaidAmt": {self.invoice_details.paid_amount},
-                "PaymtDue": {self.invoice_details.outstanding_amount},
-                "CrDay": {self.invoice_details.credit_days}
-            }},
-            "RefDtls": {{
-                "PrecDocDtls": [{{
-                    "InvNo": "{self.invoice_details.original_invoice_number}",
-                    "InvDt": "{self.invoice_details.original_invoice_date}"
-                }}]
-            }},
-            "EwbDtls": {{
-                "TransId": "{self.invoice_details.gst_transporter_id}",
-                "TransName": "{self.invoice_details.transporter_name}",
-                "TransMode": "{self.invoice_details.mode_of_transport}",
-                "Distance": {self.invoice_details.distance},
-                "TransDocNo": "{self.invoice_details.lr_no}",
-                "TransDocDt": "{self.invoice_details.lr_date_str}",
-                "VehNo": "{self.invoice_details.vehicle_no}",
-                "VehType": "{self.invoice_details.vehicle_type}"
-            }}
-        }}
-        """
+            "TranDtls": {
+                "TaxSch": self.invoice_details.tax_scheme,
+                "SupTyp": self.invoice_details.supply_type,
+                "RegRev": self.invoice_details.reverse_charge,
+                "EcmGstin": self.invoice_details.ecommerce_gstin,
+            },
+            "DocDtls": {
+                "Typ": self.invoice_details.invoice_type,
+                "No": self.invoice_details.invoice_number,
+                "Dt": self.invoice_details.invoice_date,
+            },
+            "SellerDtls": {
+                "Gstin": self.company_address.gstin,
+                "LglNm": self.company_address.legal_name,
+                "TrdNm": self.company_address.address_title,
+                "Loc": self.company_address.city,
+                "Pin": self.company_address.pincode,
+                "Stcd": self.company_address.state_code,
+                "Addr1": self.company_address.address_line1,
+                "Addr2": self.company_address.address_line2,
+            },
+            "BuyerDtls": {
+                "Gstin": self.billing_address.gstin,
+                "LglNm": self.billing_address.legal_name,
+                "TrdNm": self.billing_address.address_title,
+                "Addr1": self.billing_address.address_line1,
+                "Addr2": self.billing_address.address_line2,
+                "Loc": self.billing_address.city,
+                "Pin": self.billing_address.pincode,
+                "Stcd": self.billing_address.state_code,
+                "Pos": self.invoice_details.place_of_supply,
+            },
+            "DispDtls": {
+                "Nm": self.dispatch_address.address_title,
+                "Addr1": self.dispatch_address.address_line1,
+                "Addr2": self.dispatch_address.address_line2,
+                "Loc": self.dispatch_address.city,
+                "Pin": self.dispatch_address.pincode,
+                "Stcd": self.dispatch_address.state_code,
+            },
+            "ShipDtls": {
+                "Gstin": self.shipping_address.gstin,
+                "LglNm": self.shipping_address.address_title,
+                "TrdNm": self.shipping_address.address_title,
+                "Addr1": self.shipping_address.address_line1,
+                "Addr2": self.shipping_address.address_line2,
+                "Loc": self.shipping_address.city,
+                "Pin": self.shipping_address.pincode,
+                "Stcd": self.shipping_address.state_code,
+            },
+            "ItemList": self.item_list,
+            "ValDtls": {
+                "AssVal": self.invoice_details.base_total,
+                "CgstVal": self.invoice_details.total_cgst_amount,
+                "SgstVal": self.invoice_details.total_sgst_amount,
+                "IgstVal": self.invoice_details.total_igst_amount,
+                "CesVal": self.invoice_details.total_cess_amount
+                + self.invoice_details.total_cess_non_advol_amount,
+                "Discount": self.invoice_details.discount_amount,
+                "RndOffAmt": self.invoice_details.rounding_adjustment,
+                "OthChrg": self.invoice_details.other_charges,
+                "TotInvVal": self.invoice_details.base_grand_total,
+                "TotInvValFc": self.invoice_details.grand_total,
+            },
+            "PayDtls": {
+                "Nm": self.invoice_details.payee_name,
+                "Mode": self.invoice_details.mode_of_payment,
+                "PayTerm": self.invoice_details.payment_terms,
+                "PaidAmt": self.invoice_details.paid_amount,
+                "PaymtDue": self.invoice_details.outstanding_amount,
+                "CrDay": self.invoice_details.credit_days,
+            },
+            "RefDtls": {
+                "PrecDocDtls": [
+                    {
+                        "InvNo": self.invoice_details.original_invoice_number,
+                        "InvDt": self.invoice_details.original_invoice_date,
+                    }
+                ]
+            },
+            "EwbDtls": {
+                "TransId": self.invoice_details.gst_transporter_id,
+                "TransName": self.invoice_details.transporter_name,
+                "TransMode": self.invoice_details.mode_of_transport,
+                "Distance": self.invoice_details.distance,
+                "TransDocNo": self.invoice_details.lr_no,
+                "TransDocDt": self.invoice_details.lr_date_str,
+                "VehNo": self.invoice_details.vehicle_no,
+                "VehType": self.invoice_details.vehicle_type,
+            },
+        }
 
     def get_item_map(self):
-        return f"""
-        {{
-            "SlNo": "{self.item_details.item_no}",
-            "PrdDesc": "{self.item_details.item_name}",
-            "IsServc": "{self.item_details.is_service_item}",
-            "HsnCd": "{self.item_details.hsn_code}",
-            "Barcde": "{self.item_details.barcode}",
-            "Unit": "{self.item_details.uom}",
-            "Qty": {self.item_details.qty},
-            "UnitPrice": {self.item_details.unit_rate},
-            "TotAmt": {self.item_details.taxable_value},
-            "Discount": {self.item_details.discount_amount},
-            "AssAmt": {self.item_details.taxable_value},
-            "PrdSlNo": "{self.item_details.serial_no}",
-            "GstRt": {self.item_details.tax_rate},
-            "IgstAmt": {self.item_details.igst_amount},
-            "CgstAmt": {self.item_details.cgst_amount},
-            "SgstAmt": {self.item_details.sgst_amount},
-            "CesRt": {self.item_details.cess_rate},
-            "CesAmt": {self.item_details.cess_amount},
-            "CesNonAdvlAmt": {self.item_details.cess_non_advol_amount},
-            "TotItemVal": {self.item_details.total_value},
-            "BchDtls": {{
-                "Nm": "{self.item_details.batch_no}",
-                "ExpDt": "{self.item_details.batch_expiry_date}"
-            }}
-        }}
-        """
+        return {
+            "SlNo": str(self.item_details.item_no),
+            "PrdDesc": self.item_details.item_name,
+            "IsServc": self.item_details.is_service_item,
+            "HsnCd": self.item_details.hsn_code,
+            "Barcde": self.item_details.barcode,
+            "Unit": self.item_details.uom,
+            "Qty": self.item_details.qty,
+            "UnitPrice": self.item_details.unit_rate,
+            "TotAmt": self.item_details.taxable_value,
+            "Discount": self.item_details.discount_amount,
+            "AssAmt": self.item_details.taxable_value,
+            "PrdSlNo": self.item_details.serial_no,
+            "GstRt": self.item_details.tax_rate,
+            "IgstAmt": self.item_details.igst_amount,
+            "CgstAmt": self.item_details.cgst_amount,
+            "SgstAmt": self.item_details.sgst_amount,
+            "CesRt": self.item_details.cess_rate,
+            "CesAmt": self.item_details.cess_amount,
+            "CesNonAdvlAmt": self.item_details.cess_non_advol_amount,
+            "TotItemVal": self.item_details.total_value,
+            "BchDtls": {
+                "Nm": self.item_details.batch_no,
+                "ExpDt": self.item_details.batch_expiry_date,
+            },
+        }
