@@ -160,7 +160,7 @@ class EInvoiceData(GSTInvoiceData):
             ).days
 
         if (self.doc.is_pos or self.doc.advances) and self.doc.base_paid_amount:
-            paid_amount = round(abs(self.doc.base_paid_amount), 2)
+            paid_amount = abs(self.rounded(self.doc.base_paid_amount))
 
         self.invoice_details.update(
             {
@@ -170,11 +170,11 @@ class EInvoiceData(GSTInvoiceData):
                 ),
                 "paid_amount": paid_amount,
                 "credit_days": credit_days,
-                "outstanding_amount": round(abs(self.doc.outstanding_amount), 2),
+                "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
                 "payment_terms": self.doc.payment_terms_template
                 if self.doc.get("payment_terms_template")
                 else "",
-                "grand_total": round(abs(self.doc.grand_total), 2),
+                "grand_total": abs(self.rounded(self.doc.grand_total)),
             }
         )
 
