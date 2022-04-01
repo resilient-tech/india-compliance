@@ -40,7 +40,7 @@ import { UiState } from "../../constants";
 import {
   login,
   signup,
-  check_free_trial_eligiblity,
+  check_free_trial_eligibility,
 } from "../../services/AuthService";
 
 export default {
@@ -170,7 +170,7 @@ export default {
       else if (!validate_gst_number(value))
         field.error = "Invalid GSTIN detected";
       else {
-        const { message, error } = await check_free_trial_eligiblity(value);
+        const { message, error } = await check_free_trial_eligibility(value);
 
         if (error) {
           field.error = error;

@@ -25,7 +25,7 @@ export function signup(email, gstin) {
     });
 }
 
-export function check_free_trial_eligiblity(gstin) {
+export function check_free_trial_eligibility(gstin) {
     return ic.gst_api.call("auth/is_eligible_for_free_trial", {
         body: { gstin },
         fail_silently: true,

@@ -43,20 +43,22 @@ export default {
   computed: {
     last_synced_on() {
       //TODO: confirm the format
-      const { last_usage_synced_on } = this.subscription_details;
+      const { last_usage_synced_on } = this.subscriptionDetails;
       return (
         last_usage_synced_on &&
         moment.unix(last_usage_synced_on).format("DD-MM-YYYY HH:mm A")
       );
     },
-    subscription_details() {
-      return this.$store.state.account.subscription_details || {};
+    subscriptionDetails() {
+      return this.$store.state.account.subscriptionDetails || {};
     },
+
     balance_credits() {
-      return this.subscription_details.balance_credits;
+      return this.subscriptionDetails.balance_credits;
     },
+
     valid_upto() {
-      return frappe.datetime.str_to_user(this.subscription_details.expiry_date);
+      return frappe.datetime.str_to_user(this.subscriptionDetails.expiry_date);
     },
   },
 

@@ -1,75 +1,91 @@
 <template>
   <div class="container purchase-credits-page">
-    <PageTitle title="Purchase API Credits" class="title" />
-    <div class="main-content">
-      <div class="card card-calculator">
-        <div class="calculator">
-          <p class="title">Calculator</p>
-          <div class="form-group frappe-control">
-            <div class="control-input">
-              <input
-                type="number"
-                step="2500"
-                min="2500"
-                class="form-control"
-              />
+    <PreLoader v-if="isLoading" />
+    <div v-else>
+      <PageTitle title="Purchase API Credits" />
+      <div class="main-content">
+        <div class="card card-calculator">
+          <div class="calculator">
+            <p class="title">Calculator</p>
+            <div class="form-group frappe-control">
+              <div class="control-input">
+                <input
+                  type="number"
+                  :step="creditsMultiplier"
+                  :min="minOrderQty"
+                  class="form-control"
+                  v-model.number="creditsInputValue"
+                />
+              </div>
+            </div>
+            <p class="description">
+              Credits to be purchased (to be entered in multiple of
+              {{ creditsMultiplier }})
+            </p>
+            <button
+              class="btn btn-primary btn-sm btn-block btn-tall mt-5"
+              @click="handleButtonClick"
+              :disabled="isRedirecting"
+            >
+              {{ buttonText }}
+            </button>
+          </div>
+          <div class="calculator-result">
+            <div class="row">
+              <p class="col">Net Amount</p>
+              <p class="col calculator-net-value">
+                ₹ {{ netTotal.toFixed(2) }}
+              </p>
+            </div>
+            <div class="row">
+              <p class="col">GST @ {{ taxRate }}%</p>
+              <p class="col calculator-net-value">₹ {{ tax.toFixed(2) }}</p>
+            </div>
+            <div class="calculator-total row">
+              <p class="col">Amount Payable</p>
+              <p class="col calculator-net-value">
+                ₹ {{ grandTotal.toFixed(2) }}
+              </p>
             </div>
           </div>
-          <p class="description">
-            Credits to be purchased (to be entered in multiple of 2500)
-          </p>
-          <button class="btn btn-primary btn-sm btn-block btn-tall mt-5">
-            Calculate
-          </button>
         </div>
-        <div class="calculator-result">
-          <div class="row">
-            <p class="col">Net Amount</p>
-            <p class="col calculator-net-value">₹ 1,000.00</p>
-          </div>
-          <div class="row">
-            <p class="col">GST @ 18%</p>
-            <p class="col calculator-net-value">₹ 180.00</p>
-          </div>
-          <div class="calculator-total row">
-            <p class="col">Amount Payable</p>
-            <p class="col calculator-net-value">₹ 1,180.00</p>
-          </div>
-        </div>
-      </div>
-      <div class="card card-pricing">
-        <p class="title">Simple, Predictable Pricing</p>
-        <table class="plan-detail">
-          <tr>
-            <td></td>
-            <td class="plan-header">
-              <p>Price per Credit</p>
-              <p>(excl. GST)</p>
-            </td>
-          </tr>
-          <tr>
-            <td class="plan-list">First 10,000 Credits</td>
-            <td class="plan-list plan-price">₹ 0.50</td>
-          </tr>
-          <tr>
-            <td class="plan-list">Next 40,000 Credits</td>
-            <td class="plan-list plan-price">₹ 0.40</td>
-          </tr>
-          <tr>
-            <td class="plan-list">Any Additional Credits</td>
-            <td class="plan-list plan-price">₹ 0.30</td>
-          </tr>
-        </table>
-        <div>
+        <div class="card card-pricing">
+          <p class="title">Simple, Predictable Pricing</p>
+          <table class="plan-detail">
+            <tr>
+              <td></td>
+              <td class="plan-header">
+                <p>Price per Credit</p>
+                <p>(excl. GST)</p>
+              </td>
+            </tr>
+            <tr v-for="(rate, credits, index) in rates" :key="index">
+              <td class="plan-list">
+                {{
+                  index == 0
+                    ? "First"
+                    : credits == -1
+                    ? "Any Additional"
+                    : "Next"
+                }}
+                {{ credits != -1 ? credits : "" }} Credits
+              </td>
+              <td class="plan-list plan-price">
+                ₹ {{ (rate / 100).toFixed(2) }}
+              </td>
+            </tr>
+          </table>
           <div>
-            <p class="validity-header">Lifetime Validity<sup>*</sup></p>
-            <p class="validity-footer">
-              Initial validity of two years. Gets extended whenever you make the
-              next purchase.
-            </p>
+            <div>
+              <p class="validity-header">Lifetime Validity<sup>*</sup></p>
+              <p class="validity-footer">
+                Initial validity of two years. Gets extended whenever you make
+                the next purchase.
+              </p>
+            </div>
           </div>
+          <a href="#" class="text-highlight text-right">learn more...</a>
         </div>
-        <a href="#" class="text-highlight text-right">learn more...</a>
       </div>
     </div>
   </div>
@@ -78,13 +94,178 @@
 <script>
 import FormField from "../components/FormField.vue";
 import PageTitle from "../components/PageTitle.vue";
+import PreLoader from "../components/PreLoader.vue";
 
 export default {
   components: {
     FormField,
     PageTitle,
+    PreLoader,
+  },
+
+  data() {
+    return {
+      isLoading: true,
+      credits: 0,
+      creditsInputValue: 0,
+      isRedirecting: false,
+    };
+  },
+
+  computed: {
+    calculatorDetails() {
+      return this.$store.state.account.calculatorDetails || {};
+    },
+
+    creditsMultiplier() {
+      return this.calculatorDetails.credits_multiplier;
+    },
+
+    minOrderQty() {
+      return this.calculatorDetails.min_order_qty;
+    },
+
+    defaultCalculatorValue() {
+      return this.calculatorDetails.default_calculator_value;
+    },
+
+    creditsValidity() {
+      return this.calculatorDetails.credits_validity;
+    },
+
+    learnMoreUrl() {
+      return this.calculatorDetails.learn_more_url;
+    },
+
+    rates() {
+      return this.calculatorDetails.rates;
+    },
+
+    taxRate() {
+      return this.calculatorDetails.tax_rate;
+    },
+    tax() {
+      return (this.netTotal * this.taxRate) / 100;
+    },
+
+    netTotal() {
+      return (this.credits * this.applicableRate) / 100;
+    },
+
+    applicableRate() {
+      let slabs = Object.keys(this.rates).sort();
+      const rates = Object.values(this.rates).sort().reverse();
+      slabs.shift();
+      slabs = slabs.map((slab) => parseInt(slab));
+      return rates[bisect_left(slabs, this.credits)];
+    },
+
+    grandTotal() {
+      return this.netTotal + this.tax;
+    },
+
+    buttonText() {
+      if (this.isRedirecting) return "Redirecting...";
+      if (this.isDirty) return "Calculate";
+      return "Proceed to Payment";
+    },
+
+    isDirty() {
+      return this.creditsInputValue != this.credits;
+    },
+  },
+
+  methods: {
+    handleButtonClick() {
+      console.log(this.isDirty);
+      if (this.isDirty) {
+        this.updateCredits();
+      } else {
+        this.proceedToPayment();
+      }
+    },
+
+    async proceedToPayment() {
+      this.isRedirecting = true;
+      await this.$store.dispatch("createOrder", {
+        credits: this.credits,
+        amount: this.grandTotal,
+      });
+      const { orderToken } = this.$store.state.account;
+      if (!orderToken) return;
+
+      this.isRedirecting = false;
+      this.$router.push({ name: "PaymentPage", param: { orderToken } });
+    },
+
+    updateCredits() {
+      this.credits = this.creditsInputValue;
+
+      // credits only allowed to be in multiples of creditsMultiplier
+      if (this.credits < this.minOrderQty) {
+        this.credits = this.minOrderQty;
+      } else if (this.credits % this.creditsMultiplier != 0) {
+        this.credits =
+          Math.ceil(this.credits / this.creditsMultiplier) *
+          this.creditsMultiplier;
+      }
+
+      this.creditsInputValue = this.credits;
+    },
+  },
+
+  async created() {
+    await this.$store.dispatch("fetchCalculatorDetails");
+    this.isLoading = false;
+    this.credits = this.creditsInputValue = this.defaultCalculatorValue;
   },
 };
+
+// taken from: https://stackoverflow.com/a/58812425
+function bisect_left(sortedList, value) {
+  if (!sortedList.length) return 0;
+
+  if (sortedList.length == 1) {
+    return value > sortedList[0] ? 1 : 0;
+  }
+
+  let lbound = 0;
+  let rbound = sortedList.length - 1;
+  return bisect_left(lbound, rbound);
+
+  // note that this function depends on closure over lbound and rbound
+  // to work correctly
+  function bisect_left(lb, rb) {
+    if (rb - lb == 1) {
+      if (sortedList[lb] < value && sortedList[rb] >= value) {
+        return lb + 1;
+      }
+
+      if (sortedList[lb] == value) {
+        return lb;
+      }
+    }
+
+    if (sortedList[lb] > value) {
+      return 0;
+    }
+
+    if (sortedList[rb] < value) {
+      return sortedList.length;
+    }
+
+    let midPoint = lb + Math.floor((rb - lb) / 2);
+    let midValue = sortedList[midPoint];
+
+    if (value <= midValue) {
+      rbound = midPoint;
+    } else if (value > midValue) {
+      lbound = midPoint;
+    }
+
+    return bisect_left(lbound, rbound);
+  }
+}
 </script>
 
 <style scoped>
@@ -125,6 +306,14 @@ export default {
 .calculator .form-control {
   font-size: 1.4em;
   font-weight: 600;
+  margin: 0;
+}
+
+.calculator .form-control::-webkit-inner-spin-button,
+.calculator .form-control::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .calculator-net-value {
@@ -178,15 +367,15 @@ export default {
 @media screen and (max-width: 1200px) {
   .main-content {
     column-gap: 4em;
-    font-size:0.9em ;
+    font-size: 0.9em;
   }
-  .card{
-    padding:2em 2.5em;
+  .card {
+    padding: 2em 2.5em;
   }
 }
 @media (max-width: 992px) {
-  .purchase-credits-page{
-    font-size:0.8em ;
+  .purchase-credits-page {
+    font-size: 0.8em;
   }
   .main-content {
     column-gap: 3em;
@@ -194,8 +383,8 @@ export default {
   }
 }
 @media (max-width: 768px) {
-  .purchase-credits-page{
-    font-size:1em ;
+  .purchase-credits-page {
+    font-size: 1em;
   }
   .main-content {
     flex-direction: column;
@@ -204,18 +393,18 @@ export default {
   .card {
     max-width: 100%;
   }
-  .purchase-credits-page .title{
+  .purchase-credits-page .title {
     text-align: center;
   }
 }
 @media (max-width: 576px) {
-  .purchase-credits-page{
-    font-size:0.9em ;
+  .purchase-credits-page {
+    font-size: 0.9em;
   }
 }
 @media (max-width: 400px) {
-  .purchase-credits-page{
-    font-size:0.7em ;
+  .purchase-credits-page {
+    font-size: 0.7em;
   }
 }
 </style>
