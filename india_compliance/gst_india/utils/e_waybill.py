@@ -103,7 +103,7 @@ def _generate_e_waybill(doc, throw=True):
         "e_waybill_number": e_waybill,
         "e_waybill_date": e_waybill_date,
         "valid_upto": valid_upto,
-        "linked_with": doc.name,
+        "reference_name": doc.name,
     }
     create_or_update_e_waybill_log(doc, None, log_values)
     print_e_waybill_as_per_settings(doc)

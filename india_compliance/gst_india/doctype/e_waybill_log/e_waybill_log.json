@@ -10,7 +10,8 @@
   "section_break_0",
   "e_waybill_number",
   "e_waybill_date",
-  "linked_with",
+  "reference_doctype",
+  "reference_name",
   "column_break1",
   "valid_upto",
   "section_break1",
@@ -33,17 +34,14 @@
    "fieldname": "e_waybill_number",
    "fieldtype": "Data",
    "label": "e-Waybill Number",
+   "read_only": 1,
    "unique": 1
   },
   {
    "fieldname": "e_waybill_date",
    "fieldtype": "Datetime",
-   "label": "Date"
-  },
-  {
-   "fieldname": "linked_with",
-   "fieldtype": "Data",
-   "label": "Linked With"
+   "label": "Date",
+   "read_only": 1
   },
   {
    "fieldname": "column_break1",
@@ -52,7 +50,8 @@
   {
    "fieldname": "valid_upto",
    "fieldtype": "Datetime",
-   "label": "Valid Upto"
+   "label": "Valid Upto",
+   "read_only": 1
   },
   {
    "depends_on": "eval: doc.is_cancelled == 1",
@@ -64,12 +63,14 @@
    "default": "0",
    "fieldname": "is_cancelled",
    "fieldtype": "Check",
-   "label": "Is Cancelled"
+   "label": "Is Cancelled",
+   "read_only": 1
   },
   {
    "fieldname": "cancel_date",
    "fieldtype": "Datetime",
-   "label": "Cancel Date"
+   "label": "Cancel Date",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_2",
@@ -78,12 +79,14 @@
   {
    "fieldname": "cancel_reason_code",
    "fieldtype": "Data",
-   "label": "Cancel Reason Code"
+   "label": "Cancel Reason Code",
+   "read_only": 1
   },
   {
    "fieldname": "cancel_remark",
    "fieldtype": "Data",
-   "label": "Cancel Remark"
+   "label": "Cancel Remark",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_31",
@@ -93,24 +96,43 @@
    "fieldname": "data",
    "fieldtype": "Code",
    "label": "Data",
-   "options": "JSON"
+   "options": "JSON",
+   "read_only": 1
   },
   {
    "fieldname": "qr_base64",
    "fieldtype": "Long Text",
    "hidden": 1,
-   "label": "QR Text"
+   "label": "QR Text",
+   "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "is_latest_data",
    "fieldtype": "Check",
-   "label": "Is Latest Data"
+   "label": "Is Latest Data",
+   "read_only": 1
+  },
+  {
+   "default": "Sales Invoice",
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Reference DocType",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "label": "Sales Invoice",
+   "read_only": 1
   }
  ],
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-03-26 17:22:46.366825",
+ "modified": "2022-04-01 02:42:35.375535",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
@@ -118,7 +140,6 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
    "delete": 1,
    "email": 1,
    "export": 1,
@@ -126,8 +147,7 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 1
+   "share": 1
   }
  ],
  "sort_field": "modified",

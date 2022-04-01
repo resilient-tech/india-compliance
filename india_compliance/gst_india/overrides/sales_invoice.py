@@ -197,3 +197,9 @@ def validate_gst_accounts(doc):
                     row.idx
                 )
             )
+
+
+def ignore_logs_on_trash(doc, method=None):
+    doc.ignore_linked_doctypes = list(
+        doc.get("ignore_linked_doctypes", default=[])
+    ).append("e-Waybill Log")
