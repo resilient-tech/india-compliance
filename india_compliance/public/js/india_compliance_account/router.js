@@ -4,6 +4,7 @@ import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
 import MailSentPage from "./pages/MailSentPage.vue";
 import PurchaseCreditsPage from "./pages/purchaseCreditsPage.vue";
+import PaymentPage from "./pages/PaymentPage.vue";
 import PageNotFound from "./pages/PageNotFound.vue";
 
 const routes = [
@@ -21,6 +22,11 @@ const routes = [
         name: "purchaseCredits",
         path: "/purchase-credits",
         component: PurchaseCreditsPage,
+    },
+    {
+        name: "paymentPage",
+        path: "/payment-page",
+        component: PaymentPage,
     },
     {
         name: "home",
