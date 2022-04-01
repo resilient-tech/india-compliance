@@ -3,11 +3,11 @@ function setup_einvoice_actions(doctype) {
         async refresh(frm) {
             if (frm.doc.docstatus == 2) return;
 
-            const res = await frappe.call({
-                method: "india_compliance.gst_india.utils.e_invoice2.validate_eligibility",
-                args: { doc: frm.doc },
-            });
-            const invoice_eligible = res.message;
+            // const res = await frappe.call({
+            //     // method: "india_compliance.gst_india.utils.e_invoice2.validate_eligibility",
+            //     args: { doc: frm.doc },
+            // });
+            const invoice_eligible = false;
 
             if (!invoice_eligible) return;
 

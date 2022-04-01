@@ -1,30 +1,149 @@
 import json
 
+import jwt
+import pyqrcode
+
 import frappe
 from frappe import _
-from frappe.utils import format_date, getdate, random_string
+from frappe.utils import add_to_date, format_date, get_datetime, getdate, random_string
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
+from india_compliance.gst_india.utils.e_waybill import (
+    EWaybillData,
+    cancel_e_waybill,
+    create_or_update_e_waybill_log,
+    print_e_waybill_as_per_settings,
+)
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 
-def generate_e_invoice(doc, sandbox=False):
-    doc = frappe.get_doc("Sales Invoice", "SINV-CFY-00010-1")
-    data = EInvoiceData(doc, sandbox=sandbox).get_e_invoice_data()
+@frappe.whitelist()
+def generate_e_invoice(docname, throw=True, sandbox=False):
+    doc = get_doc(docname)
 
-    if sandbox:
-        api = EInvoiceAPI("01AMBPG7773M002", sandbox=sandbox)
-    else:
-        api = EInvoiceAPI(doc.company_gstin)
+    try:
+        data = EInvoiceData(doc, sandbox=sandbox).get_e_invoice_data()
 
-    result = api.generate_irn(data)
+        if sandbox:
+            api = EInvoiceAPI("01AMBPG7773M002", sandbox=sandbox)
+        else:
+            api = EInvoiceAPI(doc.company_gstin)
+
+        # Handle Duplicate IRN
+        result = api.generate_irn(data)
+        if result.get("InfCd") == "DUPIRN":
+            result = api.get_e_invoice_by_irn(result.get("Desc").get("Irn"))
+    except frappe.ValidationError as e:
+        if throw:
+            raise e
+
+        frappe.clear_last_message()
+        doc.db_set({"einvoice_status": "Pending"})
+        frappe.msgprint(
+            _(
+                "e-Invoice could'nt be auto-generated upon submission. Please generate"
+                " it manually after fixing following error.<br><br>{0}"
+            ).format(e.message)
+        )
+        return
+
+    # Publish Realtime
+    set_e_invoice_data(doc, result)
     return result
 
 
-def set_einvoice_data(result):
+def cancel_e_invoice(docname, dialog, throw=True, sandbox=False):
+    doc = get_doc(docname)
+    dialog = json.loads(dialog)
 
-    pass
+    validate_e_invoice_cancel_eligibility(doc)
+    if doc.ewaybill:
+        cancel_e_waybill(doc, dialog)
+
+    data = {
+        "Irn": doc.irn,
+        "Cnlrsn": dialog.get("reason"),
+        "Cnlrem": dialog.get("remark"),
+    }
+    result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).cancel_irn(data)
+    update_e_invoice_log(dialog, doc, result)
+
+
+def get_doc(docname):
+    doc = frappe.get_doc("Sales Invoice", docname)
+    if not doc:
+        frappe.throw(
+            _(
+                "Sales Invoice {0} for which you are generating e-Invoice not found."
+                " Please make sure you have saved the invoice properly."
+            ).format(docname)
+        )
+
+    return doc
+
+
+def set_e_invoice_data(doc, result):
+    doc.db_set(
+        {
+            "irn": result.get("Irn"),
+            "einvoice_status": "Generated",
+            "e_invoice_date": result.AckDt,
+        }
+    )
+    if result.EwbNo:
+        doc.db_set(
+            {"ewaybill": result.EwbNo, "e_waybill_validity": result.EwbValidTill}
+        )
+        log_values = {
+            "e_waybill_number": result.EwbNo,
+            "e_waybill_date": result.EwbDt,
+            "valid_upto": result.EwbValidTill,
+            "reference_name": doc.name,
+        }
+        create_or_update_e_waybill_log(doc, None, log_values)
+        print_e_waybill_as_per_settings(doc)
+
+    create_e_invoice_log(doc.name, result)
+
+
+def create_e_invoice_log(docname, result):
+    qr_base64 = pyqrcode.create(result.SignedQRCode).png_as_base64_str(
+        scale=2, quiet_zone=1
+    )
+    decoded_invoice = json.loads(
+        jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"]
+    )
+    log_values = {
+        "irn": result.Irn,
+        "sales_invoice": docname,
+        "ack_no": result.AckNo,
+        "ack_date": result.AckDt,
+        "signed_invoice": result.SignedInvoice,
+        "signed_qr_code": result.SignedQRCode,
+        "invoice_data": json.dumps(decoded_invoice),
+        "qr_base64": qr_base64,
+    }
+    if frappe.db.exists("e-Invoice Log", result.Irn):
+        # Handle Duplicate IRN
+        return
+
+    doc = frappe.get_doc({"doctype": "e-Invoice Log"})
+    doc.update(log_values)
+    doc.save(ignore_permissions=True)
+
+
+def update_e_invoice_log(dialog, doc, result):
+    doc.db_set({"einvoice_status": "Cancelled", "irn": None})
+    log_values = {
+        "is_cancelled": 1,
+        "cancel_reason_code": dialog.get("reason"),
+        "cancel_remark": dialog.get("remark"),
+        "cancel_date": result.get("CancelDate"),
+    }
+    einv_log = frappe.get_doc("e-Invoice Log", doc.irn)
+    einv_log.update(log_values)
+    einv_log.save(ignore_permissions=True)
 
 
 def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
@@ -66,6 +185,27 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         return
 
     return True
+
+
+def validate_e_invoice_cancel_eligibility(doc):
+    if not doc.irn:
+        frappe.throw(_("IRN not found for this invoice and hence cannot be cancelled"))
+
+    if not doc.e_invoice_date:
+        frappe.throw(
+            _(
+                "e-Invoice date not found for this invoice and hence"
+                " cancel eligibility could not be determined"
+            )
+        )
+
+    if add_to_date(doc.e_invoice_date, days=1) < get_datetime():
+        frappe.throw(
+            _(
+                "e-Invoice can be cancelled only if it is within 24 Hours of its"
+                " generation"
+            )
+        )
 
 
 class EInvoiceData(GSTInvoiceData):

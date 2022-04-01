@@ -21,6 +21,7 @@ class GSTInvoiceData:
     def __init__(self, doc, json_download=False, sandbox=False):
         self.doc = doc
         self.json_download = json_download
+        self.invoice_details = frappe._dict()
         self.sandbox = sandbox
         self.gst_accounts = {
             v: k
@@ -29,7 +30,6 @@ class GSTInvoiceData:
         self.settings = frappe.get_cached_doc("GST Settings")
 
     def get_invoice_details(self):
-        self.invoice_details = frappe._dict()
         self.update_invoice_details()
         self.get_invoice_tax_details()
 
@@ -181,7 +181,7 @@ class GSTInvoiceData:
         self.item_details.update(
             {
                 "item_no": row.idx,
-                "qty": abs(self.rounded(row.qty, self.doc.precision("qty"))),
+                "qty": abs(self.rounded(row.qty, self.doc.precision("qty", "items"))),
                 "taxable_value": abs(self.rounded(row.taxable_value)),
                 "hsn_code": row.gst_hsn_code,
                 "item_name": self.sanitize_data(row.item_name, "text"),

@@ -1,12 +1,10 @@
 {% include "india_compliance/gst_india/client_scripts/taxes.js" %}
-{% include "india_compliance/gst_india/client_scripts/einvoice.js" %}
 {% include "india_compliance/gst_india/client_scripts/invoice.js" %}
 
 const DOCTYPE = "Sales Invoice";
 
 setup_auto_gst_taxation(DOCTYPE);
 fetch_gst_category(DOCTYPE);
-setup_einvoice_actions(DOCTYPE);
 update_export_type(DOCTYPE);
 setup_e_waybill_actions(DOCTYPE);
 
