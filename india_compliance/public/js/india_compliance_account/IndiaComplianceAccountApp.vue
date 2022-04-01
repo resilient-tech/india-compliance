@@ -1,7 +1,7 @@
 <template>
   <div class="india-compliance-account">
     <transition name="fade">
-      <Startup v-if="isLoading" />
+      <PreLoader v-if="isLoading" />
       <transition name="fade" mode="out-in" v-else>
         <router-view />
       </transition>
@@ -11,11 +11,11 @@
 </template>
 
 <script>
-import Startup from "./components/PreLoader.vue";
+import PreLoader from "./components/PreLoader.vue";
 import TheFooter from "./components/TheFooter.vue";
 
 export default {
-  components: { Startup, TheFooter },
+  components: { PreLoader, TheFooter },
 
   data() {
     return {
@@ -30,7 +30,7 @@ export default {
     },
   },
 
-  async mounted() {
+  async created() {
     await this.$store.dispatch("initAuth");
     if (this.$store.getters.isLoggedIn) {
       await this.$store.dispatch("fetchSubscriptionDetails");

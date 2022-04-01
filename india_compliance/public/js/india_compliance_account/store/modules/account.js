@@ -1,13 +1,27 @@
-import { get_subscription_details } from "../../services/AccountService";
+import {
+    get_subscription_details,
+    get_calculator_details,
+    create_order,
+} from "../../services/AccountService";
 
 export default {
     state: {
-        subscription_details: null,
+        subscriptionDetails: null,
+        calculatorDetails: null,
+        orderToken: null,
     },
 
     mutations: {
-        SET_SUBSCRIPTION_DETAILS(state, subscription_details) {
-            state.subscription_details = subscription_details;
+        SET_SUBSCRIPTION_DETAILS(state, subscriptionDetails) {
+            state.subscriptionDetails = subscriptionDetails;
+        },
+
+        SET_CALCULATOR_DETAILS(state, calculatorDetails) {
+            state.calculatorDetails = calculatorDetails;
+        },
+
+        SET_ORDER_TOKEN(state, orderToken) {
+            state.orderToken = orderToken;
         },
     },
 
@@ -18,17 +32,37 @@ export default {
 
         async fetchSubscriptionDetails({ commit }) {
             const response = await get_subscription_details();
-            if (response.error) {
-                if (response.exc_type?.includes("InvalidAuthorizationToken")) {
-                    // invalid secret -> delete the secret
-                    await this.dispatch("setApiSecret", null);
-                }
-                return;
-            }
+            if (response.error) return handleInvalidTokenError(response);
             if (!response.success || !response.message) return;
             commit("SET_SUBSCRIPTION_DETAILS", response.message);
+        },
+
+        async fetchCalculatorDetails({ commit }) {
+            const response = await get_calculator_details();
+            if (response.error) return handleInvalidTokenError(response);
+            if (!response.success || !response.message) return;
+            commit("SET_CALCULATOR_DETAILS", response.message);
+        },
+
+        async createOrder({ commit }, { credits, amount }) {
+            const response = await create_order(credits, amount);
+            console.log(response);
+            if (response.error) return handleInvalidTokenError(response);
+            if (
+                !response.success ||
+                !response.message ||
+                !response.message.order_token
+            )
+                return;
+            commit("SET_ORDER_TOKEN", response.message.order_token);
         },
     },
 
     getters: {},
 };
+
+async function handleInvalidTokenError({ exc_type }) {
+    if (!exc_type?.includes("InvalidAuthorizationToken")) return;
+    // invalid secret -> delete the secret
+    await this.dispatch("setApiSecret", null);
+}
