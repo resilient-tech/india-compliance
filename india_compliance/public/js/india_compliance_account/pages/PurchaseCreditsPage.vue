@@ -195,7 +195,10 @@ export default {
       if (!orderToken) return;
 
       this.isRedirecting = false;
-      this.$router.push({ name: "PaymentPage", param: { orderToken } });
+      this.$router.push({
+        name: "paymentPage",
+        params: { orderToken },
+      });
     },
 
     updateCredits() {

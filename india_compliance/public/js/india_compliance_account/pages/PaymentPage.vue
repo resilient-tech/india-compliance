@@ -57,17 +57,11 @@ export default {
   components: {
     PageTitle,
   },
-  params: {
-    orderToken: {
-      type: String,
-      required: true,
-    },
-  },
 
-  beforeRouteEnter(to, from, next) {
-    if (to.params.orderToken) return next();
-    next({ name: "home", replace: true });
-  },
+  //   beforeRouteEnter(to, from, next) {
+  //     if (to.params.orderToken) return next();
+  //     next({ name: "home", replace: true });
+  //   },
   setup() {},
   methods: {
     editAddress() {
@@ -151,26 +145,22 @@ export default {
     );
     document.head.appendChild(script);
     script.onload = () => {
-      initCashFree();
+      initCashFree(this.$route.params.orderToken);
     };
   },
 };
 
-function initCashFree() {
+function initCashFree(orderToken) {
   const style = getComputedStyle(document.body);
   const primaryColor = style.getPropertyValue("--primary");
   const cardBg = style.getPropertyValue("--card-bg");
   const fontFamily = style.getPropertyValue("--font-stack");
   const theme =
     document.documentElement.getAttribute("data-theme-mode") || "light";
-  // console.log(primaryCcolor);
-  console.log(cardBg);
-
-  console.log(fontFamily);
 
   var dropConfig = {
     components: ["order-details", "card", "netbanking", "app", "upi"],
-    orderToken: "7RyleyCOzRftapYCmSDb",
+    orderToken,
     onSuccess: function (data) {
       //on payment flow complete
     },
