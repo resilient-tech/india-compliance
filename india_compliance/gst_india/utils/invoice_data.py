@@ -3,7 +3,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, format_date, get_date_str, nowdate
+from frappe.utils import cint, format_date, get_date_str, nowdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.constants.e_waybill import (
@@ -181,7 +181,7 @@ class GSTInvoiceData:
         self.item_details.update(
             {
                 "item_no": row.idx,
-                "qty": abs(self.rounded(row.qty)),
+                "qty": abs(self.rounded(row.qty, self.doc.precision("qty"))),
                 "taxable_value": abs(self.rounded(row.taxable_value)),
                 "hsn_code": row.gst_hsn_code,
                 "item_name": self.sanitize_data(row.item_name, "text"),
@@ -346,5 +346,6 @@ class GSTInvoiceData:
 
         return data
 
-    def rounded(self, value):
-        return round(flt(value), 2)
+    @staticmethod
+    def rounded(value, precision=2):
+        return rounded(value, precision)
