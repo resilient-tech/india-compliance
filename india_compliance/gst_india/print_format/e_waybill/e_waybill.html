@@ -1,7 +1,7 @@
 <style>
     {% include "india_compliance/gst_india/print_format/e_waybill/e_waybill.css" %}
 </style>
-{% if doc.data %} {% set ewb = json.loads(doc.data)%} {% set transType = { 1:
+{% set ewb = json.loads(doc.data) %} {% set transType = { 1:
 "Regular", 2: "Bill To - Ship To", 3: "Bill From - Dispatch From", 4:
 "Combination of 2 and 3" } %} {% set transport_modes = { "1": 'Road', "2":
 'Rail', "3": 'Air', "4": 'Ship' } %}
@@ -283,6 +283,3 @@
         </div>
     </body>
 </html>
-{%else%}
-<h1>Ewaybill is not generated for this document.</h1>
-{%endif%}
