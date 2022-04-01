@@ -10,7 +10,6 @@ from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
-    STATE_NUMBERS,
     TCS,
 )
 
@@ -208,11 +207,7 @@ def get_gstins_for_company(company):
 
 @frappe.whitelist()
 def get_gst_accounts(
-    company=None,
-    account_wise=False,
-    only_reverse_charge=0,
-    only_non_reverse_charge=0,
-    is_output_account=0,
+    company=None, account_wise=False, only_reverse_charge=0, only_non_reverse_charge=0
 ):
     filters = {"parent": "GST Settings"}
 
@@ -319,35 +314,3 @@ def delete_custom_fields(custom_fields):
             )
 
             frappe.clear_cache(doctype=doctype)
-
-
-def add_spacing(value, num):
-    x = ""
-    value = str(value)
-    for i in range(0, len(value), num):
-        x = x + value[i : i + num] + " "
-    return x
-
-
-def get_state(code):
-    for state, scode in STATE_NUMBERS.items():
-        if int(scode) == code:
-            return state
-
-
-def get_sub_supply_type(code):
-    map = {
-        1: "Supply",
-        2: "Import",
-        3: "Export",
-        4: "Job Work",
-        5: "For Own Use",
-        6: "Job work Returns",
-        7: "Sales Return",
-        8: "Others",
-        9: "SKD/CKD",
-        10: "Line Sales",
-        11: "Recipient Not Known",
-        12: "Exhibition or Fairs",
-    }
-    return map[int(code)]

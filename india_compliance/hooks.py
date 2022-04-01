@@ -139,9 +139,9 @@ regional_overrides = {
 
 jinja = {
     "methods": [
-        "india_compliance.gst_india.utils.add_spacing",
-        "india_compliance.gst_india.utils.get_state",
-        "india_compliance.gst_india.utils.get_sub_supply_type",
+        "india_compliance.gst_india.utils.jinja.add_spacing",
+        "india_compliance.gst_india.utils.jinja.get_state",
+        "india_compliance.gst_india.utils.jinja.get_sub_supply_type",
     ],
 }
 
