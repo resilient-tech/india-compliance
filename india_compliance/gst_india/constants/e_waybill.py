@@ -1,13 +1,14 @@
+# Just for reference
+# SUPPLY_TYPES = {"Inward": "I", "Outward": "O"}
+# DOCUMENT_TYPES = {
+#     "Tax Invoice": "INV",
+#     "Bill of Supply": "BIL",
+#     "Bill of Entry": "BOE",
+#     "Delivery Challan": "CHL",
+#     "Others": "OTH",
+# }
 TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4}
 VEHICLE_TYPES = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
-SUPPLY_TYPE = {"Inward": "I", "Outward": "O"}
-DOC_TYPE = {
-    "Tax Invoice": "INV",
-    "Bill of Supply": "BIL",
-    "Bill of Entry": "BOE",
-    "Delivery Challan": "CHL",
-    "Others": "OTH",
-}
 
 UOMS = {
     "BAG": "BAGS",
@@ -57,8 +58,7 @@ UOMS = {
     "YDS": "YARDS",
 }
 
-
-dn_ewaybill_fields = [
+DELIVERY_NOTE_FIELDS = [
     {
         "fieldname": "distance",
         "label": "Distance (in km)",
@@ -102,12 +102,12 @@ dn_ewaybill_fields = [
         "fieldtype": "Data",
         "depends_on": "eval:(doc.docstatus === 1)",
         "allow_on_submit": 1,
-        "insert_after": "customer_name_in_arabic",
+        "insert_after": "customer_name",
         "translatable": 0,
     },
 ]
 
-si_ewaybill_fields = [
+SALES_INVOICE_FIELDS = [
     {
         "fieldname": "transporter_info",
         "label": "Transporter Info",
@@ -124,16 +124,6 @@ si_ewaybill_fields = [
         "insert_after": "transporter_info",
         "options": "Supplier",
         "print_hide": 1,
-    },
-    {
-        "fieldname": "gst_transporter_id",
-        "label": "GST Transporter ID",
-        "fieldtype": "Data",
-        "insert_after": "transporter",
-        "fetch_from": "transporter.gst_transporter_id",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 20,
     },
     {
         "fieldname": "driver",
@@ -162,13 +152,6 @@ si_ewaybill_fields = [
         "length": 15,
     },
     {
-        "fieldname": "distance",
-        "label": "Distance (in km)",
-        "fieldtype": "Int",
-        "insert_after": "vehicle_no",
-        "print_hide": 1,
-    },
-    {
         "fieldname": "transporter_col_break",
         "fieldtype": "Column Break",
         "insert_after": "distance",
@@ -182,16 +165,6 @@ si_ewaybill_fields = [
         "read_only": 1,
         "print_hide": 1,
         "translatable": 0,
-    },
-    {
-        "fieldname": "mode_of_transport",
-        "label": "Mode of Transport",
-        "fieldtype": "Select",
-        "options": "\nRoad\nAir\nRail\nShip",
-        "insert_after": "transporter_name",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 5,
     },
     {
         "fieldname": "driver_name",
@@ -211,18 +184,6 @@ si_ewaybill_fields = [
         "print_hide": 1,
     },
     {
-        "fieldname": "gst_vehicle_type",
-        "label": "GST Vehicle Type",
-        "fieldtype": "Select",
-        "options": "Regular\nOver Dimensional Cargo (ODC)",
-        "depends_on": 'eval:(doc.mode_of_transport === "Road")',
-        "default": "Regular",
-        "insert_after": "lr_date",
-        "print_hide": 1,
-        "translatable": 0,
-        "length": 30,
-    },
-    {
         "fieldname": "ewaybill",
         "label": "e-Waybill No.",
         "fieldtype": "Data",
@@ -231,15 +192,15 @@ si_ewaybill_fields = [
             " === 0)"
         ),
         "allow_on_submit": 1,
-        "insert_after": "tax_id",
+        "insert_after": "customer_name",
         "translatable": 0,
         "length": 20,
     },
 ]
 
 E_WAYBILL_FIELDS = {
-    "Sales Invoice": si_ewaybill_fields,
-    "Delivery Note": dn_ewaybill_fields,
+    "Sales Invoice": SALES_INVOICE_FIELDS + DELIVERY_NOTE_FIELDS,
+    "Delivery Note": DELIVERY_NOTE_FIELDS,
 }
 
 E_WAYBILL_API_FIELDS = {
