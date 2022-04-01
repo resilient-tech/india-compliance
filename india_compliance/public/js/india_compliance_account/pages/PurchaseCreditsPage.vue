@@ -1,6 +1,6 @@
 <template>
   <div class="container purchase-credits-page">
-    <PageTitle title="Purchase API Credits" />
+    <PageTitle title="Purchase API Credits" class="title" />
     <div class="main-content">
       <div class="card card-calculator">
         <div class="calculator">
@@ -174,5 +174,48 @@ export default {
 }
 .validity-footer {
   font-size: 0.9em;
+}
+@media screen and (max-width: 1200px) {
+  .main-content {
+    column-gap: 4em;
+    font-size:0.9em ;
+  }
+  .card{
+    padding:2em 2.5em;
+  }
+}
+@media (max-width: 992px) {
+  .purchase-credits-page{
+    font-size:0.8em ;
+  }
+  .main-content {
+    column-gap: 3em;
+    padding: 2em 1.5em;
+  }
+}
+@media (max-width: 768px) {
+  .purchase-credits-page{
+    font-size:1em ;
+  }
+  .main-content {
+    flex-direction: column;
+    row-gap: 3em;
+  }
+  .card {
+    max-width: 100%;
+  }
+  .purchase-credits-page .title{
+    text-align: center;
+  }
+}
+@media (max-width: 576px) {
+  .purchase-credits-page{
+    font-size:0.9em ;
+  }
+}
+@media (max-width: 400px) {
+  .purchase-credits-page{
+    font-size:0.7em ;
+  }
 }
 </style>
