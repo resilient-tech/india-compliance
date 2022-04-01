@@ -183,7 +183,7 @@ class GSTInvoiceData:
                 "item_no": row.idx,
                 "qty": abs(self.rounded(row.qty)),
                 "taxable_value": abs(self.rounded(row.taxable_value)),
-                "hsn_code": int(row.gst_hsn_code),
+                "hsn_code": row.gst_hsn_code,
                 "item_name": self.sanitize_data(row.item_name, "text"),
                 "uom": row.uom if UOMS.get(row.uom) else "OTH",
             }
@@ -313,7 +313,7 @@ class GSTInvoiceData:
                 else:
                     invoice_data.pop(key, None)
 
-            elif not value and value != 0 or value == "None":
+            elif value is None or value == "":
                 invoice_data.pop(key, None)
 
         return invoice_data
