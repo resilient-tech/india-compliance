@@ -20,5 +20,5 @@ body {
 }
 
 .text-highlight {
-    color: var(--primary-color);
+    color: var(--primary-color)!important;
 }
