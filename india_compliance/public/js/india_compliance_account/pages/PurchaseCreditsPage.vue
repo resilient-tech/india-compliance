@@ -101,7 +101,7 @@ export default {
   font-size: 1.2em;
 }
 .card {
-  height: 35em;
+  min-height: 35em;
   justify-content: space-between;
   padding: 2em 3.5em;
   flex-grow: 1;
