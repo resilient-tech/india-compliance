@@ -6,7 +6,7 @@ frappe.listview_settings['Sales Invoice'].onload = function (list_view) {
 		globalOnload(list_view);
 	}
 
-	const action = () => {
+	const action = async () => {
 		const selected_docs = list_view.get_checked_items();
 		const docnames = list_view.get_checked_items(true);
 

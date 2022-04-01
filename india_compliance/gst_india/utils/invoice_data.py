@@ -5,8 +5,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, format_date, get_date_str, nowdate
 
+from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.constants.e_waybill import (
-    GST_TAX_TYPES,
     TRANSPORT_MODES,
     UOMS,
     VEHICLE_TYPES,
@@ -38,13 +38,13 @@ class GSTInvoiceData:
             {
                 "invoice_date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "base_total": abs(
-                    round(sum([i.taxable_value for i in self.doc.items]), 2)
+                    self.rounded(sum([i.taxable_value for i in self.doc.items]))
                 ),
-                "rounding_adjustment": round(-self.doc.rounding_adjustment, 2)
+                "rounding_adjustment": self.rounded(-self.doc.rounding_adjustment)
                 if self.doc.is_return
-                else round(self.doc.rounding_adjustment, 2),
-                "base_grand_total": round(abs(self.doc.base_rounded_total), 2)
-                or round(abs(self.doc.base_grand_total), 2),
+                else self.rounded(self.doc.rounding_adjustment),
+                "base_grand_total": abs(self.rounded(self.doc.base_rounded_total))
+                or abs(self.rounded(self.doc.base_grand_total)),
                 "discount_amount": 0,
                 "company_gstin": self.doc.company_gstin,
                 "invoice_number": self.doc.name,
@@ -60,7 +60,7 @@ class GSTInvoiceData:
                 continue
 
             tax = self.gst_accounts[row.account_head][:-8]
-            tax_amount = round(abs(row.base_tax_amount_after_discount_amount), 2)
+            tax_amount = abs(self.rounded(row.base_tax_amount_after_discount_amount))
             self.invoice_details.update({f"total_{tax}_amount": tax_amount})
 
         self.get_other_charges()
@@ -73,8 +73,8 @@ class GSTInvoiceData:
         for total in totals:
             base_grand_total += self.invoice_details.get(total)
 
-        self.invoice_details.other_charges = round(
-            (self.invoice_details.base_grand_total - base_grand_total), 2
+        self.invoice_details.other_charges = self.rounded(
+            (self.invoice_details.base_grand_total - base_grand_total)
         )
 
     def get_transporter_details(self):
@@ -177,14 +177,12 @@ class GSTInvoiceData:
             self.get_item_tax_details(row)
             self.item_list.append(self.get_item_map() or {})
 
-        self.item_list = ", ".join(self.item_list)
-
     def update_item_details(self, row):
         self.item_details.update(
             {
                 "item_no": row.idx,
-                "qty": round(abs(row.qty), 2),
-                "taxable_value": round(abs(row.taxable_value), 2),
+                "qty": abs(self.rounded(row.qty)),
+                "taxable_value": abs(self.rounded(row.taxable_value)),
                 "hsn_code": int(row.gst_hsn_code),
                 "item_name": self.sanitize_data(row.item_name, "text"),
                 "uom": row.uom if UOMS.get(row.uom) else "OTH",
@@ -206,13 +204,12 @@ class GSTInvoiceData:
             )[0]
 
             # considers senarios where same item is there multiple times
-            tax_amount = round(
-                abs(
+            tax_amount = abs(
+                self.rounded(
                     tax_rate * item.qty
                     if row.charge_type == "On Item Quantity"
                     else tax_rate * item.taxable_value / 100
                 ),
-                2,
             )
             self.item_details.update(
                 {
@@ -224,21 +221,20 @@ class GSTInvoiceData:
             {
                 "tax_rate": sum(
                     [
-                        flt(self.item_details.get(f"{tax}_rate", 0))
+                        self.rounded(self.item_details.get(f"{tax}_rate", 0))
                         for tax in self.TAXES[:3]
                     ]
                 ),
-                "total_value": round(
-                    abs(
+                "total_value": abs(
+                    self.rounded(
                         self.item_details.taxable_value
                         + sum(
                             [
-                                flt(self.item_details.get(f"{tax}_amount", 0))
+                                self.rounded(self.item_details.get(f"{tax}_amount", 0))
                                 for tax in self.TAXES
                             ]
                         )
                     ),
-                    2,
                 ),
             }
         )
@@ -349,3 +345,6 @@ class GSTInvoiceData:
             data = int(data)
 
         return data
+
+    def rounded(self, value):
+        return round(flt(value), 2)

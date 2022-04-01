@@ -378,8 +378,7 @@ class EWaybillData(GSTInvoiceData):
         self.get_transporter_details()
         self.get_party_address_details()
 
-        ewb_data = self.get_invoice_map()
-        return json.loads(ewb_data)
+        return self.get_invoice_map()
 
     def get_e_waybill_cancel_data(self, dialog):
         self.validate_company()
@@ -461,7 +460,7 @@ class EWaybillData(GSTInvoiceData):
         for fieldname in ("company_gstin", "company_address", "customer_address"):
             if not self.doc.get(fieldname):
                 frappe.throw(
-                    _("{} is required to generate e-Waybill JSON").format(
+                    _("{0} is required to generate e-Waybill JSON").format(
                         frappe.unscrub(fieldname)
                     ),
                     exc=frappe.MandatoryError,
@@ -664,51 +663,51 @@ class EWaybillData(GSTInvoiceData):
             self.company_address.gstin = "05AAACG2115R1ZN"
             self.billing_address.gstin = "05AAACG2140A1ZL"
 
-        data = f"""
-        {{
-            "userGstin": "{self.invoice_details.company_gstin}",
-            "supplyType": "{self.invoice_details.supply_type}",
-            "subSupplyType": {self.invoice_details.sub_supply_type},
-            "subSupplyDesc":"",
-            "docType": "{self.invoice_details.document_type}",
-            "docNo": "{self.invoice_details.invoice_number}",
-            "docDate": "{self.invoice_details.invoice_date}",
-            "transactionType": {self.invoice_details.transaction_type},
-            "fromTrdName": "{self.company_address.address_title}",
-            "fromGstin": "{self.company_address.gstin}",
-            "fromAddr1": "{self.dispatch_address.address_line1}",
-            "fromAddr2": "{self.dispatch_address.address_line2}",
-            "fromPlace": "{self.dispatch_address.city}",
-            "fromPincode": {self.dispatch_address.pincode},
-            "fromStateCode": {self.company_address.state_code},
-            "actFromStateCode": {self.dispatch_address.state_code},
-            "toTrdName": "{self.billing_address.address_title}",
-            "toGstin": "{self.billing_address.gstin}",
-            "toAddr1": "{self.shipping_address.address_line1}",
-            "toAddr2": "{self.shipping_address.address_line2}",
-            "toPlace": "{self.shipping_address.city}",
-            "toPincode": {self.shipping_address.pincode},
-            "toStateCode": {self.billing_address.state_code},
-            "actToStateCode": {self.shipping_address.state_code},
-            "totalValue": {self.invoice_details.base_total},
-            "cgstValue": {self.invoice_details.total_cgst_amount},
-            "sgstValue": {self.invoice_details.total_sgst_amount},
-            "igstValue": {self.invoice_details.total_igst_amount},
-            "cessValue": {self.invoice_details.total_cess_amount},
-            "TotNonAdvolVal": {self.invoice_details.total_cess_non_advol_amount},
-            "OthValue": {self.invoice_details.rounding_adjustment + self.invoice_details.other_charges},
-            "totInvValue": {self.invoice_details.base_grand_total},
-            "transMode": {self.invoice_details.mode_of_transport},
-            "transDistance": {self.invoice_details.distance},
-            "transporterName": "{self.invoice_details.transporter_name}",
-            "transporterId": "{self.invoice_details.gst_transporter_id}",
-            "transDocNo": "{self.invoice_details.lr_no}",
-            "transDocDate": "{self.invoice_details.lr_date_str}",
-            "vehicleNo": "{self.invoice_details.vehicle_no}",
-            "vehicleType": "{self.invoice_details.vehicle_type}",
-            "itemList": [{self.item_list}],
-            "mainHsnCode": "{self.invoice_details.main_hsn_code}"
-        }}"""
+        data = {
+            "userGstin": self.invoice_details.company_gstin,
+            "supplyType": self.invoice_details.supply_type,
+            "subSupplyType": self.invoice_details.sub_supply_type,
+            "subSupplyDesc": "",
+            "docType": self.invoice_details.document_type,
+            "docNo": self.invoice_details.invoice_number,
+            "docDate": self.invoice_details.invoice_date,
+            "transactionType": self.invoice_details.transaction_type,
+            "fromTrdName": self.company_address.address_title,
+            "fromGstin": self.company_address.gstin,
+            "fromAddr1": self.dispatch_address.address_line1,
+            "fromAddr2": self.dispatch_address.address_line2,
+            "fromPlace": self.dispatch_address.city,
+            "fromPincode": self.dispatch_address.pincode,
+            "fromStateCode": self.company_address.state_code,
+            "actFromStateCode": self.dispatch_address.state_code,
+            "toTrdName": self.billing_address.address_title,
+            "toGstin": self.billing_address.gstin,
+            "toAddr1": self.shipping_address.address_line1,
+            "toAddr2": self.shipping_address.address_line2,
+            "toPlace": self.shipping_address.city,
+            "toPincode": self.shipping_address.pincode,
+            "toStateCode": self.billing_address.state_code,
+            "actToStateCode": self.shipping_address.state_code,
+            "totalValue": self.invoice_details.base_total,
+            "cgstValue": self.invoice_details.total_cgst_amount,
+            "sgstValue": self.invoice_details.total_sgst_amount,
+            "igstValue": self.invoice_details.total_igst_amount,
+            "cessValue": self.invoice_details.total_cess_amount,
+            "TotNonAdvolVal": self.invoice_details.total_cess_non_advol_amount,
+            "OthValue": self.invoice_details.rounding_adjustment
+            + self.invoice_details.other_charges,
+            "totInvValue": self.invoice_details.base_grand_total,
+            "transMode": self.invoice_details.mode_of_transport,
+            "transDistance": self.invoice_details.distance,
+            "transporterName": self.invoice_details.transporter_name,
+            "transporterId": self.invoice_details.gst_transporter_id,
+            "transDocNo": self.invoice_details.lr_no,
+            "transDocDate": self.invoice_details.lr_date_str,
+            "vehicleNo": self.invoice_details.vehicle_no,
+            "vehicleType": self.invoice_details.vehicle_type,
+            "itemList": self.item_list,
+            "mainHsnCode": self.invoice_details.main_hsn_code,
+        }
 
         if self.json_download:
             different_keys = {  # keys that are different in json_download
@@ -717,23 +716,22 @@ class EWaybillData(GSTInvoiceData):
                 "actToStateCode": "actualToStateCode",
             }
             for key, value in different_keys.items():
-                data = data.replace(key, value)
+                data[value] = data.pop(key)
 
         return data
 
     def get_item_map(self):
-        return f"""
-        {{
-            "itemNo": {self.item_details.item_no},
+        return {
+            "itemNo": self.item_details.item_no,
             "productName": "",
-            "productDesc": "{self.item_details.item_name}",
-            "hsnCode": "{self.item_details.hsn_code}",
-            "qtyUnit": "{self.item_details.uom}",
-            "quantity": {self.item_details.qty},
-            "taxableAmount": {self.item_details.taxable_value},
-            "sgstRate": {self.item_details.sgst_rate},
-            "cgstRate": {self.item_details.cgst_rate},
-            "igstRate": {self.item_details.igst_rate},
-            "cessRate": {self.item_details.cess_rate},
-            "cessNonAdvol": {self.item_details.cess_non_advol_rate}
-        }}"""
+            "productDesc": self.item_details.item_name,
+            "hsnCode": self.item_details.hsn_code,
+            "qtyUnit": self.item_details.uom,
+            "quantity": self.item_details.qty,
+            "taxableAmount": self.item_details.taxable_value,
+            "sgstRate": self.item_details.sgst_rate,
+            "cgstRate": self.item_details.cgst_rate,
+            "igstRate": self.item_details.igst_rate,
+            "cessRate": self.item_details.cess_rate,
+            "cessNonAdvol": self.item_details.cess_non_advol_rate,
+        }
