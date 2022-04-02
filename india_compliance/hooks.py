@@ -46,6 +46,7 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
     },
     "Sales Invoice": {
+        "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": [
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",

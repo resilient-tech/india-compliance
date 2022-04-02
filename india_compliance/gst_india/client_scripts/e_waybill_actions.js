@@ -44,14 +44,11 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
             }
-            const now = frappe.datetime.now_datetime(true);
 
             if (
                 frm.doc.docstatus == 1 &&
                 frm.doc.ewaybill &&
-                ((frm.doc.e_waybill_validity &&
-                    get_date(frm.doc.e_waybill_validity) > now) ||
-                    !frm.doc.e_waybill_validity) // e-Waybill validitiy not set for Part A
+                is_e_waybill_valid(frm)
             ) {
                 frm.add_custom_button(
                     "Update Vehicle Info",
@@ -462,16 +459,21 @@ async function get_gst_tranporter_id(d) {
     d.set_value("gst_transporter_id", r.gst_transporter_id);
 }
 
-function get_date(text) {
-    return moment(
-        text,
-        frappe.datetime.get_user_date_fmt() + " " + frappe.datetime.get_user_time_fmt()
-    )._d;
+function is_e_waybill_valid(frm) {
+    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
+    if (
+        e_waybill_info
+        && (
+            !e_waybill_info.valid_upto
+            || moment(e_waybill_info.valid_upto).diff() > 0
+        )
+    ) return true;
 }
 
 function is_e_waybill_applicable(frm) {
     if (frm.doc.base_grand_total < frappe.boot.gst_settings.e_waybill_threshold)
         return false;
+
     for (let item of frm.doc.items) {
         if (!item.gst_hsn_code.startsWith("99")) return true;
     }

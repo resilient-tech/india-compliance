@@ -218,16 +218,3 @@ E_WAYBILL_FIELDS = {
     "Sales Invoice": SALES_INVOICE_FIELDS + DELIVERY_NOTE_FIELDS,
     "Delivery Note": DELIVERY_NOTE_FIELDS,
 }
-
-E_WAYBILL_API_FIELDS = {
-    ("Sales Invoice", "Delivery Note"): {
-        "fieldname": "e_waybill_validity",
-        "label": "e-Waybill Valid Upto",
-        "fieldtype": "Datetime",
-        "read_only": 1,
-        "no_copy": 1,
-        "print_hide": 1,
-        "insert_after": "ewaybill",
-        "translatable": 0,
-    },
-}
