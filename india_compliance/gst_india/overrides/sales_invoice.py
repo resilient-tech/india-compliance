@@ -1,5 +1,6 @@
 import frappe
 from frappe import _, bold
+from frappe.model import delete_doc
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.utils import (
@@ -200,6 +201,5 @@ def validate_gst_accounts(doc):
 
 
 def ignore_logs_on_trash(doc, method=None):
-    doc.ignore_linked_doctypes = list(
-        doc.get("ignore_linked_doctypes", default=[])
-    ).append("e-Waybill Log")
+    # TODO: design better way to achieve this
+    delete_doc.doctypes_to_skip += ("e-Waybill Log",)
