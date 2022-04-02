@@ -1,10 +1,24 @@
+import frappe
+from frappe import _
+
 from india_compliance.gst_india.api_classes.base import BaseAPI
 
 
 class EInvoiceAPI(BaseAPI):
-    def setup(self, company_gstin):
+    def setup(self, company_gstin=None):
         self.base_path = "ei/api"
-        self.fetch_credentials(company_gstin, "e-Invoice")
+
+        if self.sandbox:
+            company_gstin = "01AMBPG7773M002"
+            self.username = "adqgspjkusr1"
+            self.password = "Gsp@1234"
+
+        elif not company_gstin:
+            frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
+
+        else:
+            self.fetch_credentials(company_gstin, "e-Invoice")
+
         self.default_headers.update(
             {
                 "gstin": company_gstin,

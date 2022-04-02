@@ -19,21 +19,22 @@ from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, throw=True, sandbox=False):
+def generate_e_invoice(docname, throw=True):
+    return _generate_e_invoice(docname, throw)
+
+
+def _generate_e_invoice(docname, throw=True, sandbox=False):
     doc = get_doc(docname)
 
     try:
-        data = EInvoiceData(doc, sandbox=sandbox).get_e_invoice_data()
-
-        if sandbox:
-            api = EInvoiceAPI("01AMBPG7773M002", sandbox=sandbox)
-        else:
-            api = EInvoiceAPI(doc.company_gstin)
+        data = EInvoiceData(doc).get_data()
+        api = EInvoiceAPI(doc.company_gstin)
 
         # Handle Duplicate IRN
         result = api.generate_irn(data)
         if result.get("InfCd") == "DUPIRN":
             result = api.get_e_invoice_by_irn(result.get("Desc").get("Irn"))
+
     except frappe.ValidationError as e:
         if throw:
             raise e
@@ -42,7 +43,7 @@ def generate_e_invoice(docname, throw=True, sandbox=False):
         doc.db_set({"einvoice_status": "Pending"})
         frappe.msgprint(
             _(
-                "e-Invoice could'nt be auto-generated upon submission. Please generate"
+                "e-Invoice couldn't be auto-generated upon submission. Please generate"
                 " it manually after fixing following error.<br><br>{0}"
             ).format(e.message)
         )
@@ -145,42 +146,31 @@ def update_e_invoice_log(dialog, doc, result):
 
 
 def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
-    if doc.gst_category == "Unregistered":
+    def _throw(error):
         if throw:
-            frappe.throw(
-                _(
-                    "e-Invoice is not applicable for invoices with Unregistered"
-                    " Customers"
-                )
-            )
+            frappe.throw(error)
 
-        return
+    if doc.gst_category == "Unregistered":
+        return _throw(
+            _("e-Invoice is not applicable for invoices with Unregistered Customers")
+        )
 
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 
     if not gst_settings.enable_api:
-        if throw:
-            frappe.throw(_("Enable API in GST Settings to generate e-Invoice"))
-
-        return
+        return _throw(_("Enable API in GST Settings to generate e-Invoice"))
 
     if not gst_settings.enable_e_invoice:
-        if throw:
-            frappe.throw(_("Enable e-Invoicing in GST Settings to generate e-Invoice"))
-
-        return
+        return _throw(_("Enable e-Invoicing in GST Settings to generate e-Invoice"))
 
     if getdate(gst_settings.e_invoice_applicable_from) > getdate(doc.posting_date):
-        if throw:
-            frappe.throw(
-                _(
-                    "e-Invoice is not applicable for invoices before {0} as per your"
-                    " GST Settings"
-                ).format(format_date(gst_settings.e_invoice_applicable_from))
-            )
-
-        return
+        return _throw(
+            _(
+                "e-Invoice is not applicable for invoices before {0} as per your"
+                " GST Settings"
+            ).format(format_date(gst_settings.e_invoice_applicable_from))
+        )
 
     return True
 
@@ -207,25 +197,21 @@ def validate_e_invoice_cancel_eligibility(doc):
 
 
 class EInvoiceData(GSTInvoiceData):
-    def __init__(self, doc, json_download=False, sandbox=False):
-        super().__init__(doc, json_download, sandbox)
-
-    def get_e_invoice_data(self):
-        self.pre_validate_invoice()
-        self.get_item_list()
+    def get_data(self):
+        self.validate_invoice()
         self.get_invoice_details()
+        self.get_item_list()
         self.get_transporter_details()
         self.get_party_address_details()
 
-        einv_data = self.get_invoice_map()
-        return self.sanitize_invoice_map(einv_data)
+        einv_data = self.get_invoice_data()
+        return self.sanitize_data(einv_data)
 
-    def pre_validate_invoice(self):
-        super().pre_validate_invoice()
-        self.check_e_invoice_applicability()
+    def validate_invoice(self):
+        super().validate_invoice()
+        self.check_applicability()
 
-    def check_e_invoice_applicability(self):
-        self.validate_company()
+    def check_applicability(self):
         self.validate_non_gst_items()
         validate_e_invoice_applicability(self.doc, self.settings)
 
@@ -355,7 +341,7 @@ class EInvoiceData(GSTInvoiceData):
         )
         self.company_address.legal_name = self.doc.company
 
-    def get_invoice_map(self):
+    def get_invoice_data(self):
         if self.sandbox:
             seller = {
                 "gstin": "01AMBPG7773M002",
@@ -465,36 +451,36 @@ class EInvoiceData(GSTInvoiceData):
                 "TransMode": self.invoice_details.mode_of_transport,
                 "Distance": self.invoice_details.distance,
                 "TransDocNo": self.invoice_details.lr_no,
-                "TransDocDt": self.invoice_details.lr_date_str,
+                "TransDocDt": self.invoice_details.lr_date,
                 "VehNo": self.invoice_details.vehicle_no,
                 "VehType": self.invoice_details.vehicle_type,
             },
         }
 
-    def get_item_map(self):
+    def get_item_data(self, item_details):
         return {
-            "SlNo": str(self.item_details.item_no),
-            "PrdDesc": self.item_details.item_name,
-            "IsServc": self.item_details.is_service_item,
-            "HsnCd": self.item_details.hsn_code,
-            "Barcde": self.item_details.barcode,
-            "Unit": self.item_details.uom,
-            "Qty": self.item_details.qty,
-            "UnitPrice": self.item_details.unit_rate,
-            "TotAmt": self.item_details.taxable_value,
-            "Discount": self.item_details.discount_amount,
-            "AssAmt": self.item_details.taxable_value,
-            "PrdSlNo": self.item_details.serial_no,
-            "GstRt": self.item_details.tax_rate,
-            "IgstAmt": self.item_details.igst_amount,
-            "CgstAmt": self.item_details.cgst_amount,
-            "SgstAmt": self.item_details.sgst_amount,
-            "CesRt": self.item_details.cess_rate,
-            "CesAmt": self.item_details.cess_amount,
-            "CesNonAdvlAmt": self.item_details.cess_non_advol_amount,
-            "TotItemVal": self.item_details.total_value,
+            "SlNo": str(item_details.item_no),
+            "PrdDesc": item_details.item_name,
+            "IsServc": item_details.is_service_item,
+            "HsnCd": item_details.hsn_code,
+            "Barcde": item_details.barcode,
+            "Unit": item_details.uom,
+            "Qty": item_details.qty,
+            "UnitPrice": item_details.unit_rate,
+            "TotAmt": item_details.taxable_value,
+            "Discount": item_details.discount_amount,
+            "AssAmt": item_details.taxable_value,
+            "PrdSlNo": item_details.serial_no,
+            "GstRt": item_details.tax_rate,
+            "IgstAmt": item_details.igst_amount,
+            "CgstAmt": item_details.cgst_amount,
+            "SgstAmt": item_details.sgst_amount,
+            "CesRt": item_details.cess_rate,
+            "CesAmt": item_details.cess_amount,
+            "CesNonAdvlAmt": item_details.cess_non_advol_amount,
+            "TotItemVal": item_details.total_value,
             "BchDtls": {
-                "Nm": self.item_details.batch_no,
-                "ExpDt": self.item_details.batch_expiry_date,
+                "Nm": item_details.batch_no,
+                "ExpDt": item_details.batch_expiry_date,
             },
         }
