@@ -6,44 +6,58 @@
         <!-- Content -->
       </div>
       <div class="card card-billing">
-        <div class="sub-heading">
-          <p class="title">Billing Details</p>
-          <a class="text-highlight text-right" @click.prevent="editAddress"
-            >Edit</a
-          >
-        </div>
-        <div>
-          <p class="company-title">Shalibhadra Metal Corporation</p>
-          <p class="company-footer">
-            8/A, Saimee Society No 2 Nr Pancharatna Apartment, Subhanpura
-            Vadodara, Gujarat - 390023
-          </p>
-          <p class="company-footer"><strong>GSTIN: </strong>24AAUPV7468F1ZW</p>
-        </div>
-        <div class="sub-heading">
-          <p class="title">Order Summary</p>
-          <a class="text-highlight text-right">Edit</a>
-        </div>
-        <div class="order-summary">
-          <div class="row">
-            <p class="col">Credits Purchased</p>
-            <p class="col order-summary-value">10,00,000</p>
+        <PreLoader v-if="isLoading" />
+        <div v-else>
+          <div class="sub-heading">
+            <p class="title">Billing Details</p>
+            <a class="text-highlight text-right" @click.prevent="editAddress">
+              Edit
+            </a>
           </div>
-          <div class="row">
-            <p class="col">Valid Upto</p>
-            <p class="col order-summary-value">31.03.2023</p>
+          <div>
+            <p class="company-title">{{ businessName }}</p>
+            <div class="company-footer">
+              <p>{{ addressLine1 }}</p>
+              <p>{{ addressLine2 }}</p>
+              <p>{{ city }}, {{ billingDetails.state }} - {{ pincode }}</p>
+            </div>
+            <p class="company-footer"><strong>GSTIN: </strong> {{ gstin }}</p>
           </div>
-          <div class="row">
-            <p class="col">Net Amount</p>
-            <p class="col order-summary-value">₹ 10,000.00</p>
+          <div class="sub-heading">
+            <p class="title">Order Summary</p>
+            <a class="text-highlight text-right">Edit</a>
           </div>
-          <div class="row">
-            <p class="col">GST @ 18%</p>
-            <p class="col order-summary-value">₹ 1,800.00</p>
-          </div>
-          <div class="summary-footer row">
-            <p class="col">Amount Payable</p>
-            <p class="col order-summary-value">₹ 11,800.00</p>
+          <div class="order-summary">
+            <div class="row">
+              <p class="col">Credits Purchased</p>
+              <p class="col order-summary-value">
+                {{ getReadableNumber(orderDetails.credits, 0) }}
+              </p>
+            </div>
+            <div class="row">
+              <p class="col">Valid Upto</p>
+              <p class="col order-summary-value">
+                {{ creditsValidity }}
+              </p>
+            </div>
+            <div class="row">
+              <p class="col">Net Amount</p>
+              <p class="col order-summary-value">
+                ₹ {{ getReadableNumber(orderDetails.netTotal) }}
+              </p>
+            </div>
+            <div class="row">
+              <p class="col">GST @ {{ orderDetails.taxRate }}%</p>
+              <p class="col order-summary-value">
+                ₹ {{ getReadableNumber(orderDetails.tax) }}
+              </p>
+            </div>
+            <div class="summary-footer row">
+              <p class="col">Amount Payable</p>
+              <p class="col order-summary-value">
+                ₹ {{ getReadableNumber(orderDetails.grandTotal) }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -53,26 +67,84 @@
 
 <script>
 import PageTitle from "../components/PageTitle.vue";
+import PreLoader from "../components/PreLoader.vue";
+import { verify_payment } from "../services/AccountService";
+import { getReadableNumber } from "../utils";
+
 export default {
   components: {
     PageTitle,
+    PreLoader,
   },
 
-  //   beforeRouteEnter(to, from, next) {
-  //     if (to.params.orderToken) return next();
-  //     next({ name: "home", replace: true });
-  //   },
-  setup() {},
+  data() {
+    return {
+      isLoading: true,
+    };
+  },
+
+  beforeRouteEnter(to, from, next) {
+    if (to.params.order) return next();
+    next({ name: "home", replace: true });
+  },
+
+  computed: {
+    billingDetails() {
+      return this.$store.state.account.billingDetails || {};
+    },
+
+    gstin() {
+      return this.billingDetails.gstin;
+    },
+
+    businessName() {
+      return this.billingDetails.business_name;
+    },
+
+    addressLine1() {
+      return this.billingDetails.address_line1;
+    },
+
+    addressLine2() {
+      return this.billingDetails.address_line2;
+    },
+
+    city() {
+      return this.billingDetails.city;
+    },
+
+    state() {
+      return this.billingDetails.state;
+    },
+
+    country() {
+      return this.billingDetails.country;
+    },
+
+    pincode() {
+      return this.billingDetails.pincode;
+    },
+
+    orderDetails() {
+      return this.$route.params.order;
+    },
+
+    creditsValidity() {
+      return frappe.datetime.str_to_user(this.orderDetails.validity);
+    },
+  },
+
   methods: {
+    getReadableNumber,
     editAddress() {
-      let d = new frappe.ui.Dialog({
+      const dialog = new frappe.ui.Dialog({
         title: "Edit Billing Address",
         fields: [
           {
             label: "GSTIN",
             fieldname: "gstin",
             fieldtype: "Data",
-            default: "24AAUPV7468F1ZW",
+            default: this.gstin,
           },
           {
             fieldtype: "Column Break",
@@ -81,7 +153,7 @@ export default {
             label: "Business Name",
             fieldname: "business_name",
             fieldtype: "Data",
-            default: "Shalibhadra Metal Corporation",
+            default: this.businessName,
           },
           {
             fieldtype: "Section Break",
@@ -90,19 +162,19 @@ export default {
             label: "Address 1",
             fieldname: "address_line1",
             fieldtype: "Data",
-            default: "8/A, Saimee Society No 2",
+            default: this.addressLine1,
           },
           {
             label: "Address 2",
             fieldname: "address_line2",
             fieldtype: "Data",
-            default: "Nr Pancharatna Apartment, Subhanpura",
+            default: this.addressLine2,
           },
           {
             label: "City",
             fieldname: "city",
             fieldtype: "Data",
-            default: "Vadodara",
+            default: this.city,
           },
           {
             fieldtype: "Column Break",
@@ -111,32 +183,99 @@ export default {
             label: "State",
             fieldname: "state",
             fieldtype: "Data",
-            default: "Gujarat",
+            default: this.state,
           },
           {
             label: "Country",
             fieldname: "country",
             fieldtype: "Data",
-            default: "gst_return",
+            default: this.country,
           },
           {
             label: "Pincode",
             fieldname: "pincode",
             fieldtype: "Data",
-            default: "390023",
+            default: this.pincode,
           },
           {
             fieldtype: "Section Break",
           },
         ],
         primary_action_label: "Save",
-        primary_action() {
-          d.hide();
+        primary_action: async () => {
+          await this.$store.dispatch(
+            "updateBillingDetails",
+            dialog.get_values()
+          );
+          console.log({ ...this.$store.state.account.billingDetails });
+          dialog.hide();
         },
+      }).show();
+    },
+
+    redirectToHome(message, color) {
+      this.$router.push({
+        name: "home",
+        replace: true,
+        params: { message: { message, color } },
       });
-      d.show();
+    },
+    initCashFree(orderToken) {
+      const style = getComputedStyle(document.body);
+      const primaryColor = style.getPropertyValue("--primary");
+      const cardBg = style.getPropertyValue("--card-bg");
+      const fontFamily = style.getPropertyValue("--font-stack");
+      const theme =
+        document.documentElement.getAttribute("data-theme-mode") || "light";
+
+      var dropConfig = {
+        components: ["card", "netbanking", "app", "upi"],
+        orderToken,
+        onSuccess: async (data) => {
+          if (data.order && data.order.status == "PAID") {
+            const response = await verify_payment(data.order.orderId);
+            if (!response.success || response.error) {
+              this.redirectToHome(response.error, "red");
+              return;
+            }
+            this.redirectToHome(
+              `Thanks for purchasing API credits! We have successfully added <strong>${this.orderDetails.credits}</strong> credits to your account.`,
+              "green"
+            );
+          }
+        },
+        onFailure: (data) => {
+          // redirecting on order related errors
+          if (data.order.errorText) {
+            return this.redirectToHome(data.order.errorText, "red");
+          }
+
+          frappe.throw(
+            data.transaction?.txMsg ||
+              "Something went wrong, please try again later",
+            "Payment Failed"
+          );
+        },
+        style: {
+          backgroundColor: cardBg.trim(),
+          color: primaryColor.trim(),
+          fontFamily: "Inter, sans-serif",
+          fontSize: "14px",
+          errorColor: "#ff0000",
+          theme, //(or dark)
+        },
+      };
+
+      const cashfree = new Cashfree();
+      const paymentElement = document.getElementById("payment-gateway");
+      cashfree.initialiseDropin(paymentElement, dropConfig);
+
+      document
+        .querySelector("#payment-gateway iframe")
+        .setAttribute("scrolling", "no");
     },
   },
+
   created() {
     const script = document.createElement("script");
     script.setAttribute(
@@ -144,47 +283,13 @@ export default {
       "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.sandbox.js"
     );
     document.head.appendChild(script);
-    script.onload = () => {
-      initCashFree(this.$route.params.orderToken);
+    script.onload = async () => {
+      await this.$store.dispatch("fetchDetails", "billing");
+      this.isLoading = false;
+      this.initCashFree(this.$route.params.order.token);
     };
   },
 };
-
-function initCashFree(orderToken) {
-  const style = getComputedStyle(document.body);
-  const primaryColor = style.getPropertyValue("--primary");
-  const cardBg = style.getPropertyValue("--card-bg");
-  const fontFamily = style.getPropertyValue("--font-stack");
-  const theme =
-    document.documentElement.getAttribute("data-theme-mode") || "light";
-
-  var dropConfig = {
-    components: ["order-details", "card", "netbanking", "app", "upi"],
-    orderToken,
-    onSuccess: function (data) {
-      //on payment flow complete
-    },
-    onFailure: function (data) {
-      //on failure during payment initiation
-    },
-    style: {
-      backgroundColor: cardBg.trim(),
-      color: primaryColor.trim(),
-      fontFamily: fontFamily,
-      fontSize: "14px",
-      errorColor: "#ff0000",
-      theme, //(or dark)
-    },
-  };
-
-  const cashfree = new Cashfree();
-  const paymentElement = document.getElementById("payment-gateway");
-  cashfree.initialiseDropin(paymentElement, dropConfig);
-
-  document
-    .querySelector("#payment-gateway iframe")
-    .setAttribute("scrolling", "no");
-}
 </script>
 
 <style scoped>
@@ -237,8 +342,8 @@ function initCashFree(orderToken) {
   font-weight: 400;
 }
 .company-title {
-  font-size: 1.4em;
-  font-weight: 500;
+  font-size: 1.3em;
+  font-weight: bold;
 }
 .company-footer {
   font-size: 1em;

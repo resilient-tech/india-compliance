@@ -1,5 +1,6 @@
 :root {
     --page-height: calc(100vh - 60px);
+    --bg-red: var(--red-100);
 }
 
 body {
@@ -20,5 +21,5 @@ body {
 }
 
 .text-highlight {
-    color: var(--primary-color)!important;
+    color: var(--primary-color) !important;
 }
