@@ -1,10 +1,24 @@
+import frappe
+from frappe import _
+
 from india_compliance.gst_india.api_classes.base import BaseAPI
 
 
 class EWaybillAPI(BaseAPI):
-    def setup(self, company_gstin):
+    def setup(self, company_gstin=None):
         self.base_path = "ewb/ewayapi"
-        self.fetch_credentials(company_gstin, "e-Waybill")
+
+        if self.sandbox:
+            company_gstin = "05AAACG2115R1ZN"
+            self.username = "05AAACG2115R1ZN"
+            self.password = "abc123@@"
+
+        elif not company_gstin:
+            frappe.throw(_("Company GSTIN is required to use the e-Waybill API"))
+
+        else:
+            self.fetch_credentials(company_gstin, "e-Waybill")
+
         self.default_headers.update(
             {
                 "gstin": company_gstin,

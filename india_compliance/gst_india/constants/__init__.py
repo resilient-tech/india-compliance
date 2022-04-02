@@ -68,7 +68,6 @@ STATE_NUMBERS = {
 
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
 
-
 NORMAL = (  # Normal but not TCS
     r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z1-9ABD-J]{1}[0-9A-Z]{1}$"
 )
@@ -95,6 +94,7 @@ GSTIN_FORMATS = {
 
 TCS = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[C]{1}[0-9A-Z]{1}$")
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
+PINCODE_FORMAT = re.compile(r"^[1-9][0-9]{5}$")
 
 # Maximum length must be 16 characters. First character must be alphanumeric.
 # Subsequent characters can be alphanumeric, hyphens or slashes.

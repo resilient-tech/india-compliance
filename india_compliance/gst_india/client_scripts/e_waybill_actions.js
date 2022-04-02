@@ -223,7 +223,7 @@ function dialog_generate_e_waybill(frm) {
                 args: {
                     doctype: frm.doc.doctype,
                     docname: frm.doc.name,
-                    dialog: values,
+                    values,
                 },
                 callback: function () {
                     frm.reload_doc();
@@ -273,7 +273,7 @@ function dialog_cancel_e_waybill(frm) {
                 method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
                 args: {
                     doc: frm.doc,
-                    dialog: values,
+                    values,
                 },
                 callback: function () {
                     frm.reload_doc();
@@ -371,7 +371,7 @@ function dialog_update_vehicle_info(frm) {
                 method: "india_compliance.gst_india.utils.e_waybill.update_vehicle_info",
                 args: {
                     doc: frm.doc,
-                    dialog: values,
+                    values,
                 },
                 callback: function () {
                     frm.reload_doc();
@@ -436,11 +436,9 @@ function dialog_update_transporter(frm) {
                 method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
                 args: {
                     doc: frm.doc,
-                    dialog: values,
+                    values,
                 },
-                callback: function () {
-                    frm.reload_doc();
-                },
+                callback: () => frm.reload_doc(),
             });
             d.hide();
         },
