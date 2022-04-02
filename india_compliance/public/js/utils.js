@@ -46,5 +46,4 @@ function isValidGSTNumber(gstin) {
     return false;
 }
 
-window.validate_gst_number = ic.utils.validate_gst_number =
-    isValidGSTNumber;
+window.validate_gst_number = ic.utils.validate_gst_number = isValidGSTNumber;

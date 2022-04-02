@@ -34,17 +34,19 @@
             <div class="row">
               <p class="col">Net Amount</p>
               <p class="col calculator-net-value">
-                ₹ {{ netTotal.toFixed(2) }}
+                ₹ {{ getReadableNumber(netTotal) }}
               </p>
             </div>
             <div class="row">
               <p class="col">GST @ {{ taxRate }}%</p>
-              <p class="col calculator-net-value">₹ {{ tax.toFixed(2) }}</p>
+              <p class="col calculator-net-value">
+                ₹ {{ getReadableNumber(tax) }}
+              </p>
             </div>
             <div class="calculator-total row">
               <p class="col">Amount Payable</p>
               <p class="col calculator-net-value">
-                ₹ {{ grandTotal.toFixed(2) }}
+                ₹ {{ getReadableNumber(grandTotal) }}
               </p>
             </div>
           </div>
@@ -71,7 +73,7 @@
                 {{ credits != -1 ? credits : "" }} Credits
               </td>
               <td class="plan-list plan-price">
-                ₹ {{ (rate / 100).toFixed(2) }}
+                ₹ {{ getReadableNumber(rate / 100) }}
               </td>
             </tr>
           </table>
@@ -84,7 +86,13 @@
               </p>
             </div>
           </div>
-          <a href="#" class="text-highlight text-right">learn more...</a>
+          <a
+            :href="learnMoreUrl"
+            target="_blank"
+            class="text-highlight text-right"
+          >
+            learn more...
+          </a>
         </div>
       </div>
     </div>
@@ -95,6 +103,7 @@
 import FormField from "../components/FormField.vue";
 import PageTitle from "../components/PageTitle.vue";
 import PreLoader from "../components/PreLoader.vue";
+import { getReadableNumber } from "../utils";
 
 export default {
   components: {
@@ -176,8 +185,8 @@ export default {
   },
 
   methods: {
+    getReadableNumber,
     handleButtonClick() {
-      console.log(this.isDirty);
       if (this.isDirty) {
         this.updateCredits();
       } else {
@@ -197,7 +206,20 @@ export default {
       this.isRedirecting = false;
       this.$router.push({
         name: "paymentPage",
-        params: { orderToken },
+        params: {
+          order: {
+            token: orderToken,
+            credits: this.credits,
+            netTotal: this.netTotal,
+            tax: this.tax,
+            taxRate: this.taxRate,
+            grandTotal: this.grandTotal,
+            validity: frappe.datetime.add_months(
+              frappe.datetime.now_date(),
+              this.creditsValidity
+            ),
+          },
+        },
       });
     },
 
@@ -218,7 +240,7 @@ export default {
   },
 
   async created() {
-    await this.$store.dispatch("fetchCalculatorDetails");
+    await this.$store.dispatch("fetchDetails", "calculator");
     this.isLoading = false;
     this.credits = this.creditsInputValue = this.defaultCalculatorValue;
   },

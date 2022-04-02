@@ -1,6 +1,6 @@
 import {
-    get_subscription_details,
-    get_calculator_details,
+    get_details,
+    update_billing_details,
     create_order,
 } from "../../services/AccountService";
 
@@ -8,6 +8,7 @@ export default {
     state: {
         subscriptionDetails: null,
         calculatorDetails: null,
+        billingDetails: null,
         orderToken: null,
     },
 
@@ -20,6 +21,10 @@ export default {
             state.calculatorDetails = calculatorDetails;
         },
 
+        SET_BILLING_DETAILS(state, billingDetails) {
+            state.billingDetails = billingDetails;
+        },
+
         SET_ORDER_TOKEN(state, orderToken) {
             state.orderToken = orderToken;
         },
@@ -27,26 +32,25 @@ export default {
 
     actions: {
         async initAccount({ dispatch }) {
-            await dispatch("fetchSubscriptionDetails");
+            await dispatch("fetchDetails", "subscription");
         },
 
-        async fetchSubscriptionDetails({ commit }) {
-            const response = await get_subscription_details();
+        async fetchDetails({ commit }, type) {
+            const response = await get_details(type);
             if (response.error) return handleInvalidTokenError(response);
             if (!response.success || !response.message) return;
-            commit("SET_SUBSCRIPTION_DETAILS", response.message);
+            commit(`SET_${type.toUpperCase()}_DETAILS`, response.message);
         },
 
-        async fetchCalculatorDetails({ commit }) {
-            const response = await get_calculator_details();
+        async updateBillingDetails({ commit }, billingDetails) {
+            const response = await update_billing_details(billingDetails);
             if (response.error) return handleInvalidTokenError(response);
             if (!response.success || !response.message) return;
-            commit("SET_CALCULATOR_DETAILS", response.message);
+            commit("SET_BILLING_DETAILS", response.message);
         },
 
         async createOrder({ commit }, { credits, amount }) {
             const response = await create_order(credits, amount);
-            console.log(response);
             if (response.error) return handleInvalidTokenError(response);
             if (
                 !response.success ||

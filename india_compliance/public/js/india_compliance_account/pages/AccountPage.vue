@@ -1,33 +1,41 @@
 <template>
   <div class="container account-page">
-    <PageTitle title="India Compliance Account" />
-    <div class="main-content">
-      <div class="card subscription-info">
-        <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
-        <div class="subscription-details-item">
-          <p class="label">Available Credits</p>
-          <p class="value">{{ balance_credits }}</p>
+    <PreLoader v-if="isLoading" />
+    <div v-else>
+      <PageTitle title="India Compliance Account" />
+      <Message
+        v-if="message"
+        :message="message.message"
+        :color="message.color"
+      />
+      <div class="main-content">
+        <div class="card subscription-info">
+          <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
+          <div class="subscription-details-item">
+            <p class="label">Available Credits</p>
+            <p class="value">{{ getReadableNumber(balance_credits, 0) }}</p>
+          </div>
+          <div class="subscription-details-item">
+            <p class="label">Valid Upto</p>
+            <p class="value">{{ valid_upto }}</p>
+          </div>
+          <router-link
+            class="btn btn-primary btn-sm btn-block"
+            to="/purchase-credits"
+          >
+            Purchase Credits
+          </router-link>
         </div>
-        <div class="subscription-details-item">
-          <p class="label">Valid Upto</p>
-          <p class="value">{{ valid_upto }}</p>
+        <div class="card">
+          <h3 class="title">Actions</h3>
+          <ul class="links">
+            <a href="#"><li>Show Usage</li></a>
+            <a href="#"><li>Check API Status</li></a>
+            <a href="#"><li>Community Forum</li></a>
+            <a href="#"><li>Report a Bug</li></a>
+            <a href="#"><li>Get API Support</li></a>
+          </ul>
         </div>
-        <router-link
-          class="btn btn-primary btn-sm btn-block"
-          to="/purchase-credits"
-        >
-          Purchase Credits
-        </router-link>
-      </div>
-      <div class="card">
-        <h3 class="title">Actions</h3>
-        <ul class="links">
-          <a href="#"><li>Show Usage</li></a>
-          <a href="#"><li>Check API Status</li></a>
-          <a href="#"><li>Community Forum</li></a>
-          <a href="#"><li>Report a Bug</li></a>
-          <a href="#"><li>Get API Support</li></a>
-        </ul>
       </div>
     </div>
   </div>
@@ -35,10 +43,25 @@
 
 <script>
 import PageTitle from "../components/PageTitle.vue";
+import Message from "../components/Message.vue";
+import PreLoader from "../components/PreLoader.vue";
+import { getReadableNumber } from "../utils";
 
 export default {
   components: {
     PageTitle,
+    Message,
+    PreLoader,
+  },
+
+  data() {
+    return {
+      isLoading: true,
+    };
+  },
+
+  methods: {
+    getReadableNumber,
   },
   computed: {
     last_synced_on() {
@@ -49,6 +72,7 @@ export default {
         moment.unix(last_usage_synced_on).format("DD-MM-YYYY HH:mm A")
       );
     },
+
     subscriptionDetails() {
       return this.$store.state.account.subscriptionDetails || {};
     },
@@ -60,6 +84,10 @@ export default {
     valid_upto() {
       return frappe.datetime.str_to_user(this.subscriptionDetails.expiry_date);
     },
+
+    message() {
+      return this.$route.params.message;
+    },
   },
 
   beforeRouteEnter(to, from, next) {
@@ -68,6 +96,11 @@ export default {
         ? next()
         : next({ name: "auth", replace: true });
     });
+  },
+
+  async created() {
+    await this.$store.dispatch("fetchDetails", "subscription");
+    this.isLoading = false;
   },
 };
 </script>
