@@ -51,7 +51,7 @@ DATE_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 
 
 @frappe.whitelist()
-def generate_e_waybill_if_possible(doctype, docname):
+def auto_generate_e_waybill(doctype, docname):
     doc = frappe.get_doc(doctype, docname)
     _generate_e_waybill(doc, throw=False)
 
@@ -101,12 +101,9 @@ def _generate_e_waybill(doc, throw=True):
     valid_upto = None
     if result.get("validUpto"):
         valid_upto = datetime.strptime(result.get("validUpto"), DATE_FORMAT)
-    doc.db_set(
-        {
-            "ewaybill": e_waybill,
-            "e_waybill_validity": valid_upto,
-        }
-    )
+
+    doc.db_set("ewaybill", e_waybill)
+
     log_values = {
         "e_waybill_number": e_waybill,
         "e_waybill_date": e_waybill_date,
@@ -135,7 +132,6 @@ def cancel_e_waybill(doc, dialog):
 
     dt_values = {
         "ewaybill": None,
-        "e_waybill_validity": None,
     }
     log_values = {
         "name": doc.ewaybill,
@@ -165,7 +161,6 @@ def update_vehicle_info(doc, dialog):
     )
 
     doc_values = {
-        "e_waybill_validity": datetime.strptime(result.get("validUpto"), DATE_FORMAT),
         "vehicle_no": dialog.get("vehicle_no").replace(" ", ""),
         "lr_no": dialog.get("lr_no"),
         "lr_date": dialog.get("lr_date"),
@@ -570,21 +565,27 @@ class EWaybillData(GSTInvoiceData):
                 )
             )
 
-    def validate_if_e_waybill_is_available(self, dia=None, available=True):
+    def validate_if_e_waybill_is_available(self, dialog=None, available=True):
         if not available:
             if self.doc.ewaybill:
                 frappe.throw(_("e-Waybill already generated for this document"))
             return
 
         # e-Waybill should be available
-        if not self.doc.get("ewaybill"):
+        if not self.doc.ewaybill:
             frappe.throw(_("No e-Waybill found for this document"))
 
-        if dia and self.doc.ewaybill != dia.get("ewaybill"):
+        if dialog and self.doc.ewaybill != dialog.get("ewaybill"):
             frappe.throw(_("Invalid e-Waybill"))
 
     def validate_e_waybill_validity(self):
-        if self.doc.e_waybill_validity and self.doc.e_waybill_validity < today():
+        e_waybill_info = self.doc.get("__onload", {}).get("e_waybill_info")
+        if not e_waybill_info:
+            e_waybill_info = frappe.get_value(
+                "e-Waybill Log", self.doc.ewaybill, "valid_upto", as_dict=True
+            )
+
+        if e_waybill_info["valid_upto"] and e_waybill_info["valid_upto"] < today():
             frappe.throw(
                 _("e-Waybill cannot be cancelled/modified after its validity is over")
             )

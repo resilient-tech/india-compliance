@@ -10,6 +10,43 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
 
+def onload(doc, method=None):
+    if not doc.ewaybill and not doc.irn:
+        return
+
+    gst_settings = frappe.get_cached_value(
+        "GST Settings",
+        "GST Settings",
+        ("enable_api", "enable_e_waybill", "enable_e_invoice"),
+        as_dict=1,
+    )
+
+    if not gst_settings.enable_api:
+        return
+
+    if gst_settings.enable_e_waybill and doc.ewaybill:
+        doc.set_onload(
+            "e_waybill_info",
+            frappe.get_value(
+                "e-Waybill Log",
+                doc.ewaybill,
+                ("e_waybill_date", "valid_upto"),
+                as_dict=True,
+            ),
+        )
+
+    if gst_settings.enable_e_invoice and doc.irn:
+        doc.set_onload(
+            "e_invoice_info",
+            frappe.get_value(
+                "e-Invoice Log",
+                doc.irn,
+                "ack_date",
+                as_dict=True,
+            ),
+        )
+
+
 def validate_gst_invoice(doc, method=None):
     country, gst_category = frappe.get_cached_value(
         "Company", doc.company, ("country", "gst_category")

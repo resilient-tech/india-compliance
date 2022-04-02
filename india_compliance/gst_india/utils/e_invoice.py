@@ -92,9 +92,7 @@ def set_e_invoice_data(doc, result):
         }
     )
     if result.EwbNo:
-        doc.db_set(
-            {"ewaybill": result.EwbNo, "e_waybill_validity": result.EwbValidTill}
-        )
+        doc.db_set("ewaybill", result.EwbNo)
         log_values = {
             "e_waybill_number": result.EwbNo,
             "e_waybill_date": result.EwbDt,
