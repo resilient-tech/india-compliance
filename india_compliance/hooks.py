@@ -50,10 +50,9 @@ doc_events = {
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",
         ],
-        # TODO: uncomment after fixing core bug
-        # "on_trash": (
-        #     "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
-        # ),
+        "on_trash": (
+            "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
+        ),
     },
     "Purchase Invoice": {
         "validate": [
