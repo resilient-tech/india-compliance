@@ -1388,6 +1388,9 @@ def get_einvoice(doctype, docname):
 
 @frappe.whitelist()
 def generate_irn(doctype, docname):
+    if not frappe.has_permission(doctype, "read"):
+        raise frappe.PermissionError()
+
     gsp_connector = GSPConnector(doctype, docname)
     gsp_connector.generate_irn()
 
@@ -1400,6 +1403,9 @@ def cancel_irn(doctype, docname, irn, reason, remark):
 
 @frappe.whitelist()
 def generate_eway_bill(doctype, docname, **kwargs):
+    if not frappe.has_permission(doctype, "read", docname):
+        raise frappe.PermissionError()
+
     gsp_connector = GSPConnector(doctype, docname)
     gsp_connector.generate_eway_bill(**kwargs)
 
