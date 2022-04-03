@@ -16,7 +16,6 @@
   "invoice_data",
   "column_break_2",
   "signed_qr_code",
-  "qr_base64",
   "cancellation_details_section",
   "is_cancelled",
   "cancel_date",
@@ -29,12 +28,14 @@
    "fieldname": "irn",
    "fieldtype": "Data",
    "label": "Invoice Reference Number (IRN)",
+   "read_only": 1,
    "unique": 1
   },
   {
    "fieldname": "ack_no",
    "fieldtype": "Data",
-   "label": "Acknowledgement Number"
+   "label": "Acknowledgement Number",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_3",
@@ -43,7 +44,8 @@
   {
    "fieldname": "ack_date",
    "fieldtype": "Datetime",
-   "label": "Acknowledgement Date"
+   "label": "Acknowledgement Date",
+   "read_only": 1
   },
   {
    "fieldname": "signed_data_section",
@@ -53,17 +55,22 @@
   {
    "fieldname": "signed_invoice",
    "fieldtype": "Small Text",
-   "label": "Signed Invoice"
+   "hidden": 1,
+   "label": "Signed Invoice",
+   "read_only": 1
   },
   {
    "fieldname": "invoice_data",
    "fieldtype": "Code",
-   "label": "Invoice Data"
+   "label": "Invoice Data",
+   "read_only": 1
   },
   {
    "fieldname": "signed_qr_code",
    "fieldtype": "Small Text",
-   "label": "Signed QR Code"
+   "hidden": 1,
+   "label": "Signed QR Code",
+   "read_only": 1
   },
   {
    "fieldname": "cancellation_details_section",
@@ -71,26 +78,24 @@
    "label": "Cancellation Details"
   },
   {
-   "fieldname": "qr_base64",
-   "fieldtype": "Small Text",
-   "label": "QR Text"
-  },
-  {
    "default": "0",
    "fieldname": "is_cancelled",
    "fieldtype": "Check",
-   "label": "Is Cancelled"
+   "label": "Is Cancelled",
+   "read_only": 1
   },
   {
    "fieldname": "cancel_date",
    "fieldtype": "Datetime",
-   "label": "Cancel Date"
+   "label": "Cancel Date",
+   "read_only": 1
   },
   {
    "fieldname": "sales_invoice",
    "fieldtype": "Link",
    "label": "Sales Invoice",
-   "options": "Sales Invoice"
+   "options": "Sales Invoice",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_1",
@@ -103,17 +108,19 @@
   {
    "fieldname": "cancel_reason_code",
    "fieldtype": "Data",
-   "label": "Cancel Reason Code"
+   "label": "Cancel Reason Code",
+   "read_only": 1
   },
   {
    "fieldname": "cancel_remark",
    "fieldtype": "Data",
-   "label": "Cancel Remark"
+   "label": "Cancel Remark",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-04-01 14:52:50.648429",
+ "modified": "2022-04-03 10:02:58.169599",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",

@@ -8,6 +8,12 @@
 #     "Others": "OTH",
 # }
 
+ERROR_CODES = {
+    "Duplicate": "1",
+    "Order Cancelled": "2",
+    "Data Entry Mistake": "3",
+    "Others": "4",
+}
 SUB_SUPPLY_TYPES = {
     1: "Supply",
     2: "Import",

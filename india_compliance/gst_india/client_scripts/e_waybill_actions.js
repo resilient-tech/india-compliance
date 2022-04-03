@@ -45,11 +45,7 @@ function setup_e_waybill_actions(doctype) {
                 );
             }
 
-            if (
-                frm.doc.docstatus == 1 &&
-                frm.doc.ewaybill &&
-                is_e_waybill_valid(frm)
-            ) {
+            if (frm.doc.docstatus == 1 && frm.doc.ewaybill && is_e_waybill_valid(frm)) {
                 frm.add_custom_button(
                     "Update Vehicle Info",
                     () => {
@@ -241,7 +237,7 @@ function dialog_cancel_e_waybill(frm) {
         title: "Are you sure you would like to cancel Ewaybill",
         fields: [
             {
-                label: "Ewaybill",
+                label: "e-Waybill",
                 fieldname: "ewaybill",
                 fieldtype: "Data",
                 read_only: 1,
@@ -249,22 +245,22 @@ function dialog_cancel_e_waybill(frm) {
             },
             {
                 label: "Reason",
-                fieldname: "reason",
+                fieldname: "reason_e_waybill",
                 fieldtype: "Select",
                 reqd: 1,
-                default: "3-Data Entry Error",
+                default: "Data Entry Mistake",
                 options: [
-                    "1-Duplicate",
-                    "2-Order Cancelled",
-                    "3-Data Entry Error",
-                    "4-Others",
+                    "Duplicate",
+                    "Order Cancelled",
+                    "Data Entry Mistake",
+                    "Others",
                 ],
             },
             {
                 label: "Remark",
                 fieldname: "remark",
                 fieldtype: "Data",
-                mandatory_depends_on: "eval: doc.reason == '4-Others'",
+                mandatory_depends_on: "eval: doc.reason == 'Others'",
             },
         ],
         primary_action_label: "Cancel Ewaybill",
@@ -291,7 +287,7 @@ function dialog_update_vehicle_info(frm) {
         title: "Update Vehicle Information",
         fields: [
             {
-                label: "Ewaybill",
+                label: "e-Waybill",
                 fieldname: "ewaybill",
                 fieldtype: "Data",
                 read_only: 1,
@@ -389,7 +385,7 @@ function dialog_update_transporter(frm) {
         title: "Update Transporter",
         fields: [
             {
-                label: "Ewaybill",
+                label: "e-Waybill",
                 fieldname: "ewaybill",
                 fieldtype: "Data",
                 read_only: 1,
@@ -460,12 +456,10 @@ async function get_gst_tranporter_id(d) {
 function is_e_waybill_valid(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     if (
-        e_waybill_info
-        && (
-            !e_waybill_info.valid_upto
-            || moment(e_waybill_info.valid_upto).diff() > 0
-        )
-    ) return true;
+        e_waybill_info &&
+        (!e_waybill_info.valid_upto || moment(e_waybill_info.valid_upto).diff() > 0)
+    )
+        return true;
 }
 
 function is_e_waybill_applicable(frm) {

@@ -1,7 +1,6 @@
 import json
 
 import jwt
-import pyqrcode
 
 import frappe
 from frappe import _
@@ -9,9 +8,10 @@ from frappe.utils import add_to_date, format_date, get_datetime, getdate, random
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
+from india_compliance.gst_india.constants.e_invoice import ERROR_CODES
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
-    cancel_e_waybill,
+    _cancel_e_waybill,
     create_or_update_e_waybill_log,
     print_e_waybill_as_per_settings,
 )
@@ -23,12 +23,12 @@ def generate_e_invoice(docname, throw=True):
     return _generate_e_invoice(docname, throw)
 
 
-def _generate_e_invoice(docname, throw=True, sandbox=False):
-    doc = get_doc(docname)
+def _generate_e_invoice(docname, throw=True, sandbox=True):
+    doc = _get_doc(docname)
 
     try:
-        data = EInvoiceData(doc).get_data()
-        api = EInvoiceAPI(doc.company_gstin)
+        data = EInvoiceData(doc, sandbox=sandbox).get_data()
+        api = EInvoiceAPI(doc.company_gstin, sandbox=sandbox)
 
         # Handle Duplicate IRN
         result = api.generate_irn(data)
@@ -54,24 +54,28 @@ def _generate_e_invoice(docname, throw=True, sandbox=False):
     return result
 
 
-def cancel_e_invoice(docname, dialog, throw=True, sandbox=False):
-    doc = get_doc(docname)
-    dialog = json.loads(dialog)
+@frappe.whitelist()
+def cancel_e_invoice(docname, values, throw=True, sandbox=True):
+    doc = _get_doc(docname)
+    values = frappe.parse_json(values)
 
     validate_e_invoice_cancel_eligibility(doc)
     if doc.ewaybill:
-        cancel_e_waybill(doc, dialog)
+        data = EWaybillData(doc, sandbox=sandbox).get_e_waybill_cancel_data(values)
+        result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).cancel_e_waybill(data)
+        _cancel_e_waybill(doc, values, result)
 
     data = {
         "Irn": doc.irn,
-        "Cnlrsn": dialog.get("reason"),
-        "Cnlrem": dialog.get("remark"),
+        "Cnlrsn": ERROR_CODES[values.reason],
+        "Cnlrem": values.remark if values.remark else values.reason,
     }
+
     result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).cancel_irn(data)
-    update_e_invoice_log(dialog, doc, result)
+    update_e_invoice_log(values, doc, result)
 
 
-def get_doc(docname):
+def _get_doc(docname):
     doc = frappe.get_doc("Sales Invoice", docname)
     if not doc:
         frappe.throw(
@@ -89,7 +93,6 @@ def set_e_invoice_data(doc, result):
         {
             "irn": result.get("Irn"),
             "einvoice_status": "Generated",
-            "e_invoice_date": result.AckDt,
         }
     )
     if result.EwbNo:
@@ -107,10 +110,7 @@ def set_e_invoice_data(doc, result):
 
 
 def create_e_invoice_log(docname, result):
-    qr_base64 = pyqrcode.create(result.SignedQRCode).png_as_base64_str(
-        scale=2, quiet_zone=1
-    )
-    decoded_invoice = json.loads(
+    decoded_invoice = frappe.parse_json(
         jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"]
     )
     log_values = {
@@ -121,7 +121,6 @@ def create_e_invoice_log(docname, result):
         "signed_invoice": result.SignedInvoice,
         "signed_qr_code": result.SignedQRCode,
         "invoice_data": json.dumps(decoded_invoice),
-        "qr_base64": qr_base64,
     }
     if frappe.db.exists("e-Invoice Log", result.Irn):
         # Handle Duplicate IRN
@@ -132,15 +131,15 @@ def create_e_invoice_log(docname, result):
     doc.save(ignore_permissions=True)
 
 
-def update_e_invoice_log(dialog, doc, result):
+def update_e_invoice_log(values, doc, result):
     doc.db_set({"einvoice_status": "Cancelled", "irn": None})
     log_values = {
         "is_cancelled": 1,
-        "cancel_reason_code": dialog.get("reason"),
-        "cancel_remark": dialog.get("remark"),
-        "cancel_date": result.get("CancelDate"),
+        "cancel_reason_code": values.reason,
+        "cancel_remark": values.remark,
+        "cancel_date": result.CancelDate,
     }
-    einv_log = frappe.get_doc("e-Invoice Log", doc.irn)
+    einv_log = frappe.get_doc("e-Invoice Log", result.Irn)
     einv_log.update(log_values)
     einv_log.save(ignore_permissions=True)
 
@@ -179,7 +178,12 @@ def validate_e_invoice_cancel_eligibility(doc):
     if not doc.irn:
         frappe.throw(_("IRN not found for this invoice and hence cannot be cancelled"))
 
-    if not doc.e_invoice_date:
+    # e_invoice_info = doc.get("__onload", {}).get("e_invoice_info") # doesn't work
+    e_invoice_info = frappe.db.get_value(
+        "e-Invoice Log", doc.irn, "ack_date", as_dict=1
+    )
+
+    if not e_invoice_info.ack_date:
         frappe.throw(
             _(
                 "e-Invoice date not found for this invoice and hence"
@@ -187,7 +191,7 @@ def validate_e_invoice_cancel_eligibility(doc):
             )
         )
 
-    if add_to_date(doc.e_invoice_date, days=1) < get_datetime():
+    if get_datetime(add_to_date(e_invoice_info.ack_date, days=1)) < get_datetime():
         frappe.throw(
             _(
                 "e-Invoice can be cancelled only if it is within 24 Hours of its"
@@ -215,10 +219,8 @@ class EInvoiceData(GSTInvoiceData):
         self.validate_non_gst_items()
         validate_e_invoice_applicability(self.doc, self.settings)
 
-    def update_item_details(self, item):
-        super().update_item_details(item)
-
-        self.item_details.update(
+    def update_item_details(self, item_details, item):
+        item_details.update(
             {
                 "discount_amount": 0,
                 "serial_no": "",
@@ -235,7 +237,7 @@ class EInvoiceData(GSTInvoiceData):
                 "Batch", item.batch_no, "expiry_date"
             )
             batch_expiry_date = format_date(batch_expiry_date, self.DATE_FORMAT)
-            self.item_details.update(
+            item_details.update(
                 {
                     "batch_number": item.batch_no,
                     "batch_expiry_date": batch_expiry_date,
@@ -309,15 +311,15 @@ class EInvoiceData(GSTInvoiceData):
         return supply_type
 
     def get_party_address_details(self):
-        gstin_validation = True
+        validate_gstin = True
         if self.doc.gst_category == "Overseas":
-            gstin_validation = False
+            validate_gstin = False
 
         self.billing_address = self.shipping_address = self.get_address_details(
-            self.doc.customer_address, gstin_validation=gstin_validation
+            self.doc.customer_address, validate_gstin=validate_gstin
         )
         self.company_address = self.dispatch_address = self.get_address_details(
-            self.doc.company_address, gstin_validation=True
+            self.doc.company_address, validate_gstin=True
         )
 
         if (
