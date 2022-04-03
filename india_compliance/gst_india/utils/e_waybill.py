@@ -72,8 +72,8 @@ def _generate_e_waybill(doc, throw=True):
         frappe.clear_last_message()
         frappe.msgprint(
             _(
-                "e-Waybill auto-generation failed with error:<br> {0}<br><br>Please"
-                " rectify this issue and generate e-Waybill manually."
+                "e-Waybill auto-generation failed with error:<br>{0}<br><br>"
+                "Please rectify this issue and generate e-Waybill manually."
             ).format(str(e)),
             _("Warning"),
             indicator="yellow",
