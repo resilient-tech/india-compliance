@@ -384,17 +384,19 @@ class EWaybillData(GSTInvoiceData):
         self.get_transporter_details()
 
         if self.doc.irn:
-            return {
-                "Irn": self.doc.irn,
-                "Distance": self.invoice_details.distance,
-                "TransMode": str(self.invoice_details.mode_of_transport),
-                "TransId": self.invoice_details.gst_transporter_id,
-                "TransName": self.invoice_details.transporter_name,
-                "TransDocDt": self.invoice_details.lr_date,
-                "TransDocNo": self.invoice_details.lr_no,
-                "VehNo": self.invoice_details.vehicle_no,
-                "VehType": self.invoice_details.vehicle_type,
-            }
+            return self.sanitize_data(
+                {
+                    "Irn": self.doc.irn,
+                    "Distance": self.invoice_details.distance,
+                    "TransMode": str(self.invoice_details.mode_of_transport),
+                    "TransId": self.invoice_details.gst_transporter_id,
+                    "TransName": self.invoice_details.transporter_name,
+                    "TransDocDt": self.invoice_details.lr_date,
+                    "TransDocNo": self.invoice_details.lr_no,
+                    "VehNo": self.invoice_details.vehicle_no,
+                    "VehType": self.invoice_details.vehicle_type,
+                }
+            )
 
         self.get_invoice_details()
         self.get_item_list()
