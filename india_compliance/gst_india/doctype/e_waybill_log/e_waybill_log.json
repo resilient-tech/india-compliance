@@ -22,8 +22,7 @@
   "cancel_remark",
   "section_break_31",
   "is_latest_data",
-  "data",
-  "qr_base64"
+  "data"
  ],
  "fields": [
   {
@@ -100,13 +99,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "qr_base64",
-   "fieldtype": "Long Text",
-   "hidden": 1,
-   "label": "QR Text",
-   "read_only": 1
-  },
-  {
    "default": "0",
    "fieldname": "is_latest_data",
    "fieldtype": "Check",
@@ -124,16 +116,15 @@
   },
   {
    "fieldname": "reference_name",
-   "fieldtype": "Dynamic Link",
+   "fieldtype": "Data",
    "label": "Sales Invoice",
-   "options": "reference_doctype",
    "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-04-02 00:33:56.706667",
+ "modified": "2022-04-03 12:35:26.478228",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

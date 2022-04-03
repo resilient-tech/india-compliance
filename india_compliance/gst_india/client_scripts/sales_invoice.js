@@ -66,6 +66,7 @@ frappe.ui.form.on(DOCTYPE, {
 			|| frm.doc.is_return
 			|| !gst_settings.enable_api
 			|| !gst_settings.auto_generate_e_waybill
+			|| ( gst_settings.enable_e_invoice && gst_settings.auto_generate_e_invoice)
 			|| !is_e_waybill_applicable(frm)
 		) return;
 
