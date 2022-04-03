@@ -26,6 +26,10 @@ frappe.ui.form.on('GST Settings', {
 		if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
 		frm.set_value("fetch_e_waybill_data", 1);
 	},
+	auto_generate_e_invoice(frm) {
+		if (!frm.doc.auto_generate_e_invoice) return;
+		frm.set_value("auto_generate_e_waybill", 1);
+	},
 	after_save(frm) {
 		// sets latest values in frappe.boot for current user
 		// other users will still need to refresh page
