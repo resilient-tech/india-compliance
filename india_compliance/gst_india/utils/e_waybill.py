@@ -82,8 +82,7 @@ def _generate_e_waybill(doc, throw=True):
         )
         return False
 
-    api = EWaybillAPI if not doc.irn else EInvoiceAPI
-    result = api(doc.company_gstin).generate_e_waybill(data)
+    result = EWaybillAPI(doc.company_gstin).generate_e_waybill(data)
 
     e_waybill = str(result.get("ewayBillNo"))
     doc.db_set("ewaybill", e_waybill)
@@ -435,7 +434,7 @@ class EWaybillData(GSTInvoiceData):
             "reasonRem": values.remark,
             "transDocNo": values.lr_no,
             "transDocDate": frappe.utils.formatdate(values.lr_date, "dd/mm/yyyy"),
-            "transMode": TRANSPORT_MODES.get(values.mode_of_transport),
+            "transMode": str(TRANSPORT_MODES.get(values.mode_of_transport)),
             "vehicleType": VEHICLE_TYPES.get(values.gst_vehicle_type),
         }
 
