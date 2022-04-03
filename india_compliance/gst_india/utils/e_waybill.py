@@ -11,6 +11,7 @@ from frappe.utils.file_manager import save_file
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
+    ERROR_CODES,
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
@@ -116,6 +117,10 @@ def cancel_e_waybill(*, docname, values):
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_e_waybill_cancel_data(values)
     result = EWaybillAPI(doc.company_gstin).cancel_e_waybill(data)
+    _cancel_e_waybill(doc, values, result)
+
+
+def _cancel_e_waybill(doc, values, result):
     frappe.publish_realtime(
         "e_waybill_cancelled",
         {
@@ -131,8 +136,8 @@ def cancel_e_waybill(*, docname, values):
     log_values = {
         "name": doc.ewaybill,
         "is_cancelled": 1,
-        "cancel_reason_code": values.reason,
-        "cancel_remark": values.remark,
+        "cancel_reason_code": ERROR_CODES[values.reason],
+        "cancel_remark": values.remark if values.remark else values.reason,
         "cancel_date": datetime.strptime(result.get("cancelDate"), DATETIME_FORMAT),
     }
 
@@ -404,8 +409,8 @@ class EWaybillData(GSTInvoiceData):
 
         return {
             "ewbNo": self.doc.ewaybill,
-            "cancelRsnCode": values.reason.split("-")[0],
-            "cancelRmrk": values.remark,
+            "cancelRsnCode": ERROR_CODES[values.reason],
+            "cancelRmrk": values.remark if values.remark else values.reason,
         }
 
     def get_update_vehicle_data(self, values):
@@ -540,11 +545,11 @@ class EWaybillData(GSTInvoiceData):
             frappe.throw(_("Invalid e-Waybill"))
 
     def validate_e_waybill_validity(self):
-        e_waybill_info = self.doc.get("__onload", {}).get("e_waybill_info")
-        if not e_waybill_info:
-            e_waybill_info = frappe.get_value(
-                "e-Waybill Log", self.doc.ewaybill, "valid_upto", as_dict=True
-            )
+        # e_waybill_info = self.doc.get("__onload", {}).get("e_waybill_info")
+        # if not e_waybill_info:
+        e_waybill_info = frappe.get_value(
+            "e-Waybill Log", self.doc.ewaybill, "valid_upto", as_dict=True
+        )
 
         if e_waybill_info["valid_upto"] and e_waybill_info["valid_upto"] < today():
             frappe.throw(
