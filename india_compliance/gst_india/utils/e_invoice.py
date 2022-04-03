@@ -41,6 +41,9 @@ from india_compliance.gst_india.utils import (
 
 @frappe.whitelist()
 def validate_eligibility(doc):
+    if not frappe.has_permission("E Invoice Settings", ptype="read"):
+        raise frappe.PermissionError()
+
     if isinstance(doc, str):
         doc = json.loads(doc)
 
@@ -208,7 +211,8 @@ def validate_address_fields(address, skip_gstin_validation):
 
         frappe.throw(
             msg=_(
-                "Address Lines, City, Pincode, GSTIN are mandatory for address {}. Please set them and try again."
+                "Address Lines, City, Pincode, GSTIN are mandatory for address {}."
+                " Please set them and try again."
             ).format(address.name),
             title=_("Missing Address Fields"),
         )
@@ -252,7 +256,8 @@ def get_overseas_address_details(address_name):
     if not address_title or not address_line1 or not city:
         frappe.throw(
             msg=_(
-                "Address lines and city is mandatory for address {}. Please set them and try again."
+                "Address lines and city is mandatory for address {}. Please set them"
+                " and try again."
             ).format(get_link_to_form("Address", address_name)),
             title=_("Missing Address Fields"),
         )
@@ -477,7 +482,8 @@ def get_eway_bill_details(invoice):
     if invoice.is_return:
         frappe.throw(
             _(
-                "e-Waybill cannot be generated for Credit Notes & Debit Notes. Please clear fields in the Transporter Section of the invoice."
+                "e-Waybill cannot be generated for Credit Notes & Debit Notes. Please"
+                " clear fields in the Transporter Section of the invoice."
             ),
             title=_("Invalid Fields"),
         )
@@ -503,21 +509,24 @@ def validate_mandatory_fields(invoice):
     if not invoice.company_address:
         frappe.throw(
             _(
-                "Company Address is mandatory to fetch company GSTIN details. Please set Company Address and try again."
+                "Company Address is mandatory to fetch company GSTIN details. Please"
+                " set Company Address and try again."
             ),
             title=_("Missing Fields"),
         )
     if not invoice.customer_address:
         frappe.throw(
             _(
-                "Customer Address is mandatory to fetch customer GSTIN details. Please set Company Address and try again."
+                "Customer Address is mandatory to fetch customer GSTIN details. Please"
+                " set Company Address and try again."
             ),
             title=_("Missing Fields"),
         )
     if not frappe.db.get_value("Address", invoice.company_address, "gstin"):
         frappe.throw(
             _(
-                "GSTIN is mandatory to fetch company GSTIN details. Please enter GSTIN in selected company address."
+                "GSTIN is mandatory to fetch company GSTIN details. Please enter GSTIN"
+                " in selected company address."
             ),
             title=_("Missing Fields"),
         )
@@ -526,7 +535,8 @@ def validate_mandatory_fields(invoice):
     ):
         frappe.throw(
             _(
-                "GSTIN is mandatory to fetch customer GSTIN details. Please enter GSTIN in selected customer address."
+                "GSTIN is mandatory to fetch customer GSTIN details. Please enter GSTIN"
+                " in selected customer address."
             ),
             title=_("Missing Fields"),
         )
@@ -555,14 +565,16 @@ def validate_totals(einvoice):
         ):
             frappe.throw(
                 _(
-                    "Row #{}: GST rate is invalid. Please remove tax rows with zero tax amount from taxes table."
+                    "Row #{}: GST rate is invalid. Please remove tax rows with zero tax"
+                    " amount from taxes table."
                 ).format(item.idx)
             )
 
     if abs(flt(value_details["AssVal"]) - total_item_ass_value) > 1:
         frappe.throw(
             _(
-                "Total Taxable Value of the items is not equal to the Invoice Net Total. Please check item taxes / discounts for any correction."
+                "Total Taxable Value of the items is not equal to the Invoice Net"
+                " Total. Please check item taxes / discounts for any correction."
             )
         )
 
@@ -577,14 +589,16 @@ def validate_totals(einvoice):
     ):
         frappe.throw(
             _(
-                "CGST + SGST value of the items is not equal to total CGST + SGST value. Please review taxes for any correction."
+                "CGST + SGST value of the items is not equal to total CGST + SGST"
+                " value. Please review taxes for any correction."
             )
         )
 
     if abs(flt(value_details["IgstVal"]) - total_item_igst_value) > 1:
         frappe.throw(
             _(
-                "IGST value of all items is not equal to total IGST value. Please review taxes for any correction."
+                "IGST value of all items is not equal to total IGST value. Please"
+                " review taxes for any correction."
             )
         )
 
@@ -600,7 +614,8 @@ def validate_totals(einvoice):
     ):
         frappe.throw(
             _(
-                "Total Value of the items is not equal to the Invoice Grand Total. Please check item taxes / discounts for any correction."
+                "Total Value of the items is not equal to the Invoice Grand Total."
+                " Please check item taxes / discounts for any correction."
             )
         )
 
@@ -617,7 +632,8 @@ def validate_totals(einvoice):
     if abs(flt(value_details["TotInvVal"]) - calculated_invoice_value) > 1:
         frappe.throw(
             _(
-                "Total Item Value + Taxes - Discount is not equal to the Invoice Grand Total. Please check taxes / discounts for any correction."
+                "Total Item Value + Taxes - Discount is not equal to the Invoice Grand"
+                " Total. Please check taxes / discounts for any correction."
             )
         )
 
@@ -717,7 +733,8 @@ def show_link_to_error_log(invoice, einvoice):
     link_to_error_log = get_link_to_form("Error Log", err_log.name, "Error Log")
     frappe.throw(
         _(
-            "An error occurred while creating e-Invoice for {}. Please check {} for more information."
+            "An error occurred while creating e-Invoice for {}. Please check {} for"
+            " more information."
         ).format(invoice.name, link_to_error_log),
         title=_("e-Invoice Creation Failed"),
     )
@@ -817,7 +834,8 @@ def safe_json_load(json_string):
         snippet = json_string[start:end]
         frappe.throw(
             _(
-                "Error in input data. Please check for any special characters near following input: <br> {}"
+                "Error in input data. Please check for any special characters near"
+                " following input: <br> {}"
             ).format(snippet)
         )
 
@@ -866,7 +884,8 @@ class GSPConnector:
         if not self.e_invoice_settings.enable:
             frappe.throw(
                 _(
-                    "E-Invoicing is disabled. Please enable it from {} to generate e-Invoices."
+                    "E-Invoicing is disabled. Please enable it from {} to generate"
+                    " e-Invoices."
                 ).format(get_link_to_form("E Invoice Settings", "E Invoice Settings"))
             )
 
@@ -880,7 +899,8 @@ class GSPConnector:
             else:
                 frappe.throw(
                     _(
-                        "Cannot find e-invoicing credentials for selected Company GSTIN. Please check e-Invoice Settings"
+                        "Cannot find e-invoicing credentials for selected Company"
+                        " GSTIN. Please check e-Invoice Settings"
                     )
                 )
         else:
@@ -895,7 +915,8 @@ class GSPConnector:
         if not gstin:
             frappe.throw(
                 _(
-                    "Cannot retrieve Company GSTIN. Please select company address with valid GSTIN."
+                    "Cannot retrieve Company GSTIN. Please select company address with"
+                    " valid GSTIN."
                 )
             )
         return gstin
@@ -1025,8 +1046,9 @@ class GSPConnector:
                     self.set_einvoice_data(irn_details)
                 else:
                     raise RequestFailed(
-                        "IRN has already been generated for the invoice but cannot fetch details for the it. \
-						Contact ERPNext support to resolve the issue."
+                        "IRN has already been generated for the invoice but cannot"
+                        " fetch details for the it. 						Contact ERPNext support to"
+                        " resolve the issue."
                     )
 
             else:
@@ -1087,7 +1109,8 @@ class GSPConnector:
             if time_diff_in_hours(now_datetime(), self.invoice.ack_date) > 24:
                 frappe.throw(
                     _(
-                        "e-Invoice cannot be cancelled after 24 hours of IRN generation."
+                        "e-Invoice cannot be cancelled after 24 hours of IRN"
+                        " generation."
                     ),
                     title=_("Not Allowed"),
                     exc=CancellationNotAllowed,
@@ -1269,7 +1292,8 @@ class GSPConnector:
             )
             frappe.msgprint(
                 _(
-                    "An error occurred while making e-invoicing request. Please check {} for more information."
+                    "An error occurred while making e-invoicing request. Please check"
+                    " {} for more information."
                 ).format(link_to_error_list),
                 title=title,
                 raise_exception=raise_exception,
@@ -1355,6 +1379,9 @@ def sanitize_for_json(string):
 
 @frappe.whitelist()
 def get_einvoice(doctype, docname):
+    if not frappe.has_permission(doctype=doctype, ptype="read", doc=docname):
+        raise frappe.PermissionError()
+
     invoice = frappe.get_doc(doctype, docname)
     return make_einvoice(invoice)
 
@@ -1382,6 +1409,10 @@ def cancel_eway_bill(doctype, docname):
     # TODO: uncomment when eway_bill api from Adequare is enabled
     # gsp_connector = GSPConnector(doctype, docname)
     # gsp_connector.cancel_eway_bill(eway_bill, reason, remark)
+
+    for ptype in ("write", "cancel"):
+        if not frappe.has_permission(doctype, ptype):
+            raise frappe.PermissionError()
 
     frappe.db.set_value(doctype, docname, "ewaybill", "")
     frappe.db.set_value(doctype, docname, "eway_bill_cancelled", 1)

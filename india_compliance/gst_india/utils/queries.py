@@ -1,9 +1,12 @@
 import frappe
-from frappe.utils import sbool
 
 
 @frappe.whitelist()
 def get_gstin_options(company):
+    for doctype in ("Company", "Address"):
+        if not frappe.has_permission(doctype, "read"):
+            raise frappe.PermissionError()
+
     address = frappe.qb.DocType("Address")
     links = frappe.qb.DocType("Dynamic Link")
 

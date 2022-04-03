@@ -188,6 +188,10 @@ def get_place_of_supply(party_details, doctype=None):
 
 @frappe.whitelist()
 def get_gstins_for_company(company):
+    for doctype in ("Company", "Address"):
+        if not frappe.has_permission(doctype, ptype="read"):
+            raise frappe.PermissionError()
+
     company_gstins = []
     if company:
         company_gstins = frappe.db.sql(
@@ -209,6 +213,11 @@ def get_gstins_for_company(company):
 def get_gst_accounts(
     company=None, account_wise=False, only_reverse_charge=0, only_non_reverse_charge=0
 ):
+
+    for ptype in ("read", "write"):
+        if not frappe.has_permission("GST Account", ptype):
+            raise frappe.PermissionError()
+
     filters = {"parent": "GST Settings"}
 
     if company:
@@ -255,6 +264,9 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
     """
     if not company:
         frappe.throw(_("Please set Company first"))
+
+    if not frappe.has_permission("GST Settings"):
+        raise frappe.PermissionError
 
     settings = frappe.get_cached_doc("GST Settings", "GST Settings")
     for row in settings.gst_accounts:
