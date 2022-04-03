@@ -387,7 +387,7 @@ class EWaybillData(GSTInvoiceData):
             return {
                 "Irn": self.doc.irn,
                 "Distance": self.invoice_details.distance,
-                "TransMode": self.invoice_details.mode_of_transport,
+                "TransMode": str(self.invoice_details.mode_of_transport),
                 "TransId": self.invoice_details.gst_transporter_id,
                 "TransName": self.invoice_details.transporter_name,
                 "TransDocDt": self.invoice_details.lr_date,
@@ -435,7 +435,7 @@ class EWaybillData(GSTInvoiceData):
             "reasonRem": values.remark,
             "transDocNo": values.lr_no,
             "transDocDate": frappe.utils.formatdate(values.lr_date, "dd/mm/yyyy"),
-            "transMode": str(TRANSPORT_MODES.get(values.mode_of_transport)),
+            "transMode": TRANSPORT_MODES.get(values.mode_of_transport),
             "vehicleType": VEHICLE_TYPES.get(values.gst_vehicle_type),
         }
 
