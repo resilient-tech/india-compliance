@@ -126,6 +126,7 @@ DELIVERY_NOTE_FIELDS = [
         "allow_on_submit": 1,
         "insert_after": "customer_name",
         "translatable": 0,
+        "no_copy": 1,
     },
 ]
 
@@ -204,19 +205,6 @@ SALES_INVOICE_FIELDS = [
         "insert_after": "driver_name",
         "default": "Today",
         "print_hide": 1,
-    },
-    {
-        "fieldname": "ewaybill",
-        "label": "e-Waybill No.",
-        "fieldtype": "Data",
-        "depends_on": (
-            "eval:((doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled"
-            " === 0)"
-        ),
-        "allow_on_submit": 1,
-        "insert_after": "customer_name",
-        "translatable": 0,
-        "length": 20,
     },
 ]
 

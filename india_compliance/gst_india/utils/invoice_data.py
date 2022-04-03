@@ -27,6 +27,7 @@ class GSTInvoiceData:
         self.doc = doc
         self.sandbox = sandbox
         self.settings = frappe.get_cached_doc("GST Settings")
+        self.invoice_details = frappe._dict()
 
         # CGST Account - TC: "cgst_account"
         self.gst_accounts = {
@@ -45,7 +46,7 @@ class GSTInvoiceData:
             else "base_rounded_total"
         )
 
-        self.invoice_details = frappe._dict(
+        self.invoice_details.update(
             {
                 "invoice_date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "base_total": abs(
