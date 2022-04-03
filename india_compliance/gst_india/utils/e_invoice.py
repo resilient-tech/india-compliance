@@ -215,29 +215,29 @@ class EInvoiceData(GSTInvoiceData):
         self.validate_non_gst_items()
         validate_e_invoice_applicability(self.doc, self.settings)
 
-    def update_item_details(self, row):
-        super().update_item_details(row)
+    def update_item_details(self, item):
+        super().update_item_details(item)
 
         self.item_details.update(
             {
                 "discount_amount": 0,
                 "serial_no": "",
-                "is_service_item": "Y" if row.gst_hsn_code.startswith("99") else "N",
-                "unit_rate": abs(row.taxable_value / row.qty)
-                if row.qty
-                else abs(row.taxable_value),
-                "barcode": row.get("barcode") or "",
+                "is_service_item": "Y" if item.gst_hsn_code.startswith("99") else "N",
+                "unit_rate": abs(item.taxable_value / item.qty)
+                if item.qty
+                else abs(item.taxable_value),
+                "barcode": item.get("barcode") or "",
             }
         )
 
-        if row.get("batch_no"):
+        if item.get("batch_no"):
             batch_expiry_date = frappe.db.get_value(
-                "Batch", row.batch_no, "expiry_date"
+                "Batch", item.batch_no, "expiry_date"
             )
             batch_expiry_date = format_date(batch_expiry_date, self.DATE_FORMAT)
             self.item_details.update(
                 {
-                    "batch_number": row.batch_no,
+                    "batch_number": item.batch_no,
                     "batch_expiry_date": batch_expiry_date,
                 }
             )

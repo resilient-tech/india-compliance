@@ -84,18 +84,19 @@ def _generate_e_waybill(doc, throw=True):
     api = EWaybillAPI if not doc.irn else EInvoiceAPI
     result = api(doc.company_gstin).generate_e_waybill(data)
 
+    e_waybill = str(result.get("ewayBillNo"))
+    doc.db_set("ewaybill", e_waybill)
+    frappe.db.commit()
+
     frappe.publish_realtime(
         "e_waybill_generated",
         {"doctype": doc.doctype, "docname": doc.name, "alert": result.alert},
     )
 
-    e_waybill = str(result.get("ewayBillNo"))
     e_waybill_date = datetime.strptime(result.get("ewayBillDate"), DATETIME_FORMAT)
     valid_upto = None
     if result.get("validUpto"):
         valid_upto = datetime.strptime(result.get("validUpto"), DATETIME_FORMAT)
-
-    doc.db_set("ewaybill", e_waybill)
 
     log_values = {
         "e_waybill_number": e_waybill,

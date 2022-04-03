@@ -213,11 +213,11 @@ class GSTInvoiceData:
             self.get_item_tax_details(item_details, row)
             self.item_list.append(self.get_item_data(item_details))
 
-    def update_item_details(self, item_details, row):
+    def update_item_details(self, item_details, item):
         # to be overridden
         pass
 
-    def get_item_tax_details(self, item_details, row):
+    def get_item_tax_details(self, item_details, item):
         for tax in GST_TAX_TYPES:
             item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 
@@ -228,15 +228,15 @@ class GSTInvoiceData:
             # Remove '_account' from 'cgst_account'
             tax = self.gst_accounts[row.account_head][:-8]
             tax_rate = frappe.parse_json(row.item_wise_tax_detail).get(
-                row.item_code or row.item_name
+                item.item_code or item.item_name
             )[0]
 
             # considers senarios where same item is there multiple times
             tax_amount = abs(
                 self.rounded(
-                    tax_rate * row.qty
+                    tax_rate * item.qty
                     if row.charge_type == "On Item Quantity"
-                    else tax_rate * row.taxable_value / 100
+                    else tax_rate * item.taxable_value / 100
                 ),
             )
 
