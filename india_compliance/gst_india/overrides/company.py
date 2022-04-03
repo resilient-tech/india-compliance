@@ -29,6 +29,9 @@ def create_default_tax_templates(doc, method=None):
 
 @frappe.whitelist()
 def make_default_tax_templates(company: str, country: str):
+    if not frappe.has_permission("Company"):
+        raise frappe.PermissionError()
+
     if country != "India":
         return
 

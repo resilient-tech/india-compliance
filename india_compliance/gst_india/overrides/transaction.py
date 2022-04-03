@@ -96,6 +96,11 @@ def get_regional_round_off_accounts(company, account_list):
 
 @frappe.whitelist()
 def get_regional_address_details(party_details, doctype, company):
+    if not frappe.has_permission(doctype, ptype="read") or not frappe.has_permission(
+        company, ptype="read"
+    ):
+        raise frappe.PermissionError()
+
     party_details = frappe.parse_json(party_details)
     update_party_details(party_details, doctype)
 

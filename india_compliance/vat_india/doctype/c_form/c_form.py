@@ -42,10 +42,9 @@ class CForm(Document):
                 elif not inv:
                     frappe.throw(
                         _(
-                            "Row {0}: Invoice {1} is invalid, it might be cancelled / does not exist. \
-						Please enter a valid Invoice".format(
-                                d.idx, d.invoice_no
-                            )
+                            "Row {0}: Invoice {1} is invalid, it might be cancelled /"
+                            " does not exist. 						Please enter a valid Invoice"
+                            .format(d.idx, d.invoice_no)
                         )
                     )
 
@@ -88,6 +87,9 @@ class CForm(Document):
     @frappe.whitelist()
     def get_invoice_details(self, invoice_no):
         """Pull details from invoices for referrence"""
+        if not frappe.has_permission("Sales Invoice"):
+            raise frappe.PermissionError()
+
         if invoice_no:
             inv = frappe.db.get_value(
                 "Sales Invoice",

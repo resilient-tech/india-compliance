@@ -15,6 +15,9 @@ from india_compliance.gst_india.utils import (
 
 @frappe.whitelist()
 def generate_ewb_json(dt, dn):
+    if not frappe.has_permission(dt):
+        raise frappe.PermissionError()
+
     dn = json.loads(dn)
     return get_ewb_data(dt, dn)
 

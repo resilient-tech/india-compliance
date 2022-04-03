@@ -1299,6 +1299,9 @@ def get_rate_and_tax_details(row, gstin):
 
 
 def get_company_gstin_number(company, address=None, all_gstins=False):
+    if not frappe.has_permission("Address"):
+        raise frappe.PermissionError
+
     gstin = ""
     if address:
         gstin = frappe.db.get_value("Address", address, "gstin")
