@@ -14,6 +14,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     create_or_update_e_waybill_log,
     print_e_waybill_as_per_settings,
+    update_invoice,
 )
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
@@ -32,8 +33,8 @@ def _generate_e_invoice(docname, throw=True, sandbox=True):
 
         # Handle Duplicate IRN
         result = api.generate_irn(data)
-        if result.get("InfCd") == "DUPIRN":
-            result = api.get_e_invoice_by_irn(result.get("Desc").get("Irn"))
+        if result.InfCd == "DUPIRN":
+            result = api.get_e_invoice_by_irn(result.Desc.get("Irn"))
 
     except frappe.ValidationError as e:
         if throw:
@@ -49,13 +50,41 @@ def _generate_e_invoice(docname, throw=True, sandbox=True):
         )
         return
 
-    # Publish Realtime
     set_e_invoice_data(doc, result)
     return result
 
 
 @frappe.whitelist()
-def cancel_e_invoice(docname, values, throw=True, sandbox=True):
+def generate_e_waybill(doctype, docname, values, sandbox=True):
+    doc = _get_doc(docname)
+    update_invoice(doc, frappe.parse_json(values))
+
+    data = EWaybillData(doc, sandbox=sandbox).get_data()
+    result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).generate_e_waybill(data)
+    e_waybill = result.EwbNo
+    doc.db_set({"ewaybill": e_waybill})
+
+    frappe.publish_realtime(
+        "e_waybill_generated",
+        {
+            "doctype": doc.doctype,
+            "docname": doc.name,
+            "alert": "e-Waybill Generated Successfully",
+        },
+    )
+
+    log_values = {
+        "e_waybill_number": e_waybill,
+        "e_waybill_date": result.EwbDt,
+        "valid_upto": result.EwbValidTill,
+        "reference_name": doc.name,
+    }
+    create_or_update_e_waybill_log(doc, None, log_values)
+    print_e_waybill_as_per_settings(doc)
+
+
+@frappe.whitelist()
+def cancel_e_invoice(docname, values, sandbox=True):
     doc = _get_doc(docname)
     values = frappe.parse_json(values)
 
@@ -91,7 +120,7 @@ def _get_doc(docname):
 def set_e_invoice_data(doc, result):
     doc.db_set(
         {
-            "irn": result.get("Irn"),
+            "irn": result.Irn,
             "einvoice_status": "Generated",
         }
     )
@@ -450,7 +479,7 @@ class EInvoiceData(GSTInvoiceData):
             "EwbDtls": {
                 "TransId": self.invoice_details.gst_transporter_id,
                 "TransName": self.invoice_details.transporter_name,
-                "TransMode": self.invoice_details.mode_of_transport,
+                "TransMode": str(self.invoice_details.mode_of_transport),
                 "Distance": self.invoice_details.distance,
                 "TransDocNo": self.invoice_details.lr_no,
                 "TransDocDt": self.invoice_details.lr_date,
