@@ -31,7 +31,7 @@ function setup_e_waybill_actions(doctype) {
                 !settings.enable_api ||
                 !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) ||
                 !is_e_waybill_applicable(frm) ||
-                !frm.company_gstin // means company is Indian and not Unregistered
+                !frm.doc.company_gstin // means company is Indian and not Unregistered
             )
                 return;
 
@@ -214,8 +214,14 @@ function dialog_generate_e_waybill(frm) {
         ],
         primary_action_label: "Generate",
         primary_action(values) {
+            let method =
+                "india_compliance.gst_india.utils.e_waybill.generate_e_waybill";
+            if (frm.doc.irn) {
+                method =
+                    "india_compliance.gst_india.utils.e_invoice.generate_e_waybill";
+            }
             frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+                method: method,
                 args: {
                     doctype: frm.doc.doctype,
                     docname: frm.doc.name,
@@ -463,7 +469,10 @@ function is_e_waybill_valid(frm) {
 }
 
 function is_e_waybill_applicable(frm) {
-    if (frm.doc.base_grand_total < frappe.boot.gst_settings.e_waybill_threshold)
+    if (
+        Math.abs(frm.doc.base_grand_total) <
+        frappe.boot.gst_settings.e_waybill_threshold
+    )
         return false;
 
     for (let item of frm.doc.items) {
