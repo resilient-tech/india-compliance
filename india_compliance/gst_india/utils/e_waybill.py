@@ -11,6 +11,7 @@ from frappe.utils.file_manager import save_file
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
+    DATETIME_FORMAT,
     ERROR_CODES,
     TRANSPORT_MODES,
     VEHICLE_TYPES,
@@ -43,9 +44,6 @@ def generate_e_waybill_json(doctype: str, docnames):
 #######################################################################################
 
 
-DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
-
-
 @frappe.whitelist()
 def auto_generate_e_waybill(*, docname):
     doc = frappe.get_doc("Sales Invoice", docname)
@@ -72,22 +70,20 @@ def _generate_e_waybill(doc, throw=True):
             raise e
 
         frappe.clear_last_message()
-        frappe.publish_realtime(
-            "e_waybill_not_generated",
-            {
-                "doctype": doc.doctype,
-                "docname": doc.name,
-                "alert": "e-Waybill could not be auto-generated",
-            },
+        frappe.msgprint(
+            _(
+                "e-Waybill auto-generation failed with error:<br> {0}<br><br>Please"
+                " rectify this issue and generate e-Waybill manually."
+            ).format(str(e)),
+            _("Warning"),
+            indicator="yellow",
         )
         return False
 
-    api = EWaybillAPI if not doc.irn else EInvoiceAPI
-    result = api(doc.company_gstin).generate_e_waybill(data)
+    result = EWaybillData(doc.company_gstin).generate_e_waybill(data)
 
     e_waybill = str(result.get("ewayBillNo"))
     doc.db_set("ewaybill", e_waybill)
-    frappe.db.commit()
 
     frappe.publish_realtime(
         "e_waybill_generated",
@@ -107,6 +103,10 @@ def _generate_e_waybill(doc, throw=True):
     }
     create_or_update_e_waybill_log(doc, None, log_values)
     print_e_waybill_as_per_settings(doc)
+
+
+def log_and_process_e_waybill():
+    pass
 
 
 @frappe.whitelist()

@@ -224,3 +224,5 @@ E_WAYBILL_FIELDS = {
     "Sales Invoice": SALES_INVOICE_FIELDS + DELIVERY_NOTE_FIELDS,
     "Delivery Note": DELIVERY_NOTE_FIELDS,
 }
+
+DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
