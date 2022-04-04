@@ -15,6 +15,7 @@ export default {
   margin-top: 1.7em;
   font-size: 2em;
   text-align: left;
+  margin-bottom: 2em;
 }
 
 .full-stop-highlight {

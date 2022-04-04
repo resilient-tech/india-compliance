@@ -24,9 +24,15 @@ body {
     color: var(--primary-color) !important;
 }
 
+/* Page styles */
+
+.ic-account-page .form-message {
+    margin: 0em 4em;
+}
+
 .ic-account-page .main-content {
     width: 100%;
-    margin-top: 4em;
+    margin-top: 2em;
     display: flex;
     padding: 0 4em;
     column-gap: 4em;
@@ -65,9 +71,13 @@ body {
         font-size: 0.8em;
     }
 
+    .ic-account-page .form-message {
+        margin: 0em 1.5em;
+    }
+
     .ic-account-page .main-content {
         column-gap: 3em;
-        padding: 2em 1.5em;
+        padding: 0 1.5em;
     }
 }
 
@@ -96,4 +106,33 @@ body {
     .ic-account-page {
         font-size: 0.8em;
     }
+}
+
+/*** Vue transitions ***/
+
+/* Fade */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+    opacity: 0;
+}
+
+/* Slide */
+.slide-leave-active,
+.slide-enter-active {
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.slide-enter-to,
+.slide-leave {
+    max-height: 100px;
+}
+
+.slide-enter,
+.slide-leave-to {
+    max-height: 0;
+    margin: 0;
 }
