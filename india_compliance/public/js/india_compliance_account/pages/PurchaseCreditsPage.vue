@@ -313,13 +313,6 @@ function bisect_left(sortedList, value) {
   margin: 0;
 }
 
-.calculator .form-control::-webkit-inner-spin-button,
-.calculator .form-control::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
 .calculator-net-value {
   font-weight: 600;
   text-align: end;
