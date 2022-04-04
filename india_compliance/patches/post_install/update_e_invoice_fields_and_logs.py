@@ -1,11 +1,7 @@
-import datetime
-
 import frappe
 from frappe.utils import random_string
 
-from india_compliance.gst_india.utils import delete_custom_fields
-
-DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
+from india_compliance.gst_india.utils import delete_custom_fields, parse_datetime
 
 
 def execute():
@@ -13,6 +9,7 @@ def execute():
     migrate_e_invoice_fields()
     migrate_e_invoice_request_log()
     delete_e_invoice_fields()
+    delete_old_doctypes()
 
 
 def migrate_e_waybill_fields():
@@ -38,18 +35,13 @@ def migrate_e_waybill_fields():
         "is_cancelled",
     ]
     for doc in docs:
-        eway_bill_validity = (
-            datetime.strptime(doc.eway_bill_validity, DATETIME_FORMAT)
-            if "/" in doc.eway_bill_validity
-            else doc.eway_bill_validity
-        )
         values.append(
             [
                 doc.ewaybill,
                 doc.creation,
                 doc.name,
                 doc.ewaybill,
-                eway_bill_validity,
+                parse_datetime(doc.eway_bill_validity),
                 doc.eway_bill_cancelled,
             ]
         )
@@ -285,3 +277,8 @@ def delete_e_invoice_fields():
         ]
     }
     delete_custom_fields(DELETE_E_INVOICE_FIELDS)
+
+
+def delete_old_doctypes():
+    for doctype in ("E Invoice Settings", "E Invoice User", "E Invoice Request Log"):
+        frappe.delete_doc("DocType", doctype, force=True)

@@ -11,11 +11,11 @@ from frappe.utils.file_manager import save_file
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
-    DATETIME_FORMAT,
     ERROR_CODES,
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
+from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 #######################################################################################
@@ -82,23 +82,13 @@ def _generate_e_waybill(doc, throw=True):
 
     result = EWaybillAPI(doc.company_gstin).generate_e_waybill(data)
 
-    e_waybill = str(result.get("ewayBillNo"))
+    e_waybill = str(result.ewayBillNo)
     doc.db_set("ewaybill", e_waybill)
-
-    frappe.publish_realtime(
-        "e_waybill_generated",
-        {"doctype": doc.doctype, "docname": doc.name, "alert": result.alert},
-    )
-
-    e_waybill_date = datetime.strptime(result.get("ewayBillDate"), DATETIME_FORMAT)
-    valid_upto = None
-    if result.get("validUpto"):
-        valid_upto = datetime.strptime(result.get("validUpto"), DATETIME_FORMAT)
 
     log_values = {
         "e_waybill_number": e_waybill,
-        "e_waybill_date": e_waybill_date,
-        "valid_upto": valid_upto,
+        "e_waybill_date": parse_datetime(result.ewayBillDate),
+        "valid_upto": parse_datetime(result.validUpto),
         "reference_name": doc.name,
     }
     create_or_update_e_waybill_log(doc, None, log_values)
@@ -138,7 +128,7 @@ def _cancel_e_waybill(doc, values, result):
         "is_cancelled": 1,
         "cancel_reason_code": ERROR_CODES[values.reason],
         "cancel_remark": values.remark if values.remark else values.reason,
-        "cancel_date": datetime.strptime(result.get("cancelDate"), DATETIME_FORMAT),
+        "cancel_date": parse_datetime(result.cancelDate),
     }
 
     create_or_update_e_waybill_log(doc, dt_values, log_values)
@@ -171,7 +161,7 @@ def update_vehicle_info(*, docname, values):
     log_values = {
         "name": doc.ewaybill,
         "is_latest_data": 0,
-        "valid_upto": datetime.strptime(result.get("validUpto"), DATETIME_FORMAT),
+        "valid_upto": parse_datetime(result.validUpto),
     }
     comment = (
         f"{frappe.session.user} updated vehicle info for e-waybill. New details are: \n"
@@ -275,7 +265,7 @@ def _attach_or_print_e_waybill(doc, action=None, e_waybill_doc=None):
 
 def get_e_waybill_data(e_waybill, company_gstin):
     result = EWaybillAPI(company_gstin).get_e_waybill(e_waybill)
-    e_waybill_date = datetime.strptime(result.ewayBillDate, DATETIME_FORMAT)
+    e_waybill_date = parse_datetime(result.ewayBillDate)
     qr_text = "/".join(
         (
             e_waybill,
@@ -547,11 +537,11 @@ class EWaybillData(GSTInvoiceData):
             frappe.throw(_("Invalid e-Waybill"))
 
     def validate_e_waybill_validity(self):
-        # e_waybill_info = self.doc.get("__onload", {}).get("e_waybill_info")
-        # if not e_waybill_info:
-        e_waybill_info = frappe.get_value(
-            "e-Waybill Log", self.doc.ewaybill, "valid_upto", as_dict=True
-        )
+        e_waybill_info = self.doc.get("__onload", {}).get("e_waybill_info")
+        if not e_waybill_info:
+            e_waybill_info = frappe.get_value(
+                "e-Waybill Log", self.doc.ewaybill, "valid_upto", as_dict=True
+            )
 
         if (
             e_waybill_info["valid_upto"]

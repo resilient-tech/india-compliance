@@ -14,6 +14,7 @@ BASE_URL = "https://asp.resilient.tech"
 
 class BaseAPI:
     def __init__(self, *args, **kwargs):
+        self.api_name = "GST"
         self.base_path = ""
         self.sandbox = kwargs.pop("sandbox", False)
         self.settings = frappe.get_cached_doc("GST Settings")
@@ -36,7 +37,7 @@ class BaseAPI:
                 _(
                     "Please set the relevant credentials in GST Settings to use the"
                     " {0} API"
-                ).format(service),
+                ).format(self.api_name),
                 frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
             )

@@ -239,4 +239,8 @@ def validate_gst_accounts(doc):
 
 def ignore_logs_on_trash(doc, method=None):
     # TODO: design better way to achieve this
-    delete_doc.doctypes_to_skip += ("e-Waybill Log",)
+    delete_doc.doctypes_to_skip += (
+        "e-Waybill Log",
+        "e-Invoice Log",
+        "Integration Request",
+    )
