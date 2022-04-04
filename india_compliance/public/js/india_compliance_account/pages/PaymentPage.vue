@@ -86,29 +86,17 @@ export default {
   data() {
     return {
       isLoading: true,
+      // TODO: fix reactivity of vuex store's state `billingDetails` and use computed property instead
+      billingDetails: {},
     };
   },
 
   beforeRouteEnter(to, from, next) {
-    to.params.order = {
-      token: "OUxgXMHW4OC7gGJT1Xe1",
-      credits: 10000,
-      netTotal: 5000,
-      tax: 900,
-      taxRate: 18,
-      grandTotal: 5900,
-      validity: frappe.datetime.add_months(frappe.datetime.now_date(), 12),
-    };
-
     if (to.params.order) return next();
     next({ name: "home", replace: true });
   },
 
   computed: {
-    billingDetails() {
-      return this.$store.state.account.billingDetails || {};
-    },
-
     gstin() {
       return this.billingDetails.gstin;
     },
@@ -219,12 +207,16 @@ export default {
         ],
         primary_action_label: "Save",
         primary_action: async () => {
+          this.billingDetails = dialog.get_values();
           await this.$store.dispatch(
             "updateBillingDetails",
-            dialog.get_values()
+            this.billingDetails
           );
-          console.log({ ...this.$store.state.account.billingDetails });
           dialog.hide();
+          frappe.show_alert({
+            message: "Billing Details Updated successfully",
+            indicator: "green",
+          });
         },
       }).show();
     },
@@ -240,7 +232,6 @@ export default {
       const style = getComputedStyle(document.body);
       const primaryColor = style.getPropertyValue("--primary");
       const cardBg = style.getPropertyValue("--card-bg");
-      const fontFamily = style.getPropertyValue("--font-stack");
       const theme =
         document.documentElement.getAttribute("data-theme-mode") || "light";
 
@@ -300,9 +291,10 @@ export default {
     );
     document.head.appendChild(script);
     script.onload = async () => {
+      this.initCashFree(this.$route.params.order.token);
       await this.$store.dispatch("fetchDetails", "billing");
       this.isLoading = false;
-      this.initCashFree(this.$route.params.order.token);
+      this.billingDetails = this.$store.state.account.billingDetails;
     };
   },
 };
