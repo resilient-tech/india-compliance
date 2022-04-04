@@ -77,7 +77,7 @@ def generate_e_waybill(doctype, docname, values, sandbox=True):
 
     log_values = {
         "e_waybill_number": e_waybill,
-        "e_waybill_date": result.EwbDt,
+        "created_on": result.EwbDt,
         "valid_upto": result.EwbValidTill,
         "reference_name": doc.name,
     }
@@ -131,7 +131,7 @@ def set_e_invoice_data(doc, result):
         doc.db_set("ewaybill", result.EwbNo)
         log_values = {
             "e_waybill_number": result.EwbNo,
-            "e_waybill_date": result.EwbDt,
+            "created_on": result.EwbDt,
             "valid_upto": result.EwbValidTill,
             "reference_name": doc.name,
         }
@@ -148,8 +148,8 @@ def create_e_invoice_log(docname, result):
     log_values = {
         "irn": result.Irn,
         "sales_invoice": docname,
-        "ack_no": result.AckNo,
-        "ack_date": result.AckDt,
+        "acknowledgement_number": result.AckNo,
+        "acknowledged_on": result.AckDt,
         "signed_invoice": result.SignedInvoice,
         "signed_qr_code": result.SignedQRCode,
         "invoice_data": frappe.as_json(decoded_invoice, indent=4),
@@ -169,7 +169,7 @@ def update_e_invoice_log(values, doc, result):
         "is_cancelled": 1,
         "cancel_reason_code": values.reason,
         "cancel_remark": values.remark,
-        "cancel_date": result.CancelDate,
+        "cancelled_on": result.CancelDate,
     }
     einv_log = frappe.get_doc("e-Invoice Log", result.Irn)
     einv_log.update(log_values)
@@ -212,10 +212,10 @@ def validate_e_invoice_cancel_eligibility(doc):
 
     # e_invoice_info = doc.get("__onload", {}).get("e_invoice_info") # doesn't work
     e_invoice_info = frappe.db.get_value(
-        "e-Invoice Log", doc.irn, "ack_date", as_dict=1
+        "e-Invoice Log", doc.irn, "acknowledged_on", as_dict=1
     )
 
-    if not e_invoice_info.ack_date:
+    if not e_invoice_info.acknowledged_on:
         frappe.throw(
             _(
                 "e-Invoice date not found for this invoice and hence"
@@ -223,7 +223,10 @@ def validate_e_invoice_cancel_eligibility(doc):
             )
         )
 
-    if get_datetime(add_to_date(e_invoice_info.ack_date, days=1)) < get_datetime():
+    if (
+        get_datetime(add_to_date(e_invoice_info.acknowledged_on, days=1))
+        < get_datetime()
+    ):
         frappe.throw(
             _("e-Invoice can be cancelled only within 24 Hours of its generation")
         )

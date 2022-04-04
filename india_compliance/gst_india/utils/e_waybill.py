@@ -5,6 +5,7 @@ import pyqrcode
 
 import frappe
 from frappe import _
+from frappe.desk.form.save import send_updated_docs
 from frappe.utils import add_to_date, getdate, random_string
 from frappe.utils.file_manager import save_file
 
@@ -90,20 +91,18 @@ def _generate_e_waybill(doc, throw=True):
         None,
         {
             "e_waybill_number": e_waybill_number,
-            "e_waybill_date": parse_datetime(result.ewayBillDate),
+            "created_on": parse_datetime(result.ewayBillDate),
             "valid_upto": parse_datetime(result.validUpto),
             "reference_name": doc.name,
         },
     )
-    print_e_waybill_as_per_settings(doc)
 
-
-def log_and_process_e_waybill(doc, values=None, log=None, comment=None):
-    frappe.enqueue()
-
-
-def _log_and_process_e_waybill(doc, values, log, comment=None):
-    pass
+    frappe.msgprint(
+        _("e-Waybill generated successfully"),
+        indicator="green",
+        alert=True,
+    )
+    return send_updated_docs(doc)
 
 
 @frappe.whitelist()
@@ -135,7 +134,7 @@ def _cancel_e_waybill(doc, values, result):
         "is_cancelled": 1,
         "cancel_reason_code": ERROR_CODES[values.reason],
         "cancel_remark": values.remark if values.remark else values.reason,
-        "cancel_date": parse_datetime(result.cancelDate),
+        "cancelled_on": parse_datetime(result.cancelDate),
     }
 
     create_or_update_e_waybill_log(doc, dt_values, log_values)
@@ -257,7 +256,7 @@ def attach_or_print_e_waybill(docname, action):
 
 def _attach_or_print_e_waybill(doc, action=None, e_waybill_doc=None):
     if not e_waybill_doc or not e_waybill_doc.is_latest_data or not e_waybill_doc.data:
-        result, qr_base64 = get_e_waybill_data(doc.ewaybill, doc.company_gstin)
+        result, qr_base64 = fetch_e_waybill_data(doc.ewaybill, doc.company_gstin)
         e_waybill_doc = frappe._dict(
             {
                 "e_waybill_number": doc.ewaybill,
@@ -270,27 +269,17 @@ def _attach_or_print_e_waybill(doc, action=None, e_waybill_doc=None):
         generate_e_waybill_pdf(doc.doctype, doc.name, doc.ewaybill, e_waybill_doc)
 
 
-def get_e_waybill_data(e_waybill, company_gstin):
+def fetch_e_waybill_data(e_waybill, company_gstin):
     result = EWaybillAPI(company_gstin).get_e_waybill(e_waybill)
-    e_waybill_date = parse_datetime(result.ewayBillDate)
-    qr_text = "/".join(
-        (
-            e_waybill,
-            result.userGstin,
-            datetime.strftime(e_waybill_date, "%d-%m-%Y %H:%M:%S"),
-        )
-    )
-    qr_base64 = pyqrcode.create(qr_text).png_as_base64_str(scale=5, quiet_zone=1)
+
     frappe.db.set_value(
         "e-Waybill Log",
         e_waybill,
         {
             "data": frappe.as_json(result, indent=4),
-            "qr_base64": qr_base64,
             "is_latest_data": 1,
         },
     )
-    return result, qr_base64
 
 
 def generate_e_waybill_pdf(doctype, docname, e_waybill, e_waybill_doc=None):
@@ -321,6 +310,44 @@ def delete_e_waybill_pdf(doctype, docname, e_waybill):
 #######################################################################################
 ### Other Utility Functions ###########################################################
 #######################################################################################
+
+
+def log_and_process_e_waybill(doc, log_data, comment=None):
+    frappe.enqueue(
+        _log_and_process_e_waybill,
+        queue="short",
+        at_front=True,
+        doc=doc,
+        log_data=log_data,
+        comment=comment,
+    )
+
+
+def _log_and_process_e_waybill(doc, log_data, comment=None):
+    # Log e-Waybill
+
+    log_name = log_data.pop("name", doc.ewaybill)
+    try:
+        log = frappe.get_doc("e-Waybill Log", log_name)
+    except frappe.DoesNotExistError:
+        log = frappe.new_doc("e-Waybill Log")
+        frappe.clear_last_message()
+
+    log.update(log_data)
+    log.save(ignore_permissions=True)
+
+    if comment:
+        log.add_comment(text=comment)
+
+    # Fetch e-Waybill Data
+    fetch_data, attach = frappe.get_cached_value(
+        "GST Settings",
+        "GST Settings",
+        ("fetch_e_waybill_data", "attach_e_waybill_print"),
+    )
+
+    # if fetch_data:
+    #     data
 
 
 def create_or_update_e_waybill_log(doc, doc_values, log_values, comment=None):
@@ -560,10 +587,10 @@ class EWaybillData(GSTInvoiceData):
 
     def validate_e_waybill_cancelablity(self):
         e_waybill_info = frappe.get_value(
-            "e-Waybill Log", self.doc.ewaybill, "e_waybill_date", as_dict=True
+            "e-Waybill Log", self.doc.ewaybill, "created_on", as_dict=True
         )
 
-        if getdate(add_to_date(e_waybill_info["e_waybill_date"], days=1)) < getdate():
+        if getdate(add_to_date(e_waybill_info["created_on"], days=1)) < getdate():
             frappe.throw(
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )

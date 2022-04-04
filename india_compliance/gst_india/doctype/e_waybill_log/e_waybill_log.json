@@ -9,14 +9,14 @@
  "field_order": [
   "section_break_0",
   "e_waybill_number",
-  "e_waybill_date",
+  "created_on",
   "reference_doctype",
   "reference_name",
   "column_break1",
   "valid_upto",
   "section_break1",
   "is_cancelled",
-  "cancel_date",
+  "cancelled_on",
   "column_break_2",
   "cancel_reason_code",
   "cancel_remark",
@@ -37,19 +37,13 @@
    "unique": 1
   },
   {
-   "fieldname": "e_waybill_date",
-   "fieldtype": "Datetime",
-   "label": "Date",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break1",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "valid_upto",
    "fieldtype": "Datetime",
-   "label": "Valid Upto",
+   "label": "Valid Upto (IST)",
    "read_only": 1
   },
   {
@@ -63,12 +57,6 @@
    "fieldname": "is_cancelled",
    "fieldtype": "Check",
    "label": "Is Cancelled",
-   "read_only": 1
-  },
-  {
-   "fieldname": "cancel_date",
-   "fieldtype": "Datetime",
-   "label": "Cancel Date",
    "read_only": 1
   },
   {
@@ -119,18 +107,24 @@
    "fieldtype": "Data",
    "label": "Sales Invoice",
    "read_only": 1
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Datetime",
+   "label": "Created On (IST)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancelled_on",
+   "fieldtype": "Datetime",
+   "label": "Cancelled On (IST)",
+   "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
- "links": [
-  {
-   "group": "Reference",
-   "link_doctype": "Sales Invoice",
-   "link_fieldname": "ewaybill"
-  }
- ],
- "modified": "2022-04-04 14:33:11.074026",
+ "links": [],
+ "modified": "2022-04-04 09:42:03.646637",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

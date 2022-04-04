@@ -71,9 +71,9 @@ def migrate_e_invoice_fields():
         "irn",
         "sales_invoice",
         "is_cancelled",
-        "ack_no",
-        "ack_date",
-        "cancel_date",
+        "acknowledgement_number",
+        "acknowledged_on",
+        "cancelled_on",
         "invoice_data",
         "signed_qr_code",
     ]

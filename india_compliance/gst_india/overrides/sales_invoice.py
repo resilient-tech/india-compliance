@@ -30,7 +30,7 @@ def onload(doc, method=None):
             frappe.get_value(
                 "e-Waybill Log",
                 doc.ewaybill,
-                ("e_waybill_date", "valid_upto"),
+                ("created_on", "valid_upto"),
                 as_dict=True,
             ),
         )
@@ -41,7 +41,7 @@ def onload(doc, method=None):
             frappe.get_value(
                 "e-Invoice Log",
                 doc.irn,
-                "ack_date",
+                "acknowledged_on",
                 as_dict=True,
             ),
         )

@@ -9,8 +9,8 @@
   "irn",
   "sales_invoice",
   "column_break_1",
-  "ack_no",
-  "ack_date",
+  "acknowledgement_number",
+  "acknowledged_on",
   "signed_data_section",
   "signed_invoice",
   "invoice_data",
@@ -18,7 +18,7 @@
   "signed_qr_code",
   "cancellation_details_section",
   "is_cancelled",
-  "cancel_date",
+  "cancelled_on",
   "column_break_3",
   "cancel_reason_code",
   "cancel_remark"
@@ -32,20 +32,8 @@
    "unique": 1
   },
   {
-   "fieldname": "ack_no",
-   "fieldtype": "Data",
-   "label": "Acknowledgement Number",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break_3",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "ack_date",
-   "fieldtype": "Datetime",
-   "label": "Acknowledgement Date",
-   "read_only": 1
   },
   {
    "fieldname": "signed_data_section",
@@ -85,12 +73,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "cancel_date",
-   "fieldtype": "Datetime",
-   "label": "Cancel Date",
-   "read_only": 1
-  },
-  {
    "fieldname": "sales_invoice",
    "fieldtype": "Link",
    "label": "Sales Invoice",
@@ -116,6 +98,24 @@
    "fieldtype": "Data",
    "label": "Cancel Remark",
    "read_only": 1
+  },
+  {
+   "fieldname": "cancelled_on",
+   "fieldtype": "Datetime",
+   "label": "Cancelled On (IST)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acknowledgement_number",
+   "fieldtype": "Data",
+   "label": "Acknowledgement Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acknowledged_on",
+   "fieldtype": "Datetime",
+   "label": "Acknowledged On (IST)",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
@@ -126,7 +126,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2022-04-04 14:18:19.126182",
+ "modified": "2022-04-04 09:38:48.086499",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
