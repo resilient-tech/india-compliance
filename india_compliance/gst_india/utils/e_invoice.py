@@ -254,9 +254,9 @@ class EInvoiceData(GSTInvoiceData):
                 "discount_amount": 0,
                 "serial_no": "",
                 "is_service_item": "Y" if item.gst_hsn_code.startswith("99") else "N",
-                "unit_rate": abs(item.taxable_value / item.qty)
+                "unit_rate": abs(self.rounded(item.taxable_value / item.qty, 3))
                 if item.qty
-                else abs(item.taxable_value),
+                else abs(self.rounded(item.taxable_value, 3)),
                 "barcode": item.get("barcode") or "",
             }
         )
