@@ -201,9 +201,7 @@ class GSTInvoiceData:
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
-                    "qty": abs(
-                        self.rounded(row.qty, self.doc.precision("qty", "items"))
-                    ),
+                    "qty": abs(self.rounded(row.qty, 3)),
                     "taxable_value": abs(self.rounded(row.taxable_value)),
                     "hsn_code": row.gst_hsn_code,
                     "item_name": self.sanitize_value(row.item_name),
@@ -228,9 +226,12 @@ class GSTInvoiceData:
 
             # Remove '_account' from 'cgst_account'
             tax = self.gst_accounts[row.account_head][:-8]
-            tax_rate = frappe.parse_json(row.item_wise_tax_detail).get(
-                item.item_code or item.item_name
-            )[0]
+            tax_rate = self.rounded(
+                frappe.parse_json(row.item_wise_tax_detail).get(
+                    item.item_code or item.item_name
+                )[0],
+                3,
+            )
 
             # considers senarios where same item is there multiple times
             tax_amount = abs(
@@ -251,7 +252,7 @@ class GSTInvoiceData:
         item_details.update(
             {
                 "tax_rate": sum(
-                    self.rounded(item_details.get(f"{tax}_rate", 0))
+                    self.rounded(item_details.get(f"{tax}_rate", 0), 3)
                     for tax in GST_TAX_TYPES[:3]
                 ),
                 "total_value": abs(
