@@ -29,7 +29,7 @@
         <div class="card">
           <h3 class="title">Actions</h3>
           <ul class="links">
-            <a href="#"><li>Show Usage</li></a>
+            <a @click.prevent="showUsage"><li>Show Usage</li></a>
             <a href="#"><li>Check API Status</li></a>
             <a href="#"><li>Community Forum</li></a>
             <a href="#"><li>Report a Bug</li></a>
@@ -62,6 +62,12 @@ export default {
 
   methods: {
     getReadableNumber,
+    showUsage() {
+      frappe.route_options = {
+        integration_request_service: "India Compliance API",
+      };
+      frappe.set_route("List", "Integration Request");
+    },
   },
   computed: {
     last_synced_on() {
