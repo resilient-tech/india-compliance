@@ -1,9 +1,9 @@
 <template>
   <footer class="container">
     <ul class="footer-menu">
-      <li><a href="">FAQs</a></li>
-      <li><a href="">Terms & Conditions</a></li>
-      <li><a href="">Pricvacy Policy</a></li>
+      <li><a href="#">FAQs</a></li>
+      <li><a href="#">Terms & Conditions</a></li>
+      <li><a href="#">Privacy Policy</a></li>
     </ul>
     <div class="footer-logo">
       <p>ASP Services by</p>
