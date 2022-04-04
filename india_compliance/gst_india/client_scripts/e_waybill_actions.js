@@ -51,6 +51,28 @@ function setup_e_waybill_actions(doctype) {
                 );
             }
         },
+        on_submit(frm) {
+            if (
+                frm.doc.ewaybill ||
+                frm.doc.is_return ||
+                !gst_settings.enable_api ||
+                !gst_settings.auto_generate_e_waybill ||
+                (gst_settings.enable_e_invoice &&
+                    gst_settings.auto_generate_e_invoice) ||
+                !is_e_waybill_applicable(frm)
+            )
+                return;
+
+            frappe.show_alert("Attempting to generate e-Waybill");
+
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.auto_generate_e_waybill",
+                args: {
+                    doctype: frm.doc.doctype,
+                    docname: frm.doc.name,
+                },
+            });
+        },
     });
 }
 function attach_or_print_e_waybill(frm, action) {
@@ -77,7 +99,7 @@ function attach_or_print_e_waybill(frm, action) {
 
 function show_generate_e_waybill_dialog(frm) {
     let d = new frappe.ui.Dialog({
-        title: "Verify Details",
+        title: "Generate e-Waybill",
         fields: [
             {
                 label: "Transporter",
@@ -192,8 +214,12 @@ function show_generate_e_waybill_dialog(frm) {
                     docname: frm.doc.name,
                     values,
                 },
-                callback: function () {
-                    frm.reload_doc();
+                callback(response) {
+                    if (!response.message) return;
+                    frappe.show_alert({
+                        indicator: "green",
+                        message: __("e-Waybill generated successfully"),
+                    });
                 },
             });
             d.hide();
@@ -205,7 +231,7 @@ function show_generate_e_waybill_dialog(frm) {
 
 function show_cancel_e_waybill_dialog(frm, callback) {
     let d = new frappe.ui.Dialog({
-        title: "Are you sure you would like to cancel e-Waybill",
+        title: "Cancel e-Waybill",
         fields: [
             {
                 label: "e-Waybill",
@@ -234,7 +260,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
                 mandatory_depends_on: "eval: doc.reason == 'Others'",
             },
         ],
-        primary_action_label: "Cancel e-Waybill",
+        primary_action_label: "Cancel",
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
@@ -333,7 +359,7 @@ function show_update_vehicle_info_dialog(frm) {
                 mandatory_depends_on: 'eval: doc.reason == "3-Others"',
             },
         ],
-        primary_action_label: "Update Vehicle Info",
+        primary_action_label: "Update",
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_vehicle_info",
@@ -398,7 +424,7 @@ function show_update_transporter_dialog(frm) {
                 default: frappe.boot.gst_settings.fetch_e_waybill_data || 0,
             },
         ],
-        primary_action_label: "Update Transporter",
+        primary_action_label: "Update",
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
@@ -429,7 +455,8 @@ function is_e_waybill_valid(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     if (
         e_waybill_info &&
-        (!e_waybill_info.valid_upto || moment(e_waybill_info.valid_upto).diff() > 0)
+        (!e_waybill_info.valid_upto ||
+            ic.get_moment(e_waybill_info.valid_upto).diff() > 0)
     )
         return true;
 }
@@ -449,5 +476,5 @@ function is_e_waybill_applicable(frm) {
 
 function is_e_waybill_cancellable(frm) {
     let e_waybill_info = frm.doc.__onload.e_waybill_info;
-    return moment(e_waybill_info.e_waybill_date).add("days", 1).diff() > 0;
+    return ic.get_moment(e_waybill_info.e_waybill_date).add("days", 1).diff() > 0;
 }

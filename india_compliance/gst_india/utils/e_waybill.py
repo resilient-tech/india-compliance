@@ -78,24 +78,31 @@ def _generate_e_waybill(doc, throw=True):
             _("Warning"),
             indicator="yellow",
         )
-        return False
+        return
 
     result = EWaybillAPI(doc.company_gstin).generate_e_waybill(data)
 
-    e_waybill = str(result.ewayBillNo)
-    doc.db_set("ewaybill", e_waybill)
+    e_waybill_number = str(result.ewayBillNo)
+    doc.db_set("ewaybill", e_waybill_number)
 
-    log_values = {
-        "e_waybill_number": e_waybill,
-        "e_waybill_date": parse_datetime(result.ewayBillDate),
-        "valid_upto": parse_datetime(result.validUpto),
-        "reference_name": doc.name,
-    }
-    create_or_update_e_waybill_log(doc, None, log_values)
+    log_and_process_e_waybill(
+        doc,
+        None,
+        {
+            "e_waybill_number": e_waybill_number,
+            "e_waybill_date": parse_datetime(result.ewayBillDate),
+            "valid_upto": parse_datetime(result.validUpto),
+            "reference_name": doc.name,
+        },
+    )
     print_e_waybill_as_per_settings(doc)
 
 
-def log_and_process_e_waybill():
+def log_and_process_e_waybill(doc, values=None, log=None, comment=None):
+    frappe.enqueue()
+
+
+def _log_and_process_e_waybill(doc, values, log, comment=None):
     pass
 
 
