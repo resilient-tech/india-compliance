@@ -123,8 +123,14 @@
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2022-04-03 12:35:26.478228",
+ "links": [
+  {
+   "group": "Reference",
+   "link_doctype": "Sales Invoice",
+   "link_fieldname": "ewaybill"
+  }
+ ],
+ "modified": "2022-04-04 14:33:11.074026",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

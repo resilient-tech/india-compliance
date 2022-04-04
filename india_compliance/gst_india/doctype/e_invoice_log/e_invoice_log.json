@@ -54,7 +54,7 @@
   },
   {
    "fieldname": "signed_invoice",
-   "fieldtype": "Small Text",
+   "fieldtype": "Code",
    "hidden": 1,
    "label": "Signed Invoice",
    "read_only": 1
@@ -67,7 +67,7 @@
   },
   {
    "fieldname": "signed_qr_code",
-   "fieldtype": "Small Text",
+   "fieldtype": "Code",
    "hidden": 1,
    "label": "Signed QR Code",
    "read_only": 1
@@ -119,8 +119,14 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2022-04-03 10:02:58.169599",
+ "links": [
+  {
+   "group": "Reference",
+   "link_doctype": "Sales Invoice",
+   "link_fieldname": "irn"
+  }
+ ],
+ "modified": "2022-04-04 14:18:19.126182",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",

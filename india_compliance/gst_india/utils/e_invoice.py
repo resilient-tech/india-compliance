@@ -26,6 +26,7 @@ def generate_e_invoice(docname, throw=True):
 
 def _generate_e_invoice(docname, throw=True, sandbox=True):
     doc = _get_doc(docname)
+    doc.check_permission("submit")
 
     try:
         data = EInvoiceData(doc, sandbox=sandbox).get_data()
@@ -57,6 +58,7 @@ def _generate_e_invoice(docname, throw=True, sandbox=True):
 @frappe.whitelist()
 def generate_e_waybill(doctype, docname, values, sandbox=True):
     doc = _get_doc(docname)
+    doc.check_permission("submit")
     update_invoice(doc, frappe.parse_json(values))
 
     data = EWaybillData(doc, sandbox=sandbox).get_data()
@@ -86,6 +88,7 @@ def generate_e_waybill(doctype, docname, values, sandbox=True):
 @frappe.whitelist()
 def cancel_e_invoice(docname, values, sandbox=True):
     doc = _get_doc(docname)
+    doc.check_permission("cancel")
     values = frappe.parse_json(values)
 
     validate_e_invoice_cancel_eligibility(doc)
@@ -140,7 +143,7 @@ def set_e_invoice_data(doc, result):
 
 def create_e_invoice_log(docname, result):
     decoded_invoice = frappe.parse_json(
-        jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"]
+        jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"],
     )
     log_values = {
         "irn": result.Irn,
@@ -149,7 +152,7 @@ def create_e_invoice_log(docname, result):
         "ack_date": result.AckDt,
         "signed_invoice": result.SignedInvoice,
         "signed_qr_code": result.SignedQRCode,
-        "invoice_data": json.dumps(decoded_invoice),
+        "invoice_data": frappe.as_json(decoded_invoice, indent=4),
     }
     if frappe.db.exists("e-Invoice Log", result.Irn):
         # Handle Duplicate IRN
@@ -222,10 +225,7 @@ def validate_e_invoice_cancel_eligibility(doc):
 
     if get_datetime(add_to_date(e_invoice_info.ack_date, days=1)) < get_datetime():
         frappe.throw(
-            _(
-                "e-Invoice can be cancelled only if it is within 24 Hours of its"
-                " generation"
-            )
+            _("e-Invoice can be cancelled only within 24 Hours of its generation")
         )
 
 

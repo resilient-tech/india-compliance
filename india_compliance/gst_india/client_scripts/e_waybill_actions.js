@@ -60,13 +60,15 @@ function setup_e_waybill_actions(doctype) {
                     },
                     "e-Waybill"
                 );
-                frm.add_custom_button(
-                    "Cancel",
-                    () => {
-                        dialog_cancel_e_waybill(frm);
-                    },
-                    "e-Waybill"
-                );
+                if (is_e_waybill_cancellable(frm)) {
+                    frm.add_custom_button(
+                        "Cancel",
+                        () => {
+                            dialog_cancel_e_waybill(frm);
+                        },
+                        "e-Waybill"
+                    );
+                }
                 // add other buttons
             }
             if (frm.doc.docstatus == 1 && frm.doc.ewaybill) {
@@ -238,7 +240,7 @@ function dialog_generate_e_waybill(frm) {
     d.show();
 }
 
-function dialog_cancel_e_waybill(frm) {
+function dialog_cancel_e_waybill(frm, callback) {
     let d = new frappe.ui.Dialog({
         title: "Are you sure you would like to cancel Ewaybill",
         fields: [
@@ -279,6 +281,7 @@ function dialog_cancel_e_waybill(frm) {
                 },
                 callback: function () {
                     frm.reload_doc();
+                    callback && callback();
                 },
             });
             d.hide();
@@ -479,4 +482,9 @@ function is_e_waybill_applicable(frm) {
         if (!item.gst_hsn_code.startsWith("99")) return true;
     }
     return false;
+}
+
+function is_e_waybill_cancellable(frm) {
+    let e_waybill_info = frm.doc.__onload.e_waybill_info;
+    return moment(e_waybill_info.e_waybill_date).add("days", 1).diff() > 0;
 }
