@@ -476,5 +476,5 @@ function is_e_waybill_applicable(frm) {
 
 function is_e_waybill_cancellable(frm) {
     let e_waybill_info = frm.doc.__onload.e_waybill_info;
-    return ic.get_moment(e_waybill_info.e_waybill_date).add("days", 1).diff() > 0;
+    return ic.get_moment(e_waybill_info.created_on).add("days", 1).diff() > 0;
 }

@@ -1,4 +1,3 @@
-import pytz
 from dateutil import parser
 
 import frappe
@@ -15,8 +14,6 @@ from india_compliance.gst_india.constants import (
     PAN_NUMBER,
     TCS,
 )
-
-INDIA_TZ = pytz.timezone("Asia/Kolkata")
 
 
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
@@ -325,9 +322,4 @@ def parse_datetime(datetime_str):
     if not datetime_str:
         return
 
-    parsed = parser.parse(datetime_str, dayfirst=True)
-    if (system_tz := get_time_zone()) == "Asia/Kolkata":
-        return parsed
-
-    system_tz = pytz.timezone(system_tz)
-    return INDIA_TZ.localize(parsed).astimezone(system_tz)
+    return parser.parse(datetime_str, dayfirst=True)
