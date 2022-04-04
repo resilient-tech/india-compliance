@@ -207,11 +207,17 @@ export default {
         ],
         primary_action_label: "Save",
         primary_action: async () => {
-          this.billingDetails = dialog.get_values();
-          await this.$store.dispatch(
-            "updateBillingDetails",
-            this.billingDetails
-          );
+          const values = dialog.get_values();
+
+          // hack: comparing two objects
+          if (JSON.stringify(this.billingDetails) === JSON.stringify(values)) {
+            dialog.hide();
+            return;
+          }
+
+          this.billingDetails = values;
+          await this.$store.dispatch("updateBillingDetails", values);
+
           dialog.hide();
           frappe.show_alert({
             message: "Billing Details Updated successfully",
