@@ -186,23 +186,6 @@ export default {
 </script>
 
 <style scoped>
-.slide-leave-active,
-.slide-enter-active {
-  overflow: hidden;
-  transition: all 0.3s ease-in-out;
-}
-
-.slide-enter-to,
-.slide-leave {
-  max-height: 100px;
-}
-
-.slide-enter,
-.slide-leave-to {
-  max-height: 0;
-  margin: 0;
-}
-
 .server-error {
   color: var(--red-500);
   font-size: var(--font-size-xs);
