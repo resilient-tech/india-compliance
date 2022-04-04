@@ -6,6 +6,7 @@ from india_compliance.gst_india.api_classes.base import BaseAPI
 
 class EInvoiceAPI(BaseAPI):
     def setup(self, company_gstin=None):
+        self.api_name = "e-Invoice"
         self.base_path = "ei/api"
 
         if self.sandbox:
@@ -17,7 +18,7 @@ class EInvoiceAPI(BaseAPI):
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
 
         else:
-            self.fetch_credentials(company_gstin, "e-Invoice")
+            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
 
         self.default_headers.update(
             {

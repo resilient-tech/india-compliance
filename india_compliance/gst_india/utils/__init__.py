@@ -1,3 +1,5 @@
+from dateutil import parser
+
 import frappe
 from frappe import _
 from frappe.utils import cstr
@@ -314,3 +316,10 @@ def delete_custom_fields(custom_fields):
             )
 
             frappe.clear_cache(doctype=doctype)
+
+
+def parse_datetime(datetime_str):
+    if not datetime_str:
+        return
+
+    return parser.parse(datetime_str, dayfirst=True)
