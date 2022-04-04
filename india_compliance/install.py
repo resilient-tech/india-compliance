@@ -12,6 +12,7 @@ POST_INSTALL_PATCHES = (
     "remove_consumer_gst_category",
     "update_gst_accounts",
     "update_gstin_and_gst_category",
+    "delete_gst_e_invoice_print_format",
 )
 
 
