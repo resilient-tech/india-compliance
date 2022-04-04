@@ -92,39 +92,47 @@ frappe.ui.form.on(DOCTYPE, {
     before_cancel(frm) {
         if (!gst_settings.enable_api || (!frm.doc.ewaybill && !frm.doc.irn)) return;
 
-        return new Promise((resolve, reject) => {
-            const contineCancel = () => {
+        frappe.validated = false;
+
+        return new Promise((resolve) => {
+            const continueCancellation = () => {
                 frappe.validated = true;
                 resolve();
-            };
-            frappe.validated = false;
-			if (frm.doc.irn) {
+            }
+
+            if (frm.doc.irn) {
 				if (!is_irn_cancellable(frm)) {
-					frappe.warn(
-						__("IRN cannot be cancelled."),
-						__(`We suggest you to create a <strong>Credit Note</strong> instead of cancelling this invoice.
-					Still if you cancel, you shall be required to update the IRN in GST portal manually.`),
-						contineCancel,
-						"Cancel Invoice",
-						true
-					);
-				} else {
-					dialog_cancel_e_invoice(frm, contineCancel);
-				}
-			}
-			else if (frm.doc.ewaybill) {
-				if (!is_e_waybill_cancellable(frm)) {
-					frappe.warn(
-						__("e-Waybill cannot be cancelled."),
-						__("We suggest you to create a <strong>Credit Note</strong> instead of cancelling this invoice."),
-						contineCancel,
+					return frappe.warn(
+						__("IRN cannot be cancelled"),
+						__(
+                            `A <strong>Credit Note</strong> should ideally be created
+                            against this invoice instead of cancelling it. If you
+                            choose to proceed, you'll need to update the IRN in the
+                            e-Invoice portal manually.`
+                        ),
+						continueCancellation,
 						"Cancel Invoice",
 						true
 					);
 				}
-				dialog_cancel_e_waybill(frm, contineCancel);
+
+                return show_cancel_e_invoice_dialog(frm, continueCancellation);
 			}
-			else { resolve()}
+
+            if (!is_e_waybill_cancellable(frm)) {
+                return frappe.warn(
+                    __("e-Waybill cannot be cancelled"),
+                    __(
+                        `A <strong>Credit Note</strong> should ideally be created
+                        against this invoice instead of cancelling it`
+                    ),
+                    continueCancellation,
+                    "Cancel Invoice",
+                    true
+                );
+            }
+
+            return show_cancel_e_waybill_dialog(frm, continueCancellation);
         });
     },
 });
