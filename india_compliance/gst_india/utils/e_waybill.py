@@ -1,8 +1,3 @@
-import re
-from datetime import datetime
-
-import pyqrcode
-
 import frappe
 from frappe import _
 from frappe.desk.form.save import send_updated_docs
@@ -256,12 +251,11 @@ def attach_or_print_e_waybill(docname, action):
 
 def _attach_or_print_e_waybill(doc, action=None, e_waybill_doc=None):
     if not e_waybill_doc or not e_waybill_doc.is_latest_data or not e_waybill_doc.data:
-        result, qr_base64 = fetch_e_waybill_data(doc.ewaybill, doc.company_gstin)
+        result = fetch_e_waybill_data(doc.ewaybill, doc.company_gstin)
         e_waybill_doc = frappe._dict(
             {
                 "e_waybill_number": doc.ewaybill,
                 "data": result,
-                "qr_base64": qr_base64,
             }
         )
 
@@ -281,6 +275,8 @@ def fetch_e_waybill_data(e_waybill, company_gstin):
         },
     )
 
+    return result
+
 
 def generate_e_waybill_pdf(doctype, docname, e_waybill, e_waybill_doc=None):
     delete_e_waybill_pdf(doctype, docname, e_waybill)
@@ -288,7 +284,7 @@ def generate_e_waybill_pdf(doctype, docname, e_waybill, e_waybill_doc=None):
         e_waybill_doc = frappe.get_doc("e-Waybill Log", e_waybill)
 
     pdf = frappe.get_print(
-        "e-Waybill Log", e_waybill, "e-Waybill", no_letterhead=True, as_pdf=True
+        doctype, docname, "e-Waybill", no_letterhead=True, as_pdf=True
     )
     save_file(f"{e_waybill}-{docname}.pdf", pdf, doctype, docname, is_private=1)
 
@@ -358,8 +354,10 @@ def create_or_update_e_waybill_log(doc, doc_values, log_values, comment=None):
         # Handle Duplicate IRN
         return
     elif "name" in log_values:
+        print("name")
         e_waybill_doc = frappe.get_doc("e-Waybill Log", log_values.pop("name"))
     else:
+        print("no name")
         e_waybill_doc = frappe.get_doc({"doctype": "e-Waybill Log"})
 
     e_waybill_doc.update(log_values)
