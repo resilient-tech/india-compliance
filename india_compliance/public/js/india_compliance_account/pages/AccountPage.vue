@@ -1,5 +1,5 @@
 <template>
-  <div class="container account-page">
+  <div class="container ic-account-page account-page">
     <PreLoader v-if="isLoading" />
     <div v-else>
       <PageTitle title="India Compliance Account" />
@@ -106,36 +106,8 @@ export default {
 </script>
 
 <style scoped>
-.main-content {
-  margin-top: 1em;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0 4em;
-  font-size: 1em;
-}
-
-.card {
-  width: 30em;
-  height: 26em;
-  margin: 2em;
-  display: flex;
-  flex-direction: column;
-  padding: 2em 3em;
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--card-shadow);
-  background-color: var(--card-bg);
-}
-
-.card .title {
-  font-size: 1.7em;
-  font-weight: 600;
-}
-
-.page-heading {
-  margin-top: 3em;
-  font-size: 2em;
-  text-align: center;
+.ic-account-page .main-content .card {
+  min-height: 26em;
 }
 
 .subscription-info {
@@ -184,33 +156,5 @@ export default {
 }
 .links a:hover li {
   margin-left: 0.3em;
-}
-
-@media (max-width: 992px) {
-  .main-content {
-    font-size: 0.9em;
-    padding: 0;
-  }
-}
-@media (max-width: 768px) {
-  .main-content {
-    flex-direction: column;
-    align-items: center;
-    margin-top: 1 em;
-  }
-
-  .main-content > * {
-    margin: 1em 0;
-  }
-
-  .card {
-    margin-left: 0;
-  }
-}
-
-@media (max-width: 575px) {
-  .main-content {
-    font-size: 0.75em;
-  }
 }
 </style>
