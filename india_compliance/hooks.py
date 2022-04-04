@@ -13,6 +13,8 @@ required_apps = ["erpnext"]
 after_install = "india_compliance.install.after_install"
 boot_session = "india_compliance.boot.set_bootinfo"
 
+app_include_js = "gst_india.bundle.js"
+
 doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
     "Sales Order": "gst_india/client_scripts/sales_order.js",

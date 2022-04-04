@@ -68,27 +68,6 @@ frappe.ui.form.on(DOCTYPE, {
             __("Create")
         );
     },
-
-    on_submit(frm) {
-        if (
-            frm.doc.ewaybill ||
-            frm.doc.is_return ||
-            !gst_settings.enable_api ||
-            !gst_settings.auto_generate_e_waybill ||
-            (gst_settings.enable_e_invoice && gst_settings.auto_generate_e_invoice) ||
-            !is_e_waybill_applicable(frm)
-        )
-            return;
-
-        frappe.call({
-            method: "india_compliance.gst_india.utils.e_waybill.auto_generate_e_waybill",
-            args: {
-                doctype: frm.doc.doctype,
-                docname: frm.doc.name,
-            },
-            callback: () => frm.reload_doc(),
-        });
-    },
     before_cancel(frm) {
         if (!gst_settings.enable_api || (!frm.doc.ewaybill && !frm.doc.irn)) return;
 
