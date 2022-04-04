@@ -1,7 +1,7 @@
 <template>
   <transition name="fade">
     <div class="form-message" v-if="!hideMessage" :class="color">
-      <span>{{ message }}</span>
+      <span v-html="message" />
       <span class="close" @click="dismiss">&times;</span>
     </div>
   </transition>
