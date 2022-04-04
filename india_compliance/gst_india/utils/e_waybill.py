@@ -5,7 +5,7 @@ import pyqrcode
 
 import frappe
 from frappe import _
-from frappe.utils import getdate, random_string
+from frappe.utils import add_to_date, getdate, random_string
 from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
@@ -407,7 +407,7 @@ class EWaybillData(GSTInvoiceData):
     def get_e_waybill_cancel_data(self, values):
         self.validate_doctype_for_e_waybill()
         self.validate_if_e_waybill_is_available(values)
-        self.validate_e_waybill_validity()
+        self.validate_e_waybill_cancelablity()
 
         return {
             "ewbNo": self.doc.ewaybill,
@@ -559,6 +559,16 @@ class EWaybillData(GSTInvoiceData):
         ):
             frappe.throw(
                 _("e-Waybill cannot be cancelled/modified after its validity is over")
+            )
+
+    def validate_e_waybill_cancelablity(self):
+        e_waybill_info = frappe.get_value(
+            "e-Waybill Log", self.doc.ewaybill, "e_waybill_date", as_dict=True
+        )
+
+        if getdate(add_to_date(e_waybill_info["e_waybill_date"], days=1)) < getdate():
+            frappe.throw(
+                _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )
 
     def validate_e_waybill_log(self):

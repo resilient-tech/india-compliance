@@ -1,7 +1,7 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
         if (!is_e_invoice_applicable(frm) || frm.doc.docstatus != 1) return;
-        if (frm.doc.einvoice_status == "Pending" || !frm.doc.irn) {
+        if (!frm.doc.irn) {
             frm.add_custom_button(
                 "Generate",
                 async () => {
@@ -17,18 +17,7 @@ frappe.ui.form.on("Sales Invoice", {
                 "e-Invoice"
             );
         }
-        let e_invoice_info = frm.doc.__onload.e_invoice_info;
-        let dateutil = frappe.datetime;
-        const expiry_time = dateutil.get_datetime_as_string(
-            dateutil.str_to_obj(e_invoice_info.ack_date).addHours(24)
-        );
-        const now_datetime = dateutil.now_datetime();
-        console.log(expiry_time, now_datetime);
-        if (
-            frm.doc.einvoice_status == "Generated" &&
-            frm.doc.irn &&
-            expiry_time > now_datetime
-        ) {
+        if (frm.doc.irn && is_irn_cancellable(frm)) {
             frm.add_custom_button(
                 "Cancel",
                 () => dialog_cancel_e_invoice(frm),
@@ -41,9 +30,13 @@ frappe.ui.form.on("Sales Invoice", {
             frm.set_value("einvoice_status", "Pending");
     },
     on_submit(frm) {
-        if (!is_e_invoice_applicable(frm) || !gst_settings.auto_generate_e_invoice)
+        if (
+            frm.doc.irn ||
+            !is_e_invoice_applicable(frm) ||
+            !gst_settings.auto_generate_e_invoice
+        )
             return;
-        console.log("calling generate_e_invoice");
+
         frappe.call({
             method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
             args: {
@@ -55,7 +48,12 @@ frappe.ui.form.on("Sales Invoice", {
     },
 });
 
-function dialog_cancel_e_invoice(frm) {
+function is_irn_cancellable(frm) {
+    let e_invoice_info = frm.doc.__onload.e_invoice_info;
+    return moment(e_invoice_info.ack_date).add("days", 1).diff() > 0;
+}
+
+function dialog_cancel_e_invoice(frm, callback) {
     let d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
@@ -108,6 +106,7 @@ function dialog_cancel_e_invoice(frm) {
                 },
                 callback: function () {
                     frm.reload_doc();
+                    callback && callback();
                 },
             });
             d.hide();
