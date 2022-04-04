@@ -1,30 +1,5 @@
 function setup_e_waybill_actions(doctype) {
     frappe.ui.form.on(doctype, {
-        setup(frm) {
-            const events = {
-                e_waybill_generated: "blue",
-                e_waybill_not_generated: "yellow",
-                e_waybill_cancelled: "blue",
-                vehicle_info_updated: "blue",
-                transporter_info_updated: "blue",
-            };
-
-            for (const event in events) {
-                frappe.realtime.on(event, function (data) {
-                    if (
-                        data.docname != frm.doc.name ||
-                        data.doctype != doctype ||
-                        !data.alert
-                    )
-                        return;
-
-                    frappe.show_alert({
-                        message: data.alert,
-                        indicator: events[event],
-                    });
-                });
-            }
-        },
         refresh(frm) {
             let settings = frappe.boot.gst_settings;
             if (
@@ -38,9 +13,7 @@ function setup_e_waybill_actions(doctype) {
             if (!frm.doc.ewaybill && frm.doc.docstatus == 1) {
                 frm.add_custom_button(
                     "Generate",
-                    () => {
-                        dialog_generate_e_waybill(frm);
-                    },
+                    () => show_generate_e_waybill_dialog(frm),
                     "e-Waybill"
                 );
             }
@@ -48,24 +21,18 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.docstatus == 1 && frm.doc.ewaybill && is_e_waybill_valid(frm)) {
                 frm.add_custom_button(
                     "Update Vehicle Info",
-                    () => {
-                        dialog_update_vehicle_info(frm);
-                    },
+                    () => show_update_vehicle_info_dialog(frm),
                     "e-Waybill"
                 );
                 frm.add_custom_button(
                     "Update Transporter",
-                    () => {
-                        dialog_update_transporter(frm);
-                    },
+                    () => show_update_transporter_dialog(frm),
                     "e-Waybill"
                 );
                 if (is_e_waybill_cancellable(frm)) {
                     frm.add_custom_button(
                         "Cancel",
-                        () => {
-                            dialog_cancel_e_waybill(frm);
-                        },
+                        () => show_cancel_e_waybill_dialog(frm),
                         "e-Waybill"
                     );
                 }
@@ -74,16 +41,12 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.docstatus == 1 && frm.doc.ewaybill) {
                 frm.add_custom_button(
                     "Print",
-                    () => {
-                        attach_or_print_e_waybill(frm, "print");
-                    },
+                    () => attach_or_print_e_waybill(frm, "print"),
                     "e-Waybill"
                 );
                 frm.add_custom_button(
                     "Attach",
-                    () => {
-                        attach_or_print_e_waybill(frm, "attach");
-                    },
+                    () => attach_or_print_e_waybill(frm, "attach"),
                     "e-Waybill"
                 );
             }
@@ -112,7 +75,7 @@ function attach_or_print_e_waybill(frm, action) {
     });
 }
 
-function dialog_generate_e_waybill(frm) {
+function show_generate_e_waybill_dialog(frm) {
     let d = new frappe.ui.Dialog({
         title: "Verify Details",
         fields: [
@@ -240,9 +203,9 @@ function dialog_generate_e_waybill(frm) {
     d.show();
 }
 
-function dialog_cancel_e_waybill(frm, callback) {
+function show_cancel_e_waybill_dialog(frm, callback) {
     let d = new frappe.ui.Dialog({
-        title: "Are you sure you would like to cancel Ewaybill",
+        title: "Are you sure you would like to cancel e-Waybill",
         fields: [
             {
                 label: "e-Waybill",
@@ -271,7 +234,7 @@ function dialog_cancel_e_waybill(frm, callback) {
                 mandatory_depends_on: "eval: doc.reason == 'Others'",
             },
         ],
-        primary_action_label: "Cancel Ewaybill",
+        primary_action_label: "Cancel e-Waybill",
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
@@ -291,7 +254,7 @@ function dialog_cancel_e_waybill(frm, callback) {
     d.show();
 }
 
-function dialog_update_vehicle_info(frm) {
+function show_update_vehicle_info_dialog(frm) {
     let d = new frappe.ui.Dialog({
         title: "Update Vehicle Information",
         fields: [
@@ -389,7 +352,7 @@ function dialog_update_vehicle_info(frm) {
     d.show();
 }
 
-function dialog_update_transporter(frm) {
+function show_update_transporter_dialog(frm) {
     let d = new frappe.ui.Dialog({
         title: "Update Transporter",
         fields: [

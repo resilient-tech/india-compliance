@@ -20,7 +20,7 @@ frappe.ui.form.on("Sales Invoice", {
         if (frm.doc.irn && is_irn_cancellable(frm)) {
             frm.add_custom_button(
                 "Cancel",
-                () => dialog_cancel_e_invoice(frm),
+                () => show_cancel_e_invoice_dialog(frm),
                 "e-Invoice"
             );
         }
@@ -53,7 +53,7 @@ function is_irn_cancellable(frm) {
     return moment(e_invoice_info.ack_date).add("days", 1).diff() > 0;
 }
 
-function dialog_cancel_e_invoice(frm, callback) {
+function show_cancel_e_invoice_dialog(frm, callback) {
     let d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
