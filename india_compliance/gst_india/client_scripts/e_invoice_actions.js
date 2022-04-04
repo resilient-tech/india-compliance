@@ -1,6 +1,11 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
-        if (!is_e_invoice_applicable(frm) || frm.doc.docstatus != 1) return;
+        if (
+            !is_e_invoice_applicable(frm) ||
+            frm.doc.docstatus != 1 ||
+            !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+        )
+            return;
         if (!frm.doc.irn) {
             frm.add_custom_button(
                 "Generate",
@@ -17,7 +22,11 @@ frappe.ui.form.on("Sales Invoice", {
                 "e-Invoice"
             );
         }
-        if (frm.doc.irn && is_irn_cancellable(frm)) {
+        if (
+            frm.doc.irn &&
+            is_irn_cancellable(frm) &&
+            frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
+        ) {
             frm.add_custom_button(
                 "Cancel",
                 () => show_cancel_e_invoice_dialog(frm),
