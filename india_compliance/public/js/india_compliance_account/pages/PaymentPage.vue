@@ -1,65 +1,69 @@
 <template>
-  <div class="container payment-page-page">
+  <div class="container ic-account-page payment-page">
     <PageTitle title="Make Payment" class="title" />
     <div class="main-content">
       <div class="card card-payment-gateway" id="payment-gateway">
         <!-- Content -->
       </div>
-      <div class="card card-billing">
+      <div class="card">
         <PreLoader v-if="isLoading" />
-        <div v-else>
-          <div class="sub-heading">
-            <p class="title">Billing Details</p>
-            <a class="text-highlight text-right" @click.prevent="editAddress">
-              Edit
-            </a>
-          </div>
-          <div>
-            <p class="company-title">{{ businessName }}</p>
-            <div class="company-footer">
-              <p>{{ addressLine1 }}</p>
-              <p>{{ addressLine2 }}</p>
-              <p>{{ city }}, {{ billingDetails.state }} - {{ pincode }}</p>
+        <template v-else>
+          <div class="billing-details">
+            <div class="sub-heading">
+              <p class="title">Billing Details</p>
+              <a class="text-highlight text-right" @click.prevent="editAddress">
+                Edit
+              </a>
             </div>
-            <p class="company-footer"><strong>GSTIN: </strong> {{ gstin }}</p>
-          </div>
-          <div class="sub-heading">
-            <p class="title">Order Summary</p>
-            <a class="text-highlight text-right">Edit</a>
+            <div class="billing-details-body">
+              <p class="company-title">{{ businessName }}</p>
+              <div class="company-footer">
+                <p>{{ addressLine1 }}</p>
+                <p>{{ addressLine2 }}</p>
+                <p>{{ city }}, {{ billingDetails.state }} - {{ pincode }}</p>
+              </div>
+              <p class="company-footer"><strong>GSTIN: </strong> {{ gstin }}</p>
+            </div>
           </div>
           <div class="order-summary">
-            <div class="row">
-              <p class="col">Credits Purchased</p>
-              <p class="col order-summary-value">
-                {{ getReadableNumber(orderDetails.credits, 0) }}
-              </p>
+            <div class="sub-heading">
+              <p class="title">Order Summary</p>
+              <a class="text-highlight text-right">Edit</a>
             </div>
-            <div class="row">
-              <p class="col">Valid Upto</p>
-              <p class="col order-summary-value">
-                {{ creditsValidity }}
-              </p>
-            </div>
-            <div class="row">
-              <p class="col">Net Amount</p>
-              <p class="col order-summary-value">
-                ₹ {{ getReadableNumber(orderDetails.netTotal) }}
-              </p>
-            </div>
-            <div class="row">
-              <p class="col">GST @ {{ orderDetails.taxRate }}%</p>
-              <p class="col order-summary-value">
-                ₹ {{ getReadableNumber(orderDetails.tax) }}
-              </p>
-            </div>
-            <div class="summary-footer row">
-              <p class="col">Amount Payable</p>
-              <p class="col order-summary-value">
-                ₹ {{ getReadableNumber(orderDetails.grandTotal) }}
-              </p>
+            <div class="order-summary-body">
+              <div class="row">
+                <p class="col">Credits Purchased</p>
+                <p class="col order-summary-value">
+                  {{ getReadableNumber(orderDetails.credits, 0) }}
+                </p>
+              </div>
+              <div class="row">
+                <p class="col">Valid Upto</p>
+                <p class="col order-summary-value">
+                  {{ creditsValidity }}
+                </p>
+              </div>
+              <div class="row">
+                <p class="col">Net Amount</p>
+                <p class="col order-summary-value">
+                  ₹ {{ getReadableNumber(orderDetails.netTotal) }}
+                </p>
+              </div>
+              <div class="row">
+                <p class="col">GST @ {{ orderDetails.taxRate }}%</p>
+                <p class="col order-summary-value">
+                  ₹ {{ getReadableNumber(orderDetails.tax) }}
+                </p>
+              </div>
+              <div class="summary-footer row">
+                <p class="col">Amount Payable</p>
+                <p class="col order-summary-value">
+                  ₹ {{ getReadableNumber(orderDetails.grandTotal) }}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
     </div>
   </div>
@@ -84,6 +88,16 @@ export default {
   },
 
   beforeRouteEnter(to, from, next) {
+    to.params.order = {
+      token: "OUxgXMHW4OC7gGJT1Xe1",
+      credits: 10000,
+      netTotal: 5000,
+      tax: 900,
+      taxRate: 18,
+      grandTotal: 5900,
+      validity: frappe.datetime.add_months(frappe.datetime.now_date(), 12),
+    };
+
     if (to.params.order) return next();
     next({ name: "home", replace: true });
   },
@@ -293,42 +307,22 @@ export default {
 </script>
 
 <style scoped>
-.main-content {
-  width: 100%;
-  margin-top: 4em;
-  display: flex;
-  padding: 0 4em;
-  column-gap: 6em;
-  justify-content: stretch;
-}
-
 .card {
   max-height: 40em;
-  justify-content: space-between;
-  padding: 2em 3.5em;
-  flex-grow: 1;
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--card-shadow);
-  background-color: var(--card-bg);
 }
-.card .title {
-  font-size: 1.6em;
-  font-weight: 600;
-}
+
 .card-payment-gateway {
-  padding: 0;
+  padding: 0 !important;
   overflow-x: hidden;
   overflow-y: scroll;
 }
+
 .order-summary-value {
   font-weight: 600;
   text-align: end;
   font-size: 1.1em;
 }
 
-.card-billing {
-  max-width: 43%;
-}
 .summary-footer {
   font-size: 1.3em;
   font-weight: 600;
@@ -341,60 +335,20 @@ export default {
   margin-bottom: 1.6em;
   font-weight: 400;
 }
+
 .company-title {
   font-size: 1.3em;
   font-weight: bold;
 }
+
 .company-footer {
   font-size: 1em;
   color: var(--text-light);
 }
+
 .sub-heading {
   display: flex;
   justify-content: space-between;
   flex-direction: row;
-}
-@media screen and (max-width: 1200px) {
-  .main-content {
-    column-gap: 4em;
-    font-size: 0.9em;
-  }
-  .card {
-    padding: 2em 2.5em;
-  }
-}
-@media (max-width: 992px) {
-  .payment-page-page {
-    font-size: 0.8em;
-  }
-  .main-content {
-    column-gap: 3em;
-    padding: 2em 1.5em;
-  }
-}
-@media (max-width: 768px) {
-  .payment-page-page {
-    font-size: 1em;
-  }
-  .main-content {
-    flex-direction: column;
-    row-gap: 3em;
-  }
-  .card {
-    max-width: 100%;
-  }
-  .payment-page-page .title {
-    text-align: center;
-  }
-}
-@media (max-width: 576px) {
-  .payment-page-page {
-    font-size: 0.9em;
-  }
-}
-@media (max-width: 400px) {
-  .payment-page-page {
-    font-size: 0.7em;
-  }
 }
 </style>

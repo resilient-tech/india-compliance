@@ -1,5 +1,5 @@
 <template>
-  <div class="container purchase-credits-page">
+  <div class="container ic-account-page purchase-credits-page">
     <PreLoader v-if="isLoading" />
     <div v-else>
       <PageTitle title="Purchase API Credits" />
@@ -294,31 +294,10 @@ function bisect_left(sortedList, value) {
 </script>
 
 <style scoped>
-.main-content {
-  width: 100%;
-  margin-top: 4em;
-  display: flex;
-  padding: 0 4em;
-  column-gap: 6em;
-  justify-content: stretch;
-}
-
 .btn-tall {
   font-size: 1.2em;
 }
-.card {
-  min-height: 35em;
-  justify-content: space-between;
-  padding: 2em 3.5em;
-  flex-grow: 1;
-  border-radius: var(--border-radius-md);
-  box-shadow: var(--card-shadow);
-  background-color: var(--card-bg);
-}
-.card .title {
-  font-size: 1.7em;
-  font-weight: 600;
-}
+
 /* Card Calculator*/
 
 .calculator .title {
@@ -356,11 +335,6 @@ function bisect_left(sortedList, value) {
 }
 
 /* Card Plan */
-
-.card-pricing {
-  max-width: 43%;
-}
-
 .plan-header {
   text-align: end;
   font-size: 0.75em;
@@ -389,47 +363,10 @@ function bisect_left(sortedList, value) {
 .validity-footer {
   font-size: 0.9em;
 }
-@media screen and (max-width: 1200px) {
-  .main-content {
-    column-gap: 4em;
-    font-size: 0.9em;
-  }
-  .card {
-    padding: 2em 2.5em;
-  }
-}
-@media (max-width: 992px) {
-  .purchase-credits-page {
-    font-size: 0.8em;
-  }
-  .main-content {
-    column-gap: 3em;
-    padding: 2em 1.5em;
-  }
-}
-@media (max-width: 768px) {
-  .purchase-credits-page {
-    font-size: 1em;
-  }
-  .main-content {
-    flex-direction: column;
-    row-gap: 3em;
-  }
-  .card {
-    max-width: 100%;
-  }
-  .purchase-credits-page .title {
-    text-align: center;
-  }
-}
-@media (max-width: 576px) {
-  .purchase-credits-page {
-    font-size: 0.9em;
-  }
-}
+
 @media (max-width: 400px) {
-  .purchase-credits-page {
-    font-size: 0.7em;
+  .card {
+    min-height: 38em !important;
   }
 }
 </style>
