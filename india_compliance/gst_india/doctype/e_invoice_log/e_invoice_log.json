@@ -102,7 +102,7 @@
   {
    "fieldname": "cancelled_on",
    "fieldtype": "Datetime",
-   "label": "Cancelled On (IST)",
+   "label": "Cancelled On",
    "read_only": 1
   },
   {
@@ -114,7 +114,7 @@
   {
    "fieldname": "acknowledged_on",
    "fieldtype": "Datetime",
-   "label": "Acknowledged On (IST)",
+   "label": "Acknowledged On",
    "read_only": 1
   }
  ],
@@ -126,7 +126,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2022-04-04 09:38:48.086499",
+ "modified": "2022-04-05 06:16:38.330814",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",

@@ -6,7 +6,7 @@ import pyqrcode
 import frappe
 from frappe import _
 from frappe.desk.form.save import send_updated_docs
-from frappe.utils import add_to_date, get_fullname, random_string
+from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
 from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
@@ -17,7 +17,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     UPDATE_VEHICLE_REASON_CODES,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import get_datetime_ist, parse_datetime
+from india_compliance.gst_india.utils import parse_datetime
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 #######################################################################################
@@ -578,7 +578,7 @@ class EWaybillData(GSTInvoiceData):
     def check_e_waybill_validity(self):
         valid_upto = frappe.get_value("e-Waybill Log", self.doc.ewaybill, "valid_upto")
 
-        if valid_upto and get_datetime_ist(valid_upto) < get_datetime_ist():
+        if valid_upto and get_datetime(valid_upto) < get_datetime():
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
 
     def validate_if_ewaybill_can_be_cancelled(self):
@@ -588,7 +588,7 @@ class EWaybillData(GSTInvoiceData):
             as_datetime=True,
         )
 
-        if get_datetime_ist(cancel_upto) < get_datetime_ist():
+        if get_datetime(cancel_upto) < get_datetime():
             frappe.throw(
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )
