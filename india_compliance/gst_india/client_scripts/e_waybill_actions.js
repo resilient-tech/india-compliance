@@ -462,7 +462,9 @@ function is_e_waybill_valid(frm) {
     return (
         e_waybill_info &&
         (!e_waybill_info.valid_upto ||
-            ic.get_moment(e_waybill_info.valid_upto).diff() > 0)
+            frappe.datetime
+                .convert_to_user_tz(e_waybill_info.valid_upto, false)
+                .diff() > 0)
     );
 }
 
@@ -482,6 +484,9 @@ function is_e_waybill_cancellable(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     return (
         e_waybill_info &&
-        ic.get_moment(e_waybill_info.created_on).add("days", 1).diff() > 0
+        frappe.datetime
+            .convert_to_user_tz(e_waybill_info.created_on, false)
+            .add("days", 1)
+            .diff() > 0
     );
 }

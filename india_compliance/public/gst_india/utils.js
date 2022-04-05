@@ -1,9 +1,5 @@
 frappe.provide("ic");
 
-ic.get_moment = date => {
-    return moment.tz(date, "Asia/Kolkata");
-};
-
 ic.get_gstin_query = company => {
     if (!company) {
         frappe.show_alert({
