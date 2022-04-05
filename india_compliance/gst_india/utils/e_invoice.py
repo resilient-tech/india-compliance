@@ -4,15 +4,17 @@ import jwt
 
 import frappe
 from frappe import _
+from frappe.desk.form.save import send_updated_docs
 from frappe.utils import add_to_date, format_date, get_datetime, getdate, random_string
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
-from india_compliance.gst_india.constants.e_invoice import ERROR_CODES
+from india_compliance.gst_india.constants.e_invoice import CANCEL_REASON_CODES
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     _cancel_e_waybill,
     create_or_update_e_waybill_log,
+    log_and_process_e_waybill,
     print_e_waybill_as_per_settings,
     update_invoice,
 )
@@ -51,8 +53,46 @@ def _generate_e_invoice(docname, throw=True, sandbox=True):
         )
         return
 
-    set_e_invoice_data(doc, result)
-    return result
+    doc.db_set(
+        {
+            "irn": result.Irn,
+            "einvoice_status": "Generated",
+        }
+    )
+    if result.EwbNo:
+        doc.db_set("ewaybill", result.EwbNo)
+        log_and_process_e_waybill(
+            doc,
+            {
+                "e_waybill_number": result.EwbNo,
+                "created_on": result.EwbDt,
+                "valid_upto": result.EwbValidTill,
+                "reference_name": doc.name,
+            },
+            fetch=frappe.get_cached_value(
+                "GST Settings", "GST Settings", "fetch_e_waybill_data"
+            ),
+        )
+    frappe.msgprint(
+        _("e-Invoice generated successfully."), alert=True, indicator="green"
+    )
+
+    decoded_invoice = frappe.parse_json(
+        jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"],
+    )
+    log_and_process_e_invoice(
+        doc.name,
+        {
+            "irn": result.Irn,
+            "sales_invoice": docname,
+            "acknowledgement_number": result.AckNo,
+            "acknowledged_on": result.AckDt,
+            "signed_invoice": result.SignedInvoice,
+            "signed_qr_code": result.SignedQRCode,
+            "invoice_data": frappe.as_json(decoded_invoice, indent=4),
+        },
+    )
+    return send_updated_docs(doc)
 
 
 @frappe.whitelist()
@@ -65,24 +105,22 @@ def generate_e_waybill(doctype, docname, values, sandbox=True):
     result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).generate_e_waybill(data)
     e_waybill = result.EwbNo
     doc.db_set({"ewaybill": e_waybill})
-
-    frappe.publish_realtime(
-        "e_waybill_generated",
-        {
-            "doctype": doc.doctype,
-            "docname": doc.name,
-            "alert": "e-Waybill Generated Successfully",
-        },
+    frappe.msgprint(
+        _("e-Waybill generated successfully."), alert=True, indicator="green"
     )
-
-    log_values = {
-        "e_waybill_number": e_waybill,
-        "created_on": result.EwbDt,
-        "valid_upto": result.EwbValidTill,
-        "reference_name": doc.name,
-    }
-    create_or_update_e_waybill_log(doc, None, log_values)
-    print_e_waybill_as_per_settings(doc)
+    log_and_process_e_waybill(
+        doc,
+        {
+            "e_waybill_number": e_waybill,
+            "created_on": result.EwbDt,
+            "valid_upto": result.EwbValidTill,
+            "reference_name": doc.name,
+        },
+        fetch=frappe.get_cached_value(
+            "GST Settings", "GST Settings", "fetch_e_waybill_data"
+        ),
+    )
+    return send_updated_docs(doc)
 
 
 @frappe.whitelist()
@@ -99,12 +137,41 @@ def cancel_e_invoice(docname, values, sandbox=True):
 
     data = {
         "Irn": doc.irn,
-        "Cnlrsn": ERROR_CODES[values.reason],
+        "Cnlrsn": CANCEL_REASON_CODES[values.reason],
         "Cnlrem": values.remark if values.remark else values.reason,
     }
 
     result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).cancel_irn(data)
-    update_e_invoice_log(values, doc, result)
+    doc.db_set({"einvoice_status": "Cancelled", "irn": None})
+    frappe.msgprint(
+        _("e-Invoice Cancelled successfully."), alert=True, indicator="green"
+    )
+    log_and_process_e_invoice(
+        doc,
+        {
+            "name": result.Irn,
+            "is_cancelled": 1,
+            "cancel_reason_code": values.reason,
+            "cancel_remark": values.remark,
+            "cancelled_on": result.CancelDate,
+        },
+    )
+
+
+def log_and_process_e_invoice(doc, log_data):
+    frappe.enqueue(_log_and_process_e_invoice, doc, log_data)
+
+
+def _log_and_process_e_invoice(doc, log_data):
+    log_name = log_data.pop("name", doc.irn)
+    try:
+        log = frappe.get_doc("e-Invoice Log", log_name)
+    except frappe.DoesNotExistError:
+        log = frappe.new_doc("e-Invoice Log")
+        frappe.clear_last_message()
+
+    log.update(log_data)
+    log.save(ignore_permissions=True)
 
 
 def _get_doc(docname):
@@ -118,62 +185,6 @@ def _get_doc(docname):
         )
 
     return doc
-
-
-def set_e_invoice_data(doc, result):
-    doc.db_set(
-        {
-            "irn": result.Irn,
-            "einvoice_status": "Generated",
-        }
-    )
-    if result.EwbNo:
-        doc.db_set("ewaybill", result.EwbNo)
-        log_values = {
-            "e_waybill_number": result.EwbNo,
-            "created_on": result.EwbDt,
-            "valid_upto": result.EwbValidTill,
-            "reference_name": doc.name,
-        }
-        create_or_update_e_waybill_log(doc, None, log_values)
-        print_e_waybill_as_per_settings(doc)
-
-    create_e_invoice_log(doc.name, result)
-
-
-def create_e_invoice_log(docname, result):
-    decoded_invoice = frappe.parse_json(
-        jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"],
-    )
-    log_values = {
-        "irn": result.Irn,
-        "sales_invoice": docname,
-        "acknowledgement_number": result.AckNo,
-        "acknowledged_on": result.AckDt,
-        "signed_invoice": result.SignedInvoice,
-        "signed_qr_code": result.SignedQRCode,
-        "invoice_data": frappe.as_json(decoded_invoice, indent=4),
-    }
-    if frappe.db.exists("e-Invoice Log", result.Irn):
-        # Handle Duplicate IRN
-        return
-
-    doc = frappe.get_doc({"doctype": "e-Invoice Log"})
-    doc.update(log_values)
-    doc.save(ignore_permissions=True)
-
-
-def update_e_invoice_log(values, doc, result):
-    doc.db_set({"einvoice_status": "Cancelled", "irn": None})
-    log_values = {
-        "is_cancelled": 1,
-        "cancel_reason_code": values.reason,
-        "cancel_remark": values.remark,
-        "cancelled_on": result.CancelDate,
-    }
-    einv_log = frappe.get_doc("e-Invoice Log", result.Irn)
-    einv_log.update(log_values)
-    einv_log.save(ignore_permissions=True)
 
 
 def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
