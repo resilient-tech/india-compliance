@@ -83,7 +83,7 @@ function setup_e_waybill_actions(doctype) {
             if (frappe.perm.has_perm(frm.doctype, 0, "attach", frm.doc.name)) {
                 frm.add_custom_button(
                     __("Attach"),
-                    () => fetch_e_waybill_data(frm, { attach: 1 }),
+                    () => fetch_e_waybill_data(frm, { attach: 1 }, () => frm.refresh()),
                     "e-Waybill"
                 );
             }
@@ -105,6 +105,7 @@ function setup_e_waybill_actions(doctype) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 args: { docname: frm.doc.name },
+                callback: () => frm.refresh(),
             });
         },
     });
@@ -221,20 +222,13 @@ function show_generate_e_waybill_dialog(frm) {
         ],
         primary_action_label: __("Generate"),
         primary_action(values) {
-            let method =
-                "india_compliance.gst_india.utils.e_waybill.generate_e_waybill";
-
-            if (frm.doc.irn) {
-                method =
-                    "india_compliance.gst_india.utils.e_invoice.generate_e_waybill";
-            }
-
             frappe.call({
-                method: method,
+                method: "india_compliance.gst_india.utils.e_invoice.generate_e_waybill",
                 args: {
                     docname: frm.doc.name,
                     values,
                 },
+                callback: () => frm.refresh(),
             });
 
             d.hide();
@@ -284,6 +278,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
                     values,
                 },
                 callback: () => {
+                    frm.refresh();
                     if (callback) callback();
                 },
             });
@@ -381,6 +376,7 @@ function show_update_vehicle_info_dialog(frm) {
                     docname: frm.doc.name,
                     values,
                 },
+                callback: () => frm.refresh(),
             });
             d.hide();
         },
@@ -441,6 +437,7 @@ function show_update_transporter_dialog(frm) {
                     doctype: frm.doc.doctype,
                     values,
                 },
+                callback: () => frm.refresh(),
             });
             d.hide();
         },
