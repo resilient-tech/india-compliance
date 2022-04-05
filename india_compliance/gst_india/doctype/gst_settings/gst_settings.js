@@ -1,8 +1,6 @@
 // Copyright (c) 2017, Frappe Technologies Pvt. Ltd. and contributors
 // For license information, please see license.txt
 
-{% include "india_compliance/gst_india/client_scripts/gstin_query.js" %}
-
 frappe.ui.form.on('GST Settings', {
 	setup(frm) {
 		(["cgst_account", "sgst_account", "igst_account", "cess_account"]).forEach(
