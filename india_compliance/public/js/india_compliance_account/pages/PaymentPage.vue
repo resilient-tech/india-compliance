@@ -220,7 +220,7 @@ export default {
 
           dialog.hide();
           frappe.show_alert({
-            message: "Billing Details Updated successfully",
+            message: "Billing Details updated successfully",
             indicator: "green",
           });
         },
