@@ -1,8 +1,6 @@
 // Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-{% include "india_compliance/gst_india/client_scripts/gstin_query.js" %}
-
 frappe.query_reports["GSTR-1"] = {
 	"filters": [
 		{
