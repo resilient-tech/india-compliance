@@ -22,6 +22,13 @@ class BaseAPI:
             "x-api-key": self.settings.get_password("api_secret"),
         }
 
+        if not self.settings.enable_api:
+            frappe.throw(
+                _("Please enable API in GST Settings to use the {0} API").format(
+                    self.api_name
+                )
+            )
+
         self.setup(*args, **kwargs)
 
     def setup(*args, **kwargs):

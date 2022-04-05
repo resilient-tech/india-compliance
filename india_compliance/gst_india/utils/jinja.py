@@ -12,13 +12,13 @@ def add_spacing(string, interval):
     return " ".join(string[i : i + interval] for i in range(0, len(string), interval))
 
 
-def get_state(state_code):
-    """Get state from State Code"""
+def get_state(state_number):
+    """Get state from State Number"""
 
-    state_code = str(state_code)
+    state_number = str(state_number)
 
     for state, code in STATE_NUMBERS.items():
-        if code == state_code:
+        if code == state_number:
             return state
 
 

@@ -379,12 +379,12 @@ class EInvoiceData(GSTInvoiceData):
         if self.sandbox:
             seller = {
                 "gstin": "01AMBPG7773M002",
-                "state_code": "01",
+                "state_number": "01",
                 "pincode": 193501,
             }
             buyer = {
                 "gstin": "36AMBPG7773M002",
-                "state_code": "36",
+                "state_number": "36",
                 "pincode": 500055,
             }
             self.company_address.update(seller)
@@ -416,7 +416,7 @@ class EInvoiceData(GSTInvoiceData):
                 "TrdNm": self.company_address.address_title,
                 "Loc": self.company_address.city,
                 "Pin": self.company_address.pincode,
-                "Stcd": self.company_address.state_code,
+                "Stcd": self.company_address.state_number,
                 "Addr1": self.company_address.address_line1,
                 "Addr2": self.company_address.address_line2,
             },
@@ -428,7 +428,7 @@ class EInvoiceData(GSTInvoiceData):
                 "Addr2": self.billing_address.address_line2,
                 "Loc": self.billing_address.city,
                 "Pin": self.billing_address.pincode,
-                "Stcd": self.billing_address.state_code,
+                "Stcd": self.billing_address.state_number,
                 "Pos": self.invoice_details.place_of_supply,
             },
             "DispDtls": {
@@ -437,7 +437,7 @@ class EInvoiceData(GSTInvoiceData):
                 "Addr2": self.dispatch_address.address_line2,
                 "Loc": self.dispatch_address.city,
                 "Pin": self.dispatch_address.pincode,
-                "Stcd": self.dispatch_address.state_code,
+                "Stcd": self.dispatch_address.state_number,
             },
             "ShipDtls": {
                 "Gstin": self.shipping_address.gstin,
@@ -447,7 +447,7 @@ class EInvoiceData(GSTInvoiceData):
                 "Addr2": self.shipping_address.address_line2,
                 "Loc": self.shipping_address.city,
                 "Pin": self.shipping_address.pincode,
-                "Stcd": self.shipping_address.state_code,
+                "Stcd": self.shipping_address.state_number,
             },
             "ItemList": self.item_list,
             "ValDtls": {
