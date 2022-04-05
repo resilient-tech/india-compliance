@@ -15,6 +15,7 @@ export default {
     mutations: {
         SET_API_SECRET(state, api_secret) {
             state.api_secret = api_secret;
+            state.session = null;
         },
 
         SET_SESSION(state, session) {
@@ -27,9 +28,9 @@ export default {
             await dispatch("authenticate");
         },
 
-        async authenticate({ state, dispatch }) {
+        async authenticate({ state, dispatch, commit }) {
             const api_secret = await get_api_secret();
-            if (api_secret) return await dispatch("setApiSecret", api_secret);
+            if (api_secret) return commit("SET_API_SECRET", api_secret);
 
             await dispatch("fetchSession");
             if (!state.session) return;
@@ -54,7 +55,6 @@ export default {
         async setApiSecret({ commit }, api_secret) {
             await set_api_secret(api_secret);
             commit("SET_API_SECRET", api_secret);
-            commit("SET_SESSION", null);
         },
 
         async fetchSession({ commit }) {
