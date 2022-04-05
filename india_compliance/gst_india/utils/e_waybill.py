@@ -174,7 +174,7 @@ def update_vehicle_info(*, docname, values):
     )
 
     comment = _(
-        "Vehicle Info has been updated by {user}. New details are: <br>"
+        "Vehicle Info has been updated by {user}.<br><br> New details are: <br>"
     ).format(user=frappe.bold(get_fullname()))
 
     values_in_comment = {
@@ -238,7 +238,7 @@ def update_transporter(*, docname, values):
         " {transporter_id}."
     ).format(
         user=frappe.bold(get_fullname()),
-        transporter_id=values.gst_transporter_id,
+        transporter_id=frappe.bold(values.gst_transporter_id),
     )
 
     log_and_process_e_waybill(
