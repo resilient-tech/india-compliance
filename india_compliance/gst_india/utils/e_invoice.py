@@ -26,9 +26,9 @@ def generate_e_invoice(docname, throw=True):
     try:
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc.company_gstin)
+        result = api.generate_irn(data)
 
         # Handle Duplicate IRN
-        result = api.generate_irn(data)
         if result.InfCd == "DUPIRN":
             result = api.get_e_invoice_by_irn(result.Desc.get("Irn"))
 
