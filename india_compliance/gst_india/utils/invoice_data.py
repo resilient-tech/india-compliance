@@ -29,7 +29,7 @@ class GSTInvoiceData:
         self.settings = frappe.get_cached_doc("GST Settings")
         self.invoice_details = frappe._dict()
 
-        # CGST Account - TC: "cgst_account"
+        # "CGST Account - TC": "cgst_account"
         self.gst_accounts = {
             v: k
             for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
@@ -141,9 +141,7 @@ class GSTInvoiceData:
                         self.doc.mode_of_transport
                     ),
                     "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
-                    "vehicle_no": re.sub(
-                        ALLOWED_CHARACTERS[0], "", self.doc.vehicle_no
-                    ),
+                    "vehicle_no": self.sanitize_vehicle_no(self.doc.vehicle_no),
                     "lr_no": self.sanitize_value(self.doc.lr_no, False),
                     "lr_date": format_date(self.doc.lr_date, self.DATE_FORMAT)
                     if self.doc.lr_no
@@ -296,7 +294,7 @@ class GSTInvoiceData:
         return frappe._dict(
             {
                 "gstin": address.get("gstin") or "URP",
-                "state_code": int(address.gst_state_number),
+                "state_number": int(address.gst_state_number),
                 "address_title": self.sanitize_value(address.address_title, False),
                 "address_line1": self.sanitize_value(address.address_line1),
                 "address_line2": self.sanitize_value(address.address_line2),
@@ -381,3 +379,10 @@ class GSTInvoiceData:
         )
 
         return value[:max_length]
+
+    @staticmethod
+    def sanitize_vehicle_no(vehicle_no):
+        if not vehicle_no:
+            return
+
+        return re.sub(ALLOWED_CHARACTERS[0], "", vehicle_no)
