@@ -105,6 +105,7 @@ export default {
   },
 
   async created() {
+    if (!this.$store.getters.isLoggedIn) return;
     await this.$store.dispatch("fetchDetails", "subscription");
     this.isLoading = false;
   },

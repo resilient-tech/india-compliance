@@ -32,9 +32,6 @@ export default {
 
   async created() {
     await this.$store.dispatch("initAuth");
-    if (this.$store.getters.isLoggedIn) {
-      await this.$store.dispatch("initAccount");
-    }
     this.isLoading = false;
   },
 };
