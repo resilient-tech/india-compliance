@@ -11,6 +11,7 @@ frappe.ui.form.on("Sales Invoice", {
                     await frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name },
+                        callback: () => frm.refresh(),
                     });
                 },
                 "e-Invoice"
@@ -108,7 +109,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                     values: values,
                 },
                 callback: function () {
-                    frm.reload_doc();
+                    frm.refresh();
                     callback && callback();
                 },
             });
