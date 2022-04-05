@@ -1,6 +1,6 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
-        if (!is_e_invoice_applicable(frm) || frm.doc.docstatus != 1) return;
+        if (frm.doc.docstatus != 1 || !is_e_invoice_applicable(frm)) return;
         if (
             !frm.doc.irn &&
             frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
@@ -10,12 +10,8 @@ frappe.ui.form.on("Sales Invoice", {
                 async () => {
                     await frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-                        args: {
-                            docname: frm.doc.name,
-                        },
-                        freeze: true,
+                        args: { docname: frm.doc.name },
                     });
-                    frm.reload_doc();
                 },
                 "e-Invoice"
             );

@@ -23,9 +23,9 @@ ALLOWED_CHARACTERS = {
 class GSTInvoiceData:
     DATE_FORMAT = "dd/mm/yyyy"
 
-    def __init__(self, doc, *, sandbox=False):
+    def __init__(self, doc):
         self.doc = doc
-        self.sandbox = sandbox
+        self.sandbox = frappe.conf.use_gst_api_sandbox or frappe.flags.in_test
         self.settings = frappe.get_cached_doc("GST Settings")
         self.invoice_details = frappe._dict()
 
