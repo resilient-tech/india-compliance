@@ -12,7 +12,6 @@ from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
 from india_compliance.gst_india.constants.e_invoice import CANCEL_REASON_CODES
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
-    _cancel_e_waybill,
     create_or_update_e_waybill_log,
     log_and_process_e_waybill,
     print_e_waybill_as_per_settings,
@@ -23,16 +22,12 @@ from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
-    return _generate_e_invoice(docname, throw)
-
-
-def _generate_e_invoice(docname, throw=True, sandbox=True):
-    doc = _get_doc(docname)
+    doc = frappe.get_doc("Sales Invoice", docname)
     doc.check_permission("submit")
 
     try:
-        data = EInvoiceData(doc, sandbox=sandbox).get_data()
-        api = EInvoiceAPI(doc.company_gstin, sandbox=sandbox)
+        data = EInvoiceData(doc).get_data()
+        api = EInvoiceAPI(doc.company_gstin)
 
         # Handle Duplicate IRN
         result = api.generate_irn(data)
@@ -96,13 +91,13 @@ def _generate_e_invoice(docname, throw=True, sandbox=True):
 
 
 @frappe.whitelist()
-def generate_e_waybill(doctype, docname, values, sandbox=True):
-    doc = _get_doc(docname)
+def generate_e_waybill(doctype, docname, values):
+    doc = frappe.get_doc("Sales Invoice", docname)
     doc.check_permission("submit")
     update_invoice(doc, frappe.parse_json(values))
 
-    data = EWaybillData(doc, sandbox=sandbox).get_data()
-    result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).generate_e_waybill(data)
+    data = EWaybillData(doc).get_data()
+    result = EInvoiceAPI(doc.company_gstin).generate_e_waybill(data)
     e_waybill = result.EwbNo
     doc.db_set({"ewaybill": e_waybill})
     frappe.msgprint(
@@ -124,15 +119,15 @@ def generate_e_waybill(doctype, docname, values, sandbox=True):
 
 
 @frappe.whitelist()
-def cancel_e_invoice(docname, values, sandbox=True):
-    doc = _get_doc(docname)
+def cancel_e_invoice(docname, values):
+    doc = frappe.get_doc("Sales Invoice", docname)
     doc.check_permission("cancel")
     values = frappe.parse_json(values)
 
     validate_e_invoice_cancel_eligibility(doc)
     if doc.ewaybill:
-        data = EWaybillData(doc, sandbox=sandbox).get_e_waybill_cancel_data(values)
-        result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).cancel_e_waybill(data)
+        data = EWaybillData(doc).get_e_waybill_cancel_data(values)
+        result = EInvoiceAPI(doc.company_gstin).cancel_e_waybill(data)
         _cancel_e_waybill(doc, values, result)
 
     data = {
@@ -141,7 +136,7 @@ def cancel_e_invoice(docname, values, sandbox=True):
         "Cnlrem": values.remark if values.remark else values.reason,
     }
 
-    result = EInvoiceAPI(doc.company_gstin, sandbox=sandbox).cancel_irn(data)
+    result = EInvoiceAPI(doc.company_gstin).cancel_irn(data)
     doc.db_set({"einvoice_status": "Cancelled", "irn": None})
     frappe.msgprint(
         _("e-Invoice Cancelled successfully."), alert=True, indicator="green"
@@ -172,19 +167,6 @@ def _log_and_process_e_invoice(doc, log_data):
 
     log.update(log_data)
     log.save(ignore_permissions=True)
-
-
-def _get_doc(docname):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    if not doc:
-        frappe.throw(
-            _(
-                "Sales Invoice {0} for which you are generating e-Invoice not found."
-                " Please make sure you have saved the invoice properly."
-            ).format(docname)
-        )
-
-    return doc
 
 
 def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
