@@ -153,10 +153,6 @@ def update_vehicle_info(*, docname, values):
     doc = frappe.get_doc("Sales Invoice", docname)
     doc.check_permission("submit")
 
-    values = frappe.parse_json(values)
-    data = EWaybillData(doc).get_update_vehicle_data(values)
-    result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
-
     doc.db_set(
         {
             "vehicle_no": values.vehicle_no.replace(" ", ""),
@@ -166,6 +162,10 @@ def update_vehicle_info(*, docname, values):
             "gst_vehicle_type": values.gst_vehicle_type,
         }
     )
+
+    values = frappe.parse_json(values)
+    data = EWaybillData(doc).get_update_vehicle_data(values)
+    result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
 
     frappe.msgprint(
         _("Vehicle Info updated successfully"),
@@ -455,6 +455,8 @@ class EWaybillData(GSTInvoiceData):
     def get_update_vehicle_data(self, values):
         self.validate_if_e_waybill_is_set()
         self.check_e_waybill_validity()
+        self.validate_mode_of_transport()
+        self.get_transporter_details()
 
         dispatch_address_name = (
             self.doc.dispatch_address_name
@@ -465,15 +467,15 @@ class EWaybillData(GSTInvoiceData):
 
         return {
             "ewbNo": self.doc.ewaybill,
-            "vehicleNo": self.sanitize_vehicle_no(values.vehicle_no),
+            "vehicleNo": self.invoice_details.vehicle_no,
             "fromPlace": dispatch_address.city,
             "fromState": dispatch_address.state_number,
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
             "reasonRem": self.sanitize_value(values.remark),
-            "transDocNo": self.sanitize_value(values.lr_no),
-            "transDocDate": frappe.utils.formatdate(values.lr_date, self.DATE_FORMAT),
-            "transMode": TRANSPORT_MODES.get(values.mode_of_transport),
-            "vehicleType": VEHICLE_TYPES.get(values.gst_vehicle_type),
+            "transDocNo": self.invoice_details.lr_no,
+            "transDocDate": self.invoice_details.lr_date,
+            "transMode": self.invoice_details.mode_of_transport,
+            "vehicleType": self.invoice_details.vehicle_type,
         }
 
     def get_update_transporter_data(self, values):
