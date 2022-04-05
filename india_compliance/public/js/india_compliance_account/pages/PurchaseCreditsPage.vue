@@ -239,7 +239,16 @@ export default {
     },
   },
 
+  beforeRouteEnter(to, from, next) {
+    next((vm) => {
+      vm.$store.getters.isLoggedIn
+        ? next()
+        : next({ name: "auth", replace: true });
+    });
+  },
+
   async created() {
+    if (!this.$store.getters.isLoggedIn) return;
     await this.$store.dispatch("fetchDetails", "calculator");
     this.isLoading = false;
     this.credits = this.creditsInputValue = this.defaultCalculatorValue;
