@@ -69,10 +69,10 @@ def generate_e_invoice(docname, throw=True):
         jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"]
     )
 
-    log_and_process_e_invoice(
-        doc.name,
+    log_e_invoice(
         {
-            "irn": result.Irn,
+            "name": doc.irn,
+            "irn": doc.irn,
             "sales_invoice": docname,
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
@@ -110,8 +110,7 @@ def cancel_e_invoice(docname, values):
     result = EInvoiceAPI(doc.company_gstin).cancel_irn(data)
     doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
 
-    log_and_process_e_invoice(
-        doc,
+    log_e_invoice(
         {
             "name": result.Irn,
             "is_cancelled": 1,
@@ -130,18 +129,17 @@ def cancel_e_invoice(docname, values):
     return send_updated_docs(doc)
 
 
-def log_and_process_e_invoice(doc, log_data):
+def log_e_invoice(log_data):
     frappe.enqueue(
-        _log_and_process_e_invoice,
+        _log_e_invoice,
         queue="short",
         at_front=True,
-        doc=doc,
         log_data=log_data,
     )
 
 
-def _log_and_process_e_invoice(doc, log_data):
-    log_name = log_data.pop("name", doc.irn)
+def _log_e_invoice(log_data):
+    log_name = log_data.pop("name")
     try:
         log = frappe.get_doc("e-Invoice Log", log_name)
     except frappe.DoesNotExistError:
