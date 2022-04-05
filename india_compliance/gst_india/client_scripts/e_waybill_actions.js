@@ -80,7 +80,7 @@ function setup_e_waybill_actions(doctype) {
                 );
             }
 
-            if (frappe.perm.has_perm(frm.doctype, 0, "attach", frm.doc.name)) {
+            if (frappe.perm.has_perm(frm.doctype, 0, "write", frm.doc.name)) {
                 frm.add_custom_button(
                     __("Attach"),
                     () => fetch_e_waybill_data(frm, { attach: 1 }, () => frm.refresh()),
@@ -481,7 +481,7 @@ function is_e_waybill_applicable(frm) {
 function is_e_waybill_cancellable(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     return (
-        ewaybill_info &&
+        e_waybill_info &&
         ic.get_moment(e_waybill_info.created_on).add("days", 1).diff() > 0
     );
 }

@@ -53,8 +53,11 @@ frappe.ui.form.on("Sales Invoice", {
 });
 
 function is_irn_cancellable(frm) {
-    let e_invoice_info = frm.doc.__onload.e_invoice_info;
-    return ic.get_moment(e_invoice_info.acknowledged_on).add("days", 1).diff() > 0;
+    const e_invoice_info = frm.doc.__onload && frm.doc.__onload.e_invoice_info;
+    return (
+        e_invoice_info &&
+        ic.get_moment(e_invoice_info.acknowledged_on).add("days", 1).diff() > 0
+    );
 }
 
 function show_cancel_e_invoice_dialog(frm, callback) {

@@ -5,7 +5,14 @@ import jwt
 import frappe
 from frappe import _
 from frappe.desk.form.save import send_updated_docs
-from frappe.utils import add_to_date, format_date, get_datetime, getdate, random_string
+from frappe.utils import (
+    add_to_date,
+    cstr,
+    format_date,
+    get_datetime,
+    getdate,
+    random_string,
+)
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
@@ -438,7 +445,7 @@ class EInvoiceData(GSTInvoiceData):
             "EwbDtls": {
                 "TransId": self.invoice_details.gst_transporter_id,
                 "TransName": self.invoice_details.transporter_name,
-                "TransMode": str(self.invoice_details.mode_of_transport),
+                "TransMode": cstr(self.invoice_details.mode_of_transport),
                 "Distance": self.invoice_details.distance,
                 "TransDocNo": self.invoice_details.lr_no,
                 "TransDocDt": self.invoice_details.lr_date,
@@ -449,7 +456,7 @@ class EInvoiceData(GSTInvoiceData):
 
     def get_item_data(self, item_details):
         return {
-            "SlNo": str(item_details.item_no),
+            "SlNo": cstr(item_details.item_no),
             "PrdDesc": item_details.item_name,
             "IsServc": item_details.is_service_item,
             "HsnCd": item_details.hsn_code,
