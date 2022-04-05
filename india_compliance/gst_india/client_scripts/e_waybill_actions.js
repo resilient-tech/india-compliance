@@ -223,7 +223,7 @@ function show_generate_e_waybill_dialog(frm) {
         primary_action_label: __("Generate"),
         primary_action(values) {
             frappe.call({
-                method: "india_compliance.gst_india.utils.e_invoice.generate_e_waybill",
+                method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 args: {
                     docname: frm.doc.name,
                     values,
@@ -251,7 +251,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
             },
             {
                 label: "Reason",
-                fieldname: "reason_e_waybill",
+                fieldname: "reason",
                 fieldtype: "Select",
                 reqd: 1,
                 default: "Data Entry Mistake",
@@ -434,7 +434,7 @@ function show_update_transporter_dialog(frm) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
                 args: {
-                    doctype: frm.doc.doctype,
+                    docname: frm.doc.name,
                     values,
                 },
                 callback: () => frm.refresh(),
