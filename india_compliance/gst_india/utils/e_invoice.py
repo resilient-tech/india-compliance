@@ -71,7 +71,6 @@ def generate_e_invoice(docname, throw=True):
 
     log_e_invoice(
         {
-            "name": doc.irn,
             "irn": doc.irn,
             "sales_invoice": docname,
             "acknowledgement_number": result.AckNo,
@@ -139,7 +138,8 @@ def log_e_invoice(log_data):
 
 
 def _log_e_invoice(log_data):
-    log_name = log_data.pop("name")
+    #  fallback to IRN to avoid duplicate entry error
+    log_name = log_data.pop("name", log_data.get("irn"))
     try:
         log = frappe.get_doc("e-Invoice Log", log_name)
     except frappe.DoesNotExistError:

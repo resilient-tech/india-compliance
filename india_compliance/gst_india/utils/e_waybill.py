@@ -97,7 +97,6 @@ def log_and_process_e_waybill_generation(doc, result):
     log_and_process_e_waybill(
         doc,
         {
-            "name": e_waybill_number,
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
                 result["ewayBillDate" if not doc.irn else "EwbDt"]
@@ -347,7 +346,8 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
 def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     ### Log e-Waybill
 
-    log_name = log_data.pop("name")
+    #  fallback to e-Waybill number to avoid duplicate entry error
+    log_name = log_data.pop("name", log_data.get("e_waybill_number"))
     try:
         log = frappe.get_doc("e-Waybill Log", log_name)
     except frappe.DoesNotExistError:
