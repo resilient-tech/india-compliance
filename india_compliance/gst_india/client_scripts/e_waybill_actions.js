@@ -434,7 +434,7 @@ function show_update_transporter_dialog(frm) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
                 args: {
-                    doctype: frm.doc.doctype,
+                    docname: frm.doc.name,
                     values,
                 },
                 callback: () => frm.refresh(),
