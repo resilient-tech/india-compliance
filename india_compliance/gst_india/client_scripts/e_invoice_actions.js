@@ -1,14 +1,12 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
+        if (!is_e_invoice_applicable(frm) || frm.doc.docstatus != 1) return;
         if (
-            !is_e_invoice_applicable(frm) ||
-            frm.doc.docstatus != 1 ||
-            !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
-        )
-            return;
-        if (!frm.doc.irn) {
+            !frm.doc.irn &&
+            frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+        ) {
             frm.add_custom_button(
-                "Generate",
+                __("Generate"),
                 async () => {
                     await frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
@@ -28,7 +26,7 @@ frappe.ui.form.on("Sales Invoice", {
             frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
         ) {
             frm.add_custom_button(
-                "Cancel",
+                __("Cancel"),
                 () => show_cancel_e_invoice_dialog(frm),
                 "e-Invoice"
             );
