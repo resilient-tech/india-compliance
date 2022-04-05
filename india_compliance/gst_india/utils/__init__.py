@@ -1,9 +1,9 @@
-import pytz
 from dateutil import parser
+from pytz import timezone
 
 import frappe
 from frappe import _
-from frappe.utils import cstr, get_datetime, get_datetime_in_timezone
+from frappe.utils import cstr, get_datetime, get_time_zone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -17,7 +17,7 @@ from india_compliance.gst_india.constants import (
     TIMEZONE,
 )
 
-TZ = pytz.timezone(TIMEZONE)
+TZ = timezone(TIMEZONE)
 
 
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
@@ -322,14 +322,30 @@ def delete_custom_fields(custom_fields):
             frappe.clear_cache(doctype=doctype)
 
 
-def parse_datetime(datetime_str):
-    if not datetime_str:
+def parse_datetime(value):
+    """Convert IST string to offset-naive system time"""
+
+    if not value:
         return
 
-    return parser.parse(datetime_str, dayfirst=True)
+    parsed = parser.parse(value, dayfirst=True)
+    system_tz = get_time_zone()
+
+    if system_tz == TIMEZONE:
+        return parsed.replace(tzinfo=None)
+
+    # localize to india, convert to system, remove tzinfo
+    return TZ.localize(parsed).astimezone(timezone(system_tz)).replace(tzinfo=None)
 
 
-def get_datetime_ist(datetime=None):
+def as_ist(datetime=None):
+    """Convert system time to offset-naive IST time"""
 
-    # TODO: implement
-    return get_datetime(datetime)
+    parsed = get_datetime(datetime)
+    system_tz = get_time_zone()
+
+    if system_tz == TIMEZONE:
+        return datetime
+
+    # localize to system, convert to IST, remove tzinfo
+    return timezone(system_tz).localize(parsed).astimezone(TZ).replace(tzinfo=None)
