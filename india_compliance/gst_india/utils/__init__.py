@@ -1,8 +1,9 @@
+import pytz
 from dateutil import parser
 
 import frappe
 from frappe import _
-from frappe.utils import cstr, get_time_zone
+from frappe.utils import cstr, get_datetime, get_datetime_in_timezone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -13,7 +14,10 @@ from india_compliance.gst_india.constants import (
     GSTIN_FORMATS,
     PAN_NUMBER,
     TCS,
+    TIMEZONE,
 )
+
+TZ = pytz.timezone(TIMEZONE)
 
 
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
@@ -323,3 +327,9 @@ def parse_datetime(datetime_str):
         return
 
     return parser.parse(datetime_str, dayfirst=True)
+
+
+def get_datetime_ist(datetime=None):
+
+    # TODO: implement
+    return get_datetime(datetime)

@@ -1,12 +1,7 @@
 frappe.provide("ic");
 
 ic.get_moment = date => {
-    let timezone;
-    if (frappe.boot.time_zone) {
-        timezone = frappe.boot.time_zone.system;
-    }
-
-    return moment(date, timezone);
+    return moment.tz(date, "Asia/Kolkata");
 };
 
 ic.get_gstin_query = company => {

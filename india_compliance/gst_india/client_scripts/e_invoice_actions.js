@@ -46,7 +46,7 @@ frappe.ui.form.on("Sales Invoice", {
                 docname: frm.doc.name,
                 throw: false,
             },
-            callback: r => frm.reload_doc(),
+            callback: () => frm.refresh(),
         });
     },
 });

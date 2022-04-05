@@ -6,25 +6,18 @@ import pyqrcode
 import frappe
 from frappe import _
 from frappe.desk.form.save import send_updated_docs
-from frappe.utils import (
-    add_to_date,
-    get_datetime,
-    get_datetime_in_timezone,
-    get_fullname,
-    random_string,
-)
+from frappe.utils import add_to_date, get_fullname, random_string
 from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
-from india_compliance.gst_india.constants import TIMEZONE
 from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
     TRANSPORT_MODES,
     UPDATE_VEHICLE_REASON_CODES,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.utils import get_datetime_ist, parse_datetime
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
 #######################################################################################
@@ -83,23 +76,9 @@ def _generate_e_waybill(doc, throw=True):
         )
         return
 
-    result = EWaybillAPI(doc.company_gstin).generate_e_waybill(data)
-
-    e_waybill_number = str(result.ewayBillNo)
-    doc.db_set("ewaybill", e_waybill_number)
-
-    log_and_process_e_waybill(
-        doc,
-        {
-            "e_waybill_number": e_waybill_number,
-            "created_on": parse_datetime(result.ewayBillDate),
-            "valid_upto": parse_datetime(result.validUpto),
-            "reference_name": doc.name,
-        },
-        fetch=frappe.get_cached_value(
-            "GST Settings", "GST Settings", "fetch_e_waybill_data"
-        ),
-    )
+    api = EWaybillAPI if not doc.irn else EInvoiceAPI
+    result = api(doc.company_gstin).generate_e_waybill(data)
+    log_and_process_e_waybill_generation(doc, result)
 
     frappe.msgprint(
         _("e-Waybill generated successfully"),
@@ -109,12 +88,44 @@ def _generate_e_waybill(doc, throw=True):
     return send_updated_docs(doc)
 
 
+def log_and_process_e_waybill_generation(doc, result):
+    """Separate function, since called in backend from e-invoice utils"""
+
+    e_waybill_number = str(result["ewayBillNo" if not doc.irn else "EwbNo"])
+    doc.db_set("ewaybill", e_waybill_number)
+
+    log_and_process_e_waybill(
+        doc,
+        {
+            "e_waybill_number": e_waybill_number,
+            "created_on": parse_datetime(
+                result["ewayBillDate" if not doc.irn else "EwbDt"]
+            ),
+            "valid_upto": parse_datetime(
+                result["validUpto" if not doc.irn else "EwbValidTill"]
+            ),
+            "reference_name": doc.name,
+        },
+        fetch=frappe.get_cached_value(
+            "GST Settings", "GST Settings", "fetch_e_waybill_data"
+        ),
+    )
+
+
 @frappe.whitelist()
 def cancel_e_waybill(*, docname, values):
     doc = frappe.get_doc("Sales Invoice", docname)
     doc.check_permission("cancel")
 
     values = frappe.parse_json(values)
+    _cancel_e_waybill(doc, values)
+
+    return send_updated_docs(doc)
+
+
+def _cancel_e_waybill(doc, values):
+    """Separate function, since called in backend from e-invoice utils"""
+
     data = EWaybillData(doc).get_e_waybill_cancel_data(values)
     result = EWaybillAPI(doc.company_gstin).cancel_e_waybill(data)
     doc.db_set("ewaybill", "")
@@ -135,8 +146,6 @@ def cancel_e_waybill(*, docname, values):
             "cancelled_on": parse_datetime(result.cancelDate),
         },
     )
-
-    return send_updated_docs(doc)
 
 
 @frappe.whitelist()
@@ -569,7 +578,7 @@ class EWaybillData(GSTInvoiceData):
     def check_e_waybill_validity(self):
         valid_upto = frappe.get_value("e-Waybill Log", self.doc.ewaybill, "valid_upto")
 
-        if valid_upto and get_datetime(valid_upto) < get_datetime_in_timezone(TIMEZONE):
+        if valid_upto and get_datetime_ist(valid_upto) < get_datetime_ist():
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
 
     def validate_if_ewaybill_can_be_cancelled(self):
@@ -579,7 +588,7 @@ class EWaybillData(GSTInvoiceData):
             as_datetime=True,
         )
 
-        if get_datetime(cancel_upto) < get_datetime_in_timezone(TIMEZONE):
+        if get_datetime_ist(cancel_upto) < get_datetime_ist():
             frappe.throw(
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )
