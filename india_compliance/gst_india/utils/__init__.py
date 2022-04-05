@@ -17,8 +17,6 @@ from india_compliance.gst_india.constants import (
     TIMEZONE,
 )
 
-TZ = timezone(TIMEZONE)
-
 
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
@@ -335,7 +333,12 @@ def parse_datetime(value):
         return parsed.replace(tzinfo=None)
 
     # localize to india, convert to system, remove tzinfo
-    return TZ.localize(parsed).astimezone(timezone(system_tz)).replace(tzinfo=None)
+    return (
+        timezone(TIMEZONE)
+        .localize(parsed)
+        .astimezone(timezone(system_tz))
+        .replace(tzinfo=None)
+    )
 
 
 def as_ist(datetime=None):
@@ -348,4 +351,9 @@ def as_ist(datetime=None):
         return datetime
 
     # localize to system, convert to IST, remove tzinfo
-    return timezone(system_tz).localize(parsed).astimezone(TZ).replace(tzinfo=None)
+    return (
+        timezone(system_tz)
+        .localize(parsed)
+        .astimezone(timezone(TIMEZONE))
+        .replace(tzinfo=None)
+    )
