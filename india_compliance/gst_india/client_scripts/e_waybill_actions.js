@@ -4,34 +4,42 @@ function setup_e_waybill_actions(doctype) {
             let settings = frappe.boot.gst_settings;
             if (
                 !settings.enable_api ||
-                !frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) ||
                 !is_e_waybill_applicable(frm) ||
                 !frm.doc.company_gstin // means company is Indian and not Unregistered
             )
                 return;
 
-            if (!frm.doc.ewaybill && frm.doc.docstatus == 1) {
+            if (
+                !frm.doc.ewaybill &&
+                frm.doc.docstatus == 1 &&
+                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+            ) {
                 frm.add_custom_button(
-                    "Generate",
+                    __("Generate"),
                     () => show_generate_e_waybill_dialog(frm),
                     "e-Waybill"
                 );
             }
 
-            if (frm.doc.docstatus == 1 && frm.doc.ewaybill && is_e_waybill_valid(frm)) {
+            if (
+                frm.doc.docstatus == 1 &&
+                frm.doc.ewaybill &&
+                is_e_waybill_valid(frm) &&
+                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+            ) {
                 frm.add_custom_button(
-                    "Update Vehicle Info",
+                    __("Update Vehicle Info"),
                     () => show_update_vehicle_info_dialog(frm),
                     "e-Waybill"
                 );
                 frm.add_custom_button(
-                    "Update Transporter",
+                    __("Update Transporter"),
                     () => show_update_transporter_dialog(frm),
                     "e-Waybill"
                 );
                 if (is_e_waybill_cancellable(frm)) {
                     frm.add_custom_button(
-                        "Cancel",
+                        __("Cancel"),
                         () => show_cancel_e_waybill_dialog(frm),
                         "e-Waybill"
                     );
@@ -39,16 +47,18 @@ function setup_e_waybill_actions(doctype) {
                 // add other buttons
             }
             if (frm.doc.docstatus == 1 && frm.doc.ewaybill) {
-                frm.add_custom_button(
-                    "Print",
-                    () => attach_or_print_e_waybill(frm, "print"),
-                    "e-Waybill"
-                );
-                frm.add_custom_button(
-                    "Attach",
-                    () => attach_or_print_e_waybill(frm, "attach"),
-                    "e-Waybill"
-                );
+                if (frappe.perm.has_perm(frm.doctype, 0, "print", frm.doc.name))
+                    frm.add_custom_button(
+                        __("Print"),
+                        () => attach_or_print_e_waybill(frm, "print"),
+                        "e-Waybill"
+                    );
+                if (frappe.perm.has_perm(frm.doctype, 0, "attach", frm.doc.name))
+                    frm.add_custom_button(
+                        __("Attach"),
+                        () => attach_or_print_e_waybill(frm, "attach"),
+                        "e-Waybill"
+                    );
             }
         },
         on_submit(frm) {
@@ -63,7 +73,7 @@ function setup_e_waybill_actions(doctype) {
             )
                 return;
 
-            frappe.show_alert("Attempting to generate e-Waybill");
+            frappe.show_alert(__("Attempting to generate e-Waybill"));
 
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.auto_generate_e_waybill",
@@ -99,7 +109,7 @@ function attach_or_print_e_waybill(frm, action) {
 
 function show_generate_e_waybill_dialog(frm) {
     let d = new frappe.ui.Dialog({
-        title: "Generate e-Waybill",
+        title: __("Generate e-Waybill"),
         fields: [
             {
                 label: "Transporter",
@@ -199,7 +209,7 @@ function show_generate_e_waybill_dialog(frm) {
                 default: frm.doc.export_type,
             },
         ],
-        primary_action_label: "Generate",
+        primary_action_label: __("Generate"),
         primary_action(values) {
             let method =
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill";
@@ -231,7 +241,7 @@ function show_generate_e_waybill_dialog(frm) {
 
 function show_cancel_e_waybill_dialog(frm, callback) {
     let d = new frappe.ui.Dialog({
-        title: "Cancel e-Waybill",
+        title: __("Cancel e-Waybill"),
         fields: [
             {
                 label: "e-Waybill",
@@ -260,7 +270,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
                 mandatory_depends_on: "eval: doc.reason == 'Others'",
             },
         ],
-        primary_action_label: "Cancel",
+        primary_action_label: __("Cancel"),
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
@@ -282,7 +292,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
 
 function show_update_vehicle_info_dialog(frm) {
     let d = new frappe.ui.Dialog({
-        title: "Update Vehicle Information",
+        title: __("Update Vehicle Information"),
         fields: [
             {
                 label: "e-Waybill",
@@ -359,7 +369,7 @@ function show_update_vehicle_info_dialog(frm) {
                 mandatory_depends_on: 'eval: doc.reason == "3-Others"',
             },
         ],
-        primary_action_label: "Update",
+        primary_action_label: __("Update"),
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_vehicle_info",
@@ -380,7 +390,7 @@ function show_update_vehicle_info_dialog(frm) {
 
 function show_update_transporter_dialog(frm) {
     let d = new frappe.ui.Dialog({
-        title: "Update Transporter",
+        title: __("Update Transporter"),
         fields: [
             {
                 label: "e-Waybill",
@@ -424,7 +434,7 @@ function show_update_transporter_dialog(frm) {
                 default: frappe.boot.gst_settings.fetch_e_waybill_data || 0,
             },
         ],
-        primary_action_label: "Update",
+        primary_action_label: __("Update"),
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
