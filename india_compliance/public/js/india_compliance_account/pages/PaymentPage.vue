@@ -293,7 +293,7 @@ export default {
     const script = document.createElement("script");
     script.setAttribute(
       "src",
-      "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.sandbox.js"
+      "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.prod.js"
     );
     document.head.appendChild(script);
     script.onload = async () => {
