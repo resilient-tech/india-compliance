@@ -167,14 +167,14 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         return _throw(_("Enable API in GST Settings to generate e-Invoice"))
 
     if not gst_settings.enable_e_invoice:
-        return _throw(_("Enable e-Invoicing in GST Settings to generate e-Invoice"))
+        return _throw(_("Please enable e-Invoicing in GST Settings first"))
 
     if getdate(gst_settings.e_invoice_applicable_from) > getdate(doc.posting_date):
         return _throw(
             _(
                 "e-Invoice is not applicable for invoices before {0} as per your"
                 " GST Settings"
-            ).format(format_date(gst_settings.e_invoice_applicable_from))
+            ).format(frappe.bold(format_date(gst_settings.e_invoice_applicable_from)))
         )
 
     return True
@@ -188,7 +188,7 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
     if get_datetime(add_to_date(acknowledged_on, days=1)) < get_datetime():
         frappe.throw(
-            _("e-Invoice can be cancelled only within 24 Hours of its generation")
+            _("e-Invoice can only be cancelled upto 24 hours after it is generated")
         )
 
 
@@ -199,9 +199,7 @@ class EInvoiceData(GSTInvoiceData):
         self.get_item_list()
         self.get_transporter_details()
         self.get_party_address_details()
-
-        einv_data = self.get_invoice_data()
-        return self.sanitize_data(einv_data)
+        return self.sanitize_data(self.get_invoice_data())
 
     def validate_invoice(self):
         super().validate_invoice()
@@ -217,22 +215,25 @@ class EInvoiceData(GSTInvoiceData):
                 "discount_amount": 0,
                 "serial_no": "",
                 "is_service_item": "Y" if item.gst_hsn_code.startswith("99") else "N",
-                "unit_rate": abs(self.rounded(item.taxable_value / item.qty, 3))
-                if item.qty
-                else abs(self.rounded(item.taxable_value, 3)),
-                "barcode": item.get("barcode") or "",
+                "unit_rate": (
+                    abs(self.rounded(item.taxable_value / item.qty, 3))
+                    if item.qty
+                    else abs(self.rounded(item.taxable_value, 3))
+                ),
+                "barcode": item.barcode,
             }
         )
 
-        if item.get("batch_no"):
+        if item.batch_no:
             batch_expiry_date = frappe.db.get_value(
                 "Batch", item.batch_no, "expiry_date"
             )
-            batch_expiry_date = format_date(batch_expiry_date, self.DATE_FORMAT)
             item_details.update(
                 {
                     "batch_number": item.batch_no,
-                    "batch_expiry_date": batch_expiry_date,
+                    "batch_expiry_date": format_date(
+                        batch_expiry_date, self.DATE_FORMAT
+                    ),
                 }
             )
 
@@ -250,7 +251,7 @@ class EInvoiceData(GSTInvoiceData):
             }
         )
 
-        # RETURN/CN DETIALS
+        # Credit Note Details
         if self.doc.is_return and (return_against := self.doc.return_against):
             self.invoice_details.update(
                 {
@@ -269,8 +270,10 @@ class EInvoiceData(GSTInvoiceData):
     def update_payment_details(self):
         # PAYMENT DETAILS
         # cover cases where advance payment is made
-        credit_days = paid_amount = 0
-        if self.doc.get("due_date"):
+        credit_days = 0
+        paid_amount = 0
+
+        if self.doc.due_date:
             credit_days = (
                 getdate(self.doc.due_date) - getdate(self.doc.posting_date)
             ).days
@@ -282,14 +285,12 @@ class EInvoiceData(GSTInvoiceData):
             {
                 "payee_name": self.doc.company if paid_amount else "",
                 "mode_of_payment": ", ".join(
-                    [d.mode_of_payment for d in self.doc.payments if self.doc.payments]
+                    d.mode_of_payment for d in self.doc.payments or ()
                 ),
                 "paid_amount": paid_amount,
                 "credit_days": credit_days,
                 "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
-                "payment_terms": self.doc.payment_terms_template
-                if self.doc.get("payment_terms_template")
-                else "",
+                "payment_terms": self.doc.payment_terms_template,
                 "grand_total": abs(self.rounded(self.doc.grand_total)),
             }
         )
@@ -297,25 +298,25 @@ class EInvoiceData(GSTInvoiceData):
     def get_supply_type(self):
         supply_type = GST_CATEGORIES[self.doc.gst_category]
         if self.doc.gst_category in ("Overseas", "SEZ"):
-            export_type = EXPORT_TYPES[self.doc.export_type]
-            supply_type = f"{supply_type}{export_type}"
+            supply_type = f"{supply_type}{EXPORT_TYPES[self.doc.export_type]}"
 
         return supply_type
 
     def get_party_address_details(self):
-        validate_gstin = True
-        if self.doc.gst_category == "Overseas":
-            validate_gstin = False
-
-        self.billing_address = self.shipping_address = self.get_address_details(
-            self.doc.customer_address, validate_gstin=validate_gstin
+        self.billing_address = self.get_address_details(
+            self.doc.customer_address,
+            validate_gstin=self.doc.gst_category != "Overseas",
         )
-        self.company_address = self.dispatch_address = self.get_address_details(
+        self.company_address = self.get_address_details(
             self.doc.company_address, validate_gstin=True
         )
 
+        # Defaults
+        self.shipping_address = self.billing_address
+        self.dispatch_address = self.company_address
+
         if (
-            self.doc.get("shipping_address_name")
+            self.doc.shipping_address_name
             and self.doc.customer_address != self.doc.shipping_address_name
         ):
             self.shipping_address = self.get_address_details(
@@ -323,16 +324,14 @@ class EInvoiceData(GSTInvoiceData):
             )
 
         if (
-            self.doc.get("dispatch_address_name")
+            self.doc.dispatch_address_name
             and self.doc.company_address != self.doc.dispatch_address_name
         ):
             self.dispatch_address = self.get_address_details(
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = (
-            self.doc.get("customer_name") or self.doc.customer
-        )
+        self.billing_address.legal_name = self.doc.customer_name or self.doc.customer
         self.company_address.legal_name = self.doc.company
 
     def get_invoice_data(self):
