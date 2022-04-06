@@ -31,8 +31,6 @@ from india_compliance.gst_india.utils.invoice_data import (
     validate_non_gst_items,
 )
 
-ONLOAD_KEY = "e_invoice_info"
-
 
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
@@ -143,7 +141,7 @@ def log_e_invoice(doc, log_data):
         log_data=log_data,
     )
 
-    update_onload(doc, ONLOAD_KEY, log_data)
+    update_onload(doc, "e_invoice_info", log_data)
 
 
 def _log_e_invoice(log_data):
@@ -304,7 +302,11 @@ class EInvoiceData(GSTInvoiceData):
                 "credit_days": credit_days,
                 "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
                 "payment_terms": self.doc.payment_terms_template,
-                "grand_total": abs(self.rounded(self.doc.grand_total)),
+                "grand_total": (
+                    abs(self.rounded(self.doc.grand_total))
+                    if self.doc.currency != "INR"
+                    else ""
+                ),
             }
         )
 
