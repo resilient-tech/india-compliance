@@ -186,11 +186,7 @@ class GSTInvoiceData:
             )
 
     def validate_non_gst_items(self):
-        if self.doc.items[0].is_non_gst:
-            frappe.throw(
-                _("This action cannot be performed for invoices with non-GST items"),
-                title=_("Invalid Data"),
-            )
+        validate_non_gst_items(self.doc)
 
     def get_item_list(self):
         self.item_list = []
@@ -386,3 +382,16 @@ class GSTInvoiceData:
             return
 
         return re.sub(ALLOWED_CHARACTERS[0], "", vehicle_no)
+
+
+def validate_non_gst_items(doc, throw=True):
+    if doc.items[0].is_non_gst:
+        if not throw:
+            return
+
+        frappe.throw(
+            _("This action cannot be performed for invoices with non-GST items"),
+            title=_("Invalid Data"),
+        )
+
+    return True

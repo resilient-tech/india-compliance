@@ -22,7 +22,10 @@ from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     log_and_process_e_waybill_generation,
 )
-from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
+from india_compliance.gst_india.utils.invoice_data import (
+    GSTInvoiceData,
+    validate_non_gst_items,
+)
 
 
 @frappe.whitelist()
@@ -44,7 +47,6 @@ def generate_e_invoice(docname, throw=True):
             raise e
 
         frappe.clear_last_message()
-        doc.db_set({"einvoice_status": "Pending"})
         frappe.msgprint(
             _(
                 "e-Invoice auto-generation failed with error:<br>{0}<br><br>"
@@ -155,6 +157,9 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         if throw:
             frappe.throw(error)
 
+    if not validate_non_gst_items(doc, throw=throw):
+        return
+
     if doc.gst_category == "Unregistered":
         return _throw(
             _("e-Invoice is not applicable for invoices with Unregistered Customers")
@@ -203,10 +208,6 @@ class EInvoiceData(GSTInvoiceData):
 
     def validate_invoice(self):
         super().validate_invoice()
-        self.check_applicability()
-
-    def check_applicability(self):
-        self.validate_non_gst_items()
         validate_e_invoice_applicability(self.doc, self.settings)
 
     def update_item_details(self, item_details, item):
