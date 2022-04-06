@@ -14,26 +14,20 @@ frappe.ui.form.on(DOCTYPE, {
 		});
 	},
 	refresh(frm) {
-		if(frm.doc.docstatus == 1 && !frm.is_dirty() && !frm.doc.ewaybill) {
-			frm.add_custom_button('e-Waybill JSON', () => {
-				frappe.call({
-					method: 'india_compliance.gst_india.utils.e_waybill.generate_ewb_json',
-					args: {
-						'dt': frm.doc.doctype,
-						'dn': [frm.doc.name]
-					},
-					callback: function(r) {
-						if (r.message) {
-							const args = {
-								cmd: 'india_compliance.gst_india.utils.e_waybill.download_ewb_json',
-								data: r.message,
-								docname: frm.doc.name
-							};
-							open_url_post(frappe.request.url, args);
-						}
-					}
-				});
-			}, __("Create"));
-		}
-	}
+		if (
+			!frappe.boot.gst_settings.enable_e_waybill
+			||frm.doc.docstatus != 1
+			|| frm.is_dirty()
+			|| frm.doc.ewaybill
+		) return;
+
+		frm.add_custom_button('e-Waybill JSON', async () => {
+			const ewb_data = await frappe.xcall(
+				"india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
+				{doctype: frm.doctype, docnames: frm.doc.name}
+			);
+
+			trigger_file_download(ewb_data, get_e_waybill_file_name(frm.doc.name));
+		}, __("Create"));
+	},
 })
