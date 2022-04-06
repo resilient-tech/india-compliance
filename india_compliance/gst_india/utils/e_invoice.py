@@ -1,5 +1,3 @@
-import json
-
 import jwt
 
 import frappe
