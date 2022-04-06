@@ -15,7 +15,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 ALLOWED_CHARACTERS = {
     0: re.compile(r"[^A-Za-z0-9]"),
-    1: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
+    1: re.compile(r"[^A-Za-z0-9\-\/. ]"),
     2: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
 }
 
