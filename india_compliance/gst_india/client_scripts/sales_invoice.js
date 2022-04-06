@@ -49,7 +49,8 @@ frappe.ui.form.on(DOCTYPE, {
             // ewaybill is applicable and not created or updated.
             frm.dashboard.add_comment(
                 "e-Waybill is applicable for this invoice and not yet generated or updated.",
-                "yellow"
+                "yellow",
+                true
             );
         }
 

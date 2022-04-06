@@ -1,8 +1,10 @@
 from dateutil import parser
+from pytz import timezone
 
 import frappe
 from frappe import _
-from frappe.utils import cstr, get_time_zone
+from frappe.desk.form.load import get_docinfo, run_onload
+from frappe.utils import cstr, get_datetime, get_time_zone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -13,7 +15,44 @@ from india_compliance.gst_india.constants import (
     GSTIN_FORMATS,
     PAN_NUMBER,
     TCS,
+    TIMEZONE,
 )
+
+
+def load_doc(doctype, name, perm="read"):
+    """Get doc, check perms and run onload method"""
+    doc = frappe.get_doc(doctype, name)
+    doc.check_permission(perm)
+    run_onload(doc)
+
+    return doc
+
+
+def update_onload(doc, key, value):
+    """Set or update onload key in doc"""
+
+    if not (onload := doc.get("__onload")):
+        onload = frappe._dict()
+        doc.set("__onload", onload)
+
+    if not onload.get(key):
+        onload[key] = value
+    else:
+        onload[key].update(value)
+
+
+def send_updated_doc(doc, set_docinfo=False):
+    """Apply fieldlevel perms and send doc if called while handling a request"""
+
+    if not frappe.request:
+        return
+
+    doc.apply_fieldlevel_read_permissions()
+
+    if set_docinfo:
+        get_docinfo(doc)
+
+    frappe.response.docs.append(doc)
 
 
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
@@ -318,8 +357,40 @@ def delete_custom_fields(custom_fields):
             frappe.clear_cache(doctype=doctype)
 
 
-def parse_datetime(datetime_str):
-    if not datetime_str:
+def parse_datetime(value):
+    """Convert IST string to offset-naive system time"""
+
+    if not value:
         return
 
-    return parser.parse(datetime_str, dayfirst=True)
+    parsed = parser.parse(value, dayfirst=True)
+    system_tz = get_time_zone()
+
+    if system_tz == TIMEZONE:
+        return parsed.replace(tzinfo=None)
+
+    # localize to india, convert to system, remove tzinfo
+    return (
+        timezone(TIMEZONE)
+        .localize(parsed)
+        .astimezone(timezone(system_tz))
+        .replace(tzinfo=None)
+    )
+
+
+def as_ist(datetime=None):
+    """Convert system time to offset-naive IST time"""
+
+    parsed = get_datetime(datetime)
+    system_tz = get_time_zone()
+
+    if system_tz == TIMEZONE:
+        return datetime
+
+    # localize to system, convert to IST, remove tzinfo
+    return (
+        timezone(system_tz)
+        .localize(parsed)
+        .astimezone(timezone(TIMEZONE))
+        .replace(tzinfo=None)
+    )

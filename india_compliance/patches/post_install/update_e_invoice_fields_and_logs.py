@@ -15,44 +15,54 @@ def execute():
 def migrate_e_waybill_fields():
     docs = frappe.get_all(
         "Sales Invoice",
-        filters={"eway_bill_validity": ["not in", ["", None]]},
-        fields=[
+        filters={"eway_bill_validity": ("not in", ("", None))},
+        fields=(
             "name",
             "eway_bill_validity",
             "ewaybill",
             "eway_bill_cancelled",
             "creation",
-        ],
+            "ack_date",
+        ),
     )
 
-    values = []
-    fields = [
+    fields = (
         "name",
         "creation",
+        "modified",
+        "owner",
+        "modified_by",
         "reference_name",
         "e_waybill_number",
         "valid_upto",
         "is_cancelled",
-    ]
+    )
+    values = []
     for doc in docs:
         values.append(
             [
                 doc.ewaybill,
-                doc.creation,
+                doc.ack_date or doc.creation,
+                doc.ack_date or doc.creation,
+                "Administrator",
+                "Administrator",
                 doc.name,
                 doc.ewaybill,
                 parse_datetime(doc.eway_bill_validity),
                 doc.eway_bill_cancelled,
             ]
         )
-    frappe.db.bulk_insert("e-Waybill Log", fields=fields, values=values)
+
+    frappe.db.bulk_insert(
+        "e-Waybill Log", fields=fields, values=values, ignore_duplicates=True
+    )
 
 
 def migrate_e_invoice_fields():
     docs = frappe.get_all(
         "Sales Invoice",
-        filters={"irn": ["not in", ["", None]]},
-        fields=[
+        filters={"irn": ("not in", ("", None))},
+        fields=(
             "name",
             "irn_cancelled",
             "ack_no",
@@ -61,13 +71,16 @@ def migrate_e_invoice_fields():
             "signed_einvoice",
             "signed_qr_code",
             "irn",
-        ],
+        ),
     )
 
     values = []
-    fields = [
+    fields = (
         "name",
         "creation",
+        "modified",
+        "owner",
+        "modified_by",
         "irn",
         "sales_invoice",
         "is_cancelled",
@@ -76,12 +89,15 @@ def migrate_e_invoice_fields():
         "cancelled_on",
         "invoice_data",
         "signed_qr_code",
-    ]
+    )
     for doc in docs:
         values.append(
             [
                 doc.irn,
                 doc.ack_date,
+                doc.ack_date,
+                "Administrator",
+                "Administrator",
                 doc.irn,
                 doc.name,
                 doc.irn_cancelled,
@@ -93,15 +109,17 @@ def migrate_e_invoice_fields():
             ]
         )
 
-    frappe.db.bulk_insert("e-Invoice Log", fields=fields, values=values)
+    frappe.db.bulk_insert(
+        "e-Invoice Log", fields=fields, values=values, ignore_duplicates=True
+    )
 
 
 def migrate_e_invoice_request_log():
     docs = frappe.get_all(
         "E Invoice Request Log",
-        fields=[
+        fields=(
             "user",
-            "timestamp",
+            "creation",
             "url",
             "reference_invoice",
             "headers",
@@ -110,32 +128,33 @@ def migrate_e_invoice_request_log():
             "modified",
             "modified_by",
             "name",
-        ],
+            "owner",
+        ),
     )
 
     values = []
-    fields = [
+    fields = (
         "name",
-        "owner",
         "creation",
-        "modified_by",
         "modified",
+        "owner",
+        "modified_by",
         "integration_request_service",
         "status",
         "data",
         "output",
         "reference_doctype",
         "reference_docname",
-    ]
+    )
     for doc in docs:
         values.append(
             [
                 doc.name,
-                doc.user,
-                doc.timestamp,
-                doc.modified_by,
+                doc.creation,
                 doc.modified,
-                "e-Invoice Request Log",
+                doc.user or doc.owner,
+                doc.modified_by,
+                "Migrated from e-Invoice Request Log",
                 "Completed",
                 frappe.as_json(
                     {
@@ -151,11 +170,13 @@ def migrate_e_invoice_request_log():
             ]
         )
 
-    frappe.db.bulk_insert("Integration Request", fields=fields, values=values)
+    frappe.db.bulk_insert(
+        "Integration Request", fields=fields, values=values, ignore_duplicates=True
+    )
 
 
 def delete_e_invoice_fields():
-    DELETE_E_INVOICE_FIELDS = {
+    FIELDS_TO_DELETE = {
         "Sales Invoice": [
             {
                 "fieldname": "failure_description",
@@ -276,7 +297,7 @@ def delete_e_invoice_fields():
             },
         ]
     }
-    delete_custom_fields(DELETE_E_INVOICE_FIELDS)
+    delete_custom_fields(FIELDS_TO_DELETE)
 
 
 def delete_old_doctypes():

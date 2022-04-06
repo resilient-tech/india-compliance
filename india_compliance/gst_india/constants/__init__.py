@@ -1,5 +1,7 @@
 import re
 
+TIMEZONE = "Asia/Kolkata"
+
 GST_ACCOUNT_FIELDS = (
     "cgst_account",
     "sgst_account",

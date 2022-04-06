@@ -1,21 +1,18 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
-        if (!is_e_invoice_applicable(frm) || frm.doc.docstatus != 1) return;
+        if (frm.doc.docstatus != 1 || !is_e_invoice_applicable(frm)) return;
         if (
             !frm.doc.irn &&
             frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
         ) {
             frm.add_custom_button(
                 __("Generate"),
-                async () => {
-                    await frappe.call({
+                () => {
+                    frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-                        args: {
-                            docname: frm.doc.name,
-                        },
-                        freeze: true,
+                        args: { docname: frm.doc.name },
+                        callback: () => frm.refresh(),
                     });
-                    frm.reload_doc();
                 },
                 "e-Invoice"
             );
@@ -32,11 +29,7 @@ frappe.ui.form.on("Sales Invoice", {
             );
         }
     },
-    validate(frm) {
-        if (is_e_invoice_applicable(frm) && !gst_settings.auto_generate_e_invoice)
-            frm.set_value("einvoice_status", "Pending");
-    },
-    on_submit(frm) {
+    async on_submit(frm) {
         if (
             frm.doc.irn ||
             !is_e_invoice_applicable(frm) ||
@@ -44,24 +37,31 @@ frappe.ui.form.on("Sales Invoice", {
         )
             return;
 
-        frappe.call({
-            method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-            args: {
+        frappe.show_alert(__("Attempting to generate e-Invoice"));
+
+        await frappe.xcall(
+            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+            {
                 docname: frm.doc.name,
                 throw: false,
             },
-            callback: r => frm.reload_doc(),
-        });
+        );
     },
 });
 
 function is_irn_cancellable(frm) {
-    let e_invoice_info = frm.doc.__onload.e_invoice_info;
-    return ic.get_moment(e_invoice_info.acknowledged_on).add("days", 1).diff() > 0;
+    const e_invoice_info = frm.doc.__onload && frm.doc.__onload.e_invoice_info;
+    return (
+        e_invoice_info &&
+        frappe.datetime
+            .convert_to_user_tz(e_invoice_info.acknowledged_on, false)
+            .add("days", 1)
+            .diff() > 0
+    );
 }
 
 function show_cancel_e_invoice_dialog(frm, callback) {
-    let d = new frappe.ui.Dialog({
+    const d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
             : __("Cancel e-Invoice"),
@@ -78,7 +78,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                 fieldname: "ewaybill",
                 fieldtype: "Data",
                 read_only: 1,
-                default: frm.doc.ewaybill,
+                default: frm.doc.ewaybill || "",
             },
             {
                 label: "Reason",
@@ -112,7 +112,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                     values: values,
                 },
                 callback: function () {
-                    frm.reload_doc();
+                    frm.refresh();
                     callback && callback();
                 },
             });
@@ -133,8 +133,3 @@ function is_e_invoice_applicable(frm) {
         !frm.doc.items[0].is_non_gst
     );
 }
-
-Date.prototype.addHours = function (h) {
-    this.setTime(this.getTime() + h * 60 * 60 * 1000);
-    return this;
-};
