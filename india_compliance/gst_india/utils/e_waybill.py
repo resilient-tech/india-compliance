@@ -24,9 +24,6 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
 
-ONLOAD_KEY = "e_waybill_info"
-
-
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
 #######################################################################################
@@ -352,7 +349,7 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         comment=comment,
     )
 
-    update_onload(doc, ONLOAD_KEY, log_data)
+    update_onload(doc, "e_waybill_info", log_data)
 
 
 def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
