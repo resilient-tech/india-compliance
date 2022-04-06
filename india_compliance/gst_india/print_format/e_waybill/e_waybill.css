@@ -1,0 +1,23 @@
+tbody > tr > td {
+    border-top: None !important;
+}
+
+.title_model {
+    font-size: 14px;
+    font-weight: bold;
+    font-family: Verdana;
+}
+
+.pagelayout {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    line-height: 1.42857143;
+    box-sizing: border-box;
+    transform-origin: top center;
+    width: 550px;
+    margin: 10px auto;
+}
+
+.gvtables {
+    margin-top: 0px !important;
+}
