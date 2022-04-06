@@ -26,8 +26,11 @@ class GSTSettings(Document):
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
 
+        if self.enable_e_invoice and self.auto_generate_e_invoice:
+            self.auto_generate_e_waybill = 1
+
     def on_update(self):
-        frappe.enqueue(self.update_custom_fields)
+        frappe.enqueue(self.update_custom_fields, queue="short", at_front=True)
 
         # clear session boot cache
         frappe.cache().delete_keys("bootinfo")
@@ -99,6 +102,6 @@ class GSTSettings(Document):
 
 def _update_custom_fields(fields, condition):
     if condition:
-        create_custom_fields(fields)
+        create_custom_fields(fields, ignore_validate=True)
     else:
         delete_custom_fields(fields)

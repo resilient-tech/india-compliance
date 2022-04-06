@@ -12,12 +12,20 @@
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 
 
-ERROR_CODES = {
+CANCEL_REASON_CODES = {
     "Duplicate": "1",
     "Order Cancelled": "2",
     "Data Entry Mistake": "3",
     "Others": "4",
 }
+
+UPDATE_VEHICLE_REASON_CODES = {
+    "Due to Break Down": "1",
+    "Due to Trans Shipment": "2",
+    "First Time": "4",
+    "Others": "3",
+}
+
 SUB_SUPPLY_TYPES = {
     1: "Supply",
     2: "Import",
