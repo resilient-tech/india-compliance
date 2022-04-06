@@ -53,9 +53,6 @@ doc_events = {
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",
         ],
-        "before_submit": (
-            "india_compliance.gst_india.overrides.sales_invoice.set_e_invoice_status"
-        ),
         "on_trash": (
             "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
         ),
