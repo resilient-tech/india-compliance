@@ -187,7 +187,7 @@ function show_generate_e_waybill_dialog(frm) {
                 default: frm.doc.mode_of_transport,
                 onchange: () => {
                     update_generate_button_label(d);
-                    update_vehicle_type(d.get_values(true), d);
+                    update_vehicle_type(d);
                 },
             },
             {
@@ -222,7 +222,7 @@ function show_generate_e_waybill_dialog(frm) {
                 default: frm.doc.export_type,
             },
         ],
-        primary_action_label: get_generate_button_label(frm.doc),
+        primary_action_label: __(get_generate_button_label(frm.doc)),
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
@@ -328,7 +328,7 @@ function show_update_vehicle_info_dialog(frm) {
                 options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
                 mandatory_depends_on: "eval: doc.lr_no",
-                onchange: () => update_vehicle_type(d.get_values(true), d),
+                onchange: () => update_vehicle_type(d),
             },
             {
                 label: "GST Vehicle Type",
@@ -501,24 +501,22 @@ function is_e_waybill_cancellable(frm) {
 }
 
 function update_generate_button_label(dialog) {
-    const button = get_generate_button_label(dialog.get_values(true), dialog);
-    d.get_primary_btn().removeClass("hide").html(button);
+    const label = get_generate_button_label(dialog.get_values(true));
+    dialog.set_df_property(
+        "gst_transporter_id",
+        "reqd",
+        label == "Generate e-Waybill" ? 0 : 1
+    );
+    d.get_primary_btn().html(__(label));
 }
 
-function get_generate_button_label(doc, dialog) {
-    if (is_transport_details_available(doc)) {
-        if (dialog) {
-            dialog.set_df_property("gst_transporter_id", "reqd", 0);
-        }
-        return __("Generate e-Waybill");
-    }
-    if (dialog) {
-        dialog.set_df_property("gst_transporter_id", "reqd", 1);
-    }
-    return __("Generate Part A");
+function get_generate_button_label(doc) {
+    return `Generate e-Waybill${
+        are_transport_details_available(doc) ? " (Part A)" : ""
+    }`;
 }
 
-function is_transport_details_available(doc) {
+function are_transport_details_available(doc) {
     return (
         (doc.mode_of_transport == "Road" && doc.vehicle_no) ||
         (["Air", "Rail"].includes(doc.mode_of_transport) && doc.lr_no) ||
@@ -526,10 +524,12 @@ function is_transport_details_available(doc) {
     );
 }
 
-function update_vehicle_type(doc, dialog) {
-    if (doc.mode_of_transport == "Road")
-        dialog.set_value("gst_vehicle_type", "Regular");
-    else if (doc.mode_of_transport == "Ship")
-        dialog.set_value("gst_vehicle_type", "Over Dimensional Cargo (ODC)");
-    else dialog.set_value("gst_vehicle_type", "");
+function update_vehicle_type(dialog) {
+    dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+}
+
+function get_vehicle_type(doc) {
+    if (doc.mode_of_transport == "Road") return "Regular";
+    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
+    return "";
 }
