@@ -30,7 +30,7 @@ class GSTSettings(Document):
             self.auto_generate_e_waybill = 1
 
     def on_update(self):
-        frappe.enqueue(self.update_custom_fields)
+        frappe.enqueue(self.update_custom_fields, queue="short", at_front=True)
 
         # clear session boot cache
         frappe.cache().delete_keys("bootinfo")
