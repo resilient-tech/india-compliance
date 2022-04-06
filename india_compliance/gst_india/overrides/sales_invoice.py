@@ -111,6 +111,11 @@ def validate_mandatory_fields_for_e_invoice(doc):
             )
 
 
+def set_e_invoice_status(doc, method=None):
+    if validate_e_invoice_applicability(doc, throw=False) and not doc.irn:
+        doc.einvoice_status = "Pending"
+
+
 def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 

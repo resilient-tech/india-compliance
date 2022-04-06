@@ -7,8 +7,8 @@ frappe.ui.form.on("Sales Invoice", {
         ) {
             frm.add_custom_button(
                 __("Generate"),
-                async () => {
-                    await frappe.call({
+                () => {
+                    frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name },
                         callback: () => frm.refresh(),
@@ -28,10 +28,6 @@ frappe.ui.form.on("Sales Invoice", {
                 "e-Invoice"
             );
         }
-    },
-    validate(frm) {
-        if (is_e_invoice_applicable(frm) && !gst_settings.auto_generate_e_invoice)
-            frm.set_value("einvoice_status", "Pending");
     },
     on_submit(frm) {
         if (
@@ -136,8 +132,3 @@ function is_e_invoice_applicable(frm) {
         !frm.doc.items[0].is_non_gst
     );
 }
-
-Date.prototype.addHours = function (h) {
-    this.setTime(this.getTime() + h * 60 * 60 * 1000);
-    return this;
-};
