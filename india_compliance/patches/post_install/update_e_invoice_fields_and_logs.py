@@ -53,7 +53,9 @@ def migrate_e_waybill_fields():
             ]
         )
 
-    frappe.db.bulk_insert("e-Waybill Log", fields=fields, values=values)
+    frappe.db.bulk_insert(
+        "e-Waybill Log", fields=fields, values=values, ignore_duplicates=True
+    )
 
 
 def migrate_e_invoice_fields():
@@ -107,7 +109,9 @@ def migrate_e_invoice_fields():
             ]
         )
 
-    frappe.db.bulk_insert("e-Invoice Log", fields=fields, values=values)
+    frappe.db.bulk_insert(
+        "e-Invoice Log", fields=fields, values=values, ignore_duplicates=True
+    )
 
 
 def migrate_e_invoice_request_log():
@@ -124,16 +128,17 @@ def migrate_e_invoice_request_log():
             "modified",
             "modified_by",
             "name",
+            "owner",
         ),
     )
 
     values = []
     fields = (
         "name",
-        "owner",
         "creation",
-        "modified_by",
         "modified",
+        "owner",
+        "modified_by",
         "integration_request_service",
         "status",
         "data",
@@ -145,10 +150,10 @@ def migrate_e_invoice_request_log():
         values.append(
             [
                 doc.name,
-                doc.user,
                 doc.creation,
-                doc.modified_by,
                 doc.modified,
+                doc.user or doc.owner,
+                doc.modified_by,
                 "Migrated from e-Invoice Request Log",
                 "Completed",
                 frappe.as_json(
@@ -165,7 +170,9 @@ def migrate_e_invoice_request_log():
             ]
         )
 
-    frappe.db.bulk_insert("Integration Request", fields=fields, values=values)
+    frappe.db.bulk_insert(
+        "Integration Request", fields=fields, values=values, ignore_duplicates=True
+    )
 
 
 def delete_e_invoice_fields():
