@@ -266,6 +266,7 @@ class GSTInvoiceData:
             "Address",
             address_name,
             (
+                "name",
                 "address_title",
                 "address_line1",
                 "address_line2",
@@ -319,7 +320,7 @@ class GSTInvoiceData:
                 _(
                     "{0} is missing in Address {1}. Please update it and try again."
                 ).format(
-                    frappe.bold(address.meta.get_label(fieldname)),
+                    frappe.bold(frappe.get_meta("Address").get_label(fieldname)),
                     frappe.bold(address.name),
                 ),
                 title=_("Missing Address Details"),
