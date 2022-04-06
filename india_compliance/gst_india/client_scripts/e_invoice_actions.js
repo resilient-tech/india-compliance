@@ -60,7 +60,7 @@ function is_irn_cancellable(frm) {
 }
 
 function show_cancel_e_invoice_dialog(frm, callback) {
-    let d = new frappe.ui.Dialog({
+    const d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
             : __("Cancel e-Invoice"),
@@ -77,7 +77,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
                 fieldname: "ewaybill",
                 fieldtype: "Data",
                 read_only: 1,
-                default: frm.doc.ewaybill,
+                default: frm.doc.ewaybill || "",
             },
             {
                 label: "Reason",

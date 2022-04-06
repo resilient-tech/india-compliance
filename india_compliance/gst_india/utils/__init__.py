@@ -3,6 +3,7 @@ from pytz import timezone
 
 import frappe
 from frappe import _
+from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import cstr, get_datetime, get_time_zone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -16,6 +17,42 @@ from india_compliance.gst_india.constants import (
     TCS,
     TIMEZONE,
 )
+
+
+def load_doc(doctype, name, perm="read"):
+    """Get doc, check perms and run onload method"""
+    doc = frappe.get_doc(doctype, name)
+    doc.check_permission(perm)
+    run_onload(doc)
+
+    return doc
+
+
+def update_onload(doc, key, value):
+    """Set or update onload key in doc"""
+
+    if not (onload := doc.get("__onload")):
+        onload = frappe._dict()
+        doc.set("__onload", onload)
+
+    if not onload.get(key):
+        onload[key] = value
+    else:
+        onload[key].update(value)
+
+
+def send_updated_doc(doc, set_docinfo=False):
+    """Apply fieldlevel perms and send doc if called while handling a request"""
+
+    if not frappe.request:
+        return
+
+    doc.apply_fieldlevel_read_permissions()
+
+    if set_docinfo:
+        get_docinfo(doc)
+
+    frappe.response.docs.append(doc)
 
 
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
