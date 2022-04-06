@@ -1,8 +1,3 @@
-import re
-from datetime import datetime
-
-import pyqrcode
-
 import frappe
 from frappe import _
 from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
@@ -12,9 +7,7 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
-    TRANSPORT_MODES,
     UPDATE_VEHICLE_REASON_CODES,
-    VEHICLE_TYPES,
 )
 from india_compliance.gst_india.utils import (
     load_doc,
