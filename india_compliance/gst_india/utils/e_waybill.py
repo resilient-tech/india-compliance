@@ -86,7 +86,9 @@ def _generate_e_waybill(doc, throw=True):
     log_and_process_e_waybill_generation(doc, result)
 
     frappe.msgprint(
-        _("e-Waybill generated successfully"),
+        _("e-Waybill generated successfully")
+        if result.validUpto
+        else _("e-Waybill (Part A) generated successfully"),
         indicator="green",
         alert=True,
     )
@@ -105,10 +107,10 @@ def log_and_process_e_waybill_generation(doc, result):
         {
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
-                result["ewayBillDate" if not doc.irn else "EwbDt"]
+                result.get("ewayBillDate" if not doc.irn else "EwbDt")
             ),
             "valid_upto": parse_datetime(
-                result["validUpto" if not doc.irn else "EwbValidTill"]
+                result.get("validUpto" if not doc.irn else "EwbValidTill")
             ),
             "reference_name": doc.name,
         },
