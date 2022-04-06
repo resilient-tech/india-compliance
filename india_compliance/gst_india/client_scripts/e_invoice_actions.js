@@ -56,7 +56,10 @@ function is_irn_cancellable(frm) {
     const e_invoice_info = frm.doc.__onload && frm.doc.__onload.e_invoice_info;
     return (
         e_invoice_info &&
-        ic.get_moment(e_invoice_info.acknowledged_on).add("days", 1).diff() > 0
+        frappe.datetime
+            .convert_to_user_tz(e_invoice_info.acknowledged_on, false)
+            .add("days", 1)
+            .diff() > 0
     );
 }
 
