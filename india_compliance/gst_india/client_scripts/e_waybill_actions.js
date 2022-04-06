@@ -149,12 +149,14 @@ function show_generate_e_waybill_dialog(frm) {
                     frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
+                onchange: () => update_generate_button_label(d.get_values(true), d),
             },
             {
                 label: "Vehicle No",
                 fieldname: "vehicle_no",
                 fieldtype: "Data",
                 default: frm.doc.vehicle_no,
+                onchange: () => update_generate_button_label(d.get_values(true), d),
             },
             {
                 label: "Distance (in km)",
@@ -170,6 +172,7 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldname: "lr_no",
                 fieldtype: "Data",
                 default: frm.doc.lr_no,
+                onchange: () => update_generate_button_label(d.get_values(true), d),
             },
             {
                 label: "Transport Receipt Date",
@@ -183,6 +186,7 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldtype: "Select",
                 options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
+                onchange: () => update_generate_button_label(d.get_values(true), d),
             },
             {
                 label: "GST Vehicle Type",
@@ -220,7 +224,7 @@ function show_generate_e_waybill_dialog(frm) {
                 default: frm.doc.export_type,
             },
         ],
-        primary_action_label: __("Generate"),
+        primary_action_label: get_generate_button_label(frm.doc),
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
@@ -488,5 +492,30 @@ function is_e_waybill_cancellable(frm) {
             .convert_to_user_tz(e_waybill_info.created_on, false)
             .add("days", 1)
             .diff() > 0
+    );
+}
+
+function update_generate_button_label(doc, d) {
+    const button = get_generate_button_label(doc, d);
+    d.get_primary_btn().removeClass("hide").html(button);
+}
+
+function get_generate_button_label(doc, d) {
+    if (is_transport_details_available(doc)) {
+        if (d) {d.set_df_property("gst_transporter_id", "reqd", 0);
+    }
+        return __("Generate e-Waybill");
+    }
+    if(d) {
+        d.set_df_property("gst_transporter_id", "reqd", 1);
+    }
+    return __("Generate Part A");
+}
+
+function is_transport_details_available(doc) {
+    return (
+        (doc.mode_of_transport == "Road" && doc.vehicle_no)||
+        (["Air", "Rail"].includes(doc.mode_of_transport) && doc.lr_no)||
+        (doc.mode_of_transport == "Ship" && doc.lr_no && doc.vehicle_no)
     );
 }
