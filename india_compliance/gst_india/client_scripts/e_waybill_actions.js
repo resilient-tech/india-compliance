@@ -142,7 +142,6 @@ function show_generate_e_waybill_dialog(frm) {
                 label: "GST Transporter ID",
                 fieldname: "gst_transporter_id",
                 fieldtype: "Data",
-                fetch_from: "transporter.gst_transporter_id",
                 default:
                     frm.doc.gst_transporter_id &&
                     frm.doc.gst_transporter_id.length == 15
@@ -178,6 +177,7 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldname: "lr_date",
                 fieldtype: "Date",
                 default: frm.doc.lr_date,
+                mandatory_depends_on: "eval:doc.lr_no",
             },
             {
                 label: "Mode Of Transport",
@@ -185,14 +185,18 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldtype: "Select",
                 options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
-                onchange: () => update_generate_button_label(d.get_values(true), d),
+                onchange: () => {
+                    update_generate_button_label(d.get_values(true), d);
+                    update_vehicle_type(d.get_values(true), d);
+                },
             },
             {
                 label: "GST Vehicle Type",
                 fieldname: "gst_vehicle_type",
                 fieldtype: "Select",
                 options: `Regular\nOver Dimensional Cargo (ODC)`,
-                depends_on: 'eval:(doc.mode_of_transport === "Road")',
+                depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+                read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
                 default: frm.doc.gst_vehicle_type,
             },
             {
@@ -204,8 +208,6 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldtype: "Select",
                 options:
                     "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
-                fetch_from: "customer_address.gst_category",
-                fetch_if_empty: 1,
                 default: frm.doc.gst_category,
             },
             {
@@ -215,11 +217,8 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldname: "export_type",
                 label: "Export Type",
                 fieldtype: "Select",
-                depends_on:
-                    'eval:in_list(["SEZ", "Overseas", "Deemed Export"], doc.gst_category)',
+                depends_on: 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
                 options: "\nWith Payment of Tax\nWithout Payment of Tax",
-                fetch_from: "customer_address.export_type",
-                fetch_if_empty: 1,
                 default: frm.doc.export_type,
             },
         ],
@@ -307,14 +306,17 @@ function show_update_vehicle_info_dialog(frm) {
                 label: "Vehicle No",
                 fieldname: "vehicle_no",
                 fieldtype: "Data",
-                reqd: 1,
                 default: frm.doc.vehicle_no,
+                mandatory_depends_on:
+                    "eval: ['Road', 'Ship'].includes(doc.mode_of_transport)",
             },
             {
                 label: "Transport Receipt No",
                 fieldname: "lr_no",
                 fieldtype: "Data",
                 default: frm.doc.lr_no,
+                mandatory_depends_on:
+                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
             },
             {
                 fieldtype: "Column Break",
@@ -325,13 +327,16 @@ function show_update_vehicle_info_dialog(frm) {
                 fieldtype: "Select",
                 options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
+                mandatory_depends_on: "eval: doc.lr_no",
+                onchange: () => update_vehicle_type(d.get_values(true), d),
             },
             {
                 label: "GST Vehicle Type",
                 fieldname: "gst_vehicle_type",
                 fieldtype: "Select",
                 options: `Regular\nOver Dimensional Cargo (ODC)`,
-                depends_on: 'eval:(doc.mode_of_transport === "Road")',
+                depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+                read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
                 default: frm.doc.gst_vehicle_type,
             },
             {
@@ -339,6 +344,7 @@ function show_update_vehicle_info_dialog(frm) {
                 fieldname: "lr_date",
                 fieldtype: "Date",
                 default: frm.doc.lr_date,
+                mandatory_depends_on: "eval:doc.lr_no",
             },
             {
                 fieldtype: "Section Break",
@@ -518,4 +524,11 @@ function is_transport_details_available(doc) {
         (["Air", "Rail"].includes(doc.mode_of_transport) && doc.lr_no) ||
         (doc.mode_of_transport == "Ship" && doc.lr_no && doc.vehicle_no)
     );
+}
+
+function update_vehicle_type(doc, d) {
+    if (doc.mode_of_transport == "Road") d.set_value("gst_vehicle_type", "Regular");
+    else if (doc.mode_of_transport == "Ship")
+        d.set_value("gst_vehicle_type", "Over Dimensional Cargo (ODC)");
+    else d.set_value("gst_vehicle_type", "");
 }
