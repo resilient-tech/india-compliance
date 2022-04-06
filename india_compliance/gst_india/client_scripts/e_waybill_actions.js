@@ -88,7 +88,7 @@ function setup_e_waybill_actions(doctype) {
                 );
             }
         },
-        on_submit(frm) {
+        async on_submit(frm) {
             if (
                 frm.doc.ewaybill ||
                 frm.doc.is_return ||
@@ -102,11 +102,10 @@ function setup_e_waybill_actions(doctype) {
 
             frappe.show_alert(__("Attempting to generate e-Waybill"));
 
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-                args: { docname: frm.doc.name },
-                callback: () => frm.refresh(),
-            });
+            await frappe.xcall(
+                "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+                { docname: frm.doc.name }
+            );
         },
     });
 }
@@ -502,11 +501,12 @@ function update_generate_button_label(doc, d) {
 
 function get_generate_button_label(doc, d) {
     if (is_transport_details_available(doc)) {
-        if (d) {d.set_df_property("gst_transporter_id", "reqd", 0);
-    }
+        if (d) {
+            d.set_df_property("gst_transporter_id", "reqd", 0);
+        }
         return __("Generate e-Waybill");
     }
-    if(d) {
+    if (d) {
         d.set_df_property("gst_transporter_id", "reqd", 1);
     }
     return __("Generate Part A");
@@ -514,8 +514,8 @@ function get_generate_button_label(doc, d) {
 
 function is_transport_details_available(doc) {
     return (
-        (doc.mode_of_transport == "Road" && doc.vehicle_no)||
-        (["Air", "Rail"].includes(doc.mode_of_transport) && doc.lr_no)||
+        (doc.mode_of_transport == "Road" && doc.vehicle_no) ||
+        (["Air", "Rail"].includes(doc.mode_of_transport) && doc.lr_no) ||
         (doc.mode_of_transport == "Ship" && doc.lr_no && doc.vehicle_no)
     );
 }

@@ -29,7 +29,7 @@ frappe.ui.form.on("Sales Invoice", {
             );
         }
     },
-    on_submit(frm) {
+    async on_submit(frm) {
         if (
             frm.doc.irn ||
             !is_e_invoice_applicable(frm) ||
@@ -37,14 +37,15 @@ frappe.ui.form.on("Sales Invoice", {
         )
             return;
 
-        frappe.call({
-            method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-            args: {
+        frappe.show_alert(__("Attempting to generate e-Invoice"));
+
+        await frappe.xcall(
+            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+            {
                 docname: frm.doc.name,
                 throw: false,
             },
-            callback: () => frm.refresh(),
-        });
+        );
     },
 });
 
