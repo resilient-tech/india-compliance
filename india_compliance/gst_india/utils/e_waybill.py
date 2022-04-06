@@ -5,7 +5,6 @@ import pyqrcode
 
 import frappe
 from frappe import _
-from frappe.desk.form.save import send_updated_docs
 from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
 from frappe.utils.file_manager import save_file
 
@@ -17,8 +16,16 @@ from india_compliance.gst_india.constants.e_waybill import (
     UPDATE_VEHICLE_REASON_CODES,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.utils import (
+    load_doc,
+    parse_datetime,
+    send_updated_doc,
+    update_onload,
+)
 from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
+
+ONLOAD_KEY = "e_waybill_info"
+
 
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
@@ -48,9 +55,7 @@ def generate_e_waybill_json(doctype: str, docnames):
 
 @frappe.whitelist()
 def generate_e_waybill(*, docname, values=None):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    doc.check_permission("submit")
-
+    doc = load_doc("Sales Invoice", docname, "submit")
     if values:
         update_invoice(doc, frappe.parse_json(values))
 
@@ -85,7 +90,8 @@ def _generate_e_waybill(doc, throw=True):
         indicator="green",
         alert=True,
     )
-    return send_updated_docs(doc)
+
+    return send_updated_doc(doc)
 
 
 def log_and_process_e_waybill_generation(doc, result):
@@ -114,13 +120,11 @@ def log_and_process_e_waybill_generation(doc, result):
 
 @frappe.whitelist()
 def cancel_e_waybill(*, docname, values):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    doc.check_permission("cancel")
-
+    doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
     _cancel_e_waybill(doc, values)
 
-    return send_updated_docs(doc)
+    return send_updated_doc(doc)
 
 
 def _cancel_e_waybill(doc, values):
@@ -150,9 +154,7 @@ def _cancel_e_waybill(doc, values):
 
 @frappe.whitelist()
 def update_vehicle_info(*, docname, values):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    doc.check_permission("submit")
-
+    doc = load_doc("Sales Invoice", docname, "submit")
     doc.db_set(
         {
             "vehicle_no": values.vehicle_no.replace(" ", ""),
@@ -200,14 +202,12 @@ def update_vehicle_info(*, docname, values):
         comment=comment,
     )
 
-    return send_updated_docs(doc)
+    return send_updated_doc(doc)
 
 
 @frappe.whitelist()
 def update_transporter(*, docname, values):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    doc.check_permission("submit")
-
+    doc = load_doc("Sales Invoice", docname, "submit")
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
     EWaybillAPI(doc.company_gstin).update_transporter(data)
@@ -251,7 +251,7 @@ def update_transporter(*, docname, values):
         comment=comment,
     )
 
-    return send_updated_docs(doc)
+    return send_updated_doc(doc)
 
 
 #######################################################################################
@@ -261,8 +261,7 @@ def update_transporter(*, docname, values):
 
 @frappe.whitelist()
 def fetch_e_waybill_data(*, docname, attach=False):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    doc.check_permission("write" if attach else "print")
+    doc = load_doc("Sales Invoice", docname, "write" if attach else "print")
 
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
@@ -271,7 +270,7 @@ def fetch_e_waybill_data(*, docname, attach=False):
     if not attach:
         return
 
-    attach_e_waybill_pdf(doc)
+    attach_e_waybill_pdf(doc, log)
 
     frappe.msgprint(
         _("e-Waybill PDF attached successfully"),
@@ -279,7 +278,7 @@ def fetch_e_waybill_data(*, docname, attach=False):
         alert=True,
     )
 
-    return send_updated_docs(doc)
+    return send_updated_doc(doc, set_docinfo=True)
 
 
 def _fetch_e_waybill_data(doc, log):
@@ -294,11 +293,15 @@ def _fetch_e_waybill_data(doc, log):
 
 def attach_e_waybill_pdf(doc, log=None):
     if log:
+        # to avoid get_doc when printing
         doc._e_waybill_log = log
 
     pdf_content = frappe.get_print(
         doc.doctype, doc.name, "e-Waybill", doc=doc, no_letterhead=True, as_pdf=True
     )
+
+    # remove temporary attribute
+    doc.__dict__.pop("_e_waybill_log", None)
 
     pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
     delete_file(doc, pdf_filename)
@@ -341,6 +344,8 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         fetch=fetch,
         comment=comment,
     )
+
+    update_onload(doc, ONLOAD_KEY, log_data)
 
 
 def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
@@ -579,19 +584,21 @@ class EWaybillData(GSTInvoiceData):
             frappe.throw(_("No e-Waybill found for this document"))
 
     def check_e_waybill_validity(self):
-        valid_upto = frappe.get_value("e-Waybill Log", self.doc.ewaybill, "valid_upto")
+        # this works because we do run_onload in load_doc above
+        valid_upto = self.doc.__onload.get("e_waybill_info", {}).get("valid_upto")
 
         if valid_upto and get_datetime(valid_upto) < get_datetime():
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
 
     def validate_if_ewaybill_can_be_cancelled(self):
         cancel_upto = add_to_date(
-            frappe.get_value("e-Waybill Log", self.doc.ewaybill, "created_on"),
+            # this works because we do run_onload in load_doc above
+            get_datetime(self.doc.__onload.get("e_waybill_info", {}).get("created_on")),
             days=1,
             as_datetime=True,
         )
 
-        if get_datetime(cancel_upto) < get_datetime():
+        if cancel_upto < get_datetime():
             frappe.throw(
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )

@@ -4,7 +4,6 @@ import jwt
 
 import frappe
 from frappe import _
-from frappe.desk.form.save import send_updated_docs
 from frappe.utils import (
     add_to_date,
     cstr,
@@ -17,7 +16,12 @@ from frappe.utils import (
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
 from india_compliance.gst_india.constants.e_invoice import CANCEL_REASON_CODES
-from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.utils import (
+    load_doc,
+    parse_datetime,
+    send_updated_doc,
+    update_onload,
+)
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     log_and_process_e_waybill_generation,
@@ -27,12 +31,12 @@ from india_compliance.gst_india.utils.invoice_data import (
     validate_non_gst_items,
 )
 
+ONLOAD_KEY = "e_invoice_info"
+
 
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    doc.check_permission("submit")
-
+    doc = load_doc("Sales Invoice", docname, "submit")
     try:
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc.company_gstin)
@@ -64,14 +68,12 @@ def generate_e_invoice(docname, throw=True):
         }
     )
 
-    if result.EwbNo:
-        log_and_process_e_waybill_generation(doc, result)
-
     decoded_invoice = frappe.parse_json(
         jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"]
     )
 
     log_e_invoice(
+        doc,
         {
             "irn": doc.irn,
             "sales_invoice": docname,
@@ -83,19 +85,21 @@ def generate_e_invoice(docname, throw=True):
         },
     )
 
+    if result.EwbNo:
+        log_and_process_e_waybill_generation(doc, result)
+
     frappe.msgprint(
         _("e-Invoice generated successfully"),
         indicator="green",
         alert=True,
     )
 
-    return send_updated_docs(doc)
+    return send_updated_doc(doc)
 
 
 @frappe.whitelist()
 def cancel_e_invoice(docname, values):
-    doc = frappe.get_doc("Sales Invoice", docname)
-    doc.check_permission("cancel")
+    doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
     validate_if_e_invoice_can_be_cancelled(doc)
 
@@ -112,6 +116,7 @@ def cancel_e_invoice(docname, values):
     doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
 
     log_e_invoice(
+        doc,
         {
             "name": result.Irn,
             "is_cancelled": 1,
@@ -127,16 +132,18 @@ def cancel_e_invoice(docname, values):
         alert=True,
     )
 
-    return send_updated_docs(doc)
+    return send_updated_doc(doc)
 
 
-def log_e_invoice(log_data):
+def log_e_invoice(doc, log_data):
     frappe.enqueue(
         _log_e_invoice,
         queue="short",
         at_front=True,
         log_data=log_data,
     )
+
+    update_onload(doc, ONLOAD_KEY, log_data)
 
 
 def _log_e_invoice(log_data):
@@ -189,9 +196,14 @@ def validate_if_e_invoice_can_be_cancelled(doc):
     if not doc.irn:
         frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
 
-    acknowledged_on = frappe.db.get_value("e-Invoice Log", doc.irn, "acknowledged_on")
+    # this works because we do run_onload in load_doc above
+    acknowledged_on = doc.__onload.get("e_invoice_info", {}).get("acknowledged_on")
 
-    if get_datetime(add_to_date(acknowledged_on, days=1)) < get_datetime():
+    if (
+        not acknowledged_on
+        or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
+        < get_datetime()
+    ):
         frappe.throw(
             _("e-Invoice can only be cancelled upto 24 hours after it is generated")
         )
