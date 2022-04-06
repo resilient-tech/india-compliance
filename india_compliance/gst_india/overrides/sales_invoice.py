@@ -62,6 +62,7 @@ def validate_gst_invoice(doc, method=None):
     validate_invoice_number(doc)
     validate_gst_accounts(doc)
     validate_mandatory_fields(doc)
+    validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
 
 
@@ -95,10 +96,8 @@ def validate_mandatory_fields(doc):
                 )
             )
 
-    validate_mandatory_fields_for_e_invoice(doc)
 
-
-def validate_mandatory_fields_for_e_invoice(doc):
+def validate_fields_and_set_status_for_e_invoice(doc):
     if not validate_e_invoice_applicability(doc, throw=False):
         return
 
@@ -110,9 +109,7 @@ def validate_mandatory_fields_for_e_invoice(doc):
                 )
             )
 
-
-def set_e_invoice_status(doc, method=None):
-    if validate_e_invoice_applicability(doc, throw=False) and not doc.irn:
+    if doc._action == "submit" and not doc.irn:
         doc.einvoice_status = "Pending"
 
 
