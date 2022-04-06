@@ -147,14 +147,14 @@ function show_generate_e_waybill_dialog(frm) {
                     frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
-                onchange: () => update_generate_button_label(d.get_values(true), d),
+                onchange: () => update_generate_button_label(d),
             },
             {
                 label: "Vehicle No",
                 fieldname: "vehicle_no",
                 fieldtype: "Data",
                 default: frm.doc.vehicle_no,
-                onchange: () => update_generate_button_label(d.get_values(true), d),
+                onchange: () => update_generate_button_label(d),
             },
             {
                 label: "Distance (in km)",
@@ -170,7 +170,7 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldname: "lr_no",
                 fieldtype: "Data",
                 default: frm.doc.lr_no,
-                onchange: () => update_generate_button_label(d.get_values(true), d),
+                onchange: () => update_generate_button_label(d),
             },
             {
                 label: "Transport Receipt Date",
@@ -186,7 +186,7 @@ function show_generate_e_waybill_dialog(frm) {
                 options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
                 onchange: () => {
-                    update_generate_button_label(d.get_values(true), d);
+                    update_generate_button_label(d);
                     update_vehicle_type(d.get_values(true), d);
                 },
             },
@@ -500,20 +500,20 @@ function is_e_waybill_cancellable(frm) {
     );
 }
 
-function update_generate_button_label(doc, d) {
-    const button = get_generate_button_label(doc, d);
+function update_generate_button_label(dialog) {
+    const button = get_generate_button_label(dialog.get_values(true), dialog);
     d.get_primary_btn().removeClass("hide").html(button);
 }
 
-function get_generate_button_label(doc, d) {
+function get_generate_button_label(doc, dialog) {
     if (is_transport_details_available(doc)) {
-        if (d) {
-            d.set_df_property("gst_transporter_id", "reqd", 0);
+        if (dialog) {
+            dialog.set_df_property("gst_transporter_id", "reqd", 0);
         }
         return __("Generate e-Waybill");
     }
-    if (d) {
-        d.set_df_property("gst_transporter_id", "reqd", 1);
+    if (dialog) {
+        dialog.set_df_property("gst_transporter_id", "reqd", 1);
     }
     return __("Generate Part A");
 }
@@ -526,9 +526,10 @@ function is_transport_details_available(doc) {
     );
 }
 
-function update_vehicle_type(doc, d) {
-    if (doc.mode_of_transport == "Road") d.set_value("gst_vehicle_type", "Regular");
+function update_vehicle_type(doc, dialog) {
+    if (doc.mode_of_transport == "Road")
+        dialog.set_value("gst_vehicle_type", "Regular");
     else if (doc.mode_of_transport == "Ship")
-        d.set_value("gst_vehicle_type", "Over Dimensional Cargo (ODC)");
-    else d.set_value("gst_vehicle_type", "");
+        dialog.set_value("gst_vehicle_type", "Over Dimensional Cargo (ODC)");
+    else dialog.set_value("gst_vehicle_type", "");
 }
