@@ -127,7 +127,12 @@ def _cancel_e_waybill(doc, values):
     """Separate function, since called in backend from e-invoice utils"""
 
     data = EWaybillData(doc).get_e_waybill_cancel_data(values)
-    result = EWaybillAPI(doc.company_gstin).cancel_e_waybill(data)
+    api = (
+        EWaybillAPI(doc.company_gstin)
+        if not doc.irn
+        else EInvoiceAPI(doc.company_gstin)
+    )
+    result = api.cancel_e_waybill(data)
     doc.db_set("ewaybill", "")
 
     frappe.msgprint(
