@@ -3,12 +3,12 @@
 
 import frappe
 from frappe import _
-from frappe.contacts.doctype.contact.contact import get_default_contact
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.model.document import Document
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
+from india_compliance.gst_india.constants.custom_fields import REVERSE_CHARGE_FIELD
 from india_compliance.gst_india.constants.e_invoice import E_INVOICE_FIELDS
 from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_FIELDS
 from india_compliance.gst_india.utils import delete_custom_fields
@@ -17,7 +17,6 @@ from india_compliance.gst_india.utils import delete_custom_fields
 class GSTSettings(Document):
     def validate(self):
         self.validate_gst_accounts()
-        self.enable_disable_reverse_charge_feature()
         self.validate_e_invoice_applicability_date()
         self.update_dependant_fields()
 
@@ -74,33 +73,6 @@ class GSTSettings(Document):
 
             account_types.append(row.account_type)
 
-    def enable_disable_reverse_charge_feature(self):
-        self.create_reverse_charge_field_in_si() if self.enable_reverse_charge else self.delete_reverse_charge_field_from_si()
-
-    def create_reverse_charge_field_in_si(self):
-
-        REVERSE_CHARGE_FIELD = {
-            "Sales Invoice": [
-                {
-                    "fieldname": "is_reverse_charge",
-                    "label": "Is Reverse Charge",
-                    "fieldtype": "Check",
-                    "insert_after": "is_debit_note",
-                    "print_hide": 1,
-                    "default": 0,
-                },
-            ]
-        }
-
-        create_custom_fields(REVERSE_CHARGE_FIELD, update=True)
-
-    def delete_reverse_charge_field_from_si(self):
-        if frappe.get_meta("Sales Invoice").has_field("is_reverse_charge"):
-            frappe.db.delete(
-                "Custom Field",
-                {"dt": "Sales Invoice", "fieldname": "is_reverse_charge"},
-            )
-
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):
             _update_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
@@ -109,6 +81,9 @@ class GSTSettings(Document):
             _update_custom_fields(
                 E_INVOICE_FIELDS, self.enable_e_invoice and self.enable_api
             )
+
+        if self.has_value_changed("enable_reverse_charge"):
+            _update_custom_fields(REVERSE_CHARGE_FIELD, self.enable_reverse_charge)
 
     def validate_e_invoice_applicability_date(self):
         if not self.enable_api or not self.enable_e_invoice:

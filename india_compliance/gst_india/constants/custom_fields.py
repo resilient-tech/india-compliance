@@ -632,3 +632,16 @@ CUSTOM_FIELDS = {
     "Customer": party_fields,
     "Company": company_fields,
 }
+
+REVERSE_CHARGE_FIELD = {
+    "Sales Invoice": [
+        {
+            "fieldname": "is_reverse_charge",
+            "label": "Is Reverse Charge",
+            "fieldtype": "Check",
+            "insert_after": "is_debit_note",
+            "print_hide": 1,
+            "default": 0,
+        },
+    ]
+}
