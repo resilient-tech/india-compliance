@@ -60,8 +60,8 @@ def validate_gst_invoice(doc, method=None):
         return
 
     validate_invoice_number(doc)
-    validate_gst_accounts(doc)
     validate_mandatory_fields(doc)
+    validate_gst_accounts(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
 
