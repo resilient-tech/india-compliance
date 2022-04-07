@@ -141,6 +141,9 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.add_spacing",
         "india_compliance.gst_india.utils.jinja.get_state",
         "india_compliance.gst_india.utils.jinja.get_sub_supply_type",
+        # not methods, but work just fine
+        "india_compliance.gst_india.constants.e_waybill.TRANSPORT_MODES",
+        "india_compliance.gst_india.constants.e_waybill.TRANSPORT_TYPES",
     ],
 }
 
