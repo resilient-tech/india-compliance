@@ -14,11 +14,20 @@ BASE_URL = "https://asp.resilient.tech"
 
 class BaseAPI:
     def __init__(self, *args, **kwargs):
+        self.api_name = "GST"
         self.base_path = ""
+        self.sandbox = frappe.conf.use_gst_api_sandbox or frappe.flags.in_test
         self.settings = frappe.get_cached_doc("GST Settings")
         self.default_headers = {
             "x-api-key": self.settings.get_password("api_secret"),
         }
+
+        if not self.settings.enable_api:
+            frappe.throw(
+                _("Please enable API in GST Settings to use the {0} API").format(
+                    self.api_name
+                )
+            )
 
         self.setup(*args, **kwargs)
 
@@ -35,7 +44,7 @@ class BaseAPI:
                 _(
                     "Please set the relevant credentials in GST Settings to use the"
                     " {0} API"
-                ).format(service),
+                ).format(self.api_name),
                 frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
             )
@@ -45,8 +54,13 @@ class BaseAPI:
         self.password = row.get_password(raise_exception=require_password)
 
     def get_url(self, *parts):
+        parts = list(parts)
+
         if self.base_path:
-            parts = (self.base_path,) + parts
+            parts.insert(0, self.base_path)
+
+        if self.sandbox:
+            parts.insert(0, "test")
 
         return urljoin(BASE_URL, "/".join(part.strip("/") for part in parts))
 
@@ -59,7 +73,7 @@ class BaseAPI:
     def _make_request(
         self,
         method,
-        endpoint=None,
+        endpoint="",
         params=None,
         headers=None,
         json=None,
@@ -116,7 +130,7 @@ class BaseAPI:
             if isinstance(success_value, str):
                 success_value = sbool(success_value)
 
-            if not success_value or not self.handle_failed_response(response_json):
+            if not success_value and not self.handle_failed_response(response_json):
                 frappe.throw(
                     response_json.get("message")
                     # Fallback to response body if message is not present
@@ -124,7 +138,10 @@ class BaseAPI:
                     title=_("API Request Failed"),
                 )
 
-            return frappe._dict(response_json.get("result", response_json))
+            result = response_json.get("result", response_json)
+            if isinstance(result, list):
+                result = result[0]
+            return frappe._dict(result)
 
         except Exception as e:
             log.error = str(e)

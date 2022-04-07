@@ -1,13 +1,11 @@
 {
  "actions": [],
- "creation": "2022-03-27 00:51:09.831504",
+ "creation": "2017-06-27 15:09:01.318003",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
-  "enable_overseas_transactions",
-  "default_without_payment_of_tax",
   "round_off_gst_values",
   "hsn_wise_tax_breakup",
   "enable_reverse_charge",
@@ -15,12 +13,23 @@
   "validate_hsn_code",
   "min_hsn_digits",
   "e_waybill_section",
-  "enable_e_waybill_api",
+  "enable_e_waybill",
+  "e_waybill_threshold",
+  "column_break_10",
+  "auto_generate_e_waybill",
+  "fetch_e_waybill_data",
+  "attach_e_waybill_print",
+  "e_invoice_section",
+  "enable_e_invoice",
+  "auto_generate_e_invoice",
+  "column_break_17",
+  "e_invoice_applicable_from",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
-  "credentials",
-  "api_secret"
+  "api_secret",
+  "enable_api",
+  "credentials"
  ],
  "fields": [
   {
@@ -37,7 +46,7 @@
    "label": "Round Off GST Values"
   },
   {
-   "default": "1",
+   "default": "0",
    "fieldname": "hsn_wise_tax_breakup",
    "fieldtype": "Check",
    "label": "Tax Breakup Table Based On HSN Code"
@@ -53,7 +62,7 @@
    "label": "API Secret"
   },
   {
-   "default": "1",
+   "default": "0",
    "description": "As per <a href=\"https://www.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
@@ -90,16 +99,78 @@
    "label": "General"
   },
   {
-   "depends_on": "eval:doc.api_secret",
    "fieldname": "e_waybill_section",
    "fieldtype": "Section Break",
    "label": "e-Waybill"
   },
   {
    "default": "0",
-   "fieldname": "enable_e_waybill_api",
+   "fieldname": "enable_e_waybill",
    "fieldtype": "Check",
-   "label": "Enable e-Waybill API"
+   "label": "Enable e-Waybill Features"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "If checked, a PDF of e-Waybill will be automatically attached to the Invoice after generation",
+   "fieldname": "attach_e_waybill_print",
+   "fieldtype": "Check",
+   "label": "Attach e-Waybill Print After Generation"
+  },
+  {
+   "default": "0",
+   "description": "Enable this to use API features including e-Waybill, e-Invoice or Autofill using Public APIs",
+   "fieldname": "enable_api",
+   "fieldtype": "Check",
+   "label": "Enable API Features"
+  },
+  {
+   "depends_on": "eval: doc.enable_api",
+   "fieldname": "e_invoice_section",
+   "fieldtype": "Section Break",
+   "label": "e-Invoice"
+  },
+  {
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "Posting Date from which e-Invoicing features should be enabled",
+   "fieldname": "e_invoice_applicable_from",
+   "fieldtype": "Date",
+   "label": "e-Invoice Applicable From",
+   "mandatory_depends_on": "eval: doc.enable_e_invoice"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "50000",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "description": "When selling goods with total Sales Invoice value greater than this amount, a prompt will be displayed if e-Waybill hasn't been generated upon submission",
+   "fieldname": "e_waybill_threshold",
+   "fieldtype": "Currency",
+   "label": "Invoice Value Threshold for e-Waybill Generation"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "e-Waybill will be automatically generated after Sales Invoice submission if the invoice value threshold is met, and data is available and valid",
+   "fieldname": "auto_generate_e_waybill",
+   "fieldtype": "Check",
+   "label": "Automatically Generate e-Waybill on Invoice Submission",
+   "read_only_depends_on": "eval: doc.enable_e_invoice && doc.auto_generate_e_invoice"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "Automatically fetch e-Waybill data after e-Waybill generation for printing or logging purposes. This will lead to one additional API request.",
+   "fieldname": "fetch_e_waybill_data",
+   "fieldtype": "Check",
+   "label": "Fetch e-Waybill Data After Generation",
+   "read_only_depends_on": "eval: doc.attach_e_waybill_print"
   },
   {
    "default": "0",
@@ -109,25 +180,24 @@
    "label": "Enable Reverse Charge in Sales Transactions"
   },
   {
-   "default": "1",
-   "description": "Fields and validations for these transactions will apply based on this setting",
-   "fieldname": "enable_overseas_transactions",
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "e-Invoice will be automatically generated after Sales Invoice submission if applicable",
+   "fieldname": "auto_generate_e_invoice",
    "fieldtype": "Check",
-   "label": "Enable SEZ / Overseas Transactions"
+   "label": "Automatically Generate e-Invoice on Invoice Submission"
   },
   {
    "default": "0",
-   "depends_on": "eval: doc.enable_overseas_transactions",
-   "description": "Supply without payment of tax can be made under bond or Letter of Undertaking (LUT)",
-   "fieldname": "default_without_payment_of_tax",
+   "fieldname": "enable_e_invoice",
    "fieldtype": "Check",
-   "label": "Default Export Type to Without Payment of Tax"
+   "label": "Enable e-Invoicing"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-31 14:19:39.654144",
+ "modified": "2022-04-06 13:56:34.868949",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
