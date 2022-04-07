@@ -13,14 +13,24 @@ required_apps = ["erpnext"]
 after_install = "india_compliance.install.after_install"
 boot_session = "india_compliance.boot.set_bootinfo"
 
+app_include_js = "gst_india.bundle.js"
+
 doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
     "Sales Order": "gst_india/client_scripts/sales_order.js",
-    "Delivery Note": "gst_india/client_scripts/delivery_note.js",
+    "Delivery Note": [
+        "gst_india/client_scripts/e_waybill_utils.js",
+        "gst_india/client_scripts/delivery_note.js",
+    ],
     "Purchase Order": "gst_india/client_scripts/purchase_order.js",
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
-    "Sales Invoice": "gst_india/client_scripts/sales_invoice.js",
+    "Sales Invoice": [
+        "gst_india/client_scripts/e_waybill_utils.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/sales_invoice.js",
+        "gst_india/client_scripts/e_invoice_actions.js",
+    ],
     "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
     "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
     "Company": "gst_india/client_scripts/company.js",
@@ -38,17 +48,25 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
     },
     "Sales Invoice": {
+        "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": [
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",
-        ]
+        ],
+        "on_trash": (
+            "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
+        ),
     },
     "Purchase Invoice": {
         "validate": [
             "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
             "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
-            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
         ]
+    },
+    ("Sales Invoice", "Purchase Invoice", "Delivery Note"): {
+        "validate": (
+            "india_compliance.gst_india.overrides.invoice.update_taxable_values"
+        ),
     },
     "Payment Entry": {
         "validate": (
@@ -109,9 +127,6 @@ regional_overrides = {
         ),
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
         "erpnext.accounts.party.get_regional_address_details": "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
-        "erpnext.controllers.accounts_controller.validate_einvoice_fields": (
-            "india_compliance.gst_india.utils.e_invoice.validate_einvoice_fields"
-        ),
         "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
         "erpnext.hr.utils.calculate_annual_eligible_hra_exemption": "india_compliance.income_tax_india.overrides.salary_slip.calculate_annual_eligible_hra_exemption",
         "erpnext.hr.utils.calculate_hra_exemption_for_period": "india_compliance.income_tax_india.overrides.salary_slip.calculate_hra_exemption_for_period",
@@ -119,6 +134,14 @@ regional_overrides = {
             "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount"
         ),
     }
+}
+
+jinja = {
+    "methods": [
+        "india_compliance.gst_india.utils.jinja.add_spacing",
+        "india_compliance.gst_india.utils.jinja.get_state",
+        "india_compliance.gst_india.utils.jinja.get_sub_supply_type",
+    ],
 }
 
 # Includes in <head>

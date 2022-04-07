@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:e_waybill_number",
+ "creation": "2022-03-24 17:34:14.323812",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_0",
+  "e_waybill_number",
+  "created_on",
+  "reference_doctype",
+  "reference_name",
+  "column_break1",
+  "valid_upto",
+  "section_break1",
+  "is_cancelled",
+  "cancelled_on",
+  "column_break_2",
+  "cancel_reason_code",
+  "cancel_remark",
+  "section_break_31",
+  "is_latest_data",
+  "data"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_0",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "e_waybill_number",
+   "fieldtype": "Data",
+   "label": "e-Waybill Number",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "valid_upto",
+   "fieldtype": "Datetime",
+   "label": "Valid Upto",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval: doc.is_cancelled == 1",
+   "fieldname": "section_break1",
+   "fieldtype": "Section Break",
+   "label": "Cancellation Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_cancelled",
+   "fieldtype": "Check",
+   "label": "Is Cancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cancel_reason_code",
+   "fieldtype": "Data",
+   "label": "Cancel Reason Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancel_remark",
+   "fieldtype": "Data",
+   "label": "Cancel Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_31",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "data",
+   "fieldtype": "Code",
+   "label": "Data",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_latest_data",
+   "fieldtype": "Check",
+   "label": "Is Latest Data",
+   "read_only": 1
+  },
+  {
+   "default": "Sales Invoice",
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Reference DocType",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "label": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Datetime",
+   "label": "Created On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancelled_on",
+   "fieldtype": "Datetime",
+   "label": "Cancelled On",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-04-05 06:16:17.926246",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "e-Waybill Log",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
