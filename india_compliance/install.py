@@ -1,5 +1,3 @@
-import os
-
 import click
 
 import frappe
@@ -13,6 +11,7 @@ POST_INSTALL_PATCHES = (
     "update_gst_accounts",
     "update_reverse_charge",
     "update_gstin_and_gst_category",
+    "update_e_invoice_fields_and_logs",
 )
 
 
