@@ -42,6 +42,12 @@ SUB_SUPPLY_TYPES = {
 }
 
 TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4}
+TRANSPORT_TYPES = {
+    1: "Regular",
+    2: "Bill To - Ship To",
+    3: "Bill From - Dispatch From",
+    4: "Combination of 2 and 3",
+}
 VEHICLE_TYPES = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
 
 UOMS = {
