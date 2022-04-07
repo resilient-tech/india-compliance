@@ -50,27 +50,66 @@ doc_events = {
     "Sales Invoice": {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": [
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",
+            "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
         ],
         "on_trash": (
             "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
         ),
     },
+    "Delivery Note": {
+        "validate": [
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
+            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
+            "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
+        ],
+    },
+    "Sales Order": {
+        "validate": [
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
+            "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
+        ],
+    },
     "Purchase Invoice": {
         "validate": [
-            "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
+            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
+            "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
         ]
     },
-    ("Sales Invoice", "Purchase Invoice", "Delivery Note"): {
+    "Purchase Receipt": {
         "validate": (
-            "india_compliance.gst_india.overrides.invoice.update_taxable_values"
-        ),
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
+        )
+    },
+    "Purchase Order": {
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
+        )
     },
     "Payment Entry": {
         "validate": (
             "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
+        )
+    },
+    "Company": {
+        "validate": "india_compliance.gst_india.overrides.party.validate_party",
+        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
+        "on_update": [
+            "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
+            "india_compliance.gst_india.overrides.company.create_default_tax_templates",
+        ],
+        "after_insert": "india_compliance.gst_india.overrides.company.update_accounts_settings_for_taxes",
+    },
+    "Customer": {
+        "validate": "india_compliance.gst_india.overrides.party.validate_party",
+    },
+    "Supplier": {
+        "validate": (
+            "india_compliance.gst_india.overrides.supplier.update_transporter_gstin"
         )
     },
     "Address": {
@@ -79,42 +118,11 @@ doc_events = {
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
         ],
     },
-    ("Customer", "Supplier", "Company"): {
-        "validate": "india_compliance.gst_india.overrides.party.validate_party"
-    },
-    "Supplier": {
-        "validate": (
-            "india_compliance.gst_india.overrides.supplier.update_transporter_gstin"
-        )
-    },
-    (
-        "Purchase Order",
-        "Purchase Receipt",
-        "Purchase Invoice",
-        "Sales Order",
-        "Delivery Note",
-        "Sales Invoice",
-    ): {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
-        )
-    },
-    ("Sales Order", "Delivery Note", "Sales Invoice"): {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_hsn_code"
-    },
-    "Company": {
-        "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
-        "on_update": [
-            "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
-            "india_compliance.gst_india.overrides.company.create_default_tax_templates",
-        ],
-        "after_insert": "india_compliance.gst_india.overrides.company.update_accounts_settings_for_taxes",
+    "Item": {
+        "validate": "india_compliance.gst_india.overrides.item.validate_hsn_code",
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india",
-    },
-    "Item": {
-        "validate": "india_compliance.gst_india.overrides.item.validate_hsn_code",
     },
 }
 
