@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applic
 
 
 def onload(doc, method=None):
-    if not doc.ewaybill and not doc.irn:
+    if not doc.get("ewaybill") and not doc.get("irn"):
         return
 
     gst_settings = frappe.get_cached_value(
