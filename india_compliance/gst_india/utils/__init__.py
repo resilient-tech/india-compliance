@@ -378,14 +378,14 @@ def parse_datetime(value):
     )
 
 
-def as_ist(datetime=None):
+def as_ist(value=None):
     """Convert system time to offset-naive IST time"""
 
-    parsed = get_datetime(datetime)
+    parsed = get_datetime(value)
     system_tz = get_time_zone()
 
     if system_tz == TIMEZONE:
-        return datetime
+        return parsed
 
     # localize to system, convert to IST, remove tzinfo
     return (
