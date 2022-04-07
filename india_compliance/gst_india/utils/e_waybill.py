@@ -578,7 +578,7 @@ class EWaybillData(GSTInvoiceData):
 
     def check_e_waybill_validity(self):
         # this works because we do run_onload in load_doc above
-        valid_upto = self.doc.__onload.get("e_waybill_info", {}).get("valid_upto")
+        valid_upto = self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto")
 
         if valid_upto and get_datetime(valid_upto) < get_datetime():
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
@@ -586,7 +586,9 @@ class EWaybillData(GSTInvoiceData):
     def validate_if_ewaybill_can_be_cancelled(self):
         cancel_upto = add_to_date(
             # this works because we do run_onload in load_doc above
-            get_datetime(self.doc.__onload.get("e_waybill_info", {}).get("created_on")),
+            get_datetime(
+                self.doc.get_onload().get("e_waybill_info", {}).get("created_on")
+            ),
             days=1,
             as_datetime=True,
         )
