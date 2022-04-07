@@ -16,11 +16,18 @@ class BaseAPI:
     def __init__(self, *args, **kwargs):
         self.api_name = "GST"
         self.base_path = ""
-        self.sandbox = kwargs.pop("sandbox", False)
+        self.sandbox = frappe.conf.use_gst_api_sandbox or frappe.flags.in_test
         self.settings = frappe.get_cached_doc("GST Settings")
         self.default_headers = {
             "x-api-key": self.settings.get_password("api_secret"),
         }
+
+        if not self.settings.enable_api:
+            frappe.throw(
+                _("Please enable API in GST Settings to use the {0} API").format(
+                    self.api_name
+                )
+            )
 
         self.setup(*args, **kwargs)
 

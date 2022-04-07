@@ -1,14 +1,5 @@
 frappe.provide("ic");
 
-ic.get_moment = date => {
-    let timezone;
-    if (frappe.boot.time_zone) {
-        timezone = frappe.boot.time_zone.system;
-    }
-
-    return moment(date, timezone);
-};
-
 ic.get_gstin_query = company => {
     if (!company) {
         frappe.show_alert({
