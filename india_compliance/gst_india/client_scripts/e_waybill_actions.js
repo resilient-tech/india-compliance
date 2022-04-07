@@ -455,17 +455,6 @@ function show_update_transporter_dialog(frm) {
     d.show();
 }
 
-async function update_gst_tranporter_id(d) {
-    const transporter = d.fields_dict.transporter.value;
-    const { message: response } = await frappe.db.get_value(
-        "Supplier",
-        transporter,
-        "gst_transporter_id"
-    );
-
-    d.set_value("gst_transporter_id", response.gst_transporter_id);
-}
-
 function is_e_waybill_valid(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     return (
@@ -500,6 +489,17 @@ function is_e_waybill_cancellable(frm) {
     );
 }
 
+async function update_gst_tranporter_id(dialog) {
+    const transporter = dialog.get_value("transporter");
+    const { message: response } = await frappe.db.get_value(
+        "Supplier",
+        transporter,
+        "gst_transporter_id"
+    );
+
+    dialog.set_value("gst_transporter_id", response.gst_transporter_id);
+}
+
 function update_generate_button_label(dialog) {
     const label = get_generate_button_label(dialog.get_values(true));
     dialog.set_df_property(
@@ -507,7 +507,7 @@ function update_generate_button_label(dialog) {
         "reqd",
         label == "Generate e-Waybill" ? 0 : 1
     );
-    d.get_primary_btn().html(__(label));
+    dialog.get_primary_btn().html(__(label));
 }
 
 function get_generate_button_label(doc) {
