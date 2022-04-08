@@ -20,6 +20,20 @@ class PublicAPI(BaseAPI):
         "URP": "Unregistered",
     }
 
+    # ####### SAMPLE DATA for GST_CATEGORIES ########
+    # "Composition" - 36AASFP8573D2ZN
+    # "Input Service Distributor (ISD)" - 29AABCF8078M2ZW - Flipkart
+    # "Tax Deductor" - 06DELI09652G1DA, 09ALDN00287A1DD, 27AAFT56212B1DO, 19AAACI1681G1DV
+    # "SEZ Developer" - 27AAJCS5738D1Z6 -
+    # "United Nation Body" - 0717UNO00157UNO, 0717UNO00211UN2, 2117UNO00002UNF
+    # "Consulate or Embassy of Foreign Country" - 0717UNO00154UNU
+
+    # "Tax Collector (Electronic Commerce Operator)" - 29AABCF8078M1C8, 27AAECG3736E1C2 - Cannot be a part of GSTR1
+    # "Non Resident Online Services Provider" - 9917SGP29001OST - Google - Cannot be a part of GSTR1
+
+    # "Non Resident Taxable Person" -
+    # "Government Department ID" -
+
     def setup(self):
         self.api_name = "GST Public"
         self.base_path = "commonapi"
