@@ -65,16 +65,11 @@ function setup_e_waybill_actions(doctype) {
                     __("Print"),
                     () =>
                         fetch_e_waybill_data(frm, null, function (response) {
-                            if (!response.message) return;
-
-                            if (action == "print") {
-                                frappe.set_route(
-                                    "print",
-                                    "e-waybill-log",
-                                    frm.doc.ewaybill
-                                );
-                                return;
-                            }
+                            frappe.set_route(
+                                "print",
+                                "e-waybill-log",
+                                frm.doc.ewaybill
+                            );
                         }),
                     "e-Waybill"
                 );
@@ -512,7 +507,7 @@ function update_generate_button_label(dialog) {
 
 function get_generate_button_label(doc) {
     return `Generate e-Waybill${
-        are_transport_details_available(doc) ? " (Part A)" : ""
+        are_transport_details_available(doc) ? "" : " (Part A)"
     }`;
 }
 

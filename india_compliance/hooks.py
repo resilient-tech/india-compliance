@@ -145,7 +145,6 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_qr_code",
         "india_compliance.gst_india.utils.jinja.get_transport_type",
         "india_compliance.gst_india.utils.jinja.get_transport_mode",
-        "india_compliance.gst_india.utils.jinja.get_e_waybill_log",
     ],
 }
 

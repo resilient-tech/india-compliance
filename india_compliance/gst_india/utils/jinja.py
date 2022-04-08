@@ -41,15 +41,10 @@ def get_transport_type(code):
     return TRANSPORT_TYPES[int(code)]
 
 
-def get_transport_mode(mode_val):
-    for mode, code in TRANSPORT_MODES:
-        if int(code) == mode_val:
-            return mode
-
-
-def get_e_waybill_log(ewaybill):
-    e_waybill_log = frappe.get_doc("e-Waybill Log", ewaybill)
-    return e_waybill_log
+def get_transport_mode(code):
+    for transport_mode, _code in TRANSPORT_MODES.items():
+        if int(_code) == code:
+            return transport_mode
 
 
 def get_e_waybill_qr_code(e_waybill, gstin, ewaybill_date):

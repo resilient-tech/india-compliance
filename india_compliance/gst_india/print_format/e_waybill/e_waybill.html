@@ -2,8 +2,11 @@
     {% include "india_compliance/gst_india/print_format/e_waybill/e_waybill.css" %}
 </style>
 
-{% set ewb = _dict(json.loads(get_e_waybill_log(doc.ewaybill).data)) %}
 
+
+
+{% set e_waybill_log = doc.get("e_waybill_log_") or frappe.get_doc("e-Waybill Log", doc.ewaybill) %}
+{% set data = _dict(json.loads(e_waybill_log.data)) %}
 
 <html lang="en">
     <body>
@@ -23,7 +26,7 @@
                             <div style="height: 2px"></div>
                             <div>
                                 <img
-                                    src="data:image/png;base64,{{ get_e_waybill_qr_code(doc.ewaybill,ewb.userGstin, ewb.ewayBillDate) }}"
+                                    src="data:image/png;base64,{{ get_e_waybill_qr_code(doc.ewaybill,data.userGstin, data.ewayBillDate) }}"
                                     width="95"
                                     height="95"
                                     style="width: 95 !important"
@@ -41,8 +44,8 @@
                             <span>e-Waybill No:</span>
                         </td>
                         <td>
-                            <span class="ewb-no-span">
-                                {{ add_spacing(ewb.ewbNo, 4) }}
+                            <span class="data-no-span">
+                                {{ add_spacing(data.dataNo, 4) }}
                             </span>
                         </td>
                     </tr>
@@ -52,7 +55,7 @@
                         </td>
                         <td>
                             <span>
-                                <strong>{{ ewb.ewayBillDate | replace(":00 ", "") }}</strong>
+                                <strong>{{ data.ewayBillDate | replace(":00 ", "") }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -63,7 +66,7 @@
                         <td>
                             <span>
                                 <strong>
-                                    {{ add_spacing(ewb.userGstin, 5) }} - {{ ewb.fromTrdName }}
+                                    {{ add_spacing(data.userGstin, 5) }} - {{ data.fromTrdName }}
                                 </strong>
                             </span>
                         </td>
@@ -74,8 +77,8 @@
                         </td>
                         <td>
                             <span>
-                                <strong>{{ ewb.ewayBillDate | replace(":00 ", " ") }}
-                                {{ " [" }}{{ ewb.actualDist }}{{ "Kms]" }}</strong>
+                                <strong>{{ data.ewayBillDate | replace(":00 ", " ") }}
+                                {{ " [" }}{{ data.actualDist }}{{ "Kms]" }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -85,7 +88,7 @@
                         </td>
                         <td>
                             <span>
-                                <strong>{{ ewb.validUpto[:10] }}</strong>
+                                <strong>{{ data.validUpto[:10] }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -98,7 +101,7 @@
                         <td>GSTIN of Supplier</td>
                         <td>
                             <span>
-                                <strong>{{ add_spacing(ewb.fromGstin, 5) }}-{{ ewb.fromTrdName }}</strong>
+                                <strong>{{ add_spacing(data.fromGstin, 5) }}-{{ data.fromTrdName }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -106,9 +109,9 @@
                         <td>Place of Dispatch</td>
                         <td>
                             <span>
-                                <strong>{{ ewb.fromPlace }},
-                                {{ get_state(ewb.actFromStateCode) }} -
-                                {{ ewb.fromPincode }}</strong>
+                                <strong>{{ data.fromPlace }},
+                                {{ get_state(data.actFromStateCode) }} -
+                                {{ data.fromPincode }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -116,7 +119,7 @@
                         <td>GSTIN of Recipient</td>
                         <td>
                             <span>
-                                <strong>{{ add_spacing(ewb.toGstin, 5) }}-{{ ewb.toTrdName }}
+                                <strong>{{ add_spacing(data.toGstin, 5) }}-{{ data.toTrdName }}
                                 </strong>
                             </span>
                         </td>
@@ -125,8 +128,8 @@
                         <td>Place of Delivery</td>
                         <td>
                             <span><strong>
-                                    {{ ewb.toPlace }},
-                                    {{ get_state(ewb.actToStateCode) }} -{{ ewb.toPincode }}
+                                    {{ data.toPlace }},
+                                    {{ get_state(data.actToStateCode) }} -{{ data.toPincode }}
                             </strong>
                             </span>
                         </td>
@@ -135,7 +138,7 @@
                         <td>Document No.</td>
                         <td>
                             <span><strong>
-                                {{ ewb.docNo }}
+                                {{ data.docNo }}
                             </strong>
                             </span>
                         </td>
@@ -144,7 +147,7 @@
                         <td>Document Date</td>
                         <td>
                             <span><strong>
-                                {{ ewb.docDate }}
+                                {{ data.docDate }}
                             </strong>
                             </span>
                         </td>
@@ -154,7 +157,7 @@
                             <span>Transaction Type:</span>
                         </td>
                         <td>
-                            <span><strong>{{ get_transport_type(ewb.transactionType) }}</strong>
+                            <span><strong>{{ get_transport_type(data.transactionType) }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -163,7 +166,7 @@
                         <td>
                             <span class="classfont">
                                 <strong>
-                                    {{ frappe.format(ewb.totInvValue, {'fieldtype':'Currency'}) }}</strong>
+                                    {{ frappe.format(data.totInvValue, {'fieldtype':'Currency'}) }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -171,9 +174,9 @@
                         <td>HSN Code</td>
                         <td>
                             <span class="form-control1" onkeydown="expandtext(this);">
-                                <strong>{{ ewb.itemList[0].hsnCode }}
-                                {%if ewb.itemList[0].productDesc%}
-                                {{ " - " ~ewb.itemList[0].productDesc }}
+                                <strong>{{ data.itemList[0].hsnCode }}
+                                {%if data.itemList[0].productDesc%}
+                                {{ " - " ~data.itemList[0].productDesc }}
                                 {%endif%}
                             </strong>
                             </span>
@@ -183,7 +186,7 @@
                         <td>Reason for Transportation</td>
                         <td>
                             <span>
-                                <strong>Outward - {{ get_sub_supply_type(ewb.subSupplyType) }} </strong>
+                                <strong>Outward - {{ get_sub_supply_type(data.subSupplyType) }} </strong>
                             </span>
                         </td>
                     </tr>
@@ -191,12 +194,12 @@
                         <td>Transporter</td>
                         <td>
                             <span>
-                                <strong>{{ add_spacing(ewb.transporterId, 5) }}-
-                                {{ ewb.transporterName }}</strong>
+                                <strong>{{ add_spacing(data.transporterId, 5) }}-
+                                {{ data.transporterName }}</strong>
                             </span>
                         </td>
                     </tr>
-                    {% if ewb.VehiclListDetails|length > 0 %}
+                    {% if data.VehiclListDetails|length > 0 %}
                     <tr class="eway-section">
                         <td colspan="2" style="height: 25px;">
                             <strong>Part - B</strong>
@@ -222,7 +225,7 @@
                                             <th scope="col">Entered Date</th>
                                             <th scope="col">Entered By</th>
                                             <th scope="col">
-                                                CEWB No. <br />
+                                                Cdata No. <br />
                                                 (If any)
                                             </th>
                                             <th scope="col">
@@ -230,7 +233,7 @@
                                                 (If any)
                                             </th>
                                         </tr>
-                                        {% for detail in ewb.VehiclListDetails %}
+                                        {% for detail in data.VehiclListDetails %}
                                         <tr>
                                             <td>
                                                 {{ get_transport_mode(detail.transMode) }}
