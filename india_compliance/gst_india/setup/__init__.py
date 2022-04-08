@@ -12,7 +12,7 @@ def after_install():
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
-    create_custom_fields(CUSTOM_FIELDS, ignore_validate=True, update=True)
+    create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
 
     create_property_setters()
     create_address_template()
