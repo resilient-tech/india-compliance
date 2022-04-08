@@ -905,6 +905,9 @@ class Gstr1Report(object):
 def get_json(filters, report_name, data):
     filters = json.loads(filters)
     report_data = json.loads(data)
+
+    frappe.has_permission("Company", doc=filters.get("company"), throw=True)
+
     gstin = get_company_gstin_number(
         filters.get("company"), filters.get("company_address")
     )
@@ -1299,9 +1302,6 @@ def get_rate_and_tax_details(row, gstin):
 
 
 def get_company_gstin_number(company, address=None, all_gstins=False):
-    if not frappe.has_permission("Address"):
-        raise frappe.PermissionError
-
     gstin = ""
     if address:
         gstin = frappe.db.get_value("Address", address, "gstin")

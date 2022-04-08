@@ -29,9 +29,6 @@ def create_default_tax_templates(doc, method=None):
 
 @frappe.whitelist()
 def make_default_tax_templates(company: str, country: str):
-    if not frappe.has_permission("Company"):
-        raise frappe.PermissionError()
-
     if country != "India":
         return
 
@@ -39,6 +36,8 @@ def make_default_tax_templates(company: str, country: str):
         frappe.throw(
             _("Company {0} does not exist yet. Taxes setup aborted.").format(company)
         )
+
+    frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
     default_taxes = json.loads(read_data_file("tax_defaults.json"))
     from_detailed_data(company, default_taxes)

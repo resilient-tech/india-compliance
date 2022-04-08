@@ -565,8 +565,7 @@ def get_period(month, year=None):
 
 @frappe.whitelist()
 def view_report(name):
-    if not frappe.has_permission("GSTR 3B Report", "read"):
-        raise frappe.PermissionError()
+    frappe.has_permission("GSTR 3B Report", throw=True)
 
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
     return json.loads(json_data)
@@ -574,8 +573,7 @@ def view_report(name):
 
 @frappe.whitelist()
 def make_json(name):
-    if not frappe.has_permission("GSTR 3B Report", "read"):
-        raise frappe.PermissionError()
+    frappe.has_permission("GSTR 3B Report", throw=True)
 
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
     file_name = "GST3B.json"

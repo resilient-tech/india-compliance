@@ -96,10 +96,8 @@ def get_regional_round_off_accounts(company, account_list):
 
 @frappe.whitelist()
 def get_regional_address_details(party_details, doctype, company):
-    if not frappe.has_permission(doctype, ptype="read") or not frappe.has_permission(
-        company, ptype="read"
-    ):
-        raise frappe.PermissionError()
+    frappe.has_permission(doctype, throw=True)
+    frappe.has_permission("Company", doc=company, throw=True)
 
     party_details = frappe.parse_json(party_details)
     update_party_details(party_details, doctype)
@@ -113,12 +111,16 @@ def get_regional_address_details(party_details, doctype, company):
 
     if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
         master_doctype = "Sales Taxes and Charges Template"
+        frappe.has_permission(master_doctype, throw=True)
+
         tax_template_by_category = get_tax_template_based_on_category(
             master_doctype, company, party_details
         )
 
     elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
         master_doctype = "Purchase Taxes and Charges Template"
+        frappe.has_permission(master_doctype, throw=True)
+
         tax_template_by_category = get_tax_template_based_on_category(
             master_doctype, company, party_details
         )
