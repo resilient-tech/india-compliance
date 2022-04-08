@@ -292,14 +292,14 @@ def _fetch_e_waybill_data(doc, log):
 def attach_e_waybill_pdf(doc, log=None):
     if log:
         # to avoid get_doc when printing
-        doc._e_waybill_log = log
+        doc.e_waybill_log_ = log
 
     pdf_content = frappe.get_print(
         doc.doctype, doc.name, "e-Waybill", doc=doc, no_letterhead=True, as_pdf=True
     )
 
     # remove temporary attribute
-    doc.__dict__.pop("_e_waybill_log", None)
+    doc.__dict__.pop("e_waybill_log_", None)
 
     pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
     delete_file(doc, pdf_filename)
