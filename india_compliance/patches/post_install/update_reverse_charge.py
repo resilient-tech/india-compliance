@@ -3,11 +3,14 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 from india_compliance.gst_india.constants.custom_fields import REVERSE_CHARGE_FIELD
 
+DOCTYPES = ("Purchase Invoice", "Sales Invoice")
+
 
 def execute():
     column = "reverse_charge"
 
-    for doctype in ("Purchase Invoice", "Sales Invoice"):
+    delete_old_fields()
+    for doctype in DOCTYPES:
         if not frappe.db.table_exists(
             doctype
         ) or column not in frappe.db.get_table_columns(doctype):
@@ -46,4 +49,14 @@ def is_reverse_charge_applicable(doctype):
         "select name from `tab{doctype}` {condition} limit 1".format(
             doctype=doctype, condition=condition
         )
+    )
+
+
+def delete_old_fields():
+    frappe.db.delete(
+        "Custom Field",
+        {
+            "fieldname": "reverse_charge",
+            "dt": ("in", DOCTYPES),
+        },
     )
