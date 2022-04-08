@@ -268,7 +268,7 @@
 
                                 <div class="text-center">
                                         <span class="barcode-data">
-                                            <canvas class="barcode"></canvas>
+                                            <img class="barcode" src="data:image/gif;base64,{{ get_ewaybill_barcode(doc.ewaybill) }}">
                                       </span>
                                   </div>
 
@@ -281,6 +281,7 @@
                         </td>
                     </tr>
                     <tr class="eway-section">
+                        <td></td>
                     </tr>
                 </tbody>
             </table>
@@ -289,11 +290,3 @@
         </div>
     </body>
 </html>
-<script src='{{ frappe.utils.get_url("assets/frappe/node_modules/jsbarcode/dist/JsBarcode.all.min.js") }}'>   </script>
-<script type="text/javascript">
-    JsBarcode(".barcode", "{{ doc.ewaybill }}", {
-        format: "ean13",
-        fontSize: 14,
-        flat: true
-    });
-</script>

@@ -1,6 +1,10 @@
+import base64
+import os
 from datetime import datetime
 
+import barcode
 import pyqrcode
+from barcode.writer import ImageWriter
 
 import frappe
 
@@ -61,3 +65,17 @@ def get_e_waybill_qr_code(e_waybill, gstin, ewaybill_date):
 
 def get_qr_code(qr_text, scale=5):
     return pyqrcode.create(qr_text).png_as_base64_str(scale=scale, quiet_zone=1)
+
+
+def get_ewaybill_barcode(ewaybill):
+    EAN = barcode.get_barcode_class("ean13")
+    barcode_ean = EAN(str(ewaybill), writer=ImageWriter())
+    barcode_filename = barcode_ean.save(ewaybill)
+
+    image_path = os.path.abspath(barcode_filename)
+
+    with open(image_path, "rb") as f:
+        barcode_content = f.read()
+        barcode_base64 = base64.b64encode(barcode_content).decode()
+
+    return barcode_base64
