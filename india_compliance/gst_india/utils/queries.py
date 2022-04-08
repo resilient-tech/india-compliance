@@ -4,8 +4,9 @@ import frappe
 @frappe.whitelist()
 def get_gstin_options(company):
     for doctype in ("Company", "Address"):
-        if not frappe.has_permission(doctype, "read"):
-            raise frappe.PermissionError()
+        frappe.has_permission(
+            doctype, doc=company if doctype == "Company" else None, throw=True
+        )
 
     address = frappe.qb.DocType("Address")
     links = frappe.qb.DocType("Dynamic Link")

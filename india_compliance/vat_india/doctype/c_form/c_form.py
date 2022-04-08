@@ -87,8 +87,7 @@ class CForm(Document):
     @frappe.whitelist()
     def get_invoice_details(self, invoice_no):
         """Pull details from invoices for referrence"""
-        if not frappe.has_permission("Sales Invoice"):
-            raise frappe.PermissionError()
+        frappe.has_permission("Sales Invoice", throw=True)
 
         if invoice_no:
             inv = frappe.db.get_value(

@@ -229,12 +229,13 @@ def get_place_of_supply(party_details, doctype=None):
 
 @frappe.whitelist()
 def get_gstins_for_company(company):
-    for doctype in ("Company", "Address"):
-        if not frappe.has_permission(doctype, ptype="read"):
-            raise frappe.PermissionError()
-
     company_gstins = []
     if company:
+        for doctype in ("Company", "Address"):
+            frappe.has_permission(
+                doctype, doc=company if doctype == "Company" else None, throw=True
+            )
+
         company_gstins = frappe.db.sql(
             """select
             distinct `tabAddress`.gstin
@@ -256,8 +257,7 @@ def get_gst_accounts(
 ):
 
     for ptype in ("read", "write"):
-        if not frappe.has_permission("GST Account", ptype):
-            raise frappe.PermissionError()
+        frappe.has_permission("GST Account", ptype)
 
     filters = {"parent": "GST Settings"}
 
