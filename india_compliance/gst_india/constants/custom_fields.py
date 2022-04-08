@@ -136,17 +136,6 @@ invoice_gst_fields = [
         "translatable": 0,
     },
     {
-        "fieldname": "reverse_charge",
-        "label": "Reverse Charge",
-        "length": 2,
-        "fieldtype": "Select",
-        "insert_after": "invoice_copy",
-        "print_hide": 1,
-        "options": "Y\nN",
-        "default": "N",
-        "translatable": 0,
-    },
-    {
         "fieldname": "ecommerce_gstin",
         "label": "E-commerce GSTIN",
         "length": 15,
