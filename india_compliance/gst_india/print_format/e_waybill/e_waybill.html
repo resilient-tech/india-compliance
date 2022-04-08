@@ -45,7 +45,7 @@
                         </td>
                         <td>
                             <span class="data-no-span">
-                                {{ add_spacing(data.dataNo, 4) }}
+                                <strong>{{ add_spacing(data.ewbNo, 4) }}</strong>
                             </span>
                         </td>
                     </tr>
@@ -259,11 +259,41 @@
                         </td>
                     </tr>
                     {% endif %}
+                    <tr>
+                        <td colspan="2" class="text-center">
+                            <div style="height: 2px"></div>
+                            <div class="dashboard-section">
+                                <div class="barcode-label-container">
+                                <div id="barcode-label" class="barcode-label">
+
+                                <div class="text-center">
+                                        <span class="barcode-data">
+                                            <canvas class="barcode"></canvas>
+                                      </span>
+                                  </div>
+
+                                </div>
+                                </div>
+                                </div>
+
+
+
+                        </td>
+                    </tr>
+                    <tr class="eway-section">
+                    </tr>
                 </tbody>
             </table>
-
             <br />
             <br />
         </div>
     </body>
 </html>
+<script src='{{ frappe.utils.get_url("assets/frappe/node_modules/jsbarcode/dist/JsBarcode.all.min.js") }}'>   </script>
+<script type="text/javascript">
+    JsBarcode(".barcode", "{{ doc.ewaybill }}", {
+        format: "ean13",
+        fontSize: 14,
+        flat: true
+    });
+</script>

@@ -1,39 +1,42 @@
-.print-format, tbody > tr > td {
+.print-format tbody > tr > td {
     border-top: None !important;
 }
 
-.print-format, .title_model {
+.print-format .title_model {
     font-size: 14px;
     font-weight: bold;
     font-family: Verdana;
 }
 
-.print-format, .pagelayout {
+.print-format .pagelayout {
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 10px;
     line-height: 1.42857143;
     box-sizing: border-box;
     transform-origin: top center;
     width: 550px;
-    margin: 10px auto;
+    margin: 10px 60px auto 60px;
 }
 
-.print-format, .gvtables {
+.print-format .gvtables {
     margin-top: 0px !important;
     font-size: 8px;
     border-collapse: collapse;
 }
 
-.print-format, .table_css {
+.print-format .table_css {
     width: 520px;
     margin: 15px
 }
 
-.print-format, .ewb-no-span {
+.print-format .ewb-no-span {
     font-size: 13px;
-    font-weight: bold
 }
 
-.print-format, .eway-section {
+.print-format .eway-section {
     border-top: 2px solid Gray;
+}
+
+.print-format .barcode {
+    width: 105px;
 }
