@@ -122,6 +122,7 @@ frappe.ui.form.AddressQuickEntryForm = class AddressQuickEntryForm extends (
     async render_dialog() {
         const address_fields = this.get_address_fields();
         const address_fieldnames = address_fields.map(({ fieldname }) => fieldname);
+        address_fieldnames.push("pincode");
 
         this.mandatory = [
             ...this.get_party_fields(),
