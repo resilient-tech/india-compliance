@@ -1,5 +1,6 @@
 from dateutil import parser
 from pytz import timezone
+from titlecase import titlecase as _titlecase
 
 import frappe
 from frappe import _
@@ -11,6 +12,7 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import (
+    ABBREVIATIONS,
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
@@ -55,6 +57,32 @@ def send_updated_doc(doc, set_docinfo=False):
     frappe.response.docs.append(doc)
 
 
+@frappe.whitelist()
+def get_gstin_details(gstin):
+    from india_compliance.gst_india.api_classes import PublicAPI
+
+    validate_gstin(gstin)
+    return PublicAPI().get_gstin_info(gstin)
+
+
+@frappe.whitelist()
+def get_party_gstins(party_type, party):
+    """
+    Returns a list of all the party's GSTINs.
+    """
+
+    return frappe.get_list(
+        "Address",
+        filters={
+            "link_doctype": party_type,
+            "link_name": party,
+        },
+        pluck="gstin",
+        distinct=True,
+    )
+
+
+@frappe.whitelist()
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
     Validate GSTIN with following checks:
@@ -394,3 +422,12 @@ def as_ist(value=None):
         .astimezone(timezone(TIMEZONE))
         .replace(tzinfo=None)
     )
+
+
+def titlecase(value):
+    def abbreviations(word, **kwargs):
+        word_upper = word.upper()
+        if word_upper in ABBREVIATIONS:
+            return word_upper
+
+    return _titlecase(value, callback=abbreviations)
