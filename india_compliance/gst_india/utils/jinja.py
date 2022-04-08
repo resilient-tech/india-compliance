@@ -2,9 +2,15 @@ from datetime import datetime
 
 import pyqrcode
 
+import frappe
+
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.constants.e_waybill import SUB_SUPPLY_TYPES
-from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.constants.e_waybill import (
+    SUB_SUPPLY_TYPES,
+    TRANSPORT_MODES,
+    TRANSPORT_TYPES,
+)
+from india_compliance.gst_india.utils import as_ist
 
 
 def add_spacing(string, interval):
@@ -31,8 +37,23 @@ def get_sub_supply_type(code):
     return SUB_SUPPLY_TYPES[int(code)]
 
 
+def get_transport_type(code):
+    return TRANSPORT_TYPES[int(code)]
+
+
+def get_transport_mode(mode_val):
+    for mode, code in TRANSPORT_MODES:
+        if int(code) == mode_val:
+            return mode
+
+
+def get_e_waybill_log(ewaybill):
+    e_waybill_log = frappe.get_doc("e-Waybill Log", ewaybill)
+    return e_waybill_log
+
+
 def get_e_waybill_qr_code(e_waybill, gstin, ewaybill_date):
-    e_waybill_date = parse_datetime(ewaybill_date)
+    e_waybill_date = as_ist(ewaybill_date)
     qr_text = "/".join(
         (
             e_waybill,
@@ -43,5 +64,5 @@ def get_e_waybill_qr_code(e_waybill, gstin, ewaybill_date):
     return get_qr_code(qr_text)
 
 
-def get_qr_code(qr_text):
-    return pyqrcode.create(qr_text).png_as_base64_str(scale=2, quiet_zone=1)
+def get_qr_code(qr_text, scale=5):
+    return pyqrcode.create(qr_text).png_as_base64_str(scale=scale, quiet_zone=1)

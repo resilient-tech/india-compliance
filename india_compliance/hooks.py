@@ -143,9 +143,9 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_sub_supply_type",
         "india_compliance.gst_india.utils.jinja.get_e_waybill_qr_code",
         "india_compliance.gst_india.utils.jinja.get_qr_code",
-        # not methods, but work just fine
-        "india_compliance.gst_india.constants.e_waybill.TRANSPORT_MODES",
-        "india_compliance.gst_india.constants.e_waybill.TRANSPORT_TYPES",
+        "india_compliance.gst_india.utils.jinja.get_transport_type",
+        "india_compliance.gst_india.utils.jinja.get_transport_mode",
+        "india_compliance.gst_india.utils.jinja.get_e_waybill_log",
     ],
 }
 
