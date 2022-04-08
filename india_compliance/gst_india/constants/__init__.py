@@ -2,6 +2,8 @@ import re
 
 TIMEZONE = "Asia/Kolkata"
 
+ABBREVIATIONS = ("SEZ",)
+
 GST_ACCOUNT_FIELDS = (
     "cgst_account",
     "sgst_account",
