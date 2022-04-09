@@ -6,7 +6,7 @@ from erpnext.accounts.report.sales_register.sales_register import _execute
 
 
 def execute(filters=None):
-    return _execute(
+    columns, result = _execute(
         filters,
         additional_table_columns=[
             dict(
@@ -34,8 +34,8 @@ def execute(filters=None):
                 width=120,
             ),
             dict(
-                fieldtype="Check",
-                label="Is Reverse Charge",
+                fieldtype="Data",
+                label="Reverse Charge",
                 fieldname="is_reverse_charge",
                 default=0,
                 width=120,
@@ -70,3 +70,9 @@ def execute(filters=None):
             "ecommerce_gstin",
         ],
     )
+
+    # Result is returned as list of dict
+    for row in result:
+        row["is_reverse_charge"] = "Y" if row["is_reverse_charge"] else "N"
+
+    return columns, result

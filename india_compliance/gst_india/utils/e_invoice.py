@@ -253,7 +253,7 @@ class EInvoiceData(GSTInvoiceData):
             {
                 "tax_scheme": "GST",
                 "supply_type": self.get_supply_type(),
-                "reverse_charge": self.doc.is_reverse_charge,
+                "reverse_charge": getattr(self.doc, "is_reverse_charge", "N"),
                 "invoice_type": "CRN" if self.doc.is_return else "INV",
                 "ecommerce_gstin": self.doc.ecommerce_gstin,
                 "place_of_supply": self.doc.place_of_supply.split("-")[0],
