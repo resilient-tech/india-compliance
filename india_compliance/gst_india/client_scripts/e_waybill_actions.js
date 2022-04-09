@@ -161,6 +161,8 @@ function show_generate_e_waybill_dialog(frm) {
                 fieldname: "distance",
                 fieldtype: "Float",
                 default: frm.doc.distance,
+                description:
+                    "Set as zero to update distance as per the e-Waybill portal (if available)",
             },
             {
                 fieldtype: "Column Break",
@@ -512,7 +514,7 @@ function update_generate_button_label(dialog) {
 
 function get_generate_button_label(doc) {
     return `Generate e-Waybill${
-        are_transport_details_available(doc) ? " (Part A)" : ""
+        are_transport_details_available(doc) ? "" : " (Part A)"
     }`;
 }
 
@@ -526,10 +528,4 @@ function are_transport_details_available(doc) {
 
 function update_vehicle_type(dialog) {
     dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
-}
-
-function get_vehicle_type(doc) {
-    if (doc.mode_of_transport == "Road") return "Regular";
-    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
-    return "";
 }
