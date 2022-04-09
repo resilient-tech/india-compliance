@@ -46,8 +46,8 @@ doctype_list_js = {
 doc_events = {
     "Address": {
         "validate": [
-            "india_compliance.gst_india.overrides.address.validate",
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
+            "india_compliance.gst_india.overrides.address.validate",
         ]
     },
     "Company": {
@@ -116,8 +116,8 @@ doc_events = {
     },
     "Supplier": {
         "validate": [
-            "india_compliance.gst_india.overrides.party.validate_party",
             "india_compliance.gst_india.overrides.supplier.update_transporter_gstin",
+            "india_compliance.gst_india.overrides.party.validate_party",
         ]
     },
     "Tax Category": {
