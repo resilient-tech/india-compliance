@@ -89,7 +89,8 @@ def _generate_e_waybill(doc, throw=True):
 def log_and_process_e_waybill_generation(doc, result):
     """Separate function, since called in backend from e-invoice utils"""
 
-    e_waybill_number = str(result["ewayBillNo" if not doc.get("irn") else "EwbNo"])
+    irn = doc.get("irn")
+    e_waybill_number = str(result["ewayBillNo" if not irn else "EwbNo"])
     doc.db_set("ewaybill", e_waybill_number)
 
     log_and_process_e_waybill(
@@ -97,10 +98,10 @@ def log_and_process_e_waybill_generation(doc, result):
         {
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
-                result.get("ewayBillDate" if not doc.get("irn") else "EwbDt")
+                result.get("ewayBillDate" if not irn else "EwbDt")
             ),
             "valid_upto": parse_datetime(
-                result.get("validUpto" if not doc.get("irn") else "EwbValidTill")
+                result.get("validUpto" if not irn else "EwbValidTill")
             ),
             "reference_name": doc.name,
         },
@@ -419,11 +420,11 @@ class EWaybillData(GSTInvoiceData):
         self.validate_invoice()
         self.get_transporter_details()
 
-        if self.doc.get("irn"):
+        if irn := self.doc.get("irn"):
             # Via e-Invoice
             return self.sanitize_data(
                 {
-                    "Irn": self.doc.get("irn"),
+                    "Irn": irn,
                     "Distance": self.invoice_details.distance,
                     "TransMode": str(self.invoice_details.mode_of_transport),
                     "TransId": self.invoice_details.gst_transporter_id,
