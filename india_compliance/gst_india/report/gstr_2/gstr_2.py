@@ -103,7 +103,10 @@ class Gstr2Report(Gstr1Report):
                 conditions += opts[1]
 
         if self.filters.get("type_of_business") == "B2B":
-            conditions += "and ifnull(gst_category, '') in ('Registered Regular', 'Deemed Export', 'SEZ', 'Registered Composition') and is_return != 1 "
+            conditions += (
+                "and ifnull(gst_category, '') in ('Registered Regular', 'Deemed"
+                " Export', 'SEZ', 'Registered Composition') and is_return != 1 "
+            )
 
         elif self.filters.get("type_of_business") == "CDNR":
             conditions += """ and is_return = 1 """
@@ -211,8 +214,8 @@ class Gstr2Report(Gstr1Report):
                 },
                 {
                     "fieldname": "is_reverse_charge",
-                    "label": "Is Reverse Charge",
-                    "fieldtype": "Check",
+                    "label": "Reverse Charge",
+                    "fieldtype": "Data",
                     "default": 0,
                     "width": 80,
                 },
