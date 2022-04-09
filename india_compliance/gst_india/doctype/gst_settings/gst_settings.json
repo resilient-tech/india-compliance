@@ -115,7 +115,7 @@
   {
    "default": "0",
    "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
-   "description": "If checked, a PDF of e-Waybill will be automatically attached to the Invoice after generation",
+   "description": "If checked, a PDF of e-Waybill will be automatically attached to the transaction after generation",
    "fieldname": "attach_e_waybill_print",
    "fieldtype": "Check",
    "label": "Attach e-Waybill Print After Generation"
@@ -189,7 +189,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-06 13:56:34.868949",
+ "modified": "2022-04-09 04:06:35.521218",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

@@ -90,6 +90,7 @@ function setup_e_waybill_actions(doctype) {
         },
         async on_submit(frm) {
             if (
+                frm.doc.doctype !== "Sales Invoice" ||
                 frm.doc.ewaybill ||
                 frm.doc.is_return ||
                 !gst_settings.enable_api ||
@@ -104,7 +105,7 @@ function setup_e_waybill_actions(doctype) {
 
             await frappe.xcall(
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-                { docname: frm.doc.name }
+                { doctype: frm.doctype, docname: frm.doc.name }
             );
         },
     });
@@ -114,7 +115,7 @@ function fetch_e_waybill_data(frm, args, callback) {
 
     frappe.call({
         method: "india_compliance.gst_india.utils.e_waybill.fetch_e_waybill_data",
-        args: { docname: frm.doc.name, ...args },
+        args: { doctype: frm.doctype, docname: frm.doc.name, ...args },
         callback,
     });
 }
@@ -229,6 +230,7 @@ function show_generate_e_waybill_dialog(frm) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 args: {
+                    doctype: frm.doctype,
                     docname: frm.doc.name,
                     values,
                 },
@@ -278,6 +280,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.cancel_e_waybill",
                 args: {
+                    doctype: frm.doctype,
                     docname: frm.doc.name,
                     values,
                 },
@@ -384,6 +387,7 @@ function show_update_vehicle_info_dialog(frm) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_vehicle_info",
                 args: {
+                    doctype: frm.doctype,
                     docname: frm.doc.name,
                     values,
                 },
@@ -445,6 +449,7 @@ function show_update_transporter_dialog(frm) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.update_transporter",
                 args: {
+                    doctype: frm.doctype,
                     docname: frm.doc.name,
                     values,
                 },
@@ -470,6 +475,7 @@ function is_e_waybill_valid(frm) {
 
 function is_e_waybill_applicable(frm) {
     if (
+        frm.doc.doctype == "Sales Invoice" &&
         Math.abs(frm.doc.base_grand_total) <
         frappe.boot.gst_settings.e_waybill_threshold
     )

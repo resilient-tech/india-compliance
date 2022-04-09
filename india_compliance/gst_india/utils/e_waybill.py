@@ -15,7 +15,10 @@ from india_compliance.gst_india.utils import (
     send_updated_doc,
     update_onload,
 )
-from india_compliance.gst_india.utils.invoice_data import GSTInvoiceData
+from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
+
+PERMITTED_DOCTYPES = {"Sales Invoice", "Delivery Note"}
+
 
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
@@ -44,10 +47,10 @@ def generate_e_waybill_json(doctype: str, docnames):
 
 
 @frappe.whitelist()
-def generate_e_waybill(*, docname, values=None):
-    doc = load_doc("Sales Invoice", docname, "submit")
+def generate_e_waybill(*, doctype, docname, values=None):
+    doc = load_doc(doctype, docname, "submit")
     if values:
-        update_invoice(doc, frappe.parse_json(values))
+        update_transaction(doc, frappe.parse_json(values))
 
     _generate_e_waybill(doc, throw=True if values else False)
 
@@ -105,6 +108,7 @@ def log_and_process_e_waybill_generation(doc, result):
                     "validUpto" if not irn else "EwbValidTill", day_first=not irn
                 )
             ),
+            "reference_doctype": doc.doctype,
             "reference_name": doc.name,
         },
         fetch=frappe.get_cached_value(
@@ -114,8 +118,8 @@ def log_and_process_e_waybill_generation(doc, result):
 
 
 @frappe.whitelist()
-def cancel_e_waybill(*, docname, values):
-    doc = load_doc("Sales Invoice", docname, "cancel")
+def cancel_e_waybill(*, doctype, docname, values):
+    doc = load_doc(doctype, docname, "cancel")
     values = frappe.parse_json(values)
     _cancel_e_waybill(doc, values)
 
@@ -149,8 +153,8 @@ def _cancel_e_waybill(doc, values):
 
 
 @frappe.whitelist()
-def update_vehicle_info(*, docname, values):
-    doc = load_doc("Sales Invoice", docname, "submit")
+def update_vehicle_info(*, doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
     doc.db_set(
         {
             "vehicle_no": values.vehicle_no.replace(" ", ""),
@@ -202,8 +206,8 @@ def update_vehicle_info(*, docname, values):
 
 
 @frappe.whitelist()
-def update_transporter(*, docname, values):
-    doc = load_doc("Sales Invoice", docname, "submit")
+def update_transporter(*, doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
     EWaybillAPI(doc.company_gstin).update_transporter(data)
@@ -256,8 +260,8 @@ def update_transporter(*, docname, values):
 
 
 @frappe.whitelist()
-def fetch_e_waybill_data(*, docname, attach=False):
-    doc = load_doc("Sales Invoice", docname, "write" if attach else "print")
+def fetch_e_waybill_data(*, doctype, docname, attach=False):
+    doc = load_doc(doctype, docname, "write" if attach else "print")
 
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
@@ -381,28 +385,30 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     attach_e_waybill_pdf(doc, log)
 
 
-def update_invoice(doc, values):
+def update_transaction(doc, values):
     transporter_name = (
         frappe.db.get_value("Supplier", values.transporter, "supplier_name")
         if values.transporter
         else None
     )
 
-    doc.db_set(
-        {
-            "transporter": values.transporter,
-            "transporter_name": transporter_name,
-            "gst_transporter_id": values.gst_transporter_id,
-            "vehicle_no": values.vehicle_no,
-            "distance": values.distance,
-            "lr_no": values.lr_no,
-            "lr_date": values.lr_date,
-            "mode_of_transport": values.mode_of_transport,
-            "gst_vehicle_type": values.gst_vehicle_type,
-            "gst_category": values.gst_category,
-            "export_type": values.export_type,
-        },
-    )
+    data = {
+        "transporter": values.transporter,
+        "transporter_name": transporter_name,
+        "gst_transporter_id": values.gst_transporter_id,
+        "vehicle_no": values.vehicle_no,
+        "distance": values.distance,
+        "lr_no": values.lr_no,
+        "lr_date": values.lr_date,
+        "mode_of_transport": values.mode_of_transport,
+        "gst_vehicle_type": values.gst_vehicle_type,
+        "gst_category": values.gst_category,
+    }
+
+    if doc.doctype == "Sales Invoice":
+        data["export_type"] = values.export_type
+
+    doc.db_set(data)
 
 
 #######################################################################################
@@ -410,7 +416,7 @@ def update_invoice(doc, values):
 #######################################################################################
 
 
-class EWaybillData(GSTInvoiceData):
+class EWaybillData(GSTTransactionData):
     def __init__(self, *args, **kwargs):
         self.for_json = kwargs.pop("for_json", False)
         super().__init__(*args, **kwargs)
@@ -419,7 +425,7 @@ class EWaybillData(GSTInvoiceData):
         self.validate_doctype_for_e_waybill()
 
     def get_data(self):
-        self.validate_invoice()
+        self.validate_transaction()
         self.get_transporter_details()
 
         if irn := self.doc.get("irn"):
@@ -427,22 +433,22 @@ class EWaybillData(GSTInvoiceData):
             return self.sanitize_data(
                 {
                     "Irn": irn,
-                    "Distance": self.invoice_details.distance,
-                    "TransMode": str(self.invoice_details.mode_of_transport),
-                    "TransId": self.invoice_details.gst_transporter_id,
-                    "TransName": self.invoice_details.transporter_name,
-                    "TransDocDt": self.invoice_details.lr_date,
-                    "TransDocNo": self.invoice_details.lr_no,
-                    "VehNo": self.invoice_details.vehicle_no,
-                    "VehType": self.invoice_details.vehicle_type,
+                    "Distance": self.transaction_details.distance,
+                    "TransMode": str(self.transaction_details.mode_of_transport),
+                    "TransId": self.transaction_details.gst_transporter_id,
+                    "TransName": self.transaction_details.transporter_name,
+                    "TransDocDt": self.transaction_details.lr_date,
+                    "TransDocNo": self.transaction_details.lr_no,
+                    "VehNo": self.transaction_details.vehicle_no,
+                    "VehType": self.transaction_details.vehicle_type,
                 }
             )
 
-        self.get_invoice_details()
+        self.get_transaction_details()
         self.get_item_list()
         self.get_party_address_details()
 
-        return self.get_invoice_data()
+        return self.get_transaction_data()
 
     def get_e_waybill_cancel_data(self, values):
         self.validate_if_e_waybill_is_set()
@@ -469,15 +475,15 @@ class EWaybillData(GSTInvoiceData):
 
         return {
             "ewbNo": self.doc.ewaybill,
-            "vehicleNo": self.invoice_details.vehicle_no,
+            "vehicleNo": self.transaction_details.vehicle_no,
             "fromPlace": dispatch_address.city,
             "fromState": dispatch_address.state_number,
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
             "reasonRem": self.sanitize_value(values.remark),
-            "transDocNo": self.invoice_details.lr_no,
-            "transDocDate": self.invoice_details.lr_date,
-            "transMode": self.invoice_details.mode_of_transport,
-            "vehicleType": self.invoice_details.vehicle_type,
+            "transDocNo": self.transaction_details.lr_no,
+            "transDocDate": self.transaction_details.lr_date,
+            "transMode": self.transaction_details.mode_of_transport,
+            "vehicleType": self.transaction_details.vehicle_type,
         }
 
     def get_update_transporter_data(self, values):
@@ -489,10 +495,10 @@ class EWaybillData(GSTInvoiceData):
             "transporterId": values.gst_transporter_id,
         }
 
-    def validate_invoice(self):
+    def validate_transaction(self):
         # TODO: Add Support for Delivery Note
 
-        super().validate_invoice()
+        super().validate_transaction()
 
         if self.doc.ewaybill:
             frappe.throw(_("e-Waybill already generated for this document"))
@@ -547,7 +553,10 @@ class EWaybillData(GSTInvoiceData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        if self.doc.base_grand_total < self.settings.e_waybill_threshold:
+        if (
+            self.doc.doctype == "Sales Invoice"
+            and self.doc.base_grand_total < self.settings.e_waybill_threshold
+        ):
             frappe.throw(
                 _("e-Waybill is only applicable for Invoice Value above {0}").format(
                     self.settings.e_waybill_threshold
@@ -567,12 +576,13 @@ class EWaybillData(GSTInvoiceData):
         self.validate_non_gst_items()
 
     def validate_doctype_for_e_waybill(self):
-        if self.doc.doctype not in ("Sales Invoice", "Delivery Note"):
+        if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
                 _(
                     "Only Sales Invoice and Delivery Note are supported for e-Waybill"
                     " actions"
-                )
+                ),
+                title=_("Unsupported DocType"),
             )
 
     def validate_if_e_waybill_is_set(self):
@@ -601,7 +611,7 @@ class EWaybillData(GSTInvoiceData):
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )
 
-    def update_invoice_details(self):
+    def update_transaction_details(self):
         # first HSN Code for goods
         main_hsn_code = next(
             row.gst_hsn_code
@@ -609,7 +619,7 @@ class EWaybillData(GSTInvoiceData):
             if not row.gst_hsn_code.startswith("99")
         )
 
-        self.invoice_details.update(
+        self.transaction_details.update(
             {
                 "supply_type": "O",
                 "sub_supply_type": 1,
@@ -619,7 +629,7 @@ class EWaybillData(GSTInvoiceData):
         )
 
         if self.doc.is_return:
-            self.invoice_details.update(
+            self.transaction_details.update(
                 {
                     "supply_type": "I",
                     "sub_supply_type": 7,
@@ -628,10 +638,10 @@ class EWaybillData(GSTInvoiceData):
             )
 
         elif self.doc.gst_category == "Overseas":
-            self.invoice_details.sub_supply_type = 3
+            self.transaction_details.sub_supply_type = 3
 
             if self.doc.export_type == "Without Payment of Tax":
-                self.invoice_details.document_type = "BIL"
+                self.transaction_details.document_type = "BIL"
 
     def get_party_address_details(self):
         transaction_type = 1
@@ -673,31 +683,31 @@ class EWaybillData(GSTInvoiceData):
                 self.doc.shipping_address_name
             )
 
-        self.invoice_details.transaction_type = transaction_type
+        self.transaction_details.transaction_type = transaction_type
 
         if self.doc.gst_category == "SEZ":
             self.billing_address.state_number = 96
 
-    def get_invoice_data(self):
+    def get_transaction_data(self):
         if self.sandbox:
-            self.invoice_details.update(
+            self.transaction_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
-                    "invoice_number": random_string(6),
+                    "name": random_string(6),
                 }
             )
             self.company_address.gstin = "05AAACG2115R1ZN"
             self.billing_address.gstin = "05AAACG2140A1ZL"
 
         data = {
-            "userGstin": self.invoice_details.company_gstin,
-            "supplyType": self.invoice_details.supply_type,
-            "subSupplyType": self.invoice_details.sub_supply_type,
+            "userGstin": self.transaction_details.company_gstin,
+            "supplyType": self.transaction_details.supply_type,
+            "subSupplyType": self.transaction_details.sub_supply_type,
             "subSupplyDesc": "",
-            "docType": self.invoice_details.document_type,
-            "docNo": self.invoice_details.invoice_number,
-            "docDate": self.invoice_details.invoice_date,
-            "transactionType": self.invoice_details.transaction_type,
+            "docType": self.transaction_details.document_type,
+            "docNo": self.transaction_details.name,
+            "docDate": self.transaction_details.date,
+            "transactionType": self.transaction_details.transaction_type,
             "fromTrdName": self.company_address.address_title,
             "fromGstin": self.company_address.gstin,
             "fromAddr1": self.dispatch_address.address_line1,
@@ -714,25 +724,25 @@ class EWaybillData(GSTInvoiceData):
             "toPincode": self.shipping_address.pincode,
             "toStateCode": self.billing_address.state_number,
             "actToStateCode": self.shipping_address.state_number,
-            "totalValue": self.invoice_details.base_total,
-            "cgstValue": self.invoice_details.total_cgst_amount,
-            "sgstValue": self.invoice_details.total_sgst_amount,
-            "igstValue": self.invoice_details.total_igst_amount,
-            "cessValue": self.invoice_details.total_cess_amount,
-            "TotNonAdvolVal": self.invoice_details.total_cess_non_advol_amount,
-            "OthValue": self.invoice_details.rounding_adjustment
-            + self.invoice_details.other_charges,
-            "totInvValue": self.invoice_details.base_grand_total,
-            "transMode": self.invoice_details.mode_of_transport,
-            "transDistance": self.invoice_details.distance,
-            "transporterName": self.invoice_details.transporter_name,
-            "transporterId": self.invoice_details.gst_transporter_id,
-            "transDocNo": self.invoice_details.lr_no,
-            "transDocDate": self.invoice_details.lr_date,
-            "vehicleNo": self.invoice_details.vehicle_no,
-            "vehicleType": self.invoice_details.vehicle_type,
+            "totalValue": self.transaction_details.base_total,
+            "cgstValue": self.transaction_details.total_cgst_amount,
+            "sgstValue": self.transaction_details.total_sgst_amount,
+            "igstValue": self.transaction_details.total_igst_amount,
+            "cessValue": self.transaction_details.total_cess_amount,
+            "TotNonAdvolVal": self.transaction_details.total_cess_non_advol_amount,
+            "OthValue": self.transaction_details.rounding_adjustment
+            + self.transaction_details.other_charges,
+            "totInvValue": self.transaction_details.base_grand_total,
+            "transMode": self.transaction_details.mode_of_transport,
+            "transDistance": self.transaction_details.distance,
+            "transporterName": self.transaction_details.transporter_name,
+            "transporterId": self.transaction_details.gst_transporter_id,
+            "transDocNo": self.transaction_details.lr_no,
+            "transDocDate": self.transaction_details.lr_date,
+            "vehicleNo": self.transaction_details.vehicle_no,
+            "vehicleType": self.transaction_details.vehicle_type,
             "itemList": self.item_list,
-            "mainHsnCode": self.invoice_details.main_hsn_code,
+            "mainHsnCode": self.transaction_details.main_hsn_code,
         }
 
         if self.for_json:

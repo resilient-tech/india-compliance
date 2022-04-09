@@ -21,6 +21,7 @@ doctype_js = {
     "Customer": "gst_india/client_scripts/customer.js",
     "Delivery Note": [
         "gst_india/client_scripts/e_waybill_utils.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/delivery_note.js",
     ],
     "Item": "gst_india/client_scripts/item.js",
@@ -32,8 +33,8 @@ doctype_js = {
     "Sales Invoice": [
         "gst_india/client_scripts/e_waybill_utils.js",
         "gst_india/client_scripts/e_waybill_actions.js",
-        "gst_india/client_scripts/sales_invoice.js",
         "gst_india/client_scripts/e_invoice_actions.js",
+        "gst_india/client_scripts/sales_invoice.js",
     ],
     "Sales Order": "gst_india/client_scripts/sales_order.js",
     "Supplier": "gst_india/client_scripts/supplier.js",
