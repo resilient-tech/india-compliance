@@ -296,6 +296,7 @@ class Gstr1Report(object):
         )
 
         for d in invoice_data:
+            d.is_reverse_charge = "Y" if d.is_reverse_charge else "N"
             self.invoices.setdefault(d.invoice_number, d)
 
     def get_advance_entries(self):
@@ -544,7 +545,7 @@ class Gstr1Report(object):
                 },
                 {
                     "fieldname": "is_reverse_charge",
-                    "label": "Is Reverse Charge",
+                    "label": "Reverse Charge",
                     "fieldtype": "Data",
                     "default": 0,
                 },
@@ -647,7 +648,7 @@ class Gstr1Report(object):
                 },
                 {
                     "fieldname": "is_reverse_charge",
-                    "label": "Is Reverse Charge",
+                    "label": "Reverse Charge",
                     "fieldtype": "Data",
                     "default": 0,
                 },
@@ -1008,7 +1009,7 @@ def get_b2b_json(res, gstin):
 
             inv_item = get_basic_invoice_detail(invoice[0])
             inv_item["pos"] = "%02d" % int(invoice[0]["place_of_supply"].split("-")[0])
-            inv_item["rchrg"] = "Y" if invoice[0]["is_reverse_charge"] else "N"
+            inv_item["rchrg"] = invoice[0]["is_reverse_charge"]
             inv_item["inv_typ"] = get_invoice_type(invoice[0])
 
             if inv_item["pos"] == "00":
@@ -1185,7 +1186,7 @@ def get_cdnr_reg_json(res, gstin):
                 "val": abs(flt(invoice[0]["invoice_value"])),
                 "ntty": invoice[0]["document_type"],
                 "pos": "%02d" % int(invoice[0]["place_of_supply"].split("-")[0]),
-                "rchrg": "Y" if invoice[0]["is_reverse_charge"] else "N",
+                "rchrg": invoice[0]["is_reverse_charge"],
                 "inv_typ": get_invoice_type(invoice[0]),
             }
 
