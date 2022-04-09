@@ -99,7 +99,7 @@ def cancel_e_invoice(docname, values):
     values = frappe.parse_json(values)
     validate_if_e_invoice_can_be_cancelled(doc)
 
-    if doc.ewaybill:
+    if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
     data = {
