@@ -1,6 +1,6 @@
 import base64
-import os
 from datetime import datetime
+from io import BytesIO
 
 import barcode
 import pyqrcode
@@ -68,14 +68,10 @@ def get_qr_code(qr_text, scale=5):
 
 
 def get_ewaybill_barcode(ewaybill):
-    EAN = barcode.get_barcode_class("ean13")
-    barcode_ean = EAN(str(ewaybill), writer=ImageWriter())
-    barcode_filename = barcode_ean.save(ewaybill)
-
-    image_path = os.path.abspath(barcode_filename)
-
-    with open(image_path, "rb") as f:
-        barcode_content = f.read()
-        barcode_base64 = base64.b64encode(barcode_content).decode()
+    Code128 = barcode.get_barcode_class("Code128")
+    barcode_fp = BytesIO()
+    # options = {"font_size": 10}
+    Code128(str(ewaybill), writer=ImageWriter()).write(barcode_fp)
+    barcode_base64 = base64.b64encode(barcode_fp.getbuffer()).decode()
 
     return barcode_base64
