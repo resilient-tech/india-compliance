@@ -2,8 +2,8 @@ import base64
 from datetime import datetime
 from io import BytesIO
 
-import barcode
 import pyqrcode
+from barcode import Code128
 from barcode.writer import ImageWriter
 
 import frappe
@@ -68,10 +68,9 @@ def get_qr_code(qr_text, scale=5):
 
 
 def get_ewaybill_barcode(ewaybill):
-    Code128 = barcode.get_barcode_class("Code128")
     barcode_fp = BytesIO()
     # options = {"font_size": 10}
-    Code128(str(ewaybill), writer=ImageWriter()).write(barcode_fp)
+    Code128(ewaybill, writer=ImageWriter()).write(barcode_fp)
     barcode_base64 = base64.b64encode(barcode_fp.getbuffer()).decode()
 
     return barcode_base64

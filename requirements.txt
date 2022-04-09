@@ -1,1 +1,1 @@
-python-barcode==0.13.1
+python-barcode~=0.13.1

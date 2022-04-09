@@ -1,8 +1,3 @@
-import re
-from datetime import datetime
-
-import pyqrcode
-
 import frappe
 from frappe import _
 from frappe.utils import add_to_date, get_datetime, get_fullname, random_string

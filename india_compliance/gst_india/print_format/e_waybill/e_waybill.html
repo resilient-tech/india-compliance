@@ -2,9 +2,6 @@
     {% include "india_compliance/gst_india/print_format/e_waybill/e_waybill.css" %}
 </style>
 
-
-
-
 {% set e_waybill_log = doc.get("e_waybill_log_") or frappe.get_doc("e-Waybill Log", doc.ewaybill) %}
 {% set data = _dict(json.loads(e_waybill_log.data)) %}
 
@@ -275,9 +272,6 @@
                                 </div>
                                 </div>
                                 </div>
-
-
-
                         </td>
                     </tr>
                     <tr class="eway-section">
