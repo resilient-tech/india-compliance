@@ -38,5 +38,6 @@
 }
 
 .print-format .barcode {
-    width: 140px;
+    width: 95px;
+    height: 55px;
 }
