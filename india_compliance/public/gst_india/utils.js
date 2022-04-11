@@ -27,7 +27,7 @@ ic.utils.get_party_type = function (doctype) {
 };
 
 export async function autofill_gstin_fields(frm) {
-    const gstin = frm.doc.gstin_custom || frm.doc.gstin;
+    const gstin = frm.doc._gstin || frm.doc.gstin;
     if (!gstin || gstin.length != 15) return;
 
     const gstin_info = await get_gstin_details(gstin);
@@ -38,7 +38,7 @@ export async function autofill_gstin_fields(frm) {
 }
 
 function setup_pincode_field(frm, gstin_info) {
-    const pincode_field = frm.fields_dict.pincode_custom;
+    const pincode_field = frm.fields_dict._pincode;
     pincode_field.set_data(
         gstin_info.all_addresses.map(address => {
             return {
@@ -72,18 +72,25 @@ function map_gstin_details(doc, gstin_info) {
 }
 
 function update_party_info(doc, gstin_info) {
+    doc.gstin = doc._gstin;
     doc.supplier_name = doc.customer_name = gstin_info.business_name;
     doc.gst_category = gstin_info.gst_category;
 }
 
 function update_address_info(doc, address) {
     if (!address || doc.address_line1 === address.address_line1) return;
+
     Object.assign(doc, address);
-    doc.pincode_custom = address.pincode;
+
+    // renamed address_line1 to stop execution of erpnext.selling.doctype.customer.customer.create_primary_address
+    doc._address_line1 = doc.address_line1;
+    delete doc.address_line1;
+
+    doc.pincode = doc._pincode = address.pincode;
 }
 
 function autofill_address(doc, { all_addresses }) {
-    const { pincode_custom: pincode } = doc;
+    const { _pincode: pincode } = doc;
     if (!pincode || pincode.length !== 6 || !all_addresses) return;
     update_address_info(
         doc,

@@ -107,3 +107,51 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
         message += f"{bold(doctype)}:<br/>{'<br/>'.join(docnames)}"
 
     frappe.msgprint(message, title=_("Insufficient Permission"), indicator="yellow")
+
+
+# custom erpnext.selling.doctype.customer.customer.create_primary_address
+def create_primary_address(doc, method=None):
+    if not doc.flags.is_new_doc or not doc.get("_address_line1"):
+        return
+
+    from frappe.contacts.doctype.address.address import get_address_display
+
+    address = make_address(doc)
+    address_display = get_address_display(address.as_dict())
+
+    doc.db_set(f"{doc.doctype.lower()}_primary_address", address.name)
+    doc.db_set("primary_address", address_display)
+
+
+def make_address(doc):
+    required_fields = []
+    for field in ("city", "country"):
+        if not doc.get(field):
+            required_fields.append(f"<li>{field.title()}</li>")
+
+    if required_fields:
+        frappe.throw(
+            "{0} <br><br> <ul>{1}</ul>".format(
+                _("Following fields are mandatory to create address:"),
+                "\n".join(required_fields),
+            ),
+            title=_("Missing Values Required"),
+        )
+
+    return frappe.get_doc(
+        {
+            "doctype": "Address",
+            "address_title": doc.get("name"),
+            "address_line1": doc.get("_address_line1"),
+            "address_line2": doc.get("address_line2"),
+            "city": doc.get("city"),
+            "state": doc.get("state"),
+            "pincode": doc.get("pincode"),
+            "country": doc.get("country"),
+            "gstin": doc.get("gstin"),
+            "gst_category": doc.get("gst_category"),
+            "links": [
+                {"link_doctype": doc.get("doctype"), "link_name": doc.get("name")}
+            ],
+        }
+    ).insert()
