@@ -1,16 +1,50 @@
-import re
-
 import frappe
 from frappe import _, bold
+from frappe.model import delete_doc
 
+from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
 )
+from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
-# Maximum length must be 16 characters. First character must be alphanumeric.
-# Subsequent characters can be alphanumeric, hyphens or slashes.
-GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
+
+def onload(doc, method=None):
+    if not doc.get("ewaybill") and not doc.get("irn"):
+        return
+
+    gst_settings = frappe.get_cached_value(
+        "GST Settings",
+        "GST Settings",
+        ("enable_api", "enable_e_waybill", "enable_e_invoice"),
+        as_dict=1,
+    )
+
+    if not gst_settings.enable_api:
+        return
+
+    if gst_settings.enable_e_waybill and doc.ewaybill:
+        doc.set_onload(
+            "e_waybill_info",
+            frappe.get_value(
+                "e-Waybill Log",
+                doc.ewaybill,
+                ("created_on", "valid_upto"),
+                as_dict=True,
+            ),
+        )
+
+    if gst_settings.enable_e_invoice and doc.irn:
+        doc.set_onload(
+            "e_invoice_info",
+            frappe.get_value(
+                "e-Invoice Log",
+                doc.irn,
+                "acknowledged_on",
+                as_dict=True,
+            ),
+        )
 
 
 def validate_gst_invoice(doc, method=None):
@@ -21,16 +55,21 @@ def validate_gst_invoice(doc, method=None):
     if country != "India" or gst_category == "Unregistered":
         return
 
+    if validate_items(doc) is False:
+        # If there are no GST items, then no need to proceed further
+        return
+
     validate_invoice_number(doc)
     validate_mandatory_fields(doc)
-    validate_item_tax_template(doc)
     validate_gst_accounts(doc)
+    validate_fields_and_set_status_for_e_invoice(doc)
+    validate_billing_address_gstin(doc)
 
 
 def validate_invoice_number(doc):
     """Validate GST invoice number requirements."""
 
-    if len(doc.name > 16):
+    if len(doc.name) > 16:
         frappe.throw(
             _("GST Invoice Number cannot exceed 16 characters"),
             title=_("Invalid GST Invoice Number"),
@@ -47,7 +86,7 @@ def validate_invoice_number(doc):
 
 
 def validate_mandatory_fields(doc):
-    for field in ("company_gstin", "place_of_supply"):
+    for field in ("company_gstin", "place_of_supply", "gst_category"):
         if not doc.get(field):
             frappe.throw(
                 _(
@@ -58,22 +97,61 @@ def validate_mandatory_fields(doc):
             )
 
 
-def validate_item_tax_template(doc):
-    """Different Item Tax Templates should not be used for the same Item Code"""
+def validate_fields_and_set_status_for_e_invoice(doc):
+    if not validate_e_invoice_applicability(doc, throw=False):
+        return
 
-    if not doc.has_value_changed("grand_total") or not doc.items:
+    for field in ("customer_address",):
+        if not doc.get(field):
+            frappe.throw(
+                _("{0} is a mandatory field for generating e-Invoices").format(
+                    bold(_(doc.meta.get_label(field))),
+                )
+            )
+
+    if doc._action == "submit" and not doc.irn:
+        doc.einvoice_status = "Pending"
+
+
+def validate_items(doc):
+    """Validate Items for a GST Compliant Invoice"""
+
+    if not doc.items:
         return
 
     item_tax_templates = frappe._dict()
     items_with_duplicate_taxes = []
+    non_gst_items = []
+    has_gst_items = False
 
     for row in doc.items:
+        # Collect data to validate that non-GST items are not used with GST items
+        if row.is_non_gst:
+            non_gst_items.append(row.idx)
+            continue
+
+        has_gst_items = True
+
+        # Different Item Tax Templates should not be used for the same Item Code
         if row.item_code not in item_tax_templates:
             item_tax_templates[row.item_code] = row.item_tax_template
             continue
 
         if row.item_tax_template != item_tax_templates[row.item_code]:
             items_with_duplicate_taxes.append(bold(row.item_code))
+
+    if not has_gst_items:
+        return False
+
+    if non_gst_items:
+        frappe.throw(
+            _(
+                "Items not covered under GST cannot be clubbed with items for which GST"
+                " is applicable. Please create another invoice for items in the"
+                " following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in non_gst_items)),
+            title=_("Invalid Items"),
+        )
 
     if items_with_duplicate_taxes:
         frappe.throw(
@@ -82,6 +160,17 @@ def validate_item_tax_template(doc):
                 " following items:<br> {0}"
             ).format("<br>".join(items_with_duplicate_taxes)),
             title="Inconsistent Item Tax Templates",
+        )
+
+
+def validate_billing_address_gstin(doc):
+    if doc.company_gstin == doc.billing_address_gstin:
+        frappe.throw(
+            _(
+                "Billing Address GSTIN and Company GSTIN cannot be same. Please"
+                " change the Billing Address"
+            ),
+            title=_("Invalid Billing Address GSTIN"),
         )
 
 
@@ -148,3 +237,12 @@ def validate_gst_accounts(doc):
                     row.idx
                 )
             )
+
+
+def ignore_logs_on_trash(doc, method=None):
+    # TODO: design better way to achieve this
+    delete_doc.doctypes_to_skip += (
+        "e-Waybill Log",
+        "e-Invoice Log",
+        "Integration Request",
+    )

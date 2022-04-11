@@ -28,7 +28,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (!["Customer", "Supplier", "Company"].includes(row.link_doctype)) return;
 
         // Try to get clean doc from locals
-        const doc = frappe.get_doc(row.link_doctype, row.link_name);
+        let doc = frappe.get_doc(row.link_doctype, row.link_name);
 
         // Fallback to DB
         if (!doc || doc.__unsaved || doc.__islocal) {
