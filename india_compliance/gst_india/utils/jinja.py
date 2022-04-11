@@ -55,7 +55,7 @@ def get_e_waybill_qr_code(e_waybill, gstin, ewaybill_date):
     e_waybill_date = as_ist(ewaybill_date)
     qr_text = "/".join(
         (
-            e_waybill,
+            str(e_waybill),
             gstin,
             datetime.strftime(e_waybill_date, "%d-%m-%Y %H:%M:%S"),
         )
@@ -70,7 +70,7 @@ def get_qr_code(qr_text, scale=5):
 def get_ewaybill_barcode(ewaybill):
     barcode_fp = BytesIO()
     # options = {"font_size": 10}
-    Code128(ewaybill, writer=ImageWriter()).write(barcode_fp)
+    Code128(str(ewaybill), writer=ImageWriter()).write(barcode_fp)
     barcode_base64 = base64.b64encode(barcode_fp.getbuffer()).decode()
 
     return barcode_base64
