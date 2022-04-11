@@ -7,6 +7,7 @@ setup_auto_gst_taxation(DOCTYPE);
 fetch_gst_category(DOCTYPE);
 update_export_type(DOCTYPE);
 setup_e_waybill_actions(DOCTYPE);
+update_gst_vehicle_type(DOCTYPE);
 
 const gst_settings = frappe.boot.gst_settings;
 

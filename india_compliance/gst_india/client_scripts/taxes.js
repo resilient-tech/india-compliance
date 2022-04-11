@@ -80,3 +80,17 @@ function get_party_type(doctype) {
         ? "customer"
         : "supplier";
 }
+
+function update_gst_vehicle_type(doctype) {
+    frappe.ui.form.on(doctype, {
+        mode_of_transport(frm) {
+            frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        },
+    });
+}
+
+function get_vehicle_type(doc) {
+    if (doc.mode_of_transport == "Road") return "Regular";
+    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
+    return "";
+}

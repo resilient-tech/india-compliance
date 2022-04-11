@@ -4,6 +4,7 @@ const DOCTYPE = "Delivery Note";
 
 setup_auto_gst_taxation(DOCTYPE);
 fetch_gst_category(DOCTYPE);
+update_gst_vehicle_type(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
 	setup(frm) {

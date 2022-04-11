@@ -500,7 +500,7 @@ company_fields[0]["insert_after"] = "parent_company"
 CUSTOM_FIELDS = {
     "Address": [
         {
-            "fieldname": "tax_details",
+            "fieldname": "tax_details_section",
             "label": "Tax Details",
             "fieldtype": "Section Break",
             "insert_after": "disabled",
@@ -509,7 +509,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gstin",
             "label": "GSTIN / UIN",
             "fieldtype": "Data",
-            "insert_after": "tax_details",
+            "insert_after": "tax_details_section",
             "translatable": 0,
         },
         {
@@ -530,7 +530,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_category",
             "label": "GST Category",
             "fieldtype": "Select",
-            "insert_after": "tax_column_break",
+            "insert_after": "tax_details_column_break",
             "options": gst_category_options,
             "default": default_gst_category,
             "reqd": 1,

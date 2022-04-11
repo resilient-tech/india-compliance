@@ -105,6 +105,9 @@ DELIVERY_NOTE_FIELDS = [
         "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
+        "description": (
+            "Set as zero to update distance as per the e-Waybill portal (if available)"
+        ),
     },
     {
         "fieldname": "gst_transporter_id",
@@ -130,7 +133,8 @@ DELIVERY_NOTE_FIELDS = [
         "label": "GST Vehicle Type",
         "fieldtype": "Select",
         "options": "Regular\nOver Dimensional Cargo (ODC)",
-        "depends_on": 'eval:(doc.mode_of_transport === "Road")',
+        "depends_on": 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
