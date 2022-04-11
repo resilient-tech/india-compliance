@@ -1,5 +1,7 @@
 import re
 
+TIMEZONE = "Asia/Kolkata"
+
 GST_ACCOUNT_FIELDS = (
     "cgst_account",
     "sgst_account",
@@ -8,16 +10,23 @@ GST_ACCOUNT_FIELDS = (
     "cess_non_advol_account",
 )
 
-GST_CATEGORIES = [
-    "Registered Regular",
-    "Registered Composition",
-    "Unregistered",
-    "SEZ",
-    "Overseas",
-    "Deemed Export",
-    "UIN Holders",
-    "Tax Deductor",
-]
+GST_TAX_TYPES = tuple(field[:-8] for field in GST_ACCOUNT_FIELDS)
+
+GST_CATEGORIES = {
+    "Registered Regular": "B2B",
+    "Registered Composition": "B2B",
+    "Unregistered": "B2C",
+    "SEZ": "SEZ",
+    "Overseas": "EXP",
+    "Deemed Export": "DEXP",
+    "UIN Holders": "B2B",
+    "Tax Deductor": "B2B",
+}
+
+EXPORT_TYPES = {
+    "With Payment of Tax": "WP",
+    "Without Payment of Tax": "WOP",
+}
 
 STATE_NUMBERS = {
     "Andaman and Nicobar Islands": "35",
@@ -61,7 +70,6 @@ STATE_NUMBERS = {
 
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
 
-
 NORMAL = (  # Normal but not TCS
     r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z1-9ABD-J]{1}[0-9A-Z]{1}$"
 )
@@ -88,3 +96,8 @@ GSTIN_FORMATS = {
 
 TCS = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[C]{1}[0-9A-Z]{1}$")
 PAN_NUMBER = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$")
+PINCODE_FORMAT = re.compile(r"^[1-9][0-9]{5}$")
+
+# Maximum length must be 16 characters. First character must be alphanumeric.
+# Subsequent characters can be alphanumeric, hyphens or slashes.
+GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")

@@ -32,7 +32,8 @@ def validate_filters(filters=None):
     if not filters.from_date or not filters.to_date:
         frappe.throw(
             _(
-                "From Date & To Date is mandatory for generating e-Invoice Summary Report"
+                "From Date & To Date is mandatory for generating e-Invoice Summary"
+                " Report"
             ),
             title=_("Invalid Filter"),
         )
@@ -95,11 +96,16 @@ def get_columns():
             "label": _("Is Return"),
             "width": 85,
         },
-        {"fieldtype": "Data", "fieldname": "ack_no", "label": "Ack. No.", "width": 145},
         {
             "fieldtype": "Data",
-            "fieldname": "ack_date",
-            "label": "Ack. Date",
+            "fieldname": "acknowledgement_number",
+            "label": "Acknowledgement Number",
+            "width": 145,
+        },
+        {
+            "fieldtype": "Data",
+            "fieldname": "acknowledged_on",
+            "label": "Acknowledged On (IST)",
             "width": 165,
         },
         {"fieldtype": "Data", "fieldname": "irn", "label": _("IRN No."), "width": 250},

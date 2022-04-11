@@ -15,6 +15,7 @@ class ReturnsAPI(BaseAPI):
     }
 
     def setup(self, company_gstin):
+        self.api_name = "GST Returns"
         self.company_gstin = company_gstin
         self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
         self.default_headers.update(
@@ -48,6 +49,7 @@ class ReturnsAPI(BaseAPI):
 class GSTR2bAPI(ReturnsAPI):
     def setup(self, company_gstin):
         super().setup(company_gstin)
+        self.api_name = "GSTR-2B"
         self.base_path = "returns/gstr2b"
 
     def get_data(self, return_period, otp=None):
@@ -58,6 +60,7 @@ class GSTR2bAPI(ReturnsAPI):
 class GSTR2aAPI(ReturnsAPI):
     def setup(self, company_gstin):
         super().setup(company_gstin)
+        self.api_name = "GSTR-2A"
         self.base_path = "returns/gstr2a"
 
     def get_data(self, action, return_period, otp=None):
