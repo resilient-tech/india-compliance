@@ -12,19 +12,15 @@ function update_gstin_in_other_documents(doctype) {
                 "You were using the GSTIN <strong>{0}</strong> in following other documents. Do you want to update these?",
                 [previous_gstin]
             );
+
             for (const [doctype, docnames] of Object.entries(
                 docs_with_previous_gstin
             )) {
-                let form_link = frappe.urllib.get_full_url(
-                    frappe.utils.get_form_link(
-                    doctype,
-                    docnames))
-
                 message += `<br/><br/><strong>${__(doctype)}</strong>:<br/>`;
 
-                // Used onclick to render link form in a new tab. default not works.
-                // TODO: change this after fixing the issue in frappe
-                message += `<a href="#" onclick="window.open('${form_link}', '_blank').focus();">${__(docnames)}</a><br/>`;
+                docnames.forEach(docname => {
+                    message += `${frappe.utils.get_form_link(doctype, docname, true)}<br/>`;
+                });
             }
 
             frappe.confirm(message, function () {
