@@ -291,7 +291,7 @@ def attach_e_waybill_pdf(doc, log=None):
         doc.e_waybill_log_ = log
 
     pdf_content = frappe.get_print(
-        doc.doctype, doc.name, "e-Waybill", doc=doc, no_letterhead=True, as_pdf=True
+        log.doctype, log.name, "e-Waybill", doc=log, no_letterhead=True, as_pdf=True
     )
 
     # remove temporary attribute

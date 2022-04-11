@@ -2,8 +2,7 @@
     {% include "india_compliance/gst_india/print_format/e_waybill/e_waybill.css" %}
 </style>
 
-{% set e_waybill_log = doc.get("e_waybill_log_") or frappe.get_doc("e-Waybill Log", doc.ewaybill) %}
-{% set data = _dict(json.loads(e_waybill_log.data)) %}
+{% set data = _dict(json.loads(doc.data)) %}
 
 <html lang="en">
     <body>
@@ -23,7 +22,7 @@
                             <div style="height: 2px"></div>
                             <div>
                                 <img
-                                    src="data:image/png;base64,{{ get_e_waybill_qr_code(doc.ewaybill,data.userGstin, data.ewayBillDate) }}"
+                                    src="data:image/png;base64,{{ get_e_waybill_qr_code(data.ewbNo,data.userGstin, data.ewayBillDate) }}"
                                     width="95"
                                     height="95"
                                     style="width: 95 !important"
@@ -265,7 +264,7 @@
 
                                 <div class="text-center">
                                         <span class="barcode-data">
-                                            <img class="barcode" src="data:image/gif;base64,{{ get_ewaybill_barcode(doc.ewaybill) }}">
+                                            <img class="barcode" src="data:image/gif;base64,{{ get_ewaybill_barcode(data.ewbNo) }}">
                                       </span>
                                   </div>
 
