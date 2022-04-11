@@ -18,13 +18,13 @@ class PartyQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             },
             {
                 label: __("Pincode"),
-                fieldname: "pincode_custom",
+                fieldname: "_pincode",
                 fieldtype: "Autocomplete",
                 ignore_validation: true,
             },
             {
                 label: __("Address Line 1"),
-                fieldname: "address_line1",
+                fieldname: "_address_line1",
                 fieldtype: "Data",
             },
             {
@@ -64,7 +64,7 @@ class PartyQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         return [
             {
                 label: "GSTIN",
-                fieldname: "gstin_custom",
+                fieldname: "_gstin",
                 fieldtype: "Autocomplete",
                 description: "Autofill party information by entering correct GSTIN.",
                 ignore_validation: true,
@@ -165,7 +165,7 @@ frappe.ui.form.AddressQuickEntryForm = class AddressQuickEntryForm extends (
                         { party_type, party }
                     );
                     if (!gstins || !gstins.length) return;
-                    this.dialog.fields_dict.gstin_custom.set_data(gstins.join("\n"));
+                    this.dialog.fields_dict._gstin.set_data(gstins.join("\n"));
                 },
             },
             {

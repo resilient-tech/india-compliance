@@ -60,7 +60,7 @@ class PublicAPI(BaseAPI):
 
         permanent_address = gstin_info.get("pradr", {})
         if permanent_address:
-            # permanent address will be at first position
+            # permanent address will be at the first position
             addresses = [permanent_address] + gstin_info.get("adadr", [])
             gstin_details.all_addresses = list(map(self._get_address, addresses))
             gstin_details.permanent_address = gstin_details.all_addresses[0]
