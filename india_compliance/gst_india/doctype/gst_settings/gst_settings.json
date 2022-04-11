@@ -13,11 +13,12 @@
   "min_hsn_digits",
   "e_waybill_section",
   "enable_e_waybill",
-  "e_waybill_threshold",
-  "column_break_10",
-  "auto_generate_e_waybill",
+  "enable_e_waybill_from_dn",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
+  "column_break_10",
+  "auto_generate_e_waybill",
+  "e_waybill_threshold",
   "e_invoice_section",
   "enable_e_invoice",
   "auto_generate_e_invoice",
@@ -115,7 +116,7 @@
   {
    "default": "0",
    "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
-   "description": "If checked, a PDF of e-Waybill will be automatically attached to the transaction after generation",
+   "description": "If checked, a PDF of the e-Waybill will be automatically attached to the transaction after it's generation",
    "fieldname": "attach_e_waybill_print",
    "fieldtype": "Check",
    "label": "Attach e-Waybill Print After Generation"
@@ -165,7 +166,7 @@
   {
    "default": "0",
    "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
-   "description": "Automatically fetch e-Waybill data after e-Waybill generation for printing or logging purposes. This will lead to one additional API request.",
+   "description": "Automatically fetch e-Waybill data after it's generation for printing or logging purposes. This will lead to one additional API request.",
    "fieldname": "fetch_e_waybill_data",
    "fieldtype": "Check",
    "label": "Fetch e-Waybill Data After Generation",
@@ -184,12 +185,18 @@
    "fieldname": "enable_e_invoice",
    "fieldtype": "Check",
    "label": "Enable e-Invoicing"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_waybill_from_dn",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Generation from Delivery Note"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-09 04:06:35.521218",
+ "modified": "2022-04-10 06:00:05.826119",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

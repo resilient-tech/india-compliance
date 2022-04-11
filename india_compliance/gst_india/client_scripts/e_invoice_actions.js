@@ -47,6 +47,39 @@ frappe.ui.form.on("Sales Invoice", {
             },
         );
     },
+    before_cancel(frm) {
+        if (!frappe.boot.gst_settings.enable_api || !frm.doc.irn) return;
+
+        frappe.validated = false;
+
+        return new Promise((resolve) => {
+            const continueCancellation = () => {
+                frappe.validated = true;
+                resolve();
+            }
+
+            if (!is_irn_cancellable(frm)) {
+                const d = frappe.warn(
+                    __("Cannot Cancel IRN"),
+                    __(
+                        `You should ideally create a <strong>Credit Note</strong>
+                        against this invoice instead of cancelling it. If you
+                        choose to proceed, you'll be required to update the IRN in the
+                        e-Invoice portal manually.<br><br>
+
+                        Are you sure you want to continue?`
+                    ),
+                    continueCancellation,
+                    __("Yes"),
+                );
+
+                d.set_secondary_action_label(__("No"));
+                return;
+            }
+
+            return show_cancel_e_invoice_dialog(frm, continueCancellation);
+        });
+    },
 });
 
 function is_irn_cancellable(frm) {

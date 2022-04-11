@@ -144,7 +144,7 @@ DELIVERY_NOTE_FIELDS = [
         "fieldname": "ewaybill",
         "label": "e-Waybill No.",
         "fieldtype": "Data",
-        "depends_on": "eval:(doc.docstatus === 1)",
+        "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
         "allow_on_submit": 1,
         "insert_after": "customer_name",
         "translatable": 0,

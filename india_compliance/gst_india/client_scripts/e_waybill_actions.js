@@ -1,4 +1,7 @@
 function setup_e_waybill_actions(doctype) {
+    const gst_settings = frappe.boot.gst_settings;
+    if (!gst_settings.enable_e_waybill) return;
+
     frappe.ui.form.on(doctype, {
         setup(frm) {
             frappe.realtime.on("e_waybill_pdf_attached", () => {
@@ -10,10 +13,37 @@ function setup_e_waybill_actions(doctype) {
             });
         },
         refresh(frm) {
-            let settings = frappe.boot.gst_settings;
+            if (!enable_api) {
+                frm.add_custom_button(
+                    "e-Waybill JSON",
+                    async () => {
+                        const ewb_data = await frappe.xcall(
+                            "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
+                            { doctype: frm.doctype, docnames: frm.doc.name }
+                        );
+
+                        trigger_file_download(
+                            ewb_data,
+                            get_e_waybill_file_name(frm.doc.name)
+                        );
+                    },
+                    __("Create")
+                );
+
+                return;
+            }
+
+            if (
+                gst_settings.enable_api &&
+                frm.doc.ewaybill &&
+                frm.doc.ewaybill.length == 12
+            ) {
+                frm.set_df_property("ewaybill", "allow_on_submit", 0);
+            }
+
             if (
                 frm.doc.docstatus != 1 ||
-                !settings.enable_api ||
+                !enable_api ||
                 !is_e_waybill_applicable(frm) ||
                 !frm.doc.company_gstin // means company is Indian and not Unregistered
             )
@@ -473,13 +503,17 @@ function is_e_waybill_valid(frm) {
     );
 }
 
-function is_e_waybill_applicable(frm) {
+function has_e_waybill_threshold_met(frm) {
     if (
         frm.doc.doctype == "Sales Invoice" &&
-        Math.abs(frm.doc.base_grand_total) <
-        frappe.boot.gst_settings.e_waybill_threshold
+        Math.abs(frm.doc.base_grand_total) >=
+            frappe.boot.gst_settings.e_waybill_threshold
     )
-        return;
+        return true;
+}
+
+function is_e_waybill_applicable(frm) {
+    // e-Waybill is applicable if atleast one item is not a service
 
     for (let item of frm.doc.items) {
         if (!item.gst_hsn_code.startsWith("99")) return true;
@@ -534,4 +568,44 @@ function are_transport_details_available(doc) {
 
 function update_vehicle_type(dialog) {
     dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+}
+
+/********
+ * Utils
+ *******/
+
+function trigger_file_download(file_content, file_name) {
+    let type = "application/json;charset=utf-8";
+
+    if (!file_name.endsWith(".json")) {
+        type = "application/octet-stream";
+    }
+
+    const blob = new Blob([file_content], { type: type });
+
+    // Create a link and set the URL using `createObjectURL`
+    const link = document.createElement("a");
+    link.style.display = "none";
+    link.href = URL.createObjectURL(blob);
+    link.download = file_name;
+
+    // It needs to be added to the DOM so it can be clicked
+    document.body.appendChild(link);
+    link.click();
+
+    // To make this work on Firefox we need to wait
+    // a little while before removing it.
+    setTimeout(() => {
+        URL.revokeObjectURL(link.href);
+        link.parentNode.removeChild(link);
+    }, 0);
+}
+
+function get_e_waybill_file_name(docname) {
+    let prefix = "Bulk";
+    if (docname) {
+        prefix = docname.replaceAll(/[^\w_.)( -]/g, "");
+    }
+
+    return `${prefix}_e-Waybill_Data_${frappe.utils.get_random(5)}.json`;
 }
