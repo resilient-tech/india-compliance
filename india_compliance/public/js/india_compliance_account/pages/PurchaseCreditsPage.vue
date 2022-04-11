@@ -104,6 +104,7 @@ import FormField from "../components/FormField.vue";
 import PageTitle from "../components/PageTitle.vue";
 import PreLoader from "../components/PreLoader.vue";
 import { getReadableNumber } from "../utils";
+import { create_order } from "../../services/AccountService";
 
 export default {
   components: {
@@ -196,19 +197,19 @@ export default {
 
     async proceedToPayment() {
       this.isRedirecting = true;
-      await this.$store.dispatch("createOrder", {
-        credits: this.credits,
-        amount: this.grandTotal,
-      });
-      const { orderToken } = this.$store.state.account;
-      if (!orderToken) return;
-
+      const response = await create_order(this.credits, this.grandTotal);
       this.isRedirecting = false;
+
+      if (response.invalid_token)
+        return this.$store.dispatch("setApiSecret", null);
+
+      if (!response.success || !response.message?.order_token) return;
+
       this.$router.push({
         name: "paymentPage",
         params: {
           order: {
-            token: orderToken,
+            token: response.message.order_token,
             credits: this.credits,
             netTotal: this.netTotal,
             tax: this.tax,

@@ -74,7 +74,14 @@ ic.gst_api.call = async function (endpoint, options) {
             });
         }
 
-        return { ...e.response, success: false, error };
+        return {
+            ...e.response,
+            success: false,
+            error,
+            invalid_token: e.response.exc_type?.includes(
+                "InvalidAuthorizationToken"
+            ),
+        };
     }
 };
 

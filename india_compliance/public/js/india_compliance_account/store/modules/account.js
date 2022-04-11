@@ -33,24 +33,27 @@ export default {
     actions: {
         async fetchDetails({ commit }, type) {
             const response = await get_details(type);
-            if (response.error)
-                return this.dispatch("handleInvalidTokenError", response);
+            if (response.invalid_token)
+                return this.dispatch("setApiSecret", null);
+
             if (!response.success || !response.message) return;
             commit(`SET_${type.toUpperCase()}_DETAILS`, response.message);
         },
 
         async updateBillingDetails({ commit }, billingDetails) {
             const response = await update_billing_details(billingDetails);
-            if (response.error)
-                return this.dispatch("handleInvalidTokenError", response);
+            if (response.invalid_token)
+                return this.dispatch("setApiSecret", null);
+
             if (!response.success || !response.message) return;
             commit("SET_BILLING_DETAILS", response.message);
         },
 
         async createOrder({ commit }, { credits, amount }) {
             const response = await create_order(credits, amount);
-            if (response.error)
-                return this.dispatch("handleInvalidTokenError", response);
+            if (response.invalid_token)
+                return this.dispatch("setApiSecret", null);
+
             if (
                 !response.success ||
                 !response.message ||
@@ -58,14 +61,6 @@ export default {
             )
                 return;
             commit("SET_ORDER_TOKEN", response.message.order_token);
-        },
-
-        handleInvalidTokenError(_, { exc_type }) {
-            console.log("setting to null", exc_type);
-
-            if (!exc_type?.includes("InvalidAuthorizationToken")) return;
-            // invalid secret -> delete the secret
-            this.dispatch("setApiSecret", null);
         },
     },
 
