@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
+  "enable_overseas_transactions",
   "round_off_gst_values",
   "hsn_wise_tax_breakup",
   "column_break_4",
@@ -184,12 +185,19 @@
    "fieldname": "enable_e_invoice",
    "fieldtype": "Check",
    "label": "Enable e-Invoicing"
+  },
+  {
+   "default": "0",
+   "description": "Fields and validations for the transactions will apply based on this setting",
+   "fieldname": "enable_overseas_transactions",
+   "fieldtype": "Check",
+   "label": "Enable SEZ / Overseas Transactions"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-06 13:56:34.868949",
+ "modified": "2022-04-11 15:31:25.421558",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
