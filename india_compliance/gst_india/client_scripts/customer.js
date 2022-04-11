@@ -5,4 +5,4 @@ const DOCTYPE = "Customer";
 validate_pan(DOCTYPE);
 validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
-validate_overseas_gst_category(DOCTYPE);
+overseas_gst_category_alert(DOCTYPE);
