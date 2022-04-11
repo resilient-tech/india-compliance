@@ -121,14 +121,14 @@ frappe.ui.form.AddressQuickEntryForm = class AddressQuickEntryForm extends (
 ) {
     async render_dialog() {
         const address_fields = this.get_address_fields();
-        const address_fieldnames = address_fields.map(({ fieldname }) => fieldname);
-        address_fieldnames.push("pincode");
+        const fields_to_exclude = address_fields.map(({ fieldname }) => fieldname);
+        fields_to_exclude.push("pincode", "address_line1");
 
         this.mandatory = [
             ...this.get_party_fields(),
             ...this.get_gstin_fields(),
             ...this.mandatory.filter(
-                field => !address_fieldnames.includes(field.fieldname)
+                field => !fields_to_exclude.includes(field.fieldname)
             ),
             ...address_fields,
         ];
