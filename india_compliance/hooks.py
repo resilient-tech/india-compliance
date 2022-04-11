@@ -67,6 +67,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
+            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ]
     },
     "DocType": {
@@ -84,16 +85,19 @@ doc_events = {
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
             "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
+            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ]
     },
     "Purchase Order": {
         "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
+            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         )
     },
     "Purchase Receipt": {
         "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply"
+            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
+            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         )
     },
     "Sales Invoice": {
@@ -106,12 +110,14 @@ doc_events = {
             "india_compliance.gst_india.overrides.invoice.update_taxable_values",
             "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",
             "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
+            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ],
     },
     "Sales Order": {
         "validate": [
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
             "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
+            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ]
     },
     "Supplier": {
@@ -122,6 +128,12 @@ doc_events = {
     },
     "Tax Category": {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
+    },
+    "POS Invoice": {
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+    },
+    "Quotation": {
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
     },
 }
 
