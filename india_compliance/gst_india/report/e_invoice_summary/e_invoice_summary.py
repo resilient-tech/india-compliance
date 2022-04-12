@@ -42,25 +42,51 @@ def validate_filters(filters=None):
 
 
 def get_data(filters=None):
-    if filters is None:
-        filters = {}
-    query_filters = {
-        "posting_date": ["between", [filters.from_date, filters.to_date]],
-        "einvoice_status": ["is", "set"],
-        "company": filters.company,
-    }
-    if filters.customer:
-        query_filters["customer"] = filters.customer
-    if filters.status:
-        query_filters["einvoice_status"] = filters.status
+    conditions = get_conditions(filters)
 
-    data = frappe.get_all(
-        "Sales Invoice",
-        filters=query_filters,
-        fields=[d.get("fieldname") for d in get_columns()],
+    data = frappe.db.sql(
+        """
+        SELECT
+            si.posting_date,
+            einv_log.sales_invoice,
+            si.einvoice_status,
+            si.customer,
+            si.is_return,
+            einv_log.acknowledgement_number,
+            einv_log.acknowledged_on,
+            einv_log.irn,
+            si.base_grand_total
+        FROM
+            `tabSales Invoice` as si,
+            `tabe-Invoice Log` as einv_log
+        WHERE
+            si.name = einv_log.sales_invoice
+            {0}
+    """.format(
+            conditions
+        )
     )
 
     return data
+
+
+def get_conditions(filters=None):
+    conditions = ""
+
+    conditions += " AND si.posting_date BETWEEN '%s' and '%s'" % (
+        filters.get("from_date"),
+        filters.get("to_date"),
+    )
+
+    conditions += " AND si.company = '{0}'".format(filters.get("company"))
+
+    if filters.get("status"):
+        conditions += " AND si.einvoice_status = '{0}'".format(filters.get("status"))
+
+    if filters.get("customer"):
+        conditions += " AND si.customer = '{0}'".format(filters.get("customer"))
+
+    return conditions
 
 
 def get_columns():
