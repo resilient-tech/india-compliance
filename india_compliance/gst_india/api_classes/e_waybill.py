@@ -9,6 +9,9 @@ class EWaybillAPI(BaseAPI):
         self.api_name = "e-Waybill"
         self.base_path = "ewb/ewayapi"
 
+        if not self.settings.enable_e_waybill:
+            frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
+
         if self.sandbox:
             company_gstin = "05AAACG2115R1ZN"
             self.username = "05AAACG2115R1ZN"
