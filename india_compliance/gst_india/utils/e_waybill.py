@@ -7,6 +7,7 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
+    SUB_SUPPLY_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
 )
 from india_compliance.gst_india.utils import (
@@ -26,7 +27,7 @@ PERMITTED_DOCTYPES = {"Sales Invoice", "Delivery Note"}
 
 
 @frappe.whitelist()
-def generate_e_waybill_json(doctype: str, docnames):
+def generate_e_waybill_json(doctype: str, docnames, values=None):
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
     ewb_data = {
         "version": "1.0.0621",
@@ -36,6 +37,11 @@ def generate_e_waybill_json(doctype: str, docnames):
     for doc in docnames:
         doc = frappe.get_doc(doctype, doc)
         doc.check_permission("submit")
+
+        if values:
+            update_transaction(doc, frappe.parse_json(values))
+            send_updated_doc(doc)
+
         ewb_data["billLists"].append(EWaybillData(doc, for_json=True).get_data())
 
     return frappe.as_json(ewb_data, indent=4)
@@ -101,12 +107,12 @@ def log_and_process_e_waybill_generation(doc, result):
         {
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
-                result.get("ewayBillDate" if not irn else "EwbDt", day_first=not irn)
+                result.get("ewayBillDate" if not irn else "EwbDt"),
+                day_first=not irn,
             ),
             "valid_upto": parse_datetime(
-                result.get(
-                    "validUpto" if not irn else "EwbValidTill", day_first=not irn
-                )
+                result.get("validUpto" if not irn else "EwbValidTill"),
+                day_first=not irn,
             ),
             "reference_doctype": doc.doctype,
             "reference_name": doc.name,
@@ -410,6 +416,9 @@ def update_transaction(doc, values):
 
     doc.db_set(data)
 
+    if doc.doctype == "Delivery Note":
+        doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+
 
 #######################################################################################
 ### e-Waybill Data Generation #########################################################
@@ -642,6 +651,14 @@ class EWaybillData(GSTTransactionData):
 
             if self.doc.export_type == "Without Payment of Tax":
                 self.transaction_details.document_type = "BIL"
+
+        if self.doc.doctype == "Delivery Note":
+            self.transaction_details.update(
+                {
+                    "sub_supply_type": self.doc._sub_supply_type,
+                    "document_type": "CHL",
+                }
+            )
 
     def get_party_address_details(self):
         transaction_type = 1

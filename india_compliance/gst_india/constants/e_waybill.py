@@ -27,19 +27,20 @@ UPDATE_VEHICLE_REASON_CODES = {
 }
 
 SUB_SUPPLY_TYPES = {
-    1: "Supply",
-    2: "Import",
-    3: "Export",
-    4: "Job Work",
-    5: "For Own Use",
-    6: "Job work Returns",
-    7: "Sales Return",
-    8: "Others",
-    9: "SKD/CKD",
-    10: "Line Sales",
-    11: "Recipient Not Known",
-    12: "Exhibition or Fairs",
+    "Supply": 1,
+    "Import": 2,
+    "Export": 3,
+    "Job Work": 4,
+    "For Own Use": 5,
+    "Job Work Returns": 6,
+    "Sales Return": 7,
+    "Others": 8,
+    "SKD/CKD": 9,
+    "Line Sales": 10,
+    "Recipient Not Known": 11,
+    "Exhibition or Fairs": 12,
 }
+
 
 TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4}
 TRANSPORT_TYPES = {
