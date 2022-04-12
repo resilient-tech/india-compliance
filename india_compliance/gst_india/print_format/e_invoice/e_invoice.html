@@ -51,7 +51,7 @@
 			</div>
 		</div>
 		<div class="col-xs-4 column-break">
-			<img src="{{ get_qr_code(doc.signed_qr_code, scale=2) }}" width="175px" style="float: right;">
+			<img src="data:image/png;base64,{{ get_qr_code(doc.signed_qr_code, scale=2) }}" width="175px" style="float: right;">
 		</div>
 	</div>
 	<h5 class="font-bold" style="margin-top: 15px; margin-bottom: 10px;">2. Party Details</h5>

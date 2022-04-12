@@ -75,15 +75,14 @@ def get_qr_code(qr_text, scale=5):
 
 def get_ewaybill_barcode(ewaybill):
     stream = BytesIO()
-    writer = ImageWriter()
-    writer.set_options(
+    Code128(str(ewaybill), writer=ImageWriter()).write(
+        stream,
         {
-            "background": "transparent",
+            "module_width": 0.4,
             "text_distance": 2,
-        }
+            "font_size": 20,
+        },
     )
-
-    Code128(str(ewaybill), writer=ImageWriter()).write(stream)
     barcode_base64 = base64.b64encode(stream.getbuffer()).decode()
     stream.close()
 
