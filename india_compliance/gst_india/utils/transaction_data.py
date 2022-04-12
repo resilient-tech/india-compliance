@@ -12,10 +12,10 @@ from india_compliance.gst_india.constants.e_waybill import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
-ALLOWED_CHARACTERS = {
-    0: re.compile(r"[^A-Za-z0-9]"),
-    1: re.compile(r"[^A-Za-z0-9\-\/. ]"),
-    2: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
+REGEX_MAP = {
+    1: re.compile(r"[^A-Za-z0-9]"),
+    2: re.compile(r"[^A-Za-z0-9\-\/. ]"),
+    3: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
 }
 
 
@@ -140,13 +140,17 @@ class GSTTransactionData:
                         self.doc.mode_of_transport
                     ),
                     "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
-                    "vehicle_no": self.sanitize_vehicle_no(self.doc.vehicle_no),
-                    "lr_no": self.sanitize_value(self.doc.lr_no, False),
+                    "vehicle_no": self.sanitize_value(self.doc.vehicle_no, 1),
+                    "lr_no": self.sanitize_value(self.doc.lr_no, 2, max_length=15),
                     "lr_date": format_date(self.doc.lr_date, self.DATE_FORMAT)
                     if self.doc.lr_no
                     else "",
                     "gst_transporter_id": self.doc.gst_transporter_id or "",
-                    "transporter_name": self.doc.transporter_name or "",
+                    "transporter_name": self.sanitize_value(
+                        self.doc.transporter_name, 3, max_length=25
+                    )
+                    if self.doc.transporter_name
+                    else "",
                 }
             )
 
@@ -191,14 +195,16 @@ class GSTTransactionData:
         self.item_list = []
 
         for row in self.doc.items:
+            uom = row.uom.upper()
+
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
                     "qty": abs(self.rounded(row.qty, 3)),
                     "taxable_value": abs(self.rounded(row.taxable_value)),
                     "hsn_code": row.gst_hsn_code,
-                    "item_name": self.sanitize_value(row.item_name),
-                    "uom": row.uom if UOMS.get(row.uom) else "OTH",
+                    "item_name": self.sanitize_value(row.item_name, 3, max_length=300),
+                    "uom": uom if uom in UOMS else "OTH",
                 }
             )
             self.update_item_details(item_details, row)
@@ -291,10 +297,10 @@ class GSTTransactionData:
             {
                 "gstin": address.get("gstin") or "URP",
                 "state_number": int(address.gst_state_number),
-                "address_title": self.sanitize_value(address.address_title, False),
-                "address_line1": self.sanitize_value(address.address_line1),
-                "address_line2": self.sanitize_value(address.address_line2),
-                "city": self.sanitize_value(address.city, max_length=50),
+                "address_title": self.sanitize_value(address.address_title, 2),
+                "address_line1": self.sanitize_value(address.address_line1, 3),
+                "address_line2": self.sanitize_value(address.address_line2, 3),
+                "city": self.sanitize_value(address.city, 3, max_length=50),
                 "pincode": int(address.pincode),
             }
         )
@@ -367,25 +373,21 @@ class GSTTransactionData:
     @staticmethod
     def sanitize_value(
         value,
-        allow_special_characters=True,
-        min_length=0,
+        regex=None,
+        min_length=3,
         max_length=100,
+        truncate=True,
     ):
         if not value or len(value) < min_length:
             return
 
-        value = re.sub(
-            ALLOWED_CHARACTERS[2 if allow_special_characters else 1], "", value
-        )
+        if regex:
+            value = re.sub(REGEX_MAP[regex], "", value)
 
-        return value[:max_length]
-
-    @staticmethod
-    def sanitize_vehicle_no(vehicle_no):
-        if not vehicle_no:
+        if not truncate and len(value) > max_length:
             return
 
-        return re.sub(ALLOWED_CHARACTERS[0], "", vehicle_no)
+        return value[:max_length]
 
 
 def validate_non_gst_items(doc, throw=True):

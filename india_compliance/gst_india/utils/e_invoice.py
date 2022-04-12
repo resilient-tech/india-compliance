@@ -229,17 +229,21 @@ class EInvoiceData(GSTTransactionData):
                     if item.qty
                     else abs(self.rounded(item.taxable_value, 3))
                 ),
-                "barcode": item.barcode,
+                "barcode": self.sanitize_value(
+                    item.barcode, max_length=30, truncate=False
+                ),
             }
         )
 
-        if item.batch_no:
+        if batch_no := self.sanitize_value(
+            item.batch_no, max_length=20, truncate=False
+        ):
             batch_expiry_date = frappe.db.get_value(
                 "Batch", item.batch_no, "expiry_date"
             )
             item_details.update(
                 {
-                    "batch_number": item.batch_no,
+                    "batch_number": batch_no,
                     "batch_expiry_date": format_date(
                         batch_expiry_date, self.DATE_FORMAT
                     ),
@@ -290,14 +294,14 @@ class EInvoiceData(GSTTransactionData):
 
         self.transaction_details.update(
             {
-                "payee_name": self.doc.company if paid_amount else "",
-                "mode_of_payment": ", ".join(
-                    d.mode_of_payment for d in self.doc.payments or ()
-                ),
+                "payee_name": self.sanitize_value(self.doc.company)
+                if paid_amount
+                else "",
+                "mode_of_payment": self.get_mode_of_payment(),
                 "paid_amount": paid_amount,
                 "credit_days": credit_days,
                 "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
-                "payment_terms": self.doc.payment_terms_template,
+                "payment_terms": self.sanitize_value(self.doc.payment_terms_template),
                 "grand_total": (
                     abs(self.rounded(self.doc.grand_total))
                     if self.doc.currency != "INR"
@@ -305,6 +309,16 @@ class EInvoiceData(GSTTransactionData):
                 ),
             }
         )
+
+    def get_mode_of_payment(self):
+        modes_of_payment = set()
+        for payment in self.doc.payments or ():
+            modes_of_payment.add(payment.mode_of_payment)
+
+        if not modes_of_payment:
+            return
+
+        return self.sanitize_value(", ".join(modes_of_payment), max_length=18)
 
     def get_supply_type(self):
         supply_type = GST_CATEGORIES[self.doc.gst_category]
@@ -342,8 +356,10 @@ class EInvoiceData(GSTTransactionData):
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = self.doc.customer_name or self.doc.customer
-        self.company_address.legal_name = self.doc.company
+        self.billing_address.legal_name = self.sanitize_value(
+            self.doc.customer_name or self.doc.customer
+        )
+        self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
     def get_invoice_data(self):
         if self.sandbox:

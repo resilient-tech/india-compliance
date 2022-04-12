@@ -479,7 +479,7 @@ class EWaybillData(GSTTransactionData):
             "fromPlace": dispatch_address.city,
             "fromState": dispatch_address.state_number,
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
-            "reasonRem": self.sanitize_value(values.remark),
+            "reasonRem": self.sanitize_value(values.remark, 3),
             "transDocNo": self.transaction_details.lr_no,
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
