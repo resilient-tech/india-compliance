@@ -1,8 +1,8 @@
 {
  "absolute_value": 0,
- "align_labels_right": 1,
+ "align_labels_right": 0,
  "creation": "2022-03-27 16:32:27.037976",
- "custom_format": 0,
+ "custom_format": 1,
  "default_print_language": "en",
  "disabled": 0,
  "doc_type": "e-Waybill Log",
@@ -11,12 +11,12 @@
  "font_size": 14,
  "html": "{% include \"india_compliance/gst_india/print_format/e_waybill/e_waybill.html\" %}",
  "idx": 0,
- "line_breaks": 1,
+ "line_breaks": 0,
  "margin_bottom": 0.0,
  "margin_left": 0.0,
  "margin_right": 0.0,
  "margin_top": 0.0,
- "modified": "2022-04-11 10:46:28.812855",
+ "modified": "2022-04-12 10:25:56.394793",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill",
@@ -26,6 +26,6 @@
  "print_format_builder_beta": 0,
  "print_format_type": "Jinja",
  "raw_printing": 0,
- "show_section_headings": 1,
+ "show_section_headings": 0,
  "standard": "Yes"
 }

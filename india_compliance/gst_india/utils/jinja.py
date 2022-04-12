@@ -40,19 +40,21 @@ def get_state(state_number):
 def get_sub_supply_type(code):
     code = int(code)
 
-    for sub_supply_type, code_number in SUB_SUPPLY_TYPES.items():
-        if code_number == code:
+    for sub_supply_type, _code in SUB_SUPPLY_TYPES.items():
+        if _code == code:
             return sub_supply_type
+
+
+def get_transport_mode(code):
+    code = int(code)
+
+    for transport_mode, _code in TRANSPORT_MODES.items():
+        if _code == code:
+            return transport_mode
 
 
 def get_transport_type(code):
     return TRANSPORT_TYPES[int(code)]
-
-
-def get_transport_mode(code):
-    for transport_mode, _code in TRANSPORT_MODES.items():
-        if int(_code) == code:
-            return transport_mode
 
 
 def get_e_waybill_qr_code(e_waybill, gstin, ewaybill_date):
@@ -73,7 +75,13 @@ def get_qr_code(qr_text, scale=5):
 
 def get_ewaybill_barcode(ewaybill):
     stream = BytesIO()
-    # options = {"font_size": 10}
+    writer = ImageWriter()
+    writer.set_options(
+        {
+            "background": "transparent",
+            "text_distance": 2,
+        }
+    )
 
     Code128(str(ewaybill), writer=ImageWriter()).write(stream)
     barcode_base64 = base64.b64encode(stream.getbuffer()).decode()
