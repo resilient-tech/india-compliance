@@ -73,18 +73,24 @@ def get_data(filters=None):
 def get_conditions(filters=None):
     conditions = ""
 
-    conditions += " AND si.posting_date BETWEEN '%s' and '%s'" % (
-        filters.get("from_date"),
-        filters.get("to_date"),
+    conditions += " AND si.posting_date BETWEEN %s and %s" % (
+        frappe.db.escape(filters.get("from_date")),
+        frappe.db.escape(filters.get("to_date")),
     )
 
-    conditions += " AND si.company = '{0}'".format(filters.get("company"))
+    conditions += " AND si.company = {0}".format(
+        frappe.db.escape(filters.get("company"))
+    )
 
     if filters.get("status"):
-        conditions += " AND si.einvoice_status = '{0}'".format(filters.get("status"))
+        conditions += " AND si.einvoice_status = {0}".format(
+            frappe.db.escape(filters.get("status"))
+        )
 
     if filters.get("customer"):
-        conditions += " AND si.customer = '{0}'".format(filters.get("customer"))
+        conditions += " AND si.customer = {0}".format(
+            frappe.db.escape(filters.get("customer"))
+        )
 
     return conditions
 
