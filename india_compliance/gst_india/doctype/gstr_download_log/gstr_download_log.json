@@ -1,0 +1,67 @@
+{
+ "actions": [],
+ "creation": "2022-04-12 18:57:59.122090",
+ "description": "This document will maintain time log of latest download of GST Returns",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "gstin",
+  "gst_return",
+  "classification",
+  "return_period",
+  "last_updated_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "label": "GSTIN"
+  },
+  {
+   "fieldname": "gst_return",
+   "fieldtype": "Data",
+   "label": "GST Return"
+  },
+  {
+   "fieldname": "classification",
+   "fieldtype": "Select",
+   "label": "Classification",
+   "options": "\nB2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nIMPG\nIMPGSEZ"
+  },
+  {
+   "fieldname": "return_period",
+   "fieldtype": "Data",
+   "label": "Return Period"
+  },
+  {
+   "fieldname": "last_updated_on",
+   "fieldtype": "Datetime",
+   "label": "Last updated on"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-04-12 18:57:59.122090",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR Download Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
