@@ -6,41 +6,34 @@
 
 <html lang="en">
     <body>
-        <div class="pagelayout">
-            <table class="table_css table borderless" border="0">
+        <div class="page-layout">
+            <table class="table borderless">
                 <tbody>
                     <tr>
                         <td colspan="2" class="text-center">
-                            <span class="title_model">
-                                <span>e-Waybill</span>
-                            </span>
+                            <h1 class="title">e-Waybill</h1>
                         </td>
                     </tr>
 
                     <tr>
                         <td colspan="2" class="text-center">
-                            <div style="height: 2px"></div>
-                            <div>
-                                <img
-                                    src="data:image/png;base64,{{ get_e_waybill_qr_code(data.ewbNo,data.userGstin, data.ewayBillDate) }}"
-                                    width="95"
-                                    height="95"
-                                    style="width: 95 !important"
-                                />
-                            </div>
+                            <img
+                                src="data:image/png;base64,{{ get_e_waybill_qr_code(data.ewbNo,data.userGstin, data.ewayBillDate) }}"
+                                class="qr-code"
+                            />
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            <table class="table_css table borderless" border="0">
+            <table class="table borderless">
                 <tbody>
                     <tr>
                         <td style="width: 200px">
                             <span>e-Waybill No:</span>
                         </td>
                         <td>
-                            <span class="data-no-span">
+                            <span class="e-waybill-number">
                                 <strong>{{ add_spacing(data.ewbNo, 4) }}</strong>
                             </span>
                         </td>
@@ -88,9 +81,10 @@
                             </span>
                         </td>
                     </tr>
-                    <tr class="eway-section">
-                        <td colspan="2" style="height: 20px; font-weight: bold">
-                            Part - A
+                    <tr>
+                        <td colspan="2">
+                            <div class="section-separator"></div>
+                            <strong>Part - A</strong>
                         </td>
                     </tr>
                     <tr>
@@ -196,8 +190,9 @@
                         </td>
                     </tr>
                     {% if data.VehiclListDetails|length > 0 %}
-                    <tr class="eway-section">
-                        <td colspan="2" style="height: 25px;">
+                    <tr>
+                        <td colspan="2">
+                            <div class="section-separator"></div>
                             <strong>Part - B</strong>
                         </td>
                     </tr>
@@ -208,7 +203,7 @@
                                     cellspacing="0"
                                     cellpadding="3"
                                     rules="all"
-                                    class="table table-responsive gvtables"
+                                    class="table table-responsive vehicle-info"
                                     border="1">
                                     <tbody>
                                         <tr>
@@ -257,29 +252,16 @@
                     {% endif %}
                     <tr>
                         <td colspan="2" class="text-center">
-                            <div style="height: 2px"></div>
-                            <div class="dashboard-section">
-                                <div class="barcode-label-container">
-                                <div id="barcode-label" class="barcode-label">
-
-                                <div class="text-center">
-                                        <span class="barcode-data">
-                                            <img class="barcode" src="data:image/png;base64,{{ get_ewaybill_barcode(data.ewbNo) }}">
-                                      </span>
-                                  </div>
-
-                                </div>
-                                </div>
-                                </div>
+                            <img class="barcode" src="data:image/png;base64,{{ get_ewaybill_barcode(data.ewbNo) }}">
                         </td>
                     </tr>
-                    <tr class="eway-section">
-                        <td></td>
+                    <tr>
+                        <td colspan="2">
+                            <div class="section-separator"></div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
-            <br />
-            <br />
         </div>
     </body>
 </html>
