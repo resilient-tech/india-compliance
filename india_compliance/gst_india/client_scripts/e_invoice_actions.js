@@ -59,11 +59,7 @@ frappe.ui.form.on("Sales Invoice", {
                 resolve();
             };
 
-            const e_invoice_enabled =
-                frappe.boot.gst_settings.enable_api &&
-                frappe.boot.gst_settings.enable_e_invoice;
-
-            if (!is_irn_cancellable(frm) || !e_invoice_enabled) {
+            if (!is_irn_cancellable(frm) || !frappe.boot.gst_settings.enable_e_invoice) {
                 const d = frappe.warn(
                     __("Cannot Cancel IRN"),
                     __(
