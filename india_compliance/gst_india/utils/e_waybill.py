@@ -714,7 +714,11 @@ class EWaybillData(GSTTransactionData):
                 }
             )
             self.company_address.gstin = "05AAACG2115R1ZN"
-            self.billing_address.gstin = "05AAACG2140A1ZL"
+            self.billing_address.gstin = (
+                "05AAACG2140A1ZL"
+                if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
+                else "05AAACG2115R1ZN"
+            )
 
         data = {
             "userGstin": self.transaction_details.company_gstin,
