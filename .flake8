@@ -52,7 +52,6 @@ ignore =
     E702,
     E703,
     E741,
-    F401,
     F403,
     W191,
     W291,
@@ -62,5 +61,7 @@ ignore =
     W503,
     W504,
 
+per-file-ignores =
+    __init__.py:F401
 
 max-line-length = 200
