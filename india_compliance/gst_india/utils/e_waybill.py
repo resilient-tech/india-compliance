@@ -98,10 +98,12 @@ def log_and_process_e_waybill_generation(doc, result):
         {
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
-                result.get("ewayBillDate" if not irn else "EwbDt")
+                result.get("ewayBillDate" if not irn else "EwbDt", day_first=not irn)
             ),
             "valid_upto": parse_datetime(
-                result.get("validUpto" if not irn else "EwbValidTill")
+                result.get(
+                    "validUpto" if not irn else "EwbValidTill", day_first=not irn
+                )
             ),
             "reference_name": doc.name,
         },
@@ -141,7 +143,7 @@ def _cancel_e_waybill(doc, values):
             "is_cancelled": 1,
             "cancel_reason_code": CANCEL_REASON_CODES[values.reason],
             "cancel_remark": values.remark if values.remark else values.reason,
-            "cancelled_on": parse_datetime(result.cancelDate),
+            "cancelled_on": parse_datetime(result.cancelDate, day_first=True),
         },
     )
 
@@ -190,7 +192,7 @@ def update_vehicle_info(*, docname, values):
         {
             "name": doc.ewaybill,
             "is_latest_data": 0,
-            "valid_upto": parse_datetime(result.validUpto),
+            "valid_upto": parse_datetime(result.validUpto, day_first=True),
         },
         fetch=values.update_e_waybill_data,
         comment=comment,
