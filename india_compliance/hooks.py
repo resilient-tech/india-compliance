@@ -1,3 +1,5 @@
+from . import __version__ as app_version
+
 app_name = "india_compliance"
 app_title = "India Compliance"
 app_publisher = "Resilient Tech"
