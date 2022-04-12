@@ -21,27 +21,36 @@ function setup_e_waybill_actions(doctype) {
         refresh(frm) {
             if (
                 frm.doc.docstatus != 1 ||
-                !is_e_waybill_applicable(frm) ||
-                frm.is_dirty()
+                frm.is_dirty() ||
+                !is_e_waybill_applicable(frm)
             )
                 return;
 
-            if (
-                !frm.doc.ewaybill &&
-                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
-            ) {
-                frm.add_custom_button(
-                    __("Generate"),
-                    () => show_generate_e_waybill_dialog(frm, gst_settings.enable_api),
-                    "e-Waybill"
-                );
+            if (!frm.doc.ewaybill) {
+                if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
+                    frm.add_custom_button(
+                        __("Generate"),
+                        () =>
+                            show_generate_e_waybill_dialog(
+                                frm,
+                                gst_settings.enable_api
+                            ),
+                        "e-Waybill"
+                    );
+                }
+
+                if (!frm.doc.is_return && doctype === "Sales Invoice") {
+                    frm.dashboard.add_comment(
+                        "e-Waybill is applicable for this invoice and not yet generated or updated.",
+                        "yellow",
+                        true
+                    );
+                }
+
+                return;
             }
 
-            if (
-                !frm.doc.ewaybill ||
-                !gst_settings.enable_api ||
-                !is_e_waybill_generated_using_api(frm)
-            ) {
+            if (!gst_settings.enable_api || !is_e_waybill_generated_using_api(frm)) {
                 return;
             }
 
@@ -117,6 +126,38 @@ function setup_e_waybill_actions(doctype) {
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 { doctype: frm.doctype, docname: frm.doc.name }
             );
+        },
+        before_cancel(frm) {
+            // if IRN is present, e-Waybill gets cancelled in e-Invoice action
+            if (!gst_settings.enable_api || frm.doc.irn || !frm.doc.ewaybill) return;
+
+            frappe.validated = false;
+
+            return new Promise(resolve => {
+                const continueCancellation = () => {
+                    frappe.validated = true;
+                    resolve();
+                };
+
+                if (!is_e_waybill_cancellable(frm)) {
+                    const d = frappe.warn(
+                        __("Cannot Cancel e-Waybill"),
+                        __(
+                            `The e-Waybill created against this invoice cannot be
+                            cancelled.<br><br>
+
+                            Do you want to continue anyway?`
+                        ),
+                        continueCancellation,
+                        __("Yes")
+                    );
+
+                    d.set_secondary_action_label(__("No"));
+                    return;
+                }
+
+                return show_cancel_e_waybill_dialog(frm, continueCancellation);
+            });
         },
     });
 }

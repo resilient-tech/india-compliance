@@ -69,8 +69,8 @@ frappe.ui.form.on("Sales Invoice", {
                     __(
                         `You should ideally create a <strong>Credit Note</strong>
                         against this invoice instead of cancelling it. If you
-                        choose to proceed, you'll be required to update the IRN in the
-                        e-Invoice portal manually.<br><br>
+                        choose to proceed, you'll be required to manually exclude this
+                        IRN when filing GST Returns.<br><br>
 
                         Are you sure you want to continue?`
                     ),
