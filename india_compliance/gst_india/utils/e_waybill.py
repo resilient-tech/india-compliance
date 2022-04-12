@@ -562,16 +562,6 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        if (
-            self.doc.doctype == "Sales Invoice"
-            and self.doc.base_grand_total < self.settings.e_waybill_threshold
-        ):
-            frappe.throw(
-                _("e-Waybill is only applicable for Invoice Value above {0}").format(
-                    self.settings.e_waybill_threshold
-                )
-            )
-
         # TODO: Add support for HSN Summary
         item_limit = 1000 if self.doc.get("irn") else 250
         if len(self.doc.items) > item_limit:

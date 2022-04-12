@@ -39,7 +39,7 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (!frm.doc.is_return && doctype === "Sales Invoice") {
+                if (!frm.doc.is_return && has_e_waybill_threshold_met(frm)) {
                     frm.dashboard.add_comment(
                         "e-Waybill is applicable for this invoice and not yet generated or updated.",
                         "yellow",
@@ -109,14 +109,14 @@ function setup_e_waybill_actions(doctype) {
         },
         async on_submit(frm) {
             if (
-                frm.doc.doctype !== "Sales Invoice" ||
                 frm.doc.ewaybill ||
                 frm.doc.is_return ||
                 !gst_settings.enable_api ||
                 !gst_settings.auto_generate_e_waybill ||
                 (gst_settings.enable_e_invoice &&
                     gst_settings.auto_generate_e_invoice) ||
-                !is_e_waybill_applicable(frm)
+                !is_e_waybill_applicable(frm) ||
+                !has_e_waybill_threshold_met(frm)
             )
                 return;
 
