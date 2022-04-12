@@ -17,7 +17,7 @@ E_INVOICE_FIELDS = {
             "print_hide": 1,
             "depends_on": (
                 'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed'
-                ' Export"], doc.gst_category) && doc.irn_cancelled === 0'
+                ' Export"], doc.gst_category)'
             ),
             "translatable": 0,
         },
