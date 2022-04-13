@@ -9,6 +9,9 @@ class EInvoiceAPI(BaseAPI):
         self.api_name = "e-Invoice"
         self.base_path = "ei/api"
 
+        if not self.settings.enable_e_invoice:
+            frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
+
         if self.sandbox:
             company_gstin = "01AMBPG7773M002"
             self.username = "adqgspjkusr1"

@@ -27,19 +27,20 @@ UPDATE_VEHICLE_REASON_CODES = {
 }
 
 SUB_SUPPLY_TYPES = {
-    1: "Supply",
-    2: "Import",
-    3: "Export",
-    4: "Job Work",
-    5: "For Own Use",
-    6: "Job work Returns",
-    7: "Sales Return",
-    8: "Others",
-    9: "SKD/CKD",
-    10: "Line Sales",
-    11: "Recipient Not Known",
-    12: "Exhibition or Fairs",
+    "Supply": 1,
+    "Import": 2,
+    "Export": 3,
+    "Job Work": 4,
+    "For Own Use": 5,
+    "Job Work Returns": 6,
+    "Sales Return": 7,
+    "Others": 8,
+    "SKD/CKD": 9,
+    "Line Sales": 10,
+    "Recipient Not Known": 11,
+    "Exhibition or Fairs": 12,
 }
+
 
 TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4}
 TRANSPORT_TYPES = {
@@ -105,6 +106,9 @@ DELIVERY_NOTE_FIELDS = [
         "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
+        "description": (
+            "Set as zero to update distance as per the e-Waybill portal (if available)"
+        ),
     },
     {
         "fieldname": "gst_transporter_id",
@@ -130,7 +134,8 @@ DELIVERY_NOTE_FIELDS = [
         "label": "GST Vehicle Type",
         "fieldtype": "Select",
         "options": "Regular\nOver Dimensional Cargo (ODC)",
-        "depends_on": 'eval:(doc.mode_of_transport === "Road")',
+        "depends_on": 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
@@ -140,7 +145,7 @@ DELIVERY_NOTE_FIELDS = [
         "fieldname": "ewaybill",
         "label": "e-Waybill No.",
         "fieldtype": "Data",
-        "depends_on": "eval:(doc.docstatus === 1)",
+        "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
         "allow_on_submit": 1,
         "insert_after": "customer_name",
         "translatable": 0,

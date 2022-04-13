@@ -12,21 +12,21 @@ from india_compliance.gst_india.constants.e_waybill import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
-ALLOWED_CHARACTERS = {
-    0: re.compile(r"[^A-Za-z0-9]"),
-    1: re.compile(r"[^A-Za-z0-9\-\/. ]"),
-    2: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
+REGEX_MAP = {
+    1: re.compile(r"[^A-Za-z0-9]"),
+    2: re.compile(r"[^A-Za-z0-9\-\/. ]"),
+    3: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
 }
 
 
-class GSTInvoiceData:
+class GSTTransactionData:
     DATE_FORMAT = "dd/mm/yyyy"
 
     def __init__(self, doc):
         self.doc = doc
         self.sandbox = frappe.conf.use_gst_api_sandbox or frappe.flags.in_test
         self.settings = frappe.get_cached_doc("GST Settings")
-        self.invoice_details = frappe._dict()
+        self.transaction_details = frappe._dict()
 
         # "CGST Account - TC": "cgst_account"
         self.gst_accounts = {
@@ -34,7 +34,7 @@ class GSTInvoiceData:
             for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
         }
 
-    def get_invoice_details(self):
+    def get_transaction_details(self):
         rounding_adjustment = self.rounded(self.doc.rounding_adjustment)
         if self.doc.is_return:
             rounding_adjustment = -rounding_adjustment
@@ -45,9 +45,9 @@ class GSTInvoiceData:
             else "base_rounded_total"
         )
 
-        self.invoice_details.update(
+        self.transaction_details.update(
             {
-                "invoice_date": format_date(self.doc.posting_date, self.DATE_FORMAT),
+                "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "base_total": abs(
                     self.rounded(sum(row.taxable_value for row in self.doc.items))
                 ),
@@ -57,38 +57,38 @@ class GSTInvoiceData:
                 ),
                 "discount_amount": 0,
                 "company_gstin": self.doc.company_gstin,
-                "invoice_number": self.doc.name,
+                "name": self.doc.name,
             }
         )
-        self.update_invoice_details()
-        self.get_invoice_tax_details()
+        self.update_transaction_details()
+        self.get_transaction_tax_details()
 
-    def update_invoice_details(self):
+    def update_transaction_details(self):
         # to be overrridden
         pass
 
-    def get_invoice_tax_details(self):
+    def get_transaction_tax_details(self):
         tax_totals = [f"total_{tax}_amount" for tax in GST_TAX_TYPES]
 
         for key in tax_totals:
-            self.invoice_details[key] = 0
+            self.transaction_details[key] = 0
 
         for row in self.doc.taxes:
             if not row.tax_amount or row.account_head not in self.gst_accounts:
                 continue
 
             tax = self.gst_accounts[row.account_head][:-8]
-            self.invoice_details[f"total_{tax}_amount"] = abs(
+            self.transaction_details[f"total_{tax}_amount"] = abs(
                 self.rounded(row.base_tax_amount_after_discount_amount)
             )
 
         # Other Charges
         current_total = 0
         for total in ["base_total", "rounding_adjustment", *tax_totals]:
-            current_total += self.invoice_details.get(total)
+            current_total += self.transaction_details.get(total)
 
-        self.invoice_details.other_charges = self.rounded(
-            (self.invoice_details.base_grand_total - current_total)
+        self.transaction_details.other_charges = self.rounded(
+            (self.transaction_details.base_grand_total - current_total)
         )
 
     def validate_mode_of_transport(self, throw=True):
@@ -129,31 +129,35 @@ class GSTInvoiceData:
         return True
 
     def get_transporter_details(self):
-        self.invoice_details.distance = (
+        self.transaction_details.distance = (
             self.doc.distance if self.doc.distance and self.doc.distance < 4000 else 0
         )
 
         if self.validate_mode_of_transport(False):
-            self.invoice_details.update(
+            self.transaction_details.update(
                 {
                     "mode_of_transport": TRANSPORT_MODES.get(
                         self.doc.mode_of_transport
                     ),
                     "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
-                    "vehicle_no": self.sanitize_vehicle_no(self.doc.vehicle_no),
-                    "lr_no": self.sanitize_value(self.doc.lr_no, False),
+                    "vehicle_no": self.sanitize_value(self.doc.vehicle_no, 1),
+                    "lr_no": self.sanitize_value(self.doc.lr_no, 2, max_length=15),
                     "lr_date": format_date(self.doc.lr_date, self.DATE_FORMAT)
                     if self.doc.lr_no
                     else "",
                     "gst_transporter_id": self.doc.gst_transporter_id or "",
-                    "transporter_name": self.doc.transporter_name or "",
+                    "transporter_name": self.sanitize_value(
+                        self.doc.transporter_name, 3, max_length=25
+                    )
+                    if self.doc.transporter_name
+                    else "",
                 }
             )
 
         #  Part A Only
         elif self.doc.gst_transporter_id:
             for_json = getattr(self, "for_json", False)
-            self.invoice_details.update(
+            self.transaction_details.update(
                 {
                     "mode_of_transport": 1 if for_json else "",
                     "vehicle_type": "R" if for_json else "",
@@ -165,7 +169,7 @@ class GSTInvoiceData:
                 }
             )
 
-    def validate_invoice(self):
+    def validate_transaction(self):
         posting_date = getdate(self.doc.posting_date)
 
         if posting_date > getdate():
@@ -191,14 +195,16 @@ class GSTInvoiceData:
         self.item_list = []
 
         for row in self.doc.items:
+            uom = row.uom.upper()
+
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
                     "qty": abs(self.rounded(row.qty, 3)),
                     "taxable_value": abs(self.rounded(row.taxable_value)),
                     "hsn_code": row.gst_hsn_code,
-                    "item_name": self.sanitize_value(row.item_name),
-                    "uom": row.uom if UOMS.get(row.uom) else "OTH",
+                    "item_name": self.sanitize_value(row.item_name, 3, max_length=300),
+                    "uom": uom if uom in UOMS else "OTH",
                 }
             )
             self.update_item_details(item_details, row)
@@ -291,10 +297,10 @@ class GSTInvoiceData:
             {
                 "gstin": address.get("gstin") or "URP",
                 "state_number": int(address.gst_state_number),
-                "address_title": self.sanitize_value(address.address_title, False),
-                "address_line1": self.sanitize_value(address.address_line1),
-                "address_line2": self.sanitize_value(address.address_line2),
-                "city": self.sanitize_value(address.city, max_length=50),
+                "address_title": self.sanitize_value(address.address_title, 2),
+                "address_line1": self.sanitize_value(address.address_line1, 3),
+                "address_line2": self.sanitize_value(address.address_line2, 3),
+                "city": self.sanitize_value(address.city, 3, max_length=50),
                 "pincode": int(address.pincode),
             }
         )
@@ -347,12 +353,16 @@ class GSTInvoiceData:
         if isinstance(d, dict):
             return {
                 k: v
-                for k, v in ((k, GSTInvoiceData.sanitize_data(v)) for k, v in d.items())
+                for k, v in (
+                    (k, GSTTransactionData.sanitize_data(v)) for k, v in d.items()
+                )
                 if _is_truthy(v)
             }
 
         if isinstance(d, list):
-            return [v for v in map(GSTInvoiceData.sanitize_data, d) if _is_truthy(v)]
+            return [
+                v for v in map(GSTTransactionData.sanitize_data, d) if _is_truthy(v)
+            ]
 
         return d
 
@@ -363,25 +373,21 @@ class GSTInvoiceData:
     @staticmethod
     def sanitize_value(
         value,
-        allow_special_characters=True,
-        min_length=0,
+        regex=None,
+        min_length=3,
         max_length=100,
+        truncate=True,
     ):
         if not value or len(value) < min_length:
             return
 
-        value = re.sub(
-            ALLOWED_CHARACTERS[2 if allow_special_characters else 1], "", value
-        )
+        if regex:
+            value = re.sub(REGEX_MAP[regex], "", value)
 
-        return value[:max_length]
-
-    @staticmethod
-    def sanitize_vehicle_no(vehicle_no):
-        if not vehicle_no:
+        if not truncate and len(value) > max_length:
             return
 
-        return re.sub(ALLOWED_CHARACTERS[0], "", vehicle_no)
+        return value[:max_length]
 
 
 def validate_non_gst_items(doc, throw=True):
@@ -390,7 +396,7 @@ def validate_non_gst_items(doc, throw=True):
             return
 
         frappe.throw(
-            _("This action cannot be performed for invoices with non-GST items"),
+            _("This action cannot be performed for transactions with non-GST items"),
             title=_("Invalid Data"),
         )
 
