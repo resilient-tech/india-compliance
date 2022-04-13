@@ -98,7 +98,10 @@ def validate_mandatory_fields(doc):
 
 
 def validate_fields_and_set_status_for_e_invoice(doc):
-    if not validate_e_invoice_applicability(doc, throw=False):
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
+        doc, gst_settings=gst_settings, throw=False
+    ):
         return
 
     for field in ("customer_address",):
