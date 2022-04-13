@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder import Case
 
 
 def execute(filters=None):
@@ -52,7 +53,7 @@ def get_data(filters=None):
             sales_invoice.posting_date,
             sales_invoice.einvoice_status,
             sales_invoice.customer,
-            sales_invoice.is_return,
+            Case().when(sales_invoice.is_return == 1, "Y").else_("N").as_("is_return"),
             sales_invoice.base_grand_total,
             e_invoice_log.sales_invoice,
             e_invoice_log.acknowledgement_number,
@@ -86,7 +87,7 @@ def get_columns():
         },
         {
             "fieldtype": "Link",
-            "fieldname": "name",
+            "fieldname": "sales_invoice",
             "label": _("Sales Invoice"),
             "options": "Sales Invoice",
             "width": 140,
@@ -104,7 +105,7 @@ def get_columns():
             "label": _("Customer"),
         },
         {
-            "fieldtype": "Check",
+            "fieldtype": "Data",
             "fieldname": "is_return",
             "label": _("Is Return"),
             "width": 85,
