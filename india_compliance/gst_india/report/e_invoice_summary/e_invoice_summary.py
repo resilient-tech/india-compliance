@@ -42,57 +42,38 @@ def validate_filters(filters=None):
 
 
 def get_data(filters=None):
-    conditions = get_conditions(filters)
-
-    data = frappe.db.sql(
-        """
-        SELECT
-            si.posting_date,
-            einv_log.sales_invoice,
-            si.einvoice_status,
-            si.customer,
-            si.is_return,
-            einv_log.acknowledgement_number,
-            einv_log.acknowledged_on,
-            einv_log.irn,
-            si.base_grand_total
-        FROM
-            `tabSales Invoice` as si,
-            `tabe-Invoice Log` as einv_log
-        WHERE
-            si.name = einv_log.sales_invoice
-            {0}
-    """.format(
-            conditions
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+    e_invoice_log = frappe.qb.DocType("e-Invoice Log")
+    query = (
+        frappe.qb.from_(sales_invoice)
+        .inner_join(e_invoice_log)
+        .on(sales_invoice.name == e_invoice_log.sales_invoice)
+        .select(
+            sales_invoice.posting_date,
+            sales_invoice.einvoice_status,
+            sales_invoice.customer,
+            sales_invoice.is_return,
+            sales_invoice.base_grand_total,
+            e_invoice_log.sales_invoice,
+            e_invoice_log.acknowledgement_number,
+            e_invoice_log.acknowledged_on,
+            e_invoice_log.irn,
         )
-    )
-
-    return data
-
-
-def get_conditions(filters=None):
-    conditions = ""
-
-    conditions += " AND si.posting_date BETWEEN %s and %s" % (
-        frappe.db.escape(filters.get("from_date")),
-        frappe.db.escape(filters.get("to_date")),
-    )
-
-    conditions += " AND si.company = {0}".format(
-        frappe.db.escape(filters.get("company"))
+        .where(
+            sales_invoice.posting_date[
+                filters.get("from_date") : filters.get("to_date")
+            ]
+        )
+        .where(sales_invoice.company == filters.get("company"))
     )
 
     if filters.get("status"):
-        conditions += " AND si.einvoice_status = {0}".format(
-            frappe.db.escape(filters.get("status"))
-        )
+        query = query.where(sales_invoice.einvoice_status == filters.get("status"))
 
     if filters.get("customer"):
-        conditions += " AND si.customer = {0}".format(
-            frappe.db.escape(filters.get("customer"))
-        )
+        query = query.where(sales_invoice.customer == filters.get("customer"))
 
-    return conditions
+    return query.run()
 
 
 def get_columns():
