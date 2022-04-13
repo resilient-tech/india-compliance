@@ -10,7 +10,6 @@ def validate(doc, method=None):
     validate_gst_category(doc.gst_category, doc.gstin)
     validate_overseas_gst_category(doc)
     validate_state(doc)
-    link_party(doc)
 
 
 def validate_overseas_gst_category(doc):
@@ -62,9 +61,11 @@ def validate_state(doc):
         )
 
 
-def link_party(doc):
-    if not doc.get("party_type") or not doc.get("party"):
+def link_party(doc, method=None):
+    if not (doc.get("party_type") and doc.get("party")):
         return
 
-    doc.address_title = doc.party
+    if not doc.address_title:
+        doc.address_title = doc.party
+
     doc.append("links", {"link_doctype": doc.party_type, "link_name": doc.party})

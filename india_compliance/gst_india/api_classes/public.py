@@ -28,7 +28,7 @@ class PublicAPI(BaseAPI):
     # "United Nation Body" - 0717UNO00157UNO, 0717UNO00211UN2, 2117UNO00002UNF
     # "Consulate or Embassy of Foreign Country" - 0717UNO00154UNU
 
-    # "Tax Collector (Electronic Commerce Operator)" - 29AABCF8078M1C8, 27AAECG3736E1C2 - Cannot be a part of GSTR1
+    # "Tax Collector (e-Commerce Operator)" - 29AABCF8078M1C8, 27AAECG3736E1C2 - Cannot be a part of GSTR1
     # "Non Resident Online Services Provider" - 9917SGP29001OST - Google - Cannot be a part of GSTR1
 
     # "Non Resident Taxable Person" -
@@ -43,10 +43,11 @@ class PublicAPI(BaseAPI):
             return
 
         gstin_info = self.get("search", params={"action": "TP", "gstin": gstin})
-
-        business_name = gstin_info.lgnm
-        if gstin_info.ctb == "Proprietorship":
-            business_name = gstin_info.tradeNam
+        business_name = (
+            gstin_info.tradeNam
+            if gstin_info.ctb == "Proprietorship"
+            else gstin_info.lgnm
+        )
 
         gstin_details = frappe._dict(
             gstin=gstin,
@@ -55,11 +56,8 @@ class PublicAPI(BaseAPI):
         )
 
         gstin_details.gst_category = self.GST_CATEGORIES[gstin_info.dty]
-        if gstin in ("URP", "NA"):
-            gstin_details.gst_category = self.GST_CATEGORIES["URP"]
 
-        permanent_address = gstin_info.get("pradr", {})
-        if permanent_address:
+        if permanent_address := gstin_info.get("pradr"):
             # permanent address will be at the first position
             addresses = [permanent_address] + gstin_info.get("adadr", [])
             gstin_details.all_addresses = list(map(self._get_address, addresses))
