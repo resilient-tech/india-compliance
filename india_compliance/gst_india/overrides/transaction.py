@@ -143,6 +143,7 @@ def validate_items(doc):
             items_with_duplicate_taxes.append(bold(row.item_code))
 
     if not has_gst_items:
+        validate_tax_accounts_for_non_gst(doc)
         return False
 
     if non_gst_items:

@@ -11,7 +11,6 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_hsn_code,
     validate_items,
     validate_mandatory_fields,
-    validate_tax_accounts_for_non_gst,
 )
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -59,7 +58,6 @@ def validate(doc, method=None):
 
     if validate_items(doc) is False:
         # If there are no GST items, then no need to proceed further
-        validate_tax_accounts_for_non_gst(doc)
         return
 
     set_place_of_supply(doc)
