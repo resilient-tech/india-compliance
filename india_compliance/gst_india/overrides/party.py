@@ -109,9 +109,9 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
     frappe.msgprint(message, title=_("Insufficient Permission"), indicator="yellow")
 
 
-# custom erpnext.selling.doctype.customer.customer.create_primary_address
+# modified version of erpnext.selling.doctype.customer.customer.create_primary_address
 def create_primary_address(doc, method=None):
-    if not doc.flags.is_new_doc or not doc.get("_address_line1"):
+    if not doc.is_new() or not doc.get("_address_line1"):
         return
 
     from frappe.contacts.doctype.address.address import get_address_display
@@ -127,31 +127,30 @@ def make_address(doc):
     required_fields = []
     for field in ("city", "country"):
         if not doc.get(field):
-            required_fields.append(f"<li>{field.title()}</li>")
+            required_fields.append(f"<li>{_(doc.meta.get_label(field))}</li>")
 
     if required_fields:
         frappe.throw(
             "{0} <br><br> <ul>{1}</ul>".format(
-                _("Following fields are mandatory to create address:"),
+                _("Following fields are mandatory to create Address:"),
                 "\n".join(required_fields),
             ),
-            title=_("Missing Values Required"),
+            frappe.MandatoryError,
+            title=_("Missing Required Values"),
         )
 
     return frappe.get_doc(
         {
             "doctype": "Address",
-            "address_title": doc.get("name"),
+            "address_title": doc.name,
             "address_line1": doc.get("_address_line1"),
             "address_line2": doc.get("address_line2"),
             "city": doc.get("city"),
             "state": doc.get("state"),
             "pincode": doc.get("pincode"),
             "country": doc.get("country"),
-            "gstin": doc.get("gstin"),
-            "gst_category": doc.get("gst_category"),
-            "links": [
-                {"link_doctype": doc.get("doctype"), "link_name": doc.get("name")}
-            ],
+            "gstin": doc.gstin,
+            "gst_category": doc.gst_category,
+            "links": [{"link_doctype": doc.doctype, "link_name": doc.name}],
         }
     ).insert()

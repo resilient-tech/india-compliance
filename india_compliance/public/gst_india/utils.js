@@ -1,4 +1,4 @@
-frappe.provide("ic.utils");
+frappe.provide("ic");
 
 ic.get_gstin_query = company => {
     if (!company) {
@@ -17,7 +17,7 @@ ic.get_gstin_query = company => {
     };
 };
 
-ic.utils.get_party_type = function (doctype) {
+ic.get_party_type = function (doctype) {
     return in_list(
         ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"],
         doctype
@@ -27,7 +27,7 @@ ic.utils.get_party_type = function (doctype) {
 };
 
 export async function autofill_gstin_fields(frm) {
-    const gstin = frm.doc._gstin || frm.doc.gstin;
+    const gstin = frm.doc._gstin;
     if (!gstin || gstin.length != 15) return;
 
     const gstin_info = await get_gstin_details(gstin);
@@ -66,14 +66,17 @@ function get_gstin_details(gstin) {
 
 function map_gstin_details(doc, gstin_info) {
     if (!gstin_info) return;
-    if (gstin_info.permanent_address)
+    if (gstin_info.permanent_address) {
         update_address_info(doc, gstin_info.permanent_address);
+    }
+
     update_party_info(doc, gstin_info);
 }
 
 function update_party_info(doc, gstin_info) {
     doc.gstin = doc._gstin;
-    doc.supplier_name = doc.customer_name = gstin_info.business_name;
+    const party_name_field = `${ic.get_party_type(doc.doctype).toLowerCase()}_name`;
+    doc[party_name_field] = gstin_info.business_name;
     doc.gst_category = gstin_info.gst_category;
 }
 
@@ -82,7 +85,8 @@ function update_address_info(doc, address) {
 
     Object.assign(doc, address);
 
-    // renamed address_line1 to stop execution of erpnext.selling.doctype.customer.customer.create_primary_address
+    // rename address_line1 to stop execution of
+    // erpnext.selling.doctype.customer.customer.create_primary_address
     doc._address_line1 = doc.address_line1;
     delete doc.address_line1;
 

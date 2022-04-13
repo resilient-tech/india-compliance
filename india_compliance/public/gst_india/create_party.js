@@ -187,7 +187,7 @@ frappe.ui.form.AddressQuickEntryForm = class AddressQuickEntryForm extends (
         if (in_list(["Customer", "Supplier"], doctype))
             return { party_type: doctype, party: cur_frm.doc.name };
 
-        const party_type = ic.utils.get_party_type(doctype);
+        const party_type = ic.get_party_type(doctype);
         return { party_type, party: cur_frm.doc[party_type.toLowerCase()] };
     }
 };
