@@ -84,7 +84,7 @@ function setup_e_waybill_actions(doctype) {
                 );
             }
 
-            if (frappe.perm.has_perm("e-Waybill Log", 0, "print", frm.doc.ewaybill)) {
+            if (frappe.model.can_print("e-Waybill Log")) {
                 frm.add_custom_button(
                     __("Print"),
                     () => {
