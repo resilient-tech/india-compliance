@@ -369,6 +369,8 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     if comment:
         log.add_comment(text=comment)
 
+    frappe.db.commit()
+
     ### Fetch Data
 
     if not fetch:
