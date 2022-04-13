@@ -10,7 +10,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 
 
-def validate_gst_challan(doc, method=None):
+def validate(doc, method=None):
     country, gst_category = frappe.get_cached_value(
         "Company", doc.company, ("country", "gst_category")
     )

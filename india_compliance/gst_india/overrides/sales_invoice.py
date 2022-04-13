@@ -52,7 +52,7 @@ def onload(doc, method=None):
         )
 
 
-def validate_gst_invoice(doc, method=None):
+def validate(doc, method=None):
     country, gst_category = frappe.get_cached_value(
         "Company", doc.company, ("country", "gst_category")
     )
