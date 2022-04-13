@@ -9,14 +9,18 @@ function update_gstin_in_other_documents(doctype) {
 
             const { gstin, gst_category } = frm.doc;
             let message = __(
-                "You were using the GSTIN <strong>{0}</strong> in following other documents. Do you want to update these?",
+                "You were using the GSTIN <strong>{0}</strong> in following other documents. Do you want to update these? <br>",
                 [previous_gstin]
             );
+
             for (const [doctype, docnames] of Object.entries(
                 docs_with_previous_gstin
             )) {
-                message += `<br/><br/><strong>${__(doctype)}</strong>:<br/>`;
-                message += docnames.join("<br/>");
+                message += `<br><strong>${__(doctype)}</strong>:<br>`;
+
+                docnames.forEach(docname => {
+                    message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
+                });
             }
 
             frappe.confirm(message, function () {
