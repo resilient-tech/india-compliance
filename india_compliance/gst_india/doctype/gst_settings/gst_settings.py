@@ -82,8 +82,10 @@ class GSTSettings(Document):
                 E_INVOICE_FIELDS, self.enable_e_invoice and self.enable_api
             )
 
-        if self.has_value_changed("enable_reverse_charge"):
-            _update_custom_fields(REVERSE_CHARGE_FIELD, self.enable_reverse_charge)
+        if self.has_value_changed("enable_reverse_charge_in_sales"):
+            _update_custom_fields(
+                REVERSE_CHARGE_FIELD, self.enable_reverse_charge_in_sales
+            )
 
     def validate_e_invoice_applicability_date(self):
         if not self.enable_api or not self.enable_e_invoice:
