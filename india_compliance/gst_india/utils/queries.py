@@ -1,5 +1,4 @@
 import frappe
-from frappe.utils import sbool
 
 
 @frappe.whitelist()
