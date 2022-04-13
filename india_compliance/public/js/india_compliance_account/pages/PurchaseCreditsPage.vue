@@ -13,6 +13,7 @@
                   type="number"
                   :step="creditsMultiplier"
                   :min="minOrderQty"
+                  :max="maxOrderQty"
                   class="form-control"
                   v-model.number="creditsInputValue"
                 />
@@ -104,7 +105,7 @@ import FormField from "../components/FormField.vue";
 import PageTitle from "../components/PageTitle.vue";
 import PreLoader from "../components/PreLoader.vue";
 import { getReadableNumber } from "../utils";
-import { create_order } from "../../services/AccountService";
+import { create_order } from "../services/AccountService";
 
 export default {
   components: {
@@ -133,6 +134,10 @@ export default {
 
     minOrderQty() {
       return this.calculatorDetails.min_order_qty;
+    },
+
+    maxOrderQty() {
+      return this.calculatorDetails.max_order_qty;
     },
 
     defaultCalculatorValue() {
@@ -228,7 +233,9 @@ export default {
       this.credits = this.creditsInputValue;
 
       // credits only allowed to be in multiples of creditsMultiplier
-      if (this.credits < this.minOrderQty) {
+      if (this.credits > this.maxOrderQty) {
+        this.credits = this.maxOrderQty;
+      } else if (this.credits < this.minOrderQty) {
         this.credits = this.minOrderQty;
       } else if (this.credits % this.creditsMultiplier != 0) {
         this.credits =
