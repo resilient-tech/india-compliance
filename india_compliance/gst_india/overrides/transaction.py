@@ -13,13 +13,25 @@ from india_compliance.gst_india.utils import (
 )
 
 
+def is_indian_registered_company(doc):
+    if not doc.company_gstin:
+        country, gst_category = frappe.get_cached_value(
+            "Company", doc.company, ("country", "gst_category")
+        )
+
+        if country != "India" or gst_category == "Unregistered":
+            return False
+
+    return True
+
+
 def validate_mandatory_fields(doc, fields):
     for field in fields:
         if not doc.get(field):
             frappe.throw(
                 _("{0} is a mandatory field for creating a GST Compliant {1}").format(
                     bold(_(doc.meta.get_label(field))),
-                    bold(_(doc.doctype)),
+                    (doc.doctype),
                 )
             )
 
@@ -86,6 +98,20 @@ def validate_gst_accounts(doc):
                 _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
                     row.idx
                 )
+            )
+
+
+def validate_tax_accounts_for_non_gst(doc):
+    """GST Tax Accounts should not be charged for Non GST Items"""
+    accounts_list = get_all_gst_accounts(doc.company)
+
+    for row in doc.taxes:
+        if row.account_head in accounts_list and row.tax_amount:
+            frappe.throw(
+                _("Row #{0}: Cannot charge GST for Non GST Items").format(
+                    row.idx, row.account_head
+                ),
+                title=_("Invalid Taxes"),
             )
 
 

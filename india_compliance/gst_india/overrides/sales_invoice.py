@@ -5,13 +5,14 @@ from frappe.model import delete_doc
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.invoice import update_taxable_values
 from india_compliance.gst_india.overrides.transaction import (
+    is_indian_registered_company,
     set_place_of_supply,
     validate_gst_accounts,
     validate_hsn_code,
     validate_items,
     validate_mandatory_fields,
+    validate_tax_accounts_for_non_gst,
 )
-from india_compliance.gst_india.utils import get_all_gst_accounts
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
 
@@ -53,16 +54,12 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    country, gst_category = frappe.get_cached_value(
-        "Company", doc.company, ("country", "gst_category")
-    )
-
-    if country != "India" or gst_category == "Unregistered":
+    if not is_indian_registered_company(doc):
         return
 
     if validate_items(doc) is False:
         # If there are no GST items, then no need to proceed further
-        validate_tax_accounts(doc)
+        validate_tax_accounts_for_non_gst(doc)
         return
 
     set_place_of_supply(doc)
@@ -122,19 +119,6 @@ def validate_billing_address_gstin(doc):
             ),
             title=_("Invalid Billing Address GSTIN"),
         )
-
-
-def validate_tax_accounts(doc):
-    """GST Tax Accounts should not be charged for Non GST Items"""
-    accounts_list = get_all_gst_accounts(doc.company)
-
-    for row in doc.taxes:
-        if row.account_head in accounts_list and row.tax_amount:
-            frappe.throw(
-                _("Row #{0}: You cannot charge {1} for Non GST Items").format(
-                    row.idx, row.account_head
-                )
-            )
 
 
 def ignore_logs_on_trash(doc, method=None):
