@@ -73,7 +73,7 @@ def get_data(filters=None):
     if filters.get("customer"):
         query = query.where(sales_invoice.customer == filters.get("customer"))
 
-    return query.run()
+    return query.run(as_dict=True)
 
 
 def get_columns():
