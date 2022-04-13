@@ -54,6 +54,12 @@ def get_property_setters():
                 " frappe.boot.gst_settings.enable_e_waybill)"
             ),
         },
+        {
+            "doctype": "e-Waybill Log",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+            "value": "e-Waybill",
+        },
     ]
 
 

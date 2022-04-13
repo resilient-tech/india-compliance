@@ -84,17 +84,12 @@ function setup_e_waybill_actions(doctype) {
                 );
             }
 
-            if (frappe.perm.has_perm(frm.doctype, 0, "print", frm.doc.name)) {
+            if (frappe.model.can_print("e-Waybill Log")) {
                 frm.add_custom_button(
                     __("Print"),
-                    () =>
-                        fetch_e_waybill_data(frm, null, function (response) {
-                            frappe.set_route(
-                                "print",
-                                "e-waybill-log",
-                                frm.doc.ewaybill
-                            );
-                        }),
+                    () => {
+                        frappe.set_route("print", "e-Waybill Log", frm.doc.ewaybill);
+                    },
                     "e-Waybill"
                 );
             }

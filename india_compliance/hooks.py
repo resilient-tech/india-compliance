@@ -63,11 +63,9 @@ doc_events = {
     },
     "Delivery Note": {
         "validate": [
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
-            "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
+            "india_compliance.gst_india.overrides.delivery_note.validate",
             "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
-        ]
+        ],
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india"
@@ -105,10 +103,7 @@ doc_events = {
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": [
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
-            "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice",
-            "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
+            "india_compliance.gst_india.overrides.sales_invoice.validate",
             "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ],
     },
@@ -159,9 +154,11 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.add_spacing",
         "india_compliance.gst_india.utils.jinja.get_state",
         "india_compliance.gst_india.utils.jinja.get_sub_supply_type",
-        # not methods, but work just fine
-        "india_compliance.gst_india.constants.e_waybill.TRANSPORT_MODES",
-        "india_compliance.gst_india.constants.e_waybill.TRANSPORT_TYPES",
+        "india_compliance.gst_india.utils.jinja.get_e_waybill_qr_code",
+        "india_compliance.gst_india.utils.jinja.get_qr_code",
+        "india_compliance.gst_india.utils.jinja.get_transport_type",
+        "india_compliance.gst_india.utils.jinja.get_transport_mode",
+        "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
     ],
 }
 
