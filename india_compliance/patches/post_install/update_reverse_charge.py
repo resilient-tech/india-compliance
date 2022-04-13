@@ -37,7 +37,9 @@ def enable_reverse_charge_in_gst_settings(doctype):
         return
 
     create_custom_fields(REVERSE_CHARGE_FIELD)
-    return frappe.db.set_value("GST Settings", None, "enable_reverse_charge", 1)
+    return frappe.db.set_value(
+        "GST Settings", None, "enable_reverse_charge_in_sales", 1
+    )
 
 
 def is_reverse_charge_applicable(doctype):
