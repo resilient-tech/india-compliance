@@ -53,7 +53,7 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
             }
-        }
+        },
     });
 }
 
@@ -75,20 +75,24 @@ function validate_pan(doctype) {
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
-        }
+        },
     });
 }
 
-function overseas_gst_category_alert(doctype) {
+function alert_for_disabled_overseas_settings(doctype) {
     frappe.ui.form.on(doctype, {
         validate(frm) {
-            let overseas_enabled = frappe.boot.gst_settings.enable_overseas_transactions;
-
-            if (in_list(["SEZ", "Overseas"], frm.doc.gst_category)) {
-                if (!overseas_enabled) {
-                    frappe.show_alert({message:__("GST Category is set to {0} and SEZ/Overseas is not enabled in GST Settings.", [frm.doc.gst_category]), indicator:'orange'})
-                }
+            if (
+                in_list(["SEZ", "Overseas"], frm.doc.gst_category) &&
+                !frappe.boot.gst_settings.enable_overseas_transactions
+            ) {
+                frappe.show_alert({
+                    message: __(
+                        "SEZ/Overseas transactions are disabled in GST Settings."
+                    ),
+                    indicator: "orange",
+                });
             }
-        }
-    })
+        },
+    });
 }

@@ -4,7 +4,7 @@ const DOCTYPE = "Address";
 
 validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
-overseas_gst_category_alert(DOCTYPE);
+alert_for_disabled_overseas_settings(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     country(frm) {
