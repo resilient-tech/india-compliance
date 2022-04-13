@@ -62,9 +62,7 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.party.validate_party"
     },
     "Delivery Note": {
-        "validate": (
-            "india_compliance.gst_india.overrides.delivery_note.validate_gst_challan"
-        ),
+        "validate": "india_compliance.gst_india.overrides.delivery_note.validate",
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india"
@@ -98,9 +96,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
-        "validate": (
-            "india_compliance.gst_india.overrides.sales_invoice.validate_gst_invoice"
-        ),
+        "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
     },
     "Sales Order": {
         "validate": [
