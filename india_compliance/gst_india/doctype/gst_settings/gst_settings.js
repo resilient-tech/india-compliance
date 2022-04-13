@@ -37,6 +37,12 @@ frappe.ui.form.on("GST Settings", {
         // other users will still need to refresh page
         frappe.boot.gst_settings = frm.doc;
     },
+    enable_api(frm) {
+        if (!frm.doc.enable_api || !frm.doc.enable_e_waybill) return;
+        frm.set_value("fetch_e_waybill_data", 1);
+        frm.set_value("attach_e_waybill_print", 1);
+        frm.set_value("auto_generate_e_waybill", 1);
+    },
 });
 
 function filter_accounts(frm, account_field) {
