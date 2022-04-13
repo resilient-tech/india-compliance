@@ -91,7 +91,7 @@ function setup_e_waybill_actions(doctype) {
                         fetch_e_waybill_data(frm, null, function (response) {
                             frappe.set_route(
                                 "print",
-                                "e-waybill-log",
+                                "e-Waybill Log",
                                 frm.doc.ewaybill
                             );
                         }),
