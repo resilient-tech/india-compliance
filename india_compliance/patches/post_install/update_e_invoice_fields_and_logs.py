@@ -1,5 +1,4 @@
 import frappe
-from frappe.utils import random_string
 
 from india_compliance.gst_india.utils import delete_custom_fields, parse_datetime
 
@@ -303,3 +302,7 @@ def delete_e_invoice_fields():
 def delete_old_doctypes():
     for doctype in ("E Invoice Settings", "E Invoice User", "E Invoice Request Log"):
         frappe.delete_doc("DocType", doctype, force=True)
+
+
+def delete_old_report():
+    frappe.delete_doc("Report", "E-Invoice Summary", force=True)
