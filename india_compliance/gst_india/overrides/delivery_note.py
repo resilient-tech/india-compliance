@@ -21,15 +21,13 @@ def validate(doc, method=None):
 
     set_place_of_supply(doc)
     update_taxable_values(doc)
-    validate_mandatory_fields(doc, ("company_gstin",))
+
+    mandatory_fields = ["company_gstin"]
+    if frappe.get_cached_value(
+        "GST Settings", "GST Settings", "enable_e_waybill_from_dn"
+    ):
+        mandatory_fields.append("shipping_address_name")
+
+    validate_mandatory_fields(doc, mandatory_fields)
     validate_gst_accounts(doc)
     validate_hsn_code(doc)
-
-    enable_e_waybill_from_dn = frappe.get_cached_value(
-        "GST Settings", "GST Settings", "enable_e_waybill_from_dn"
-    )
-
-    if not enable_e_waybill_from_dn:
-        return
-
-    validate_mandatory_fields(doc, ("shipping_address_name",))
