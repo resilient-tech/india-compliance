@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applic
 
 
 def onload(doc, method=None):
-    if not doc.ewaybill and not doc.irn:
+    if not doc.get("ewaybill") and not doc.get("irn"):
         return
 
     gst_settings = frappe.get_cached_value(
@@ -60,8 +60,8 @@ def validate_gst_invoice(doc, method=None):
         return
 
     validate_invoice_number(doc)
-    validate_gst_accounts(doc)
     validate_mandatory_fields(doc)
+    validate_gst_accounts(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
 
@@ -98,7 +98,10 @@ def validate_mandatory_fields(doc):
 
 
 def validate_fields_and_set_status_for_e_invoice(doc):
-    if not validate_e_invoice_applicability(doc, throw=False):
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
+        doc, gst_settings=gst_settings, throw=False
+    ):
         return
 
     for field in ("customer_address",):

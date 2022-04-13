@@ -23,4 +23,8 @@ def get_state(state_number):
 
 
 def get_sub_supply_type(code):
-    return SUB_SUPPLY_TYPES[int(code)]
+    code = int(code)
+
+    for sub_supply_type, code_number in SUB_SUPPLY_TYPES.items():
+        if code_number == code:
+            return sub_supply_type
