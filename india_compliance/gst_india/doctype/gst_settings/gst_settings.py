@@ -81,6 +81,7 @@ class GSTSettings(Document):
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):
             _update_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
+            append_dynamic_link(self.enable_e_waybill)
 
         if self.has_value_changed("enable_e_invoice"):
             _update_custom_fields(
@@ -111,3 +112,19 @@ def _update_custom_fields(fields, condition):
         create_custom_fields(fields, ignore_validate=True)
     else:
         delete_custom_fields(fields)
+
+
+def append_dynamic_link(is_e_waybill_enabled):
+    e_waybill_field = "ewaybill"
+    filter_fields = {"parent": "Sales Invoice", "link_fieldname": e_waybill_field}
+
+    if is_e_waybill_enabled:
+        if not frappe.db.exists("Dynamic Link", filter_fields):
+            si_doc = frappe.get_doc("DocType", "Sales Invoice")
+            si_doc.append(
+                "links",
+                {"link_doctype": si_doc.name, "link_fieldname": e_waybill_field},
+            )
+            si_doc.save()
+    else:
+        frappe.delete_doc_if_exists("Dynamic Link", filter_fields)
