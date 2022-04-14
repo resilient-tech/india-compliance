@@ -1,0 +1,156 @@
+{
+ "actions": [],
+ "autoname": "field:irn",
+ "creation": "2022-04-01 11:58:37.111826",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "irn",
+  "sales_invoice",
+  "column_break_1",
+  "acknowledgement_number",
+  "acknowledged_on",
+  "signed_data_section",
+  "invoice_data",
+  "signed_invoice",
+  "signed_qr_code",
+  "cancellation_details_section",
+  "is_cancelled",
+  "cancelled_on",
+  "column_break_3",
+  "cancel_reason_code",
+  "cancel_remark"
+ ],
+ "fields": [
+  {
+   "fieldname": "irn",
+   "fieldtype": "Data",
+   "label": "Invoice Reference Number (IRN)",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "signed_data_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "signed_invoice",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Signed Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invoice_data",
+   "fieldtype": "Code",
+   "label": "Invoice Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "signed_qr_code",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Signed QR Code",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval: doc.is_cancelled",
+   "fieldname": "cancellation_details_section",
+   "fieldtype": "Section Break",
+   "label": "Cancellation Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_cancelled",
+   "fieldtype": "Check",
+   "label": "Is Cancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cancel_reason_code",
+   "fieldtype": "Data",
+   "label": "Cancel Reason Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancel_remark",
+   "fieldtype": "Data",
+   "label": "Cancel Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cancelled_on",
+   "fieldtype": "Datetime",
+   "label": "Cancelled On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acknowledgement_number",
+   "fieldtype": "Data",
+   "label": "Acknowledgement Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "acknowledged_on",
+   "fieldtype": "Datetime",
+   "label": "Acknowledged On",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "links": [
+  {
+   "link_doctype": "Sales Invoice",
+   "link_fieldname": "irn"
+  }
+ ],
+ "modified": "2022-04-13 01:46:26.972997",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "e-Invoice Log",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1
+  },
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1
+  }
+ ],
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "sales_invoice"
+}
