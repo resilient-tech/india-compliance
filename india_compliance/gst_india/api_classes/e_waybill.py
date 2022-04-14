@@ -1,10 +1,28 @@
+import frappe
+from frappe import _
+
 from india_compliance.gst_india.api_classes.base import BaseAPI
 
 
 class EWaybillAPI(BaseAPI):
-    def setup(self, company_gstin):
+    def setup(self, company_gstin=None):
+        self.api_name = "e-Waybill"
         self.base_path = "ewb/ewayapi"
-        self.fetch_credentials(company_gstin, "e-Waybill")
+
+        if not self.settings.enable_e_waybill:
+            frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
+
+        if self.sandbox:
+            company_gstin = "05AAACG2115R1ZN"
+            self.username = "05AAACG2115R1ZN"
+            self.password = "abc123@@"
+
+        elif not company_gstin:
+            frappe.throw(_("Company GSTIN is required to use the e-Waybill API"))
+
+        else:
+            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
+
         self.default_headers.update(
             {
                 "gstin": company_gstin,
@@ -16,13 +34,13 @@ class EWaybillAPI(BaseAPI):
     def post(self, action, json):
         return super().post(params={"action": action}, json=json)
 
-    def get_ewaybill(self, ewaybill_number):
+    def get_e_waybill(self, ewaybill_number):
         return self.get("getewaybill", params={"ewbNo": ewaybill_number})
 
-    def generate_ewaybill(self, data):
+    def generate_e_waybill(self, data):
         return self.post("GENEWAYBILL", data)
 
-    def cancel_ewaybill(self, data):
+    def cancel_e_waybill(self, data):
         return self.post("CANEWB", data)
 
     def update_vehicle_info(self, data):

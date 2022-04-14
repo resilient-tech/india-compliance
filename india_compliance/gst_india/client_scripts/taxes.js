@@ -6,7 +6,7 @@ function setup_auto_gst_taxation(doctype) {
             "customer_address",
             "supplier_address",
             "tax_category",
-        ].map((field) => [field, get_tax_template])
+        ].map(field => [field, get_tax_template])
     );
 
     frappe.ui.form.on(doctype, events);
@@ -28,7 +28,7 @@ function get_tax_template(frm) {
     ];
 
     const party_details = Object.fromEntries(
-        party_fields.map((field) => [field, frm.doc[field]])
+        party_fields.map(field => [field, frm.doc[field]])
     );
 
     frappe.call({
@@ -56,20 +56,41 @@ function fetch_gst_category(doctype) {
             // set gst category from party first, can be overwritten from address
             frm.add_fetch(party_type, "gst_category", "gst_category");
         },
+        customer_address(frm) {
+            if (frm.doc.customer_address) return;
+
+            frappe.db.get_value(
+                frappe.utils.to_title_case(party_type),
+                frm.doc[party_type],
+                "gst_category",
+                response => {
+                    if (!response) return;
+                    frm.set_value("gst_category", response.gst_category);
+                }
+            );
+        },
     });
 }
 
 function get_party_type(doctype) {
     return in_list(
-        [
-            "Quotation",
-            "Sales Order",
-            "Delivery Note",
-            "Sales Invoice",
-            "POS Invoice",
-        ],
+        ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"],
         doctype
     )
         ? "customer"
         : "supplier";
+}
+
+function update_gst_vehicle_type(doctype) {
+    frappe.ui.form.on(doctype, {
+        mode_of_transport(frm) {
+            frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        },
+    });
+}
+
+function get_vehicle_type(doc) {
+    if (doc.mode_of_transport == "Road") return "Regular";
+    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
+    return "";
 }

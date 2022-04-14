@@ -5,36 +5,27 @@ from india_compliance.gst_india.constants import STATE_NUMBERS
 
 def get_property_setters():
     return [
-        {
-            "doctype": "Journal Entry",
-            "fieldname": "voucher_type",
-            "property": "options",
-            "value": get_updated_options(
-                "Journal Entry", "voucher_type", ["Reversal Of ITC"]
-            ),
-        },
-        {
-            "doctype": "Sales Invoice",
-            "fieldname": "naming_series",
-            "property": "options",
-            "value": get_updated_options(
-                "Sales Invoice",
-                "naming_series",
-                ["SINV-.YY.-", "SRET-.YY.-", ""],
-                prepend=True,
-            ),
-        },
-        {
-            "doctype": "Purchase Invoice",
-            "fieldname": "naming_series",
-            "property": "options",
-            "value": get_updated_options(
-                "Purchase Invoice",
-                "naming_series",
-                ["PINV-.YY.-", "PRET-.YY.-", ""],
-                prepend=True,
-            ),
-        },
+        get_naming_series_property(
+            "Journal Entry",
+            "voucher_type",
+            ["Reversal Of ITC"],
+            prepend=False,
+        ),
+        get_naming_series_property(
+            "Delivery Note",
+            "naming_series",
+            ["DN-.YY.-", "DRET-.YY.-", ""],
+        ),
+        get_naming_series_property(
+            "Sales Invoice",
+            "naming_series",
+            ["SINV-.YY.-", "SRET-.YY.-", ""],
+        ),
+        get_naming_series_property(
+            "Purchase Invoice",
+            "naming_series",
+            ["PINV-.YY.-", "PRET-.YY.-", ""],
+        ),
         {
             "doctype": "Address",
             "fieldname": "state",
@@ -53,14 +44,37 @@ def get_property_setters():
             "property": "mandatory_depends_on",
             "value": "eval: doc.country == 'India'",
         },
+        {
+            "doctype": "Address",
+            "fieldname": "pincode",
+            "property": "mandatory_depends_on",
+            "value": (
+                "eval: doc.country == 'India' && frappe.boot.gst_settings &&"
+                " (frappe.boot.gst_settings.enable_e_invoice ||"
+                " frappe.boot.gst_settings.enable_e_waybill)"
+            ),
+        },
+        {
+            "doctype": "e-Waybill Log",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+            "value": "e-Waybill",
+        },
     ]
 
 
-def get_updated_options(doctype, fieldname, options, prepend=False):
+def get_naming_series_property(doctype, fieldname, new_options, prepend=True):
     existing_options = frappe.get_meta(doctype).get_options(fieldname).split("\n")
     if prepend:
-        options = options + existing_options
+        options = new_options + existing_options
     else:
-        options = existing_options + options
+        options = existing_options + new_options
 
-    return "\n".join(options)
+    options = "\n".join(options)
+
+    return {
+        "doctype": doctype,
+        "fieldname": fieldname,
+        "property": "options",
+        "value": options,
+    }

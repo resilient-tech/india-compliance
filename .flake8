@@ -52,7 +52,6 @@ ignore =
     E702,
     E703,
     E741,
-    F401,
     F403,
     W191,
     W291,
@@ -62,5 +61,8 @@ ignore =
     W503,
     W504,
 
+per-file-ignores =
+    # syntax: [comma-separated path/to/file: comma-separated ERROR CODES]
+    __init__.py, hooks.py: F401
 
 max-line-length = 200

@@ -1,0 +1,75 @@
+.print-format {
+    padding: 0.25in;
+    color: black;
+}
+
+@media print {
+    .print-format {
+        padding: 0;
+        margin-top: 10mm;
+        margin-bottom: 10mm;
+    }
+}
+
+.print-format tbody > tr > td, .print-format tbody > tr > th {
+    padding: 6px !important;
+    border-top: None;
+    color: black;
+}
+
+
+.print-format h1.title {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.print-format .e-waybill-number {
+    font-size: 16px;
+}
+
+.print-format .page-layout {
+    font-size: 12px;
+    line-height: 1.42857143;
+    box-sizing: border-box;
+    transform-origin: top center;
+    width: 550px;
+    margin: 0 auto;
+}
+
+.print-format .vehicle-info {
+    margin: 0 !important;
+    font-size: 9px;
+    border-collapse: collapse;
+}
+
+.print-format .vehicle-info th {
+    font-weight: bold;
+}
+
+.print-format .vehicle-info td, .print-format .vehicle-info th {
+    border: 0px !important;
+    border-top: 1px solid black !important;
+}
+
+
+
+.print-format table.table {
+    width: 520px;
+    margin: 15px
+}
+
+.print-format .ewb-no-span {
+    font-size: 13px;
+}
+
+.print-format .section-separator {
+    border-top: 2px solid #bbb;
+    margin: 8px 0 16px;
+}
+
+.print-format table td img.barcode, .print-format table td img.qr-code {
+    margin-top: 5px;
+    width: 95px !important;
+    image-rendering: -webkit-optimize-contrast;
+}
