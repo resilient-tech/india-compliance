@@ -9,6 +9,7 @@ def execute():
     migrate_e_invoice_request_log()
     delete_e_invoice_fields()
     delete_old_doctypes()
+    delete_old_reports()
 
 
 def migrate_e_waybill_fields():
@@ -304,5 +305,6 @@ def delete_old_doctypes():
         frappe.delete_doc("DocType", doctype, force=True)
 
 
-def delete_old_report():
-    frappe.delete_doc("Report", "E-Invoice Summary", force=True)
+def delete_old_reports():
+    for report in ("E-Invoice Summary",):
+        frappe.delete_doc("Report", report, force=True)
