@@ -34,7 +34,7 @@ class Gstr2Report(Gstr1Report):
 			return_against,
 			is_return,
 			gst_category,
-			export_type,
+			export_with_payment_of_tax,
 			reason_for_issuing_document,
 			eligibility_for_itc,
 			itc_integrated_tax,
@@ -103,7 +103,10 @@ class Gstr2Report(Gstr1Report):
                 conditions += opts[1]
 
         if self.filters.get("type_of_business") == "B2B":
-            conditions += "and ifnull(gst_category, '') in ('Registered Regular', 'Deemed Export', 'SEZ', 'Registered Composition') and is_return != 1 "
+            conditions += (
+                "and ifnull(gst_category, '') in ('Registered Regular', 'Deemed"
+                " Export', 'SEZ', 'Registered Composition') and is_return != 1 "
+            )
 
         elif self.filters.get("type_of_business") == "CDNR":
             conditions += """ and is_return = 1 """

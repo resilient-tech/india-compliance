@@ -2,7 +2,7 @@ function update_export_type(doctype) {
     frappe.ui.form.on(doctype, {
         async gst_category(frm) {
             if (!["SEZ", "Overseas"].includes(frm.doc.gst_category)) {
-                return frm.set_value("export_type", "");
+                return frm.set_value("export_with_payment_of_tax", 0);
             }
 
             // TODO: categories should not be visible if not enabled
@@ -15,10 +15,10 @@ function update_export_type(doctype) {
             }
 
             frm.set_value(
-                "export_type",
+                "export_with_payment_of_tax",
                 gst_settings.default_without_payment_of_tax
-                    ? "Without Payment of Tax"
-                    : "With Payment of Tax"
+                    ? 0
+                    : 1
             );
         },
     });

@@ -60,13 +60,13 @@ purchase_invoice_gst_category = [
         "translatable": 0,
     },
     {
-        "fieldname": "export_type",
-        "label": "Export Type",
-        "fieldtype": "Select",
+        "fieldname": "export_with_payment_of_tax",
+        "label": "Export with payment of Tax",
+        "fieldtype": "Check",
         "insert_after": "gst_category",
         "print_hide": 1,
         "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-        "options": "\nWith Payment of Tax\nWithout Payment of Tax",
+        "default": 0,
         "translatable": 0,
     },
 ]
@@ -93,15 +93,14 @@ sales_invoice_gst_category = [
         "translatable": 0,
     },
     {
-        "fieldname": "export_type",
-        "label": "Export Type",
-        "fieldtype": "Select",
+        "fieldname": "export_with_payment_of_tax",
+        "label": "Export with payment of Tax",
+        "fieldtype": "Check",
         "insert_after": "gst_category",
         "print_hide": 1,
         "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-        "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-        "length": 25,
         "translatable": 0,
+        "default": 0,
     },
 ]
 
@@ -126,7 +125,7 @@ invoice_gst_fields = [
         "label": "Invoice Copy",
         "length": 30,
         "fieldtype": "Select",
-        "insert_after": "export_type",
+        "insert_after": "export_with_payment_of_tax",
         "print_hide": 1,
         "allow_on_submit": 1,
         "options": (
@@ -151,7 +150,7 @@ invoice_gst_fields = [
         "label": "E-commerce GSTIN",
         "length": 15,
         "fieldtype": "Data",
-        "insert_after": "export_type",
+        "insert_after": "export_with_payment_of_tax",
         "print_hide": 1,
         "translatable": 0,
     },
@@ -623,4 +622,19 @@ CUSTOM_FIELDS = {
     ],
     "Customer": party_fields,
     "Company": company_fields,
+}
+
+EXPORT_TYPE_FIELD = {
+    ("Sales Invoice", "Purchase Invoice"): [
+        {
+            "fieldname": "export_with_payment_of_tax",
+            "label": "Export with payment of Tax",
+            "fieldtype": "Check",
+            "insert_after": "gst_category",
+            "print_hide": 1,
+            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
+            "translatable": 0,
+            "default": 0,
+        },
+    ]
 }

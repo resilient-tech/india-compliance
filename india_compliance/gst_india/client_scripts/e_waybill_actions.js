@@ -288,12 +288,11 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             fieldtype: "Column Break",
         },
         {
-            fieldname: "export_type",
-            label: "Export Type",
-            fieldtype: "Select",
+            fieldname: "export_with_payment_of_tax",
+            label: "Export with payment of Tax",
+            fieldtype: "Check",
             depends_on: 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            options: "\nWith Payment of Tax\nWithout Payment of Tax",
-            default: frm.doc.export_type,
+            default: 0,
         },
     ];
 
