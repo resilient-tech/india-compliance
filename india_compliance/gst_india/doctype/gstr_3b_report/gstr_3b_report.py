@@ -201,7 +201,7 @@ class GSTR3BReport(Document):
         invoice_details = frappe.db.sql(
             """
             SELECT
-                name, gst_category, export_type, place_of_supply
+                name, gst_category, export_with_payment_of_tax, place_of_supply
             FROM
                 `tab{doctype}`
             WHERE
@@ -221,6 +221,11 @@ class GSTR3BReport(Document):
         )
 
         for d in invoice_details:
+            d.export_with_payment_of_tax = (
+                "With Payment of Tax"
+                if d.export_with_payment_of_tax
+                else "Without Payment of Tax"
+            )
             self.invoice_detail_map.setdefault(d.name, d)
             self.invoices.append(d.name)
 
@@ -330,7 +335,9 @@ class GSTR3BReport(Document):
             for invoice, items in self.invoice_items.items():
                 if (
                     invoice not in self.items_based_on_tax_rate
-                    and self.invoice_detail_map.get(invoice, {}).get("export_type")
+                    and self.invoice_detail_map.get(invoice, {}).get(
+                        "export_with_payment_of_tax"
+                    )
                     == "Without Payment of Tax"
                     and self.invoice_detail_map.get(invoice, {}).get("gst_category")
                     == "Overseas"
@@ -361,7 +368,9 @@ class GSTR3BReport(Document):
                 self.invoice_detail_map.get(inv, {}).get("place_of_supply")
                 or "00-Other Territory"
             )
-            export_type = self.invoice_detail_map.get(inv, {}).get("export_type")
+            export_type = self.invoice_detail_map.get(inv, {}).get(
+                "export_with_payment_of_tax"
+            )
 
             for rate, items in items_based_on_rate.items():
                 for item_code, taxable_value in self.invoice_items.get(inv).items():

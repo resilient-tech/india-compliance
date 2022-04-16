@@ -60,7 +60,7 @@ def validate_gst_accounts(doc):
 
         if (
             doc.gst_category in ("SEZ", "Overseas")
-            and doc.export_type == "Without Payment of Tax"
+            and not doc.export_with_payment_of_tax
         ):
             frappe.throw(
                 _(
