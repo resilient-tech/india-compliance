@@ -37,10 +37,10 @@
   "irn_gen_date",
   "section_break_25",
   "itc_availability",
-  "2b_return_period",
+  "return_period_2b",
   "column_break_28",
   "reason_itc_unavailability",
-  "2b_gen_date",
+  "gen_date_2b",
   "section_break_32",
   "other_return_period",
   "original_doc_number",
@@ -218,11 +218,6 @@
    "options": "\nYes\nNo\nTemporary"
   },
   {
-   "fieldname": "2b_return_period",
-   "fieldtype": "Data",
-   "label": "2B Return Period"
-  },
-  {
    "fieldname": "column_break_28",
    "fieldtype": "Column Break"
   },
@@ -230,11 +225,6 @@
    "fieldname": "reason_itc_unavailability",
    "fieldtype": "Data",
    "label": "Reason for ITC Unavailability"
-  },
-  {
-   "fieldname": "2b_gen_date",
-   "fieldtype": "Date",
-   "label": "2B Generation Date"
   },
   {
    "fieldname": "section_break_32",
@@ -347,11 +337,21 @@
    "fieldname": "registration_cancel_date",
    "fieldtype": "Date",
    "label": "Registration Cancel Date"
+  },
+  {
+   "fieldname": "return_period_2b",
+   "fieldtype": "Data",
+   "label": "2B Return Period"
+  },
+  {
+   "fieldname": "gen_date_2b",
+   "fieldtype": "Date",
+   "label": "2B Generation Date"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-04-12 17:45:44.603856",
+ "modified": "2022-04-20 17:52:58.350429",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Inward Supply",
