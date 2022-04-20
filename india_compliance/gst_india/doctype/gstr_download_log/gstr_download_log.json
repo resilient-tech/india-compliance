@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "gstin",
-  "gst_return",
+  "return_type",
   "classification",
   "return_period",
   "last_updated_on"
@@ -17,11 +17,6 @@
    "fieldname": "gstin",
    "fieldtype": "Data",
    "label": "GSTIN"
-  },
-  {
-   "fieldname": "gst_return",
-   "fieldtype": "Data",
-   "label": "GST Return"
   },
   {
    "fieldname": "classification",
@@ -38,11 +33,16 @@
    "fieldname": "last_updated_on",
    "fieldtype": "Datetime",
    "label": "Last updated on"
+  },
+  {
+   "fieldname": "return_type",
+   "fieldtype": "Data",
+   "label": "Return Type"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-04-12 18:57:59.122090",
+ "modified": "2022-04-12 19:04:26.384900",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR Download Log",
