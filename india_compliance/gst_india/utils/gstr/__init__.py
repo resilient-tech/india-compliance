@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 import frappe
+from frappe.query_builder.terms import Criterion
 
 from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
 from india_compliance.gst_india.doctype.gstr_download_log.gstr_download_log import (
@@ -122,7 +123,10 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
         save_gstr(gstin, ReturnType.GSTR2B, return_period, json_data.get("docdata"))
 
+    update_download_history(return_periods)
 
+
+# TODO: enqueue save_gstr
 def save_gstr(gstin, return_type, return_period, json_data):
     """Save GSTR data to Inward Supply
 
@@ -141,3 +145,32 @@ def save_gstr(gstin, return_type, return_period, json_data):
 
 def get_data_handler(return_type, category):
     return getattr(MODULE_MAP[return_type], f"{return_type.value}{category.value}")
+
+
+def update_download_history(return_periods):
+    """Updates 2A data availability from 2B download"""
+
+    if not (
+        inward_supplies := frappe.get_all(
+            "Inward Supply",
+            filters={"return_period_2b": ("in", return_periods)},
+            fields=("sup_return_period as return_period", "classification"),
+            distinct=True,
+        )
+    ):
+        return
+
+    log = frappe.qb.DocType("GSTR Download Log")
+    (
+        log.update()
+        .set(log.data_not_found, 0)
+        .where(log.data_not_found == 1)
+        .where(
+            Criterion.any(
+                (log.return_period == doc.return_period)
+                & (log.classification == doc.classification)
+                for doc in inward_supplies
+            )
+        )
+        .run()
+    )
