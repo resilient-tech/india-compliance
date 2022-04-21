@@ -162,7 +162,7 @@ def update_download_history(return_periods):
 
     log = frappe.qb.DocType("GSTR Download Log")
     (
-        log.update()
+        frappe.qb.update(log)
         .set(log.data_not_found, 0)
         .where(log.data_not_found == 1)
         .where(
