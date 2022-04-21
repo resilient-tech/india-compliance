@@ -1,3 +1,5 @@
+import json
+
 from dateutil import parser
 from pytz import timezone
 
@@ -131,6 +133,13 @@ def read_data_file(file_name):
     file_path = frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
     with open(file_path, "r") as f:
         return f.read()
+
+
+def read_json_data_file(filename):
+    if not filename.endswith(".json"):
+        filename = filename + ".json"
+
+    return json.loads(read_data_file(filename))
 
 
 def validate_gstin_check_digit(gstin, label="GSTIN"):
