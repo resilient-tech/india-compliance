@@ -11,7 +11,6 @@ class TestGSTRMixin:
         docname = frappe.get_value(
             self.doctype,
             {"company_gstin": self.gstin, "classification": category.value},
-            "*",
         )
         self.assertIsNotNone(docname)
         return frappe.get_doc(self.doctype, docname)
