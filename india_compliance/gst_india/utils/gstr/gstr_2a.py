@@ -1,94 +1,48 @@
-from isodate import parse_datetime
+from datetime import datetime
 
 import frappe
 
-from india_compliance.gst_india.api_classes.returns import GSTR2aAPI
-from india_compliance.gst_india.doctype.gstr_download_log.gstr_download_log import (
-    create_download_log,
-)
-from india_compliance.gst_india.utils.gstr import (
-    GSTR,
-    GSTRCategory,
-    ReturnType,
-    get_mapped_value,
-    map_date_format,
-    save_gstr,
-)
-
-ACTIONS = {
-    "B2B": GSTRCategory.B2B,
-    "B2BA": GSTRCategory.B2BA,
-    "CDN": GSTRCategory.CDNR,
-    "CDNA": GSTRCategory.CDNRA,
-    "ISD": GSTRCategory.ISD,
-    "IMPG": GSTRCategory.IMPG,
-    "IMPGSEZ": GSTRCategory.IMPGSEZ,
-}
+from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.utils.gstr.gstr import GSTR, get_mapped_value
 
 
-def download_gstr_2a(gstin, return_periods, otp=None):
-    api = GSTR2aAPI(gstin)
-    for return_period in return_periods:
-        json_data = {}
-        for action, category in ACTIONS.items():
-            # call api only if data is available
-            if frappe.db.get_value(
-                "GSTR Download Log",
-                {
-                    "gst_return": ReturnType.GSTR2A,
-                    "return_period": return_period,
-                    "classification": category,
-                },
-                "no_data_found",
-            ):
-                continue
-
-            response = api.get_data(action, return_period, otp)
-            if response.error_type == "otp_requested":
-                return response
-
-            if response.error_type == "no_docs_found":
-                create_download_log(
-                    gstin,
-                    ReturnType.GSTR2A,
-                    return_period,
-                    data_not_found=True,
-                )
-                continue
-
-            # TODO: confirm about throwing
-            if not response.get(action.lower()):
-                frappe.throw(
-                    "Data received seems to be invalid from the GST Portal. Please try"
-                    " again or raise support ticket.",
-                    title="Invalid Response Received.",
-                )
-
-            json_data.update(response.json_data)
-
-        save_gstr(return_period, json_data)
+def map_date_format(date_str, source_format, target_format):
+    return date_str and datetime.strptime(date_str, source_format).strftime(
+        target_format
+    )
 
 
 class GSTR2a(GSTR):
     def get_supplier_details(self, supplier):
         return {
             "supplier_gstin": supplier.ctin,
-            "gstr_1_filled": get_mapped_value(supplier.cfs, self.VALUE_MAPS.yes_no),
-            "gstr_3b_filled": get_mapped_value(supplier.cfs3b, self.VALUE_MAPS.yes_no),
+            "gstr_1_filled": get_mapped_value(
+                supplier.cfs, self.VALUE_MAPS.Y_N_to_check
+            ),
+            "gstr_3b_filled": get_mapped_value(
+                supplier.cfs3b, self.VALUE_MAPS.Y_N_to_check
+            ),
             "gstr_1_filing_date": parse_datetime(supplier.fldtr1),
             "registration_cancel_date": parse_datetime(supplier.dtcancel),
             "sup_return_period": map_date_format(supplier.flprdr1, "%b-%y", "%m%Y"),
         }
+
+    # item details are in item_det for GSTR2a
+    def get_transaction_items(self, invoice):
+        return [
+            self.get_transaction_item(frappe._dict(item.get("itm_det", {})))
+            for item in invoice.get(self.get_key("items_key"))
+        ]
 
     def get_transaction_item(self, item):
         return {
             "item_number": item.num,
             "rate": item.rt,
             "taxable_value": item.txval,
-            "igst": item.igst,
-            "cgst": item.cgst,
-            "sgst": item.sgst,
-            "cess": item.cess,
+            "igst": item.iamt,
+            "cgst": item.camt,
+            "sgst": item.samt,
+            "cess": item.csamt,
         }
 
 
@@ -111,7 +65,9 @@ class GSTR2aB2B(GSTR2a):
             "amendment_type": get_mapped_value(
                 invoice.atyp, self.VALUE_MAPS.amend_type
             ),
-            "reverse_charge": get_mapped_value(invoice.rchrg, self.VALUE_MAPS.yes_no),
+            "reverse_charge": get_mapped_value(
+                invoice.rchrg, self.VALUE_MAPS.Y_N_to_check
+            ),
             "diffprcnt": get_mapped_value(
                 invoice.diff_percent, {1: 1, 0.65: 0.65, None: 1}
             ),
@@ -177,13 +133,18 @@ class GSTR2aISD(GSTR2a):
             "doc_number": invoice.docnum,
             "doc_date": parse_datetime(invoice.docdt, day_first=True),
             "itc_availability": get_mapped_value(
-                invoice.itc_elg, {"Y": "Yes", "N": "No"}
+                invoice.itc_elg, self.VALUE_MAPS.yes_no
             ),
             "other_return_period": map_date_format(invoice.aspd, "%b-%y", "%m%Y"),
             "amendment_type": get_mapped_value(
                 invoice.atyp, self.VALUE_MAPS.amend_type
             ),
         }
+
+    def get_transaction_item(self, item):
+        transaction_item = super().get_transaction_item(item)
+        transaction_item["cess"] = item.cess
+        return transaction_item
 
     # item details are included in invoice details
     def get_transaction_items(self, invoice):
@@ -203,7 +164,7 @@ class GSTR2aIMPG(GSTR2a):
             "doc_type": "Bill of Entry",  # custom field
             "doc_number": invoice.benum,
             "doc_date": parse_datetime(invoice.bedt, day_first=True),
-            "is_amended": get_mapped_value(invoice.amd, self.VALUE_MAPS.yes_no),
+            "is_amended": get_mapped_value(invoice.amd, self.VALUE_MAPS.Y_N_to_check),
             "port_code": invoice.portcd,
         }
 

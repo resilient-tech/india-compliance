@@ -1,45 +1,7 @@
 import frappe
 
-from india_compliance.gst_india.api_classes.returns import GSTR2bAPI
-from india_compliance.gst_india.doctype.gstr_download_log.gstr_download_log import (
-    create_download_log,
-)
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr import (
-    GSTR,
-    ReturnType,
-    get_mapped_value,
-    save_gstr,
-)
-
-
-def download_gstr_2b(gstin, return_periods, otp=None):
-    api = GSTR2bAPI(gstin)
-    for return_period in return_periods:
-        response = api.get_data(return_period, otp)
-        if response.error_type == "otp_requested":
-            return response
-
-        if response.error_type == "no_docs_found":
-            create_download_log(
-                gstin, ReturnType.GSTR2B, return_period, data_not_found=True
-            )
-            continue
-
-        json_data = response.json_data
-        # TODO: confirm about throwing
-        if (
-            not json_data
-            or json_data.get("gstin") != gstin
-            or json_data.get("rtnprd") != return_period
-        ):
-            frappe.throw(
-                "Data received seems to be invalid from the GST Portal. Please try"
-                " again or raise support ticket.",
-                title="Invalid Response Received.",
-            )
-
-        save_gstr(return_period, json_data.get("docdata"))
+from india_compliance.gst_india.utils.gstr.gstr import GSTR, get_mapped_value
 
 
 class GSTR2b(GSTR):
@@ -48,9 +10,9 @@ class GSTR2b(GSTR):
 
         transaction.return_period_2b = self.return_period
         # TODO: find a way to save gendt
-        transaction.gen_date_2b = parse_datetime(
-            self.json_data.get("gendt"), day_first=True
-        )
+        # transaction.gen_date_2b = parse_datetime(
+        #     self.json_data.get("gendt"), day_first=True
+        # )
         return transaction
 
     def get_supplier_details(self, supplier):
@@ -86,9 +48,11 @@ class GSTR2bB2B(GSTR2b):
             "doc_date": parse_datetime(invoice.dt, day_first=True),
             "document_value": invoice.val,
             "place_of_supply": get_mapped_value(invoice.pos, self.VALUE_MAPS.states),
-            "reverse_charge": get_mapped_value(invoice.rev, self.VALUE_MAPS.yes_no),
+            "reverse_charge": get_mapped_value(
+                invoice.rev, self.VALUE_MAPS.Y_N_to_check
+            ),
             "itc_availability": get_mapped_value(
-                invoice.itcavl, {"Y": "Yes", "N": "No", "T": "Temporary"}
+                invoice.itcavl, {**self.VALUE_MAPS.yes_no, "T": "Temporary"}
             ),
             "reason_itc_unavailability": get_mapped_value(
                 invoice.rsn,
@@ -167,7 +131,7 @@ class GSTR2bISD(GSTR2b):
             "doc_number": invoice.docnum,
             "doc_date": parse_datetime(invoice.docdt, day_first=True),
             "itc_availability": get_mapped_value(
-                invoice.itcelg, {"Y": "Yes", "N": "No"}
+                invoice.itcelg, self.VALUE_MAPS.yes_no
             ),
         }
 
@@ -201,7 +165,7 @@ class GSTR2bIMPGSEZ(GSTR2b):
             "doc_type": "Bill of Entry",  # custom field
             "doc_number": invoice.boenum,
             "doc_date": parse_datetime(invoice.boedt, day_first=True),
-            "is_amended": get_mapped_value(invoice.isamd, self.VALUE_MAPS.yes_no),
+            "is_amended": get_mapped_value(invoice.isamd, self.VALUE_MAPS.Y_N_to_check),
             "port_code": invoice.portcode,
         }
 

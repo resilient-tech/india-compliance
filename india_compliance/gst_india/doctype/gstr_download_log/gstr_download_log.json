@@ -10,7 +10,8 @@
   "return_type",
   "classification",
   "return_period",
-  "last_updated_on"
+  "last_updated_on",
+  "data_not_found"
  ],
  "fields": [
   {
@@ -38,11 +39,16 @@
    "fieldname": "return_type",
    "fieldtype": "Data",
    "label": "Return Type"
+  },
+  {
+   "fieldname": "data_not_found",
+   "fieldtype": "Data",
+   "label": "Data not Found"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-04-12 19:04:26.384900",
+ "modified": "2022-04-20 18:35:43.229488",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR Download Log",
