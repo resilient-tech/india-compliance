@@ -57,7 +57,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
             if frappe.db.get_value(
                 "GSTR Download Log",
                 {
-                    "gst_return": ReturnType.GSTR2A.value,
+                    "return_type": ReturnType.GSTR2A.value,
                     "return_period": return_period,
                     "classification": category.value,
                 },
@@ -80,14 +80,15 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 continue
 
             # TODO: confirm about throwing
-            if not response.get(action.lower()):
+            if not (data := response.get(action.lower())):
                 frappe.throw(
                     "Data received seems to be invalid from the GST Portal. Please try"
                     " again or raise support ticket.",
                     title="Invalid Response Received.",
                 )
 
-            json_data.update(response)
+            # making consistent with GSTR2b
+            json_data[category.value] = data
 
         save_gstr(gstin, ReturnType.GSTR2A, return_period, json_data)
 
