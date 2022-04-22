@@ -330,7 +330,7 @@ def delete_file(doc, filename):
         },
         pluck="name",
     ):
-        frappe.delete_doc("File", file, force=True)
+        frappe.delete_doc("File", file, force=True, ignore_permissions=True)
 
 
 #######################################################################################
