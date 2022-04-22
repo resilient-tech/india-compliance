@@ -127,6 +127,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
 
 # TODO: enqueue save_gstr
+# TODO: show progress
 def save_gstr(gstin, return_type, return_period, json_data):
     """Save GSTR data to Inward Supply
 
@@ -136,8 +137,8 @@ def save_gstr(gstin, return_type, return_period, json_data):
     create_download_log(gstin, return_type.value, return_period)
 
     for category in GSTRCategory:
-        data_handler = get_data_handler(return_type, category)(gstin, return_period)
-        data_handler.create_transactions(
+        gstr = get_data_handler(return_type, category)
+        gstr(gstin, return_period, json_data).create_transactions(
             category,
             json_data.get(category.value.lower()),
         )

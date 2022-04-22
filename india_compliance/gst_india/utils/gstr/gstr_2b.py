@@ -7,12 +7,10 @@ from india_compliance.gst_india.utils.gstr.gstr import GSTR, get_mapped_value
 class GSTR2b(GSTR):
     def get_transaction(self, category, supplier, invoice):
         transaction = super().get_transaction(category, supplier, invoice)
-
         transaction.return_period_2b = self.return_period
-        # TODO: find a way to save gendt
-        # transaction.gen_date_2b = parse_datetime(
-        #     self.json_data.get("gendt"), day_first=True
-        # )
+        transaction.gen_date_2b = parse_datetime(
+            self._data.get("gendt"), day_first=True
+        )
         return transaction
 
     def get_supplier_details(self, supplier):

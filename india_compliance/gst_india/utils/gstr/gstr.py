@@ -37,9 +37,10 @@ class GSTR:
         }
     )
 
-    def __init__(self, gstin, return_period) -> None:
+    def __init__(self, gstin, return_period, data):
         self.gstin = gstin
         self.return_period = return_period
+        self._data = data
         self.setup()
 
     def setup(self):
