@@ -1,4 +1,3 @@
-from datetime import datetime
 from enum import Enum
 
 import frappe
@@ -11,18 +10,12 @@ from india_compliance.gst_india.doctype.gstr_download_log.gstr_download_log impo
 from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
 
 
-class ICEnum(Enum):
-    @classmethod
-    def as_dict(cls):
-        return frappe._dict({member.name: member.value for member in cls})
-
-
-class ReturnType(ICEnum):
+class ReturnType(Enum):
     GSTR2A = "GSTR2a"
     GSTR2B = "GSTR2b"
 
 
-class GSTRCategory(ICEnum):
+class GSTRCategory(Enum):
     B2B = "B2B"
     B2BA = "B2BA"
     CDNR = "CDNR"
@@ -43,7 +36,7 @@ ACTIONS = {
     "IMPGSEZ": GSTRCategory.IMPGSEZ,
 }
 
-MODULE_MAP = {
+GSTR_MODULES = {
     ReturnType.GSTR2A: gstr_2a,
     ReturnType.GSTR2B: gstr_2b,
 }
@@ -109,7 +102,6 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
         json_data = response.data
 
-        # TODO: confirm about throwing
         if (
             not json_data
             or json_data.get("gstin") != gstin
@@ -145,10 +137,12 @@ def save_gstr(gstin, return_type, return_period, json_data):
 
 
 def get_data_handler(return_type, category):
-    return getattr(MODULE_MAP[return_type], f"{return_type.value}{category.value}")
+    class_name = return_type.value + category.value
+    return getattr(GSTR_MODULES[return_type], class_name)
 
 
 def update_download_history(return_periods):
+
     """Updates 2A data availability from 2B download"""
 
     if not (
