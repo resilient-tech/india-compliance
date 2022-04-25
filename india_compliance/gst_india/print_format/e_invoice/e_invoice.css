@@ -1,0 +1,8 @@
+.print-format .info-section {
+	border-bottom: 1px solid #d1d8dd;
+	padding-bottom: 10px;
+}
+.print-format .section-heading {
+	margin-top: 15px;
+	margin-bottom: 10px;
+}
