@@ -45,7 +45,7 @@ GSTR_MODULES = {
 def download_gstr_2a(gstin, return_periods, otp=None):
     api = GSTR2aAPI(gstin)
     for return_period in return_periods:
-        json_data = {}
+        json_data = {"gstin": gstin, "fp": return_period}
         for action, category in ACTIONS.items():
             # call api only if data is available
             if frappe.db.get_value(
@@ -106,6 +106,17 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
 
 def save_gstr_2a(gstin, return_period, json_data):
+    if (
+        not json_data
+        or json_data.get("gstin") != gstin
+        or json_data.get("fp") != return_period
+    ):
+        frappe.throw(
+            "Data received seems to be invalid from the GST Portal. Please try"
+            " again or raise support ticket.",
+            title="Invalid Response Received.",
+        )
+
     return save_gstr(gstin, ReturnType.GSTR2A, return_period, json_data)
 
 
