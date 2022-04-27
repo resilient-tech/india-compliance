@@ -56,9 +56,7 @@
 			</div>
 		</div>
 		<div class="col-xs-4 column-break">
-			{% if einvoice_log.signed_qr_code %}
 			<img src="data:image/png;base64,{{ get_qr_code(einvoice_log.signed_qr_code, scale=2) }}" width="175px" style="float: right;">
-			{% endif %}
 		</div>
 	</div>
 	<h5 class="font-bold section-heading">2. Party Details</h5>
