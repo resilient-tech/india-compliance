@@ -66,7 +66,13 @@
 		<div class="col-xs-6 column-break">
 			{% if einvoice.SellerDtls %}
 				{%- set seller = einvoice.SellerDtls -%}
-				<h5 style="margin-bottom: 5px;"><strong>Seller</strong></h5>
+				<h5 style="margin-bottom: 5px;"><strong>
+					{% if einvoice.DispDtls and einvoice.DispDtls.Pin == seller.Pin and einvoice.DispDtls.Addr1 == seller.Addr1 %}
+						Seller and Dispatch Details
+					{% else %}
+						Seller Details
+					{% endif %}
+				</strong></h5>
 				<p>{{ seller.Gstin }}</p>
 				<p>{{ seller.LglNm }}</p>
 				<p>{{ seller.Addr1 }}</p>
@@ -76,22 +82,28 @@
 				<p>{% if seller_gst_state %}{{ seller_gst_state }} - {% endif %}{{ seller.Pin }}</p>
 			{% endif %}
 
-			{%- if einvoice.ShipDtls -%}
-				{%- set shipping = einvoice.ShipDtls -%}
-				<h5 style="margin-bottom: 5px;"><strong>Shipped From</strong></h5>
-				<p>{{ shipping.Gstin }}</p>
-				<p>{{ shipping.LglNm }}</p>
-				<p>{{ shipping.Addr1 }}</p>
-				{%- if shipping.Addr2 -%} <p>{{ shipping.Addr2 }}</p> {% endif %}
-				<p>{{ shipping.Loc }}</p>
-				{% set gst_state = frappe.db.get_value("Address", doc.shipping_address_name, "gst_state") %}
-				<p>{% if gst_state %}{{ gst_state }} - {% endif %}{{ shipping.Pin }}</p>
+			{%- if einvoice.DispDtls and (einvoice.DispDtls.Pin != einvoice.SellerDtls.Pin or einvoice.DispDtls.Addr1 != einvoice.SellerDtls.Addr1) -%}
+				{%- set dispatch = einvoice.DispDtls -%}
+				<h5 style="margin-bottom: 5px;"><strong>Dispatched From</strong></h5>
+				{%- if dispatch.Gstin -%} <p>{{ dispatch.Gstin }}</p> {% endif %}
+				{% if  dispatch.Nm %}<p>{{ dispatch.Nm }}</p>{% endif %}
+				<p>{{ dispatch.Addr1 }}</p>
+				{%- if dispatch.Addr2 -%} <p>{{ dispatch.Addr2 }}</p> {% endif %}
+				<p>{{ dispatch.Loc }}</p>
+				{% set disp_gst_state = frappe.db.get_value("Address", doc.dispatch_address_name, "gst_state") %}
+				<p>{% if disp_gst_state %}{{ disp_gst_state }} - {% elif seller_gst_state %} {{ seller_gst_state }} - {% endif %}{{ dispatch.Pin }}</p>
 			{% endif %}
 		</div>
 		<div class="col-xs-6 column-break">
 			{% if einvoice.BuyerDtls %}
 				{%- set buyer = einvoice.BuyerDtls -%}
-				<h5 style="margin-bottom: 5px;"><strong>Buyer</strong></h5>
+				<h5 style="margin-bottom: 5px;"><strong>
+					{% if einvoice.ShipDtls and einvoice.ShipDtls.Pin == buyer.Pin and einvoice.ShipDtls.Addr1 == buyer.Addr1 %}
+						Buyer and Shipping Details
+					{% else %}
+						Buyer Details
+					{% endif %}
+				</strong></h5>
 				<p>{{ buyer.Gstin }}</p>
 				<p>{{ buyer.LglNm }}</p>
 				<p>{{ buyer.Addr1 }}</p>
@@ -101,16 +113,17 @@
 				<p>{% if cust_gst_state %}{{ cust_gst_state }} - {% endif %}{{ buyer.Pin }}</p>
 			{% endif %}
 
-			{%- if einvoice.DispDtls -%}
-				{%- set dispatch = einvoice.DispDtls -%}
-				<h5 style="margin-bottom: 5px;"><strong>Dispatched From</strong></h5>
-				{%- if dispatch.Gstin -%} <p>{{ dispatch.Gstin }}</p> {% endif %}
-				{% if  dispatch.LglNm %}<p>{{ dispatch.LglNm }}</p>{% endif %}
-				<p>{{ dispatch.Addr1 }}</p>
-				{%- if dispatch.Addr2 -%} <p>{{ dispatch.Addr2 }}</p> {% endif %}
-				<p>{{ dispatch.Loc }}</p>
-				{% set disp_gst_state = frappe.db.get_value("Address", doc.dispatch_address_name, "gst_state") %}
-				<p>{% if disp_gst_state %}{{ disp_gst_state }} - {% endif %}{{ dispatch.Pin }}</p>
+
+			{%- if einvoice.ShipDtls and (einvoice.ShipDtls.Pin != einvoice.BuyerDtls.Pin or einvoice.ShipDtls.Addr1 != einvoice.BuyerDtls.Addr1) -%}
+				{%- set shipping = einvoice.ShipDtls -%}
+				<h5 style="margin-bottom: 5px;"><strong>Shipped To</strong></h5>
+				<p>{{ shipping.Gstin }}</p>
+				<p>{{ shipping.LglNm }}</p>
+				<p>{{ shipping.Addr1 }}</p>
+				{%- if shipping.Addr2 -%} <p>{{ shipping.Addr2 }}</p> {% endif %}
+				<p>{{ shipping.Loc }}</p>
+				{% set gst_state = frappe.db.get_value("Address", doc.shipping_address_name, "gst_state") %}
+				<p>{% if gst_state %}{{ gst_state }} - {% endif %}{{ shipping.Pin }}</p>
 			{% endif %}
 		</div>
 	</div>
