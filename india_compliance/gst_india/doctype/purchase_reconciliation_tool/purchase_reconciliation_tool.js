@@ -12,26 +12,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
 
-        frm.add_custom_button(
-            "GSTR 2A",
-            () => show_gstr_dialog(frm, ReturnType.GSTR2A),
-            "Download"
-        );
-        frm.add_custom_button(
-            "GSTR 2B",
-            () => show_gstr_dialog(frm, ReturnType.GSTR2B),
-            "Download"
-        );
-        frm.add_custom_button(
-            "GSTR 2A",
-            () => show_gstr_dialog(frm, ReturnType.GSTR2A, false),
-            "Upload"
-        );
-        frm.add_custom_button(
-            "GSTR 2B",
-            () => show_gstr_dialog(frm, ReturnType.GSTR2B, false),
-            "Upload"
-        );
+        frm.add_custom_button("Download", () => show_gstr_dialog(frm));
+        frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
     },
 
     purchase_period(frm) {
@@ -56,18 +38,17 @@ async function fetch_date_range(frm, field_prefix) {
     frm.set_value(to_date_field, message[1]);
 }
 
-function get_dialog_fields(return_type) {
+function get_gstr_dialog_fields() {
     return [
         {
             label: "GST Return Type",
             fieldname: "return_type",
             fieldtype: "Select",
-            // read_only: 1,
+            default: ReturnType.GSTR2A,
             options: [
                 { label: "GSTR 2A", value: ReturnType.GSTR2A },
                 { label: "GSTR 2B", value: ReturnType.GSTR2B },
             ],
-            default: return_type,
         },
         {
             fieldtype: "Column Break",
@@ -98,13 +79,13 @@ function get_history_fields(for_download = true) {
     ];
 }
 
-function show_gstr_dialog(frm, return_type, for_download = true) {
+function show_gstr_dialog(frm, for_download = true) {
     let dialog;
     if (for_download) {
-        dialog = _show_download_gstr_dialog(return_type);
+        dialog = _show_download_gstr_dialog();
     } else {
-        dialog = _show_upload_gstr_dialog(return_type);
-        dialog.fields_dict.fiscal_year.df.onchange = () => {
+        dialog = _show_upload_gstr_dialog();
+        dialog.fields_dict.attach_file.df.onchange = () => {
             const attached_file = dialog.get_value("attach_file");
             if (!attached_file) return;
             fetch_return_period_from_file(frm, dialog);
@@ -116,51 +97,73 @@ function show_gstr_dialog(frm, return_type, for_download = true) {
     };
 
     dialog.fields_dict.return_type.df.onchange = () => {
-        set_dialog_actions(dialog, dialog.get_value("return_type"));
+        set_dialog_actions(frm, dialog, for_download);
         fetch_download_history(frm, dialog, for_download);
     };
 
+    set_dialog_actions(frm, dialog, for_download);
     fetch_download_history(frm, dialog, for_download);
 }
 
-function set_dialog_actions(dialog, return_type) {
-    if (return_type === ReturnType.GSTR2A) {
-        dialog.set_primary_action(__("Download All"), () => {
-            // TODO
+function set_dialog_actions(frm, dialog, for_download) {
+    const return_type = dialog.get_value("return_type");
+    const fiscal_year = dialog.get_value("fiscal_year");
+
+    if (for_download) {
+        let primary_action_label;
+        if (return_type === ReturnType.GSTR2A) {
+            primary_action_label = __("Download All");
+
+            dialog.set_secondary_action_label(__("Download Missing"));
+            dialog.set_secondary_action(() => {
+                download_gstr(frm, return_type, fiscal_year, true);
+                dialog.hide();
+            });
+        } else if (return_type === ReturnType.GSTR2B) {
+            primary_action_label = __("Download");
+
+            dialog.set_secondary_action_label(null);
+            dialog.set_secondary_action(null);
+        }
+        dialog.set_primary_action(primary_action_label, () => {
+            download_gstr(frm, return_type, fiscal_year, false);
+            dialog.hide();
         });
-        dialog.set_secondary_action_label(__("Download Missing"));
-        dialog.set_secondary_action(() => {
-            // TODO
+    } else {
+        dialog.set_primary_action(__("Upload"), () => {
+            const file_path = dialog.get_value("attach_file");
+            const period = dialog.get_value("period");
+            if (!file_path) frappe.throw(__("Please select a file first!"));
+            if (!period)
+                frappe.throw(
+                    __(
+                        "Could not fetch period from file, make sure you have selected the correct file!"
+                    )
+                );
+            upload_gstr(frm, return_type, period, file_path);
+            dialog.hide();
         });
-    } else if (return_type === ReturnType.GSTR2B) {
-        dialog.set_primary_action(__("Download"), () => {
-            // TODO
-        });
-        dialog.set_secondary_action_label(null);
-        dialog.set_secondary_action(null);
     }
 }
 
-function _show_download_gstr_dialog(return_type) {
+function _show_download_gstr_dialog() {
     const dialog = new frappe.ui.Dialog({
         title: __("Download Data from GSTN"),
-        fields: [...get_dialog_fields(return_type), ...get_history_fields()],
+        fields: [...get_gstr_dialog_fields(), ...get_history_fields()],
     });
-    set_dialog_actions(dialog, return_type);
     return dialog.show();
 }
 
-function _show_upload_gstr_dialog(return_type) {
+function _show_upload_gstr_dialog() {
     const dialog = new frappe.ui.Dialog({
         title: __("Upload Data"),
-        primary_action_label: __("Upload"),
         fields: [
-            ...get_dialog_fields(return_type),
+            ...get_gstr_dialog_fields(),
             {
                 label: "Period",
                 fieldname: "period",
                 fieldtype: "Data",
-                default: frappe.datetime.now_date(),
+                read_only: 1,
             },
             {
                 fieldtype: "Section Break",
@@ -170,24 +173,11 @@ function _show_upload_gstr_dialog(return_type) {
                 fieldname: "attach_file",
                 fieldtype: "Attach",
                 description: "Attach .json file here",
-                options: { restrictions: { allowed_file_types: ["json"] } },
+                options: { restrictions: { allowed_file_types: [".json"] } },
             },
             ...get_history_fields(false),
         ],
     });
-
-    if (return_type === ReturnType.GSTR2A) {
-        dialog.primary_action = () => {
-            // TODO: Upload Data
-            dialog.hide();
-        };
-    } else {
-        dialog.primary_action = () => {
-            // TODO: Upload Data
-            dialog.hide();
-        };
-    }
-
     return dialog.show();
 }
 
@@ -202,32 +192,83 @@ async function fetch_download_history(frm, dialog, for_download = true) {
     dialog.fields_dict.history.set_value(message);
 }
 
-function download_gstr(frm, dialog, method, otp = null) {
-    frm.call(method, {
-        gstr_name: dialog.fields_dict.return_type.value,
-        fiscal_year: dialog.fields_dict.fiscal_year.value,
-        otp: otp,
-    }).then(r => {
-        if (r.message.errorCode == "RETOTPREQUEST") {
-            reco_tool.get_gstin_otp(reco_tool.download_gstr, frm, dialog, method);
-        }
+async function fetch_return_period_from_file(frm, dialog) {
+    const return_type = dialog.get_value("return_type");
+    const file_path = dialog.get_value("attach_file");
+    const { message } = await frm.call("get_return_period_from_file", {
+        return_type,
+        file_path,
     });
-    let return_type = dialog.fields_dict.return_type.value;
+
+    if (!message) {
+        dialog.get_field("attach_file").clear_attachment();
+        frappe.throw(
+            __(
+                "Please make sure you have uploaded the correct file. File Uploaded is not for {0}",
+                [return_type]
+            )
+        );
+
+        return dialog.hide();
+    }
+
+    await dialog.set_value("period", message);
+    dialog.refresh();
+}
+
+async function download_gstr(
+    frm,
+    return_type,
+    fiscal_year,
+    only_missing = true,
+    otp = null
+) {
+    const args = {
+        method: null,
+        args: { fiscal_year, otp },
+    };
+    if (return_type === ReturnType.GSTR2A) {
+        args.method = "download_gstr_2a";
+        args.args.force = !only_missing;
+    } else {
+        args.method = "download_gstr_2b";
+    }
+
+    const { message } = frm.call(...args);
+    if (message && message.errorCode == "RETOTPREQUEST") {
+        const { otp } = await get_gstin_otp();
+        if (otp) download_gstr(frm, return_type, only_missing, otp);
+        return;
+    }
+
     reco_tool.show_progress_gstr_2a_2b(frm, return_type, "download");
 }
 
-function upload_gstr(frm, dialog, method) {
-    frm.call(method, {
-        return_type: dialog.fields_dict.return_type.value,
-        period: dialog.fields_dict.period.value,
-        attach_file: dialog.fields_dict.attach_file.value,
-    }).then(r => {
-        console.log(r.message);
+function get_gstin_otp() {
+    return new Promise(resolve => {
+        frappe.prompt(
+            {
+                fieldtype: "Data",
+                label: "One Time Password",
+                fieldname: "otp",
+                reqd: 1,
+                description:
+                    "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.",
+            },
+            function ({ otp }) {
+                resolve(otp);
+            },
+            "Enter OTP"
+        );
     });
-    let return_type = dialog.fields_dict.return_type.value;
+}
+
+async function upload_gstr(frm, return_type, period, file_path) {
+    await frm.call("upload_gstr", { return_type, period, file_path });
     reco_tool.show_progress_gstr_2a_2b(frm, return_type, "upload");
 }
 
+// TODO: refactor progress
 reco_tool.show_progress_gstr_2a_2b = function (frm, return_type, type) {
     if (type == "download") {
         frappe.run_serially([
@@ -320,28 +361,6 @@ function create_or_update_progress(frm, return_type, method, type) {
             frm.page.set_indicator(__("Success"), "green");
         }
     });
-}
-
-async function fetch_return_period_from_file(frm, dialog) {
-    const return_type = dialog.get_value("return_type");
-    const file_path = dialog.get_value("attach_file");
-    const { message } = await frm.call("get_return_period_from_file", {
-        return_type,
-        file_path,
-    });
-
-    if (!message) {
-        frappe.throw(
-            __(
-                "Please make sure you have uploaded the correct file. File Uploaded is not for {0}",
-                [return_type]
-            )
-        );
-
-        return dialog.hide();
-    }
-
-    dialog.set_value("period", r.message);
 }
 
 const purchase_reco_data_manager = class DataTableManager {

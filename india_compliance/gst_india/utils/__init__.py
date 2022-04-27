@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import cstr, get_datetime, get_time_zone
+from frappe.utils.file_manager import get_file_path
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -403,3 +404,7 @@ def as_ist(value=None):
         .astimezone(timezone(TIMEZONE))
         .replace(tzinfo=None)
     )
+
+
+def get_json_from_file(path):
+    return frappe._dict(frappe.get_file_json(get_file_path(path)))

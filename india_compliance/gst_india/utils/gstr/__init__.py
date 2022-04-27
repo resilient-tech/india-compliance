@@ -84,7 +84,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
             # making consistent with GSTR2b
             json_data[category.value] = data
 
-        save_gstr(gstin, ReturnType.GSTR2A, return_period, json_data)
+        save_gstr_2a(gstin, return_period, json_data)
 
 
 def download_gstr_2b(gstin, return_periods, otp=None):
@@ -100,30 +100,29 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             )
             continue
 
-        json_data = response.data
-
-        if (
-            not json_data
-            or json_data.get("gstin") != gstin
-            or json_data.get("rtnprd") != return_period
-        ):
-            frappe.throw(
-                "Data received seems to be invalid from the GST Portal. Please try"
-                " again or raise support ticket.",
-                title="Invalid Response Received.",
-            )
-
-        save_gstr(gstin, ReturnType.GSTR2B, return_period, json_data.get("docdata"))
+        save_gstr_2b(gstin, return_period, response)
 
     update_download_history(return_periods)
 
 
-def upload_gstr_2a(gstin, return_periods, otp=None):
-    pass
+def save_gstr_2a(gstin, return_period, json_data):
+    return save_gstr(gstin, ReturnType.GSTR2A, return_period, json_data)
 
 
-def upload_gstr_2b(gstin, return_periods, otp=None):
-    pass
+def save_gstr_2b(gstin, return_period, json_data):
+    json_data = json_data.data
+    if (
+        not json_data
+        or json_data.get("gstin") != gstin
+        or json_data.get("rtnprd") != return_period
+    ):
+        frappe.throw(
+            "Data received seems to be invalid from the GST Portal. Please try"
+            " again or raise support ticket.",
+            title="Invalid Response Received.",
+        )
+
+    return save_gstr(gstin, ReturnType.GSTR2B, return_period, json_data.get("docdata"))
 
 
 # TODO: enqueue save_gstr

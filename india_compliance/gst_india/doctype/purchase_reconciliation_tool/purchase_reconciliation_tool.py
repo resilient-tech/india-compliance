@@ -12,15 +12,15 @@ import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import Sum
 from frappe.utils import cint, getdate
-from frappe.utils.file_manager import get_file_path
 
+from india_compliance.gst_india.utils import get_json_from_file
 from india_compliance.gst_india.utils.gstr import (
     GSTRCategory,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
-    upload_gstr_2a,
-    upload_gstr_2b,
+    save_gstr_2a,
+    save_gstr_2b,
 )
 
 
@@ -264,17 +264,16 @@ class PurchaseReconciliationTool(Document):
         return inv
 
     @frappe.whitelist()
-    def upload_gstr(self, gst_return, period, attach_file):
-        if gst_return == "GSTR 2A":
-            response = upload_gstr_2a(
-                self.company_gstin, gst_return, period, attach_file
-            )
-        if gst_return == "GSTR 2B":
-            response = upload_gstr_2b(
-                self.company_gstin, gst_return, period, attach_file
-            )
-        return response
+    def upload_gstr(self, return_type, period, file_path):
+        return_type = ReturnType(return_type)
+        json_data = get_json_from_file(file_path)
+        if return_type == ReturnType.GSTR2A:
+            return save_gstr_2a(self.company_gstin, period, json_data)
 
+        if return_type == ReturnType.GSTR2B:
+            return save_gstr_2b(self.company_gstin, period, json_data)
+
+    @frappe.whitelist()
     def download_gstr_2a(self, fiscal_year, force=False, otp=None):
         periods = get_periods(fiscal_year)
         if not force:
@@ -282,6 +281,7 @@ class PurchaseReconciliationTool(Document):
 
         return download_gstr_2a(self.company_gstin, periods, otp)
 
+    @frappe.whitelist()
     def download_gstr_2b(self, fiscal_year, otp=None):
         periods = self.get_periods_to_download(
             ReturnType.GSTR2B, get_periods(fiscal_year)
@@ -301,6 +301,9 @@ class PurchaseReconciliationTool(Document):
     @frappe.whitelist()
     def get_download_history(self, return_type, fiscal_year, for_download=True):
         # TODO: refactor this method
+        if not return_type:
+            return
+
         return_type = ReturnType(return_type)
         periods = get_periods(fiscal_year)
         history = get_downloads_history(self.company_gstin, return_type, periods)
@@ -355,13 +358,13 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def get_return_period_from_file(self, return_type, path):
-        if not path:
+    def get_return_period_from_file(self, return_type, file_path):
+        if not file_path:
             return
 
         return_type = ReturnType(return_type)
         try:
-            json_data = get_json_from_file(path)
+            json_data = get_json_from_file(file_path)
             if return_type == ReturnType.GSTR2A:
                 return json_data.get("fp")
 
@@ -477,10 +480,6 @@ def get_summary_data(
         }
     )
     return summary_data
-
-
-def get_json_from_file(path):
-    return frappe.get_file_json(get_file_path(path))
 
 
 def get_periods(fiscal_year):
