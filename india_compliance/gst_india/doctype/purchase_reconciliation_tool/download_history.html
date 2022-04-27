@@ -1,0 +1,37 @@
+<div class="download_data">
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                {% for column in columns %}
+                    <th class="text-left">{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% set previous_period = '' %}
+            {% for period in data %}
+                <!-- for first class -->
+                <tr>
+                    {% if period != previous_period %}
+                        <td rowspan="{{data[period]|length}}">{{period}}</td>
+                        {% set previous_period = period %}
+                    {% endif %}
+                    {% for value in data[period].pop(0).values() %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+
+                <!-- for more than one class -->
+                {% if data[period] %}
+                    {% for category in data[period] %}
+                    <tr>
+                        {% for value in category.values() %}
+                            <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+            {% endfor%}
+        </tbody>
+    </table>
+</div>

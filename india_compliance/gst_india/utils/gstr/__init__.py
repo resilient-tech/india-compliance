@@ -118,6 +118,14 @@ def download_gstr_2b(gstin, return_periods, otp=None):
     update_download_history(return_periods)
 
 
+def upload_gstr_2a(gstin, return_periods, otp=None):
+    pass
+
+
+def upload_gstr_2b(gstin, return_periods, otp=None):
+    pass
+
+
 # TODO: enqueue save_gstr
 # TODO: show progress
 def save_gstr(gstin, return_type, return_period, json_data):
