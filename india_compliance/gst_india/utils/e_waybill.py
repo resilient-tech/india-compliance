@@ -701,7 +701,7 @@ class EWaybillData(GSTTransactionData):
             self.transaction_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6),
+                    "name": random_string(6).lstrip("0"),
                 }
             )
             self.company_address.gstin = "05AAACG2115R1ZN"
