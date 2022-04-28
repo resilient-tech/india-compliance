@@ -73,7 +73,9 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 )
                 continue
 
-            # TODO: confirm about throwing
+            if response.error_type:
+                continue
+
             if not (data := response.get(action.lower())):
                 frappe.throw(
                     "Data received seems to be invalid from the GST Portal. Please try"
@@ -90,6 +92,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
 def download_gstr_2b(gstin, return_periods, otp=None):
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
+        # TODO: skip if today is not greater than 14th return period's next months
         response = api.get_data(return_period, otp)
         if response.error_type == "otp_requested":
             return response
@@ -98,6 +101,9 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             create_download_log(
                 gstin, ReturnType.GSTR2B.value, return_period, data_not_found=True
             )
+            continue
+
+        if response.error_type:
             continue
 
         save_gstr_2b(gstin, return_period, response)

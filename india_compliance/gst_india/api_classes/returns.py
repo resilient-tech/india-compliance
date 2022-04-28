@@ -12,6 +12,8 @@ class ReturnsAPI(BaseAPI):
         "RET2B1023": "no_docs_found",
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
+        # For GSTR2B
+        "RET2B1018": "requested_before_cutoff_date",
     }
 
     def setup(self, company_gstin):

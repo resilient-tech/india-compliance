@@ -107,28 +107,42 @@ function show_gstr_dialog(frm, for_download = true) {
 
 function set_dialog_actions(frm, dialog, for_download) {
     const return_type = dialog.get_value("return_type");
-    const fiscal_year = dialog.get_value("fiscal_year");
 
     if (for_download) {
-        let primary_action_label;
         if (return_type === ReturnType.GSTR2A) {
-            primary_action_label = __("Download All");
-
+            dialog.set_primary_action(__("Download All"), () => {
+                console.log(dialog.get_value("fiscal_year"));
+                download_gstr(
+                    frm,
+                    dialog.get_value("return_type"),
+                    dialog.get_value("fiscal_year"),
+                    false
+                );
+                dialog.hide();
+            });
             dialog.set_secondary_action_label(__("Download Missing"));
             dialog.set_secondary_action(() => {
-                download_gstr(frm, return_type, fiscal_year, true);
+                download_gstr(
+                    frm,
+                    dialog.get_value("return_type"),
+                    dialog.get_value("fiscal_year"),
+                    true
+                );
                 dialog.hide();
             });
         } else if (return_type === ReturnType.GSTR2B) {
-            primary_action_label = __("Download");
-
+            dialog.set_primary_action(__("Download"), () => {
+                download_gstr(
+                    frm,
+                    dialog.get_value("return_type"),
+                    dialog.get_value("fiscal_year"),
+                    true
+                );
+                dialog.hide();
+            });
             dialog.set_secondary_action_label(null);
             dialog.set_secondary_action(null);
         }
-        dialog.set_primary_action(primary_action_label, () => {
-            download_gstr(frm, return_type, fiscal_year, false);
-            dialog.hide();
-        });
     } else {
         dialog.set_primary_action(__("Upload"), () => {
             const file_path = dialog.get_value("attach_file");
@@ -223,21 +237,19 @@ async function download_gstr(
     only_missing = true,
     otp = null
 ) {
-    const args = {
-        method: null,
-        args: { fiscal_year, otp },
-    };
+    let method;
+    const args = { fiscal_year, otp };
     if (return_type === ReturnType.GSTR2A) {
-        args.method = "download_gstr_2a";
-        args.args.force = !only_missing;
+        method = "download_gstr_2a";
+        args.force = !only_missing;
     } else {
-        args.method = "download_gstr_2b";
+        method = "download_gstr_2b";
     }
 
-    const { message } = frm.call(...args);
+    const { message } = await frm.call(method, args);
     if (message && message.errorCode == "RETOTPREQUEST") {
         const { otp } = await get_gstin_otp();
-        if (otp) download_gstr(frm, return_type, only_missing, otp);
+        if (otp) download_gstr(frm, return_type, fiscal_year, only_missing, otp);
         return;
     }
 
