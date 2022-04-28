@@ -133,10 +133,7 @@ def cancel_e_invoice(docname, values):
 
 def log_e_invoice(doc, log_data):
     frappe.enqueue(
-        _log_e_invoice,
-        queue="short",
-        at_front=True,
-        log_data=log_data,
+        _log_e_invoice, queue="short", at_front=True, log_data=log_data, now=True
     )
 
     update_onload(doc, "e_invoice_info", log_data)
@@ -315,6 +312,7 @@ class EInvoiceData(GSTTransactionData):
         return self.sanitize_value(", ".join(modes_of_payment), max_length=18)
 
     def get_supply_type(self):
+        print(self.doc)
         supply_type = GST_CATEGORIES[self.doc.gst_category]
         if self.doc.gst_category in ("Overseas", "SEZ"):
             supply_type = f"{supply_type}{EXPORT_TYPES[self.doc.export_type]}"
