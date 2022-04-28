@@ -1,11 +1,15 @@
-import random
-import string
-
 import jwt
 
 import frappe
 from frappe import _
-from frappe.utils import add_to_date, cstr, format_date, get_datetime, getdate
+from frappe.utils import (
+    add_to_date,
+    cstr,
+    format_date,
+    get_datetime,
+    getdate,
+    random_string,
+)
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
@@ -128,12 +132,7 @@ def cancel_e_invoice(docname, values):
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(
-        _log_e_invoice,
-        queue="short",
-        at_front=True,
-        log_data=log_data,
-    )
+    frappe.enqueue(_log_e_invoice, queue="short", at_front=True, log_data=log_data)
 
     update_onload(doc, "e_invoice_info", log_data)
 
@@ -363,14 +362,12 @@ class EInvoiceData(GSTTransactionData):
                 "state_number": "36",
                 "pincode": 500055,
             }
-
             self.company_address.update(seller)
             self.dispatch_address.update(seller)
             self.billing_address.update(buyer)
             self.shipping_address.update(buyer)
-            self.transaction_details.name = "".join(
-                random.choices(string.ascii_letters + string.digits, k=6)
-            )
+            self.transaction_details.name = random_string(6).lstrip("0")
+
             if self.transaction_details.total_igst_amount > 0:
                 self.transaction_details.place_of_supply = "36"
             else:

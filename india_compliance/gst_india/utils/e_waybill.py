@@ -1,9 +1,6 @@
-import random
-import string
-
 import frappe
 from frappe import _
-from frappe.utils import add_to_date, get_datetime, get_fullname
+from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
 from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
@@ -703,9 +700,7 @@ class EWaybillData(GSTTransactionData):
             self.transaction_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
-                    "name": "".join(
-                        random.choices(string.ascii_letters + string.digits, k=6)
-                    ),
+                    "name": random_string(6).lstrip("0"),
                 }
             )
             self.company_address.gstin = "05AAACG2115R1ZN"
