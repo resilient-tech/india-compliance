@@ -1,3 +1,7 @@
 {% include "india_compliance/gst_india/client_scripts/party.js" %}
 
-erpnext.setup_gst_reminder_button('Customer')
+const DOCTYPE = "Customer";
+
+validate_pan(DOCTYPE);
+validate_gstin(DOCTYPE);
+update_gstin_in_other_documents(DOCTYPE);

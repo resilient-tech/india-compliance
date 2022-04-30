@@ -1,8 +1,6 @@
 import frappe
-import json
-from frappe.custom.doctype.custom_field.custom_field import (
-    create_custom_fields,
-)
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
 from india_compliance.income_tax_india.constants.custom_fields import CUSTOM_FIELDS
 
 
@@ -21,9 +19,10 @@ def create_gratuity_rule_for_india():
 def _create_gratuity_rule_for_india():
     if frappe.db.exists("Gratuity Rule", "Indian Standard Gratuity Rule"):
         return
-    rule = frappe.get_doc(
+
+    rule = frappe.new_doc("Gratuity Rule")
+    rule.update(
         {
-            "doctype": "Gratuity Rule",
             "name": "Indian Standard Gratuity Rule",
             "calculate_gratuity_amount_based_on": "Current Slab",
             "work_experience_calculation_method": "Round Off Work Experience",

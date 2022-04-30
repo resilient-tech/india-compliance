@@ -5,48 +5,37 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "api_secret",
-  "gst_summary",
-  "gst_tax_settings_section",
+  "general_tab",
   "round_off_gst_values",
+  "hsn_wise_tax_breakup",
+  "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
-  "column_break_4",
-  "hsn_wise_tax_breakup",
-  "gstin_email_sent_on",
-  "section_break_4",
+  "e_waybill_section",
+  "enable_e_waybill",
+  "enable_e_waybill_from_dn",
+  "fetch_e_waybill_data",
+  "attach_e_waybill_print",
+  "column_break_10",
+  "auto_generate_e_waybill",
+  "e_waybill_threshold",
+  "e_invoice_section",
+  "enable_e_invoice",
+  "auto_generate_e_invoice",
+  "column_break_17",
+  "e_invoice_applicable_from",
+  "accounts_tab",
   "gst_accounts",
-  "b2c_limit"
+  "credentials_tab",
+  "api_secret",
+  "enable_api",
+  "credentials"
  ],
  "fields": [
   {
-   "fieldname": "gst_summary",
-   "fieldtype": "HTML",
-   "label": "GST Summary"
-  },
-  {
-   "fieldname": "gstin_email_sent_on",
-   "fieldtype": "Date",
-   "label": "GSTIN Email Sent On",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_break_4",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "gst_accounts",
    "fieldtype": "Table",
-   "label": "GST Accounts",
-   "options": "GST Account"
-  },
-  {
-   "default": "250000",
-   "description": "Set Invoice Value for B2C. B2CL and B2CS calculated based on this invoice value.",
-   "fieldname": "b2c_limit",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "B2C Limit",
+   "options": "GST Account",
    "reqd": 1
   },
   {
@@ -63,19 +52,14 @@
    "label": "Tax Breakup Table Based On HSN Code"
   },
   {
-   "fieldname": "gst_tax_settings_section",
-   "fieldtype": "Section Break",
-   "label": "GST Tax Settings"
-  },
-  {
    "fieldname": "column_break_4",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "api_secret",
    "fieldtype": "Password",
-   "label": "API Secret",
-   "read_only": 1
+   "hidden": 1,
+   "label": "API Secret"
   },
   {
    "default": "0",
@@ -92,12 +76,127 @@
    "label": "Minimum HSN/SAC Code Digits",
    "mandatory_depends_on": "eval: doc.validate_hsn_code",
    "options": "4\n6"
+  },
+  {
+   "fieldname": "accounts_tab",
+   "fieldtype": "Tab Break",
+   "label": "Accounts"
+  },
+  {
+   "depends_on": "eval: doc.api_secret",
+   "fieldname": "credentials_tab",
+   "fieldtype": "Tab Break",
+   "label": "Credentials"
+  },
+  {
+   "fieldname": "credentials",
+   "fieldtype": "Table",
+   "options": "GST Credentials"
+  },
+  {
+   "fieldname": "general_tab",
+   "fieldtype": "Tab Break",
+   "label": "General"
+  },
+  {
+   "fieldname": "e_waybill_section",
+   "fieldtype": "Section Break",
+   "label": "e-Waybill"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_waybill",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Features"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "If checked, a PDF of the e-Waybill will be automatically attached to the transaction after it's generation",
+   "fieldname": "attach_e_waybill_print",
+   "fieldtype": "Check",
+   "label": "Attach e-Waybill Print After Generation"
+  },
+  {
+   "default": "0",
+   "description": "Enable this to use API features including e-Waybill, e-Invoice or Autofill using Public APIs",
+   "fieldname": "enable_api",
+   "fieldtype": "Check",
+   "label": "Enable API Features"
+  },
+  {
+   "depends_on": "eval: doc.enable_api",
+   "fieldname": "e_invoice_section",
+   "fieldtype": "Section Break",
+   "label": "e-Invoice"
+  },
+  {
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "Posting Date from which e-Invoicing features should be enabled",
+   "fieldname": "e_invoice_applicable_from",
+   "fieldtype": "Date",
+   "label": "e-Invoice Applicable From",
+   "mandatory_depends_on": "eval: doc.enable_e_invoice"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "50000",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "description": "When selling goods with total Sales Invoice value greater than this amount, a prompt will be displayed if e-Waybill hasn't been generated upon submission",
+   "fieldname": "e_waybill_threshold",
+   "fieldtype": "Currency",
+   "label": "Invoice Value Threshold for e-Waybill Generation"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "e-Waybill will be automatically generated after Sales Invoice submission if the invoice value threshold is met, and data is available and valid",
+   "fieldname": "auto_generate_e_waybill",
+   "fieldtype": "Check",
+   "label": "Automatically Generate e-Waybill on Invoice Submission",
+   "read_only_depends_on": "eval: doc.enable_e_invoice && doc.auto_generate_e_invoice"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_api && doc.enable_e_waybill",
+   "description": "Automatically fetch e-Waybill data after it's generation for printing or logging purposes. This will lead to one additional API request.",
+   "fieldname": "fetch_e_waybill_data",
+   "fieldtype": "Check",
+   "label": "Fetch e-Waybill Data After Generation",
+   "read_only_depends_on": "eval: doc.attach_e_waybill_print"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "e-Invoice will be automatically generated after Sales Invoice submission if applicable",
+   "fieldname": "auto_generate_e_invoice",
+   "fieldtype": "Check",
+   "label": "Automatically Generate e-Invoice on Invoice Submission"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_invoice",
+   "fieldtype": "Check",
+   "label": "Enable e-Invoicing"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_waybill_from_dn",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Generation from Delivery Note"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-03-26 15:09:26.535232",
+ "modified": "2022-04-10 06:00:05.826119",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
