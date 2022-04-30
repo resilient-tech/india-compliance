@@ -16,8 +16,9 @@
   "inward_supply_period",
   "inward_supply_from_date",
   "inward_supply_to_date",
+  "reconciliation_data",
   "section_break_11",
-  "html_data"
+  "summary_data"
  ],
  "fields": [
   {
@@ -82,15 +83,21 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "html_data",
+   "fieldname": "summary_data",
    "fieldtype": "HTML"
+  },
+  {
+   "fieldname": "reconciliation_data",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Reconciliation Data"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-22 15:27:38.166558",
+ "modified": "2022-04-28 18:16:01.567526",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",

@@ -410,6 +410,53 @@ class PurchaseReconciliationTool(Document):
         date2 = datetime.strftime(date2 if date2 < now else now, "%Y-%m-%d")
         return [date1, date2]
 
+    @frappe.whitelist()
+    def get_reconciliation_data(self, company_gstin, force=False):
+        if not force and self.reconciliation_data:
+            return self.reconciliation_data
+
+        # TODO: add more filters
+
+        purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+        purchase_tax = frappe.qb.DocType("Purchase Taxes and Charges")
+        inward_supply = frappe.qb.DocType("Inward Supply")
+        inward_supply_item = frappe.qb.DocType("Inward Supply Item")
+
+        # TODO: do full outer joinap
+        self.reconciliation_data = (
+            frappe.qb.from_(purchase_invoice)
+            .left_join(purchase_tax)
+            .on(purchase_tax.parent == purchase_invoice.name)
+            .full_outer_join(inward_supply)
+            .on(
+                (inward_supply.link_doctype == "Purchase Invoice")
+                & (inward_supply.link_name == purchase_invoice.name)
+            )
+            .left_join(inward_supply_item)
+            .on(inward_supply_item.parent == inward_supply.name)
+            .where(company_gstin == purchase_invoice.company_gstin)
+            .where(purchase_invoice.is_return == 0)
+            .where(purchase_invoice.gst_category == "Registered Regular")
+            .select(
+                purchase_invoice.name.as_("purchase_invoice_number"),
+                purchase_invoice.supplier_name,
+                purchase_invoice.supplier_gstin,
+                # from inward supply
+                inward_supply.name.as_("inward_supply_number"),
+                inward_supply.doc_number.as_("bill_no"),
+                inward_supply.doc_date.as_("bill_date"),
+                inward_supply.reverse_charge,
+                inward_supply.place_of_supply,
+                inward_supply.classification,
+                inward_supply.match_status,
+                Sum(inward_supply_item.taxable_value).as_("taxable_value"),
+                Sum(inward_supply_item.igst).as_("igst"),
+                Sum(inward_supply_item.cgst).as_("cgst"),
+                Sum(inward_supply_item.sgst).as_("sgst"),
+                Sum(inward_supply_item.cess).as_("cess"),
+            )
+        )
+
 
 @frappe.whitelist()
 def get_summary_data(

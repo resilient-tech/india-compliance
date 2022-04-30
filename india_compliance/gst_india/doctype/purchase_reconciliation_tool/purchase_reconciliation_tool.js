@@ -8,6 +8,10 @@ const ReturnType = {
 };
 
 frappe.ui.form.on("Purchase Reconciliation Tool", {
+    setup(frm) {
+        frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
+    },
+
     refresh(frm) {
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
@@ -24,6 +28,60 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "inward_supply");
     },
 });
+
+class PurchaseReconciliationTool {
+    constructor(frm) {
+        this.frm = frm;
+        this.render_tab_group();
+    }
+
+    render_tab_group() {
+        this.tabGroup = new frappe.ui.FieldGroup({
+            fields: [
+                // this field is a hack for the FieldGroup(Layout) to not render default tab
+                {
+                    fieldtype: "Data",
+                    hidden: 1,
+                },
+                {
+                    label: "Summary",
+                    fieldtype: "Tab Break",
+                    fieldname: "summary_tab_break",
+                    active: 1,
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "summary",
+                    options: "summary",
+                },
+                {
+                    label: "Supplier Level",
+                    fieldtype: "Tab Break",
+                    fieldname: "supplier_tab_break",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "supplier_level",
+                    options: "supplier_level",
+                },
+                {
+                    label: "Invoice Level",
+                    fieldtype: "Tab Break",
+                    fieldname: "invoice_tab_break",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "invoice_level",
+                    options: "invoice_level",
+                },
+            ],
+            body: this.frm.get_field("summary_data").$wrapper,
+        });
+
+        this.tabGroup.make();
+        this.tabGroup.tabs[0].toggle(true);
+    }
+}
 
 async function fetch_date_range(frm, field_prefix) {
     const from_date_field = field_prefix + "_from_date";
