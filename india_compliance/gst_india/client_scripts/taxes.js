@@ -1,69 +1,96 @@
-const SALES_DOCTYPES = [
-	"Quotation",
-	"Sales Order",
-	"Delivery Note",
-	"Sales Invoice",
-	"POS Invoice",
-];
-
 function setup_auto_gst_taxation(doctype) {
-	frappe.ui.form.on(doctype, {
-		company_address: get_tax_template,
-		shipping_address: get_tax_template,
-		supplier_address: get_tax_template,
-		tax_category: get_tax_template,
-		customer_address: get_tax_template,
-	});
+    const events = Object.fromEntries(
+        [
+            "company_address",
+            "shipping_address",
+            "customer_address",
+            "supplier_address",
+            "tax_category",
+        ].map(field => [field, get_tax_template])
+    );
+
+    frappe.ui.form.on(doctype, events);
 }
 
 function get_tax_template(frm) {
-	if (!frm.doc.company) return;
+    if (!frm.doc.company) return;
 
-	let party_details = {
-		"shipping_address": frm.doc.shipping_address || "",
-		"shipping_address_name": frm.doc.shipping_address_name || "",
-		"customer_address": frm.doc.customer_address || "",
-		"supplier_address": frm.doc.supplier_address,
-		"customer": frm.doc.customer,
-		"supplier": frm.doc.supplier,
-		"supplier_gstin": frm.doc.supplier_gstin,
-		"company_gstin": frm.doc.company_gstin,
-		"tax_category": frm.doc.tax_category
-	};
+    const party_fields = [
+        "shipping_address",
+        "customer_address",
+        "supplier_address",
+        "shipping_address_name",
+        "customer",
+        "supplier",
+        "supplier_gstin",
+        "company_gstin",
+        "tax_category",
+    ];
 
-	frappe.call({
-		method: "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
-		args: {
-			party_details: JSON.stringify(party_details),
-			doctype: frm.doc.doctype,
-			company: frm.doc.company
-		},
-		debounce: 2000,
-		callback: function(r) {
-			if(r.message) {
-				frm.set_value("taxes_and_charges", r.message.taxes_and_charges);
-				frm.set_value("taxes", r.message.taxes);
-				frm.set_value("place_of_supply", r.message.place_of_supply);
-			}
-		}
-	});
+    const party_details = Object.fromEntries(
+        party_fields.map(field => [field, frm.doc[field]])
+    );
+
+    frappe.call({
+        method: "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
+        args: {
+            party_details: JSON.stringify(party_details),
+            doctype: frm.doc.doctype,
+            company: frm.doc.company,
+        },
+        debounce: 2000,
+        callback(r) {
+            if (r.message) {
+                frm.set_value("taxes_and_charges", r.message.taxes_and_charges);
+                frm.set_value("taxes", r.message.taxes);
+                frm.set_value("place_of_supply", r.message.place_of_supply);
+            }
+        },
+    });
 }
 
-function highlight_gst_category(doctype) {
-	frappe.ui.form.on(doctype, {
-		refresh: _highlight_gst_category,
-		gst_category: _highlight_gst_category,
-	});
+function fetch_gst_category(doctype) {
+    const party_type = get_party_type(doctype);
+    frappe.ui.form.on(doctype, {
+        setup(frm) {
+            // set gst category from party first, can be overwritten from address
+            frm.add_fetch(party_type, "gst_category", "gst_category");
+        },
+        customer_address(frm) {
+            if (frm.doc.customer_address) return;
+
+            frappe.db.get_value(
+                frappe.utils.to_title_case(party_type),
+                frm.doc[party_type],
+                "gst_category",
+                response => {
+                    if (!response) return;
+                    frm.set_value("gst_category", response.gst_category);
+                }
+            );
+        },
+    });
 }
 
-function _highlight_gst_category(frm) {
-	const party_type = in_list(SALES_DOCTYPES, frm.doctype) ? "customer" : "supplier";
-	const party_field = frm.fields_dict[party_type];
+function get_party_type(doctype) {
+    return in_list(
+        ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"],
+        doctype
+    )
+        ? "customer"
+        : "supplier";
+}
 
-	if (!frm.doc[party_type] || !frm.doc.gst_category) {
-		party_field.set_description("");
-		return;
-	};
+function update_gst_vehicle_type(doctype) {
+    frappe.ui.form.on(doctype, {
+        mode_of_transport(frm) {
+            frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        },
+    });
+}
 
-	party_field.set_description(`<em>${frm.doc.gst_category}</em>`);
+function get_vehicle_type(doc) {
+    if (doc.mode_of_transport == "Road") return "Regular";
+    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
+    return "";
 }

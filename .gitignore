@@ -4,6 +4,11 @@
 *.swp
 tags
 .vscode/
+__pycache__/
+
+# docs
+india_compliance/docs/current
+
+# JS
 dist/
 node_modules
-india_compliance/docs/current
