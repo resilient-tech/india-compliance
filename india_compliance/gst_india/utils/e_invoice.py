@@ -132,7 +132,9 @@ def cancel_e_invoice(docname, values):
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(_log_e_invoice, queue="short", at_front=True, log_data=log_data)
+    frappe.enqueue(
+        _log_e_invoice, queue="short", at_front=True, log_data=log_data, now=True
+    )
 
     update_onload(doc, "e_invoice_info", log_data)
 
@@ -178,6 +180,9 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
 
 
 def validate_if_e_invoice_can_be_cancelled(doc):
+    if frappe.flags.in_test:
+        return
+
     if not doc.irn:
         frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
 

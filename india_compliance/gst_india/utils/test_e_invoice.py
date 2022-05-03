@@ -25,8 +25,8 @@ class TestEInvoice(unittest.TestCase):
         self.sales_invoice = si
 
     @classmethod
-    def tearDownClass(cls) -> None:
-        return super().tearDownClass()
+    def tearDownClass(self):
+        pass
 
     def test_generate_irn(self):
         generate_e_invoice(self.sales_invoice.name)
@@ -36,10 +36,12 @@ class TestEInvoice(unittest.TestCase):
         )
         self.assertEqual(irn, e_invoice_log)
 
-        self.generate_e_waybill()
-        self._cancel_e_invoice()
+        self._generate_e_waybill()
 
-    def generate_e_waybill(self):
+        values = {"reason": "Others", "remark": "Test"}
+        cancel_e_invoice(self.sales_invoice.name, values)
+
+    def _generate_e_waybill(self):
         supplier = create_supplier(
             supplier_name="_Test Common Supplier",
             supplier_group="Unregistered Supplier",
@@ -66,7 +68,3 @@ class TestEInvoice(unittest.TestCase):
             "e-Waybill Log", {"reference_name": self.sales_invoice.name}, "name"
         )
         self.assertEqual(ewaybill, e_waybill_log)
-
-    def _cancel_e_invoice(self):
-        values = {"reason": "Others", "remark": "Test"}
-        cancel_e_invoice(self.sales_invoice.name, values)

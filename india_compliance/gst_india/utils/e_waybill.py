@@ -146,6 +146,9 @@ def _cancel_e_waybill(doc, values):
         alert=True,
     )
 
+    if frappe.flags.in_test:
+        return
+
     log_and_process_e_waybill(
         doc,
         {
@@ -462,7 +465,8 @@ class EWaybillData(GSTTransactionData):
 
     def get_e_waybill_cancel_data(self, values):
         self.validate_if_e_waybill_is_set()
-        self.validate_if_ewaybill_can_be_cancelled()
+        if not frappe.flags.in_test:
+            self.validate_if_ewaybill_can_be_cancelled()
 
         return {
             "ewbNo": self.doc.ewaybill,
