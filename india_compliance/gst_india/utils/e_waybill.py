@@ -91,7 +91,6 @@ def _generate_e_waybill(doc, throw=True):
         indicator="green",
         alert=True,
     )
-
     return send_updated_doc(doc)
 
 
@@ -350,7 +349,7 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         log_data=log_data,
         fetch=fetch,
         comment=comment,
-        now=True,
+        now=frappe.flags.in_test,
     )
 
     update_onload(doc, "e_waybill_info", log_data)
