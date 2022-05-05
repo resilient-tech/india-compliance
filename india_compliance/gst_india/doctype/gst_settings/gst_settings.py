@@ -3,14 +3,13 @@
 
 import frappe
 from frappe import _
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.model.document import Document
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 from india_compliance.gst_india.constants.e_invoice import E_INVOICE_FIELDS
 from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_FIELDS
-from india_compliance.gst_india.utils import delete_custom_fields
+from india_compliance.gst_india.utils import toggle_custom_fields
 
 
 class GSTSettings(Document):
@@ -107,7 +106,4 @@ class GSTSettings(Document):
 
 
 def _update_custom_fields(fields, condition):
-    if condition:
-        create_custom_fields(fields, ignore_validate=True)
-    else:
-        delete_custom_fields(fields)
+    toggle_custom_fields(fields, condition)
