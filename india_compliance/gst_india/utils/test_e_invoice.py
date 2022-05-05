@@ -1,3 +1,4 @@
+import json
 import unittest
 
 import frappe
@@ -14,30 +15,36 @@ from india_compliance.gst_india.utils.e_waybill import generate_e_waybill
 class TestEInvoice(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        si = create_sales_invoice(
-            naming_series="SINV-.CFY.-", item_code="Test Sample", do_not_submit=True
+        frappe.db.set_single_value("GST Settings", "enable_e_invoice", 1)
+        frappe.db.set_single_value("GST Settings", "auto_generate_e_invoice", 0)
+        frappe.db.set_single_value("GST Settings", "enable_e_waybill", 1)
+
+        self.si = create_sales_invoice(
+            item_code="Test Sample",
+            item_name="Test Sample",
+            gst_hsn_code="73041990",
+            do_not_submit=True,
         )
-        si.gst_category = "Registered Regular"
-        si.save()
-        si.submit()
-        self.sales_invoice = si
+        self.si.gst_category = "Registered Regular"
+        self.si.save()
+        self.si.submit()
 
     @classmethod
     def tearDownClass(self):
-        pass
+        frappe.db.set_single_value("GST Settings", "enable_e_invoice", 0)
+        frappe.db.set_single_value("GST Settings", "auto_generate_e_invoice", 1)
 
     def test_generate_irn(self):
-        generate_e_invoice(self.sales_invoice.name)
-        irn = frappe.db.get_value("Sales Invoice", self.sales_invoice.name, "irn")
-        e_invoice_log = frappe.db.get_value(
-            "e-Invoice Log", {"sales_invoice": self.sales_invoice.name}, "name"
+        generate_e_invoice(self.si.name)
+
+        expected_result = "IRN generated successfully"
+        integration_request = frappe.get_last_doc("Integration Request")
+        self.assertEqual(
+            expected_result, json.loads(integration_request.output).get("message")
         )
-        self.assertEqual(irn, e_invoice_log)
 
         self._generate_e_waybill()
-
-        values = {"reason": "Others", "remark": "Test"}
-        cancel_e_invoice(self.sales_invoice.name, values)
+        self._cancel_e_invoice()
 
     def _generate_e_waybill(self):
         supplier = create_supplier(
@@ -55,17 +62,27 @@ class TestEInvoice(unittest.TestCase):
         }
 
         generate_e_waybill(
-            doctype=self.sales_invoice.doctype,
-            docname=self.sales_invoice.name,
+            doctype=self.si.doctype,
+            docname=self.si.name,
             values=values,
         )
-        ewaybill = frappe.db.get_value(
-            "Sales Invoice", self.sales_invoice.name, "ewaybill"
+        expected_result = "E-Way Bill generated successfully"
+
+        integration_request = frappe.get_last_doc("Integration Request")
+        self.assertEqual(
+            expected_result, json.loads(integration_request.output).get("message")
         )
-        e_waybill_log = frappe.db.get_value(
-            "e-Waybill Log", {"reference_name": self.sales_invoice.name}, "name"
+
+    def _cancel_e_invoice(self):
+        values = {"reason": "Others", "remark": "Test"}
+        cancel_e_invoice(self.si.name, values)
+
+        expected_result = "E-Invoice is cancelled successfully"
+
+        integration_request = frappe.get_last_doc("Integration Request")
+        self.assertEqual(
+            expected_result, json.loads(integration_request.output).get("message")
         )
-        self.assertEqual(ewaybill, e_waybill_log)
 
 
 def create_sales_invoice(**args):
