@@ -22,7 +22,7 @@
                 <p>{{ addressLine2 }}</p>
                 <p>{{ city }}, {{ billingDetails.state }} - {{ pincode }}</p>
               </div>
-              <p class="company-footer"><strong>GSTIN: </strong> {{ gstin }}</p>
+              <p class="company-footer"><strong>GSTIN: </strong> {{ billingGstin }}</p>
             </div>
           </div>
           <div class="order-summary">
@@ -97,8 +97,8 @@ export default {
   },
 
   computed: {
-    gstin() {
-      return this.billingDetails.gstin;
+    billingGstin() {
+      return this.billingDetails.billing_gstin;
     },
 
     businessName() {
@@ -141,14 +141,53 @@ export default {
   methods: {
     getReadableNumber,
     editAddress() {
+      const states = [
+        "Andaman and Nicobar Islands",
+        "Andhra Pradesh",
+        "Arunachal Pradesh",
+        "Assam",
+        "Bihar",
+        "Chandigarh",
+        "Chhattisgarh",
+        "Dadra and Nagar Haveli and Daman and Diu",
+        "Delhi",
+        "Goa",
+        "Gujarat",
+        "Haryana",
+        "Himachal Pradesh",
+        "Jammu and Kashmir",
+        "Jharkhand",
+        "Karnataka",
+        "Kerala",
+        "Ladakh",
+        "Lakshadweep Islands",
+        "Madhya Pradesh",
+        "Maharashtra",
+        "Manipur",
+        "Meghalaya",
+        "Mizoram",
+        "Nagaland",
+        "Odisha",
+        "Other Territory",
+        "Pondicherry",
+        "Punjab",
+        "Rajasthan",
+        "Sikkim",
+        "Tamil Nadu",
+        "Telangana",
+        "Tripura",
+        "Uttar Pradesh",
+        "Uttarakhand",
+        "West Bengal",
+      ]
       const dialog = new frappe.ui.Dialog({
         title: "Edit Billing Address",
         fields: [
           {
             label: "GSTIN",
-            fieldname: "gstin",
+            fieldname: "billing_gstin",
             fieldtype: "Data",
-            default: this.gstin,
+            default: this.billingGstin,
           },
           {
             fieldtype: "Column Break",
@@ -186,14 +225,21 @@ export default {
           {
             label: "State",
             fieldname: "state",
-            fieldtype: "Data",
+            fieldtype: "Autocomplete",
             default: this.state,
+            options: this.country.toLowerCase() == "india" ? states:[]
           },
           {
             label: "Country",
             fieldname: "country",
             fieldtype: "Data",
             default: this.country,
+            onchange(){
+              // TODO: fix in frappe needed to update dialog options
+              this.value.toLowerCase() == "india" ?
+              dialog.set_df_property("state","options", states):
+              dialog.set_df_property("state", "options", [])
+            }
           },
           {
             label: "Pincode",
@@ -216,7 +262,10 @@ export default {
           }
 
           this.billingDetails = values;
-          await this.$store.dispatch("updateBillingDetails", values);
+          const updatedValues = await this.$store.dispatch("updateBillingDetails", values);
+
+          // don't close dialog if errors in address
+          if(!updatedValues) return;
 
           dialog.hide();
           frappe.show_alert({

@@ -82,7 +82,7 @@
             <div>
               <p class="validity-header">Lifetime Validity<sup>*</sup></p>
               <p class="validity-footer">
-                Initial validity of two years. Gets extended whenever you make
+                Initial validity is of {{creditsValidity}} months. Gets extended whenever you make
                 the next purchase.
               </p>
             </div>
