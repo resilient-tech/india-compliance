@@ -47,6 +47,7 @@ export default {
 
             if (!response.success || !response.message) return;
             commit("SET_BILLING_DETAILS", response.message);
+            return response.message
         },
 
         async createOrder({ commit }, { credits, amount }) {
