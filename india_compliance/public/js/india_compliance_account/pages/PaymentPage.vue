@@ -262,10 +262,7 @@ export default {
           }
 
           this.billingDetails = values;
-          const updatedValues = await this.$store.dispatch("updateBillingDetails", values);
-
-          // don't close dialog if errors in address
-          if(!updatedValues) return;
+          await this.$store.dispatch("updateBillingDetails", values);
 
           dialog.hide();
           frappe.show_alert({
@@ -342,7 +339,7 @@ export default {
     const script = document.createElement("script");
     script.setAttribute(
       "src",
-      "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.prod.js"
+      "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.sandbox.js"
     );
     document.head.appendChild(script);
     script.onload = async () => {

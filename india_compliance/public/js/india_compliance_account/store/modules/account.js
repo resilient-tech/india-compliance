@@ -36,7 +36,8 @@ export default {
             if (response.invalid_token)
                 return this.dispatch("setApiSecret", null);
 
-            if (!response.success || !response.message) return;
+            if (!response.success || !response.message)
+                frappe.throw();
             commit(`SET_${type.toUpperCase()}_DETAILS`, response.message);
         },
 
@@ -45,7 +46,8 @@ export default {
             if (response.invalid_token)
                 return this.dispatch("setApiSecret", null);
 
-            if (!response.success || !response.message) return;
+            if (!response.success || !response.message)
+                frappe.throw();
             commit("SET_BILLING_DETAILS", response.message);
             return response.message
         },
@@ -60,7 +62,7 @@ export default {
                 !response.message ||
                 !response.message.order_token
             )
-                return;
+                frappe.throw();
             commit("SET_ORDER_TOKEN", response.message.order_token);
         },
     },
