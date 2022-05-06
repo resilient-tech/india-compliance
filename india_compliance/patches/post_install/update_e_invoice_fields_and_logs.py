@@ -307,4 +307,6 @@ def delete_old_doctypes():
 
 def delete_old_reports():
     for report in ("E-Invoice Summary",):
-        frappe.delete_doc("Report", report, force=True, ignore_permissions=True)
+        frappe.delete_doc(
+            "Report", report, force=True, ignore_permissions=True, ignore_on_trash=True
+        )
