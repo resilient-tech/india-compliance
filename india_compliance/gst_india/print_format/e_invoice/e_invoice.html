@@ -3,15 +3,19 @@
 </style>
 
 {%- from "templates/print_formats/standard_macros.html" import add_header, render_field, print_value -%}
-{% set einvoice_log = frappe.get_doc("e-Invoice Log", doc.irn) %}
-{%- set einvoice = _dict(json.loads(einvoice_log.invoice_data)) -%}
+
+{% set e_invoice_log = frappe.db.get_value(
+	"e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
+) %}
+
+{%- set invoice_data = _dict(json.loads(e_invoice_log.invoice_data)) -%}
 
 <div class="page-break">
 	<div {% if print_settings.repeat_header_footer %} id="header-html" class="hidden-pdf" {% endif %}>
 		{% if letter_head and not no_letterhead %}
 			<div class="letter-head">{{ letter_head }}</div>
 		{% endif %}
-		<div class="print-heading">
+		<div class="print-heading text-right">
 			<h2>e-Invoice<br><small>{{ doc.name }}</small></h2>
 		</div>
 	</div>
@@ -27,45 +31,45 @@
 		</p>
 	</div>
 	{% endif %}
-	<h5 class="font-bold" style="margin-top: 0px;">1. Transaction Details</h5>
+	<h5 class="font-bold section-heading">1. Transaction Details</h5>
 	<div class="row section-break info-section">
 		<div class="col-xs-8 column-break">
 			<div class="row data-field">
 				<div class="col-xs-4"><label>IRN</label></div>
-				<div class="col-xs-8 value">{{ einvoice.Irn }}</div>
+				<div class="col-xs-8 value">{{ invoice_data.Irn }}</div>
 			</div>
 			<div class="row data-field">
 				<div class="col-xs-4"><label>Ack. No</label></div>
-				<div class="col-xs-8 value">{{ einvoice.AckNo }}</div>
+				<div class="col-xs-8 value">{{ invoice_data.AckNo }}</div>
 			</div>
 			<div class="row data-field">
 				<div class="col-xs-4"><label>Ack. Date</label></div>
-				<div class="col-xs-8 value">{{ frappe.utils.format_datetime(einvoice.AckDt, "dd/MM/yyyy hh:mm:ss") }}</div>
+				<div class="col-xs-8 value">{{ frappe.utils.format_datetime(invoice_data.AckDt, "dd/MM/yyyy hh:mm:ss") }}</div>
 			</div>
 			<div class="row data-field">
 				<div class="col-xs-4"><label>Category</label></div>
-				<div class="col-xs-8 value">{{ einvoice.TranDtls.SupTyp }}</div>
+				<div class="col-xs-8 value">{{ invoice_data.TranDtls.SupTyp }}</div>
 			</div>
 			<div class="row data-field">
 				<div class="col-xs-4"><label>Document Type</label></div>
-				<div class="col-xs-8 value">{{ einvoice.DocDtls.Typ }}</div>
+				<div class="col-xs-8 value">{{ invoice_data.DocDtls.Typ }}</div>
 			</div>
 			<div class="row data-field">
 				<div class="col-xs-4"><label>Document No</label></div>
-				<div class="col-xs-8 value">{{ einvoice.DocDtls.No }}</div>
+				<div class="col-xs-8 value">{{ invoice_data.DocDtls.No }}</div>
 			</div>
 		</div>
 		<div class="col-xs-4 column-break">
-			<img src="data:image/png;base64,{{ get_qr_code(einvoice_log.signed_qr_code, scale=2) }}" width="175px" style="float: right;">
+			<img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}" width="175px" style="float: right;">
 		</div>
 	</div>
 	<h5 class="font-bold section-heading">2. Party Details</h5>
 	<div class="row section-break info-section">
 		<div class="col-xs-6 column-break">
-			{% if einvoice.SellerDtls %}
-				{%- set seller = einvoice.SellerDtls -%}
+			{% if invoice_data.SellerDtls %}
+				{%- set seller = invoice_data.SellerDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>
-					{% if einvoice.DispDtls and einvoice.DispDtls.Pin == seller.Pin and einvoice.DispDtls.Addr1 == seller.Addr1 %}
+					{% if invoice_data.DispDtls and invoice_data.DispDtls.Pin == seller.Pin and invoice_data.DispDtls.Addr1 == seller.Addr1 %}
 						Seller and Dispatch Details
 					{% else %}
 						Seller Details
@@ -80,8 +84,8 @@
 				<p>{% if seller_gst_state %}{{ seller_gst_state }} - {% endif %}{{ seller.Pin }}</p>
 			{% endif %}
 
-			{%- if einvoice.DispDtls and (einvoice.DispDtls.Pin != einvoice.SellerDtls.Pin or einvoice.DispDtls.Addr1 != einvoice.SellerDtls.Addr1) -%}
-				{%- set dispatch = einvoice.DispDtls -%}
+			{%- if invoice_data.DispDtls and (invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin or invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1) -%}
+				{%- set dispatch = invoice_data.DispDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>Dispatched From</strong></h5>
 				{%- if dispatch.Gstin -%} <p>{{ dispatch.Gstin }}</p> {% endif %}
 				{% if  dispatch.Nm %}<p>{{ dispatch.Nm }}</p>{% endif %}
@@ -93,10 +97,10 @@
 			{% endif %}
 		</div>
 		<div class="col-xs-6 column-break">
-			{% if einvoice.BuyerDtls %}
-				{%- set buyer = einvoice.BuyerDtls -%}
+			{% if invoice_data.BuyerDtls %}
+				{%- set buyer = invoice_data.BuyerDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>
-					{% if einvoice.ShipDtls and einvoice.ShipDtls.Pin == buyer.Pin and einvoice.ShipDtls.Addr1 == buyer.Addr1 %}
+					{% if invoice_data.ShipDtls and invoice_data.ShipDtls.Pin == buyer.Pin and invoice_data.ShipDtls.Addr1 == buyer.Addr1 %}
 						Buyer and Shipping Details
 					{% else %}
 						Buyer Details
@@ -112,8 +116,8 @@
 			{% endif %}
 
 
-			{%- if einvoice.ShipDtls and (einvoice.ShipDtls.Pin != einvoice.BuyerDtls.Pin or einvoice.ShipDtls.Addr1 != einvoice.BuyerDtls.Addr1) -%}
-				{%- set shipping = einvoice.ShipDtls -%}
+			{%- if invoice_data.ShipDtls and (invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin or invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1) -%}
+				{%- set shipping = invoice_data.ShipDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>Shipped To</strong></h5>
 				<p>{{ shipping.Gstin }}</p>
 				<p>{{ shipping.LglNm }}</p>
@@ -125,7 +129,7 @@
 			{% endif %}
 		</div>
 	</div>
-	{% if einvoice.ItemList %}
+	{% if invoice_data.ItemList %}
 	<div style="overflow-x: auto;">
 		<h5 class="font-bold section-heading">3. Item Details</h5>
 		<table class="table table-bordered">
@@ -145,7 +149,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{% for item in einvoice.ItemList %}
+				{% for item in invoice_data.ItemList %}
 					<tr>
 						<td class="text-left" style="width: 3%;">{{ item.SlNo }}</td>
 						<td class="text-left">{{ item.PrdDesc }}</td>
@@ -164,9 +168,10 @@
 		</table>
 	</div>
 	{% endif %}
-	{% if einvoice.ValDtls %}
+	{% if invoice_data.ValDtls %}
+	{%- set value_details = invoice_data.ValDtls -%}
 	<div style="overflow-x: auto;">
-		<h5 class="font-bold">4. Value Details</h5>
+		<h5 class="font-bold section-heading">4. Value Details</h5>
 		<table class="table table-bordered">
 			<thead>
 				<tr>
@@ -175,7 +180,6 @@
 					<th class="text-left">SGST</th>
 					<th class="text-left">IGST</th>
 					<th class="text-left">CESS</th>
-					<th class="text-left" style="width: 10%;">State CESS</th>
 					<th class="text-left">Discount</th>
 					<th class="text-left" style="width: 10%;">Other Charges</th>
 					<th class="text-left" style="width: 10%;">Round Off</th>
@@ -183,14 +187,12 @@
 				</tr>
 			</thead>
 			<tbody>
-				{%- set value_details = einvoice.ValDtls -%}
 				<tr>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.AssVal, None, "INR") }}</td>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.CgstVal, None, "INR") }}</td>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.SgstVal, None, "INR") }}</td>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.IgstVal, None, "INR") }}</td>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.CesVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(0, None, "INR") }}</td>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.Discount, None, "INR") }}</td>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.OthChrg, None, "INR") }}</td>
 					<td class="text-right">{{ frappe.utils.fmt_money(value_details.RndOffAmt, None, "INR") }}</td>
