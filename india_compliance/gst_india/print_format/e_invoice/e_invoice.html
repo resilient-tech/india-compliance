@@ -66,13 +66,15 @@
 	<h5 class="font-bold section-heading">2. Party Details</h5>
 	<div class="row section-break info-section">
 		<div class="col-xs-6 column-break">
+			{%- set dispatch_condition = (invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin or invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1) -%}
+
 			{% if invoice_data.SellerDtls %}
 				{%- set seller = invoice_data.SellerDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>
-					{% if invoice_data.DispDtls and invoice_data.DispDtls.Pin == seller.Pin and invoice_data.DispDtls.Addr1 == seller.Addr1 %}
-						Seller and Dispatch Details
-					{% else %}
+					{% if invoice_data.DispDtls and dispatch_condition %}
 						Seller Details
+					{% else %}
+						Seller and Dispatch Details
 					{% endif %}
 				</strong></h5>
 				<p>{{ seller.Gstin }}</p>
@@ -84,7 +86,7 @@
 				<p>{% if seller_gst_state %}{{ seller_gst_state }} - {% endif %}{{ seller.Pin }}</p>
 			{% endif %}
 
-			{%- if invoice_data.DispDtls and (invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin or invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1) -%}
+			{%- if invoice_data.DispDtls and dispatch_condition -%}
 				{%- set dispatch = invoice_data.DispDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>Dispatched From</strong></h5>
 				{%- if dispatch.Gstin -%} <p>{{ dispatch.Gstin }}</p> {% endif %}
@@ -97,13 +99,14 @@
 			{% endif %}
 		</div>
 		<div class="col-xs-6 column-break">
+			{%- set shipping_condition = (invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin or invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1) -%}
 			{% if invoice_data.BuyerDtls %}
 				{%- set buyer = invoice_data.BuyerDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>
-					{% if invoice_data.ShipDtls and invoice_data.ShipDtls.Pin == buyer.Pin and invoice_data.ShipDtls.Addr1 == buyer.Addr1 %}
-						Buyer and Shipping Details
-					{% else %}
+					{% if invoice_data.ShipDtls and shipping_condition %}
 						Buyer Details
+					{% else %}
+						Buyer and Shipping Details
 					{% endif %}
 				</strong></h5>
 				<p>{{ buyer.Gstin }}</p>
@@ -116,7 +119,7 @@
 			{% endif %}
 
 
-			{%- if invoice_data.ShipDtls and (invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin or invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1) -%}
+			{%- if invoice_data.ShipDtls and shipping_condition -%}
 				{%- set shipping = invoice_data.ShipDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>Shipped To</strong></h5>
 				<p>{{ shipping.Gstin }}</p>
@@ -132,7 +135,7 @@
 	{% if invoice_data.ItemList %}
 	<div style="overflow-x: auto;">
 		<h5 class="font-bold section-heading">3. Item Details</h5>
-		<table class="table table-bordered">
+		<table class="table table-bordered hide-scrollbar">
 			<thead>
 				<tr>
 					<th class="text-left" style="width: 3%;">Sr. No.</th>
@@ -140,12 +143,22 @@
 					<th class="text-left" style="width: 10%;">HSN Code</th>
 					<th class="text-left" style="width: 5%;">Qty</th>
 					<th class="text-left" style="width: 5%;">UOM</th>
+					{% if is_zero_amount(item_list=invoice_data.ItemList, field="GstRt") %}
 					<th class="text-left">Rate</th>
+					{% endif %}
+					{% if is_zero_amount(item_list=invoice_data.ItemList, field="Discount") %}
 					<th class="text-left" style="width: 5%;">Discount</th>
+					{% endif %}
+					{% if is_zero_amount(item_list=invoice_data.ItemList, field="AssAmt") %}
 					<th class="text-left">Taxable Amount</th>
+					{% endif %}
 					<th class="text-left" style="width: 7%;">Tax Rate</th>
+					{% if is_zero_amount(field="other") %}
 					<th class="text-left" style="width: 5%;">Other Charges</th>
+					{% endif %}
+					{% if is_zero_amount(item_list=invoice_data.ItemList, field="TotItemVal") %}
 					<th class="text-left">Total</th>
+					{% endif %}
 				</tr>
 			</thead>
 			<tbody>
@@ -157,11 +170,21 @@
 						<td class="text-right" style="width: 5%;">{{ item.Qty }}</td>
 						<td class="text-left" style="width: 5%;">{{ item.Unit }}</td>
 						<td class="text-right">{{ frappe.utils.fmt_money(item.UnitPrice, None, "INR") }}</td>
-						<td class="text-right" style="width: 5%;">{{ frappe.utils.fmt_money(item.Discount, None, "INR") }}</td>
-						<td class="text-right">{{ frappe.utils.fmt_money(item.AssAmt, None, "INR") }}</td>
-						<td class="text-right" style="width: 7%;">{{ item.GstRt + item.CesRt }} %</td>
-						<td class="text-right" style="width: 5%;">{{ frappe.utils.fmt_money(0, None, "INR") }}</td>
-						<td class="text-right">{{ frappe.utils.fmt_money(item.TotItemVal, None, "INR") }}</td>
+						{% if is_zero_amount(item_list=invoice_data.ItemList, field="Discount") %}
+						<td class="text-right text-nowrap" style="width: 5%;">{{ frappe.utils.fmt_money(item.Discount, None, "INR") }}</td>
+						{% endif %}
+						{% if is_zero_amount(item_list=invoice_data.ItemList, field="AssAmt") %}
+						<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(item.AssAmt, None, "INR") }}</td>
+						{% endif %}
+						{% if is_zero_amount(item_list=invoice_data.ItemList, field="GstRt") %}
+						<td class="text-right text-nowrap" style="width: 7%;">{{ item.GstRt + item.CesRt }} %</td>
+						{% endif %}
+						{% if not True %}
+						<td class="text-right text-nowrap" style="width: 5%;">{{ frappe.utils.fmt_money(0, None, "INR") }}</td>
+						{% endif %}
+						{% if is_zero_amount(item_list=invoice_data.ItemList, field="TotItemVal") %}
+						<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(item.TotItemVal, None, "INR") }}</td>
+						{% endif %}
 					</tr>
 				{% endfor %}
 			</tbody>
@@ -172,31 +195,63 @@
 	{%- set value_details = invoice_data.ValDtls -%}
 	<div style="overflow-x: auto;">
 		<h5 class="font-bold section-heading">4. Value Details</h5>
-		<table class="table table-bordered">
+		<table class="table table-bordered hide-scrollbar">
 			<thead>
 				<tr>
 					<th class="text-left">Taxable Amount</th>
+					{% if value_details.CgstVal > 0 %}
 					<th class="text-left">CGST</th>
+					{% endif %}
+					{% if value_details.SgstVal > 0 %}
 					<th class="text-left">SGST</th>
+					{% endif %}
+					{% if value_details.IgstVal > 0 %}
 					<th class="text-left">IGST</th>
+					{% endif %}
+					{% if value_details.CesVal > 0 %}
 					<th class="text-left">CESS</th>
+					{% endif %}
+					{% if value_details.Discount > 0 %}
 					<th class="text-left">Discount</th>
+					{% endif %}
+					{% if value_details.OthChrg > 0 %}
 					<th class="text-left" style="width: 10%;">Other Charges</th>
+					{% endif %}
+					{% if value_details.RndOffAmt != 0 %}
 					<th class="text-left" style="width: 10%;">Round Off</th>
+					{% endif %}
+					{% if value_details.TotInvVal > 0 %}
 					<th class="text-left">Total Value</th>
+					{% endif %}
 				</tr>
 			</thead>
 			<tbody>
 				<tr>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.AssVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.CgstVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.SgstVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.IgstVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.CesVal, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.Discount, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.OthChrg, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.RndOffAmt, None, "INR") }}</td>
-					<td class="text-right">{{ frappe.utils.fmt_money(value_details.TotInvVal, None, "INR") }}</td>
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.AssVal, None, "INR") }}</td>
+					{% if value_details.CgstVal > 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.CgstVal, None, "INR") }}</td>
+					{% endif %}
+					{% if value_details.SgstVal > 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.SgstVal, None, "INR") }}</td>
+					{% endif %}
+					{% if value_details.IgstVal > 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.IgstVal, None, "INR") }}</td>
+					{% endif %}
+					{% if value_details.CesVal > 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.CesVal, None, "INR") }}</td>
+					{% endif %}
+					{% if value_details.Discount > 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.Discount, None, "INR") }}</td>
+					{% endif %}
+					{% if value_details.OthChrg > 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.OthChrg, None, "INR") }}</td>
+					{% endif %}
+					{% if value_details.RndOffAmt != 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.RndOffAmt, None, "INR") }}</td>
+					{% endif %}
+					{% if value_details.TotInvVal > 0 %}
+					<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(value_details.TotInvVal, None, "INR") }}</td>
+					{% endif %}
 				</tr>
 			</tbody>
 		</table>

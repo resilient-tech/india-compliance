@@ -7,3 +7,7 @@
 	margin-bottom: 10px;
 	font-weight: bold;
 }
+
+.print-format .hide-scrollbar::-webkit-scrollbar{
+	display: none;
+}
