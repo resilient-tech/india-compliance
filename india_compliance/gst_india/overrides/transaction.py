@@ -5,7 +5,7 @@ from frappe import _, bold
 from frappe.model.utils import get_fetch_values
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
-from india_compliance.gst_india.constants import STATE_NUMBERS, TRANSACTION_DOCS
+from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
@@ -226,14 +226,12 @@ def validate_overseas_gst_category(doc, method):
         "GST Settings", "GST Settings", "enable_overseas_transactions"
     )
 
-    if doc.doctype in TRANSACTION_DOCS and doc.meta.has_field("gst_category"):
-        if doc.gst_category in ("SEZ", "Overseas") and not overseas_enabled:
-            frappe.throw(
-                _(
-                    "GST Category is set to {0} and SEZ/Overseas is not enabled in GST"
-                    " Settings."
-                ).format(frappe.bold(doc.gst_category))
-            )
+    if doc.gst_category in ("SEZ", "Overseas") and not overseas_enabled:
+        frappe.throw(
+            _(
+                "GST Category cannot be set to {0} since it is disabled in GST Settings"
+            ).format(frappe.bold(doc.gst_category))
+        )
 
 
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):

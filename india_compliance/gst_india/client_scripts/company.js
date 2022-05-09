@@ -5,7 +5,7 @@ const DOCTYPE = "Company";
 validate_pan(DOCTYPE);
 validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
-alert_for_disabled_overseas_settings(DOCTYPE);
+show_overseas_disabled_warning(DOCTYPE);
 
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
