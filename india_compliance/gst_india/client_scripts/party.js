@@ -87,8 +87,7 @@ function show_overseas_disabled_warning(doctype) {
     frappe.ui.form.on(doctype, {
         validate(frm) {
             if (
-                in_list(["SEZ", "Overseas"], frm.doc.gst_category) &&
-                !frappe.boot.gst_settings.enable_overseas_transactions
+                !frappe.boot.gst_settings.enable_overseas_transactions && in_list(["SEZ", "Overseas"], frm.doc.gst_category)
             ) {
                 frappe.msgprint({
                     message: __(
