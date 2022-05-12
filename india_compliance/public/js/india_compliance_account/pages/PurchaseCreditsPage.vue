@@ -67,11 +67,11 @@
                 {{
                   index == 0
                     ? "First"
-                    : credits == -1
+                    : credits == Infinity
                     ? "Any Additional"
                     : "Next"
                 }}
-                {{ credits != -1 ? credits : "" }} Credits
+                {{ credits != Infinity ? credits : "" }} Credits
               </td>
               <td class="plan-list plan-price">
                 ₹ {{ getReadableNumber(rate / 100) }}
