@@ -377,7 +377,7 @@ def delete_custom_fields(custom_fields):
             frappe.db.delete(
                 "Custom Field",
                 {
-                    "fieldname": ("in", [field.fieldname for field in fields]),
+                    "fieldname": ("in", [field["fieldname"] for field in fields]),
                     "dt": doctype,
                 },
             )
