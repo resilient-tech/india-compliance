@@ -132,12 +132,7 @@ def cancel_e_invoice(docname, values):
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(
-        _log_e_invoice,
-        queue="short",
-        at_front=True,
-        log_data=log_data,
-    )
+    frappe.enqueue(_log_e_invoice, queue="short", at_front=True, log_data=log_data)
 
     update_onload(doc, "e_invoice_info", log_data)
 
@@ -371,7 +366,7 @@ class EInvoiceData(GSTTransactionData):
             self.dispatch_address.update(seller)
             self.billing_address.update(buyer)
             self.shipping_address.update(buyer)
-            self.transaction_details.name = random_string(6)
+            self.transaction_details.name = random_string(6).lstrip("0")
 
             if self.transaction_details.total_igst_amount > 0:
                 self.transaction_details.place_of_supply = "36"
