@@ -66,12 +66,12 @@
 	<h5 class="font-bold section-heading">2. Party Details</h5>
 	<div class="row section-break info-section">
 		<div class="col-xs-6 column-break">
-			{%- set dispatch_condition = (invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin or invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1) -%}
+			{%- set dispatch_condition = invoice_data.DispDtls and (invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin or invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1) -%}
 
 			{% if invoice_data.SellerDtls %}
 				{%- set seller = invoice_data.SellerDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>
-					{% if invoice_data.DispDtls and dispatch_condition %}
+					{% if dispatch_condition %}
 						Seller Details
 					{% else %}
 						Seller and Dispatch Details
@@ -86,7 +86,7 @@
 				<p>{% if seller_gst_state %}{{ seller_gst_state }} - {% endif %}{{ seller.Pin }}</p>
 			{% endif %}
 
-			{%- if invoice_data.DispDtls and dispatch_condition -%}
+			{%- if dispatch_condition -%}
 				{%- set dispatch = invoice_data.DispDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>Dispatched From</strong></h5>
 				{%- if dispatch.Gstin -%} <p>{{ dispatch.Gstin }}</p> {% endif %}
@@ -99,11 +99,11 @@
 			{% endif %}
 		</div>
 		<div class="col-xs-6 column-break">
-			{%- set shipping_condition = (invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin or invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1) -%}
+			{%- set shipping_condition = invoice_data.ShipDtls and (invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin or invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1) -%}
 			{% if invoice_data.BuyerDtls %}
 				{%- set buyer = invoice_data.BuyerDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>
-					{% if invoice_data.ShipDtls and shipping_condition %}
+					{% if shipping_condition %}
 						Buyer Details
 					{% else %}
 						Buyer and Shipping Details
@@ -119,7 +119,7 @@
 			{% endif %}
 
 
-			{%- if invoice_data.ShipDtls and shipping_condition -%}
+			{%- if shipping_condition -%}
 				{%- set shipping = invoice_data.ShipDtls -%}
 				<h5 style="margin-bottom: 5px;"><strong>Shipped To</strong></h5>
 				<p>{{ shipping.Gstin }}</p>
@@ -133,6 +133,7 @@
 		</div>
 	</div>
 	{% if invoice_data.ItemList %}
+	{% set zero_amount_fields = get_zero_amount_fields(item_list=invoice_data.ItemList) %}
 	<div style="overflow-x: auto;">
 		<h5 class="font-bold section-heading">3. Item Details</h5>
 		<table class="table table-bordered hide-scrollbar">
@@ -141,22 +142,26 @@
 					<th class="text-left" style="width: 3%;">Sr. No.</th>
 					<th class="text-left">Item</th>
 					<th class="text-left" style="width: 10%;">HSN Code</th>
+					{% if "Qty" not in zero_amount_fields %}
 					<th class="text-left" style="width: 5%;">Qty</th>
+					{% endif %}
 					<th class="text-left" style="width: 5%;">UOM</th>
-					{% if is_zero_amount(item_list=invoice_data.ItemList, field="GstRt") %}
+					{% if "UnitPrice" not in zero_amount_fields %}
 					<th class="text-left">Rate</th>
 					{% endif %}
-					{% if is_zero_amount(item_list=invoice_data.ItemList, field="Discount") %}
+					{% if "Discount" not in zero_amount_fields %}
 					<th class="text-left" style="width: 5%;">Discount</th>
 					{% endif %}
-					{% if is_zero_amount(item_list=invoice_data.ItemList, field="AssAmt") %}
+					{% if "AssAmt" not in zero_amount_fields %}
 					<th class="text-left">Taxable Amount</th>
 					{% endif %}
+					{% if "GstRt" not in zero_amount_fields %}
 					<th class="text-left" style="width: 7%;">Tax Rate</th>
-					{% if is_zero_amount(field="other") %}
+					{% endif %}
+					{% if not True %}
 					<th class="text-left" style="width: 5%;">Other Charges</th>
 					{% endif %}
-					{% if is_zero_amount(item_list=invoice_data.ItemList, field="TotItemVal") %}
+					{% if "TotItemVal" in zero_amount_fields %}
 					<th class="text-left">Total</th>
 					{% endif %}
 				</tr>
@@ -167,22 +172,26 @@
 						<td class="text-left" style="width: 3%;">{{ item.SlNo }}</td>
 						<td class="text-left">{{ item.PrdDesc }}</td>
 						<td class="text-left" style="width: 10%;">{{ item.HsnCd }}</td>
+						{% if "Qty" not in zero_amount_fields %}
 						<td class="text-right" style="width: 5%;">{{ item.Qty }}</td>
+						{% endif %}
 						<td class="text-left" style="width: 5%;">{{ item.Unit }}</td>
+						{% if "UnitPrice" not in zero_amount_fields %}
 						<td class="text-right">{{ frappe.utils.fmt_money(item.UnitPrice, None, "INR") }}</td>
-						{% if is_zero_amount(item_list=invoice_data.ItemList, field="Discount") %}
+						{% endif %}
+						{% if "Discount" not in zero_amount_fields %}
 						<td class="text-right text-nowrap" style="width: 5%;">{{ frappe.utils.fmt_money(item.Discount, None, "INR") }}</td>
 						{% endif %}
-						{% if is_zero_amount(item_list=invoice_data.ItemList, field="AssAmt") %}
+						{% if "AssAmt" not in zero_amount_fields %}
 						<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(item.AssAmt, None, "INR") }}</td>
 						{% endif %}
-						{% if is_zero_amount(item_list=invoice_data.ItemList, field="GstRt") %}
+						{% if "GstRt" not in zero_amount_fields or "CesRt" not in zero_amount_fields %}
 						<td class="text-right text-nowrap" style="width: 7%;">{{ item.GstRt + item.CesRt }} %</td>
 						{% endif %}
 						{% if not True %}
 						<td class="text-right text-nowrap" style="width: 5%;">{{ frappe.utils.fmt_money(0, None, "INR") }}</td>
 						{% endif %}
-						{% if is_zero_amount(item_list=invoice_data.ItemList, field="TotItemVal") %}
+						{% if "TotItemVal" in zero_amount_fields %}
 						<td class="text-right text-nowrap">{{ frappe.utils.fmt_money(item.TotItemVal, None, "INR") }}</td>
 						{% endif %}
 					</tr>

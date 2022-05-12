@@ -87,10 +87,12 @@ def get_ewaybill_barcode(ewaybill):
     return barcode_base64
 
 
-def is_zero_amount(item_list=None, value_details=None, field=None):
-    if not field or field == "Other":
-        return False
+def get_zero_amount_fields(item_list=None):
+    fields = ("Qty", "UnitPrice", "Discount", "AssAmt", "GstRt", "CesRt", "TotItemVal")
     if item_list:
-        return True if not all(item[field] == 0 for item in item_list) else False
-    if value_details:
-        return True if value_details[field] > 0 else False
+        zero_amount_fields = []
+        for field in fields:
+            zero_amount_fields.append(field) if all(
+                item[field] == 0 for item in item_list
+            ) else None
+        return zero_amount_fields
