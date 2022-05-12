@@ -86,9 +86,9 @@ def get_party_gstins(party_type, party):
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
     Validate GSTIN with following checks:
-    - Length should be 15.
-    - Validate GSTIN Check Digit.
-    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin parameter).
+    - Length should be 15
+    - Validate GSTIN Check Digit
+    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin)
     """
 
     if not gstin:
@@ -425,9 +425,14 @@ def as_ist(value=None):
 
 
 def titlecase(value):
-    def abbreviations(word, **kwargs):
-        word_upper = word.upper()
-        if word_upper in ABBREVIATIONS:
-            return word_upper
+    return _titlecase(value, callback=get_titlecase_version)
 
-    return _titlecase(value, callback=abbreviations)
+
+def get_titlecase_version(word, all_caps=False, **kwargs):
+    """Retruns abbreviation if found, else None"""
+
+    if not all_caps:
+        word = word.upper()
+
+    if word in ABBREVIATIONS:
+        return word
