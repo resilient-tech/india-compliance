@@ -40,9 +40,7 @@
             </div>
             <div class="row">
               <p class="col">GST @ {{ taxRate }}%</p>
-              <p class="col calculator-net-value">
-                ₹ {{ getReadableNumber(tax) }}
-              </p>
+              <p class="col calculator-net-value">₹ {{ getReadableNumber(tax) }}</p>
             </div>
             <div class="calculator-total row">
               <p class="col">Amount Payable</p>
@@ -65,11 +63,7 @@
             <tr v-for="(rate, credits, index) in rates" :key="index">
               <td class="plan-list">
                 {{
-                  index == 0
-                    ? "First"
-                    : credits == Infinity
-                    ? "Any Additional"
-                    : "Next"
+                  index == 0 ? "First" : credits == Infinity ? "Any Additional" : "Next"
                 }}
                 {{ credits != Infinity ? credits : "" }} Credits
               </td>
@@ -82,16 +76,12 @@
             <div>
               <p class="validity-header">Lifetime Validity<sup>*</sup></p>
               <p class="validity-footer">
-                Initial validity is of {{creditsValidity}} months. Gets extended whenever you make
-                the next purchase.
+                Initial validity is of {{ creditsValidity }} months. Gets extended
+                whenever you make the next purchase.
               </p>
             </div>
           </div>
-          <a
-            :href="learnMoreUrl"
-            target="_blank"
-            class="text-highlight text-right"
-          >
+          <a :href="learnMoreUrl" target="_blank" class="text-highlight text-right">
             learn more...
           </a>
         </div>
@@ -164,15 +154,17 @@ export default {
     },
 
     netTotal() {
-      return (this.credits * this.applicableRate) / 100;
-    },
+      let net_total = 0;
+      let total_credits = this.credits;
 
-    applicableRate() {
-      let slabs = Object.keys(this.rates).sort();
-      const rates = Object.values(this.rates).sort().reverse();
-      slabs.shift();
-      slabs = slabs.map((slab) => parseInt(slab));
-      return rates[bisect_left(slabs, this.credits)];
+      for (let [credits, rate] of Object.entries(this.rates)) {
+        credits = Math.min(total_credits, credits);
+        net_total += (credits * rate) / 100;
+        total_credits -= credits;
+        if (!total_credits) break;
+      }
+
+      return net_total;
     },
 
     grandTotal() {
@@ -205,8 +197,7 @@ export default {
       const response = await create_order(this.credits, this.grandTotal);
       this.isRedirecting = false;
 
-      if (response.invalid_token)
-        return this.$store.dispatch("setApiSecret", null);
+      if (response.invalid_token) return this.$store.dispatch("setApiSecret", null);
 
       if (!response.success || !response.message?.order_token) return;
 
@@ -239,8 +230,7 @@ export default {
         this.credits = this.minOrderQty;
       } else if (this.credits % this.creditsMultiplier != 0) {
         this.credits =
-          Math.ceil(this.credits / this.creditsMultiplier) *
-          this.creditsMultiplier;
+          Math.ceil(this.credits / this.creditsMultiplier) * this.creditsMultiplier;
       }
 
       this.creditsInputValue = this.credits;
@@ -248,10 +238,8 @@ export default {
   },
 
   beforeRouteEnter(to, from, next) {
-    next((vm) => {
-      vm.$store.getters.isLoggedIn
-        ? next()
-        : next({ name: "auth", replace: true });
+    next(vm => {
+      vm.$store.getters.isLoggedIn ? next() : next({ name: "auth", replace: true });
     });
   },
 
