@@ -357,13 +357,13 @@ def delete_custom_fields(custom_fields):
             frappe.clear_cache(doctype=doctype)
 
 
-def parse_datetime(value):
+def parse_datetime(value, day_first=False):
     """Convert IST string to offset-naive system time"""
 
     if not value:
         return
 
-    parsed = parser.parse(value, dayfirst=True)
+    parsed = parser.parse(value, dayfirst=day_first)
     system_tz = get_time_zone()
 
     if system_tz == TIMEZONE:
@@ -378,14 +378,14 @@ def parse_datetime(value):
     )
 
 
-def as_ist(datetime=None):
+def as_ist(value=None):
     """Convert system time to offset-naive IST time"""
 
-    parsed = get_datetime(datetime)
+    parsed = get_datetime(value)
     system_tz = get_time_zone()
 
     if system_tz == TIMEZONE:
-        return datetime
+        return parsed
 
     # localize to system, convert to IST, remove tzinfo
     return (

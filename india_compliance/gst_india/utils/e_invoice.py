@@ -24,8 +24,8 @@ from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     log_and_process_e_waybill_generation,
 )
-from india_compliance.gst_india.utils.invoice_data import (
-    GSTInvoiceData,
+from india_compliance.gst_india.utils.transaction_data import (
+    GSTTransactionData,
     validate_non_gst_items,
 )
 
@@ -99,7 +99,7 @@ def cancel_e_invoice(docname, values):
     values = frappe.parse_json(values)
     validate_if_e_invoice_can_be_cancelled(doc)
 
-    if doc.ewaybill:
+    if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
     data = {
@@ -132,12 +132,7 @@ def cancel_e_invoice(docname, values):
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(
-        _log_e_invoice,
-        queue="short",
-        at_front=True,
-        log_data=log_data,
-    )
+    frappe.enqueue(_log_e_invoice, queue="short", at_front=True, log_data=log_data)
 
     update_onload(doc, "e_invoice_info", log_data)
 
@@ -171,12 +166,6 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not gst_settings.enable_api:
-        return _throw(_("Enable API in GST Settings to generate e-Invoice"))
-
-    if not gst_settings.enable_e_invoice:
-        return _throw(_("Please enable e-Invoicing in GST Settings first"))
-
     if getdate(gst_settings.e_invoice_applicable_from) > getdate(doc.posting_date):
         return _throw(
             _(
@@ -205,17 +194,17 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         )
 
 
-class EInvoiceData(GSTInvoiceData):
+class EInvoiceData(GSTTransactionData):
     def get_data(self):
-        self.validate_invoice()
-        self.get_invoice_details()
+        self.validate_transaction()
+        self.get_transaction_details()
         self.get_item_list()
         self.get_transporter_details()
         self.get_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
-    def validate_invoice(self):
-        super().validate_invoice()
+    def validate_transaction(self):
+        super().validate_transaction()
         validate_e_invoice_applicability(self.doc, self.settings)
 
     def update_item_details(self, item_details, item):
@@ -229,27 +218,29 @@ class EInvoiceData(GSTInvoiceData):
                     if item.qty
                     else abs(self.rounded(item.taxable_value, 3))
                 ),
-                "barcode": item.barcode,
+                "barcode": self.sanitize_value(
+                    item.barcode, max_length=30, truncate=False
+                ),
             }
         )
 
-        if item.batch_no:
+        if batch_no := self.sanitize_value(
+            item.batch_no, max_length=20, truncate=False
+        ):
             batch_expiry_date = frappe.db.get_value(
                 "Batch", item.batch_no, "expiry_date"
             )
             item_details.update(
                 {
-                    "batch_number": item.batch_no,
+                    "batch_number": batch_no,
                     "batch_expiry_date": format_date(
                         batch_expiry_date, self.DATE_FORMAT
                     ),
                 }
             )
 
-    def update_invoice_details(self):
-        super().update_invoice_details()
-
-        self.invoice_details.update(
+    def update_transaction_details(self):
+        self.transaction_details.update(
             {
                 "tax_scheme": "GST",
                 "supply_type": self.get_supply_type(),
@@ -264,10 +255,10 @@ class EInvoiceData(GSTInvoiceData):
 
         # Credit Note Details
         if self.doc.is_return and (return_against := self.doc.return_against):
-            self.invoice_details.update(
+            self.transaction_details.update(
                 {
-                    "original_invoice_number": return_against,
-                    "original_invoice_date": format_date(
+                    "original_name": return_against,
+                    "original_date": format_date(
                         frappe.db.get_value(
                             "Sales Invoice", return_against, "posting_date"
                         ),
@@ -292,16 +283,16 @@ class EInvoiceData(GSTInvoiceData):
         if (self.doc.is_pos or self.doc.advances) and self.doc.base_paid_amount:
             paid_amount = abs(self.rounded(self.doc.base_paid_amount))
 
-        self.invoice_details.update(
+        self.transaction_details.update(
             {
-                "payee_name": self.doc.company if paid_amount else "",
-                "mode_of_payment": ", ".join(
-                    d.mode_of_payment for d in self.doc.payments or ()
-                ),
+                "payee_name": self.sanitize_value(self.doc.company)
+                if paid_amount
+                else "",
+                "mode_of_payment": self.get_mode_of_payment(),
                 "paid_amount": paid_amount,
                 "credit_days": credit_days,
                 "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
-                "payment_terms": self.doc.payment_terms_template,
+                "payment_terms": self.sanitize_value(self.doc.payment_terms_template),
                 "grand_total": (
                     abs(self.rounded(self.doc.grand_total))
                     if self.doc.currency != "INR"
@@ -309,6 +300,16 @@ class EInvoiceData(GSTInvoiceData):
                 ),
             }
         )
+
+    def get_mode_of_payment(self):
+        modes_of_payment = set()
+        for payment in self.doc.payments or ():
+            modes_of_payment.add(payment.mode_of_payment)
+
+        if not modes_of_payment:
+            return
+
+        return self.sanitize_value(", ".join(modes_of_payment), max_length=18)
 
     def get_supply_type(self):
         supply_type = GST_CATEGORIES[self.doc.gst_category]
@@ -346,8 +347,10 @@ class EInvoiceData(GSTInvoiceData):
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = self.doc.customer_name or self.doc.customer
-        self.company_address.legal_name = self.doc.company
+        self.billing_address.legal_name = self.sanitize_value(
+            self.doc.customer_name or self.doc.customer
+        )
+        self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
     def get_invoice_data(self):
         if self.sandbox:
@@ -365,25 +368,25 @@ class EInvoiceData(GSTInvoiceData):
             self.dispatch_address.update(seller)
             self.billing_address.update(buyer)
             self.shipping_address.update(buyer)
-            self.invoice_details.invoice_number = random_string(6)
+            self.transaction_details.name = random_string(6).lstrip("0")
 
-            if self.invoice_details.total_igst_amount > 0:
-                self.invoice_details.place_of_supply = "36"
+            if self.transaction_details.total_igst_amount > 0:
+                self.transaction_details.place_of_supply = "36"
             else:
-                self.invoice_details.place_of_supply = "01"
+                self.transaction_details.place_of_supply = "01"
 
         return {
             "Version": "1.1",
             "TranDtls": {
-                "TaxSch": self.invoice_details.tax_scheme,
-                "SupTyp": self.invoice_details.supply_type,
-                "RegRev": self.invoice_details.reverse_charge,
-                "EcmGstin": self.invoice_details.ecommerce_gstin,
+                "TaxSch": self.transaction_details.tax_scheme,
+                "SupTyp": self.transaction_details.supply_type,
+                "RegRev": self.transaction_details.reverse_charge,
+                "EcmGstin": self.transaction_details.ecommerce_gstin,
             },
             "DocDtls": {
-                "Typ": self.invoice_details.invoice_type,
-                "No": self.invoice_details.invoice_number,
-                "Dt": self.invoice_details.invoice_date,
+                "Typ": self.transaction_details.invoice_type,
+                "No": self.transaction_details.name,
+                "Dt": self.transaction_details.date,
             },
             "SellerDtls": {
                 "Gstin": self.company_address.gstin,
@@ -404,7 +407,7 @@ class EInvoiceData(GSTInvoiceData):
                 "Loc": self.billing_address.city,
                 "Pin": self.billing_address.pincode,
                 "Stcd": self.billing_address.state_number,
-                "Pos": self.invoice_details.place_of_supply,
+                "Pos": self.transaction_details.place_of_supply,
             },
             "DispDtls": {
                 "Nm": self.dispatch_address.address_title,
@@ -426,43 +429,43 @@ class EInvoiceData(GSTInvoiceData):
             },
             "ItemList": self.item_list,
             "ValDtls": {
-                "AssVal": self.invoice_details.base_total,
-                "CgstVal": self.invoice_details.total_cgst_amount,
-                "SgstVal": self.invoice_details.total_sgst_amount,
-                "IgstVal": self.invoice_details.total_igst_amount,
-                "CesVal": self.invoice_details.total_cess_amount
-                + self.invoice_details.total_cess_non_advol_amount,
-                "Discount": self.invoice_details.discount_amount,
-                "RndOffAmt": self.invoice_details.rounding_adjustment,
-                "OthChrg": self.invoice_details.other_charges,
-                "TotInvVal": self.invoice_details.base_grand_total,
-                "TotInvValFc": self.invoice_details.grand_total,
+                "AssVal": self.transaction_details.base_total,
+                "CgstVal": self.transaction_details.total_cgst_amount,
+                "SgstVal": self.transaction_details.total_sgst_amount,
+                "IgstVal": self.transaction_details.total_igst_amount,
+                "CesVal": self.transaction_details.total_cess_amount
+                + self.transaction_details.total_cess_non_advol_amount,
+                "Discount": self.transaction_details.discount_amount,
+                "RndOffAmt": self.transaction_details.rounding_adjustment,
+                "OthChrg": self.transaction_details.other_charges,
+                "TotInvVal": self.transaction_details.base_grand_total,
+                "TotInvValFc": self.transaction_details.grand_total,
             },
             "PayDtls": {
-                "Nm": self.invoice_details.payee_name,
-                "Mode": self.invoice_details.mode_of_payment,
-                "PayTerm": self.invoice_details.payment_terms,
-                "PaidAmt": self.invoice_details.paid_amount,
-                "PaymtDue": self.invoice_details.outstanding_amount,
-                "CrDay": self.invoice_details.credit_days,
+                "Nm": self.transaction_details.payee_name,
+                "Mode": self.transaction_details.mode_of_payment,
+                "PayTerm": self.transaction_details.payment_terms,
+                "PaidAmt": self.transaction_details.paid_amount,
+                "PaymtDue": self.transaction_details.outstanding_amount,
+                "CrDay": self.transaction_details.credit_days,
             },
             "RefDtls": {
                 "PrecDocDtls": [
                     {
-                        "InvNo": self.invoice_details.original_invoice_number,
-                        "InvDt": self.invoice_details.original_invoice_date,
+                        "InvNo": self.transaction_details.original_name,
+                        "InvDt": self.transaction_details.original_date,
                     }
                 ]
             },
             "EwbDtls": {
-                "TransId": self.invoice_details.gst_transporter_id,
-                "TransName": self.invoice_details.transporter_name,
-                "TransMode": cstr(self.invoice_details.mode_of_transport),
-                "Distance": self.invoice_details.distance,
-                "TransDocNo": self.invoice_details.lr_no,
-                "TransDocDt": self.invoice_details.lr_date,
-                "VehNo": self.invoice_details.vehicle_no,
-                "VehType": self.invoice_details.vehicle_type,
+                "TransId": self.transaction_details.gst_transporter_id,
+                "TransName": self.transaction_details.transporter_name,
+                "TransMode": cstr(self.transaction_details.mode_of_transport),
+                "Distance": self.transaction_details.distance,
+                "TransDocNo": self.transaction_details.lr_no,
+                "TransDocDt": self.transaction_details.lr_date,
+                "VehNo": self.transaction_details.vehicle_no,
+                "VehType": self.transaction_details.vehicle_type,
             },
         }
 
