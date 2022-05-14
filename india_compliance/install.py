@@ -12,6 +12,7 @@ POST_INSTALL_PATCHES = (
     "update_reverse_charge",
     "update_gstin_and_gst_category",
     "update_e_invoice_fields_and_logs",
+    "delete_gst_e_invoice_print_format",
 )
 
 

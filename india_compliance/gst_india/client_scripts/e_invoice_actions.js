@@ -1,6 +1,7 @@
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
-        if (frm.doc.docstatus != 1 || !is_e_invoice_applicable(frm)) return;
+        if (!is_e_invoice_applicable(frm)) return;
+
         if (
             !frm.doc.irn &&
             frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
@@ -33,7 +34,7 @@ frappe.ui.form.on("Sales Invoice", {
         if (
             frm.doc.irn ||
             !is_e_invoice_applicable(frm) ||
-            !gst_settings.auto_generate_e_invoice
+            !frappe.boot.gst_settings.auto_generate_e_invoice
         )
             return;
 
@@ -44,8 +45,41 @@ frappe.ui.form.on("Sales Invoice", {
             {
                 docname: frm.doc.name,
                 throw: false,
-            },
+            }
         );
+    },
+    before_cancel(frm) {
+        if (!frm.doc.irn) return;
+
+        frappe.validated = false;
+
+        return new Promise(resolve => {
+            const continueCancellation = () => {
+                frappe.validated = true;
+                resolve();
+            };
+
+            if (!is_irn_cancellable(frm) || !frappe.boot.gst_settings.enable_e_invoice) {
+                const d = frappe.warn(
+                    __("Cannot Cancel IRN"),
+                    __(
+                        `You should ideally create a <strong>Credit Note</strong>
+                        against this invoice instead of cancelling it. If you
+                        choose to proceed, you'll be required to manually exclude this
+                        IRN when filing GST Returns.<br><br>
+
+                        Are you sure you want to continue?`
+                    ),
+                    continueCancellation,
+                    __("Yes")
+                );
+
+                d.set_secondary_action_label(__("No"));
+                return;
+            }
+
+            return show_cancel_e_invoice_dialog(frm, continueCancellation);
+        });
     },
 });
 
@@ -124,8 +158,10 @@ function show_cancel_e_invoice_dialog(frm, callback) {
 }
 
 function is_e_invoice_applicable(frm) {
+    const gst_settings = frappe.boot.gst_settings;
+
     return (
-        gst_settings.enable_api &&
+        frm.doc.docstatus == 1 &&
         gst_settings.enable_e_invoice &&
         gst_settings.e_invoice_applicable_from <= frm.doc.posting_date &&
         frm.doc.company_gstin &&
