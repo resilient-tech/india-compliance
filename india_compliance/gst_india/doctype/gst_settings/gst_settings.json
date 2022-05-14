@@ -193,8 +193,8 @@
    "fieldname": "enable_reverse_charge_in_sales",
    "fieldtype": "Check",
    "label": "Enable Reverse Charge in Sales Transactions"
-},
-   {
+  },
+  {
    "default": "0",
    "fieldname": "enable_e_waybill_from_dn",
    "fieldtype": "Check",
@@ -204,7 +204,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-05-13 06:40:13.495469",
+ "modified": "2022-05-14 01:21:46.973406",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
