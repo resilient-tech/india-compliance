@@ -6,8 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
-  "round_off_gst_values",
   "hsn_wise_tax_breakup",
+  "enable_reverse_charge_in_sales",
+  "round_off_gst_values",
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
@@ -188,6 +189,12 @@
   },
   {
    "default": "0",
+   "fieldname": "enable_reverse_charge_in_sales",
+   "fieldtype": "Check",
+   "label": "Enable Reverse Charge in Sales Invoice"
+  },
+  {
+   "default": "0",
    "fieldname": "enable_e_waybill_from_dn",
    "fieldtype": "Check",
    "label": "Enable e-Waybill Generation from Delivery Note"
@@ -196,7 +203,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-10 06:00:05.826119",
+ "modified": "2022-05-18 04:57:10.762675",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
