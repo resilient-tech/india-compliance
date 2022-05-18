@@ -136,17 +136,6 @@ invoice_gst_fields = [
         "translatable": 0,
     },
     {
-        "fieldname": "reverse_charge",
-        "label": "Reverse Charge",
-        "length": 2,
-        "fieldtype": "Select",
-        "insert_after": "invoice_copy",
-        "print_hide": 1,
-        "options": "Y\nN",
-        "default": "N",
-        "translatable": 0,
-    },
-    {
         "fieldname": "ecommerce_gstin",
         "label": "E-commerce GSTIN",
         "length": 15,
@@ -206,6 +195,14 @@ purchase_invoice_gst_fields = [
         "print_hide": 1,
         "read_only": 1,
         "translatable": 0,
+    },
+    {
+        "fieldname": "is_reverse_charge",
+        "label": "Is Reverse Charge",
+        "fieldtype": "Check",
+        "insert_after": "apply_tds",
+        "print_hide": 1,
+        "default": 0,
     },
 ]
 
@@ -623,4 +620,17 @@ CUSTOM_FIELDS = {
     ],
     "Customer": party_fields,
     "Company": company_fields,
+}
+
+REVERSE_CHARGE_FIELD = {
+    "Sales Invoice": [
+        {
+            "fieldname": "is_reverse_charge",
+            "label": "Is Reverse Charge",
+            "fieldtype": "Check",
+            "insert_after": "is_debit_note",
+            "print_hide": 1,
+            "default": 0,
+        },
+    ]
 }
