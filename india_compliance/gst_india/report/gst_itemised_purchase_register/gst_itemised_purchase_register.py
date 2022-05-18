@@ -8,7 +8,7 @@ from erpnext.accounts.report.item_wise_purchase_register.item_wise_purchase_regi
 
 
 def execute(filters=None):
-    columns, result, message, chart, report_summary, skip_total_row = _execute(
+    values = _execute(
         filters,
         additional_table_columns=[
             dict(
@@ -76,8 +76,8 @@ def execute(filters=None):
         ],
     )
 
-    # Result is returned as list of dict
-    for row in result:
+    # Result (values[1]) is returned as list of dicts
+    for row in values[1]:
         row["is_reverse_charge"] = "Y" if row["is_reverse_charge"] else "N"
 
-    return columns, result, message, chart, report_summary, skip_total_row
+    return values
