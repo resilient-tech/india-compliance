@@ -216,7 +216,6 @@ class Gstr2Report(Gstr1Report):
                     "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
-                    "default": 0,
                     "width": 80,
                 },
                 {
