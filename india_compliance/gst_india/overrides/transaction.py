@@ -226,7 +226,7 @@ def validate_overseas_gst_category(doc, method):
         "GST Settings", "GST Settings", "enable_overseas_transactions"
     )
 
-    if doc.gst_category in ("SEZ", "Overseas") and not overseas_enabled:
+    if not overseas_enabled and doc.gst_category in ("SEZ", "Overseas"):
         frappe.throw(
             _(
                 "GST Category cannot be set to {0} since it is disabled in GST Settings"
