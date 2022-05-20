@@ -80,15 +80,15 @@ class GSTSettings(Document):
 
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):
-            _update_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
+            _toggle_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
 
         if self.has_value_changed("enable_e_invoice"):
-            _update_custom_fields(
+            _toggle_custom_fields(
                 E_INVOICE_FIELDS, self.enable_e_invoice and self.enable_api
             )
 
         if self.has_value_changed("enable_reverse_charge_in_sales"):
-            _update_custom_fields(
+            _toggle_custom_fields(
                 REVERSE_CHARGE_FIELD, self.enable_reverse_charge_in_sales
             )
 
@@ -111,5 +111,5 @@ class GSTSettings(Document):
             )
 
 
-def _update_custom_fields(fields, condition):
+def _toggle_custom_fields(fields, condition):
     toggle_custom_fields(fields, condition)
