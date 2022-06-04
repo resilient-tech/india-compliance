@@ -268,7 +268,6 @@ def update_transporter(*, doctype, docname, values):
 @frappe.whitelist()
 def fetch_e_waybill_data(*, doctype, docname, attach=False):
     doc = load_doc(doctype, docname, "write" if attach else "print")
-
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
         _fetch_e_waybill_data(doc, log)
