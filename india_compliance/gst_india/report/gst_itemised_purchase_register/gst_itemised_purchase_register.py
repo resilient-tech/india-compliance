@@ -8,7 +8,7 @@ from erpnext.accounts.report.item_wise_purchase_register.item_wise_purchase_regi
 
 
 def execute(filters=None):
-    return _execute(
+    values = _execute(
         filters,
         additional_table_columns=[
             dict(
@@ -26,7 +26,7 @@ def execute(filters=None):
             dict(
                 fieldtype="Data",
                 label="Reverse Charge",
-                fieldname="reverse_charge",
+                fieldname="is_reverse_charge",
                 width=120,
             ),
             dict(
@@ -66,7 +66,7 @@ def execute(filters=None):
         additional_query_columns=[
             "supplier_gstin",
             "company_gstin",
-            "reverse_charge",
+            "is_reverse_charge",
             "gst_category",
             "export_type",
             "ecommerce_gstin",
@@ -75,3 +75,9 @@ def execute(filters=None):
             "bill_date",
         ],
     )
+
+    # Result (values[1]) is returned as list of dicts
+    for row in values[1]:
+        row["is_reverse_charge"] = "Y" if row["is_reverse_charge"] else "N"
+
+    return values

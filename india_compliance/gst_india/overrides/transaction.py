@@ -1,12 +1,169 @@
 import json
 
 import frappe
-from frappe import _
+from frappe import _, bold
 from frappe.model.utils import get_fetch_values
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.utils import get_all_gst_accounts, get_place_of_supply
+from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
+    get_gst_accounts_by_type,
+    get_place_of_supply,
+)
+
+
+def is_indian_registered_company(doc):
+    if not doc.company_gstin:
+        country, gst_category = frappe.get_cached_value(
+            "Company", doc.company, ("country", "gst_category")
+        )
+
+        if country != "India" or gst_category == "Unregistered":
+            return False
+
+    return True
+
+
+def validate_mandatory_fields(doc, fields):
+    for field in fields:
+        if not doc.get(field):
+            frappe.throw(
+                _("{0} is a mandatory field for creating a GST Compliant {1}").format(
+                    bold(_(doc.meta.get_label(field))),
+                    (doc.doctype),
+                )
+            )
+
+
+def validate_gst_accounts(doc):
+    """
+    Validate GST accounts before invoice creation
+    - Only Output Accounts should be allowed in GST Sales Invoice
+    - If supply made to SEZ/Overseas without payment of tax, then no GST account should be specified
+    - SEZ supplies should not have CGST or SGST account
+    - Inter-State supplies should not have CGST or SGST account
+    - Intra-State supplies should not have IGST account
+    """
+
+    if not doc.taxes:
+        return
+
+    accounts_list = get_all_gst_accounts(doc.company)
+    output_accounts = get_gst_accounts_by_type(doc.company, "Output")
+
+    for row in doc.taxes:
+        account_head = row.account_head
+
+        if account_head not in accounts_list or not row.tax_amount:
+            continue
+
+        if (
+            doc.gst_category in ("SEZ", "Overseas")
+            and doc.export_type == "Without Payment of Tax"
+        ):
+            frappe.throw(
+                _(
+                    "Cannot charge GST in Row #{0} since Export Type is set to Without"
+                    " Payment of Tax"
+                ).format(row.idx)
+            )
+
+        if account_head not in output_accounts.values():
+            frappe.throw(
+                _(
+                    "{0} is not an Output GST Account and cannot be used in Sales"
+                    " Transactions."
+                ).format(bold(account_head))
+            )
+
+        # Inter State supplies should not have CGST or SGST account
+        if (
+            doc.place_of_supply[:2] != doc.company_gstin[:2]
+            or doc.gst_category == "SEZ"
+        ):
+            if account_head in (
+                output_accounts.cgst_account,
+                output_accounts.sgst_account,
+            ):
+                frappe.throw(
+                    _(
+                        "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
+                    ).format(row.idx)
+                )
+
+        # Intra State supplies should not have IGST account
+        elif account_head == output_accounts.igst_account:
+            frappe.throw(
+                _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
+                    row.idx
+                )
+            )
+
+
+def validate_tax_accounts_for_non_gst(doc):
+    """GST Tax Accounts should not be charged for Non GST Items"""
+    accounts_list = get_all_gst_accounts(doc.company)
+
+    for row in doc.taxes:
+        if row.account_head in accounts_list and row.tax_amount:
+            frappe.throw(
+                _("Row #{0}: Cannot charge GST for Non GST Items").format(
+                    row.idx, row.account_head
+                ),
+                title=_("Invalid Taxes"),
+            )
+
+
+def validate_items(doc):
+    """Validate Items for a GST Compliant Invoice"""
+
+    if not doc.items:
+        return
+
+    item_tax_templates = frappe._dict()
+    items_with_duplicate_taxes = []
+    non_gst_items = []
+    has_gst_items = False
+
+    for row in doc.items:
+        # Collect data to validate that non-GST items are not used with GST items
+        if row.is_non_gst:
+            non_gst_items.append(row.idx)
+            continue
+
+        has_gst_items = True
+
+        # Different Item Tax Templates should not be used for the same Item Code
+        if row.item_code not in item_tax_templates:
+            item_tax_templates[row.item_code] = row.item_tax_template
+            continue
+
+        if row.item_tax_template != item_tax_templates[row.item_code]:
+            items_with_duplicate_taxes.append(bold(row.item_code))
+
+    if not has_gst_items:
+        validate_tax_accounts_for_non_gst(doc)
+        return False
+
+    if non_gst_items:
+        frappe.throw(
+            _(
+                "Items not covered under GST cannot be clubbed with items for which GST"
+                " is applicable. Please create another document for items in the"
+                " following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in non_gst_items)),
+            title=_("Invalid Items"),
+        )
+
+    if items_with_duplicate_taxes:
+        frappe.throw(
+            _(
+                "Cannot use different Item Tax Templates in different rows for"
+                " following items:<br> {0}"
+            ).format("<br>".join(items_with_duplicate_taxes)),
+            title="Inconsistent Item Tax Templates",
+        )
 
 
 def set_place_of_supply(doc, method=None):
@@ -61,6 +218,19 @@ def validate_hsn_code(doc, method=None):
                 "HSN/SAC code should be at least {0} digits long for the following"
                 " row numbers: <br>{1}"
             ).format(min_hsn_digits, frappe.bold(", ".join(invalid_hsn)))
+        )
+
+
+def validate_overseas_gst_category(doc, method):
+    overseas_enabled = frappe.get_cached_value(
+        "GST Settings", "GST Settings", "enable_overseas_transactions"
+    )
+
+    if not overseas_enabled and doc.gst_category in ("SEZ", "Overseas"):
+        frappe.throw(
+            _(
+                "GST Category cannot be set to {0} since it is disabled in GST Settings"
+            ).format(frappe.bold(doc.gst_category))
         )
 
 

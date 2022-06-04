@@ -9,14 +9,18 @@ function update_gstin_in_other_documents(doctype) {
 
             const { gstin, gst_category } = frm.doc;
             let message = __(
-                "You were using the GSTIN <strong>{0}</strong> in following other documents. Do you want to update these?",
+                "You were using the GSTIN <strong>{0}</strong> in following other documents. Do you want to update these? <br>",
                 [previous_gstin]
             );
+
             for (const [doctype, docnames] of Object.entries(
                 docs_with_previous_gstin
             )) {
-                message += `<br/><br/><strong>${__(doctype)}</strong>:<br/>`;
-                message += docnames.join("<br/>");
+                message += `<br><strong>${__(doctype)}</strong>:<br>`;
+
+                docnames.forEach(docname => {
+                    message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
+                });
             }
 
             frappe.confirm(message, function () {
@@ -53,7 +57,7 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
             }
-        }
+        },
     });
 }
 
@@ -75,6 +79,25 @@ function validate_pan(doctype) {
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
-        }
+        },
+    });
+}
+
+function show_overseas_disabled_warning(doctype) {
+    frappe.ui.form.on(doctype, {
+        after_save(frm) {
+            if (
+                !frappe.boot.gst_settings.enable_overseas_transactions &&
+                in_list(["SEZ", "Overseas"], frm.doc.gst_category)
+            ) {
+                frappe.msgprint({
+                    message: __(
+                        `SEZ/Overseas transactions are disabled in GST Settings.
+                        Please enable this setting to create transactions for this party.`
+                    ),
+                    indicator: "orange",
+                });
+            }
+        },
     });
 }

@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
+from india_compliance.gst_india.constants.custom_fields import REVERSE_CHARGE_FIELD
 from india_compliance.gst_india.constants.e_invoice import E_INVOICE_FIELDS
 from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_FIELDS
 from india_compliance.gst_india.utils import delete_custom_fields
@@ -25,6 +26,9 @@ class GSTSettings(Document):
 
         if not self.enable_api:
             self.enable_e_invoice = 0
+
+        if not self.enable_e_waybill:
+            self.enable_e_waybill_from_dn = 0
 
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
@@ -82,6 +86,11 @@ class GSTSettings(Document):
         if self.has_value_changed("enable_e_invoice"):
             _update_custom_fields(
                 E_INVOICE_FIELDS, self.enable_e_invoice and self.enable_api
+            )
+
+        if self.has_value_changed("enable_reverse_charge_in_sales"):
+            _update_custom_fields(
+                REVERSE_CHARGE_FIELD, self.enable_reverse_charge_in_sales
             )
 
     def validate_e_invoice_applicability_date(self):
