@@ -55,7 +55,6 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 @frappe.whitelist()
 def generate_e_waybill(*, doctype, docname, values=None):
     doc = load_doc(doctype, docname, "submit")
-    doc.check_permission("write")
     if values:
         update_transaction(doc, frappe.parse_json(values))
 
@@ -127,10 +126,6 @@ def log_and_process_e_waybill_generation(doc, result):
 @frappe.whitelist()
 def cancel_e_waybill(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "cancel")
-
-    for permtype in ("write", "cancel"):
-        doc.check_permission(permtype)
-
     values = frappe.parse_json(values)
     _cancel_e_waybill(doc, values)
 
@@ -166,8 +161,6 @@ def _cancel_e_waybill(doc, values):
 @frappe.whitelist()
 def update_vehicle_info(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
-    doc.check_permission("write")
-
     doc.db_set(
         {
             "vehicle_no": values.vehicle_no.replace(" ", ""),
@@ -221,10 +214,6 @@ def update_vehicle_info(*, doctype, docname, values):
 @frappe.whitelist()
 def update_transporter(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
-
-    for permtype in ("read", "write"):
-        doc.check_permission(permtype)
-
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
     EWaybillAPI(doc.company_gstin).update_transporter(data)
@@ -279,10 +268,6 @@ def update_transporter(*, doctype, docname, values):
 @frappe.whitelist()
 def fetch_e_waybill_data(*, doctype, docname, attach=False):
     doc = load_doc(doctype, docname, "write" if attach else "print")
-
-    for permtype in ("read", "write", "print"):
-        doc.check_permission(permtype)
-
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
         _fetch_e_waybill_data(doc, log)

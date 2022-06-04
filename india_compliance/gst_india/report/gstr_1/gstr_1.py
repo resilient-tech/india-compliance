@@ -904,11 +904,12 @@ class Gstr1Report(object):
 
 @frappe.whitelist()
 def get_json(filters, report_name, data):
+    """
+    This function does not check for permissions since it only manipulates data sent to it
+    """
+
     filters = json.loads(filters)
     report_data = json.loads(data)
-
-    frappe.has_permission("Company", doc=filters.get("company"), throw=True)
-
     gstin = get_company_gstin_number(
         filters.get("company"), filters.get("company_address")
     )
