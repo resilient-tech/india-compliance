@@ -266,6 +266,16 @@ def get_regional_round_off_accounts(company, account_list):
 
 @frappe.whitelist()
 def get_regional_address_details(party_details, doctype, company):
+    """
+    This function does not check for permissions since it returns insensitive data
+    based on already sensitive input (party details)
+
+    Data returned:
+     - place of supply (based on address name in party_details)
+     - tax template
+     - taxes in the tax template
+    """
+
     party_details = frappe.parse_json(party_details)
     update_party_details(party_details, doctype)
 

@@ -227,26 +227,6 @@ def get_place_of_supply(party_details, doctype=None):
             return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
 
 
-@frappe.whitelist()
-def get_gstins_for_company(company):
-    company_gstins = []
-    if company:
-        company_gstins = frappe.db.sql(
-            """select
-            distinct `tabAddress`.gstin
-        from
-            `tabAddress`, `tabDynamic Link`
-        where
-            `tabDynamic Link`.parent = `tabAddress`.name and
-            `tabDynamic Link`.parenttype = 'Address' and
-            `tabDynamic Link`.link_doctype = 'Company' and
-            `tabDynamic Link`.link_name = %(company)s""",
-            {"company": company},
-        )
-    return company_gstins
-
-
-@frappe.whitelist()
 def get_gst_accounts(
     company=None, account_wise=False, only_reverse_charge=0, only_non_reverse_charge=0
 ):
