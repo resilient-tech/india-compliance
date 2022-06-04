@@ -87,7 +87,7 @@ class CForm(Document):
 
     @frappe.whitelist()
     def get_invoice_details(self, invoice_no):
-        """Pull details from invoices for referrence"""
+        """Pull details from invoice for reference"""
 
         if not invoice_no:
             return
