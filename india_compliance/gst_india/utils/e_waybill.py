@@ -312,16 +312,14 @@ def _fetch_e_waybill_data(doc, log):
 
 
 def attach_e_waybill_pdf(doc, log=None):
-    if log:
-        # to avoid get_doc when printing
-        doc._e_waybill_log = log
-
     pdf_content = frappe.get_print(
-        doc.doctype, doc.name, "e-Waybill", doc=doc, no_letterhead=True, as_pdf=True
+        "e-Waybill Log",
+        doc.ewaybill,
+        "e-Waybill",
+        doc=log,
+        no_letterhead=True,
+        as_pdf=True,
     )
-
-    # remove temporary attribute
-    doc.__dict__.pop("_e_waybill_log", None)
 
     pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
     delete_file(doc, pdf_filename)
@@ -346,7 +344,7 @@ def delete_file(doc, filename):
         },
         pluck="name",
     ):
-        frappe.delete_doc("File", file, force=True)
+        frappe.delete_doc("File", file, force=True, ignore_permissions=True)
 
 
 #######################################################################################
@@ -384,6 +382,8 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
 
     if comment:
         log.add_comment(text=comment)
+
+    frappe.db.commit()
 
     ### Fetch Data
 
@@ -714,7 +714,7 @@ class EWaybillData(GSTTransactionData):
             self.transaction_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6),
+                    "name": random_string(6).lstrip("0"),
                 }
             )
             self.company_address.gstin = "05AAACG2115R1ZN"
