@@ -33,8 +33,6 @@ from india_compliance.gst_india.utils.transaction_data import (
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
-    doc.check_permission("write")
-
     try:
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc.company_gstin)
@@ -98,9 +96,6 @@ def generate_e_invoice(docname, throw=True):
 @frappe.whitelist()
 def cancel_e_invoice(docname, values):
     doc = load_doc("Sales Invoice", docname, "cancel")
-    for permtype in ("write", "cancel"):
-        doc.check_permission(permtype=permtype)
-
     values = frappe.parse_json(values)
     validate_if_e_invoice_can_be_cancelled(doc)
 

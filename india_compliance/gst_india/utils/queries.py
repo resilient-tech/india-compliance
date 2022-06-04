@@ -3,10 +3,10 @@ import frappe
 
 @frappe.whitelist()
 def get_gstin_options(company):
-    for doctype in ("Company", "Address"):
-        frappe.has_permission(
-            doctype, doc=company if doctype == "Company" else None, throw=True
-        )
+    """
+    This function does not check for permission because it only returns GSTINs,
+    which are publicly accessible.
+    """
 
     address = frappe.qb.DocType("Address")
     links = frappe.qb.DocType("Dynamic Link")
