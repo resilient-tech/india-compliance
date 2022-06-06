@@ -1,0 +1,42 @@
+[
+	{
+		"address_title": "Test Customer",
+		"address_type": "Billing",
+		"pincode": "395009",
+		"address_line1": "Test Address",
+		"city": "Test City",
+		"state": "Gujarat",
+		"country": "India",
+		"gst_state": "Gujarat",
+		"gst_category": "Unregistered",
+		"gst_state_number": "24",
+		"is_primary_address": 1,
+		"is_shipping_address": 1,
+		"links": [
+			{
+				"link_doctype": "Customer",
+				"link_name": "Test Customer",
+				"link_title": "Test Customer",
+				"parent": "Test Customer-Billing"
+			}
+		]
+	},
+	{
+		"address_title": "Test Address",
+		"address_type": "Billing",
+		"pincode": "391243",
+		"address_line1": "Plot No.1, Test Address",
+		"address_line2": "Test Address",
+		"gstin": "24ADFPP0210P1ZO",
+		"use_different_gstin": 0,
+		"city": "Vadodara",
+		"state": "Gujarat",
+		"country": "India",
+		"gst_state": "Gujarat",
+		"gst_category": "Overseas",
+		"gst_state_number": "24",
+		"email_id": "info@test.com",
+		"is_primary_address": 1,
+		"is_shipping_address": 1
+	}
+]

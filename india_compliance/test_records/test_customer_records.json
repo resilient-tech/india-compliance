@@ -1,0 +1,65 @@
+[
+	{
+		"customer_name": "Test Customer",
+		"customer_group": "Commercial",
+		"customer_type": "Company",
+		"territory": "India",
+		"default_currency": "INR",
+		"gst_category": "Unregistered"
+	},
+	{
+		"customer_name": "Test Customer",
+		"customer_group": "Commercial",
+		"customer_type": "Company",
+		"territory": "India",
+		"default_currency": "INR",
+		"gst_category": "Unregistered",
+		"__onload": {
+			"contact_list": [
+				{
+					"email_id": "test@example.com",
+					"first_name": "Test Contact",
+					"status": "Passive",
+					"user": "test@example.com",
+					"is_primary_contact": 0
+				}
+			]
+		}
+	},
+	{
+		"customer_name": "Test Customer",
+		"customer_group": "Commercial",
+		"customer_type": "Company",
+		"territory": "India",
+		"default_currency": "INR",
+		"gst_category": "Unregistered",
+		"__onload": {
+			"addr_list": [
+				{
+					"pincode": "395009",
+					"city": "Test City",
+					"address_line1": "Test Address",
+					"is_primary_address": 1,
+					"state": "Gujarat",
+					"address_type": "Billing",
+					"address_title": "Test Customer",
+					"country": "India",
+					"gst_state": "Gujarat",
+					"gst_state_number": "24",
+					"disabled": 0,
+					"gst_category": "Unregistered",
+					"display": "Test Address<br>Test City<br>\nGujarat, State Code: 24<br>Postal Code: 395009<br>India<br>\n"
+				}
+			],
+			"contact_list": [
+				{
+					"email_id": "test@example.com",
+					"first_name": "Test Contact",
+					"status": "Passive",
+					"user": "test@example.com",
+					"is_primary_contact": 0
+				}
+			]
+		}
+	}
+]
