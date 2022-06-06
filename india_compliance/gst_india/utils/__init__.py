@@ -358,8 +358,9 @@ def delete_custom_fields(custom_fields):
 
 
 def toggle_custom_fields(custom_fields, enabled):
-    """Toggle multiple custom fields
-    :param custom_fields: example `{'Sales Invoice': [dict(fieldname='test')]}`"""
+    """Hide / Unhide custom fields
+    :param custom_fields: example `{'Sales Invoice': [dict(fieldname='test')]}`
+    :param enabled: True to unhide, False to hide"""
 
     for doctypes, fields in custom_fields.items():
         if isinstance(fields, dict):
@@ -378,7 +379,7 @@ def toggle_custom_fields(custom_fields, enabled):
                     "fieldname": ["in", [field["fieldname"] for field in fields]],
                 },
                 "hidden",
-                1 if not enabled else 0,
+                int(not enabled),
             )
 
             frappe.clear_cache(doctype=doctype)

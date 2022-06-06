@@ -83,9 +83,7 @@ class GSTSettings(Document):
             _toggle_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
 
         if self.has_value_changed("enable_e_invoice"):
-            _toggle_custom_fields(
-                E_INVOICE_FIELDS, self.enable_e_invoice and self.enable_api
-            )
+            _toggle_custom_fields(E_INVOICE_FIELDS, self.enable_e_invoice)
 
         if self.has_value_changed("enable_reverse_charge_in_sales"):
             _toggle_custom_fields(

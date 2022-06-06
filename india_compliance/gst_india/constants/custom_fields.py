@@ -1,13 +1,6 @@
 from copy import deepcopy
 
 from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
-from india_compliance.gst_india.constants.e_invoice import E_INVOICE_FIELDS
-from india_compliance.gst_india.constants.e_waybill import (
-    DELIVERY_NOTE_FIELDS as delivery_note_ewaybill_fields,
-)
-from india_compliance.gst_india.constants.e_waybill import (
-    SALES_INVOICE_FIELDS as sales_invoice_ewaybill_fields,
-)
 
 # TODO: Imporve variable naming
 
@@ -497,8 +490,6 @@ party_fields = [
     },
 ]
 
-e_invoice_fields = E_INVOICE_FIELDS.get("Sales Invoice")
-
 company_fields = deepcopy(party_fields)
 company_fields[0]["insert_after"] = "parent_company"
 
@@ -559,15 +550,11 @@ CUSTOM_FIELDS = {
     "Sales Invoice": sales_invoice_gst_category
     + invoice_gst_fields
     + sales_invoice_shipping_fields
-    + sales_invoice_gst_fields
-    + sales_invoice_ewaybill_fields
-    + delivery_note_ewaybill_fields
-    + e_invoice_fields,
+    + sales_invoice_gst_fields,
     "POS Invoice": sales_invoice_gst_fields,
     "Delivery Note": sales_invoice_gst_fields
     + sales_invoice_shipping_fields
-    + delivery_note_gst_category
-    + delivery_note_ewaybill_fields,
+    + delivery_note_gst_category,
     "Payment Entry": payment_entry_fields,
     "Journal Entry": journal_entry_fields,
     "Sales Order": sales_invoice_gst_fields,
