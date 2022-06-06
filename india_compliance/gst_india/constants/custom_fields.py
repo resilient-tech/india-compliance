@@ -459,6 +459,7 @@ payment_entry_fields = [
     },
 ]
 
+
 party_fields = [
     {
         "fieldname": "tax_details_section",
