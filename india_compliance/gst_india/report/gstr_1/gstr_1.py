@@ -34,7 +34,7 @@ class Gstr1Report(object):
 			NULLIF(billing_address_gstin, '') as billing_address_gstin,
 			place_of_supply,
 			ecommerce_gstin,
-			reverse_charge,
+			is_reverse_charge,
 			return_against,
 			is_return,
 			is_debit_note,
@@ -297,6 +297,7 @@ class Gstr1Report(object):
         )
 
         for d in invoice_data:
+            d.is_reverse_charge = "Y" if d.is_reverse_charge else "N"
             d.export_with_payment_of_tax = (
                 "With Payment of Tax"
                 if d.export_with_payment_of_tax
@@ -549,7 +550,7 @@ class Gstr1Report(object):
                     "width": 100,
                 },
                 {
-                    "fieldname": "reverse_charge",
+                    "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
                 },
@@ -651,7 +652,7 @@ class Gstr1Report(object):
                     "width": 120,
                 },
                 {
-                    "fieldname": "reverse_charge",
+                    "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
                 },
@@ -909,6 +910,10 @@ class Gstr1Report(object):
 
 @frappe.whitelist()
 def get_json(filters, report_name, data):
+    """
+    This function does not check for permissions since it only manipulates data sent to it
+    """
+
     filters = json.loads(filters)
     report_data = json.loads(data)
     gstin = get_company_gstin_number(
@@ -1012,7 +1017,7 @@ def get_b2b_json(res, gstin):
 
             inv_item = get_basic_invoice_detail(invoice[0])
             inv_item["pos"] = "%02d" % int(invoice[0]["place_of_supply"].split("-")[0])
-            inv_item["rchrg"] = invoice[0]["reverse_charge"]
+            inv_item["rchrg"] = invoice[0]["is_reverse_charge"]
             inv_item["inv_typ"] = get_invoice_type(invoice[0])
 
             if inv_item["pos"] == "00":
@@ -1189,7 +1194,7 @@ def get_cdnr_reg_json(res, gstin):
                 "val": abs(flt(invoice[0]["invoice_value"])),
                 "ntty": invoice[0]["document_type"],
                 "pos": "%02d" % int(invoice[0]["place_of_supply"].split("-")[0]),
-                "rchrg": invoice[0]["reverse_charge"],
+                "rchrg": invoice[0]["is_reverse_charge"],
                 "inv_typ": get_invoice_type(invoice[0]),
             }
 

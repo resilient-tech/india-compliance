@@ -196,7 +196,7 @@ class GSTR3BReport(Document):
         condition = ""
 
         if reverse_charge:
-            condition += "AND reverse_charge = 'Y'"
+            condition += "AND is_reverse_charge = 1"
 
         invoice_details = frappe.db.sql(
             """
@@ -574,12 +574,16 @@ def get_period(month, year=None):
 
 @frappe.whitelist()
 def view_report(name):
+    frappe.has_permission("GSTR 3B Report", throw=True)
+
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
     return json.loads(json_data)
 
 
 @frappe.whitelist()
 def make_json(name):
+    frappe.has_permission("GSTR 3B Report", throw=True)
+
     json_data = frappe.get_value("GSTR 3B Report", name, "json_output")
     file_name = "GST3B.json"
     frappe.local.response.filename = file_name

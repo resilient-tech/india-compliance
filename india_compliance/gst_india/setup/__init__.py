@@ -3,7 +3,12 @@ import json
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
-from india_compliance.gst_india.constants.custom_fields import CUSTOM_FIELDS
+from india_compliance.gst_india.constants.custom_fields import (
+    CUSTOM_FIELDS,
+    E_INVOICE_FIELDS,
+    E_WAYBILL_FIELDS,
+    SALES_REVERSE_CHARGE_FIELDS,
+)
 from india_compliance.gst_india.setup.property_setters import get_property_setters
 from india_compliance.gst_india.utils import read_data_file
 
@@ -12,7 +17,13 @@ def after_install():
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
-    create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)
+    for fields in (
+        CUSTOM_FIELDS,
+        SALES_REVERSE_CHARGE_FIELDS,
+        E_INVOICE_FIELDS,
+        E_WAYBILL_FIELDS,
+    ):
+        create_custom_fields(fields, ignore_validate=True)
 
     create_property_setters()
     create_address_template()

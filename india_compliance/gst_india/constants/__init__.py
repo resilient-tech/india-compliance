@@ -68,17 +68,6 @@ STATE_NUMBERS = {
     "West Bengal": "19",
 }
 
-TRANSACTION_DOCS = (
-    "Sales Invoice",
-    "Delivery Note",
-    "Sales Order",
-    "Purchase Invoice",
-    "Purchase Order",
-    "Purchase Receipt",
-    "Quotation",
-    "POS Invoice",
-)
-
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
 
 NORMAL = (  # Normal but not TCS
