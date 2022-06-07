@@ -221,6 +221,19 @@ def validate_hsn_code(doc, method=None):
         )
 
 
+def validate_overseas_gst_category(doc, method):
+    overseas_enabled = frappe.get_cached_value(
+        "GST Settings", "GST Settings", "enable_overseas_transactions"
+    )
+
+    if not overseas_enabled and doc.gst_category in ("SEZ", "Overseas"):
+        frappe.throw(
+            _(
+                "GST Category cannot be set to {0} since it is disabled in GST Settings"
+            ).format(frappe.bold(doc.gst_category))
+        )
+
+
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
     hsn_wise_in_gst_settings = frappe.db.get_single_value(
         "GST Settings", "hsn_wise_tax_breakup"
@@ -253,6 +266,16 @@ def get_regional_round_off_accounts(company, account_list):
 
 @frappe.whitelist()
 def get_regional_address_details(party_details, doctype, company):
+    """
+    This function does not check for permissions since it returns insensitive data
+    based on already sensitive input (party details)
+
+    Data returned:
+     - place of supply (based on address name in party_details)
+     - tax template
+     - taxes in the tax template
+    """
+
     party_details = frappe.parse_json(party_details)
     update_party_details(party_details, doctype)
 
