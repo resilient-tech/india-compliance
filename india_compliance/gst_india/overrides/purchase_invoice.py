@@ -14,7 +14,7 @@ def validate_reverse_charge_transaction(doc, method):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
 
-    if doc.reverse_charge != "Y":
+    if not doc.is_reverse_charge:
         return
 
     reverse_charge_accounts = get_gst_accounts_by_type(
