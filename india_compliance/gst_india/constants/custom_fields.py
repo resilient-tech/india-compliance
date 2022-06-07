@@ -2,8 +2,6 @@ from copy import deepcopy
 
 from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
 
-# TODO: Imporve variable naming
-
 state_options = "\n" + "\n".join(STATE_NUMBERS)
 gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
@@ -154,7 +152,7 @@ purchase_gst_fields = [
     },
 ]
 
-purchase_invoice_itc_fields = [
+purchase_itc_fields = [
     {
         "fieldname": "eligibility_for_itc",
         "label": "Eligibility For ITC",
@@ -259,7 +257,7 @@ sales_gst_fields = [
     },
 ]
 
-sales_invoice_shipping_fields = [
+sales_shipping_fields = [
     {
         "fieldname": "port_code",
         "label": "Port Code",
@@ -502,13 +500,13 @@ CUSTOM_FIELDS = {
     ],
     "Purchase Invoice": [
         *pi_si_common_fields,
-        *purchase_invoice_itc_fields,
+        *purchase_itc_fields,
         *purchase_gst_fields,
     ],
     ("Purchase Order", "Purchase Receipt"): purchase_gst_fields,
     "Sales Invoice": pi_si_common_fields,
     ("Sales Invoice", "Delivery Note"): [
-        *sales_invoice_shipping_fields,
+        *sales_shipping_fields,
         *sales_gst_fields,
     ],
     ("POS Invoice", "Sales Order"): sales_gst_fields,
