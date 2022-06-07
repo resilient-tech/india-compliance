@@ -94,7 +94,7 @@
 	{% set item_list = get_non_zero_formatted_fields(data=invoice_data.ItemList) %}
 	<div style="overflow-x: auto;">
 		<h5 class="font-bold section-heading">3. Item Details</h5>
-		<table class="table table-bordered hide-scrollbar">
+		<table class="table table-bordered">
 			<thead>
 				<tr>
 					{% for key in item_list[0].keys() %}
@@ -124,7 +124,7 @@
 	{%- set value_details = get_non_zero_formatted_fields(data=invoice_data.ValDtls)[0] -%}
 	<div style="overflow-x: auto;">
 		<h5 class="font-bold section-heading">4. Value Details</h5>
-		<table class="table table-bordered hide-scrollbar">
+		<table class="table table-bordered">
 			<thead>
 				<tr>
 					{% for key in value_details.keys() %}
