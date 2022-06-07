@@ -90,17 +90,6 @@ def get_ewaybill_barcode(ewaybill):
     return barcode_base64
 
 
-def get_zero_amount_fields(item_list=None):
-    fields = ("Qty", "UnitPrice", "Discount", "AssAmt", "GstRt", "CesRt", "TotItemVal")
-    if item_list:
-        zero_amount_fields = []
-        for field in fields:
-            zero_amount_fields.append(field) if all(
-                item[field] == 0 for item in item_list
-            ) else None
-        return zero_amount_fields
-
-
 def get_non_zero_formatted_fields(data):
     """
     Filter out zero fields from data and return them with their respective labels
