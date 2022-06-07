@@ -324,7 +324,7 @@ journal_entry_fields = [
     },
 ]
 
-inter_state_gst_field = [
+inter_state_gst_fields = [
     {
         "fieldname": "is_inter_state",
         "label": "Is Inter State",
@@ -512,7 +512,7 @@ CUSTOM_FIELDS = {
     ("POS Invoice", "Sales Order"): sales_gst_fields,
     "Payment Entry": payment_entry_fields,
     "Journal Entry": journal_entry_fields,
-    "Tax Category": inter_state_gst_field,
+    "Tax Category": inter_state_gst_fields,
     "Item": [
         {
             "fieldname": "gst_hsn_code",
@@ -573,21 +573,6 @@ CUSTOM_FIELDS = {
     ],
     "Customer": party_fields,
     "Company": company_fields,
-}
-
-EXPORT_TYPE_FIELD = {
-    ("Sales Invoice", "Purchase Invoice"): [
-        {
-            "fieldname": "export_with_payment_of_tax",
-            "label": "Export with payment of Tax",
-            "fieldtype": "Check",
-            "insert_after": "gst_category",
-            "print_hide": 1,
-            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            "translatable": 0,
-            "default": 0,
-        },
-    ]
 }
 
 SALES_REVERSE_CHARGE_FIELDS = {
