@@ -6,7 +6,10 @@ import pyqrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
 
+from frappe.utils import fmt_money
+
 from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants.e_invoice import E_INVOICE_DATA_MAP
 from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
     TRANSPORT_MODES,
@@ -96,3 +99,55 @@ def get_zero_amount_fields(item_list=None):
                 item[field] == 0 for item in item_list
             ) else None
         return zero_amount_fields
+
+
+def get_non_zero_formatted_fields(data):
+    """
+    Filter out zero fields from data and return them with their respective labels
+    returns a list of ordered dicts with formated currency as follows:
+    [
+        {
+            "Sr. No.": 1,
+            "Product Description": "Product 1",
+            "Taxable Amount": "₹ 100.00",
+            ...
+        }
+    ]
+    """
+    if isinstance(data, dict):
+        data = [data]
+
+    non_zero_keys = set(field for row in data for field in row if row[field] != 0)
+    new_data = []
+
+    for row in data:
+        new_row = {
+            E_INVOICE_DATA_MAP[key]: fmt_values(key, row[key])
+            for key in E_INVOICE_DATA_MAP
+            if key in non_zero_keys
+        }
+        new_data.append(new_row)
+
+    return new_data
+
+
+def fmt_values(key, value):
+    if key[-3:] in ["Val", "Amt"]:
+        return fmt_money(value, None, "INR")
+    return value
+
+
+def get_address_html(address):
+    """Get address html from address dict of e-Invoice data"""
+
+    address_html = []
+    address_fields = ["Gstin", "LglNm", "Nm", "Addr1", "Addr2", "Loc"]
+
+    for field in address_fields:
+        if field in address:
+            address_html.append(f"<p>{address[field]}</p>")
+
+    address_html.append(
+        "<p>{0} - {1}</p>".format(get_state(address["Stcd"]), address["Pin"])
+    )
+    return "".join(address_html)

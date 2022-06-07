@@ -143,7 +143,8 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_transport_type",
         "india_compliance.gst_india.utils.jinja.get_transport_mode",
         "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
-        "india_compliance.gst_india.utils.jinja.get_zero_amount_fields",
+        "india_compliance.gst_india.utils.jinja.get_non_zero_formatted_fields",
+        "india_compliance.gst_india.utils.jinja.get_address_html",
     ],
 }
 
