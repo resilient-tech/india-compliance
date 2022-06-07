@@ -132,12 +132,7 @@ def cancel_e_invoice(docname, values):
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(
-        _log_e_invoice,
-        queue="short",
-        at_front=True,
-        log_data=log_data,
-    )
+    frappe.enqueue(_log_e_invoice, queue="short", at_front=True, log_data=log_data)
 
     update_onload(doc, "e_invoice_info", log_data)
 
@@ -249,7 +244,9 @@ class EInvoiceData(GSTTransactionData):
             {
                 "tax_scheme": "GST",
                 "supply_type": self.get_supply_type(),
-                "reverse_charge": self.doc.reverse_charge,
+                "reverse_charge": (
+                    "Y" if getattr(self.doc, "is_reverse_charge", 0) else "N"
+                ),
                 "invoice_type": "CRN" if self.doc.is_return else "INV",
                 "ecommerce_gstin": self.doc.ecommerce_gstin,
                 "place_of_supply": self.doc.place_of_supply.split("-")[0],
@@ -376,7 +373,7 @@ class EInvoiceData(GSTTransactionData):
             self.dispatch_address.update(seller)
             self.billing_address.update(buyer)
             self.shipping_address.update(buyer)
-            self.transaction_details.name = random_string(6)
+            self.transaction_details.name = random_string(6).lstrip("0")
 
             if self.transaction_details.total_igst_amount > 0:
                 self.transaction_details.place_of_supply = "36"

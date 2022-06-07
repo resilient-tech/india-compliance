@@ -83,16 +83,17 @@ function validate_pan(doctype) {
     });
 }
 
-function alert_for_disabled_overseas_settings(doctype) {
+function show_overseas_disabled_warning(doctype) {
     frappe.ui.form.on(doctype, {
-        validate(frm) {
+        after_save(frm) {
             if (
-                in_list(["SEZ", "Overseas"], frm.doc.gst_category) &&
-                !frappe.boot.gst_settings.enable_overseas_transactions
+                !frappe.boot.gst_settings.enable_overseas_transactions &&
+                in_list(["SEZ", "Overseas"], frm.doc.gst_category)
             ) {
-                frappe.show_alert({
+                frappe.msgprint({
                     message: __(
-                        "SEZ/Overseas transactions are disabled in GST Settings."
+                        `SEZ/Overseas transactions are disabled in GST Settings.
+                        Please enable this setting to create transactions for this party.`
                     ),
                     indicator: "orange",
                 });

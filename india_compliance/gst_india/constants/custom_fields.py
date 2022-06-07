@@ -135,17 +135,6 @@ invoice_gst_fields = [
         "translatable": 0,
     },
     {
-        "fieldname": "reverse_charge",
-        "label": "Reverse Charge",
-        "length": 2,
-        "fieldtype": "Select",
-        "insert_after": "invoice_copy",
-        "print_hide": 1,
-        "options": "Y\nN",
-        "default": "N",
-        "translatable": 0,
-    },
-    {
         "fieldname": "ecommerce_gstin",
         "label": "E-commerce GSTIN",
         "length": 15,
@@ -205,6 +194,14 @@ purchase_invoice_gst_fields = [
         "print_hide": 1,
         "read_only": 1,
         "translatable": 0,
+    },
+    {
+        "fieldname": "is_reverse_charge",
+        "label": "Is Reverse Charge",
+        "fieldtype": "Check",
+        "insert_after": "apply_tds",
+        "print_hide": 1,
+        "default": 0,
     },
 ]
 
@@ -637,4 +634,187 @@ EXPORT_TYPE_FIELD = {
             "default": 0,
         },
     ]
+}
+
+SALES_REVERSE_CHARGE_FIELDS = {
+    "Sales Invoice": [
+        {
+            "fieldname": "is_reverse_charge",
+            "label": "Is Reverse Charge",
+            "fieldtype": "Check",
+            "insert_after": "is_debit_note",
+            "print_hide": 1,
+            "default": 0,
+        },
+    ]
+}
+
+E_INVOICE_FIELDS = {
+    "Sales Invoice": [
+        {
+            "fieldname": "irn",
+            "label": "IRN",
+            "fieldtype": "Data",
+            "read_only": 1,
+            "insert_after": "customer",
+            "no_copy": 1,
+            "print_hide": 1,
+            "depends_on": (
+                'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed'
+                ' Export"], doc.gst_category)'
+            ),
+            "translatable": 0,
+        },
+        {
+            "fieldname": "einvoice_status",
+            "label": "e-Invoice Status",
+            "fieldtype": "Select",
+            "insert_after": "status",
+            "options": "\nPending\nGenerated\nCancelled\nFailed",
+            "default": None,
+            "hidden": 1,
+            "no_copy": 1,
+            "print_hide": 1,
+            "read_only": 1,
+            "translatable": 0,
+        },
+    ]
+}
+
+E_WAYBILL_DN_FIELDS = [
+    {
+        "fieldname": "distance",
+        "label": "Distance (in km)",
+        "fieldtype": "Int",
+        "insert_after": "vehicle_no",
+        "print_hide": 1,
+        "description": (
+            "Set as zero to update distance as per the e-Waybill portal (if available)"
+        ),
+    },
+    {
+        "fieldname": "gst_transporter_id",
+        "label": "GST Transporter ID",
+        "fieldtype": "Data",
+        "insert_after": "transporter",
+        "fetch_from": "transporter.gst_transporter_id",
+        "print_hide": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "mode_of_transport",
+        "label": "Mode of Transport",
+        "fieldtype": "Select",
+        "options": "\nRoad\nAir\nRail\nShip",
+        "default": "Road",
+        "insert_after": "transporter_name",
+        "print_hide": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "gst_vehicle_type",
+        "label": "GST Vehicle Type",
+        "fieldtype": "Select",
+        "options": "Regular\nOver Dimensional Cargo (ODC)",
+        "depends_on": 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+        "read_only_depends_on": "eval: doc.mode_of_transport == 'Ship'",
+        "default": "Regular",
+        "insert_after": "lr_date",
+        "print_hide": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "ewaybill",
+        "label": "e-Waybill No.",
+        "fieldtype": "Data",
+        "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
+        "allow_on_submit": 1,
+        "insert_after": "customer_name",
+        "translatable": 0,
+        "no_copy": 1,
+    },
+]
+
+E_WAYBILL_SI_FIELDS = [
+    {
+        "fieldname": "transporter_info",
+        "label": "Transporter Info",
+        "fieldtype": "Section Break",
+        "insert_after": "terms",
+        "collapsible": 1,
+        "collapsible_depends_on": "transporter",
+        "print_hide": 1,
+    },
+    {
+        "fieldname": "transporter",
+        "label": "Transporter",
+        "fieldtype": "Link",
+        "insert_after": "transporter_info",
+        "options": "Supplier",
+        "print_hide": 1,
+    },
+    {
+        "fieldname": "driver",
+        "label": "Driver",
+        "fieldtype": "Link",
+        "insert_after": "gst_transporter_id",
+        "options": "Driver",
+        "print_hide": 1,
+    },
+    {
+        "fieldname": "lr_no",
+        "label": "Transport Receipt No",
+        "fieldtype": "Data",
+        "insert_after": "driver",
+        "print_hide": 1,
+        "translatable": 0,
+        "length": 30,
+    },
+    {
+        "fieldname": "vehicle_no",
+        "label": "Vehicle No",
+        "fieldtype": "Data",
+        "insert_after": "lr_no",
+        "print_hide": 1,
+        "translatable": 0,
+        "length": 15,
+    },
+    {
+        "fieldname": "transporter_col_break",
+        "fieldtype": "Column Break",
+        "insert_after": "distance",
+    },
+    {
+        "fieldname": "transporter_name",
+        "label": "Transporter Name",
+        "fieldtype": "Small Text",
+        "insert_after": "transporter_col_break",
+        "fetch_from": "transporter.name",
+        "read_only": 1,
+        "print_hide": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "driver_name",
+        "label": "Driver Name",
+        "fieldtype": "Small Text",
+        "insert_after": "mode_of_transport",
+        "fetch_from": "driver.full_name",
+        "print_hide": 1,
+        "translatable": 0,
+    },
+    {
+        "fieldname": "lr_date",
+        "label": "Transport Receipt Date",
+        "fieldtype": "Date",
+        "insert_after": "driver_name",
+        "default": "Today",
+        "print_hide": 1,
+    },
+    *E_WAYBILL_DN_FIELDS,
+]
+
+E_WAYBILL_FIELDS = {
+    "Sales Invoice": E_WAYBILL_SI_FIELDS,
+    "Delivery Note": E_WAYBILL_DN_FIELDS,
 }

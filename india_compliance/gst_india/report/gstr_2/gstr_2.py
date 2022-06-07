@@ -29,7 +29,7 @@ class Gstr2Report(Gstr1Report):
 			supplier_gstin,
 			place_of_supply,
 			ecommerce_gstin,
-			reverse_charge,
+			is_reverse_charge,
 			gst_category,
 			return_against,
 			is_return,
@@ -213,7 +213,7 @@ class Gstr2Report(Gstr1Report):
                     "width": 120,
                 },
                 {
-                    "fieldname": "reverse_charge",
+                    "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
                     "width": 80,
