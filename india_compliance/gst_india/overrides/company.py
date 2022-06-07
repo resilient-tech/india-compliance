@@ -37,6 +37,8 @@ def make_default_tax_templates(company: str, country: str):
             _("Company {0} does not exist yet. Taxes setup aborted.").format(company)
         )
 
+    frappe.has_permission("Company", ptype="write", doc=company, throw=True)
+
     default_taxes = json.loads(read_data_file("tax_defaults.json"))
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
