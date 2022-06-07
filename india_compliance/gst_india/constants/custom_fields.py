@@ -324,7 +324,7 @@ journal_entry_fields = [
     },
 ]
 
-inter_state_gst_field = [
+inter_state_gst_fields = [
     {
         "fieldname": "is_inter_state",
         "label": "Is Inter State",
@@ -512,7 +512,7 @@ CUSTOM_FIELDS = {
     ("POS Invoice", "Sales Order"): sales_gst_fields,
     "Payment Entry": payment_entry_fields,
     "Journal Entry": journal_entry_fields,
-    "Tax Category": inter_state_gst_field,
+    "Tax Category": inter_state_gst_fields,
     "Item": [
         {
             "fieldname": "gst_hsn_code",
