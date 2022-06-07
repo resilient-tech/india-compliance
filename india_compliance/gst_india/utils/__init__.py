@@ -333,8 +333,9 @@ def get_all_gst_accounts(company):
 
 
 def delete_custom_fields(custom_fields):
-    """Delete multiple custom fields
-    :param custom_fields: example `{'Sales Invoice': [dict(fieldname='test')]}`"""
+    """
+    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
+    """
 
     for doctypes, fields in custom_fields.items():
         if isinstance(fields, dict):
@@ -357,10 +358,13 @@ def delete_custom_fields(custom_fields):
             frappe.clear_cache(doctype=doctype)
 
 
-def toggle_custom_fields(custom_fields, enabled):
-    """Hide / Unhide custom fields
-    :param custom_fields: example `{'Sales Invoice': [dict(fieldname='test')]}`
-    :param enabled: True to unhide, False to hide"""
+def toggle_custom_fields(custom_fields, show):
+    """
+    Show / hide custom fields
+
+    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
+    :param show: True to show fields, False to hide
+    """
 
     for doctypes, fields in custom_fields.items():
         if isinstance(fields, dict):
@@ -379,7 +383,7 @@ def toggle_custom_fields(custom_fields, enabled):
                     "fieldname": ["in", [field["fieldname"] for field in fields]],
                 },
                 "hidden",
-                int(not enabled),
+                int(not show),
             )
 
             frappe.clear_cache(doctype=doctype)
