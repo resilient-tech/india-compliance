@@ -12,7 +12,7 @@ def execute(filters=None):
             dict(
                 fieldtype="Data",
                 label="Customer GSTIN",
-                fieldname="customer_gstin",
+                fieldname="shipping_address_gstin",
                 width=120,
             ),
             dict(
@@ -59,7 +59,7 @@ def execute(filters=None):
             ),
         ],
         additional_query_columns=[
-            "customer_gstin",
+            "shipping_address_gstin",
             "billing_address_gstin",
             "company_gstin",
             "place_of_supply",

@@ -235,7 +235,7 @@ sales_gst_fields = [
         "translatable": 0,
     },
     {
-        "fieldname": "customer_gstin",
+        "fieldname": "shipping_address_gstin",
         "label": "Shipping Address GSTIN",
         "fieldtype": "Data",
         "insert_after": "shipping_address",
@@ -405,7 +405,7 @@ payment_entry_fields = [
         "depends_on": 'eval:doc.party_type == "Customer"',
     },
     {
-        "fieldname": "customer_gstin",
+        "fieldname": "shipping_address_gstin",
         "label": "Customer GSTIN",
         "fieldtype": "Data",
         "insert_after": "customer_address",
