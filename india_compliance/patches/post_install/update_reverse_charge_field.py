@@ -1,27 +1,31 @@
 import frappe
 
-DOCTYPES = ("Purchase Invoice", "Sales Invoice")
-
 
 def execute():
-    column = "reverse_charge"
+    update_and_process_column(
+        column="reverse_charge",
+        doctypes=("Purchase Invoice", "Sales Invoice"),
+        values_to_update="Y",
+    )
 
-    delete_old_fields()
-    for doctype in DOCTYPES:
+
+def update_and_process_column(column, doctypes, values_to_update):
+    delete_old_fields(column, doctypes)
+    for doctype in doctypes:
         if column not in frappe.db.get_table_columns(doctype):
             continue
 
-        frappe.db.set_value(doctype, {column: "Y"}, "is_reverse_charge", 1)
+        frappe.db.set_value(doctype, {column: values_to_update}, "is_reverse_charge", 1)
         frappe.db.sql_ddl(
             "alter table `tab{0}` drop column {1}".format(doctype, column)
         )
 
 
-def delete_old_fields():
+def delete_old_fields(column, doctypes):
     frappe.db.delete(
         "Custom Field",
         {
-            "fieldname": "reverse_charge",
-            "dt": ("in", DOCTYPES),
+            "fieldname": column,
+            "dt": ("in", doctypes),
         },
     )

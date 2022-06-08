@@ -34,7 +34,7 @@ class Gstr2Report(Gstr1Report):
 			return_against,
 			is_return,
 			gst_category,
-			export_with_payment_of_tax,
+			is_export_with_gst,
 			reason_for_issuing_document,
 			eligibility_for_itc,
 			itc_integrated_tax,

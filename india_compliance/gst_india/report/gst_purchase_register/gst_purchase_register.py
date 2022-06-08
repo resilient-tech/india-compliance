@@ -36,7 +36,7 @@ def execute(filters=None):
             dict(
                 fieldtype="Data",
                 label="Export Type",
-                fieldname="export_with_payment_of_tax",
+                fieldname="is_export_with_gst",
                 width=120,
             ),
             dict(
@@ -51,7 +51,7 @@ def execute(filters=None):
             "company_gstin",
             "is_reverse_charge",
             "gst_category",
-            "export_with_payment_of_tax",
+            "is_export_with_gst",
             "ecommerce_gstin",
         ],
     )
@@ -65,6 +65,6 @@ def execute(filters=None):
     # Result (values[1]) is returned as list of lists
     for row in values[1]:
         row[index] = "Y" if row[index] else "N"
-        row[index] = "With Payment of Tax" if row[index] else "Without Payment of Tax"
+        row[index] = "WPAY" if row[index] else "WOPAY"
 
     return values

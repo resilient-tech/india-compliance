@@ -39,7 +39,7 @@ class Gstr1Report(object):
 			is_return,
 			is_debit_note,
 			gst_category,
-			export_with_payment_of_tax,
+			is_export_with_gst,
 			port_code,
 			shipping_bill_number,
 			shipping_bill_date,
@@ -229,12 +229,8 @@ class Gstr1Report(object):
                 )
             elif fieldname in ("posting_date", "shipping_bill_date"):
                 row.append(formatdate(invoice_details.get(fieldname), "dd-MMM-YY"))
-            elif fieldname == "export_with_payment_of_tax":
-                export_type = (
-                    "WPAY"
-                    if invoice_details.get(fieldname) == "With Payment of Tax"
-                    else "WOPAY"
-                )
+            elif fieldname == "is_export_with_gst":
+                export_type = "WPAY" if invoice_details.get(fieldname) else "WOPAY"
                 row.append(export_type)
             else:
                 row.append(invoice_details.get(fieldname))
@@ -262,8 +258,7 @@ class Gstr1Report(object):
                 elif (
                     not tax_rate
                     and self.filters.get("type_of_business") == "EXPORT"
-                    and invoice_details.get("export_with_payment_of_tax")
-                    == "Without Payment of Tax"
+                    and not invoice_details.get("is_export_with_gst")
                 ):
                     taxable_value += abs(net_amount)
 
@@ -298,11 +293,6 @@ class Gstr1Report(object):
 
         for d in invoice_data:
             d.is_reverse_charge = "Y" if d.is_reverse_charge else "N"
-            d.export_with_payment_of_tax = (
-                "With Payment of Tax"
-                if d.export_with_payment_of_tax
-                else "Without Payment of Tax"
-            )
             self.invoices.setdefault(d.invoice_number, d)
 
     def get_advance_entries(self):
@@ -486,8 +476,7 @@ class Gstr1Report(object):
             if (
                 invoice not in self.items_based_on_tax_rate
                 and invoice not in unidentified_gst_accounts_invoice
-                and self.invoices.get(invoice, {}).get("export_with_payment_of_tax")
-                == "Without Payment of Tax"
+                and not self.invoices.get(invoice, {}).get("is_export_with_gst")
                 and self.invoices.get(invoice, {}).get("gst_category")
                 in ("Overseas", "SEZ")
             ):
@@ -657,8 +646,8 @@ class Gstr1Report(object):
                     "fieldtype": "Data",
                 },
                 {
-                    "fieldname": "export_with_payment_of_tax",
-                    "label": "Export Type",
+                    "fieldname": "is_export_with_gst",
+                    "label": "Export with GST",
                     "fieldtype": "Data",
                     "hidden": 1,
                 },
@@ -735,8 +724,8 @@ class Gstr1Report(object):
                     "width": 120,
                 },
                 {
-                    "fieldname": "export_with_payment_of_tax",
-                    "label": "Export Type",
+                    "fieldname": "is_export_with_gst",
+                    "label": "Export with GST",
                     "fieldtype": "Data",
                     "hidden": 1,
                 },
@@ -816,8 +805,8 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "EXPORT":
             self.invoice_columns = [
                 {
-                    "fieldname": "export_with_payment_of_tax",
-                    "label": "Export Type",
+                    "fieldname": "is_export_with_gst",
+                    "label": "Export with GST",
                     "fieldtype": "Data",
                     "width": 120,
                 },
@@ -950,7 +939,7 @@ def get_json(filters, report_name, data):
 
     elif filters["type_of_business"] == "EXPORT":
         for item in report_data[:-1]:
-            res.setdefault(item["export_with_payment_of_tax"], []).append(item)
+            res.setdefault(item["is_export_with_gst"], []).append(item)
 
         out = get_export_json(res)
         gst_json["exp"] = out
@@ -1261,10 +1250,10 @@ def get_invoice_type(row):
     gst_category = row.get("gst_category")
 
     if gst_category == "SEZ":
-        return "SEWP" if row.get("export_with_payment_of_tax") == "WPAY" else "SEWOP"
+        return "SEWP" if row.get("is_export_with_gst") == "WPAY" else "SEWOP"
 
     if gst_category == "Overseas":
-        return "EXPWP" if row.get("export_with_payment_of_tax") == "WPAY" else "EXPWOP"
+        return "EXPWP" if row.get("is_export_with_gst") == "WPAY" else "EXPWOP"
 
     return (
         {

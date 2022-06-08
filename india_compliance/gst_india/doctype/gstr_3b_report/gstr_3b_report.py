@@ -201,7 +201,7 @@ class GSTR3BReport(Document):
         invoice_details = frappe.db.sql(
             """
             SELECT
-                name, gst_category, export_with_payment_of_tax, place_of_supply
+                name, gst_category, is_export_with_gst, place_of_supply
             FROM
                 `tab{doctype}`
             WHERE
@@ -221,11 +221,6 @@ class GSTR3BReport(Document):
         )
 
         for d in invoice_details:
-            d.export_with_payment_of_tax = (
-                "With Payment of Tax"
-                if d.export_with_payment_of_tax
-                else "Without Payment of Tax"
-            )
             self.invoice_detail_map.setdefault(d.name, d)
             self.invoices.append(d.name)
 
@@ -335,10 +330,9 @@ class GSTR3BReport(Document):
             for invoice, items in self.invoice_items.items():
                 if (
                     invoice not in self.items_based_on_tax_rate
-                    and self.invoice_detail_map.get(invoice, {}).get(
-                        "export_with_payment_of_tax"
+                    and not self.invoice_detail_map.get(invoice, {}).get(
+                        "is_export_with_gst"
                     )
-                    == "Without Payment of Tax"
                     and self.invoice_detail_map.get(invoice, {}).get("gst_category")
                     == "Overseas"
                 ):
@@ -368,9 +362,7 @@ class GSTR3BReport(Document):
                 self.invoice_detail_map.get(inv, {}).get("place_of_supply")
                 or "00-Other Territory"
             )
-            export_type = self.invoice_detail_map.get(inv, {}).get(
-                "export_with_payment_of_tax"
-            )
+            export_type = self.invoice_detail_map.get(inv, {}).get("is_export_with_gst")
 
             for rate, items in items_based_on_rate.items():
                 for item_code, taxable_value in self.invoice_items.get(inv).items():
@@ -384,8 +376,7 @@ class GSTR3BReport(Document):
                                 "txval"
                             ] += taxable_value
                         elif rate == 0 or (
-                            gst_category == "Overseas"
-                            and export_type == "Without Payment of Tax"
+                            gst_category == "Overseas" and not export_type
                         ):
                             self.report_dict["sup_details"]["osup_zero"][
                                 "txval"
