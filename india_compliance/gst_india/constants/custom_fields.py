@@ -40,7 +40,7 @@ transaction_item_fields = [
 pi_si_common_fields = [
     {
         "fieldname": "is_export_with_gst",
-        "label": "Is Export with Payment of GST",
+        "label": "Is Export With Payment of GST",
         "fieldtype": "Check",
         "insert_after": "is_reverse_charge",
         "print_hide": 1,

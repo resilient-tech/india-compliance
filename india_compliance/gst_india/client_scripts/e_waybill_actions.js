@@ -289,7 +289,7 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
         },
         {
             fieldname: "is_export_with_gst",
-            label: "Is Export with Payment of GST",
+            label: "Is Export With Payment of GST",
             fieldtype: "Check",
             depends_on: 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
             default: frm.doc.is_export_with_gst,
