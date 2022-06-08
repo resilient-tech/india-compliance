@@ -46,6 +46,16 @@ CUSTOM_FIELDS = {
     # Invoice Fields
     ("Purchase Invoice", "Sales Invoice"): [
         {
+            "fieldname": "is_export_with_gst",
+            "label": "Is Export With Payment of GST",
+            "fieldtype": "Check",
+            "insert_after": "is_reverse_charge",
+            "print_hide": 1,
+            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
+            "default": 0,
+            "translatable": 0,
+        },
+        {
             "fieldname": "invoice_copy",
             "label": "Invoice Copy",
             "length": 30,
@@ -68,21 +78,11 @@ CUSTOM_FIELDS = {
             "collapsible": 1,
         },
         {
-            "fieldname": "is_export_with_gst",
-            "label": "Is Export With Payment of GST",
-            "fieldtype": "Check",
-            "insert_after": "is_reverse_charge",
-            "print_hide": 1,
-            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            "default": 0,
-            "translatable": 0,
-        },
-        {
             "fieldname": "ecommerce_gstin",
             "label": "E-commerce GSTIN",
             "length": 15,
             "fieldtype": "Data",
-            "insert_after": "is_export_with_gst",
+            "insert_after": "gst_section",
             "print_hide": 1,
             "translatable": 0,
         },
