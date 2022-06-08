@@ -411,7 +411,7 @@ def update_transaction(doc, values):
     }
 
     if doc.doctype == "Sales Invoice":
-        data["export_with_payment_of_tax"] = values.export_with_payment_of_tax
+        data["is_export_with_gst"] = values.is_export_with_gst
 
     doc.db_set(data)
 
@@ -638,7 +638,7 @@ class EWaybillData(GSTTransactionData):
         elif self.doc.gst_category == "Overseas":
             self.transaction_details.sub_supply_type = 3
 
-            if not self.doc.export_with_payment_of_tax:
+            if not self.doc.is_export_with_gst:
                 self.transaction_details.document_type = "BIL"
 
         if self.doc.doctype == "Delivery Note":

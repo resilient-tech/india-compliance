@@ -314,12 +314,7 @@ class EInvoiceData(GSTTransactionData):
     def get_supply_type(self):
         supply_type = GST_CATEGORIES[self.doc.gst_category]
         if self.doc.gst_category in ("Overseas", "SEZ"):
-            export_type = (
-                "With Payment of Tax"
-                if self.doc.export_with_payment_of_tax
-                else "Without Payment of Tax"
-            )
-            supply_type = f"{supply_type}{EXPORT_TYPES[export_type]}"
+            supply_type = f"{supply_type}{EXPORT_TYPES[self.doc.is_export_with_gst]}"
 
         return supply_type
 
