@@ -16,9 +16,7 @@ function update_export_type(doctype) {
 
             frm.set_value(
                 "is_export_with_gst",
-                gst_settings.default_without_payment_of_tax
-                    ? 0
-                    : 1
+                gst_settings.default_with_payment_of_tax ? 1 : 0
             );
         },
     });
