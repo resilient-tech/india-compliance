@@ -407,11 +407,7 @@ def update_transaction(doc, values):
         "lr_date": values.lr_date,
         "mode_of_transport": values.mode_of_transport,
         "gst_vehicle_type": values.gst_vehicle_type,
-        "gst_category": values.gst_category,
     }
-
-    if doc.doctype == "Sales Invoice":
-        data["is_export_with_gst"] = values.is_export_with_gst
 
     doc.db_set(data)
 

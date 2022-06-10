@@ -273,27 +273,6 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
             default: frm.doc.gst_vehicle_type,
         },
-        {
-            fieldtype: "Section Break",
-        },
-        {
-            fieldname: "gst_category",
-            label: "GST Category",
-            fieldtype: "Select",
-            options:
-                "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
-            default: frm.doc.gst_category,
-        },
-        {
-            fieldtype: "Column Break",
-        },
-        {
-            fieldname: "is_export_with_gst",
-            label: "Is Export With Payment of GST",
-            fieldtype: "Check",
-            depends_on: 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            default: frm.doc.is_export_with_gst,
-        },
     ];
 
     if (frm.doctype === "Delivery Note") {
