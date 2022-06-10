@@ -6,6 +6,7 @@ DOCTYPES = ("Purchase Invoice", "Sales Invoice")
 def execute():
     update_and_process_field("reverse_charge", "is_reverse_charge", "Y")
     update_and_process_field("export_type", "is_export_with_gst", "With Payment of Tax")
+    delete_old_fields("reason_for_issuing_document", doctypes=("Purchase Invoice",))
 
 
 def update_and_process_field(old_field, new_field, values_to_update):
@@ -22,11 +23,11 @@ def update_and_process_field(old_field, new_field, values_to_update):
         )
 
 
-def delete_old_fields(field):
+def delete_old_fields(field, doctypes=DOCTYPES):
     frappe.db.delete(
         "Custom Field",
         {
             "fieldname": field,
-            "dt": ("in", DOCTYPES),
+            "dt": ("in", doctypes),
         },
     )

@@ -35,7 +35,6 @@ class Gstr2Report(Gstr1Report):
 			is_return,
 			gst_category,
 			is_export_with_gst,
-			reason_for_issuing_document,
 			eligibility_for_itc,
 			itc_integrated_tax,
 			itc_central_tax,
@@ -256,12 +255,6 @@ class Gstr2Report(Gstr1Report):
                     "fieldname": "posting_date",
                     "label": "Invoice/Advance Payment Voucher date",
                     "fieldtype": "Date",
-                    "width": 120,
-                },
-                {
-                    "fieldname": "reason_for_issuing_document",
-                    "label": "Reason For Issuing document",
-                    "fieldtype": "Data",
                     "width": 120,
                 },
                 {

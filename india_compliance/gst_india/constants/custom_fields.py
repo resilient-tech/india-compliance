@@ -43,24 +43,6 @@ company_fields[0]["insert_after"] = "parent_company"
 CUSTOM_FIELDS = {
     "Company": company_fields,
     ("Customer", "Supplier"): party_fields,
-    # Invoice Fields
-    ("Purchase Invoice", "Sales Invoice"): [
-        {
-            "fieldname": "reason_for_issuing_document",
-            "label": "Reason For Issuing document",
-            "fieldtype": "Select",
-            "insert_after": "return_against",
-            "print_hide": 1,
-            "depends_on": "eval:doc.is_return == 1",
-            "length": 45,
-            "options": (
-                "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
-                " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
-                " of Provisional assessment\n07-Others"
-            ),
-            "translatable": 0,
-        }
-    ],
     # Purchase Fields
     ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [
         {
@@ -203,22 +185,8 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
-    # Sales Shipping & Print Fields
+    # Sales Shipping Fields
     ("Delivery Note", "Sales Invoice"): [
-        {
-            "fieldname": "invoice_copy",
-            "label": "Invoice Copy",
-            "length": 30,
-            "fieldtype": "Select",
-            "insert_after": "select_print_heading",
-            "print_hide": 1,
-            "allow_on_submit": 1,
-            "options": (
-                "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
-                " Supplier\nTriplicate for Supplier"
-            ),
-            "translatable": 0,
-        },
         {
             "fieldname": "port_code",
             "label": "Port Code",
@@ -304,6 +272,37 @@ CUSTOM_FIELDS = {
             "hidden": 1,
             "options": "Company:company:default_currency",
             "print_hide": 1,
+        },
+    ],
+    "Sales Invoice": [
+        {
+            "fieldname": "invoice_copy",
+            "label": "Invoice Copy",
+            "length": 30,
+            "fieldtype": "Select",
+            "insert_after": "select_print_heading",
+            "print_hide": 1,
+            "allow_on_submit": 1,
+            "options": (
+                "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
+                " Supplier\nTriplicate for Supplier"
+            ),
+            "translatable": 0,
+        },
+        {
+            "fieldname": "reason_for_issuing_document",
+            "label": "Reason For Issuing document",
+            "fieldtype": "Select",
+            "insert_after": "return_against",
+            "print_hide": 1,
+            "depends_on": "eval:doc.is_return == 1",
+            "length": 45,
+            "options": (
+                "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
+                " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
+                " of Provisional assessment\n07-Others"
+            ),
+            "translatable": 0,
         },
     ],
     "Purchase Invoice": [
