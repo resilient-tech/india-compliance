@@ -13,11 +13,6 @@ function update_export_type(doctype) {
                     __("Please enable SEZ / Overseas transactions in GST Settings first")
                 );
             }
-
-            frm.set_value(
-                "is_export_with_gst",
-                gst_settings.default_with_payment_of_tax ? 1 : 0
-            );
         },
     });
 }
