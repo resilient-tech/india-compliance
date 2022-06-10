@@ -22,11 +22,11 @@ def update_and_process_field(old_field, new_field, values_to_update):
         )
 
 
-def delete_old_fields(column):
+def delete_old_fields(field):
     frappe.db.delete(
         "Custom Field",
         {
-            "fieldname": column,
+            "fieldname": field,
             "dt": ("in", DOCTYPES),
         },
     )
