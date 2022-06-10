@@ -9,11 +9,10 @@ from india_compliance.income_tax_india.setup import after_install as setup_incom
 POST_INSTALL_PATCHES = (
     "remove_consumer_gst_category",
     "update_gst_accounts",
-    "update_reverse_charge_field",
+    "update_reverse_charge_and_export_type",
     "update_gstin_and_gst_category",
     "update_e_invoice_fields_and_logs",
     "delete_gst_e_invoice_print_format",
-    "update_export_type",
 )
 
 
