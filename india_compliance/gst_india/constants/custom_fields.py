@@ -46,56 +46,10 @@ CUSTOM_FIELDS = {
     # Invoice Fields
     ("Purchase Invoice", "Sales Invoice"): [
         {
-            "fieldname": "is_export_with_gst",
-            "label": "Is Export With Payment of GST",
-            "fieldtype": "Check",
-            "insert_after": "is_reverse_charge",
-            "print_hide": 1,
-            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            "default": 0,
-            "translatable": 0,
-        },
-        {
-            "fieldname": "invoice_copy",
-            "label": "Invoice Copy",
-            "length": 30,
-            "fieldtype": "Select",
-            "insert_after": "language",
-            "print_hide": 1,
-            "allow_on_submit": 1,
-            "options": (
-                "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
-                " Supplier\nTriplicate for Supplier"
-            ),
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_section",
-            "label": "GST Details",
-            "fieldtype": "Section Break",
-            "insert_after": "invoice_copy",
-            "print_hide": 1,
-            "collapsible": 1,
-        },
-        {
-            "fieldname": "ecommerce_gstin",
-            "label": "E-commerce GSTIN",
-            "length": 15,
-            "fieldtype": "Data",
-            "insert_after": "gst_section",
-            "print_hide": 1,
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_col_break",
-            "fieldtype": "Column Break",
-            "insert_after": "ecommerce_gstin",
-        },
-        {
             "fieldname": "reason_for_issuing_document",
             "label": "Reason For Issuing document",
             "fieldtype": "Select",
-            "insert_after": "gst_col_break",
+            "insert_after": "return_against",
             "print_hide": 1,
             "depends_on": "eval:doc.is_return == 1",
             "length": 45,
@@ -105,7 +59,7 @@ CUSTOM_FIELDS = {
                 " of Provisional assessment\n07-Others"
             ),
             "translatable": 0,
-        },
+        }
     ],
     # Purchase Fields
     ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [
@@ -159,6 +113,41 @@ CUSTOM_FIELDS = {
         },
     ],
     # Sales Fields
+    ("Sales Order", "Delivery Note", "Sales Invoice"): [
+        {
+            "fieldname": "is_export_with_gst",
+            "label": "Is Export With Payment of GST",
+            "fieldtype": "Check",
+            "insert_after": "is_reverse_charge",
+            "print_hide": 1,
+            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
+            "default": 0,
+            "translatable": 0,
+        },
+        {
+            "fieldname": "gst_section",
+            "label": "GST Details",
+            "fieldtype": "Section Break",
+            "insert_after": "language",
+            "print_hide": 1,
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "ecommerce_gstin",
+            "label": "E-commerce GSTIN",
+            "length": 15,
+            "fieldtype": "Data",
+            "insert_after": "gst_section",
+            "print_hide": 1,
+            "translatable": 0,
+        },
+        {
+            "fieldname": "gst_col_break",
+            "fieldtype": "Column Break",
+            "insert_after": "ecommerce_gstin",
+        },
+    ],
+    # Sales GSTIN Fields
     ("Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"): [
         {
             "fieldname": "billing_address_gstin",
@@ -214,13 +203,27 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
-    # Sales Shipping Fields
-    ("Sales Invoice", "Delivery Note"): [
+    # Sales Shipping & Print Fields
+    ("Delivery Note", "Sales Invoice"): [
+        {
+            "fieldname": "invoice_copy",
+            "label": "Invoice Copy",
+            "length": 30,
+            "fieldtype": "Select",
+            "insert_after": "select_print_heading",
+            "print_hide": 1,
+            "allow_on_submit": 1,
+            "options": (
+                "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
+                " Supplier\nTriplicate for Supplier"
+            ),
+            "translatable": 0,
+        },
         {
             "fieldname": "port_code",
             "label": "Port Code",
             "fieldtype": "Data",
-            "insert_after": "reason_for_issuing_document",
+            "insert_after": "gst_col_break",
             "print_hide": 1,
             "depends_on": "eval:doc.gst_category == 'Overseas' ",
             "length": 15,
@@ -305,10 +308,23 @@ CUSTOM_FIELDS = {
     ],
     "Purchase Invoice": [
         {
+            "fieldname": "gst_section",
+            "label": "GST Details",
+            "fieldtype": "Section Break",
+            "insert_after": "language",
+            "print_hide": 1,
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "gst_col_break",
+            "fieldtype": "Column Break",
+            "insert_after": "gst_section",
+        },
+        {
             "fieldname": "eligibility_for_itc",
             "label": "Eligibility For ITC",
             "fieldtype": "Select",
-            "insert_after": "reason_for_issuing_document",
+            "insert_after": "gst_col_break",
             "print_hide": 1,
             "options": (
                 "Input Service Distributor\nImport Of Service\nImport Of Capital"
@@ -567,7 +583,27 @@ SALES_REVERSE_CHARGE_FIELDS = {
             "print_hide": 1,
             "default": 0,
         },
-    ]
+    ],
+    "Delivery Note": [
+        {
+            "fieldname": "is_reverse_charge",
+            "label": "Is Reverse Charge",
+            "fieldtype": "Check",
+            "insert_after": "issue_credit_note",
+            "print_hide": 1,
+            "default": 0,
+        },
+    ],
+    "Sales Order": [
+        {
+            "fieldname": "is_reverse_charge",
+            "label": "Is Reverse Charge",
+            "fieldtype": "Check",
+            "insert_after": "order_type",
+            "print_hide": 1,
+            "default": 0,
+        },
+    ],
 }
 
 E_INVOICE_FIELDS = {
