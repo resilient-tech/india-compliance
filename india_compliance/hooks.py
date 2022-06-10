@@ -112,7 +112,6 @@ doc_events = {
     "Sales Order": {
         "validate": [
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.validate_gst_accounts",
             "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
             "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ]
