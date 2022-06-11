@@ -61,7 +61,7 @@ def validate_state(doc):
         )
 
 
-def link_party(doc, method=None):
+def add_party_link(doc, method=None):
     if not (doc.get("party_type") and doc.get("party")):
         return
 
