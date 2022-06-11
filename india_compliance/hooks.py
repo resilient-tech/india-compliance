@@ -44,7 +44,6 @@ doctype_list_js = {
 
 doc_events = {
     "Address": {
-        "before_insert": "india_compliance.gst_india.overrides.address.add_party_link",
         "validate": [
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
             "india_compliance.gst_india.overrides.address.validate",
