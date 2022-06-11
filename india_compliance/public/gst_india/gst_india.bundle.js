@@ -1,2 +1,2 @@
 import "./utils";
-import "./create_party";
+import "./quick_entry";
