@@ -4,16 +4,20 @@ class PartyQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
         this.skip_redirect_on_error = true;
+        this.enable_api = frappe.boot.gst_settings.enable_api;
     }
 
     get_address_fields() {
         return [
             {
+                label: __("Primary Address Details"),
                 fieldname: "section_break2",
                 fieldtype: "Section Break",
-                label: __("Primary Address Details"),
-                description:
-                    "Permanent address is auto-filled. Change Pincode if you wish to autofill other address.",
+                description: this.enable_api
+                    ? __(
+                          "Permanent address is auto-filled. Change Pincode if you wish to autofill other address."
+                      )
+                    : "",
                 collapsible: 0,
             },
             {
@@ -66,10 +70,12 @@ class PartyQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 label: "GSTIN",
                 fieldname: "_gstin",
                 fieldtype: "Autocomplete",
-                description: "Autofill party information by entering correct GSTIN.",
+                description: this.enable_api
+                    ? __("Autofill party information by entering correct GSTIN.")
+                    : "",
                 ignore_validation: true,
                 onchange: _ => {
-                    if (!frappe.boot.gst_settings.enable_api) return;
+                    if (!this.enable_api) return;
                     autofill_gstin_fields(this.dialog);
                 },
             },
@@ -94,9 +100,9 @@ frappe.ui.form.SupplierQuickEntryForm =
         get_variant_fields() {
             return [
                 {
+                    label: __("Primary Contact Details"),
                     fieldname: "section_break1",
                     fieldtype: "Section Break",
-                    label: __("Primary Contact Details"),
                     collapsible: 0,
                 },
                 {
