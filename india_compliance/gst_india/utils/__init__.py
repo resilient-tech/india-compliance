@@ -61,25 +61,39 @@ def send_updated_doc(doc, set_docinfo=False):
 def get_gstin_details(gstin):
     from india_compliance.gst_india.api_classes import PublicAPI
 
+    if (
+        frappe.get_cached_value("User", frappe.session.user, "user_type")
+        == "Website User"
+    ):
+        frappe.throw(_("Not allowed"), frappe.PermissionError)
+
     validate_gstin(gstin)
     return PublicAPI().get_gstin_info(gstin)
 
 
 @frappe.whitelist()
-def get_party_gstins(party_type, party):
+def get_gstin_list(party, party_type="Company"):
     """
-    Returns a list of all the party's GSTINs.
+    Returns a list the party's GSTINs.
+    This function doesn't check for permissions since GSTINs are publicly available.
     """
 
-    return frappe.get_list(
+    gstin_list = frappe.get_all(
         "Address",
         filters={
             "link_doctype": party_type,
             "link_name": party,
+            "gstin": ("is", "set"),
         },
         pluck="gstin",
         distinct=True,
     )
+
+    default_gstin = frappe.db.get_value(party_type, party, "gstin")
+    if default_gstin and default_gstin not in gstin_list:
+        gstin_list.insert(0, default_gstin)
+
+    return gstin_list
 
 
 @frappe.whitelist()

@@ -167,7 +167,7 @@ frappe.ui.form.AddressQuickEntryForm = class AddressQuickEntryForm extends (
                     const { party_type, party } = this.dialog.doc;
                     if (!party) return;
                     const { message: gstins } = await frappe.call(
-                        "india_compliance.gst_india.utils.get_party_gstins",
+                        "india_compliance.gst_india.utils.get_gstin_list",
                         { party_type, party }
                     );
                     if (!gstins || !gstins.length) return;

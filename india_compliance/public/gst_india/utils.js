@@ -10,9 +10,9 @@ ic.get_gstin_query = company => {
     }
 
     return {
-        query: "india_compliance.gst_india.utils.queries.get_gstin_options",
+        query: "india_compliance.gst_india.utils.get_gstin_list",
         params: {
-            company: company,
+            party: company,
         },
     };
 };
