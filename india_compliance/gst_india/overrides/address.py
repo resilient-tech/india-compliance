@@ -59,13 +59,3 @@ def validate_state(doc):
             ).format(frappe.bold(doc.gst_state), doc.gst_state_number),
             title=_("Invalid GSTIN or State"),
         )
-
-
-def add_party_link(doc, method=None):
-    if not (doc.get("party_type") and doc.get("party")):
-        return
-
-    if not doc.address_title:
-        doc.address_title = doc.party
-
-    doc.append("links", {"link_doctype": doc.party_type, "link_name": doc.party})
