@@ -2,7 +2,8 @@ import json
 
 import frappe
 from frappe import _, bold
-from frappe.contacts.doctype.address.address import get_address_display, make_contact
+from frappe.contacts.doctype.address.address import get_address_display
+from erpnext.selling.doctype.customer.customer import make_contact
 
 from india_compliance.gst_india.utils import (
     is_valid_pan,

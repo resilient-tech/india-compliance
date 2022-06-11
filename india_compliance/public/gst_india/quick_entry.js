@@ -22,13 +22,14 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             },
             {
                 label: __("Pincode"),
+                // set as _pincode so that frappe.ui.form.Layout doesn't override it
                 fieldname: "_pincode",
                 fieldtype: "Autocomplete",
                 ignore_validation: true,
             },
             {
                 label: __("Address Line 1"),
-                fieldname: "_address_line1",
+                fieldname: "address_line1",
                 fieldtype: "Data",
             },
             {
@@ -81,6 +82,12 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             },
         ];
     }
+
+    update_doc() {
+        const doc = super.update_doc();
+        doc.pincode = doc._pincode;
+        return doc;
+    }
 }
 
 class PartyQuickEntryForm extends GSTQuickEntryForm {
@@ -117,6 +124,13 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
                 fieldtype: "Data",
             },
         ];
+    }
+
+    update_doc() {
+        const doc = super.update_doc();
+        doc._address_line1 = doc.address_line1;
+        delete doc.address_line1;
+        return doc;
     }
 };
 
@@ -270,11 +284,9 @@ function update_address_info(doc, address) {
     if (!address) return;
 
     Object.assign(doc, address);
-
-    // set fields renamed to stop execution of ERPNext code
+    // set field renamed due conflict with frappe.ui.form.Layout
     doc._pincode = address.pincode;
-    doc._address_line1 = doc.address_line1;
-    delete doc.address_line1;
+
 }
 
 function autofill_address(doc, { all_addresses }) {
