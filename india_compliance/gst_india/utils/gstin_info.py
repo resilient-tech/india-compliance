@@ -1,23 +1,10 @@
 from math import ceil
 
 import frappe
+from frappe import _
 
-from india_compliance.gst_india.utils import titlecase
-
-# ####### SAMPLE DATA for GST_CATEGORIES ########
-# "Composition"                             36AASFP8573D2ZN
-# "Input Service Distributor (ISD)"         29AABCF8078M2ZW     Flipkart
-# "Tax Deductor"                            06DELI09652G1DA 09ALDN00287A1DD 27AAFT56212B1DO 19AAACI1681G1DV
-# "SEZ Developer"                           27AAJCS5738D1Z6
-# "United Nation Body"                      0717UNO00157UNO 0717UNO00211UN2 2117UNO00002UNF
-# "Consulate or Embassy of Foreign Country" 0717UNO00154UNU
-
-# ###### CANNOT BE A PART OF GSTR1 ######
-# "Tax Collector (e-Commerce Operator)"     29AABCF8078M1C8 27AAECG3736E1C2
-# "Non Resident Online Services Provider"   9917SGP29001OST      Google
-
-# "Non Resident Taxable Person"
-# "Government Department ID"
+from india_compliance.gst_india.api_classes.public import PublicAPI
+from india_compliance.gst_india.utils import titlecase, validate_gstin
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
@@ -32,25 +19,33 @@ GST_CATEGORIES = {
 }
 
 
-def process_gstin_info_for_autofill(gstin_info):
+@frappe.whitelist()
+def get_gstin_info(gstin):
+    if (
+        frappe.get_cached_value("User", frappe.session.user, "user_type")
+        == "Website User"
+    ):
+        frappe.throw(_("Not allowed"), frappe.PermissionError)
+
+    validate_gstin(gstin)
+    response = PublicAPI().get_gstin_info(gstin)
     business_name = (
-        gstin_info.tradeNam if gstin_info.ctb == "Proprietorship" else gstin_info.lgnm
+        response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
     )
 
-    gstin_details = frappe._dict(
-        gstin=gstin_info.gstin,
+    gstin_info = frappe._dict(
+        gstin=response.gstin,
         business_name=titlecase(business_name),
-        gstin_info=gstin_info,
-        gst_category=GST_CATEGORIES.get(gstin_info.dty, ""),
+        gst_category=GST_CATEGORIES.get(response.dty, ""),
     )
 
-    if permanent_address := gstin_info.get("pradr"):
+    if permanent_address := response.get("pradr"):
         # permanent address will be at the first position
-        addresses = [permanent_address] + gstin_info.get("adadr", [])
-        gstin_details.all_addresses = list(map(_get_address, addresses))
-        gstin_details.permanent_address = gstin_details.all_addresses[0]
+        all_addresses = [permanent_address, *response.get("adadr", [])]
+        gstin_info.all_addresses = list(map(_get_address, all_addresses))
+        gstin_info.permanent_address = gstin_info.all_addresses[0]
 
-    return gstin_details
+    return gstin_info
 
 
 def _get_address(address):
@@ -72,6 +67,26 @@ def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
 
     keys = ("bno", "bnm", "flno", "st", "loc", "city")
-    full_address = [address.get(key, "").strip() for key in keys if address.get(key)]
+    full_address = []
+    for key in keys:
+        if value := address.get(key, "").strip():
+            full_address.append(value)
+
     middle = ceil(len(full_address) / 2)
     return (", ".join(full_address[:middle]), ", ".join(full_address[middle:]))
+
+
+# ####### SAMPLE DATA for GST_CATEGORIES ########
+# "Composition"                             36AASFP8573D2ZN
+# "Input Service Distributor (ISD)"         29AABCF8078M2ZW     Flipkart
+# "Tax Deductor"                            06DELI09652G1DA 09ALDN00287A1DD 27AAFT56212B1DO 19AAACI1681G1DV
+# "SEZ Developer"                           27AAJCS5738D1Z6
+# "United Nation Body"                      0717UNO00157UNO 0717UNO00211UN2 2117UNO00002UNF
+# "Consulate or Embassy of Foreign Country" 0717UNO00154UNU
+
+# ###### CANNOT BE A PART OF GSTR1 ######
+# "Tax Collector (e-Commerce Operator)"     29AABCF8078M1C8 27AAECG3736E1C2
+# "Non Resident Online Services Provider"   9917SGP29001OST      Google
+
+# "Non Resident Taxable Person"
+# "Government Department ID"

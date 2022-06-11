@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe import _, bold
+from frappe.contacts.doctype.address.address import get_address_display, make_contact
 
 from india_compliance.gst_india.utils import (
     is_valid_pan,
@@ -109,12 +110,44 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
     frappe.msgprint(message, title=_("Insufficient Permission"), indicator="yellow")
 
 
-# modified version of erpnext.selling.doctype.customer.customer.create_primary_address
-def create_primary_address(doc, method=None):
-    if not doc.is_new() or not doc.get("_address_line1"):
+def create_primary_address_and_contact(doc, method=None):
+    """
+    Used to create primary address and contact when creating party.
+    Modified version of erpnext.selling.doctype.customer.customer.create_primary_*
+    """
+
+    if not doc.is_new():
         return
 
-    from frappe.contacts.doctype.address.address import get_address_display
+    create_primary_address(doc)
+    create_primary_contact(doc)
+
+
+def create_primary_contact(doc):
+    mobile_no = doc.get("_mobile_no")
+    email_id = doc.get("_email_id")
+
+    if not (mobile_no or email_id):
+        return
+
+    contact = make_contact(
+        {
+            "doctype": doc.doctype,
+            "name": doc.name,
+            "email_id": email_id,
+            "mobile_no": mobile_no,
+        }
+    )
+
+    doc.db_set("customer_primary_contact", contact.name)
+    doc.db_set("mobile_no", mobile_no)
+    doc.db_set("email_id", email_id)
+
+
+def create_primary_address(doc):
+    # ERPNext uses `address_line1` so we use `_address_line1` to avoid conflict
+    if not doc.get("_address_line1"):
+        return
 
     address = make_address(doc)
     address_display = get_address_display(address.as_dict())
@@ -132,7 +165,7 @@ def make_address(doc):
     if required_fields:
         frappe.throw(
             "{0} <br><br> <ul>{1}</ul>".format(
-                _("Following fields are mandatory to create Address:"),
+                _("The following fields are mandatory to create Address:"),
                 "\n".join(required_fields),
             ),
             frappe.MandatoryError,
