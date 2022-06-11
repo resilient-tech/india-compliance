@@ -1,5 +1,6 @@
 from dateutil import parser
 from pytz import timezone
+from titlecase import titlecase as _titlecase
 
 import frappe
 from frappe import _
@@ -11,6 +12,7 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import (
+    ABBREVIATIONS,
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
@@ -55,12 +57,37 @@ def send_updated_doc(doc, set_docinfo=False):
     frappe.response.docs.append(doc)
 
 
+@frappe.whitelist()
+def get_gstin_list(party, party_type="Company"):
+    """
+    Returns a list the party's GSTINs.
+    This function doesn't check for permissions since GSTINs are publicly available.
+    """
+
+    gstin_list = frappe.get_all(
+        "Address",
+        filters={
+            "link_doctype": party_type,
+            "link_name": party,
+            "gstin": ("is", "set"),
+        },
+        pluck="gstin",
+        distinct=True,
+    )
+
+    default_gstin = frappe.db.get_value(party_type, party, "gstin")
+    if default_gstin and default_gstin not in gstin_list:
+        gstin_list.insert(0, default_gstin)
+
+    return gstin_list
+
+
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
     Validate GSTIN with following checks:
-    - Length should be 15.
-    - Validate GSTIN Check Digit.
-    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin parameter).
+    - Length should be 15
+    - Validate GSTIN Check Digit
+    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin)
     """
 
     if not gstin:
@@ -406,3 +433,17 @@ def as_ist(value=None):
         .astimezone(timezone(TIMEZONE))
         .replace(tzinfo=None)
     )
+
+
+def titlecase(value):
+    return _titlecase(value, callback=get_titlecase_version)
+
+
+def get_titlecase_version(word, all_caps=False, **kwargs):
+    """Retruns abbreviation if found, else None"""
+
+    if not all_caps:
+        word = word.upper()
+
+    if word in ABBREVIATIONS:
+        return word
