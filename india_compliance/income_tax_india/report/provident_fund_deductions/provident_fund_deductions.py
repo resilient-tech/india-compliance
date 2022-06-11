@@ -187,6 +187,10 @@ def get_data(filters):
 
 @frappe.whitelist()
 def get_years():
+    """
+    TODO: port code that uses this function to this app, see if permissions need to be checked
+    """
+
     year_list = frappe.db.sql_list(
         """select distinct YEAR(end_date) from `tabSalary Slip` ORDER BY YEAR(end_date) DESC"""
     )
