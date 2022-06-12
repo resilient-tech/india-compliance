@@ -41,7 +41,7 @@ function setup_e_waybill_actions(doctype) {
 
                 if (has_e_waybill_threshold_met(frm) && !frm.doc.is_return) {
                     frm.dashboard.add_comment(
-                        "e-Waybill is applicable for this invoice and not yet generated or updated.",
+                        __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
                         "yellow",
                         true
                     );

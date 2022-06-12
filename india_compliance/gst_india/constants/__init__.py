@@ -25,7 +25,10 @@ GST_CATEGORIES = {
     "Tax Deductor": "B2B",
 }
 
-EXPORT_TYPES = ["WOP", "WP"]
+EXPORT_TYPES = [
+    "WOP",  # Without Payment of Tax
+    "WP",  # With Payment of Tax
+]
 
 STATE_NUMBERS = {
     "Andaman and Nicobar Islands": "35",
