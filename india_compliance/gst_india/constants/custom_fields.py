@@ -280,7 +280,7 @@ CUSTOM_FIELDS = {
             "label": "Invoice Copy",
             "length": 30,
             "fieldtype": "Select",
-            "insert_after": "select_print_heading",
+            "insert_after": "column_break_84",
             "print_hide": 1,
             "allow_on_submit": 1,
             "options": (
@@ -291,7 +291,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "reason_for_issuing_document",
-            "label": "Reason For Issuing document",
+            "label": "Reason For Issuing Document",
             "fieldtype": "Select",
             "insert_after": "return_against",
             "print_hide": 1,
