@@ -10,9 +10,25 @@ ic.get_gstin_query = company => {
     }
 
     return {
-        query: "india_compliance.gst_india.utils.queries.get_gstin_options",
+        query: "india_compliance.gst_india.utils.get_gstin_list",
         params: {
-            company: company,
+            party: company,
         },
     };
+};
+
+ic.get_party_type = function (doctype) {
+    return in_list(
+        [
+            "Material Request",
+            "Request for Quotation",
+            "Supplier Quotation",
+            "Purchase Order",
+            "Purchase Receipt",
+            "Purchase Invoice",
+        ],
+        doctype
+    )
+        ? "Supplier"
+        : "Customer";
 };

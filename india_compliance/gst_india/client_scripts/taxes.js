@@ -50,35 +50,14 @@ function get_tax_template(frm) {
 }
 
 function fetch_gst_category(doctype) {
-    const party_type = get_party_type(doctype);
+    const party_type = ic.get_party_type(doctype);
+    const party_type_field = party_type.toLowerCase();
     frappe.ui.form.on(doctype, {
         setup(frm) {
             // set gst category from party first, can be overwritten from address
-            frm.add_fetch(party_type, "gst_category", "gst_category");
-        },
-        customer_address(frm) {
-            if (frm.doc.customer_address) return;
-
-            frappe.db.get_value(
-                frappe.utils.to_title_case(party_type),
-                frm.doc[party_type],
-                "gst_category",
-                response => {
-                    if (!response) return;
-                    frm.set_value("gst_category", response.gst_category);
-                }
-            );
+            frm.add_fetch(party_type_field, "gst_category", "gst_category");
         },
     });
-}
-
-function get_party_type(doctype) {
-    return in_list(
-        ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"],
-        doctype
-    )
-        ? "customer"
-        : "supplier";
 }
 
 function update_gst_vehicle_type(doctype) {
