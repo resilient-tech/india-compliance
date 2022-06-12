@@ -117,9 +117,6 @@ def create_primary_address_and_contact(doc, method=None):
     Modified version of erpnext.selling.doctype.customer.customer.create_primary_*
     """
 
-    if not doc.is_new():
-        return
-
     create_primary_address(doc)
     create_primary_contact(doc)
 

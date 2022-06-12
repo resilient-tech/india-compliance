@@ -13,7 +13,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         auto-filled by default.<br>
                         Change the Pincode to autofill other addresses.`
                       )
@@ -132,7 +132,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
         delete doc.address_line1;
         return doc;
     }
-};
+}
 
 frappe.ui.form.CustomerQuickEntryForm = PartyQuickEntryForm;
 frappe.ui.form.SupplierQuickEntryForm = PartyQuickEntryForm;
@@ -217,21 +217,21 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         const doc = cur_frm && cur_frm.doc;
         if (!doc) return { party_type: "Customer", party: "" };
 
-        const { doctype, docname } = doc;
+        const { doctype, name } = doc;
         if (in_list(["Customer", "Supplier"], doctype))
-            return { party_type: doctype, party: docname };
+            return { party_type: doctype, party: name };
 
         const party_type = ic.get_party_type(doctype);
         return { party_type, party: doc[party_type.toLowerCase()] || "" };
     }
-};
+}
 
 frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
     if (!gstin || gstin.length != 15) {
-        const pincode_field = dialog.fields_dict._pincode
+        const pincode_field = dialog.fields_dict._pincode;
         pincode_field.set_data([]);
         pincode_field.df.onchange = null;
         return;
@@ -296,7 +296,6 @@ function update_address_info(doc, address) {
     Object.assign(doc, address);
     // set field renamed due conflict with frappe.ui.form.Layout
     doc._pincode = address.pincode;
-
 }
 
 function autofill_address(doc, { all_addresses }) {
