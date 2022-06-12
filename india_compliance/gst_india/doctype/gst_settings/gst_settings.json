@@ -6,6 +6,7 @@
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
+  "enable_api",
   "hsn_wise_tax_breakup",
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
@@ -26,12 +27,13 @@
   "auto_generate_e_invoice",
   "column_break_17",
   "e_invoice_applicable_from",
+  "other_apis_section",
+  "autofill_party_info",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
-  "api_secret",
-  "enable_api",
-  "credentials"
+  "credentials",
+  "api_secret"
  ],
  "fields": [
   {
@@ -125,7 +127,7 @@
   },
   {
    "default": "0",
-   "description": "Enable this to use API features including e-Waybill, e-Invoice or Autofill using Public APIs",
+   "description": "Enable this to use API features like e-Waybill / e-Invoice generation from your ERP",
    "fieldname": "enable_api",
    "fieldtype": "Check",
    "label": "Enable API Features"
@@ -206,12 +208,25 @@
    "fieldname": "enable_overseas_transactions",
    "fieldtype": "Check",
    "label": "Enable SEZ / Overseas Transactions"
+  },
+  {
+   "depends_on": "eval: doc.enable_api",
+   "fieldname": "other_apis_section",
+   "fieldtype": "Section Break",
+   "label": "Other APIs"
+  },
+  {
+   "default": "0",
+   "description": "When creating a new Customer / Supplier / Address using the Quick Entry form, other fields will be automatically fetched based on the GSTIN entered",
+   "fieldname": "autofill_party_info",
+   "fieldtype": "Check",
+   "label": "Autofill Party Information based on GSTIN"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-06-10 01:11:04.874066",
+ "modified": "2022-06-11 09:04:52.656487",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
