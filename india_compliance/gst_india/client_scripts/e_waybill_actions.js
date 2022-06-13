@@ -22,7 +22,8 @@ function setup_e_waybill_actions(doctype) {
             if (
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
-                !is_e_waybill_applicable(frm)
+                !is_e_waybill_applicable(frm) ||
+                (frm.doctype === "Delivery Note" && !frm.doc.customer_address)
             )
                 return;
 
