@@ -2,7 +2,9 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
         this.skip_redirect_on_error = true;
-        this.api_enabled = frappe.boot.gst_settings.autofill_party_info;
+        this.api_enabled =
+            frappe.boot.gst_settings.enable_api &&
+            frappe.boot.gst_settings.autofill_party_info;
     }
 
     get_address_fields() {
