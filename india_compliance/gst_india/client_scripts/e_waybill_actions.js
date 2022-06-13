@@ -298,10 +298,7 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
     ];
 
     if (frm.doctype === "Delivery Note") {
-        const same_gstin =
-            (frm.doc.shipping_address_gstin || frm.doc.billing_address_gstin) ==
-            frm.doc.company_gstin;
-
+        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
         let options;
 
         if (frm.doc.is_return) {
