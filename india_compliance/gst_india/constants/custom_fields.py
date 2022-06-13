@@ -193,16 +193,6 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
         {
-            "fieldname": "customer_gstin",
-            "label": "Shipping Address GSTIN",
-            "fieldtype": "Data",
-            "insert_after": "shipping_address",
-            "fetch_from": "shipping_address_name.gstin",
-            "print_hide": 1,
-            "length": 15,
-            "translatable": 0,
-        },
-        {
             "fieldname": "company_gstin",
             "label": "Company GSTIN",
             "fieldtype": "Data",
