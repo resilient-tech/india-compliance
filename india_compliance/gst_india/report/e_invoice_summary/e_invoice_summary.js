@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 /* eslint-disable */
 
-frappe.query_reports["E-Invoice Summary"] = {
+frappe.query_reports["e-Invoice Summary"] = {
 	"filters": [
 		{
 			"fieldtype": "Link",
