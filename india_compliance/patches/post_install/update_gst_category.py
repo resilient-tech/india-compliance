@@ -4,7 +4,7 @@ import frappe
 def execute():
     for doctype, field in (
         {
-            "Sales Invoice": "customer_gstin",
+            "Sales Invoice": "billing_address_gstin",
             "Purchase Invoice": "supplier_gstin",
         }
     ).items():
