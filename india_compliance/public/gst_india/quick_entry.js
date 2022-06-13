@@ -55,6 +55,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldname: "country",
                 fieldtype: "Link",
                 options: "Country",
+                default: frappe.defaults.get_user_default("country"),
             },
             {
                 label: __("Customer POS Id"),
