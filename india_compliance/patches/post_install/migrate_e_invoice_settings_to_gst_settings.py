@@ -14,7 +14,32 @@ def execute():
         .where(singles.field.isin(("enable", "applicable_from")))
         .run()
     )
-    if not sbool(old_settings.get("enable")):
+
+    if old_settings.applicable_from:
+        frappe.db.set_value(
+            "GST Settings",
+            "GST Settings",
+            "e_invoice_applicable_from",
+            old_settings.applicable_from,
+        )
+
+    if old_credentials := get_credentials_from_e_invoice_user():
+        gst_settings = frappe.get_single("GST Settings")
+        gst_settings.extend("gst_credentials", old_credentials)
+        gst_settings.update_child_table("gst_credentials")
+
+    if not sbool(old_settings.enable):
+        return
+
+    click.secho(
+        "Your e-Invoice Settings have been migrated to GST Settings."
+        " Please enable the e-Invoice API in GST Settings manually.",
+        fg="yellow",
+    )
+
+
+def get_credentials_from_e_invoice_user():
+    if not frappe.db.table_exists("E Invoice User"):
         return
 
     user = frappe.qb.DocType("E Invoice User")
@@ -30,15 +55,6 @@ def execute():
 
     for credential in old_credentials:
         credential.password = credential.password and decrypt(credential.password)
-        credential.service = "e-Invoice"
+        credential.service = "e-Waybill / e-Invoice"
 
-    gst_settings = frappe.get_single("GST Settings")
-    gst_settings.db_set("applicable_from", old_settings.applicable_from)
-    gst_settings.extend("gst_credentials", old_credentials)
-    gst_settings.update_child_table("gst_credentials")
-
-    click.secho(
-        "⚠️  Your E Invoice Settings have been migrated to GST Settings."
-        " Please enable e-Invoice API in GST Settings manually.",
-        fg="yellow",
-    )
+    return old_credentials
