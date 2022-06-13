@@ -2,7 +2,7 @@ import frappe
 
 
 def execute():
-    # delete_custom_field_tax_id_if_exists
+    # delete custom field tax_id if it exists
     frappe.db.delete(
         "Custom Field",
         {
