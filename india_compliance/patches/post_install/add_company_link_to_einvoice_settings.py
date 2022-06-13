@@ -6,6 +6,9 @@ def execute():
     update Company of E Invoice User from Dyanamic Link Table in Address
     """
 
+    if not frappe.db.table_exists("E Invoice User"):
+        return
+
     frappe.db.sql(
         """
         UPDATE `tabE Invoice User` user
