@@ -11,6 +11,7 @@ def execute():
 
     for doctype in ("Sales Invoice", "Purchase Invoice"):
         field_filters = {"dt": doctype, "fieldname": "invoice_type"}
+
         if not frappe.db.exists("Custom Field", field_filters):
             continue
 

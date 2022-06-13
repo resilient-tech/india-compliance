@@ -1,14 +1,10 @@
 import frappe
-from frappe.utils import sbool
 
 
 def execute():
     """
     update Company of E Invoice User from Dyanamic Link Table in Address
     """
-
-    if not sbool(frappe.db.get_value("E Invoice Settings", None, "enable")):
-        return
 
     frappe.db.sql(
         """
