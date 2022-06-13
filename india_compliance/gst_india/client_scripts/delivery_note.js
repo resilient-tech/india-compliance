@@ -15,18 +15,18 @@ frappe.ui.form.on(DOCTYPE, {
             },
         });
     },
-    validate(frm) {
-        let settings = frappe.boot.gst_settings;
+    after_save(frm) {
+        const { gst_settings } = frappe.boot;
         if (
             frm.doc.docstatus ||
             frm.doc.customer_address ||
-            !(settings.enable_e_waybill && settings.enable_e_waybill_from_dn)
+            !(gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_dn)
         )
             return;
 
         frappe.show_alert({
-            message: __("Customer Address is required to generate e-Waybill from Delivery Note"),
+            message: __("Billing Address is required to create e-Waybill"),
             indicator: "yellow",
-        });
+        }, 10);
     },
 });
