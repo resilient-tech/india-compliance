@@ -20,6 +20,11 @@ POST_INSTALL_PATCHES = (
     "remove_consumer_gst_category",
     "update_gst_accounts",
     "migrate_e_invoice_settings_to_gst_settings",
+    "update_reverse_charge_field",
+    "update_gstin_and_gst_category",
+    "update_e_invoice_fields_and_logs",
+    "delete_gst_e_invoice_print_format",
+    "remove_customer_gstin_field",
 )
 
 
@@ -27,13 +32,13 @@ def after_install():
     setup_income_tax()
     setup_gst()
     run_post_install_patches()
-    click.secho("\nThank you for installing India Compliance!", fg="green")
+    click.secho("Thank you for installing India Compliance!", fg="green")
 
 
 def run_post_install_patches():
     if not frappe.db.exists("Company", {"country": "India"}):
         return
 
-    print("Running post-install patches")
+    print("\nPatching Existing Data...")
     for patch in POST_INSTALL_PATCHES:
         frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()

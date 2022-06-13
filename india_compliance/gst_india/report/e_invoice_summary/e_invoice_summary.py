@@ -3,6 +3,7 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder import Case
 
 
 def execute(filters=None):
@@ -32,7 +33,8 @@ def validate_filters(filters=None):
     if not filters.from_date or not filters.to_date:
         frappe.throw(
             _(
-                "From Date & To Date is mandatory for generating e-Invoice Summary Report"
+                "From Date & To Date is mandatory for generating e-Invoice Summary"
+                " Report"
             ),
             title=_("Invalid Filter"),
         )
@@ -41,25 +43,38 @@ def validate_filters(filters=None):
 
 
 def get_data(filters=None):
-    if filters is None:
-        filters = {}
-    query_filters = {
-        "posting_date": ["between", [filters.from_date, filters.to_date]],
-        "einvoice_status": ["is", "set"],
-        "company": filters.company,
-    }
-    if filters.customer:
-        query_filters["customer"] = filters.customer
-    if filters.status:
-        query_filters["einvoice_status"] = filters.status
-
-    data = frappe.get_all(
-        "Sales Invoice",
-        filters=query_filters,
-        fields=[d.get("fieldname") for d in get_columns()],
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+    e_invoice_log = frappe.qb.DocType("e-Invoice Log")
+    query = (
+        frappe.qb.from_(sales_invoice)
+        .inner_join(e_invoice_log)
+        .on(sales_invoice.name == e_invoice_log.sales_invoice)
+        .select(
+            sales_invoice.posting_date,
+            sales_invoice.einvoice_status,
+            sales_invoice.customer,
+            Case().when(sales_invoice.is_return == 1, "Y").else_("N").as_("is_return"),
+            sales_invoice.base_grand_total,
+            e_invoice_log.sales_invoice,
+            e_invoice_log.acknowledgement_number,
+            e_invoice_log.acknowledged_on,
+            e_invoice_log.irn,
+        )
+        .where(
+            sales_invoice.posting_date[
+                filters.get("from_date") : filters.get("to_date")
+            ]
+        )
+        .where(sales_invoice.company == filters.get("company"))
     )
 
-    return data
+    if filters.get("status"):
+        query = query.where(sales_invoice.einvoice_status == filters.get("status"))
+
+    if filters.get("customer"):
+        query = query.where(sales_invoice.customer == filters.get("customer"))
+
+    return query.run(as_dict=True)
 
 
 def get_columns():
@@ -72,7 +87,7 @@ def get_columns():
         },
         {
             "fieldtype": "Link",
-            "fieldname": "name",
+            "fieldname": "sales_invoice",
             "label": _("Sales Invoice"),
             "options": "Sales Invoice",
             "width": 140,
@@ -90,16 +105,21 @@ def get_columns():
             "label": _("Customer"),
         },
         {
-            "fieldtype": "Check",
+            "fieldtype": "Data",
             "fieldname": "is_return",
             "label": _("Is Return"),
             "width": 85,
         },
-        {"fieldtype": "Data", "fieldname": "ack_no", "label": "Ack. No.", "width": 145},
         {
             "fieldtype": "Data",
-            "fieldname": "ack_date",
-            "label": "Ack. Date",
+            "fieldname": "acknowledgement_number",
+            "label": "Acknowledgement Number",
+            "width": 145,
+        },
+        {
+            "fieldtype": "Data",
+            "fieldname": "acknowledged_on",
+            "label": "Acknowledged On (IST)",
             "width": 165,
         },
         {"fieldtype": "Data", "fieldname": "irn", "label": _("IRN No."), "width": 250},
