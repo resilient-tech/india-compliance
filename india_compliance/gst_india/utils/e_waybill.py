@@ -528,7 +528,7 @@ class EWaybillData(GSTTransactionData):
         - Max 250 Items
         """
 
-        for fieldname in ("company_gstin", "company_address", "customer_address"):
+        for fieldname in ("company_address", "customer_address"):
             if not self.doc.get(fieldname):
                 frappe.throw(
                     _("{0} is required to generate e-Waybill").format(
