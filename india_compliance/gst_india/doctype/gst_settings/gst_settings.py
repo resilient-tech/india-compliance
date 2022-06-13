@@ -27,10 +27,6 @@ class GSTSettings(Document):
 
         if not self.enable_api:
             self.enable_e_invoice = 0
-            self.autofill_party_info = 0
-
-        if not self.enable_e_waybill:
-            self.enable_e_waybill_from_dn = 0
 
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
