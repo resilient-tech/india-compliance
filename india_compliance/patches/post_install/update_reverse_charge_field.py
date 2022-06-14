@@ -40,7 +40,7 @@ def set_default_gst_settings():
         "name",
     )
     if not invoice:
-        return toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, False)
+        return
 
     frappe.set_value("GST Settings", None, "enable_reverse_charge_in_sales", 1)
     toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, True)
