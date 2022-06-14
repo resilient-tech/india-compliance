@@ -1,3 +1,30 @@
+{% set ITEM_FIELDS_MAP = {
+    "SlNo": "Sr.",
+    "PrdDesc": "Product Description",
+    "HsnCd": "HSN Code",
+    "Qty": "Qty",
+    "Unit": "UOM",
+    "UnitPrice": "Rate",
+    "Discount": "Discount",
+    "AssAmt": "Taxable Amount",
+    "GstRt": "Tax Rate",
+    "CesRt": "Cess Rate",
+    "TotItemVal": "Total",
+} %}
+
+{% set AMOUNT_FIELDS_MAP = {
+	"AssVal": "Taxable Value",
+	"CgstVal": "CGST",
+	"SgstVal": "SGST",
+	"IgstVal": "IGST",
+	"CessVal": "CESS",
+	"Discount": "Discount",
+	"OthChrg": "Other Charges",
+	"RndOffAmt": "Round Off",
+	"TotInvVal": "Total Value",
+} %}
+
+
 <style>
     {% include "india_compliance/gst_india/print_format/e_invoice/e_invoice.css" %}
 </style>
@@ -10,136 +37,179 @@
 
 {%- set invoice_data = _dict(json.loads(e_invoice_log.invoice_data)) -%}
 
-<div class="page-break">
-	<div {% if print_settings.repeat_header_footer %} id="header-html" class="hidden-pdf" {% endif %}>
-		{% if letter_head and not no_letterhead %}
-			<div class="letter-head">{{ letter_head }}</div>
-		{% endif %}
-		<div class="print-heading text-right">
-			<h2>e-Invoice<br><small>{{ doc.name }}</small></h2>
-		</div>
+{% macro get_address_html(address) %}
+{% for field in ("Gstin", "LglNm", "Nm", "Addr1", "Addr2", "Loc") %}
+{% if address.get(field) %}
+<p>{{ address[field] }}</p>
+{% endif %}
+{% endfor %}
+<p>{{ get_state(address["Stcd"]) }} - {{ address["Pin"] }}</p>
+{%- endmacro %}
+
+<div {% if print_settings.repeat_header_footer %} id="header-html" class="hidden-pdf" {% endif %}>
+	{% if letter_head and not no_letterhead %}
+		<div class="letter-head">{{ letter_head }}</div>
+	{% endif %}
+	<div class="print-heading text-right">
+		<h2>e-Invoice<br></h2>
+		<span class="docname">{{ doc.name }}</span>
 	</div>
-	{% if print_settings.repeat_header_footer %}
-	<div id="footer-html" class="visible-pdf">
-		{% if not no_letterhead and footer %}
-		<div class="letter-head-footer">
-			{{ footer }}
-		</div>
-		{% endif %}
-		<p class="text-center small page-number visible-pdf">
-			{{ _("Page {0} of {1}").format('<span class="page"></span>', '<span class="topage"></span>') }}
-		</p>
+</div>
+{% if print_settings.repeat_header_footer %}
+<div id="footer-html" class="visible-pdf">
+	{% if not no_letterhead and footer %}
+	<div class="letter-head-footer">
+		{{ footer }}
 	</div>
 	{% endif %}
-	<h5 class="font-bold section-heading">1. Transaction Details</h5>
-	<div class="row section-break info-section">
-		<div class="col-xs-8 column-break">
-			{%
-				set transaction_details = {
-					"IRN": invoice_data.Irn,
-					"Ack. No": invoice_data.AckNo,
-					"Ack. Date": frappe.utils.format_datetime(invoice_data.AckDt, "dd/MM/yyyy hh:mm:ss"),
-					"Category": invoice_data.TranDtls.SupTyp,
-					"Document Type": invoice_data.DocDtls.Typ,
-					"Document No": invoice_data.DocDtls.No,
-				}
-			%}
-			{% for key, value in transaction_details.items() %}
-				<div class="row data-field">
-					<div class="col-xs-4"><label>{{ key }}</label></div>
-					<div class="col-xs-8 value">{{ value }}</div>
-				</div>
-			{% endfor %}
-		</div>
-		<div class="col-xs-4 column-break">
-			<img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}" width="175px" style="float: right;">
-		</div>
+	<p class="text-center small page-number visible-pdf">
+		{{ _("Page {0} of {1}").format('<span class="page"></span>', '<span class="topage"></span>') }}
+	</p>
+</div>
+{% endif %}
+<h5 class="section-heading">1. Transaction Details</h5>
+<div class="row section-break info-section">
+	<div class="col-xs-8 column-break">
+		{%
+			set transaction_details = {
+				"IRN": invoice_data.Irn,
+				"Ack. No": invoice_data.AckNo,
+				"Ack. Date": frappe.utils.format_datetime(
+					invoice_data.AckDt, "dd/MM/yyyy hh:mm:ss"
+				),
+				"Category": invoice_data.TranDtls.SupTyp,
+				"Document Type": invoice_data.DocDtls.Typ,
+				"Document No": invoice_data.DocDtls.No,
+			}
+		%}
+		{% for key, value in transaction_details.items() %}
+			<div class="row data-field">
+				<div class="col-xs-4"><label>{{ key }}</label></div>
+				<div class="col-xs-8 value">{{ value }}</div>
+			</div>
+		{% endfor %}
 	</div>
-	<h5 class="font-bold section-heading">2. Party Details</h5>
-	<div class="row section-break info-section">
-		<div class="col-xs-6 column-break">
-			{%- set diff_dispatch_addr = invoice_data.DispDtls and (invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin or invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1) -%}
-			<h5 style="margin-bottom: 5px;"><strong>
-				{% if diff_dispatch_addr %}
-					Seller Details
-				{% else %}
-					Seller and Dispatch Details
-				{% endif %}
-			</strong></h5>
-			{{ get_address_html(invoice_data.SellerDtls) }}
-
-			{%- if diff_dispatch_addr -%}
-			<h5 style="margin-bottom: 5px;"><strong>Dispatched From</strong></h5>
-				{{ get_address_html(invoice_data.DispDtls) }}
-			{% endif %}
-		</div>
-		<div class="col-xs-6 column-break">
-			{%- set diff_shipping_addr = invoice_data.ShipDtls and (invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin or invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1) -%}
-			<h5 style="margin-bottom: 5px;"><strong>
-				{% if diff_shipping_addr %}
-					Buyer Details
-				{% else %}
-					Buyer and Shipping Details
-				{% endif %}
-			</strong></h5>
-			{{ get_address_html(invoice_data.BuyerDtls) }}
-
-			{%- if diff_shipping_addr -%}
-				<h5 style="margin-bottom: 5px;"><strong>Shipped To</strong></h5>
-				{{ get_address_html(invoice_data.ShipDtls) }}
-			{% endif %}
-		</div>
+	<div class="col-xs-4 column-break text-right">
+		<img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}" class="qrcode">
 	</div>
-	{% if invoice_data.ItemList %}
-	{% set item_list = get_non_zero_formatted_fields(data=invoice_data.ItemList) %}
-	<div style="overflow-x: auto;">
-		<h5 class="font-bold section-heading">3. Item Details</h5>
-		<table class="table table-bordered">
-			<thead>
-				<tr>
-					{% for key in item_list[0].keys() %}
-					<th class="text-left">{{ key }}</th>
-					{% endfor %}
-				</tr>
-			</thead>
-			<tbody>
-				{% for item in item_list %}
-					<tr>
-						{% for value in item.values() %}
-							{% if value[0] == "₹" %}
-								<td class="text-right text-nowrap">{{ value }}</td>
-							{% elif value is string %}
-								<td class="text-left">{{ value }}</td>
-							{% else %}
-								<td class="text-center">{{ value }}</td>
-							{% endif %}
-						{% endfor %}
-					</tr>
+</div>
+
+<h5 class="section-heading">2. Party Details</h5>
+<div class="row section-break info-section">
+	<div class="col-xs-6 column-break">
+		{%- set is_dispatch_address_different = invoice_data.DispDtls and (
+			invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1
+			or invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin
+		) -%}
+
+		<h6 class="address-heading">
+			{% if is_dispatch_address_different %}
+				Seller Details
+			{% else %}
+				Seller and Dispatch Details
+			{% endif %}
+		</h6>
+		{{ get_address_html(invoice_data.SellerDtls) }}
+
+		{%- if is_dispatch_address_different -%}
+		<h6 class="address-heading">Dispatched From</h6>
+			{{ get_address_html(invoice_data.DispDtls) }}
+		{% endif %}
+	</div>
+	<div class="col-xs-6 column-break">
+		{%- set is_shipping_address_different = invoice_data.ShipDtls and (
+			invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1
+			or invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin
+		) -%}
+
+		<h6 class="address-heading">
+			{% if is_shipping_address_different %}
+				Buyer Details
+			{% else %}
+				Buyer and Shipping Details
+			{% endif %}
+		</h6>
+		{{ get_address_html(invoice_data.BuyerDtls) }}
+
+		{%- if is_shipping_address_different -%}
+			<h6 class="address-heading">Shipped To</h6>
+			{{ get_address_html(invoice_data.ShipDtls) }}
+		{% endif %}
+	</div>
+</div>
+
+{% set items = invoice_data.ItemList %}
+{% set item_fields = get_non_zero_fields(items, ITEM_FIELDS_MAP) %}
+<h5 class="section-heading">3. Item Details</h5>
+<div class="row section-break info-section item-details">
+<div class="col-xs-12 column-break">
+	<table class="table table-bordered e-invoice-table">
+		<thead>
+			<tr>
+				{% for field in item_fields %}
+					<th
+					{% if field not in ("HsnCd", "PrdDesc", "Unit") -%}
+					class="text-right"
+					{%- endif -%}
+					>{{ ITEM_FIELDS_MAP[field] }}</th>
 				{% endfor %}
-			</tbody>
-		</table>
-	</div>
-	{% endif %}
-	{% if invoice_data.ValDtls %}
-	{%- set value_details = get_non_zero_formatted_fields(data=invoice_data.ValDtls)[0] -%}
-	<div style="overflow-x: auto;">
-		<h5 class="font-bold section-heading">4. Value Details</h5>
-		<table class="table table-bordered">
-			<thead>
+			</tr>
+		</thead>
+		<tbody>
+			{% for item in items %}
 				<tr>
-					{% for key in value_details.keys() %}
-					<th class="text-left">{{ key }}</th>
+					{% for field in item_fields %}
+						{% set value = item[field] %}
+						<!-- Currency -->
+						{% if field.endswith(("Val", "Amt", "Price")) or field == "Discount" %}
+							<td class="text-right text-nowrap">
+								{{ frappe.utils.fmt_money(value, currency="INR") }}
+							</td>
+						{% elif field.endswith("Rt") %}
+							<td class="text-right text-nowrap">
+								{% if value % 1 == 0 %}
+								{{ "{}%".format(frappe.utils.cint(value)) }}
+								{% elif value % 0.1 == 0 %}
+								{{ "{}%".format(frappe.utils.flt(value, 1)) }}
+								{% else %}
+								{{ "{}%".format(frappe.utils.flt(value, 2)) }}
+								{% endif %}
+							</td>
+						{% elif value is not string or field == "SlNo" %}
+							<td class="text-right">{{ value }}</td>
+						{% else %}
+							<td class="text-left">{{ value }}</td>
+						{% endif %}
 					{% endfor %}
 				</tr>
-			</thead>
-			<tbody>
-				<tr>
-					{% for value in value_details.values() %}
-						<td class="text-right text-nowrap">{{ value }}</td>
-					{% endfor %}
-				</tr>
-			</tbody>
-		</table>
-	</div>
-	{% endif %}
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+</div>
+
+{%- set amounts = invoice_data.ValDtls -%}
+{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP) %}
+<h5 class="section-heading">4. Value Details</h5>
+<div class="row section-break">
+<div class="col-xs-12 column-break">
+	<table class="table table-bordered e-invoice-table">
+		<thead>
+			<tr>
+				{% for field in amount_fields %}
+					<th class="text-right">{{ AMOUNT_FIELDS_MAP[field] }}</th>
+				{% endfor %}
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				{% for field in amount_fields %}
+					<td class="text-right text-nowrap">
+						{{ frappe.utils.fmt_money(amounts[field], currency="INR")}}
+					</td>
+				{% endfor %}
+			</tr>
+		</tbody>
+	</table>
+</div>
 </div>
