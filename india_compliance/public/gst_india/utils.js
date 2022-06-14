@@ -39,5 +39,5 @@ ic.set_state_options = function (state_field, country) {
         return;
     }
 
-    state_field.set_data(frappe.boot.india_state_value || []);
+    state_field.set_data(frappe.boot.india_state_options || []);
 }
