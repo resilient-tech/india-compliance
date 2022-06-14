@@ -156,7 +156,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         fields_to_exclude.push("pincode", "address_line1");
 
         this.mandatory = [
-            ...this.get_party_fields(),
+            ...this.get_dynamic_link_fields(),
             ...this.get_gstin_field(),
             ...this.mandatory.filter(
                 field => !fields_to_exclude.includes(field.fieldname)
@@ -167,7 +167,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         this.set_default_values();
     }
 
-    get_party_fields() {
+    get_dynamic_link_fields() {
         return [
             {
                 fieldname: "link_doctype",
