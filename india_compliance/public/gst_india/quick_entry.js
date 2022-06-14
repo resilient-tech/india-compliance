@@ -170,33 +170,51 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
     get_party_fields() {
         return [
             {
-                fieldname: "party_type",
-                fieldtype: "Select",
-                label: "Party Type",
-                options: "Customer\nSupplier",
+                fieldname: "link_doctype",
+                fieldtype: "Link",
+                label: "Link Document Type",
+                options: "DocType",
+                get_query: () => {
+                    return {
+                        query: "frappe.contacts.address_and_contact.filter_dynamic_link_doctypes",
+                        filters: {
+                            fieldtype: "HTML",
+                            fieldname: "address_html",
+                        },
+                    };
+                },
                 onchange: async () => {
-                    // await to avoid clash with onchange of party field
-                    await this.dialog.set_value("party", "");
+                    const { value, last_value } = this.dialog.get_field("link_doctype");
+
+                    if (value !== last_value) {
+                        // await to avoid clash with onchange of link_name field
+                        await this.dialog.set_value("link_name", "");
+                    }
 
                     // dynamic link isn't supported in dialogs, so below hack
-                    this.dialog.fields_dict.party.df.options =
-                        this.dialog.doc.party_type;
+                    this.dialog.fields_dict.link_name.df.options = value;
                 },
             },
             {
                 fieldtype: "Column Break",
             },
             {
-                fieldname: "party",
+                fieldname: "link_name",
                 fieldtype: "Link",
-                label: "Party",
+                label: "Link Name",
                 onchange: async () => {
-                    const { party_type, party } = this.dialog.doc;
-                    if (!party) return;
+                    const { link_doctype, link_name } =
+                        this.dialog.doc;
+
+                    if (
+                        !link_name ||
+                        !in_list(ic.gstin_doctypes, link_doctype)
+                    )
+                        return;
 
                     const { message: gstin_list } = await frappe.call(
                         "india_compliance.gst_india.utils.get_gstin_list",
-                        { party_type, party }
+                        { party_type: link_doctype, party: link_name }
                     );
                     if (!gstin_list || !gstin_list.length) return;
 
@@ -211,30 +229,33 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
     update_doc() {
         const doc = super.update_doc();
-        if (doc.party_type && doc.party) {
+        if (doc.link_doctype && doc.link_name) {
             const link = frappe.model.add_child(doc, "Dynamic Link", "links");
-            link.link_doctype = doc.party_type;
-            link.link_name = doc.party;
+            link.link_doctype = doc.link_doctype;
+            link.link_name = doc.link_name;
         }
         return doc;
     }
 
     async set_default_values() {
         const default_party = this.get_default_party();
-        await this.dialog.set_value("party_type", default_party.party_type);
-        this.dialog.set_value("party", default_party.party);
+        if (default_party && default_party.party) {
+            await this.dialog.set_value("link_doctype", default_party.party_type);
+            this.dialog.set_value("link_name", default_party.party);
+        }
     }
 
     get_default_party() {
         const doc = cur_frm && cur_frm.doc;
-        if (!doc) return { party_type: "Customer", party: "" };
+        if (!doc) return;
 
         const { doctype, name } = doc;
-        if (in_list(["Customer", "Supplier"], doctype))
+        if (in_list(ic.gstin_doctypes, doctype))
             return { party_type: doctype, party: name };
 
         const party_type = ic.get_party_type(doctype);
-        return { party_type, party: doc[party_type.toLowerCase()] || "" };
+        const party = doc[party_type.toLowerCase()];
+        return { party_type, party };
     }
 }
 
