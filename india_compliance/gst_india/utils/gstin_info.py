@@ -64,24 +64,19 @@ def _get_address(address):
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
 
-    keys = ("bno", "bnm", "flno", "loc", "city", "st")
-    address_line1, address_line2 = [], []
+    address_line1 = [address.get(key, "").strip() for key in ("bno", "bnm", "flno")]
+    address_line2 = [address.get(key, "").strip() for key in ("loc", "city")]
 
-    for key in keys:
-        if value := address.get(key, "").strip():
-            if key in ("bno", "bnm", "flno"):
-                address_line1.append(value)
-            elif key in ("loc", "city"):
-                address_line2.append(value)
-            elif key == "st":
-                if sum(len(word) for word in address_line1) < sum(
-                    len(word) for word in address_line2
-                ):
-                    address_line1.append(value)
-                else:
-                    address_line2.insert(0, value)
+    if address_length(address_line1) < address_length(address_line2):
+        address_line1.append(address.get("st", "").strip())
+    else:
+        address_line2.insert(0, address.get("st", "").strip())
 
     return (", ".join(address_line1), ", ".join(address_line2))
+
+
+def address_length(address_line):
+    return sum(len(n) for n in address_line)
 
 
 # ####### SAMPLE DATA for GST_CATEGORIES ########
