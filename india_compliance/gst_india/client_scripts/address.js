@@ -8,7 +8,7 @@ show_overseas_disabled_warning(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     country(frm) {
-        ic.set_state_options(frm.get_field("state"), frm.doc.country);
+        ic.set_state_options(frm);
 
         if (!frm.doc.country) return;
 
@@ -19,7 +19,7 @@ frappe.ui.form.on(DOCTYPE, {
         }
     },
     async refresh(frm) {
-        ic.set_state_options(frm.get_field("state"), frm.doc.country);
+        ic.set_state_options(frm);
 
         // set default values for GST fields
         if (!frm.is_new() || !frm.doc.links || frm.doc.gstin) return;

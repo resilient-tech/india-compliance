@@ -15,10 +15,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         auto-filled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                    )
+                      )
                     : "",
                 collapsible: 0,
             },
@@ -51,6 +51,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 label: __("State"),
                 fieldname: "state",
                 fieldtype: "Autocomplete",
+                options: frappe.boot.india_state_options,
                 ignore_validation: true,
             },
             {
@@ -59,6 +60,9 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Link",
                 options: "Country",
                 default: frappe.defaults.get_user_default("country"),
+                onchange: () => {
+                    ic.set_state_options(this.dialog);
+                },
             },
             {
                 label: __("Customer POS Id"),
@@ -103,7 +107,6 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
             ...this.get_address_fields(),
         ];
         super.render_dialog();
-        autofill_state(this.dialog);
     }
 
     get_contact_fields() {
@@ -158,7 +161,6 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         ];
         super.render_dialog();
         this.set_default_values();
-        autofill_state(this.dialog);
     }
 
     get_party_fields() {
@@ -312,9 +314,4 @@ function autofill_address(doc, { all_addresses }) {
         doc,
         all_addresses.find(address => address.pincode == pincode)
     );
-}
-
-function autofill_state(dialog) {
-    const state_field = dialog.fields_dict.state;
-    ic.set_state_options(state_field, dialog.doc.country || dialog.get_value("country"));
 }

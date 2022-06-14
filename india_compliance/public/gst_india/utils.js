@@ -33,11 +33,13 @@ ic.get_party_type = function (doctype) {
         : "Customer";
 };
 
-ic.set_state_options = function (state_field, country) {
+ic.set_state_options = function (frm) {
+    const state_field = frm.fields_dict.state;
+    const country = frm.fields_dict.country.value;
     if (country !== "India") {
         state_field.set_data([]);
         return;
     }
 
     state_field.set_data(frappe.boot.india_state_options || []);
-}
+};
