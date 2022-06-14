@@ -1,51 +1,52 @@
-<div align="center">
-    <h1>
-        <br>
-        <a href="https://www.indiacompliance.app/">
-            <img src="https://user-images.githubusercontent.com/54097382/163762588-0e1d9f20-bf81-451f-bfdc-dab3a6dcd324.jpg">
-        </a>
-    </h1>
-</div>
+# [India Compliance](href="https://www.indiacompliance.app/")
 
-<p align="center">ERPNext app to simplify compliance with Indian Rules and Regulations.</p>
+### ERPNext app to simplify compliance with Indian Rules and Regulations.
 
-## Table of Contents
-* [Installation](#installation)
-* [Features](#initial-features)
-* [Future Releases](#future-releases)
-* [License](#license)
+<br>
+
+## Introduction
+
+India Compliance is an Open Source app to simplify compliance with Indian Rules and Regulations. It comes with powerful validations and customizations to make your compliance process more efficient and effective. Also, integrations with GST services would automate your business processes.
+
+## Key Features
+
+We aim to simplify the most routine compliances for you. In such process, we currently offer a few key features:
+
+-   Autofill Party Information from GSTIN
+-   Simplifed e-Waybill Management
+-   e-Invoice Automation
+-   Configurable settings
+-   And much more...
+
+For a detailed overview of these features, please refer to the documentation.
+
+We have lined up and are working for following additional features:
+
+-   Advanced Reconciliation for GSTR2A/2B with purchase invoice
+-   Quick and easy filing process for GSTR1 and GSTR3B
 
 ## Installation
 
-You will need to simply install `india-compliance` app on your site along with **frappe** and **ERPNext**.
+You will need to simply install `india-compliance` app on your site along with **frappe** and **ERPNext**. We support them starting with v14.
 
-* Download and add application [india-compliance](https://github.com/resilient-tech/india-compliance/) to your bench using:
+-   Download and add application [india-compliance](https://github.com/resilient-tech/india-compliance/) to your bench using:
+
 ```bash
 $ bench get-app india_compliance https://github.com/resilient-tech/india-compliance/
 ```
 
-* Install app on a particular site:
+-   Install app on a particular site:
+
 ```bash
 $ bench --site [site_name] install-app india_compliance
 ```
 
-## Initial Features
-
-* Integrating GST Public APIs for simpler Party / Address creation
-![customer autofill|357x500](https://user-images.githubusercontent.com/54097382/163789992-cc954b43-b8c3-4625-b534-229ea8b49096.gif)
-* Integrating e-Waybill APIs for end-to-end e-Waybill Management
-  * Creating e-Waybills
-  * Updating transporter/ vehicle information
-  * Cancelling e-Waybills
-* Moved India-specific features into the new app
-* e-Invoicing feature
-* India-specific configurations in GST Settings
-
-## Future Releases
-
-* Purchase Reconciliation for GSTR-2A/GSTR-2B
-* File GSTR-1 and GSTR-3B from ERP itself
-
 ## License
 
 GNU General Public License (v3)
+
+## Credits
+
+-   [Frappe](https://frappe.io/)
+-   [ERPNext](https://erpnext.com/)
+-   Community of Contributors
