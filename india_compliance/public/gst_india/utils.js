@@ -43,3 +43,5 @@ ic.set_state_options = function (frm) {
 
     state_field.set_data(frappe.boot.india_state_options || []);
 };
+
+ic.gstin_doctypes = ["Customer", "Supplier", "Company"];
