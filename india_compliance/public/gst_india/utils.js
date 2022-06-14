@@ -34,8 +34,8 @@ ic.get_party_type = function (doctype) {
 };
 
 ic.set_state_options = function (frm) {
-    const state_field = frm.fields_dict.state;
-    const country = frm.fields_dict.country.value;
+    const state_field = frm.get_field("state");
+    const country = frm.get_field("country").value;
     if (country !== "India") {
         state_field.set_data([]);
         return;
