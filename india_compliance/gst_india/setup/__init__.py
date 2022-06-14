@@ -28,6 +28,7 @@ def after_install():
 
     create_property_setters()
     create_address_template()
+    setup_default_gst_settings()
     frappe.enqueue(create_hsn_codes, now=frappe.flags.in_test)
 
 
@@ -86,4 +87,5 @@ def setup_default_gst_settings():
     )
 
     # Hide the fields as not enabled by default
-    toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, False)
+    for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
+        toggle_custom_fields(fields, False)
