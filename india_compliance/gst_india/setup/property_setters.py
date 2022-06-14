@@ -60,6 +60,13 @@ def get_property_setters():
             "property": "default_print_format",
             "value": "e-Waybill",
         },
+        {
+            "doc_type": "Address",
+            "doctype_or_field": "DocType",
+            "property": "quick_entry",
+            "property_type": "Check",
+            "value": "1",
+        },
     ]
 
 
