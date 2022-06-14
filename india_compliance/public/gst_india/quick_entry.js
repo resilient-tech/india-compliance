@@ -315,7 +315,6 @@ function autofill_address(doc, { all_addresses }) {
 }
 
 function autofill_state(dialog) {
-    console.log(dialog);
     const state_field = dialog.fields_dict.state;
     ic.set_state_options(state_field, dialog.doc.country || dialog.get_value("country"));
 }
