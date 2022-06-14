@@ -17,14 +17,11 @@ function update_gstin_in_other_documents(doctype) {
             for (const [doctype, docnames] of Object.entries(
                 docs_with_previous_gstin
             )) {
-                if (frappe.model.can_write(doctype)) {
-                    message += `<br><strong>${__(doctype)}</strong>:<br>`;
-                }
+                const can_write = frappe.model.can_write;
+                message += can_write(doctype) ? `<br><strong>${__(doctype)}</strong>:<br>` : '';
 
                 docnames.forEach(docname => {
-                    if (frappe.model.can_write(doctype, docname)) {
-                        message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
-                    }
+                    message += can_write(doctype, docname) ? `${frappe.utils.get_form_link(doctype, docname, true)}<br>` : '';
                 });
             }
 
