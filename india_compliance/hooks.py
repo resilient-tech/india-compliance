@@ -63,9 +63,7 @@ doc_events = {
         "after_insert": "india_compliance.gst_india.overrides.party.create_primary_address_and_contact",
     },
     "Delivery Note": {
-        "validate": [
-            "india_compliance.gst_india.overrides.delivery_note.validate",
-        ],
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india"
@@ -79,7 +77,7 @@ doc_events = {
     "Purchase Invoice": {
         "validate": [
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.invoice.update_taxable_values",
+            "india_compliance.gst_india.overrides.transaction.update_taxable_values",
             "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
             "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
             "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
@@ -107,9 +105,7 @@ doc_events = {
         ],
     },
     "Sales Order": {
-        "validate": [
-            "india_compliance.gst_india.overrides.sales_order.validate",
-        ]
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
     },
     "Supplier": {
         "validate": [
@@ -122,10 +118,10 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
     },
     "POS Invoice": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
     },
     "Quotation": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
     },
 }
 

@@ -3,15 +3,9 @@ from frappe import _, bold
 from frappe.model import delete_doc
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.invoice import update_taxable_values
 from india_compliance.gst_india.overrides.transaction import (
-    is_indian_registered_company,
-    set_place_of_supply,
-    validate_gst_accounts,
-    validate_hsn_code,
-    validate_items,
     validate_mandatory_fields,
-    validate_overseas_gst_category,
+    validate_sales_transaction,
 )
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -54,22 +48,13 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if not is_indian_registered_company(doc):
+    if validate_sales_transaction(doc) is False:
         return
 
-    if validate_items(doc) is False:
-        # If there are no GST items, then no need to proceed further
-        return
-
-    set_place_of_supply(doc)
-    update_taxable_values(doc)
     validate_invoice_number(doc)
-    validate_mandatory_fields(doc, ("company_gstin", "place_of_supply", "gst_category"))
-    validate_gst_accounts(doc)
+    validate_mandatory_fields(doc, ("place_of_supply", "gst_category"))
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
-    validate_hsn_code(doc)
-    validate_overseas_gst_category(doc)
 
 
 def validate_invoice_number(doc):
