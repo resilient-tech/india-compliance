@@ -4,6 +4,7 @@ function update_gstin_in_other_documents(doctype) {
     frappe.ui.form.on(doctype, {
         after_save(frm) {
             // docs to be updated attached to previous response
+
             const { docs_with_previous_gstin, previous_gstin } = frappe.last_response;
             if (!docs_with_previous_gstin) return;
 
@@ -16,10 +17,14 @@ function update_gstin_in_other_documents(doctype) {
             for (const [doctype, docnames] of Object.entries(
                 docs_with_previous_gstin
             )) {
-                message += `<br><strong>${__(doctype)}</strong>:<br>`;
+                if (frappe.model.can_write(doctype)) {
+                    message += `<br><strong>${__(doctype)}</strong>:<br>`;
+                }
 
                 docnames.forEach(docname => {
-                    message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
+                    if (frappe.model.can_write(doctype, docname)) {
+                        message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
+                    }
                 });
             }
 
