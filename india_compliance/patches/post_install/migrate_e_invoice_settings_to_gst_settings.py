@@ -4,6 +4,9 @@ import frappe
 from frappe.utils import sbool
 from frappe.utils.password import decrypt
 
+from india_compliance.gst_india.constants.custom_fields import E_INVOICE_FIELDS
+from india_compliance.gst_india.utils import toggle_custom_fields
+
 
 def execute():
     singles = frappe.qb.DocType("Singles")
@@ -28,14 +31,13 @@ def execute():
         gst_settings.extend("gst_credentials", old_credentials)
         gst_settings.update_child_table("gst_credentials")
 
-    if not sbool(old_settings.enable):
-        return
-
-    click.secho(
-        "Your e-Invoice Settings have been migrated to GST Settings."
-        " Please enable the e-Invoice API in GST Settings manually.",
-        fg="yellow",
-    )
+    if sbool(old_settings.enable):
+        toggle_custom_fields(E_INVOICE_FIELDS, True)
+        click.secho(
+            "Your e-Invoice Settings have been migrated to GST Settings."
+            " Please enable the e-Invoice API in GST Settings manually.",
+            fg="yellow",
+        )
 
 
 def get_credentials_from_e_invoice_user():
