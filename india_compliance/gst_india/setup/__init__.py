@@ -11,7 +11,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
-from india_compliance.gst_india.utils import read_data_file
+from india_compliance.gst_india.utils import read_data_file, toggle_custom_fields
 
 
 def after_install():
@@ -70,6 +70,7 @@ def setup_default_gst_settings():
     settings.db_set(
         {
             "hsn_wise_tax_breakup": 1,
+            "enable_reverse_charge_in_sales": 0,
             "validate_hsn_code": 1,
             "min_hsn_digits": 6,
             "enable_e_waybill": 1,
@@ -83,3 +84,6 @@ def setup_default_gst_settings():
             "auto_fill_party_info": 1,
         }
     )
+
+    # Hide the fields as not enabled by default
+    toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, False)
