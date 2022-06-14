@@ -9,4 +9,4 @@ def set_bootinfo(bootinfo):
         gst_settings.pop(key, None)
 
     bootinfo["gst_settings"] = gst_settings
-    bootinfo["india_state_options"] = "\n".join(STATE_NUMBERS)
+    bootinfo["india_state_options"] = list(STATE_NUMBERS)
