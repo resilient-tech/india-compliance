@@ -15,10 +15,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                          `When you enter a GSTIN, the permanent address linked to it is
+                        `When you enter a GSTIN, the permanent address linked to it is
                         auto-filled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                      )
+                    )
                     : "",
                 collapsible: 0,
             },
@@ -50,7 +50,8 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             {
                 label: __("State"),
                 fieldname: "state",
-                fieldtype: "Data",
+                fieldtype: "Autocomplete",
+                ignore_validation: true,
             },
             {
                 label: __("Country"),
@@ -102,6 +103,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
             ...this.get_address_fields(),
         ];
         super.render_dialog();
+        autofill_state(this.dialog);
     }
 
     get_contact_fields() {
@@ -156,6 +158,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         ];
         super.render_dialog();
         this.set_default_values();
+        autofill_state(this.dialog);
     }
 
     get_party_fields() {
@@ -309,4 +312,10 @@ function autofill_address(doc, { all_addresses }) {
         doc,
         all_addresses.find(address => address.pincode == pincode)
     );
+}
+
+function autofill_state(dialog) {
+    console.log(dialog);
+    const state_field = dialog.fields_dict.state;
+    ic.set_state_options(state_field, dialog.doc.country || dialog.get_value("country"));
 }

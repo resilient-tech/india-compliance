@@ -8,7 +8,7 @@ show_overseas_disabled_warning(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     country(frm) {
-        set_state_options(frm);
+        ic.set_state_options(frm.get_field("state"), frm.doc.country);
 
         if (!frm.doc.country) return;
 
@@ -19,7 +19,7 @@ frappe.ui.form.on(DOCTYPE, {
         }
     },
     async refresh(frm) {
-        set_state_options(frm);
+        ic.set_state_options(frm.get_field("state"), frm.doc.country);
 
         // set default values for GST fields
         if (!frm.is_new() || !frm.doc.links || frm.doc.gstin) return;
@@ -49,13 +49,3 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("gst_category", doc.gst_category || "");
     },
 });
-
-function set_state_options(frm) {
-    const state_field = frm.get_field("state");
-    if (frm.doc.country !== "India") {
-        state_field.set_data([]);
-        return;
-    }
-
-    state_field.set_data(state_field.df.options_for_india || []);
-}

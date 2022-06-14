@@ -32,3 +32,14 @@ ic.get_party_type = function (doctype) {
         ? "Supplier"
         : "Customer";
 };
+
+ic.set_state_options = function (state_field, country) {
+    console.log(state_field, country);
+
+    if (country !== "India") {
+        state_field.set_data([]);
+        return;
+    }
+
+    state_field.set_data(frappe.boot.india_state_value || []);
+}
