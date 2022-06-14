@@ -1,5 +1,3 @@
-from math import ceil
-
 import frappe
 from frappe import _
 
@@ -66,14 +64,24 @@ def _get_address(address):
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
 
-    keys = ("bno", "bnm", "flno", "st", "loc", "city")
-    full_address = []
+    keys = ("bno", "bnm", "flno", "loc", "city", "st")
+    address_line1, address_line2 = [], []
+
     for key in keys:
         if value := address.get(key, "").strip():
-            full_address.append(value)
+            if key in ("bno", "bnm", "flno"):
+                address_line1.append(value)
+            elif key in ("loc", "city"):
+                address_line2.append(value)
+            elif key == "st":
+                if sum(len(word) for word in address_line1) < sum(
+                    len(word) for word in address_line2
+                ):
+                    address_line1.append(value)
+                else:
+                    address_line2.insert(0, value)
 
-    middle = ceil(len(full_address) / 2)
-    return (", ".join(full_address[:middle]), ", ".join(full_address[middle:]))
+    return (", ".join(address_line1), ", ".join(address_line2))
 
 
 # ####### SAMPLE DATA for GST_CATEGORIES ########
