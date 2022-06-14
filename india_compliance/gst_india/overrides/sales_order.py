@@ -1,4 +1,3 @@
-from india_compliance.gst_india.overrides.invoice import update_taxable_values
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
     set_place_of_supply,
@@ -19,7 +18,6 @@ def validate(doc, method=None):
         return
 
     set_place_of_supply(doc)
-    update_taxable_values(doc)
     validate_mandatory_fields(doc, ("company_gstin",))
     validate_gst_accounts(doc)
     validate_hsn_code(doc)
