@@ -23,6 +23,7 @@ POST_INSTALL_PATCHES = (
     "update_e_invoice_fields_and_logs",
     "delete_gst_e_invoice_print_format",
     "remove_customer_gstin_field",
+    "set_default_gst_settings",
 )
 
 

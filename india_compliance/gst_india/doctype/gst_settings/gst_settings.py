@@ -109,14 +109,20 @@ class GSTSettings(Document):
             )
 
     def validate_credentials(self):
-        if not self.enable_api or not (self.enable_e_invoice or self.enable_e_waybill):
-            return
-
-        for credential in self.credentials:
-            if credential.service == "e-Waybill / e-Invoice":
-                return
-
-        frappe.msgprint(
-            # TODO: Add Link to Documentation.
-            "Please set credentials for e-Waybill / e-Invoice to use API features"
-        )
+        if (
+            self.enable_api
+            and (self.enable_e_invoice or self.enable_e_waybill)
+            and all(
+                credential.service != "e-Waybill / e-Invoice"
+                for credential in self.credentials
+            )
+        ):
+            frappe.msgprint(
+                # TODO: Add Link to Documentation.
+                _(
+                    "Please set credentials for e-Waybill / e-Invoice to use API"
+                    " features"
+                ),
+                indicator="yellow",
+                alert=True,
+            )
