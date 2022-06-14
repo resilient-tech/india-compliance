@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.utils import nowdate
 
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
@@ -62,3 +63,23 @@ def create_hsn_codes():
                     "name": code[code_type],
                 }
             ).db_insert(ignore_if_duplicate=True)
+
+
+def setup_default_gst_settings():
+    settings = frappe.get_doc("GST Settings")
+    settings.db_set(
+        {
+            "hsn_wise_tax_breakup": 1,
+            "validate_hsn_code": 1,
+            "min_hsn_digits": 6,
+            "enable_e_waybill": 1,
+            "e_waybill_threshold": 50000,
+            # Default API Settings
+            "fetch_e_waybill_data": 1,
+            "attach_e_waybill_print": 1,
+            "auto_generate_e_waybill": 1,
+            "auto_generate_e_invoice": 1,
+            "e_invoice_applicable_from": nowdate(),
+            "auto_fill_party_info": 1,
+        }
+    )
