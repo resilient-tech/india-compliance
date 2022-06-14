@@ -159,7 +159,7 @@ CUSTOM_FIELDS = {
         },
     ],
     # Sales Fields
-    ("Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"): [
+    ("Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"): [
         {
             "fieldname": "billing_address_gstin",
             "label": "Billing Address GSTIN",
@@ -237,16 +237,16 @@ CUSTOM_FIELDS = {
     ],
     # Transaction Item Fields
     (
-        "Quotation Item",
-        "Sales Order Item",
+        "Material Request Item",
         "Supplier Quotation Item",
         "Purchase Order Item",
         "Purchase Receipt Item",
-        "Material Request Item",
+        "Purchase Invoice Item",
+        "Quotation Item",
+        "Sales Order Item",
         "Delivery Note Item",
         "Sales Invoice Item",
         "POS Invoice Item",
-        "Purchase Invoice Item",
     ): [
         {
             "fieldname": "gst_hsn_code",
