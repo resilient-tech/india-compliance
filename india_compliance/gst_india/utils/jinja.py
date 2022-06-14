@@ -6,8 +6,6 @@ import pyqrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
 
-import frappe
-
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
@@ -87,3 +85,19 @@ def get_ewaybill_barcode(ewaybill):
     stream.close()
 
     return barcode_base64
+
+
+def get_non_zero_fields(data, fields):
+    """Returns a list of fields with non-zero values in order of fields specified"""
+
+    if isinstance(data, dict):
+        data = [data]
+
+    non_zero_fields = []
+    for row in data:
+        for field in fields:
+            if row.get(field, 0) != 0 and field not in non_zero_fields:
+                non_zero_fields.append(field)
+                continue
+
+    return non_zero_fields
