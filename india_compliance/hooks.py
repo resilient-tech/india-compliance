@@ -47,7 +47,7 @@ doc_events = {
         "validate": [
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
             "india_compliance.gst_india.overrides.address.validate",
-        ]
+        ],
     },
     "Company": {
         "after_insert": "india_compliance.gst_india.overrides.company.update_accounts_settings_for_taxes",
@@ -59,7 +59,8 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.party.validate_party",
     },
     "Customer": {
-        "validate": "india_compliance.gst_india.overrides.party.validate_party"
+        "validate": "india_compliance.gst_india.overrides.party.validate_party",
+        "after_insert": "india_compliance.gst_india.overrides.party.create_primary_address_and_contact",
     },
     "Delivery Note": {
         "validate": [
@@ -118,7 +119,8 @@ doc_events = {
         "validate": [
             "india_compliance.gst_india.overrides.supplier.update_transporter_gstin",
             "india_compliance.gst_india.overrides.party.validate_party",
-        ]
+        ],
+        "after_insert": "india_compliance.gst_india.overrides.party.create_primary_address_and_contact",
     },
     "Tax Category": {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
@@ -169,7 +171,6 @@ jinja = {
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/india_compliance/css/india_compliance.css"
-# app_include_js = "/assets/india_compliance/js/india_compliance.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/india_compliance/css/india_compliance.css"
