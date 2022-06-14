@@ -34,8 +34,6 @@ ic.get_party_type = function (doctype) {
 };
 
 ic.set_state_options = function (state_field, country) {
-    console.log(state_field, country);
-
     if (country !== "India") {
         state_field.set_data([]);
         return;
