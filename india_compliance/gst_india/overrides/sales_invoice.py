@@ -11,6 +11,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_hsn_code,
     validate_items,
     validate_mandatory_fields,
+    validate_overseas_gst_category,
 )
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -68,6 +69,7 @@ def validate(doc, method=None):
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
     validate_hsn_code(doc)
+    validate_overseas_gst_category(doc)
 
 
 def validate_invoice_number(doc):

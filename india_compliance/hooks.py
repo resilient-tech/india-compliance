@@ -65,7 +65,6 @@ doc_events = {
     "Delivery Note": {
         "validate": [
             "india_compliance.gst_india.overrides.delivery_note.validate",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ],
     },
     "DocType": {
@@ -105,14 +104,11 @@ doc_events = {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": [
             "india_compliance.gst_india.overrides.sales_invoice.validate",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
         ],
     },
     "Sales Order": {
         "validate": [
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.validate_hsn_code",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+            "india_compliance.gst_india.overrides.sales_order.validate",
         ]
     },
     "Supplier": {
