@@ -7,6 +7,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         this.api_enabled = gst_settings.enable_api && gst_settings.autofill_party_info;
     }
 
+    render_dialog() {
+        super.render_dialog();
+        ic.set_state_options(this.dialog);
+    }
+
     get_address_fields() {
         return [
             {
@@ -50,7 +55,8 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             {
                 label: __("State"),
                 fieldname: "state",
-                fieldtype: "Data",
+                fieldtype: "Autocomplete",
+                ignore_validation: true,
             },
             {
                 label: __("Country"),
@@ -58,6 +64,9 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Link",
                 options: "Country",
                 default: frappe.defaults.get_user_default("country"),
+                onchange: () => {
+                    ic.set_state_options(this.dialog);
+                },
             },
             {
                 label: __("Customer POS Id"),
