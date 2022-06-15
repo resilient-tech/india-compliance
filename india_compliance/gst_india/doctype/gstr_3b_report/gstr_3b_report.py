@@ -328,13 +328,11 @@ class GSTR3BReport(Document):
         if self.get("invoice_items"):
             # Build itemised tax for export invoices, nil and exempted where tax table is blank
             for invoice, items in self.invoice_items.items():
+                invoice_details = self.invoice_detail_map.get(invoice, {})
                 if (
                     invoice not in self.items_based_on_tax_rate
-                    and not self.invoice_detail_map.get(invoice, {}).get(
-                        "is_export_with_gst"
-                    )
-                    and self.invoice_detail_map.get(invoice, {}).get("gst_category")
-                    == "Overseas"
+                    and not invoice_details.get("is_export_with_gst")
+                    and invoice_details.get("gst_category") == "Overseas"
                 ):
                     self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
                         0, items.keys()
@@ -357,10 +355,10 @@ class GSTR3BReport(Document):
         inter_state_supply_details = {}
 
         for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
-            invoice_detail = self.invoice_detail_map.get(inv, {})
-            gst_category = invoice_detail.get("gst_category")
+            invoice_details = self.invoice_detail_map.get(inv, {})
+            gst_category = invoice_details.get("gst_category")
             place_of_supply = (
-                invoice_detail.get("place_of_supply") or "00-Other Territory"
+                invoice_details.get("place_of_supply") or "00-Other Territory"
             )
 
             for rate, items in items_based_on_rate.items():
@@ -376,7 +374,7 @@ class GSTR3BReport(Document):
                             ] += taxable_value
                         elif rate == 0 or (
                             gst_category == "Overseas"
-                            and not invoice_detail.get("is_export_with_gst")
+                            and not invoice_details.get("is_export_with_gst")
                         ):
                             self.report_dict["sup_details"]["osup_zero"][
                                 "txval"
