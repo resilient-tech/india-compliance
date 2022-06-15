@@ -26,8 +26,8 @@ GST_CATEGORIES = {
 }
 
 EXPORT_TYPES = [
-    "WOP",  # Without Payment of Tax
-    "WP",  # With Payment of Tax
+    "WOP",  # Without Payment of Tax [0]
+    "WP",  # With Payment of Tax [1]
 ]
 
 STATE_NUMBERS = {

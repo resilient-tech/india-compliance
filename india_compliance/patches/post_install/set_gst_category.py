@@ -1,5 +1,7 @@
 import frappe
 
+from india_compliance.gst_india.utils import delete_old_fields
+
 
 def execute():
     invoice_type_gst_category_map = {
@@ -9,21 +11,22 @@ def execute():
         "Deemed Export": "Deemed Export",
     }
 
-    for doctype in ("Sales Invoice", "Purchase Invoice"):
-        field_filters = {"dt": doctype, "fieldname": "invoice_type"}
-
-        if not frappe.db.exists("Custom Field", field_filters):
+    doctypes = ("Sales Invoice", "Purchase Invoice")
+    for doctype in doctypes:
+        if not frappe.db.exists(
+            "Custom Field", {"dt": doctype, "fieldname": "invoice_type"}
+        ):
             continue
 
         for invoice_type, gst_category in invoice_type_gst_category_map.items():
-            frappe.db.set(
+            frappe.db.set_value(
                 doctype,
                 {"gst_category": ("in", (None, "")), "invoice_type": invoice_type},
                 "gst_category",
                 gst_category,
             )
 
-        frappe.db.delete("Custom Field", field_filters)
+    delete_old_fields("invoice_type", doctypes)
 
     # update eligibility_for_itc with new options
     for old_value, new_value in {
