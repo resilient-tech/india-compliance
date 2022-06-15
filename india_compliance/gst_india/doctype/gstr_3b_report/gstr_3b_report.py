@@ -357,12 +357,11 @@ class GSTR3BReport(Document):
         inter_state_supply_details = {}
 
         for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
-            gst_category = self.invoice_detail_map.get(inv, {}).get("gst_category")
+            invoice_detail = self.invoice_detail_map.get(inv, {})
+            gst_category = invoice_detail.get("gst_category")
             place_of_supply = (
-                self.invoice_detail_map.get(inv, {}).get("place_of_supply")
-                or "00-Other Territory"
+                invoice_detail.get("place_of_supply") or "00-Other Territory"
             )
-            export_type = self.invoice_detail_map.get(inv, {}).get("is_export_with_gst")
 
             for rate, items in items_based_on_rate.items():
                 for item_code, taxable_value in self.invoice_items.get(inv).items():
@@ -376,7 +375,8 @@ class GSTR3BReport(Document):
                                 "txval"
                             ] += taxable_value
                         elif rate == 0 or (
-                            gst_category == "Overseas" and not export_type
+                            gst_category == "Overseas"
+                            and not invoice_detail.get("is_export_with_gst")
                         ):
                             self.report_dict["sup_details"]["osup_zero"][
                                 "txval"
