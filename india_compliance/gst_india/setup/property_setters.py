@@ -1,7 +1,5 @@
 import frappe
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
-
 
 def get_property_setters():
     return [
@@ -35,12 +33,6 @@ def get_property_setters():
         {
             "doctype": "Address",
             "fieldname": "state",
-            "property": "options_for_india",
-            "value": "\n".join(STATE_NUMBERS.keys()),
-        },
-        {
-            "doctype": "Address",
-            "fieldname": "state",
             "property": "mandatory_depends_on",
             "value": "eval: doc.country == 'India'",
         },
@@ -59,6 +51,13 @@ def get_property_setters():
             "doctype_or_field": "DocType",
             "property": "default_print_format",
             "value": "e-Waybill",
+        },
+        {
+            "doc_type": "Address",
+            "doctype_or_field": "DocType",
+            "property": "quick_entry",
+            "property_type": "Check",
+            "value": "1",
         },
     ]
 

@@ -2,6 +2,7 @@ import json
 
 from dateutil import parser
 from pytz import timezone
+from titlecase import titlecase as _titlecase
 
 import frappe
 from frappe import _
@@ -14,6 +15,7 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import (
+    ABBREVIATIONS,
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
@@ -58,12 +60,37 @@ def send_updated_doc(doc, set_docinfo=False):
     frappe.response.docs.append(doc)
 
 
+@frappe.whitelist()
+def get_gstin_list(party, party_type="Company"):
+    """
+    Returns a list the party's GSTINs.
+    This function doesn't check for permissions since GSTINs are publicly available.
+    """
+
+    gstin_list = frappe.get_all(
+        "Address",
+        filters={
+            "link_doctype": party_type,
+            "link_name": party,
+            "gstin": ("is", "set"),
+        },
+        pluck="gstin",
+        distinct=True,
+    )
+
+    default_gstin = frappe.db.get_value(party_type, party, "gstin")
+    if default_gstin and default_gstin not in gstin_list:
+        gstin_list.insert(0, default_gstin)
+
+    return gstin_list
+
+
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
     Validate GSTIN with following checks:
-    - Length should be 15.
-    - Validate GSTIN Check Digit.
-    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin parameter).
+    - Length should be 15
+    - Validate GSTIN Check Digit
+    - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin)
     """
 
     if not gstin:
@@ -217,6 +244,8 @@ def get_place_of_supply(party_details, doctype=None):
     if not frappe.get_meta("Address").has_field("gst_state"):
         return
 
+    # fallback to company address or supplier address
+    # (in retail scenarios, customer / shipping address may not be set)
     if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
         address_name = party_details.customer_address or party_details.company_address
     elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
@@ -237,26 +266,6 @@ def get_place_of_supply(party_details, doctype=None):
             return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
 
 
-@frappe.whitelist()
-def get_gstins_for_company(company):
-    company_gstins = []
-    if company:
-        company_gstins = frappe.db.sql(
-            """select
-            distinct `tabAddress`.gstin
-        from
-            `tabAddress`, `tabDynamic Link`
-        where
-            `tabDynamic Link`.parent = `tabAddress`.name and
-            `tabDynamic Link`.parenttype = 'Address' and
-            `tabDynamic Link`.link_doctype = 'Company' and
-            `tabDynamic Link`.link_name = %(company)s""",
-            {"company": company},
-        )
-    return company_gstins
-
-
-@frappe.whitelist()
 def get_gst_accounts(
     company=None, account_wise=False, only_reverse_charge=0, only_non_reverse_charge=0
 ):
@@ -343,8 +352,9 @@ def get_all_gst_accounts(company):
 
 
 def delete_custom_fields(custom_fields):
-    """Delete multiple custom fields
-    :param custom_fields: example `{'Sales Invoice': [dict(fieldname='test')]}`"""
+    """
+    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
+    """
 
     for doctypes, fields in custom_fields.items():
         if isinstance(fields, dict):
@@ -362,6 +372,37 @@ def delete_custom_fields(custom_fields):
                     "fieldname": ("in", [field["fieldname"] for field in fields]),
                     "dt": doctype,
                 },
+            )
+
+            frappe.clear_cache(doctype=doctype)
+
+
+def toggle_custom_fields(custom_fields, show):
+    """
+    Show / hide custom fields
+
+    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
+    :param show: True to show fields, False to hide
+    """
+
+    for doctypes, fields in custom_fields.items():
+        if isinstance(fields, dict):
+            # only one field
+            fields = [fields]
+
+        if isinstance(doctypes, str):
+            # only one doctype
+            doctypes = (doctypes,)
+
+        for doctype in doctypes:
+            frappe.db.set_value(
+                "Custom Field",
+                {
+                    "dt": doctype,
+                    "fieldname": ["in", [field["fieldname"] for field in fields]],
+                },
+                "hidden",
+                int(not show),
             )
 
             frappe.clear_cache(doctype=doctype)
@@ -408,3 +449,17 @@ def as_ist(value=None):
 
 def get_json_from_file(path):
     return frappe._dict(frappe.get_file_json(get_file_path(path)))
+
+
+def titlecase(value):
+    return _titlecase(value, callback=get_titlecase_version)
+
+
+def get_titlecase_version(word, all_caps=False, **kwargs):
+    """Retruns abbreviation if found, else None"""
+
+    if not all_caps:
+        word = word.upper()
+
+    if word in ABBREVIATIONS:
+        return word

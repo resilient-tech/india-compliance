@@ -268,7 +268,6 @@ def update_transporter(*, doctype, docname, values):
 @frappe.whitelist()
 def fetch_e_waybill_data(*, doctype, docname, attach=False):
     doc = load_doc(doctype, docname, "write" if attach else "print")
-
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
         _fetch_e_waybill_data(doc, log)
@@ -529,7 +528,7 @@ class EWaybillData(GSTTransactionData):
         - Max 250 Items
         """
 
-        for fieldname in ("company_gstin", "company_address", "customer_address"):
+        for fieldname in ("company_address", "customer_address"):
             if not self.doc.get(fieldname):
                 frappe.throw(
                     _("{0} is required to generate e-Waybill").format(
@@ -700,7 +699,7 @@ class EWaybillData(GSTTransactionData):
             self.transaction_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6),
+                    "name": random_string(6).lstrip("0"),
                 }
             )
             self.company_address.gstin = "05AAACG2115R1ZN"

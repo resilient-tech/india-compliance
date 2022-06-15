@@ -3,14 +3,67 @@ import json
 import frappe
 from frappe import _, bold
 from frappe.model.utils import get_fetch_values
+from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
+    get_gst_accounts,
     get_gst_accounts_by_type,
     get_place_of_supply,
 )
+
+
+def update_taxable_values(doc, method=None):
+    country = frappe.get_cached_value("Company", doc.company, "country")
+
+    if country != "India":
+        return
+
+    gst_accounts = get_gst_accounts(doc.company)
+
+    # fmt: off
+    # Only considering sgst account to avoid inflating taxable value
+    gst_account_list = gst_accounts.get("sgst_account", []) + gst_accounts.get("igst_account", [])
+
+    # fmt: on
+    additional_taxes = 0
+    total_charges = 0
+    item_count = 0
+    considered_rows = []
+
+    for tax in doc.get("taxes"):
+        prev_row_id = cint(tax.row_id) - 1
+        if tax.account_head in gst_account_list and prev_row_id not in considered_rows:
+            if tax.charge_type == "On Previous Row Amount":
+                additional_taxes += doc.get("taxes")[
+                    prev_row_id
+                ].tax_amount_after_discount_amount
+                considered_rows.append(prev_row_id)
+            if tax.charge_type == "On Previous Row Total":
+                additional_taxes += (
+                    doc.get("taxes")[prev_row_id].base_total - doc.base_net_total
+                )
+                considered_rows.append(prev_row_id)
+
+    for item in doc.get("items"):
+        proportionate_value = item.base_net_amount if doc.base_net_total else item.qty
+        total_value = doc.base_net_total if doc.base_net_total else doc.total_qty
+
+        applicable_charges = flt(
+            flt(
+                proportionate_value * (flt(additional_taxes) / flt(total_value)),
+                item.precision("taxable_value"),
+            )
+        )
+        item.taxable_value = applicable_charges + proportionate_value
+        total_charges += applicable_charges
+        item_count += 1
+
+    if total_charges != additional_taxes:
+        diff = additional_taxes - total_charges
+        doc.get("items")[item_count - 1].taxable_value += diff
 
 
 def is_indian_registered_company(doc):
@@ -221,6 +274,19 @@ def validate_hsn_code(doc, method=None):
         )
 
 
+def validate_overseas_gst_category(doc, method):
+    overseas_enabled = frappe.get_cached_value(
+        "GST Settings", "GST Settings", "enable_overseas_transactions"
+    )
+
+    if not overseas_enabled and doc.gst_category in ("SEZ", "Overseas"):
+        frappe.throw(
+            _(
+                "GST Category cannot be set to {0} since it is disabled in GST Settings"
+            ).format(frappe.bold(doc.gst_category))
+        )
+
+
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
     hsn_wise_in_gst_settings = frappe.db.get_single_value(
         "GST Settings", "hsn_wise_tax_breakup"
@@ -253,6 +319,16 @@ def get_regional_round_off_accounts(company, account_list):
 
 @frappe.whitelist()
 def get_regional_address_details(party_details, doctype, company):
+    """
+    This function does not check for permissions since it returns insensitive data
+    based on already sensitive input (party details)
+
+    Data returned:
+     - place of supply (based on address name in party_details)
+     - tax template
+     - taxes in the tax template
+    """
+
     party_details = frappe.parse_json(party_details)
     update_party_details(party_details, doctype)
 
@@ -388,3 +464,22 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
                 "name",
             )
     return default_tax
+
+
+def validate_sales_transaction(doc, method=None):
+    if not is_indian_registered_company(doc):
+        return False
+
+    if validate_items(doc) is False:
+        # If there are no GST items, then no need to proceed further
+        return False
+
+    set_place_of_supply(doc)
+
+    if doc.doctype not in ("Quotation", "Sales Order"):
+        update_taxable_values(doc)
+
+    validate_mandatory_fields(doc, ("company_gstin",))
+    validate_gst_accounts(doc)
+    validate_hsn_code(doc)
+    validate_overseas_gst_category(doc)
