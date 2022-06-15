@@ -1,6 +1,4 @@
-{% include "india_compliance/gst_india/client_scripts/taxes.js" %}
-{% include "india_compliance/gst_india/client_scripts/invoice.js" %}
-
+{% include "india_compliance/gst_india/client_scripts/transaction.js" %}
 
 const DOCTYPE = "Purchase Invoice";
 

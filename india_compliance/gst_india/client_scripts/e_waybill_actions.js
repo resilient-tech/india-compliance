@@ -7,6 +7,9 @@ function setup_e_waybill_actions(doctype) {
         return;
 
     frappe.ui.form.on(doctype, {
+        mode_of_transport(frm) {
+            frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        },
         setup(frm) {
             if (!gst_settings.enable_api) return;
 
@@ -635,6 +638,12 @@ function are_transport_details_available(doc) {
 
 function update_vehicle_type(dialog) {
     dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+}
+
+function get_vehicle_type(doc) {
+    if (doc.mode_of_transport == "Road") return "Regular";
+    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
+    return "";
 }
 
 /********
