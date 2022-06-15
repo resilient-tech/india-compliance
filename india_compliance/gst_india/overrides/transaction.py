@@ -272,16 +272,22 @@ def validate_hsn_code(doc, method=None):
 
 
 def validate_overseas_gst_category(doc, method):
+    if doc.gst_category not in ("SEZ", "Overseas"):
+        return
+
     overseas_enabled = frappe.get_cached_value(
         "GST Settings", "GST Settings", "enable_overseas_transactions"
     )
 
-    if not overseas_enabled and doc.gst_category in ("SEZ", "Overseas"):
+    if not overseas_enabled:
         frappe.throw(
             _(
                 "GST Category cannot be set to {0} since it is disabled in GST Settings"
             ).format(frappe.bold(doc.gst_category))
         )
+
+    if doc.doctype == "POS Invoice":
+        frappe.throw(_("Cannot set GST Category to SEZ / Overseas in POS Invoice"))
 
 
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
@@ -523,6 +529,6 @@ def validate_sales_transaction(doc, method=None):
         update_taxable_values(doc)
 
     validate_mandatory_fields(doc, ("company_gstin",))
+    validate_overseas_gst_category(doc)
     validate_gst_accounts(doc)
     validate_hsn_code(doc)
-    validate_overseas_gst_category(doc)
