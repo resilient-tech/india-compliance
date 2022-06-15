@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, formatdate, getdate
 
-from india_compliance.gst_india.utils import get_gst_accounts
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 B2C_LIMIT = 2_50_000
 
@@ -34,7 +34,7 @@ class Gstr1Report(object):
 			NULLIF(billing_address_gstin, '') as billing_address_gstin,
 			place_of_supply,
 			ecommerce_gstin,
-			reverse_charge,
+			is_reverse_charge,
 			return_against,
 			is_return,
 			is_debit_note,
@@ -49,9 +49,7 @@ class Gstr1Report(object):
 
     def run(self):
         self.get_columns()
-        self.gst_accounts = get_gst_accounts(
-            self.filters.company, only_non_reverse_charge=1
-        )
+        self.gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
         self.get_invoice_data()
 
         if self.invoices:
@@ -98,8 +96,8 @@ class Gstr1Report(object):
         for entry in advances:
             # only consider IGST and SGST so as to avoid duplication of taxable amount
             if (
-                entry.account_head in self.gst_accounts.igst_account
-                or entry.account_head in self.gst_accounts.sgst_account
+                entry.account_head == self.gst_accounts.igst_account
+                or entry.account_head == self.gst_accounts.sgst_account
             ):
                 advances_data.setdefault(
                     (entry.place_of_supply, entry.rate), [0.0, 0.0]
@@ -107,7 +105,7 @@ class Gstr1Report(object):
                 advances_data[(entry.place_of_supply, entry.rate)][0] += (
                     entry.amount * 100 / entry.rate
                 )
-            elif entry.account_head in self.gst_accounts.cess_account:
+            elif entry.account_head == self.gst_accounts.cess_account:
                 advances_data[(entry.place_of_supply, entry.rate)][1] += entry.amount
 
         for key, value in advances_data.items():
@@ -298,6 +296,7 @@ class Gstr1Report(object):
         )
 
         for d in invoice_data:
+            d.is_reverse_charge = "Y" if d.is_reverse_charge else "N"
             self.invoices.setdefault(d.invoice_number, d)
 
     def get_advance_entries(self):
@@ -427,7 +426,7 @@ class Gstr1Report(object):
         unidentified_gst_accounts = []
         unidentified_gst_accounts_invoice = []
         for parent, account, item_wise_tax_detail, tax_amount in self.tax_details:
-            if account in self.gst_accounts.cess_account:
+            if account == self.gst_accounts.cess_account:
                 self.invoice_cess.setdefault(parent, tax_amount)
             else:
                 if item_wise_tax_detail:
@@ -435,13 +434,13 @@ class Gstr1Report(object):
                         item_wise_tax_detail = json.loads(item_wise_tax_detail)
                         cgst_or_sgst = False
                         if (
-                            account in self.gst_accounts.cgst_account
-                            or account in self.gst_accounts.sgst_account
+                            account == self.gst_accounts.cgst_account
+                            or account == self.gst_accounts.sgst_account
                         ):
                             cgst_or_sgst = True
 
                         if not (
-                            cgst_or_sgst or account in self.gst_accounts.igst_account
+                            cgst_or_sgst or account == self.gst_accounts.igst_account
                         ):
                             if (
                                 "gst" in account.lower()
@@ -545,7 +544,7 @@ class Gstr1Report(object):
                     "width": 100,
                 },
                 {
-                    "fieldname": "reverse_charge",
+                    "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
                 },
@@ -647,7 +646,7 @@ class Gstr1Report(object):
                     "width": 120,
                 },
                 {
-                    "fieldname": "reverse_charge",
+                    "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
                 },
@@ -905,6 +904,10 @@ class Gstr1Report(object):
 
 @frappe.whitelist()
 def get_json(filters, report_name, data):
+    """
+    This function does not check for permissions since it only manipulates data sent to it
+    """
+
     filters = json.loads(filters)
     report_data = json.loads(data)
     gstin = get_company_gstin_number(
@@ -1008,7 +1011,7 @@ def get_b2b_json(res, gstin):
 
             inv_item = get_basic_invoice_detail(invoice[0])
             inv_item["pos"] = "%02d" % int(invoice[0]["place_of_supply"].split("-")[0])
-            inv_item["rchrg"] = invoice[0]["reverse_charge"]
+            inv_item["rchrg"] = invoice[0]["is_reverse_charge"]
             inv_item["inv_typ"] = get_invoice_type(invoice[0])
 
             if inv_item["pos"] == "00":
@@ -1185,7 +1188,7 @@ def get_cdnr_reg_json(res, gstin):
                 "val": abs(flt(invoice[0]["invoice_value"])),
                 "ntty": invoice[0]["document_type"],
                 "pos": "%02d" % int(invoice[0]["place_of_supply"].split("-")[0]),
-                "rchrg": invoice[0]["reverse_charge"],
+                "rchrg": invoice[0]["is_reverse_charge"],
                 "inv_typ": get_invoice_type(invoice[0]),
             }
 

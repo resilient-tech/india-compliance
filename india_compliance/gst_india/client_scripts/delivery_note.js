@@ -3,30 +3,30 @@
 const DOCTYPE = "Delivery Note";
 
 setup_auto_gst_taxation(DOCTYPE);
-highlight_gst_category(DOCTYPE);
+fetch_gst_category(DOCTYPE);
+update_gst_vehicle_type(DOCTYPE);
+setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
-	refresh: function(frm) {
-		if(frm.doc.docstatus == 1 && !frm.is_dirty() && !frm.doc.ewaybill) {
-			frm.add_custom_button('e-Waybill JSON', () => {
-				frappe.call({
-					method: 'india_compliance.gst_india.utils.e_waybill.generate_ewb_json',
-					args: {
-						'dt': frm.doc.doctype,
-						'dn': [frm.doc.name]
-					},
-					callback: function(r) {
-						if (r.message) {
-							const args = {
-								cmd: 'india_compliance.gst_india.utils.e_waybill.download_ewb_json',
-								data: r.message,
-								docname: frm.doc.name
-							};
-							open_url_post(frappe.request.url, args);
-						}
-					}
-				});
-			}, __("Create"));
-		}
-	}
-})
+    setup(frm) {
+        frm.set_query("transporter", {
+            filters: {
+                is_transporter: 1,
+            },
+        });
+    },
+    after_save(frm) {
+        const { gst_settings } = frappe.boot;
+        if (
+            frm.doc.docstatus ||
+            frm.doc.customer_address ||
+            !(gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_dn)
+        )
+            return;
+
+        frappe.show_alert({
+            message: __("Billing Address is required to create e-Waybill"),
+            indicator: "yellow",
+        }, 10);
+    },
+});

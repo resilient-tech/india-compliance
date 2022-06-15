@@ -25,14 +25,12 @@ repos:
       rev: 5.10.1
       hooks:
           - id: isort
-            exclude: ".*setup.py$"
 
     - repo: https://gitlab.com/pycqa/flake8
       rev: 3.9.2
       hooks:
         - id: flake8
           additional_dependencies: [flake8-isort, flake8-bugbear]
-          exclude: ".*setup.py$"
 
 
 ci:
