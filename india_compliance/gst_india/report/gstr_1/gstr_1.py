@@ -39,7 +39,7 @@ class Gstr1Report(object):
 			is_return,
 			is_debit_note,
 			gst_category,
-			is_export_with_gst,
+			is_export_with_gst as export_type,
 			port_code,
 			shipping_bill_number,
 			shipping_bill_date,
@@ -229,7 +229,7 @@ class Gstr1Report(object):
                 )
             elif fieldname in ("posting_date", "shipping_bill_date"):
                 row.append(formatdate(invoice_details.get(fieldname), "dd-MMM-YY"))
-            elif fieldname == "is_export_with_gst":
+            elif fieldname == "export_type":
                 export_type = "WPAY" if invoice_details.get(fieldname) else "WOPAY"
                 row.append(export_type)
             else:
@@ -646,8 +646,8 @@ class Gstr1Report(object):
                     "fieldtype": "Data",
                 },
                 {
-                    "fieldname": "is_export_with_gst",
-                    "label": "Export with GST",
+                    "fieldname": "export_type",
+                    "label": "Export Type",
                     "fieldtype": "Data",
                     "hidden": 1,
                 },
@@ -724,8 +724,8 @@ class Gstr1Report(object):
                     "width": 120,
                 },
                 {
-                    "fieldname": "is_export_with_gst",
-                    "label": "Export with GST",
+                    "fieldname": "export_type",
+                    "label": "Export Type",
                     "fieldtype": "Data",
                     "hidden": 1,
                 },
@@ -805,8 +805,8 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "EXPORT":
             self.invoice_columns = [
                 {
-                    "fieldname": "is_export_with_gst",
-                    "label": "Export with GST",
+                    "fieldname": "export_type",
+                    "label": "Export Type",
                     "fieldtype": "Data",
                     "width": 120,
                 },
@@ -939,7 +939,7 @@ def get_json(filters, report_name, data):
 
     elif filters["type_of_business"] == "EXPORT":
         for item in report_data[:-1]:
-            res.setdefault(item["is_export_with_gst"], []).append(item)
+            res.setdefault(item["export_type"], []).append(item)
 
         out = get_export_json(res)
         gst_json["exp"] = out
@@ -1250,10 +1250,10 @@ def get_invoice_type(row):
     gst_category = row.get("gst_category")
 
     if gst_category == "SEZ":
-        return "SEWP" if row.get("is_export_with_gst") == "WPAY" else "SEWOP"
+        return "SEWP" if row.get("export_type") == "WPAY" else "SEWOP"
 
     if gst_category == "Overseas":
-        return "EXPWP" if row.get("is_export_with_gst") == "WPAY" else "EXPWOP"
+        return "EXPWP" if row.get("export_type") == "WPAY" else "EXPWOP"
 
     return (
         {

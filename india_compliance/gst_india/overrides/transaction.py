@@ -271,7 +271,7 @@ def validate_hsn_code(doc, method=None):
         )
 
 
-def validate_overseas_gst_category(doc, method):
+def validate_overseas_gst_category(doc, method=None):
     if doc.gst_category not in ("SEZ", "Overseas"):
         return
 
