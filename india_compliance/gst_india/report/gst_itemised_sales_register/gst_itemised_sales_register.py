@@ -8,7 +8,7 @@ from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register i
 
 
 def execute(filters=None):
-    values = _execute(
+    return _execute(
         filters,
         additional_table_columns=[
             dict(
@@ -30,8 +30,8 @@ def execute(filters=None):
                 width=120,
             ),
             dict(
-                fieldtype="Data",
-                label="Reverse Charge",
+                fieldtype="Check",
+                label="Is Reverse Charge",
                 fieldname="is_reverse_charge",
                 width=120,
             ),
@@ -42,8 +42,8 @@ def execute(filters=None):
                 width=120,
             ),
             dict(
-                fieldtype="Data",
-                label="Export Type",
+                fieldtype="Check",
+                label="Is Export With GST",
                 fieldname="is_export_with_gst",
                 width=120,
             ),
@@ -68,10 +68,3 @@ def execute(filters=None):
             "gst_hsn_code",
         ],
     )
-
-    # Result (values[1]) is returned as list of dicts
-    for row in values[1]:
-        row["is_reverse_charge"] = "Y" if row["is_reverse_charge"] else "N"
-        row["is_export_with_gst"] = "WPAY" if row["is_export_with_gst"] else "WOPAY"
-
-    return values
