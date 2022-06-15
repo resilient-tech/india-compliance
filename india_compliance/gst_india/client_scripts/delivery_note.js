@@ -1,11 +1,11 @@
-{% include "india_compliance/gst_india/client_scripts/taxes.js" %}
+{% include "india_compliance/gst_india/client_scripts/transaction.js" %}
 
 const DOCTYPE = "Delivery Note";
 
+setup_e_waybill_actions(DOCTYPE);
 setup_auto_gst_taxation(DOCTYPE);
 fetch_gst_category(DOCTYPE);
-update_gst_vehicle_type(DOCTYPE);
-setup_e_waybill_actions(DOCTYPE);
+validate_overseas_gst_category(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     setup(frm) {

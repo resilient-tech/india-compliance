@@ -79,20 +79,22 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
             "india_compliance.gst_india.overrides.transaction.update_taxable_values",
             "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
-            "india_compliance.gst_india.overrides.purchase_invoice.validate_reverse_charge_transaction",
             "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
         ]
     },
     "Purchase Order": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
             "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
         )
     },
     "Purchase Receipt": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
             "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
+            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
         )
     },
     "Sales Invoice": {

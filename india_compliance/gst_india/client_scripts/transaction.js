@@ -1,3 +1,6 @@
+// functions in this file will apply to most transactions
+// POS Invoice is a notable exception since it doesn't get created from the UI
+
 function setup_auto_gst_taxation(doctype) {
     const events = Object.fromEntries(
         [
@@ -60,16 +63,19 @@ function fetch_gst_category(doctype) {
     });
 }
 
-function update_gst_vehicle_type(doctype) {
+function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
-        mode_of_transport(frm) {
-            frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        gst_category(frm) {
+            const { enable_overseas_transactions } = frappe.boot.gst_settings;
+            if (
+                !["SEZ", "Overseas"].includes(frm.doc.gst_category) ||
+                enable_overseas_transactions
+            )
+                return;
+
+            frappe.throw(
+                __("Please enable SEZ / Overseas transactions in GST Settings first")
+            );
         },
     });
-}
-
-function get_vehicle_type(doc) {
-    if (doc.mode_of_transport == "Road") return "Regular";
-    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
-    return "";
 }

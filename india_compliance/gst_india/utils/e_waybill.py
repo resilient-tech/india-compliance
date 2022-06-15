@@ -407,11 +407,7 @@ def update_transaction(doc, values):
         "lr_date": values.lr_date,
         "mode_of_transport": values.mode_of_transport,
         "gst_vehicle_type": values.gst_vehicle_type,
-        "gst_category": values.gst_category,
     }
-
-    if doc.doctype == "Sales Invoice":
-        data["export_type"] = values.export_type
 
     doc.db_set(data)
 
@@ -638,7 +634,7 @@ class EWaybillData(GSTTransactionData):
         elif self.doc.gst_category == "Overseas":
             self.transaction_details.sub_supply_type = 3
 
-            if self.doc.export_type == "Without Payment of Tax":
+            if not self.doc.is_export_with_gst:
                 self.transaction_details.document_type = "BIL"
 
         if self.doc.doctype == "Delivery Note":

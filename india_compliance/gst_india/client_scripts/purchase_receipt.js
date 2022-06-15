@@ -1,3 +1,7 @@
-{% include "india_compliance/gst_india/client_scripts/taxes.js" %}
+{% include "india_compliance/gst_india/client_scripts/transaction.js" %}
 
-setup_auto_gst_taxation('Purchase Receipt');
+DOCTYPE = "Purchase Receipt";
+setup_auto_gst_taxation(DOCTYPE);
+fetch_gst_category(DOCTYPE);
+validate_overseas_gst_category(DOCTYPE);
+

@@ -39,7 +39,7 @@ class Gstr1Report(object):
 			is_return,
 			is_debit_note,
 			gst_category,
-			export_type,
+			is_export_with_gst as export_type,
 			port_code,
 			shipping_bill_number,
 			shipping_bill_date,
@@ -230,11 +230,7 @@ class Gstr1Report(object):
             elif fieldname in ("posting_date", "shipping_bill_date"):
                 row.append(formatdate(invoice_details.get(fieldname), "dd-MMM-YY"))
             elif fieldname == "export_type":
-                export_type = (
-                    "WPAY"
-                    if invoice_details.get(fieldname) == "With Payment of Tax"
-                    else "WOPAY"
-                )
+                export_type = "WPAY" if invoice_details.get(fieldname) else "WOPAY"
                 row.append(export_type)
             else:
                 row.append(invoice_details.get(fieldname))
@@ -262,7 +258,7 @@ class Gstr1Report(object):
                 elif (
                     not tax_rate
                     and self.filters.get("type_of_business") == "EXPORT"
-                    and invoice_details.get("export_type") == "Without Payment of Tax"
+                    and not invoice_details.get("is_export_with_gst")
                 ):
                     taxable_value += abs(net_amount)
 
@@ -480,8 +476,7 @@ class Gstr1Report(object):
             if (
                 invoice not in self.items_based_on_tax_rate
                 and invoice not in unidentified_gst_accounts_invoice
-                and self.invoices.get(invoice, {}).get("export_type")
-                == "Without Payment of Tax"
+                and not self.invoices.get(invoice, {}).get("is_export_with_gst")
                 and self.invoices.get(invoice, {}).get("gst_category")
                 in ("Overseas", "SEZ")
             ):
