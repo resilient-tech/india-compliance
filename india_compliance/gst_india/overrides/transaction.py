@@ -114,8 +114,8 @@ def validate_gst_accounts(doc):
         if doc.gst_category in ("SEZ", "Overseas") and not doc.is_export_with_gst:
             frappe.throw(
                 _(
-                    "Cannot charge GST in Row #{0} since Export Type is Without"
-                    " Payment of Tax"
+                    "Cannot charge GST in Row #{0} since export is without"
+                    " payment of GST"
                 ).format(row.idx)
             )
 
