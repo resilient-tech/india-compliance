@@ -7,6 +7,9 @@ function setup_e_waybill_actions(doctype) {
         return;
 
     frappe.ui.form.on(doctype, {
+        mode_of_transport(frm) {
+            frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        },
         setup(frm) {
             if (!gst_settings.enable_api) return;
 
@@ -42,7 +45,7 @@ function setup_e_waybill_actions(doctype) {
 
                 if (has_e_waybill_threshold_met(frm) && !frm.doc.is_return) {
                     frm.dashboard.add_comment(
-                        "e-Waybill is applicable for this invoice and not yet generated or updated.",
+                        __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
                         "yellow",
                         true
                     );
@@ -273,28 +276,6 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
             default: frm.doc.gst_vehicle_type,
-        },
-        {
-            fieldtype: "Section Break",
-        },
-        {
-            fieldname: "gst_category",
-            label: "GST Category",
-            fieldtype: "Select",
-            options:
-                "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
-            default: frm.doc.gst_category,
-        },
-        {
-            fieldtype: "Column Break",
-        },
-        {
-            fieldname: "export_type",
-            label: "Export Type",
-            fieldtype: "Select",
-            depends_on: 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            options: "\nWith Payment of Tax\nWithout Payment of Tax",
-            default: frm.doc.export_type,
         },
     ];
 
@@ -657,6 +638,12 @@ function are_transport_details_available(doc) {
 
 function update_vehicle_type(dialog) {
     dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+}
+
+function get_vehicle_type(doc) {
+    if (doc.mode_of_transport == "Road") return "Regular";
+    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
+    return "";
 }
 
 /********

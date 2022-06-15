@@ -111,14 +111,11 @@ def validate_gst_accounts(doc):
         if account_head not in accounts_list or not row.tax_amount:
             continue
 
-        if (
-            doc.gst_category in ("SEZ", "Overseas")
-            and doc.export_type == "Without Payment of Tax"
-        ):
+        if doc.gst_category in ("SEZ", "Overseas") and not doc.is_export_with_gst:
             frappe.throw(
                 _(
-                    "Cannot charge GST in Row #{0} since Export Type is set to Without"
-                    " Payment of Tax"
+                    "Cannot charge GST in Row #{0} since export is without"
+                    " payment of GST"
                 ).format(row.idx)
             )
 
@@ -274,17 +271,23 @@ def validate_hsn_code(doc, method=None):
         )
 
 
-def validate_overseas_gst_category(doc, method):
+def validate_overseas_gst_category(doc, method=None):
+    if doc.gst_category not in ("SEZ", "Overseas"):
+        return
+
     overseas_enabled = frappe.get_cached_value(
         "GST Settings", "GST Settings", "enable_overseas_transactions"
     )
 
-    if not overseas_enabled and doc.gst_category in ("SEZ", "Overseas"):
+    if not overseas_enabled:
         frappe.throw(
             _(
                 "GST Category cannot be set to {0} since it is disabled in GST Settings"
             ).format(frappe.bold(doc.gst_category))
         )
+
+    if doc.doctype == "POS Invoice":
+        frappe.throw(_("Cannot set GST Category to SEZ / Overseas in POS Invoice"))
 
 
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
@@ -466,6 +469,52 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
     return default_tax
 
 
+def validate_reverse_charge_transaction(doc, method):
+    country = frappe.get_cached_value("Company", doc.company, "country")
+
+    if country != "India":
+        return
+
+    base_gst_tax = 0
+    base_reverse_charge_booked = 0
+
+    if not doc.is_reverse_charge:
+        return
+
+    reverse_charge_accounts = get_gst_accounts_by_type(
+        doc.company, "Reverse Charge"
+    ).values()
+
+    input_gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
+
+    for tax in doc.get("taxes"):
+        if tax.account_head in input_gst_accounts:
+            if tax.add_deduct_tax == "Add":
+                base_gst_tax += tax.base_tax_amount_after_discount_amount
+            else:
+                base_gst_tax += tax.base_tax_amount_after_discount_amount
+        elif tax.account_head in reverse_charge_accounts:
+            if tax.add_deduct_tax == "Add":
+                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
+            else:
+                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
+
+    if base_gst_tax != base_reverse_charge_booked:
+        msg = _("Booked reverse charge is not equal to applied tax amount")
+        msg += "<br>"
+        msg += _(
+            "Please refer {gst_document_link} to learn more about how to setup and"
+            " create reverse charge invoice"
+        ).format(
+            gst_document_link=(
+                '<a href="https://docs.erpnext.com/docs/user/manual/en/regional/india/gst-setup">GST'
+                " Documentation</a>"
+            )
+        )
+
+        frappe.throw(msg)
+
+
 def validate_sales_transaction(doc, method=None):
     if not is_indian_registered_company(doc):
         return False
@@ -480,6 +529,6 @@ def validate_sales_transaction(doc, method=None):
         update_taxable_values(doc)
 
     validate_mandatory_fields(doc, ("company_gstin",))
+    validate_overseas_gst_category(doc)
     validate_gst_accounts(doc)
     validate_hsn_code(doc)
-    validate_overseas_gst_category(doc)

@@ -18,12 +18,12 @@ POST_INSTALL_PATCHES = (
     "remove_consumer_gst_category",
     "update_gst_accounts",
     "migrate_e_invoice_settings_to_gst_settings",
-    "update_reverse_charge_field",
+    "update_reverse_charge_and_export_type",
     "update_gstin_and_gst_category",
     "update_e_invoice_fields_and_logs",
     "delete_gst_e_invoice_print_format",
-    "remove_customer_gstin_field",
     "set_default_gst_settings",
+    "remove_old_fields",
 )
 
 
