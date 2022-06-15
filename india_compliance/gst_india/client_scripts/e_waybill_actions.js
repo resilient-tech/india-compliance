@@ -22,7 +22,8 @@ function setup_e_waybill_actions(doctype) {
             if (
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
-                !is_e_waybill_applicable(frm)
+                !is_e_waybill_applicable(frm) ||
+                (frm.doctype === "Delivery Note" && !frm.doc.customer_address)
             )
                 return;
 
@@ -276,10 +277,7 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
     ];
 
     if (frm.doctype === "Delivery Note") {
-        const same_gstin =
-            (frm.doc.customer_gstin || frm.doc.billing_address_gstin) ==
-            frm.doc.company_gstin;
-
+        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
         let options;
 
         if (frm.doc.is_return) {

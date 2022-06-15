@@ -20,6 +20,7 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
         self.update_dependant_fields()
+        self.validate_credentials()
 
     def update_dependant_fields(self):
         if not self.api_secret:
@@ -27,10 +28,6 @@ class GSTSettings(Document):
 
         if not self.enable_api:
             self.enable_e_invoice = 0
-            self.autofill_party_info = 0
-
-        if not self.enable_e_waybill:
-            self.enable_e_waybill_from_dn = 0
 
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
@@ -109,4 +106,23 @@ class GSTSettings(Document):
                 _("{0} cannot be before 2021-01-01").format(
                     frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
                 )
+            )
+
+    def validate_credentials(self):
+        if (
+            self.enable_api
+            and (self.enable_e_invoice or self.enable_e_waybill)
+            and all(
+                credential.service != "e-Waybill / e-Invoice"
+                for credential in self.credentials
+            )
+        ):
+            frappe.msgprint(
+                # TODO: Add Link to Documentation.
+                _(
+                    "Please set credentials for e-Waybill / e-Invoice to use API"
+                    " features"
+                ),
+                indicator="yellow",
+                alert=True,
             )

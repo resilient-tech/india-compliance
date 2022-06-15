@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.utils import nowdate
 
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
@@ -10,7 +11,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
-from india_compliance.gst_india.utils import read_data_file
+from india_compliance.gst_india.utils import read_data_file, toggle_custom_fields
 
 
 def after_install():
@@ -27,6 +28,7 @@ def after_install():
 
     create_property_setters()
     create_address_template()
+    setup_default_gst_settings()
     frappe.enqueue(create_hsn_codes, now=frappe.flags.in_test)
 
 
@@ -62,3 +64,28 @@ def create_hsn_codes():
                     "name": code[code_type],
                 }
             ).db_insert(ignore_if_duplicate=True)
+
+
+def setup_default_gst_settings():
+    settings = frappe.get_doc("GST Settings")
+    settings.db_set(
+        {
+            "hsn_wise_tax_breakup": 1,
+            "enable_reverse_charge_in_sales": 0,
+            "validate_hsn_code": 1,
+            "min_hsn_digits": 6,
+            "enable_e_waybill": 1,
+            "e_waybill_threshold": 50000,
+            # Default API Settings
+            "fetch_e_waybill_data": 1,
+            "attach_e_waybill_print": 1,
+            "auto_generate_e_waybill": 1,
+            "auto_generate_e_invoice": 1,
+            "e_invoice_applicable_from": nowdate(),
+            "auto_fill_party_info": 1,
+        }
+    )
+
+    # Hide the fields as not enabled by default
+    for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
+        toggle_custom_fields(fields, False)

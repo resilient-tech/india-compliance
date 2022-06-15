@@ -234,6 +234,8 @@ def get_place_of_supply(party_details, doctype=None):
     if not frappe.get_meta("Address").has_field("gst_state"):
         return
 
+    # fallback to company address or supplier address
+    # (in retail scenarios, customer / shipping address may not be set)
     if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
         address_name = party_details.customer_address or party_details.company_address
     elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):

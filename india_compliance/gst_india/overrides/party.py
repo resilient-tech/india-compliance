@@ -1,7 +1,7 @@
 import json
 
 import frappe
-from frappe import _, bold
+from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display
 from erpnext.selling.doctype.customer.customer import make_contact
 
@@ -60,7 +60,7 @@ def set_docs_with_previous_gstin(doc, method=True):
 def get_docs_with_previous_gstin(gstin, doctype, docname):
     docs_with_previous_gstin = {}
     for dt in ("Address", "Supplier", "Customer", "Company"):
-        for doc in frappe.get_all(dt, filters={"gstin": gstin}):
+        for doc in frappe.get_list(dt, filters={"gstin": gstin}):
             if doc.name == docname and doctype == dt:
                 continue
 
@@ -73,7 +73,6 @@ def get_docs_with_previous_gstin(gstin, doctype, docname):
 def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gstin):
     frappe.flags.in_update_docs_with_previous_gstin = True
     docs_with_previous_gstin = json.loads(docs_with_previous_gstin)
-    ignored_docs = {}
 
     for doctype, docnames in docs_with_previous_gstin.items():
         for docname in docnames:
@@ -82,33 +81,13 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
                 doc.gstin = gstin
                 doc.gst_category = gst_category
                 doc.save()
-            except frappe.PermissionError:
-                frappe.clear_last_message()
-                ignored_docs.setdefault(doctype, []).append(docname)
             except Exception as e:
-                # TODO: handle this in better way
                 frappe.clear_last_message()
                 frappe.throw(
                     "Error updating {0} {1}:<br/> {2}".format(doctype, docname, str(e))
                 )
 
-    if not ignored_docs:
-        return frappe.msgprint(
-            _("Updated GSTIN in all documents"), indicator="green", alert=True
-        )
-
-    message = _(
-        "Following documents could not be updated due to insufficient"
-        " permission:<br/><br/>"
-    )
-
-    for doctype, docnames in ignored_docs.items():
-        if not docnames:
-            continue
-
-        message += f"{bold(doctype)}:<br/>{'<br/>'.join(docnames)}"
-
-    frappe.msgprint(message, title=_("Insufficient Permission"), indicator="yellow")
+    frappe.msgprint(_("GSTIN Updated"), indicator="green", alert=True)
 
 
 def create_primary_address_and_contact(doc, method=None):
