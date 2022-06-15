@@ -1,18 +1,18 @@
-function update_export_type(doctype) {
+function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
         async gst_category(frm) {
-            if (!["SEZ", "Overseas"].includes(frm.doc.gst_category)) {
-                return frm.set_value("is_export_with_gst", 0);
-            }
+            const { gst_settings } = frappe.boot;
+            if (
+                !["SEZ", "Overseas"].includes(frm.doc.gst_category) ||
+                gst_settings.enable_overseas_transactions
+            )
+                return;
 
             // TODO: categories should not be visible if not enabled
-            const { gst_settings } = frappe.boot;
-            if (!gst_settings.enable_overseas_transactions) {
-                frappe.throw(
-                    // prettier-ignore
-                    __("Please enable SEZ / Overseas transactions in GST Settings first")
-                );
-            }
+            frappe.throw(
+                // prettier-ignore
+                __("Please enable SEZ / Overseas transactions in GST Settings first")
+            );
         },
     });
 }
