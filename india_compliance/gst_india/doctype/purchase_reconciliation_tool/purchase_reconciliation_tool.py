@@ -4,6 +4,7 @@
 from calendar import monthrange
 from datetime import datetime
 from math import ceil
+from typing import List
 
 import pandas as pd
 from fuzzywuzzy import fuzz, process
@@ -557,7 +558,7 @@ def _get_periods(start_date, end_date):
 
 # TODO: rearrange the code
 def get_downloads_history(
-    company_gstin, return_type: ReturnType, periods: list[str], fields=None, pluck=None
+    company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
 ):
     if not (fields or pluck):
         fields = (
