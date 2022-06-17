@@ -34,7 +34,7 @@
 {% if not doc.irn %}
 
 <div class="text-center no-preview-available">
-	You must generate e-Invoice before you can preview it.
+	Please generate an e-Invoice to preview it.
 </div>
 
 {% else %}
@@ -44,9 +44,11 @@
 ) %}
 
 {% if not e_invoice_log %}
+
 <div class="text-center no-preview-available">
-	e-Invoice preview not available as no linked e-Invoice Log found.
+	The e-Invoice Log linked to this Sales Invoice could not be found.
 </div>
+
 {% else %}
 
 {%- set invoice_data = _dict(json.loads(e_invoice_log.invoice_data)) -%}
