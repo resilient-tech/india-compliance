@@ -21,6 +21,7 @@ function get_tax_template(frm) {
     const party_fields = [
         "shipping_address",
         "customer_address",
+        "company_address",
         "supplier_address",
         "shipping_address_name",
         "customer",
