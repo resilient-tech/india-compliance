@@ -240,11 +240,14 @@ class EInvoiceData(GSTTransactionData):
             )
 
     def update_transaction_details(self):
-        invoice_type = (
-            "CRN"
-            if self.doc.is_return
-            else ("DBN" if self.doc.is_debit_note else "INV")
-        )
+        invoice_type = "INV"
+
+        if self.doc.is_return:
+            invoice_type = "CRN"
+
+        elif self.doc.is_debit_note:
+            invoice_type = "DBN"
+
         self.transaction_details.update(
             {
                 "tax_scheme": "GST",
