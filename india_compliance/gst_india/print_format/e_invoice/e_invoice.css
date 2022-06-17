@@ -28,3 +28,8 @@
 .print-format .qrcode {
 	width: 175px;
 }
+
+.print-format .no-preview-available {
+	color: var(--gray-500);
+	font-size: 14px;
+}
