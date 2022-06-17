@@ -11,6 +11,7 @@ def calculate_annual_eligible_hra_exemption(doc):
     basic_component, hra_component = frappe.db.get_value(
         "Company", doc.company, ["basic_component", "hra_component"]
     )
+
     if not (basic_component and hra_component):
         frappe.throw(
             _("Please set Basic and HRA component in Company {0}").format(
@@ -18,7 +19,7 @@ def calculate_annual_eligible_hra_exemption(doc):
             )
         )
 
-    annual_exemption, monthly_exemption, hra_amount, basic_amount = 0
+    annual_exemption = monthly_exemption = hra_amount = basic_amount = 0
 
     if hra_component and basic_component:
         assignments = get_salary_assignments(doc.employee, doc.payroll_period)
@@ -58,7 +59,6 @@ def calculate_annual_eligible_hra_exemption(doc):
         if hra_amount:
             if doc.monthly_house_rent:
                 annual_exemption = calculate_hra_exemption(
-                    assignment.salary_structure,
                     basic_amount,
                     hra_amount,
                     doc.monthly_house_rent,
@@ -134,6 +134,7 @@ def calculate_hra_exemption(
     exemptions = []
     # case 1: The actual amount allotted by the employer as the HRA.
     exemptions.append(annual_hra)
+
     # case 2: Actual rent paid less 10% of the basic salary.
     actual_annual_rent = monthly_house_rent * 12
     exemptions.append(flt(actual_annual_rent) - flt(annual_basic * 0.1))
