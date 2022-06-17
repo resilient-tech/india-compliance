@@ -31,9 +31,23 @@
 
 {%- from "templates/print_formats/standard_macros.html" import add_header, render_field, print_value -%}
 
+{% if not doc.irn %}
+
+<div class="text-center no-preview-available">
+	You must generate e-Invoice before you can preview it.
+</div>
+
+{% else %}
+
 {% set e_invoice_log = frappe.db.get_value(
 	"e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
 ) %}
+
+{% if not e_invoice_log %}
+<div class="text-center no-preview-available">
+	e-Invoice preview not available as no linked e-Invoice Log found.
+</div>
+{% else %}
 
 {%- set invoice_data = _dict(json.loads(e_invoice_log.invoice_data)) -%}
 
@@ -213,3 +227,6 @@
 	</table>
 </div>
 </div>
+
+{% endif %}
+{% endif %}
