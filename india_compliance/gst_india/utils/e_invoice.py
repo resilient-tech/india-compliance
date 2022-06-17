@@ -240,6 +240,11 @@ class EInvoiceData(GSTTransactionData):
             )
 
     def update_transaction_details(self):
+        invoice_type = (
+            "CRN"
+            if self.doc.is_return
+            else ("DBN" if self.doc.is_debit_note else "INV")
+        )
         self.transaction_details.update(
             {
                 "tax_scheme": "GST",
@@ -247,7 +252,7 @@ class EInvoiceData(GSTTransactionData):
                 "reverse_charge": (
                     "Y" if getattr(self.doc, "is_reverse_charge", 0) else "N"
                 ),
-                "invoice_type": "CRN" if self.doc.is_return else "INV",
+                "invoice_type": invoice_type,
                 "ecommerce_gstin": self.doc.ecommerce_gstin,
                 "place_of_supply": self.doc.place_of_supply.split("-")[0],
             }
