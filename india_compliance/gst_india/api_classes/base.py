@@ -111,7 +111,7 @@ class BaseAPI:
                 log.data["api_request_id"] = api_request_id
 
             try:
-                response_json = response.json()
+                response_json = response.json(object_hook=frappe._dict)
             except Exception:
                 pass
 
@@ -124,6 +124,8 @@ class BaseAPI:
             # Expect all successful responses to be JSON
             if not response_json:
                 frappe.throw(_("Error parsing response: {0}").format(response.content))
+            else:
+                self.response = response_json
 
             # All error responses have a success key set to false
             success_value = response_json.get("success", True)
@@ -138,7 +140,7 @@ class BaseAPI:
                     title=_("API Request Failed"),
                 )
 
-            return self.handle_success_response(response_json)
+            return response_json.get("result", response_json)
 
         except Exception as e:
             log.error = str(e)
@@ -151,9 +153,6 @@ class BaseAPI:
     def handle_failed_response(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
         pass
-
-    def handle_success_response(self, response_json):
-        return frappe._dict(response_json)
 
     def handle_http_code(self, status_code, response_json):
         # TODO: add link to account page / support email
