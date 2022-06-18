@@ -504,6 +504,8 @@ def validate_reverse_charge_transaction(doc, method):
 
         frappe.throw(msg)
 
+    doc.eligibility_for_itc = "ITC on Reverse Charge"
+
 
 def validate_sales_transaction(doc, method=None):
     if not is_indian_registered_company(doc):
