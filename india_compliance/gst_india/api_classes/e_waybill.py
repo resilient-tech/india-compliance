@@ -1,7 +1,10 @@
+import re
+
 import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BaseAPI
+from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 
 class EWaybillAPI(BaseAPI):
@@ -38,7 +41,9 @@ class EWaybillAPI(BaseAPI):
         return self.get("getewaybill", params={"ewbNo": ewaybill_number})
 
     def generate_e_waybill(self, data):
-        return self.post("GENEWAYBILL", data)
+        result = self.post("GENEWAYBILL", data)
+        self.update_distance(result)
+        return result
 
     def cancel_e_waybill(self, data):
         return self.post("CANEWB", data)
@@ -51,3 +56,11 @@ class EWaybillAPI(BaseAPI):
 
     def extend_validity(self, data):
         return self.post("EXTENDVALIDITY", data)
+
+    def update_distance(self, result):
+        if (
+            (alert := result.get("alert"))
+            and "Distance" in alert
+            and (distance_match := re.search(DISTANCE_REGEX, alert))
+        ):
+            result.distance = int(distance_match.group())
