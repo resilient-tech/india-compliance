@@ -16,6 +16,7 @@ from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
+    SALES_DOCTYPES,
     TCS,
     TIMEZONE,
 )
@@ -222,38 +223,30 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
     return hsn_tax, hsn_taxable_amount
 
 
-def get_place_of_supply(party_details, doctype=None):
+def get_place_of_supply(party_details, doctype):
     """
     :param party_details: A frappe._dict or document containing fields related to party
     """
 
-    if not doctype:
-        # Expect document object
-        doctype = party_details.doctype
-
-    if not frappe.get_meta("Address").has_field("gst_state"):
-        return
-
     # fallback to company address or supplier address
     # (in retail scenarios, customer / shipping address may not be set)
-    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
+    if doctype in SALES_DOCTYPES:
         address_name = party_details.customer_address or party_details.company_address
-    elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
+    else:
         address_name = party_details.shipping_address or party_details.supplier_address
 
-    if address_name:
-        address = frappe.db.get_value(
-            "Address",
-            address_name,
-            ["gst_state", "gst_state_number", "gstin"],
-            as_dict=1,
-        )
+    if not address_name:
+        return
 
-        if address and address.gst_state and address.gst_state_number:
-            # TODO: bad idea to set value in getter
-            party_details.gstin = address.gstin
+    address = frappe.db.get_value(
+        "Address",
+        address_name,
+        ("gst_state", "gst_state_number"),
+        as_dict=1,
+    )
 
-            return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
+    if address and address.gst_state and address.gst_state_number:
+        return f"{address.gst_state_number}-{address.gst_state}"
 
 
 def get_gst_accounts(

@@ -1,8 +1,8 @@
 import json
 
 import frappe
-from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 from frappe.utils import today
+from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 
 from india_compliance.income_tax_india.utils import read_data_file
 
@@ -21,12 +21,9 @@ def create_company_fixtures(company):
     set_tds_account(docs, company)
 
     for d in docs:
-        try:
-            doc = frappe.get_doc(d)
-            doc.flags.ignore_permissions = True
-            doc.insert()
-        except (frappe.NameError, frappe.DuplicateEntryError):
-            frappe.clear_messages()
+        doc = frappe.get_doc(d)
+        doc.flags.ignore_permissions = True
+        doc.insert(ignore_if_duplicate=True)
 
     # create records for Tax Withholding Category
     set_tax_withholding_category(company)

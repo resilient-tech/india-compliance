@@ -6,7 +6,7 @@ from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
+from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts,
@@ -217,7 +217,7 @@ def validate_items(doc):
 
 
 def set_place_of_supply(doc, method=None):
-    doc.place_of_supply = get_place_of_supply(doc)
+    doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
 
 def validate_hsn_code(doc, method=None):
@@ -332,27 +332,33 @@ def get_regional_address_details(party_details, doctype, company):
      - taxes in the tax template
     """
 
+    is_sales_doctype = doctype in SALES_DOCTYPES
     party_details = frappe.parse_json(party_details)
     update_party_details(party_details, doctype)
-
     party_details.place_of_supply = get_place_of_supply(party_details, doctype)
 
-    if is_internal_transfer(party_details, doctype):
+    if is_sales_doctype:
+        source_gstin = party_details.company_gstin
+        destination_gstin = party_details.billing_address_gstin
+    else:
+        source_gstin = party_details.supplier_gstin
+        destination_gstin = party_details.company_gstin
+
+    # Internal transfer
+    if destination_gstin and destination_gstin == source_gstin:
         party_details.taxes_and_charges = ""
         party_details.taxes = []
         return party_details
 
-    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
-        master_doctype = "Sales Taxes and Charges Template"
-        tax_template_by_category = get_tax_template_based_on_category(
-            master_doctype, company, party_details
-        )
+    master_doctype = (
+        "Sales Taxes and Charges Template"
+        if is_sales_doctype
+        else "Purchase Taxes and Charges Template"
+    )
 
-    elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
-        master_doctype = "Purchase Taxes and Charges Template"
-        tax_template_by_category = get_tax_template_based_on_category(
-            master_doctype, company, party_details
-        )
+    tax_template_by_category = get_tax_template_based_on_category(
+        master_doctype, company, party_details
+    )
 
     if tax_template_by_category:
         party_details["taxes_and_charges"] = tax_template_by_category
@@ -363,25 +369,17 @@ def get_regional_address_details(party_details, doctype, company):
 
     if not party_details.place_of_supply:
         return party_details
+
     if not party_details.company_gstin:
         return party_details
 
-    if (
-        doctype in ("Sales Invoice", "Delivery Note", "Sales Order")
-        and party_details.company_gstin
-        and party_details.company_gstin[:2] != party_details.place_of_supply[:2]
-    ) or (
-        doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt")
-        and party_details.supplier_gstin
-        and party_details.supplier_gstin[:2] != party_details.place_of_supply[:2]
-    ):
-        default_tax = get_tax_template(
-            master_doctype, company, 1, party_details.company_gstin[:2]
-        )
-    else:
-        default_tax = get_tax_template(
-            master_doctype, company, 0, party_details.company_gstin[:2]
-        )
+    is_inter_state = (
+        source_gstin and source_gstin[:2] != party_details.place_of_supply[:2]
+    )
+
+    default_tax = get_tax_template(
+        master_doctype, company, is_inter_state, party_details.company_gstin[:2]
+    )
 
     if not default_tax:
         return party_details
@@ -423,21 +421,6 @@ def update_party_details(party_details, doctype):
             )
 
 
-def is_internal_transfer(party_details, doctype):
-    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
-        destination_gstin = party_details.company_gstin
-    elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
-        destination_gstin = party_details.supplier_gstin
-
-    if not destination_gstin or party_details.gstin:
-        return False
-
-    if party_details.gstin == destination_gstin:
-        return True
-    else:
-        False
-
-
 def get_tax_template_based_on_category(master_doctype, company, party_details):
     if not party_details.get("tax_category"):
         return
@@ -456,7 +439,7 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
         "Tax Category",
         fields=["name", "is_inter_state", "gst_state"],
         filters={
-            "is_inter_state": is_inter_state,
+            "is_inter_state": 1 if is_inter_state else 0,
             "is_reverse_charge": 0,
             "disabled": 0,
         },
@@ -520,6 +503,8 @@ def validate_reverse_charge_transaction(doc, method):
         )
 
         frappe.throw(msg)
+
+    doc.eligibility_for_itc = "ITC on Reverse Charge"
 
 
 def validate_sales_transaction(doc, method=None):
