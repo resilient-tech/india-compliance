@@ -83,8 +83,10 @@ def _generate_e_waybill(doc, throw=True):
         return
 
     api = EWaybillAPI if not doc.get("irn") else EInvoiceAPI
-    result = api(doc.company_gstin).generate_e_waybill(data)
-    log_and_process_e_waybill_generation(doc, result)
+    api = api(doc.company_gstin)
+    result = api.generate_e_waybill(data)
+    # response sent to process eINV Info (eg: Distance)
+    log_and_process_e_waybill_generation(doc, api.response)
 
     frappe.msgprint(
         _("e-Waybill generated successfully")
@@ -97,15 +99,14 @@ def _generate_e_waybill(doc, throw=True):
     return send_updated_doc(doc)
 
 
-def log_and_process_e_waybill_generation(doc, result):
+def log_and_process_e_waybill_generation(doc, response):
     """Separate function, since called in backend from e-invoice utils"""
 
     irn = doc.get("irn")
+    result = response.result
     e_waybill_number = str(result["ewayBillNo" if not irn else "EwbNo"])
-    data = {
-        "ewaybill": e_waybill_number,
-    }
-    if distance := get_pincode_distance(result):
+    data = {"ewaybill": e_waybill_number}
+    if distance := get_pincode_distance(response):
         data["distance"] = distance
 
     doc.db_set(data)
@@ -423,11 +424,11 @@ def update_transaction(doc, values):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
 
 
-def get_pincode_distance(result):
-    if (alert := result.get("alert")) and "Distance" in alert:
+def get_pincode_distance(response):
+    if (alert := response.result.get("alert")) and "Distance" in alert:
         return re.findall(r"\d+", alert)[0]  # EWB API
 
-    if not (info := result.get("info")):
+    if not (info := response.get("info")):
         return
 
     for alert in info:

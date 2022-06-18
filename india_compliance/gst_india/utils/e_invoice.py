@@ -82,7 +82,8 @@ def generate_e_invoice(docname, throw=True):
     )
 
     if result.EwbNo:
-        log_and_process_e_waybill_generation(doc, result)
+        # response sent to process eINV Info (eg: Distance)
+        log_and_process_e_waybill_generation(doc, api.response)
 
     frappe.msgprint(
         _("e-Invoice generated successfully"),
