@@ -5,10 +5,11 @@ def execute():
     delete_old_fields(
         "customer_gstin",
         (
-            "Sales Invoice",
-            "Delivery Note",
-            "POS Invoice",
+            "Quotation",
             "Sales Order",
+            "Delivery Note",
+            "Sales Invoice",
+            "POS Invoice",
         ),
     )
 
