@@ -10,6 +10,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cstr, flt
 
+from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+
 
 class GSTR3BReport(Document):
     def validate(self):
@@ -508,7 +510,7 @@ class GSTR3BReport(Document):
     def get_missing_field_invoices(self):
         missing_field_invoices = []
 
-        for doctype in ("Sales Invoice", "Purchase Invoice"):
+        for doctype in INVOICE_DOCTYPES:
             docnames = frappe.db.sql(
                 f"""
                     SELECT name FROM `tab{doctype}`
