@@ -18,19 +18,7 @@ ic.get_gstin_query = company => {
 };
 
 ic.get_party_type = function (doctype) {
-    return in_list(
-        [
-            "Material Request",
-            "Request for Quotation",
-            "Supplier Quotation",
-            "Purchase Order",
-            "Purchase Receipt",
-            "Purchase Invoice",
-        ],
-        doctype
-    )
-        ? "Supplier"
-        : "Customer";
+    return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
 };
 
 ic.set_state_options = function (frm) {
