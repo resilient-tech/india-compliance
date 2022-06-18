@@ -36,6 +36,19 @@ class EInvoiceAPI(BaseAPI):
         if response_json.get("message").startswith("2150"):
             return True
 
+    def handle_success_response(self, response_json):
+        result = response_json.get("result", response_json)
+        if isinstance(result, list):
+            result = result[0]
+
+        if response_json.get("info"):
+            result["info"] = response_json["info"]
+
+        if response_json.get("message"):
+            result["message"] = response_json["message"]
+
+        return frappe._dict(result)
+
     def get_e_invoice_by_irn(self, irn):
         return self.get(endpoint="invoice/irn", params={"irn": irn})
 

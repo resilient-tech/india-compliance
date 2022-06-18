@@ -34,6 +34,9 @@ class EWaybillAPI(BaseAPI):
     def post(self, action, json):
         return super().post(params={"action": action}, json=json)
 
+    def handle_success_response(self, response_json):
+        return frappe._dict(response_json.get("result", response_json))
+
     def get_e_waybill(self, ewaybill_number):
         return self.get("getewaybill", params={"ewbNo": ewaybill_number})
 
