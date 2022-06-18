@@ -40,7 +40,10 @@ class EInvoiceAPI(BaseAPI):
         return self.get(endpoint="invoice/irn", params={"irn": irn})
 
     def generate_irn(self, data):
-        return self.post(endpoint="invoice", json=data)
+        result = self.post(endpoint="invoice", json=data)
+
+        # In case of Duplicate IRN, result is a list
+        return result[0] if isinstance(result, list) else result
 
     def cancel_irn(self, data):
         return self.post(endpoint="invoice/cancel", json=data)
