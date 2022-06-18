@@ -16,6 +16,7 @@ from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
+    SALES_DOCTYPES,
     TCS,
     TIMEZONE,
 )
@@ -236,16 +237,16 @@ def get_place_of_supply(party_details, doctype=None):
 
     # fallback to company address or supplier address
     # (in retail scenarios, customer / shipping address may not be set)
-    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
+    if doctype in SALES_DOCTYPES:
         address_name = party_details.customer_address or party_details.company_address
-    elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
+    else:
         address_name = party_details.shipping_address or party_details.supplier_address
 
     if address_name:
         address = frappe.db.get_value(
             "Address",
             address_name,
-            ["gst_state", "gst_state_number", "gstin"],
+            ("gst_state", "gst_state_number", "gstin"),
             as_dict=1,
         )
 
@@ -253,7 +254,7 @@ def get_place_of_supply(party_details, doctype=None):
             # TODO: bad idea to set value in getter
             party_details.gstin = address.gstin
 
-            return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
+            return f"{address.gst_state_number}-{address.gst_state}"
 
 
 def get_gst_accounts(
