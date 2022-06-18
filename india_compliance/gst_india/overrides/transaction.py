@@ -342,7 +342,7 @@ def get_regional_address_details(party_details, doctype, company):
         party_details.taxes = []
         return party_details
 
-    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
+    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order", "Quotation"):
         master_doctype = "Sales Taxes and Charges Template"
         tax_template_by_category = get_tax_template_based_on_category(
             master_doctype, company, party_details
@@ -424,7 +424,7 @@ def update_party_details(party_details, doctype):
 
 
 def is_internal_transfer(party_details, doctype):
-    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
+    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order", "Quotation"):
         destination_gstin = party_details.company_gstin
     elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
         destination_gstin = party_details.supplier_gstin
