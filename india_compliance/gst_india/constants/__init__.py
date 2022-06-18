@@ -6,15 +6,15 @@ TIMEZONE = "Asia/Kolkata"
 
 ABBREVIATIONS = {"SEZ", "GST", "CGST", "SGST", "IGST", "CESS", "HSN"}
 
-GST_ACCOUNT_FIELDS = {
+GST_ACCOUNT_FIELDS = (
     "cgst_account",
     "sgst_account",
     "igst_account",
     "cess_account",
     "cess_non_advol_account",
-}
+)
 
-GST_TAX_TYPES = {field[:-8] for field in GST_ACCOUNT_FIELDS}
+GST_TAX_TYPES = tuple(field[:-8] for field in GST_ACCOUNT_FIELDS)
 
 GST_CATEGORIES = {
     "Registered Regular": "B2B",
