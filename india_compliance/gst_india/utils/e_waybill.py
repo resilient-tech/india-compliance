@@ -86,7 +86,7 @@ def _generate_e_waybill(doc, throw=True):
 
     frappe.msgprint(
         _("e-Waybill generated successfully")
-        if result.validUpto
+        if result.validUpto or result.EwbValidTill
         else _("e-Waybill (Part A) generated successfully"),
         indicator="green",
         alert=True,
@@ -136,7 +136,12 @@ def _cancel_e_waybill(doc, values):
     """Separate function, since called in backend from e-invoice utils"""
 
     data = EWaybillData(doc).get_e_waybill_cancel_data(values)
-    api = EWaybillAPI if not doc.get("irn") else EInvoiceAPI
+    api = (
+        EInvoiceAPI
+        # Use e-invoice endpoint only for sandbox environment
+        if doc.get("irn") and frappe.conf.use_gst_api_sandbox
+        else EWaybillAPI
+    )
     result = api(doc.company_gstin).cancel_e_waybill(data)
     doc.db_set("ewaybill", "")
 
