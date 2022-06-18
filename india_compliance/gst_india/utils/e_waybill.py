@@ -100,7 +100,12 @@ def log_and_process_e_waybill_generation(doc, result):
 
     irn = doc.get("irn")
     e_waybill_number = str(result["ewayBillNo" if not irn else "EwbNo"])
-    doc.db_set("ewaybill", e_waybill_number)
+
+    data = {"ewaybill": e_waybill_number}
+    if distance := result.get("distance"):
+        data["distance"] = distance
+
+    doc.db_set(data)
 
     log_and_process_e_waybill(
         doc,
