@@ -238,7 +238,6 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
                 frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length == 15
                     ? frm.doc.gst_transporter_id
                     : "",
-            onchange: () => update_generation_dialog(d),
         },
         // Sub Supply Type will be visible here for Delivery Note
         {
