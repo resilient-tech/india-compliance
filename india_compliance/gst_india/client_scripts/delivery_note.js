@@ -8,13 +8,6 @@ fetch_gst_category(DOCTYPE);
 validate_overseas_gst_category(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
-    setup(frm) {
-        frm.set_query("transporter", {
-            filters: {
-                is_transporter: 1,
-            },
-        });
-    },
     after_save(frm) {
         const { gst_settings } = frappe.boot;
         if (
