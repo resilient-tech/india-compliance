@@ -253,10 +253,9 @@ def get_gst_accounts(doc):
     """Returns a list of all the accounts related to doc"""
 
     if doc.doctype in SALES_DOCTYPES:
-        gst_accounts = get_gst_accounts_by_type(doc.company, "Output").values()
-    else:
-        gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
+        return get_gst_accounts_by_type(doc.company, "Output").values()
 
+    gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
     if doc.is_reverse_charge:
         gst_accounts.extend(
             get_gst_accounts_by_type(doc.company, "Reverse Charge").values()
