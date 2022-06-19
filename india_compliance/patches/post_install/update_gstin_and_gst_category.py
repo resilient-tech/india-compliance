@@ -121,6 +121,6 @@ def update_gstin_and_gst_category():
             "We have identified multiple GSTINs for a few parties and couldn't set"
             " newly created fields automatically for these. Please check for parties"
             " without GSTINs or addresses without GST Category and set approporiate"
-            " values.",
+            " values.\n",
             fg="yellow",
         )
