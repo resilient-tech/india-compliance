@@ -3,7 +3,6 @@ import json
 import frappe
 from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display
-from erpnext.selling.doctype.customer.customer import make_contact
 
 from india_compliance.gst_india.utils import (
     is_valid_pan,
@@ -90,39 +89,14 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
     frappe.msgprint(_("GSTIN Updated"), indicator="green", alert=True)
 
 
-def create_primary_address_and_contact(doc, method=None):
+def create_primary_address(doc, method=None):
     """
-    Used to create primary address and contact when creating party.
-    Modified version of erpnext.selling.doctype.customer.customer.create_primary_*
+    Used to create primary address when creating party.
+    Modified version of erpnext.selling.doctype.customer.customer.create_primary_address
+
+    ERPNext uses `address_line1` so we use `_address_line1` to avoid conflict.
     """
 
-    create_primary_address(doc)
-    create_primary_contact(doc)
-
-
-def create_primary_contact(doc):
-    mobile_no = doc.get("_mobile_no")
-    email_id = doc.get("_email_id")
-
-    if not (mobile_no or email_id):
-        return
-
-    contact = make_contact(
-        {
-            "doctype": doc.doctype,
-            "name": doc.name,
-            "email_id": email_id,
-            "mobile_no": mobile_no,
-        }
-    )
-
-    doc.db_set("customer_primary_contact", contact.name)
-    doc.db_set("mobile_no", mobile_no)
-    doc.db_set("email_id", email_id)
-
-
-def create_primary_address(doc):
-    # ERPNext uses `address_line1` so we use `_address_line1` to avoid conflict
     if not doc.get("_address_line1"):
         return
 

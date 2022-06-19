@@ -60,7 +60,9 @@ doc_events = {
     },
     "Customer": {
         "validate": "india_compliance.gst_india.overrides.party.validate_party",
-        "after_insert": "india_compliance.gst_india.overrides.party.create_primary_address_and_contact",
+        "after_insert": (
+            "india_compliance.gst_india.overrides.party.create_primary_address"
+        ),
     },
     "Delivery Note": {
         "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
@@ -114,7 +116,9 @@ doc_events = {
             "india_compliance.gst_india.overrides.supplier.update_transporter_gstin",
             "india_compliance.gst_india.overrides.party.validate_party",
         ],
-        "after_insert": "india_compliance.gst_india.overrides.party.create_primary_address_and_contact",
+        "after_insert": (
+            "india_compliance.gst_india.overrides.party.create_primary_address"
+        ),
     },
     "Tax Category": {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
