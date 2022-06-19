@@ -16,54 +16,103 @@ from india_compliance.gst_india.utils import (
 
 
 def update_taxable_values(doc, method=None):
-    country = frappe.get_cached_value("Company", doc.company, "country")
+    """
+    Update item-wise taxable values for tax calculation.
+    """
 
-    if country != "India":
-        return
+    tax_breakup = get_taxes_and_charges_breakup(doc)
+    net_total = doc.base_net_total
+    item_net_total = 0
 
-    gst_accounts = get_gst_accounts(doc.company)
+    # apportion pre_tax_charges to items
+    for row in doc.get("items"):
+        if row.base_net_amount == 0:
+            row.taxable_value = 0
+            continue
 
-    # fmt: off
-    # Only considering sgst account to avoid inflating taxable value
-    gst_account_list = gst_accounts.get("sgst_account", []) + gst_accounts.get("igst_account", [])
-
-    # fmt: on
-    additional_taxes = 0
-    total_charges = 0
-    item_count = 0
-    considered_rows = []
-
-    for tax in doc.get("taxes"):
-        prev_row_id = cint(tax.row_id) - 1
-        if tax.account_head in gst_account_list and prev_row_id not in considered_rows:
-            if tax.charge_type == "On Previous Row Amount":
-                additional_taxes += doc.get("taxes")[
-                    prev_row_id
-                ].tax_amount_after_discount_amount
-                considered_rows.append(prev_row_id)
-            if tax.charge_type == "On Previous Row Total":
-                additional_taxes += (
-                    doc.get("taxes")[prev_row_id].base_total - doc.base_net_total
-                )
-                considered_rows.append(prev_row_id)
-
-    for item in doc.get("items"):
-        proportionate_value = item.base_net_amount if doc.base_net_total else item.qty
-        total_value = doc.base_net_total if doc.base_net_total else doc.total_qty
-
-        applicable_charges = flt(
-            flt(
-                proportionate_value * (flt(additional_taxes) / flt(total_value)),
-                item.precision("taxable_value"),
-            )
+        row.taxable_value = flt(
+            row.base_net_amount * (1 + tax_breakup["pre_tax_charges"] / net_total),
+            row.precision("taxable_value"),
         )
-        item.taxable_value = applicable_charges + proportionate_value
-        total_charges += applicable_charges
-        item_count += 1
+        item_net_total += row.taxable_value
 
-    if total_charges != additional_taxes:
-        diff = additional_taxes - total_charges
-        doc.get("items")[item_count - 1].taxable_value += diff
+    # if rounding off error adjustment in last item
+    if (diff := (net_total + tax_breakup["pre_tax_charges"] - item_net_total)) != 0:
+        doc.items[-1].taxable_value += diff
+
+
+def get_taxes_and_charges_breakup(doc):
+    """
+    This function returns tax breakup from the tax template.
+    """
+
+    gst_accounts = get_gst_accounts(doc)
+    withholding_tax_accounts = set(
+        frappe.get_all(
+            "Tax Withholding Account",
+            filters={"company": doc.company},
+            pluck="account",
+        )
+    )
+
+    pre_tax_charges = 0
+    total_taxes = 0
+    withholding_taxes = 0
+    post_tax_charges = 0
+    previous_row_ref = 0
+    account_heads = set()
+
+    # check for previous row reference
+    for row in doc.get("taxes"):
+        account_heads.add(row.account_head)
+        if (
+            row.account_head in gst_accounts
+            and row.charge_type == "On Previous Row Total"
+        ):
+            previous_row_ref = cint(row.row_id)
+            break
+
+    # check to ensure that atleast one gst account is present
+    # else all charges shall be pre_tax_charges
+    # applicable where no tax is charged
+    for account in account_heads:
+        if account in gst_accounts:
+            break
+
+    else:
+        previous_row_ref = len(doc.get("taxes")) + 1
+
+    # segregate taxes into pre_tax_charges, total_taxes, withholding_taxes, post_tax_charges
+    for row in doc.get("taxes"):
+        if row.account_head in withholding_tax_accounts:
+            withholding_taxes += get_tax_charged(row)
+        elif previous_row_ref and row.idx <= previous_row_ref:
+            pre_tax_charges += get_tax_charged(row)
+        elif row.account_head in gst_accounts:
+            total_taxes += get_tax_charged(row)
+        else:
+            post_tax_charges += get_tax_charged(row)
+
+    return {
+        "pre_tax_charges": pre_tax_charges,
+        "total_taxes": total_taxes,
+        "withholding_taxes": withholding_taxes,
+        "post_tax_charges": post_tax_charges,
+    }
+
+
+def get_tax_charged(row):
+    """
+    Handle differences in purchase and sales taxes and charges template and return charge applied
+    """
+
+    if row.get("category") == "Valuation":  # only for purchase template
+        return 0
+
+    if row.get("add_deduct_tax") == "Deduct":  # only for purchase template
+        return -row.base_tax_amount_after_discount_amount
+
+    return row.base_tax_amount_after_discount_amount
 
 
 def is_indian_registered_company(doc):

@@ -249,38 +249,18 @@ def get_place_of_supply(party_details, doctype):
         return f"{address.gst_state_number}-{address.gst_state}"
 
 
-def get_gst_accounts(
-    company=None, account_wise=False, only_reverse_charge=0, only_non_reverse_charge=0
-):
-    filters = {"parent": "GST Settings"}
+def get_gst_accounts(doc):
+    """Returns a list of all the accounts related to doc"""
 
-    if company:
-        filters.update({"company": company})
-    if only_reverse_charge:
-        filters.update({"account_type": "Reverse Charge"})
-    elif only_non_reverse_charge:
-        filters.update({"account_type": ("in", ("Input", "Output"))})
+    if doc.doctype in SALES_DOCTYPES:
+        gst_accounts = get_gst_accounts_by_type(doc.company, "Output").values()
+    else:
+        gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
 
-    gst_accounts = frappe._dict()
-    gst_settings_accounts = frappe.get_all(
-        "GST Account",
-        filters=filters,
-        fields=GST_ACCOUNT_FIELDS,
-    )
-
-    if (
-        not gst_settings_accounts
-        and not frappe.flags.in_test
-        and not frappe.flags.in_migrate
-    ):
-        frappe.throw(_("Please set GST Accounts in GST Settings"))
-
-    for d in gst_settings_accounts:
-        for acc, val in d.items():
-            if not account_wise:
-                gst_accounts.setdefault(acc, []).append(val)
-            elif val:
-                gst_accounts[val] = acc
+    if doc.is_reverse_charge:
+        gst_accounts.extend(
+            get_gst_accounts_by_type(doc.company, "Reverse Charge").values()
+        )
 
     return gst_accounts
 
