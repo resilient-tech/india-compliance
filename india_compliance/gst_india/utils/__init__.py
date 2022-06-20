@@ -23,6 +23,16 @@ from india_compliance.gst_india.constants import (
 )
 
 
+def get_state(state_number):
+    """Get state from State Number"""
+
+    state_number = str(state_number)
+
+    for state, code in STATE_NUMBERS.items():
+        if code == state_number:
+            return state
+
+
 def load_doc(doctype, name, perm="read"):
     """Get doc, check perms and run onload method"""
     doc = frappe.get_doc(doctype, name)
@@ -229,8 +239,8 @@ def get_place_of_supply(party_details, doctype):
     :param party_details: A frappe._dict or document containing fields related to party
     """
 
-    # fallback to company gstin or supplier gstin
-    # (in retail scenarios, customer / shipping gstin may not be set)
+    # fallback to company GSTIN for sales or supplier GSTIN for purchases
+    # (in retail scenarios, customer / company GSTIN may not be set)
     if doctype in SALES_DOCTYPES:
         party_gstin = party_details.billing_address_gstin or party_details.company_gstin
     else:
@@ -240,11 +250,9 @@ def get_place_of_supply(party_details, doctype):
         return
 
     state_code = party_gstin[:2]
-    for state, code in STATE_NUMBERS.items():
-        if code != state_code:
-            continue
 
-        return f"{code}-{state}"
+    if state := get_state(state_code):
+        return f"{state_code}-{state}"
 
 
 def get_gst_accounts(
