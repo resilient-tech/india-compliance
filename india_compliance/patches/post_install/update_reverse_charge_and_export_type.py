@@ -4,6 +4,10 @@ from india_compliance.gst_india.utils import delete_old_fields
 
 DOCTYPES = ("Purchase Invoice", "Sales Invoice")
 
+DOCTYPE_COLUMNS = {
+    doctype: frappe.db.get_table_columns(doctype) for doctype in DOCTYPES
+}
+
 
 def execute():
     update_field_to_check("reverse_charge", "is_reverse_charge", "Y")
@@ -11,8 +15,9 @@ def execute():
 
 
 def update_field_to_check(old_fieldname, new_fieldname, truthy_value):
-    for doctype in DOCTYPES:
-        if old_fieldname not in frappe.db.get_table_columns(doctype):
+    for doctype, columns in DOCTYPE_COLUMNS.items():
+        # Check for new fieldname, is_export_with_gst is only applicable for Sales Invoice
+        if old_fieldname not in columns or new_fieldname not in columns:
             continue
 
         frappe.db.set_value(doctype, {old_fieldname: truthy_value}, new_fieldname, 1)
