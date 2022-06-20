@@ -36,7 +36,7 @@ def execute():
             click.secho(
                 "It seems like you have different GST Accounts for different rates. "
                 "This is no longer supported. "
-                "Please merge these accounts and manually update GST Settings.",
+                "Please merge these accounts and manually update GST Settings.\n",
                 fg="yellow",
             )
             return
@@ -47,7 +47,7 @@ def execute():
     if show_account_type_warning:
         click.secho(
             "The account type for your GST accounts could not be set automatically. "
-            "Please set it manually in GST settings.",
+            "Please set it manually in GST settings.\n",
             fg="yellow",
         )
 

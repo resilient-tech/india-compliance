@@ -35,7 +35,7 @@ def execute():
         toggle_custom_fields(E_INVOICE_FIELDS, True)
         click.secho(
             "Your e-Invoice Settings have been migrated to GST Settings."
-            " Please enable the e-Invoice API in GST Settings manually.",
+            " Please enable the e-Invoice API in GST Settings manually.\n",
             fg="yellow",
         )
 
