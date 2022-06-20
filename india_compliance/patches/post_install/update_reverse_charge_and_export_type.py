@@ -12,7 +12,8 @@ def execute():
 
 def update_field_to_check(old_fieldname, new_fieldname, truthy_value):
     for doctype in DOCTYPES:
-        if old_fieldname not in frappe.db.get_table_columns(doctype):
+        doc_columns = frappe.db.get_table_columns(doctype)
+        if old_fieldname not in doc_columns or new_fieldname not in doc_columns:
             continue
 
         frappe.db.set_value(doctype, {old_fieldname: truthy_value}, new_fieldname, 1)
