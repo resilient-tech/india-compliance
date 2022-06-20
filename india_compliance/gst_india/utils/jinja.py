@@ -6,7 +6,6 @@ import pyqrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
     TRANSPORT_MODES,
@@ -23,16 +22,6 @@ def add_spacing(string, interval):
 
     string = str(string)
     return " ".join(string[i : i + interval] for i in range(0, len(string), interval))
-
-
-def get_state(state_number):
-    """Get state from State Number"""
-
-    state_number = str(state_number)
-
-    for state, code in STATE_NUMBERS.items():
-        if code == state_number:
-            return state
 
 
 def get_sub_supply_type(code):
