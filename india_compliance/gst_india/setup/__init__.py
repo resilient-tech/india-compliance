@@ -2,7 +2,7 @@ import json
 
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
-from frappe.utils import nowdate
+from frappe.utils import now_datetime, nowdate
 
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
@@ -29,7 +29,7 @@ def after_install():
     create_property_setters()
     create_address_template()
     setup_default_gst_settings()
-    frappe.enqueue(create_hsn_codes, now=frappe.flags.in_test)
+    create_hsn_codes()
 
 
 def create_property_setters():
@@ -54,16 +54,39 @@ def create_address_template():
 
 
 def create_hsn_codes():
-    for code_type in ("hsn_code", "sac_code"):
-        for code in json.loads(read_data_file(f"{code_type}s.json")):
-            frappe.get_doc(
-                {
-                    "doctype": "GST HSN Code",
-                    "description": code["description"],
-                    "hsn_code": code[code_type],
-                    "name": code[code_type],
-                }
-            ).db_insert(ignore_if_duplicate=True)
+    user = frappe.session.user
+    now = now_datetime()
+
+    fields = [
+        "name",
+        "creation",
+        "modified",
+        "owner",
+        "modified_by",
+        "hsn_code",
+        "description",
+    ]
+
+    hsn_codes = [
+        [
+            code["hsn_code"],
+            now,
+            now,
+            user,
+            user,
+            code["hsn_code"],
+            code["description"],
+        ]
+        for code in json.loads(read_data_file("hsn_codes.json"))
+    ]
+
+    frappe.db.bulk_insert(
+        "GST HSN Code",
+        fields,
+        hsn_codes,
+        ignore_duplicates=True,
+        chunk_size=20_000,
+    )
 
 
 def setup_default_gst_settings():
