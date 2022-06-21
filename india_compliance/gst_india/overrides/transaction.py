@@ -89,10 +89,10 @@ def validate_mandatory_fields(doc, fields):
             )
 
 
-def validate_gst_accounts(doc):
+def validate_gst_accounts_for_selling_docs(doc):
     """
-    Validate GST accounts before invoice creation
-    - Only Output Accounts should be allowed in GST Sales Invoice
+    Validate GST accounts before doc creation
+    - Only Output Accounts should be allowed in Selling Docs
     - If supply made to SEZ/Overseas without payment of tax, then no GST account should be specified
     - SEZ supplies should not have CGST or SGST account
     - Inter-State supplies should not have CGST or SGST account
@@ -123,7 +123,7 @@ def validate_gst_accounts(doc):
             frappe.throw(
                 _(
                     "{0} is not an Output GST Account and cannot be used in Sales"
-                    " Transactions."
+                    " Transactions"
                 ).format(bold(account_head))
             )
 
@@ -144,6 +144,65 @@ def validate_gst_accounts(doc):
 
         # Intra State supplies should not have IGST account
         elif account_head == output_accounts.igst_account:
+            frappe.throw(
+                _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
+                    row.idx
+                )
+            )
+
+
+def validate_gst_accounts_for_buying_docs(doc):
+    """
+    Validate GST accounts before doc creation
+    - Only valid GST accounts should be allowed in Buying Docs
+    - SEZ purchases should not have CGST or SGST account
+    - Inter-State purchases should not have CGST or SGST account
+    - Intra-State purchases should not have IGST account
+    """
+
+    if not doc.taxes:
+        return
+
+    accounts_list = get_all_gst_accounts(doc.company)
+    input_accounts = get_gst_accounts_by_type(doc.company, "Input")
+    rc_accounts = get_gst_accounts_by_type(doc.company, "Reverse Charge")
+    valid_accounts = input_accounts.values()
+
+    if doc.is_reverse_charge:
+        valid_accounts += rc_accounts.values()
+
+    for row in doc.taxes:
+        account_head = row.account_head
+
+        if account_head not in accounts_list or not row.tax_amount:
+            continue
+
+        if account_head not in valid_accounts:
+            frappe.throw(
+                _("{0} is an Invalid GST Account for your Purchase Transaction").format(
+                    bold(account_head)
+                )
+            )
+
+        # Inter State supplies should not have CGST or SGST account
+        if (
+            doc.place_of_supply[:2] != doc.company_gstin[:2]
+            or doc.gst_category == "SEZ"
+        ):
+            if account_head in (
+                input_accounts.cgst_account,
+                input_accounts.sgst_account,
+                rc_accounts.cgst_account,
+                rc_accounts.sgst_account,
+            ):
+                frappe.throw(
+                    _(
+                        "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
+                    ).format(row.idx)
+                )
+
+        # Intra State supplies should not have IGST account
+        elif account_head in (input_accounts.igst_account, rc_accounts.igst_account):
             frappe.throw(
                 _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
                     row.idx
@@ -459,12 +518,7 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
     return default_tax
 
 
-def validate_reverse_charge_transaction(doc, method):
-    country = frappe.get_cached_value("Company", doc.company, "country")
-
-    if country != "India":
-        return
-
+def validate_reverse_charge_transaction(doc, method=None):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
 
@@ -522,5 +576,24 @@ def validate_sales_transaction(doc, method=None):
 
     validate_mandatory_fields(doc, ("company_gstin",))
     validate_overseas_gst_category(doc)
-    validate_gst_accounts(doc)
+    validate_gst_accounts_for_selling_docs(doc)
     validate_hsn_code(doc)
+
+
+def validate_purchase_transaction(doc, method=None):
+    if not is_indian_registered_company(doc):
+        return False
+
+    if validate_items(doc) is False:
+        # If there are no GST items, then no need to proceed further
+        return False
+
+    set_place_of_supply(doc)
+
+    if doc.doctype not in ("Purchase Order", "Purchase Receipt"):
+        update_taxable_values(doc)
+
+    validate_mandatory_fields(doc, ("company_gstin",))
+    validate_overseas_gst_category(doc)
+    validate_gst_accounts_for_buying_docs(doc)
+    validate_reverse_charge_transaction(doc)

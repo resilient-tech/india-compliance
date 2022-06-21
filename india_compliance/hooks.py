@@ -77,36 +77,20 @@ doc_events = {
         )
     },
     "Purchase Invoice": {
-        "validate": [
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.update_taxable_values",
-            "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
-            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
-        ]
+        "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
     },
     "Purchase Order": {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
-            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
-        )
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_purchase_transaction",
     },
     "Purchase Receipt": {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
-            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
-        )
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_purchase_transaction",
     },
     "Sales Invoice": {
         "on_trash": (
             "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
-        "validate": [
-            "india_compliance.gst_india.overrides.sales_invoice.validate",
-        ],
+        "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
     },
     "Sales Order": {
         "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
