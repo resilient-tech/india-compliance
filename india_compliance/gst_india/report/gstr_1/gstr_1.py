@@ -257,7 +257,10 @@ class Gstr1Report(object):
                     taxable_value += abs(net_amount)
                 elif (
                     not tax_rate
-                    and self.filters.get("type_of_business") == "EXPORT"
+                    and (
+                        self.filters.get("type_of_business") == "EXPORT"
+                        or invoice_details.get("gst_category") == "SEZ"
+                    )
                     and not invoice_details.get("is_export_with_gst")
                 ):
                     taxable_value += abs(net_amount)
@@ -481,8 +484,8 @@ class Gstr1Report(object):
                 in ("Overseas", "SEZ")
             ):
                 self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
-                    0, items.keys()
-                )
+                    0, []
+                ).extend(items)
 
     def get_columns(self):
         self.other_columns = []
@@ -939,7 +942,9 @@ def get_json(filters, report_name, data):
 
     elif filters["type_of_business"] == "EXPORT":
         for item in report_data[:-1]:
-            res.setdefault(item["export_type"], []).append(item)
+            res.setdefault(item["export_type"], {}).setdefault(
+                item["invoice_number"], []
+            ).append(item)
 
         out = get_export_json(res)
         gst_json["exp"] = out
@@ -1135,24 +1140,31 @@ def get_b2cl_json(res, gstin):
 
 def get_export_json(res):
     out = []
-    for exp_type in res:
-        exp_item, inv = {"exp_typ": exp_type, "inv": []}, []
 
-        for row in res[exp_type]:
-            inv_item = get_basic_invoice_detail(row)
-            inv_item["itms"] = [
-                {
-                    "txval": flt(row["taxable_value"], 2),
-                    "rt": row["rate"] or 0,
-                    "iamt": 0,
-                    "csamt": 0,
-                }
-            ]
+    for export_type, invoice_wise_items in res.items():
+        export_type_invoices = []
 
-            inv.append(inv_item)
+        for items in invoice_wise_items.values():
+            invoice = get_basic_invoice_detail(items[0])
+            invoice_items = invoice.setdefault("itms", [])
 
-        exp_item["inv"] = inv
-        out.append(exp_item)
+            for item in items:
+                invoice_items.append(
+                    {
+                        "txval": flt(item["taxable_value"], 2),
+                        "rt": flt(item["rate"]),
+                        "iamt": (
+                            flt((item["taxable_value"] * flt(item["rate"])) / 100.0, 2)
+                            if export_type == "WPAY"
+                            else 0
+                        ),
+                        "csamt": flt(item.get("cess_amount"), 2) or 0,
+                    }
+                )
+
+            export_type_invoices.append(invoice)
+
+        out.append({"exp_typ": export_type, "inv": export_type_invoices})
 
     return out
 
@@ -1286,7 +1298,6 @@ def get_rate_and_tax_details(row, gstin):
 
     # calculate tax amount added
     tax = flt((row["taxable_value"] * rate) / 100.0, 2)
-    frappe.errprint([tax, tax / 2])
     if (
         row.get("billing_address_gstin")
         and gstin[0:2] == row["billing_address_gstin"][0:2]
