@@ -70,6 +70,7 @@ STATE_NUMBERS = {
     "Uttar Pradesh": "09",
     "Uttarakhand": "05",
     "West Bengal": "19",
+    "Other Countries": "96",
 }
 
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)

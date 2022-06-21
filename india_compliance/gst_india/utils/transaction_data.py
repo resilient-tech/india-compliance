@@ -285,11 +285,11 @@ class GSTTransactionData:
         )
 
         if address.gst_state_number == 97:  # For Other Territory
-            address.pincode = 999999
+            address.pincode = "999999"
 
         if address.country != "India":
             address.gst_state_number = 96
-            address.pincode = 999999
+            address.pincode = "999999"
 
         self.check_missing_address_fields(address, validate_gstin)
 

@@ -242,6 +242,9 @@ def get_place_of_supply(party_details, doctype):
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
     if doctype in SALES_DOCTYPES:
+        if party_details.gst_category == "Overseas":
+            return "96-Other Countries"
+
         party_gstin = party_details.billing_address_gstin or party_details.company_gstin
     else:
         party_gstin = party_details.company_gstin or party_details.supplier_gstin
