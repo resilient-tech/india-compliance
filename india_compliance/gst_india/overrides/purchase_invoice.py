@@ -13,12 +13,12 @@ def validate(doc, method=None):
     if validate_purchase_transaction(doc) is False:
         return
 
+    update_itc_totals(doc)
     validate_mandatory_fields(doc, ("place_of_supply", "gst_category"))
-    update_itc_availed_fields(doc)
     validate_supplier_gstin(doc)
 
 
-def update_itc_availed_fields(doc, method=None):
+def update_itc_totals(doc, method=None):
     # Initialize values
     doc.itc_integrated_tax = 0
     doc.itc_state_tax = 0
@@ -44,9 +44,6 @@ def update_itc_availed_fields(doc, method=None):
 def validate_supplier_gstin(doc):
     if doc.company_gstin == doc.supplier_gstin:
         frappe.throw(
-            _(
-                "Supplier GSTIN and Company GSTIN cannot be same. Please"
-                " change the Supplier Address."
-            ),
+            _("Supplier GSTIN and Company GSTIN cannot be the same"),
             title=_("Invalid Supplier GSTIN"),
         )

@@ -98,10 +98,7 @@ def validate_fields_and_set_status_for_e_invoice(doc):
 def validate_billing_address_gstin(doc):
     if doc.company_gstin == doc.billing_address_gstin:
         frappe.throw(
-            _(
-                "Billing Address GSTIN and Company GSTIN cannot be same. Please"
-                " change the Billing Address"
-            ),
+            _("Billing Address GSTIN and Company GSTIN cannot be the same"),
             title=_("Invalid Billing Address GSTIN"),
         )
 
