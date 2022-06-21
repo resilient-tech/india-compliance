@@ -20,16 +20,14 @@ def update_taxable_values(doc, method=None):
     Update item-wise taxable values for tax calculation.
     """
 
-    tax_breakup = get_taxes_and_charges_breakup(doc)
-    net_total = doc.base_net_total
+    if not (net_total := doc.base_net_total):
+        return
+
     item_net_total = 0
+    tax_breakup = get_taxes_and_charges_breakup(doc)
 
     # apportion pre_tax_charges to items
     for row in doc.get("items"):
-        if row.base_net_amount == 0:
-            row.taxable_value = 0
-            continue
-
         row.taxable_value = flt(
             row.base_net_amount * (1 + tax_breakup["pre_tax_charges"] / net_total),
             row.precision("taxable_value"),
@@ -59,28 +57,48 @@ def get_taxes_and_charges_breakup(doc):
     total_taxes = 0
     withholding_taxes = 0
     post_tax_charges = 0
-    previous_row_ref = 0
-    account_heads = set()
+    previous_row_ref = set()
+    gst_account_present = False
 
     # check for previous row reference
     for row in doc.get("taxes"):
-        account_heads.add(row.account_head)
-        if (
-            row.account_head in gst_accounts
-            and row.charge_type == "On Previous Row Total"
-        ):
-            previous_row_ref = cint(row.row_id)
-            break
+        if row.account_head not in gst_accounts:
+            continue
 
-    # check to ensure that atleast one gst account is present
-    # else all charges shall be pre_tax_charges
-    # applicable where no tax is charged
-    for account in account_heads:
-        if account in gst_accounts:
-            break
+        gst_account_present = True
+        if row.charge_type == "On Previous Row Total":
+            previous_row_ref.add(cint(row.row_id))
 
-    else:
-        previous_row_ref = len(doc.get("taxes")) + 1
+        # no logical way to use `On Previous Row Amount` in GST
+        elif row.charge_type == "On Previous Row Amount":
+            frappe.throw(
+                _(
+                    "Please ensure that you are using correct Charge Type in row {0} of"
+                    " taxes and charges. Currently we do not support 'On Previous Row"
+                    " Amount' for GST Account. In case of genuine use case kindly raise"
+                    " a github issue.".format(row.idx),
+                    title=_("Invalid Charge Type for GST"),
+                )
+            )
+
+    # no logical way to have more than one `previous_row_reference` in GST
+    if len(previous_row_ref) > 1:
+        frappe.throw(
+            _(
+                "You are using multiple Row References in of taxes and charges for GST"
+                " Account. Currently we do not support use of more than one Row"
+                " References for GST Accounts. In case of genuine use case kindly raise"
+                " a github issue.",
+                title=_("Invalid Row References for GST"),
+            )
+        )
+
+    if not gst_account_present:
+        # all charges shall be pre_tax_charges
+        previous_row_ref.add(len(doc.get("taxes")) + 1)
+
+    if previous_row_ref:
+        previous_row_ref = next(iter(previous_row_ref))
 
     # segregate taxes into pre_tax_charges, total_taxes, withholding_taxes, post_tax_charges
     for row in doc.get("taxes"):
