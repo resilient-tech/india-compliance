@@ -16,6 +16,14 @@ from india_compliance.gst_india.utils import (
 
 
 def update_taxable_values(doc, method=None):
+    if doc.doctype not in (
+        "Delivery Note",
+        "Sales Invoice",
+        "POS Invoice",
+        "Purchase Invoice",
+    ):
+        return
+
     country = frappe.get_cached_value("Company", doc.company, "country")
 
     if country != "India":
@@ -89,13 +97,44 @@ def validate_mandatory_fields(doc, fields):
             )
 
 
-def validate_gst_accounts_for_selling_docs(doc):
+def get_valid_accounts(doc, with_state_accounts=False):
+    all_valid_accounts = []
+
+    if with_state_accounts:
+        intra_state_accounts = []
+        inter_state_accounts = []
+
+    def add_to_valid_accounts(account_type):
+        accounts = get_gst_accounts_by_type(doc.company, account_type)
+        all_valid_accounts.extend(accounts.values())
+
+        if not with_state_accounts:
+            return
+
+        intra_state_accounts.append(accounts.cgst_account)
+        intra_state_accounts.append(accounts.sgst_account)
+        inter_state_accounts.append(accounts.igst_account)
+
+    if doc.doctype in SALES_DOCTYPES:
+        add_to_valid_accounts("Output")
+    else:
+        add_to_valid_accounts("Input")
+
+        if doc.is_reverse_charge:
+            add_to_valid_accounts("Reverse Charge")
+
+    if with_state_accounts:
+        return all_valid_accounts, intra_state_accounts, inter_state_accounts
+
+    return all_valid_accounts
+
+
+def validate_gst_accounts(doc):
     """
-    Validate GST accounts before doc creation
-    - Only Output Accounts should be allowed in Selling Docs
-    - If supply made to SEZ/Overseas without payment of tax, then no GST account should be specified
-    - SEZ supplies should not have CGST or SGST account
-    - Inter-State supplies should not have CGST or SGST account
+    Validate GST accounts
+    - Only Valid Accounts should be allowed
+    - If export without GST, then no GST account should be specified
+    - SEZ / Inter-State supplies should not have CGST or SGST account
     - Intra-State supplies should not have IGST account
     """
 
@@ -103,7 +142,15 @@ def validate_gst_accounts_for_selling_docs(doc):
         return
 
     accounts_list = get_all_gst_accounts(doc.company)
-    output_accounts = get_gst_accounts_by_type(doc.company, "Output")
+    all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
+        doc, with_state_accounts=True
+    )
+
+    is_export_without_gst = (
+        doc.doctype in SALES_DOCTYPES
+        and doc.gst_category in ("SEZ", "Overseas")
+        and not doc.is_export_with_gst
+    )
 
     for row in doc.taxes:
         account_head = row.account_head
@@ -111,7 +158,7 @@ def validate_gst_accounts_for_selling_docs(doc):
         if account_head not in accounts_list or not row.tax_amount:
             continue
 
-        if doc.gst_category in ("SEZ", "Overseas") and not doc.is_export_with_gst:
+        if is_export_without_gst:
             frappe.throw(
                 _(
                     "Cannot charge GST in Row #{0} since export is without"
@@ -119,67 +166,9 @@ def validate_gst_accounts_for_selling_docs(doc):
                 ).format(row.idx)
             )
 
-        if account_head not in output_accounts.values():
+        if account_head not in all_valid_accounts:
             frappe.throw(
-                _(
-                    "{0} is not an Output GST Account and cannot be used in Sales"
-                    " Transactions"
-                ).format(bold(account_head))
-            )
-
-        # Inter State supplies should not have CGST or SGST account
-        if (
-            doc.place_of_supply[:2] != doc.company_gstin[:2]
-            or doc.gst_category == "SEZ"
-        ):
-            if account_head in (
-                output_accounts.cgst_account,
-                output_accounts.sgst_account,
-            ):
-                frappe.throw(
-                    _(
-                        "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
-                    ).format(row.idx)
-                )
-
-        # Intra State supplies should not have IGST account
-        elif account_head == output_accounts.igst_account:
-            frappe.throw(
-                _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
-                    row.idx
-                )
-            )
-
-
-def validate_gst_accounts_for_buying_docs(doc):
-    """
-    Validate GST accounts before doc creation
-    - Only valid GST accounts should be allowed in Buying Docs
-    - SEZ purchases should not have CGST or SGST account
-    - Inter-State purchases should not have CGST or SGST account
-    - Intra-State purchases should not have IGST account
-    """
-
-    if not doc.taxes:
-        return
-
-    accounts_list = get_all_gst_accounts(doc.company)
-    input_accounts = get_gst_accounts_by_type(doc.company, "Input")
-    rc_accounts = get_gst_accounts_by_type(doc.company, "Reverse Charge")
-    valid_accounts = input_accounts.values()
-
-    if doc.is_reverse_charge:
-        valid_accounts += rc_accounts.values()
-
-    for row in doc.taxes:
-        account_head = row.account_head
-
-        if account_head not in accounts_list or not row.tax_amount:
-            continue
-
-        if account_head not in valid_accounts:
-            frappe.throw(
-                _("{0} is an Invalid GST Account for your Purchase Transaction").format(
+                _("{0} is not a valid GST account for this transaction").format(
                     bold(account_head)
                 )
             )
@@ -189,12 +178,7 @@ def validate_gst_accounts_for_buying_docs(doc):
             doc.place_of_supply[:2] != doc.company_gstin[:2]
             or doc.gst_category == "SEZ"
         ):
-            if account_head in (
-                input_accounts.cgst_account,
-                input_accounts.sgst_account,
-                rc_accounts.cgst_account,
-                rc_accounts.sgst_account,
-            ):
+            if account_head in intra_state_accounts:
                 frappe.throw(
                     _(
                         "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
@@ -202,7 +186,7 @@ def validate_gst_accounts_for_buying_docs(doc):
                 )
 
         # Intra State supplies should not have IGST account
-        elif account_head in (input_accounts.igst_account, rc_accounts.igst_account):
+        elif account_head in inter_state_accounts:
             frappe.throw(
                 _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
                     row.idx
@@ -561,7 +545,7 @@ def validate_reverse_charge_transaction(doc, method=None):
     doc.eligibility_for_itc = "ITC on Reverse Charge"
 
 
-def validate_sales_transaction(doc, method=None):
+def validate_transaction(doc):
     if not is_indian_registered_company(doc):
         return False
 
@@ -570,30 +554,21 @@ def validate_sales_transaction(doc, method=None):
         return False
 
     set_place_of_supply(doc)
-
-    if doc.doctype not in ("Quotation", "Sales Order"):
-        update_taxable_values(doc)
-
+    update_taxable_values(doc)
     validate_mandatory_fields(doc, ("company_gstin",))
     validate_overseas_gst_category(doc)
-    validate_gst_accounts_for_selling_docs(doc)
+    validate_gst_accounts(doc)
+
+
+def validate_sales_transaction(doc, method=None):
+    if validate_transaction(doc) is False:
+        return False
+
     validate_hsn_code(doc)
 
 
 def validate_purchase_transaction(doc, method=None):
-    if not is_indian_registered_company(doc):
+    if validate_transaction(doc) is False:
         return False
 
-    if validate_items(doc) is False:
-        # If there are no GST items, then no need to proceed further
-        return False
-
-    set_place_of_supply(doc)
-
-    if doc.doctype not in ("Purchase Order", "Purchase Receipt"):
-        update_taxable_values(doc)
-
-    validate_mandatory_fields(doc, ("company_gstin",))
-    validate_overseas_gst_category(doc)
-    validate_gst_accounts_for_buying_docs(doc)
     validate_reverse_charge_transaction(doc)

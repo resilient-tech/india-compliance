@@ -251,7 +251,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
         },
     ],
-    # Sales Item Fields
+    # Taxable Value
     (
         "Delivery Note Item",
         "Sales Invoice Item",
