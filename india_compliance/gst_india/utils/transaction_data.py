@@ -284,11 +284,11 @@ class GSTTransactionData:
             as_dict=True,
         )
 
-        if address.gst_state_number == 97:  # For Other Territory
+        if address.gst_state_number == "97":  # For Other Territory
             address.pincode = "999999"
 
         if address.country != "India":
-            address.gst_state_number = 96
+            address.gst_state_number = "96"
             address.pincode = "999999"
 
         self.check_missing_address_fields(address, validate_gstin)
@@ -296,7 +296,7 @@ class GSTTransactionData:
         return frappe._dict(
             {
                 "gstin": address.get("gstin") or "URP",
-                "state_number": int(address.gst_state_number),
+                "state_number": address.gst_state_number,
                 "address_title": self.sanitize_value(address.address_title, 2),
                 "address_line1": self.sanitize_value(address.address_line1, 3),
                 "address_line2": self.sanitize_value(address.address_line2, 3),

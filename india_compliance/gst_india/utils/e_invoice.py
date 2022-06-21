@@ -360,11 +360,6 @@ class EInvoiceData(GSTTransactionData):
         )
         self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
-    def get_address_details(self, address_name, validate_gstin=False):
-        address_details = super().get_address_details(address_name, validate_gstin)
-        address_details["state_number"] = str(address_details["state_number"])
-        return address_details
-
     def get_invoice_data(self):
         if self.sandbox:
             seller = {
