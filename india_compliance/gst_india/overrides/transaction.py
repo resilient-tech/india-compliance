@@ -133,7 +133,7 @@ def validate_gst_accounts(doc):
     """
     Validate GST accounts
     - Only Valid Accounts should be allowed
-    - If export without GST, then no GST account should be specified
+    - If export is made without GST, then no GST account should be specified
     - SEZ / Inter-State supplies should not have CGST or SGST account
     - Intra-State supplies should not have IGST account
     """
@@ -554,10 +554,10 @@ def validate_transaction(doc):
         return False
 
     set_place_of_supply(doc)
-    update_taxable_values(doc)
     validate_mandatory_fields(doc, ("company_gstin",))
     validate_overseas_gst_category(doc)
     validate_gst_accounts(doc)
+    update_taxable_values(doc)
 
 
 def validate_sales_transaction(doc, method=None):
