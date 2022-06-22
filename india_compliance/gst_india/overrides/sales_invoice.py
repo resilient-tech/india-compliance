@@ -5,7 +5,7 @@ from frappe.model import delete_doc
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
-    validate_sales_transaction,
+    validate_transaction,
 )
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -48,7 +48,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if validate_sales_transaction(doc) is False:
+    if validate_transaction(doc) is False:
         return
 
     validate_invoice_number(doc)

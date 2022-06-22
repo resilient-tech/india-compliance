@@ -65,7 +65,9 @@ doc_events = {
         ),
     },
     "Delivery Note": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india"
@@ -80,10 +82,14 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
     },
     "Purchase Order": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_purchase_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Purchase Receipt": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_purchase_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Sales Invoice": {
         "on_trash": (
@@ -93,7 +99,9 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
     },
     "Sales Order": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Supplier": {
         "validate": [
@@ -108,10 +116,14 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
     },
     "POS Invoice": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Quotation": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
 }
 

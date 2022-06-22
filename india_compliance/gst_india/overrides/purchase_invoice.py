@@ -4,13 +4,13 @@ from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
-    validate_purchase_transaction,
+    validate_transaction,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def validate(doc, method=None):
-    if validate_purchase_transaction(doc) is False:
+    if validate_transaction(doc) is False:
         return
 
     update_itc_totals(doc)
