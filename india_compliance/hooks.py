@@ -45,8 +45,8 @@ doctype_list_js = {
 doc_events = {
     "Address": {
         "validate": [
-            "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
             "india_compliance.gst_india.overrides.address.validate",
+            "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
         ],
     },
     "Company": {
@@ -65,7 +65,9 @@ doc_events = {
         ),
     },
     "Delivery Note": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "DocType": {
         "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india"
@@ -77,39 +79,29 @@ doc_events = {
         )
     },
     "Purchase Invoice": {
-        "validate": [
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.update_taxable_values",
-            "india_compliance.gst_india.overrides.purchase_invoice.update_itc_availed_fields",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
-            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
-        ]
+        "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
     },
     "Purchase Order": {
         "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
-            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
-        )
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Purchase Receipt": {
         "validate": (
-            "india_compliance.gst_india.overrides.transaction.set_place_of_supply",
-            "india_compliance.gst_india.overrides.transaction.validate_overseas_gst_category",
-            "india_compliance.gst_india.overrides.transaction.validate_reverse_charge_transaction",
-        )
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Sales Invoice": {
         "on_trash": (
             "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
-        "validate": [
-            "india_compliance.gst_india.overrides.sales_invoice.validate",
-        ],
+        "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
     },
     "Sales Order": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Supplier": {
         "validate": [
@@ -124,10 +116,14 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
     },
     "POS Invoice": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
     "Quotation": {
-        "validate": "india_compliance.gst_india.overrides.transaction.validate_sales_transaction",
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
     },
 }
 

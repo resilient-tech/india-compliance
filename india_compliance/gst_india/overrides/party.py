@@ -38,7 +38,7 @@ def validate_pan(doc):
         frappe.throw(_("Invalid PAN format"))
 
 
-def set_docs_with_previous_gstin(doc, method=True):
+def set_docs_with_previous_gstin(doc, method=None):
     if not frappe.request or frappe.flags.in_update_docs_with_previous_gstin:
         return
 
