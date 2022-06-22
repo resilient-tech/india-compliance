@@ -700,8 +700,8 @@ class EWaybillData(GSTTransactionData):
         if self.doc.gst_category == "SEZ":
             self.billing_address.state_number = 96
 
-    def get_address_details(self, address_name, validate_gstin=False):
-        address_details = super().get_address_details(address_name, validate_gstin)
+    def get_address_details(self, *args, **kwargs):
+        address_details = super().get_address_details(*args, **kwargs)
         address_details.state_number = int(address_details.state_number)
 
         return address_details

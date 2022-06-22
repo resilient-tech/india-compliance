@@ -34,8 +34,8 @@ def validate_state(doc):
     - Validate GST State Number with GSTIN.
     """
     if doc.country != "India":
-        doc.gst_state = "Other Countries"
-        doc.gst_state_number = "96"
+        doc.gst_state = None
+        doc.gst_state_number = None
         return
 
     if not doc.state:
