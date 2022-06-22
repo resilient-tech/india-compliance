@@ -231,8 +231,6 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
         hsn_taxable_amount.setdefault(item_or_hsn, 0)
         hsn_taxable_amount[item_or_hsn] += itemised_taxable_amount.get(item)
 
-    print(hsn_tax, "\n", hsn_taxable_amount)
-
     return hsn_tax, hsn_taxable_amount
 
 
