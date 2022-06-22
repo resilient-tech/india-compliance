@@ -27,27 +27,29 @@ def update_taxable_values(doc, valid_accounts):
     apportioned_charges = 0
 
     if doc.taxes:
-        has_gst = any(
+        if any(
             row
             for row in doc.taxes
             if row.tax_amount and row.account_head in valid_accounts
-        )
-
-        reference_row_index = (
-            -1
-            if not has_gst
-            else next(
+        ):
+            reference_row_index = next(
                 (
                     cint(row.row_id) - 1
                     for row in doc.taxes
                     if row.charge_type == "On Previous Row Total"
                     and row.tax_amount
                     and row.account_head in valid_accounts
-                )
+                ),
+                None,
             )
-        )
 
-        total_charges = doc.taxes[reference_row_index].base_total - doc.base_net_amount
+        else:
+            reference_row_index = -1
+
+        if reference_row_index is not None:
+            total_charges = (
+                doc.taxes[reference_row_index].base_total - doc.base_net_total
+            )
 
     # base net total may be zero if invoice has zero rated items + shipping
     total_value = doc.base_net_total if doc.base_net_total else doc.total_qty
