@@ -34,18 +34,22 @@ class Gstr1Report(object):
 			NULLIF(billing_address_gstin, '') as billing_address_gstin,
 			place_of_supply,
 			ecommerce_gstin,
-			is_reverse_charge,
 			return_against,
 			is_return,
 			is_debit_note,
 			gst_category,
-			is_export_with_gst as export_type,
 			port_code,
 			shipping_bill_number,
 			shipping_bill_date,
 			reason_for_issuing_document,
 			company_gstin
 		"""
+
+        self.settings = frappe.get_cached_doc("GST Settings")
+        if self.settings.enable_overseas_transactions:
+            self.select_columns += ", is_export_with_gst as export_type"
+        if self.settings.enable_reverse_charge_in_sales:
+            self.select_columns += ", is_reverse_charge"
 
     def run(self):
         self.get_columns()
@@ -491,6 +495,31 @@ class Gstr1Report(object):
         self.other_columns = []
         self.tax_columns = []
 
+        reverse_charge_columns = (
+            [
+                {
+                    "fieldname": "is_reverse_charge",
+                    "label": "Reverse Charge",
+                    "fieldtype": "Data",
+                }
+            ]
+            if self.settings.enable_reverse_charge_in_sales
+            else []
+        )
+
+        export_type_columns = (
+            [
+                {
+                    "fieldname": "export_type",
+                    "label": "Export Type",
+                    "fieldtype": "Data",
+                    "hidden": 1,
+                }
+            ]
+            if self.settings.enable_overseas_transactions
+            else []
+        )
+
         if self.filters.get("type_of_business") != "NIL Rated":
             self.tax_columns = [
                 {"fieldname": "rate", "label": "Rate", "fieldtype": "Int", "width": 60},
@@ -541,11 +570,9 @@ class Gstr1Report(object):
                     "fieldtype": "Data",
                     "width": 100,
                 },
-                {
-                    "fieldname": "is_reverse_charge",
-                    "label": "Reverse Charge",
-                    "fieldtype": "Data",
-                },
+            ]
+            self.invoice_columns += reverse_charge_columns
+            self.invoice_columns += [
                 {
                     "fieldname": "gst_category",
                     "label": "Invoice Type",
@@ -558,6 +585,7 @@ class Gstr1Report(object):
                     "width": 120,
                 },
             ]
+
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
@@ -643,17 +671,10 @@ class Gstr1Report(object):
                     "options": "Sales Invoice",
                     "width": 120,
                 },
-                {
-                    "fieldname": "is_reverse_charge",
-                    "label": "Reverse Charge",
-                    "fieldtype": "Data",
-                },
-                {
-                    "fieldname": "export_type",
-                    "label": "Export Type",
-                    "fieldtype": "Data",
-                    "hidden": 1,
-                },
+            ]
+            self.invoice_columns += reverse_charge_columns + export_type_columns
+
+            self.invoice_columns += [
                 {
                     "fieldname": "reason_for_issuing_document",
                     "label": "Reason For Issuing document",
@@ -678,6 +699,7 @@ class Gstr1Report(object):
                     "width": 120,
                 },
             ]
+
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
@@ -726,12 +748,11 @@ class Gstr1Report(object):
                     "options": "Sales Invoice",
                     "width": 120,
                 },
-                {
-                    "fieldname": "export_type",
-                    "label": "Export Type",
-                    "fieldtype": "Data",
-                    "hidden": 1,
-                },
+            ]
+
+            self.invoice_columns += export_type_columns
+
+            self.invoice_columns += [
                 {
                     "fieldname": "reason_for_issuing_document",
                     "label": "Reason For Issuing document",

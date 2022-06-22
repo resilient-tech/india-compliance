@@ -210,10 +210,17 @@ class GSTR3BReport(Document):
         if reverse_charge:
             condition += "AND is_reverse_charge = 1"
 
+        select_column = """name, gst_category, place_of_supply"""
+
+        if frappe.get_cached_value(
+            "GST Settings", "GST Settings", "enable_overseas_transactions"
+        ):
+            select_column += ", is_export_with_gst"
+
         invoice_details = frappe.db.sql(
             """
             SELECT
-                name, gst_category, is_export_with_gst, place_of_supply
+                {select_column}
             FROM
                 `tab{doctype}`
             WHERE
@@ -226,7 +233,7 @@ class GSTR3BReport(Document):
                 {reverse_charge}
             ORDER BY name
         """.format(
-                doctype=doctype, reverse_charge=condition
+                select_column=select_column, doctype=doctype, reverse_charge=condition
             ),
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
             as_dict=1,
@@ -492,6 +499,7 @@ class GSTR3BReport(Document):
             )
 
     def get_account_heads(self):
+
         account_map = {
             "sgst_account": "samt",
             "cess_account": "csamt",
