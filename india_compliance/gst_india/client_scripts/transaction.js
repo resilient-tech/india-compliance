@@ -29,6 +29,7 @@ function get_tax_template(frm) {
         "supplier_gstin",
         "company_gstin",
         "tax_category",
+        "gst_category",
     ];
 
     const party_details = Object.fromEntries(
