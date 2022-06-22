@@ -45,8 +45,8 @@ doctype_list_js = {
 doc_events = {
     "Address": {
         "validate": [
-            "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
             "india_compliance.gst_india.overrides.address.validate",
+            "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
         ],
     },
     "Company": {
