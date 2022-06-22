@@ -246,6 +246,16 @@ def get_place_of_supply(party_details, doctype):
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
             return "96-Other Countries"
+        elif (
+            party_details.gst_category == "Unregistered"
+            and party_details.customer_address
+        ):
+            gst_state_number, gst_state = frappe.db.get_value(
+                "Address",
+                party_details.customer_address,
+                ("gst_state_number", "gst_state"),
+            )
+            return f"{gst_state_number}-{gst_state}"
 
         party_gstin = party_details.billing_address_gstin or party_details.company_gstin
     else:
