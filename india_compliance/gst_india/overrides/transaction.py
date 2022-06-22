@@ -263,7 +263,7 @@ def set_place_of_supply(doc, method=None):
     doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
 
-def validate_hsn_code(doc, method=None):
+def validate_hsn_codes(doc, method=None):
     validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
@@ -273,44 +273,44 @@ def validate_hsn_code(doc, method=None):
     if not validate_hsn_code:
         return
 
-    missing_hsn = []
-    invalid_hsn = []
+    rows_with_missing_hsn = []
+    rows_with_invalid_hsn = []
     min_hsn_digits = int(min_hsn_digits)
 
     for item in doc.items:
         if not (hsn_code := item.get("gst_hsn_code")):
-            if doc._action == "submit":
-                invalid_hsn.append(str(item.idx))
-            else:
-                missing_hsn.append(str(item.idx))
+            rows_with_missing_hsn.append(str(item.idx))
 
         elif len(hsn_code) < min_hsn_digits:
-            invalid_hsn.append(str(item.idx))
+            rows_with_invalid_hsn.append(str(item.idx))
 
     if doc._action == "submit":
-        if not invalid_hsn:
+        # Same error for erroneous rows on submit
+        rows_with_invalid_hsn += rows_with_missing_hsn
+
+        if not rows_with_invalid_hsn:
             return
 
         frappe.throw(
             _(
                 "Please enter a valid HSN/SAC code for the following row numbers:"
                 " <br>{0}"
-            ).format(frappe.bold(", ".join(invalid_hsn)))
+            ).format(frappe.bold(", ".join(rows_with_invalid_hsn)))
         )
 
-    if missing_hsn:
+    if rows_with_missing_hsn:
         frappe.msgprint(
             _(
                 "Please enter HSN/SAC code for the following row numbers: <br>{0}"
-            ).format(frappe.bold(", ".join(missing_hsn)))
+            ).format(frappe.bold(", ".join(rows_with_missing_hsn)))
         )
 
-    if invalid_hsn:
+    if rows_with_invalid_hsn:
         frappe.msgprint(
             _(
                 "HSN/SAC code should be at least {0} digits long for the following"
                 " row numbers: <br>{1}"
-            ).format(min_hsn_digits, frappe.bold(", ".join(invalid_hsn)))
+            ).format(min_hsn_digits, frappe.bold(", ".join(rows_with_invalid_hsn)))
         )
 
 
@@ -564,7 +564,7 @@ def validate_sales_transaction(doc, method=None):
     if validate_transaction(doc) is False:
         return False
 
-    validate_hsn_code(doc)
+    validate_hsn_codes(doc)
 
 
 def validate_purchase_transaction(doc, method=None):
