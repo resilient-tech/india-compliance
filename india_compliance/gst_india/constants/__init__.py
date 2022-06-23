@@ -111,3 +111,17 @@ DISTANCE_REGEX = re.compile(r"\d+")
 
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
+
+EXPORT_TYPE_COLUMNS = dict(
+    fieldtype="Check",
+    label="Is Export With GST",
+    fieldname="is_export_with_gst",
+    width=120,
+)
+
+REVERSE_CHARGE_COLUMNS = dict(
+    fieldtype="Check",
+    label="Is Reverse Charge",
+    fieldname="is_reverse_charge",
+    width=120,
+)
