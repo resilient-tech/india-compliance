@@ -69,9 +69,6 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
-    "DocType": {
-        "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india"
-    },
     "Item": {"validate": "india_compliance.gst_india.overrides.item.validate_hsn_code"},
     "Payment Entry": {
         "validate": (
