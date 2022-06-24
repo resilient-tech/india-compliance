@@ -13,74 +13,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "E-Invoice Summary",
-   "link_count": 0,
-   "link_to": "e-Invoice Summary",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "HSN-wise Summary of Outward Supplies",
-   "link_count": 0,
-   "link_to": "HSN-wise-summary of outward supplies",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Sales and Purchase Reports",
-   "link_count": 4,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GST Sales Register",
-   "link_count": 0,
-   "link_to": "GST Sales Register",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GST Purchase Register",
-   "link_count": 0,
-   "link_to": "GST Purchase Register",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GST Itemised Sales Register",
-   "link_count": 0,
-   "link_to": "GST Itemised Sales Register",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GST Itemised Purchase Register",
-   "link_count": 0,
-   "link_to": "GST Itemised Purchase Register",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Other GST Reports",
    "link_count": 2,
    "onboard": 0,
@@ -143,9 +75,57 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales and Purchase Reports",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Sales Register",
+   "link_count": 0,
+   "link_to": "GST Sales Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Purchase Register",
+   "link_count": 0,
+   "link_to": "GST Purchase Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Itemised Sales Register",
+   "link_count": 0,
+   "link_to": "GST Itemised Sales Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "GST Itemised Purchase Register",
+   "link_count": 0,
+   "link_to": "GST Itemised Purchase Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2022-06-24 09:40:54.113038",
+ "modified": "2022-06-24 21:27:45.929329",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
