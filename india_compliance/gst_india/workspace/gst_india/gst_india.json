@@ -1,0 +1,191 @@
+{
+ "charts": [],
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}}]",
+ "creation": "2022-02-28 19:04:58.655348",
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "expenses",
+ "idx": 0,
+ "label": "GST India",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "E-Invoice Summary",
+   "link_count": 0,
+   "link_to": "e-Invoice Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "HSN-wise Summary of Outward Supplies",
+   "link_count": 0,
+   "link_to": "HSN-wise-summary of outward supplies",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales and Purchase Reports",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Sales Register",
+   "link_count": 0,
+   "link_to": "GST Sales Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Purchase Register",
+   "link_count": 0,
+   "link_to": "GST Purchase Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Itemised Sales Register",
+   "link_count": 0,
+   "link_to": "GST Itemised Sales Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Itemised Purchase Register",
+   "link_count": 0,
+   "link_to": "GST Itemised Purchase Register",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Other GST Reports",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "e-Invoice Summary",
+   "link_count": 0,
+   "link_to": "e-Invoice Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "HSN-wise Summary of Outward Supplies",
+   "link_count": 0,
+   "link_to": "HSN-wise-summary of outward supplies",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Logs",
+   "link_count": 2,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "e-Waybill Log",
+   "link_count": 0,
+   "link_to": "e-Waybill Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "e-Invoice Log",
+   "link_count": 0,
+   "link_to": "e-Invoice Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2022-06-24 09:28:40.895481",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GST India",
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  }
+ ],
+ "sequence_id": 3.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "GSTR-1",
+   "link_to": "GSTR-1",
+   "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "India Compliance Account",
+   "link_to": "india-compliance-account",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "GST Settings",
+   "link_to": "GST Settings",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "HSN Code",
+   "link_to": "GST HSN Code",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "GSTR-3B",
+   "link_to": "GSTR 3B Report",
+   "type": "DocType"
+  }
+ ],
+ "title": "GST India"
+}
