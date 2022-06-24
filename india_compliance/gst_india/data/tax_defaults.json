@@ -433,41 +433,6 @@
                     ],
                     "tax_category": "Reverse Charge Out-State"
                 }
-            ],
-            "*": [
-                {
-                    "title": "VAT 5%",
-                    "taxes": [
-                        {
-                            "account_head": {
-                                "account_name": "VAT 5%",
-                                "tax_rate": 5.0
-                            }
-                        }
-                    ]
-                },
-                {
-                    "title": "VAT 4%",
-                    "taxes": [
-                        {
-                            "account_head": {
-                                "account_name": "VAT 4%",
-                                "tax_rate": 4.0
-                            }
-                        }
-                    ]
-                },
-                {
-                    "title": "VAT 14%",
-                    "taxes": [
-                        {
-                            "account_head": {
-                                "account_name": "VAT 14%",
-                                "tax_rate": 14.0
-                            }
-                        }
-                    ]
-                }
             ]
         }
     }
