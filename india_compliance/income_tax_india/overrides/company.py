@@ -17,7 +17,6 @@ def make_company_fixtures(doc, method=None):
 def create_company_fixtures(company):
     docs = []
     company = company or frappe.db.get_value("Global Defaults", None, "default_company")
-    docs.extend(json.loads(read_data_file("salary_components.json")))
     set_tds_account(docs, company)
 
     for d in docs:
