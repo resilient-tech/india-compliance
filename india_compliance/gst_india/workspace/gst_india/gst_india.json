@@ -110,7 +110,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Logs",
-   "link_count": 2,
+   "link_count": 3,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -133,9 +133,19 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Integration Request",
+   "link_count": 0,
+   "link_to": "Integration Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2022-06-24 09:28:40.895481",
+ "modified": "2022-06-24 09:40:54.113038",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
