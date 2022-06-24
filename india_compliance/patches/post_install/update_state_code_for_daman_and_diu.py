@@ -2,9 +2,6 @@ import frappe
 
 
 def execute():
-    if not frappe.db.exists("Company", {"country": "India"}):
-        return
-
     address = frappe.qb.DocType("Address")
 
     (
