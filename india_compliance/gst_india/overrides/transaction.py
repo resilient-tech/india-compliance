@@ -617,7 +617,7 @@ def validate_reverse_charge_transaction(doc, method=None):
     doc.eligibility_for_itc = "ITC on Reverse Charge"
 
 
-def validate_transaction(doc):
+def validate_transaction(doc, method=None):
     if not is_indian_registered_company(doc):
         return False
 
