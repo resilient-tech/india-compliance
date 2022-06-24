@@ -34,12 +34,6 @@ def execute(filters=None):
                 width=120,
             ),
             dict(
-                fieldtype="Check",
-                label="Is Export With GST",
-                fieldname="is_export_with_gst",
-                width=120,
-            ),
-            dict(
                 fieldtype="Data",
                 label="E-Commerce GSTIN",
                 fieldname="ecommerce_gstin",
@@ -51,7 +45,6 @@ def execute(filters=None):
             "company_gstin",
             "is_reverse_charge",
             "gst_category",
-            "is_export_with_gst",
             "ecommerce_gstin",
         ],
     )
