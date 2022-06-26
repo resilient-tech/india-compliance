@@ -1,4 +1,3 @@
-import copy
 from urllib.parse import urljoin
 
 import requests
@@ -99,16 +98,21 @@ class BaseAPI:
         response_json = None
         log = frappe._dict()
 
-        # TODO: change after fields created in Frappe
-        log.data = copy.deepcopy(request_args)
+        log.update(
+            {
+                "url": request_args.url,
+                "data": request_args.params,
+                "request_headers": dict.copy(request_args.headers),
+            }
+        )
 
         # Don't log API secret
-        log.data["headers"].pop("x-api-key", None)
+        log.request_headers.pop("x-api-key", None)
 
         try:
             response = requests.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
-                log.data["api_request_id"] = api_request_id
+                log.request_id = api_request_id
 
             try:
                 response_json = response.json(object_hook=frappe._dict)
