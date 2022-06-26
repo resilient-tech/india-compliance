@@ -20,10 +20,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                          `When you enter a GSTIN, the permanent address linked to it is
+                        `When you enter a GSTIN, the permanent address linked to it is
                         auto-filled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                      )
+                    )
                     : "",
                 collapsible: 0,
             },
@@ -190,25 +190,17 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                         },
                     };
                 },
-                onchange: async () => {
-                    const { value, last_value } = this.dialog.get_field("link_doctype");
-
-                    if (value !== last_value) {
-                        // await to avoid clash with onchange of link_name field
-                        await this.dialog.set_value("link_name", "");
-                    }
-
-                    // dynamic link isn't supported in dialogs, so below hack
-                    this.dialog.fields_dict.link_name.df.options = value;
-                },
             },
             {
                 fieldtype: "Column Break",
             },
             {
                 fieldname: "link_name",
-                fieldtype: "Link",
+                fieldtype: "Dynamic Link",
                 label: "Link Name",
+                get_options: (df) => {
+                    return df.doc.link_doctype
+                },
                 onchange: async () => {
                     const { link_doctype, link_name } =
                         this.dialog.doc;
@@ -232,16 +224,6 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 fieldtype: "Section Break",
             },
         ];
-    }
-
-    update_doc() {
-        const doc = super.update_doc();
-        if (doc.link_doctype && doc.link_name) {
-            const link = frappe.model.add_child(doc, "Dynamic Link", "links");
-            link.link_doctype = doc.link_doctype;
-            link.link_name = doc.link_name;
-        }
-        return doc;
     }
 
     async set_default_values() {
