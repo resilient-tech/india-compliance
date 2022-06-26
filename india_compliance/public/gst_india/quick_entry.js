@@ -226,6 +226,16 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         ];
     }
 
+    update_doc() {
+        const doc = super.update_doc();
+        if (doc.link_doctype && doc.link_name) {
+            const link = frappe.model.add_child(doc, "Dynamic Link", "links");
+            link.link_doctype = doc.link_doctype;
+            link.link_name = doc.link_name;
+        }
+        return doc;
+    }
+
     async set_default_values() {
         const default_party = this.get_default_party();
         if (default_party && default_party.party) {
