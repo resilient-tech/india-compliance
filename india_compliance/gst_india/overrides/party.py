@@ -111,7 +111,7 @@ def make_address(doc):
     required_fields = []
     for field in ("city", "country"):
         if not doc.get(field):
-            required_fields.append(f"<li>{_(doc.meta.get_label(field))}</li>")
+            required_fields.append(f"<li>{_(field.title())}</li>")
 
     if required_fields:
         frappe.throw(
