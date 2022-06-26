@@ -96,14 +96,10 @@ class BaseAPI:
             request_args.json = json
 
         response_json = None
-        log = frappe._dict()
-
-        log.update(
-            {
-                "url": request_args.url,
-                "data": request_args.params,
-                "request_headers": dict.copy(request_args.headers),
-            }
+        log = frappe._dict(
+            url=request_args.url,
+            data=request_args.params,
+            request_headers=request_args.headers.copy(),
         )
 
         # Don't log API secret

@@ -8,7 +8,12 @@ def enqueue_integration_request(**kwargs):
 
 
 def create_integration_request(
-    url=None, request_id=None, request_headers=None, data=None, output=None, error=None
+    url=None,
+    request_id=None,
+    request_headers=None,
+    data=None,
+    output=None,
+    error=None,
 ):
 
     return frappe.get_doc(
