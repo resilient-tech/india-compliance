@@ -108,21 +108,6 @@ def create_primary_address(doc, method=None):
 
 
 def make_address(doc):
-    required_fields = []
-    for field in ("city", "country"):
-        if not doc.get(field):
-            required_fields.append(f"<li>{_(doc.meta.get_label(field))}</li>")
-
-    if required_fields:
-        frappe.throw(
-            "{0} <br><br> <ul>{1}</ul>".format(
-                _("The following fields are mandatory to create Address:"),
-                "\n".join(required_fields),
-            ),
-            frappe.MandatoryError,
-            title=_("Missing Required Values"),
-        )
-
     return frappe.get_doc(
         {
             "doctype": "Address",
