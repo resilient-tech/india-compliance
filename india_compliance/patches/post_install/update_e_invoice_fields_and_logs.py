@@ -305,9 +305,6 @@ def delete_e_invoice_fields():
     delete_custom_fields(FIELDS_TO_DELETE)
 
 
-# TODO: perhaps these need to be removed in an ERPNext patch?
-
-
 def delete_old_doctypes():
     for doctype in ("E Invoice Settings", "E Invoice User", "E Invoice Request Log"):
         frappe.delete_doc("DocType", doctype, force=True, ignore_permissions=True)
