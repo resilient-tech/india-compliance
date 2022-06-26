@@ -69,9 +69,6 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
-    "DocType": {
-        "after_insert": "india_compliance.gst_india.overrides.doctype.create_gratuity_rule_for_india"
-    },
     "Item": {"validate": "india_compliance.gst_india.overrides.item.validate_hsn_code"},
     "Payment Entry": {
         "validate": (
@@ -137,8 +134,6 @@ regional_overrides = {
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
         "erpnext.accounts.party.get_regional_address_details": "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
         "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
-        "erpnext.hr.utils.calculate_annual_eligible_hra_exemption": "india_compliance.income_tax_india.overrides.salary_slip.calculate_annual_eligible_hra_exemption",
-        "erpnext.hr.utils.calculate_hra_exemption_for_period": "india_compliance.income_tax_india.overrides.salary_slip.calculate_hra_exemption_for_period",
         "erpnext.assets.doctype.asset.asset.get_depreciation_amount": (
             "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount"
         ),
