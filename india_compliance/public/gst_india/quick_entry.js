@@ -190,6 +190,14 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                         },
                     };
                 },
+                onchange: async () => {
+                    const { value, last_value } = this.dialog.get_field("link_doctype");
+
+                    if (value !== last_value) {
+                        // await to avoid clash with onchange of link_name field
+                        await this.dialog.set_value("link_name", "");
+                    }
+                },
             },
             {
                 fieldtype: "Column Break",
