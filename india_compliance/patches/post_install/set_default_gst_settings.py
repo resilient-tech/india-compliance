@@ -32,13 +32,13 @@ def enable_e_waybill_from_dn(settings):
 
 
 def enable_overseas_transactions(settings):
-    if not frappe.db.exists(
-        "Sales Invoice",
-        {"gst_category": ("in", ("Overseas", "SEZ")), **POSTING_DATE_CONDITION},
-    ):
-        return
-
-    settings["enable_overseas_transactions"] = 1
+    for doctype in ("Sales Invoice", "Purchase Invoice"):
+        if frappe.db.exists(
+            doctype,
+            {"gst_category": ("in", ("Overseas", "SEZ")), **POSTING_DATE_CONDITION},
+        ):
+            settings["enable_overseas_transactions"] = 1
+            return
 
 
 def enable_reverse_charge_in_sales(settings):
@@ -46,7 +46,6 @@ def enable_reverse_charge_in_sales(settings):
         "Sales Invoice",
         {"is_reverse_charge": 1, **POSTING_DATE_CONDITION},
     ):
-        # No reverse charge invoices in the last three years, keep setting disabled.
         return
 
     settings["enable_reverse_charge_in_sales"] = 1

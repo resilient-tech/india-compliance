@@ -367,21 +367,24 @@ class EInvoiceData(GSTTransactionData):
                 "state_number": "01",
                 "pincode": 193501,
             }
-            buyer = {
-                "gstin": "36AMBPG7773M002",
-                "state_number": "36",
-                "pincode": 500055,
-            }
             self.company_address.update(seller)
             self.dispatch_address.update(seller)
-            self.billing_address.update(buyer)
-            self.shipping_address.update(buyer)
             self.transaction_details.name = random_string(6).lstrip("0")
 
-            if self.transaction_details.total_igst_amount > 0:
-                self.transaction_details.place_of_supply = "36"
-            else:
-                self.transaction_details.place_of_supply = "01"
+            # For overseas transactions, dummy GSTIN is not needed
+            if self.doc.gst_category != "Overseas":
+                buyer = {
+                    "gstin": "36AMBPG7773M002",
+                    "state_number": "36",
+                    "pincode": 500055,
+                }
+                self.billing_address.update(buyer)
+                self.shipping_address.update(buyer)
+
+                if self.transaction_details.total_igst_amount > 0:
+                    self.transaction_details.place_of_supply = "36"
+                else:
+                    self.transaction_details.place_of_supply = "01"
 
         return {
             "Version": "1.1",

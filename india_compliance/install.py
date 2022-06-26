@@ -14,8 +14,10 @@ POST_INSTALL_PATCHES = (
     "add_einvoice_status_field",
     "update_tax_category_for_rcm",
     "add_company_link_to_einvoice_settings",
-    "create_itc_reversal_custom_fields",
+    "update_state_code_for_daman_and_diu",
+    "update_itc_amounts",
     # India Compliance
+    "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",
     "update_gst_accounts",
     "migrate_e_invoice_settings_to_gst_settings",
