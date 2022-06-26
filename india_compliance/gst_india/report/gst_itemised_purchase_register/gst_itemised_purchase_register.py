@@ -1,19 +1,7 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
-import frappe
 from erpnext.accounts.report.item_wise_purchase_register.item_wise_purchase_register import (
     _execute,
-)
-
-from india_compliance.gst_india.constants import (
-    EXPORT_TYPE_COLUMNS,
-    REVERSE_CHARGE_COLUMNS,
-)
-
-overseas_enabled, reverse_charge_enabled = frappe.get_cached_value(
-    "GST Settings",
-    "GST Settings",
-    ("enable_overseas_transactions", "enable_reverse_charge_in_sales"),
 )
 
 
@@ -29,6 +17,12 @@ def execute(filters=None):
             fieldtype="Data",
             label="Company GSTIN",
             fieldname="company_gstin",
+            width=120,
+        ),
+        dict(
+            fieldtype="Check",
+            label="Is Reverse Charge",
+            fieldname="is_reverse_charge",
             width=120,
         ),
         dict(
@@ -61,19 +55,12 @@ def execute(filters=None):
     additional_query_columns = [
         "supplier_gstin",
         "company_gstin",
+        "is_reverse_charge",
         "gst_category",
         "ecommerce_gstin",
         "gst_hsn_code",
         "bill_no",
         "bill_date",
     ]
-
-    if reverse_charge_enabled:
-        additional_table_columns.append(REVERSE_CHARGE_COLUMNS)
-        additional_query_columns.append("is_reverse_charge")
-
-    if overseas_enabled:
-        additional_table_columns.append(EXPORT_TYPE_COLUMNS)
-        additional_query_columns.append("is_export_with_gst")
 
     return _execute(filters, additional_table_columns, additional_query_columns)

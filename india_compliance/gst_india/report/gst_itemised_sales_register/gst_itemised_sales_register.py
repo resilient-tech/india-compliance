@@ -62,11 +62,11 @@ def execute(filters=None):
     ]
 
     if reverse_charge_enabled:
-        additional_table_columns.append(REVERSE_CHARGE_COLUMNS)
-        additional_query_columns.append("is_reverse_charge")
+        additional_table_columns.insert(3, REVERSE_CHARGE_COLUMNS)
+        additional_query_columns.insert(3, "is_reverse_charge")
 
     if overseas_enabled:
-        additional_table_columns.append(EXPORT_TYPE_COLUMNS)
-        additional_query_columns.append("is_export_with_gst")
+        additional_table_columns.insert(-3, EXPORT_TYPE_COLUMNS)
+        additional_query_columns.insert(-3, "is_export_with_gst")
 
     return _execute(filters, additional_table_columns, additional_query_columns)
