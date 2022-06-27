@@ -277,7 +277,7 @@ async function autofill_fields(dialog) {
         return;
     }
 
-    const gstin_info = await get_gstin_info(gstin);
+    const gstin_info = await get_gstin_info(dialog.doc);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
 
@@ -304,13 +304,22 @@ function setup_pincode_field(dialog, gstin_info) {
     };
 }
 
-function get_gstin_info(gstin) {
-    return frappe
-        .call({
+function get_gstin_info(doc) {
+    gstin = doc._gstin;
+    frappe.call({
             method: "india_compliance.gst_india.utils.gstin_info.get_gstin_info",
             args: { gstin },
         })
-        .then(r => r.message);
+        .then(r =>
+            {
+                if (!r.message.gst_category) {
+                    frappe.db.get_value(doc.link_doctype, doc.link_name, "gst_category").then(r => {
+                        gstin_info = Object.assign({}, {'gst_category': r.message});
+                    });
+                    return gstin_info;
+                }
+                return r.message;
+            });
 }
 
 function map_gstin_info(doc, gstin_info) {
@@ -325,6 +334,7 @@ function map_gstin_info(doc, gstin_info) {
 
 function update_party_info(doc, gstin_info) {
     doc.gstin = doc._gstin;
+    console.log(gstin_info.gst_category)
     const party_name_field = `${ic.get_party_type(doc.doctype).toLowerCase()}_name`;
     doc[party_name_field] = gstin_info.business_name;
     doc.gst_category = gstin_info.gst_category;
