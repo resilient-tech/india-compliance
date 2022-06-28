@@ -533,6 +533,7 @@ def get_gst_details(party_details, doctype, company):
 
 def get_party_gst_details(party_details, is_sales_doctype):
     """fetch GSTIN and GST category from party"""
+
     party_type = "Customer" if is_sales_doctype else "Supplier"
     gstin_fieldname = "billing_address_gstin" if is_sales_doctype else "supplier_gstin"
 
