@@ -40,15 +40,18 @@ function fetch_gst_details(doctype) {
 async function update_gst_details(frm) {
     if (frm.__gst_update_triggered || frm.updating_party_details || !frm.doc.company) return;
 
+    const party_type = ic.get_party_type(frm.doc.doctype).toLowerCase();
+    if (!frm.doc[party_type]) return;
+
     frm.__gst_update_triggered = true;
     await frappe.after_ajax().then(() => frm.__gst_update_triggered = false);
 
-    const party_fields = ["tax_category", "gst_category", "company_gstin"];
+    const party_fields = ["tax_category", "gst_category", "company_gstin", party_type];
 
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
-        party_fields.push("customer", "customer_address", "billing_address_gstin");
+        party_fields.push("customer_address", "billing_address_gstin");
     } else {
-        party_fields.push("supplier", "supplier_gstin");
+        party_fields.push("supplier_gstin");
     }
 
     const party_details = Object.fromEntries(
@@ -62,7 +65,6 @@ async function update_gst_details(frm) {
             doctype: frm.doc.doctype,
             company: frm.doc.company,
         },
-        // debounce: 2000,
         callback(r) {
             if (!r.message) return;
             frm.set_value(r.message);
