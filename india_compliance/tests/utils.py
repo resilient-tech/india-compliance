@@ -132,8 +132,8 @@ def create_sales_invoice(**args):
     )
 
     if args.taxes == "in-state":
-        si.append("taxes", get_taxes("SGST", abbr, True))
         si.append("taxes", get_taxes("CGST", abbr, True))
+        si.append("taxes", get_taxes("SGST", abbr, True))
     elif args.taxes == "out-of-state":
         si.append("taxes", get_taxes("IGST", abbr, True, 18))
 
@@ -201,15 +201,15 @@ def create_purchase_invoice(**args):
     )
 
     if args.taxes == "in-state":
-        pi.append("taxes", get_taxes("SGST", abbr))
         pi.append("taxes", get_taxes("CGST", abbr))
+        pi.append("taxes", get_taxes("SGST", abbr))
     elif args.taxes == "out-of-state":
         pi.append("taxes", get_taxes("IGST", abbr, rate=18))
     elif args.taxes == "rcm-in-state":
-        pi.append("taxes", get_taxes("SGST", abbr))
         pi.append("taxes", get_taxes("CGST", abbr))
-        pi.append("taxes", get_taxes("SGST RCM", abbr))
+        pi.append("taxes", get_taxes("SGST", abbr))
         pi.append("taxes", get_taxes("CGST RCM", abbr))
+        pi.append("taxes", get_taxes("SGST RCM", abbr))
     elif args.taxes == "rcm-out-of-state":
         pi.append("taxes", get_taxes("IGST", abbr, rate=18))
         pi.append("taxes", get_taxes("IGST RCM", abbr, rate=18))
