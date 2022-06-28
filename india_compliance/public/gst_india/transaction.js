@@ -17,11 +17,13 @@ for (const doctype of TRANSACTION_DOCTYPES) {
 }
 
 function fetch_gst_details(doctype) {
-    const event_fields = ["tax_category", "gst_category", "company_gstin"];
+    const event_fields = ["tax_category", "company_gstin"];
+
+    // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
-        event_fields.push("billing_address_gstin");
+        event_fields.push("customer_address");
     } else {
-        event_fields.push("supplier_gstin");
+        event_fields.push("supplier_address");
     }
 
     const events = Object.fromEntries(
@@ -38,6 +40,7 @@ async function update_gst_details(frm) {
     if (!frm.doc[party_type]) return;
 
     frm.__gst_update_triggered = true;
+    // wait for GSTINs to get fetched
     await frappe.after_ajax().then(() => frm.__gst_update_triggered = false);
 
     const party_fields = ["tax_category", "gst_category", "company_gstin", party_type];
