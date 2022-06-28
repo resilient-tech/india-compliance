@@ -5,30 +5,20 @@
 from unittest import TestCase
 
 import frappe
-from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import (
-    create_sales_invoice,
-)
 from erpnext.stock.doctype.item.test_item import make_item
 
-from india_compliance.gst_india.doctype.gstr_3b_report.test_gstr_3b_report import (
-    make_company as setup_company,
-)
-from india_compliance.gst_india.doctype.gstr_3b_report.test_gstr_3b_report import (
-    make_customers as setup_customers,
-)
 from india_compliance.gst_india.doctype.gstr_3b_report.test_gstr_3b_report import (
     set_account_heads as setup_gst_settings,
 )
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     execute as run_report,
 )
+from india_compliance.tests.utils import create_sales_invoice
 
 
 class TestHSNWiseSummaryReport(TestCase):
     @classmethod
     def setUpClass(cls):
-        setup_company()
-        setup_customers()
         setup_gst_settings()
         make_item("Golf Car", properties={"gst_hsn_code": "999900"})
 
@@ -37,21 +27,9 @@ class TestHSNWiseSummaryReport(TestCase):
         frappe.db.rollback()
 
     def test_hsn_summary_for_invoice_with_duplicate_items(self):
-        si = create_sales_invoice(
-            company="_Test Company GST",
-            customer="_Test GST Customer",
-            currency="INR",
-            warehouse="Finished Goods - _GST",
-            debit_to="Debtors - _GST",
-            income_account="Sales - _GST",
-            expense_account="Cost of Goods Sold - _GST",
-            cost_center="Main - _GST",
-            do_not_save=1,
-        )
+        si = create_sales_invoice(do_not_save=1, taxes="out-of-state")
 
-        si.items = []
-        si.append(
-            "items",
+        si.items = [
             {
                 "item_code": "Golf Car",
                 "gst_hsn_code": "999900",
@@ -59,9 +37,6 @@ class TestHSNWiseSummaryReport(TestCase):
                 "rate": "120",
                 "cost_center": "Main - _GST",
             },
-        )
-        si.append(
-            "items",
             {
                 "item_code": "Golf Car",
                 "gst_hsn_code": "999900",
@@ -69,25 +44,15 @@ class TestHSNWiseSummaryReport(TestCase):
                 "rate": "140",
                 "cost_center": "Main - _GST",
             },
-        )
-        si.append(
-            "taxes",
-            {
-                "charge_type": "On Net Total",
-                "account_head": "Output Tax IGST - _GST",
-                "cost_center": "Main - _GST",
-                "description": "IGST @ 18.0",
-                "rate": 18,
-            },
-        )
-        si.posting_date = "2020-11-17"
+        ]
+
         si.submit()
         si.reload()
 
         [columns, data] = run_report(
             filters=frappe._dict(
                 {
-                    "company": "_Test Company GST",
+                    "company": "_Test Indian Registered Company",
                     "gst_hsn_code": "999900",
                     "company_gstin": si.company_gstin,
                     "from_date": si.posting_date,

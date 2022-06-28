@@ -26,7 +26,7 @@ class TestGSTR3BReport(unittest.TestCase):
             "delete from `tabGSTR 3B Report` where company='_Test Company GST'"
         )
 
-        get_item()
+        get_item(properties={"is_nil_exempt": 1})
         set_account_heads()
 
     def test_gstr_3b_report(self):
@@ -159,9 +159,12 @@ def create_purchase_invoices():
     create_purchase_invoice(item="_Test Trading Goods 1", rate=250, qty=1)
 
 
-def get_item():
+def get_item(properties=None):
+    if not properties:
+        return
+
     item = frappe.get_doc("Item", "_Test Trading Goods 1")
-    item.is_nil_exempt = 1
+    item.update(properties)
     item.save()
 
 
