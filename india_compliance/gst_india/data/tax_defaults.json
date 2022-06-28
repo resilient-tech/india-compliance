@@ -290,39 +290,6 @@
                             }
                         }
                     ]
-                },
-                {
-                    "title": "VAT 5%",
-                    "taxes": [
-                        {
-                            "tax_type": {
-                                "account_name": "VAT 5%",
-                                "tax_rate": 5.0
-                            }
-                        }
-                    ]
-                },
-                {
-                    "title": "VAT 4%",
-                    "taxes": [
-                        {
-                            "tax_type": {
-                                "account_name": "VAT 4%",
-                                "tax_rate": 4.0
-                            }
-                        }
-                    ]
-                },
-                {
-                    "title": "VAT 14%",
-                    "taxes": [
-                        {
-                            "tax_type": {
-                                "account_name": "VAT 14%",
-                                "tax_rate": 14.0
-                            }
-                        }
-                    ]
                 }
             ],
             "sales_tax_templates": [
@@ -402,7 +369,7 @@
                     "taxes": [
                         {
                             "account_head": {
-                                "account_name": "Input Tax SGST RCM",
+                                "account_name": "Input Tax SGST",
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
@@ -410,11 +377,29 @@
                         },
                         {
                             "account_head": {
-                                "account_name": "Input Tax CGST RCM",
+                                "account_name": "Input Tax CGST",
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
                             }
+                        },
+                        {
+                            "account_head": {
+                                "account_name": "Input Tax SGST RCM",
+                                "tax_rate": 9.0,
+                                "root_type": "Asset",
+                                "account_type": "Tax"
+                            },
+                            "add_deduct_tax": "Deduct"
+                        },
+                        {
+                            "account_head": {
+                                "account_name": "Input Tax CGST RCM",
+                                "tax_rate": 9.0,
+                                "root_type": "Asset",
+                                "account_type": "Tax"
+                            },
+                            "add_deduct_tax": "Deduct"
                         }
                     ],
                     "tax_category": "Reverse Charge In-State"
@@ -424,11 +409,20 @@
                     "taxes": [
                         {
                             "account_head": {
-                                "account_name": "Input Tax IGST RCM",
+                                "account_name": "Input Tax IGST",
                                 "tax_rate": 18.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
                             }
+                        },
+                        {
+                            "account_head": {
+                                "account_name": "Input Tax IGST RCM",
+                                "tax_rate": 18.0,
+                                "root_type": "Asset",
+                                "account_type": "Tax"
+                            },
+                            "add_deduct_tax": "Deduct"
                         }
                     ],
                     "tax_category": "Reverse Charge Out-State"
