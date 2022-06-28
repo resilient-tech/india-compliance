@@ -132,7 +132,9 @@ regional_overrides = {
             "india_compliance.gst_india.utils.get_itemised_tax_breakup_data"
         ),
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
-        "erpnext.accounts.party.get_regional_address_details": "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
+        "erpnext.accounts.party.get_regional_address_details": (
+            "india_compliance.gst_india.overrides.transaction.update_party_details"
+        ),
         "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
         "erpnext.assets.doctype.asset.asset.get_depreciation_amount": (
             "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount"
