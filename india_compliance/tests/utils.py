@@ -36,7 +36,7 @@ def before_tests():
 
     set_default_settings_for_tests()
     create_test_records()
-    # frappe.db.commit()
+    frappe.db.commit()
 
 
 def set_default_settings_for_tests():
