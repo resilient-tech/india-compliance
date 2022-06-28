@@ -25,13 +25,7 @@ function fetch_gst_details(doctype) {
     }
 
     const events = Object.fromEntries(
-        [
-            "billing_address_gstin",
-            "company_gstin",
-            "supplier_gstin",
-            "tax_category",
-            "gst_category",
-        ].map(field => [field, update_gst_details])
+        event_fields.map(field => [field, update_gst_details])
     );
 
     frappe.ui.form.on(doctype, events);
