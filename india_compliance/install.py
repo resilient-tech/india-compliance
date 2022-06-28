@@ -16,6 +16,7 @@ POST_INSTALL_PATCHES = (
     "add_company_link_to_einvoice_settings",
     "update_state_code_for_daman_and_diu"
     # India Compliance
+    "create_company_fixtures",
     "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",
     "update_gst_accounts",
