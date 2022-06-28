@@ -99,6 +99,8 @@ def create_sales_invoice(**args):
     si.conversion_rate = args.conversion_rate or 1
     si.naming_series = args.naming_series or "T-SINV-"
     si.cost_center = args.parent_cost_center
+    si.is_reverse_charge = args.is_reverse_charge
+    si.is_export_with_gst = args.is_export_with_gst
 
     if args.customer_address:
         si.customer_address = args.customer_address
@@ -130,34 +132,10 @@ def create_sales_invoice(**args):
     )
 
     if args.taxes == "in-state":
-        si.append(
-            "taxes",
-            {
-                "charge_type": "On Net Total",
-                "account_head": f"Output Tax SGST - {abbr}",
-                "description": "SGST",
-                "rate": 9,
-            },
-        )
-        si.append(
-            "taxes",
-            {
-                "charge_type": "On Net Total",
-                "account_head": f"Output Tax CGST - {abbr}",
-                "description": "CGST",
-                "rate": 9,
-            },
-        )
+        si.append("taxes", get_taxes("SGST", abbr, True))
+        si.append("taxes", get_taxes("CGST", abbr, True))
     elif args.taxes == "out-of-state":
-        si.append(
-            "taxes",
-            {
-                "charge_type": "On Net Total",
-                "account_head": f"Output Tax IGST - {abbr}",
-                "description": "IGST",
-                "rate": 18,
-            },
-        )
+        si.append("taxes", get_taxes("IGST", abbr, True, 18))
 
     if not args.do_not_save:
         si.insert()
@@ -169,3 +147,95 @@ def create_sales_invoice(**args):
         si.payment_schedule = []
 
     return si
+
+
+def create_purchase_invoice(**args):
+    pi = frappe.new_doc("Purchase Invoice")
+    args = frappe._dict(args)
+    abbr = args.abbr or "_TIRC"
+    if args.posting_date:
+        pi.set_posting_time = 1
+
+    pi.posting_date = args.posting_date or nowdate()
+
+    if args.cash_bank_account:
+        pi.cash_bank_account = args.cash_bank_account
+
+    pi.company = args.company or "_Test Indian Registered Company"
+    pi.supplier = args.supplier or "_Test Registered Supplier"
+    pi.currency = args.currency or "INR"
+    pi.naming_series = args.naming_series or "T-PINV-"
+    pi.update_stock = args.update_stock
+    pi.is_paid = args.is_paid
+    pi.conversion_rate = args.conversion_rate or 1
+    pi.is_return = args.is_return
+    pi.return_against = args.return_against
+    pi.is_subcontracted = args.is_subcontracted
+    pi.cost_center = args.parent_cost_center
+    pi.is_reverse_charge = args.is_reverse_charge
+    pi.eligibility_for_itc = args.eligibility_for_itc or "All Other ITC"
+
+    pi.append(
+        "items",
+        {
+            "item_code": args.item or args.item_code or "_Test Trading Goods 1",
+            "warehouse": args.warehouse or f"Stores - {abbr}",
+            "qty": args.qty or 5,
+            "received_qty": args.received_qty or 0,
+            "rejected_qty": args.rejected_qty or 0,
+            "rate": args.rate or 50,
+            "price_list_rate": args.price_list_rate or 50,
+            "expense_account": args.expense_account or f"Cost of Goods Sold - {abbr}",
+            "discount_account": args.discount_account or None,
+            "discount_amount": args.discount_amount or 0,
+            "conversion_factor": 1.0,
+            "serial_no": args.serial_no,
+            "stock_uom": args.uom or "Nos",
+            "cost_center": args.cost_center or f"Main - {abbr}",
+            "project": args.project,
+            "rejected_warehouse": args.rejected_warehouse or "",
+            "rejected_serial_no": args.rejected_serial_no or "",
+            "asset_location": args.location or "",
+            "allow_zero_valuation_rate": args.allow_zero_valuation_rate or 0,
+        },
+    )
+
+    if args.taxes == "in-state":
+        pi.append("taxes", get_taxes("SGST", abbr))
+        pi.append("taxes", get_taxes("CGST", abbr))
+    elif args.taxes == "out-of-state":
+        pi.append("taxes", get_taxes("IGST", abbr, rate=18))
+    elif args.taxes == "rcm-in-state":
+        pi.append("taxes", get_taxes("SGST", abbr))
+        pi.append("taxes", get_taxes("CGST", abbr))
+        pi.append("taxes", get_taxes("SGST RCM", abbr))
+        pi.append("taxes", get_taxes("CGST RCM", abbr))
+    elif args.taxes == "rcm-out-of-state":
+        pi.append("taxes", get_taxes("IGST", abbr, rate=18))
+        pi.append("taxes", get_taxes("IGST RCM", abbr, rate=18))
+
+    if not args.do_not_save:
+        pi.insert()
+        if not args.do_not_submit:
+            pi.submit()
+
+    return pi
+
+
+def get_taxes(account, abbr, is_sales=False, rate=9):
+    if is_sales:
+        account_type = "Output Tax"
+    else:
+        account_type = "Input Tax"
+
+    taxes = {
+        "charge_type": "On Net Total",
+        "account_head": f"{account_type} {account} - {abbr}",
+        "description": f"{account}",
+        "rate": rate,
+    }
+
+    if account.endswith("RCM"):
+        taxes["add_deduct_tax"] = "Deduct"
+
+    return taxes
