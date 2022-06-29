@@ -1,6 +1,6 @@
 import frappe
 
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import GST_ACCOUNT_FIELDS
 
 
 def execute():
@@ -13,18 +13,19 @@ def execute():
 
     for field in itc_amounts:
         frappe.db.sql(
-            """UPDATE `tabPurchase Invoice` set {field} = '0'
-            WHERE trim(coalesce({field}, '')) = '' """.format(
-                field=field
-            )
+            f"""
+            UPDATE `tabPurchase Invoice`
+            SET {field} = 0
+            WHERE trim(coalesce({field}, '')) = ''
+            """
         )
 
-    gst_accounts = get_gst_accounts_for_all_companies()
+    gst_accounts = get_gst_accounts(only_non_reverse_charge=1)
 
     if not gst_accounts:
         return
 
-    # Get purchase invoices where ITC is not zero
+    # Get purchase invoices where ITC amounts are not set
     invoice_list = frappe.get_all(
         "Purchase Invoice",
         {
@@ -44,40 +45,75 @@ def execute():
         """
         SELECT parent, account_head, sum(base_tax_amount_after_discount_amount) as amount
         FROM `tabPurchase Taxes and Charges`
-        where parent in %s and
-        account_head in %s
+        where parent in %s
         GROUP BY parent, account_head
     """,
-        (invoice_list, list(gst_accounts.keys())),
+        (invoice_list),
         as_dict=1,
     )
 
     if not gst_tax_amounts:
         return
 
-    accounts = ["igst_account", "sgst_account", "cgst_account", "cess_account"]
-    accounts_map = dict(zip(accounts, itc_amounts.keys()))
+    account_types = ["igst_account", "sgst_account", "cgst_account", "cess_account"]
+    account_amount_fields = dict(zip(account_types, itc_amounts.keys()))
     itc_amounts_to_update = {}
 
     # Get ITC amounts to update for each Invoice
-    for d in gst_tax_amounts:
-        itc_amounts_to_update.setdefault(d.parent, itc_amounts.copy())
+    for row in gst_tax_amounts:
+        amount_field = next(
+            (
+                amount_field
+                for account_type, amount_field in account_amount_fields.items()
+                if row.account_head in (gst_accounts.get(account_type) or ())
+            ),
+            None,
+        )
 
-        if d.account_head in gst_accounts:
-            field = accounts_map[gst_accounts[d.account_head]]
-            itc_amounts_to_update[d.parent][field] += d.amount
+        if not amount_field:
+            continue
+
+        itc_amounts = itc_amounts_to_update.setdefault(row.parent, itc_amounts.copy())
+        itc_amounts[amount_field] += row.amount
 
     # Update ITC amounts
+    update_count = 0
+
     for invoice, values in itc_amounts_to_update.items():
         frappe.db.set_value("Purchase Invoice", invoice, values)
+        update_count += 1
+
+        if update_count % 1000 == 0:
+            frappe.db.commit()
 
 
-def get_gst_accounts_for_all_companies():
-    gst_accounts = dict()
-    company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
+def get_gst_accounts(
+    company=None,
+    account_wise=False,
+    only_reverse_charge=0,
+    only_non_reverse_charge=0,
+):
+    filters = {"parent": "GST Settings"}
 
-    for company in company_list:
-        company_accounts = get_gst_accounts_by_type(company, "Input", throw=False)
-        gst_accounts.update({v: k for k, v in company_accounts.items() if v})
+    if company:
+        filters.update({"company": company})
+    if only_reverse_charge:
+        filters.update({"account_type": "Reverse Charge"})
+    elif only_non_reverse_charge:
+        filters.update({"account_type": ("in", ("Input", "Output"))})
 
-    return gst_accounts
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+    gst_accounts = settings.get("gst_accounts", filters)
+    result = frappe._dict()
+
+    for row in gst_accounts:
+        for fieldname in GST_ACCOUNT_FIELDS:
+            if not (value := row.get(fieldname)):
+                continue
+
+            if not account_wise:
+                result.setdefault(fieldname, []).append(value)
+            else:
+                result[value] = fieldname
+
+    return result
