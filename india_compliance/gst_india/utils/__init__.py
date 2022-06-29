@@ -271,41 +271,6 @@ def get_place_of_supply(party_details, doctype):
         return f"{state_code}-{state}"
 
 
-def get_gst_accounts(
-    company=None,
-    account_wise=False,
-    only_reverse_charge=0,
-    only_non_reverse_charge=0,
-):
-    """DEPRECATED: use get_gst_accounts_by_type / get_all_gst_accounts instead"""
-
-    filters = {"parent": "GST Settings"}
-
-    if company:
-        filters.update({"company": company})
-    if only_reverse_charge:
-        filters.update({"account_type": "Reverse Charge"})
-    elif only_non_reverse_charge:
-        filters.update({"account_type": ("in", ("Input", "Output"))})
-
-    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
-    gst_accounts = settings.get("gst_accounts", filters)
-    result = frappe._dict()
-
-    if not gst_accounts and not frappe.flags.in_test and not frappe.flags.in_migrate:
-        frappe.throw(_("Please set GST Accounts in GST Settings"))
-
-    for row in gst_accounts:
-        for fieldname in GST_ACCOUNT_FIELDS:
-            value = row.get(fieldname)
-            if not account_wise:
-                result.setdefault(fieldname, []).append(value)
-            elif value:
-                result[value] = fieldname
-
-    return result
-
-
 def get_gst_accounts_by_type(company, account_type, throw=True):
     """
     :param company: Company to get GST Accounts for
