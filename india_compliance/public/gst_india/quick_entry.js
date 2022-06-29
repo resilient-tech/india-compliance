@@ -20,10 +20,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                          `When you enter a GSTIN, the permanent address linked to it is
+                        `When you enter a GSTIN, the permanent address linked to it is
                         auto-filled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                      )
+                    )
                     : "",
                 collapsible: 0,
             },
@@ -98,6 +98,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     update_doc() {
         const doc = super.update_doc();
         doc.pincode = doc._pincode;
+        doc.gstin = doc._gstin;
         return doc;
     }
 }
@@ -140,8 +141,14 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
 
     update_doc() {
         const doc = super.update_doc();
+        // to prevent clash with ERPNext
         doc._address_line1 = doc.address_line1;
         delete doc.address_line1;
+
+        // these fields were suffixed with _ to prevent them from being read only
+        doc.email_id = doc._email_id;
+        doc.mobile_no = doc._mobile_no;
+
         return doc;
     }
 }
@@ -190,9 +197,6 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                         // await to avoid clash with onchange of link_name field
                         await this.dialog.set_value("link_name", "");
                     }
-
-                    // dynamic link isn't supported in dialogs, so below hack
-                    this.dialog.fields_dict.link_name.df.options = value;
                 },
             },
             {
@@ -200,8 +204,11 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
             },
             {
                 fieldname: "link_name",
-                fieldtype: "Link",
+                fieldtype: "Dynamic Link",
                 label: "Link Name",
+                get_options: (df) => {
+                    return df.doc.link_doctype
+                },
                 onchange: async () => {
                     const { link_doctype, link_name } =
                         this.dialog.doc;

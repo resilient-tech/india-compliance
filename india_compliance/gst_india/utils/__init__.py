@@ -19,9 +19,21 @@ from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
+    SALES_DOCTYPES,
+    STATE_NUMBERS,
     TCS,
     TIMEZONE,
 )
+
+
+def get_state(state_number):
+    """Get state from State Number"""
+
+    state_number = str(state_number)
+
+    for state, code in STATE_NUMBERS.items():
+        if code == state_number:
+            return state
 
 
 def load_doc(doctype, name, perm="read"):
@@ -232,43 +244,51 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
     return hsn_tax, hsn_taxable_amount
 
 
-def get_place_of_supply(party_details, doctype=None):
+def get_place_of_supply(party_details, doctype):
     """
     :param party_details: A frappe._dict or document containing fields related to party
     """
 
-    if not doctype:
-        # Expect document object
-        doctype = party_details.doctype
+    # fallback to company GSTIN for sales or supplier GSTIN for purchases
+    # (in retail scenarios, customer / company GSTIN may not be set)
 
-    if not frappe.get_meta("Address").has_field("gst_state"):
+    if doctype in SALES_DOCTYPES:
+        # for exports, Place of Supply is set using GST category in absence of GSTIN
+        if party_details.gst_category == "Overseas":
+            return "96-Other Countries"
+
+        if (
+            party_details.gst_category == "Unregistered"
+            and party_details.customer_address
+        ):
+            gst_state_number, gst_state = frappe.db.get_value(
+                "Address",
+                party_details.customer_address,
+                ("gst_state_number", "gst_state"),
+            )
+            return f"{gst_state_number}-{gst_state}"
+
+        party_gstin = party_details.billing_address_gstin or party_details.company_gstin
+    else:
+        party_gstin = party_details.company_gstin or party_details.supplier_gstin
+
+    if not party_gstin:
         return
 
-    # fallback to company address or supplier address
-    # (in retail scenarios, customer / shipping address may not be set)
-    if doctype in ("Sales Invoice", "Delivery Note", "Sales Order"):
-        address_name = party_details.customer_address or party_details.company_address
-    elif doctype in ("Purchase Invoice", "Purchase Order", "Purchase Receipt"):
-        address_name = party_details.shipping_address or party_details.supplier_address
+    state_code = party_gstin[:2]
 
-    if address_name:
-        address = frappe.db.get_value(
-            "Address",
-            address_name,
-            ["gst_state", "gst_state_number", "gstin"],
-            as_dict=1,
-        )
-
-        if address and address.gst_state and address.gst_state_number:
-            # TODO: bad idea to set value in getter
-            party_details.gstin = address.gstin
-
-            return cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
+    if state := get_state(state_code):
+        return f"{state_code}-{state}"
 
 
 def get_gst_accounts(
-    company=None, account_wise=False, only_reverse_charge=0, only_non_reverse_charge=0
+    company=None,
+    account_wise=False,
+    only_reverse_charge=0,
+    only_non_reverse_charge=0,
 ):
+    """DEPRECATED: use get_gst_accounts_by_type / get_all_gst_accounts instead"""
+
     filters = {"parent": "GST Settings"}
 
     if company:
@@ -278,28 +298,22 @@ def get_gst_accounts(
     elif only_non_reverse_charge:
         filters.update({"account_type": ("in", ("Input", "Output"))})
 
-    gst_accounts = frappe._dict()
-    gst_settings_accounts = frappe.get_all(
-        "GST Account",
-        filters=filters,
-        fields=GST_ACCOUNT_FIELDS,
-    )
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+    gst_accounts = settings.get("gst_accounts", filters)
+    result = frappe._dict()
 
-    if (
-        not gst_settings_accounts
-        and not frappe.flags.in_test
-        and not frappe.flags.in_migrate
-    ):
+    if not gst_accounts and not frappe.flags.in_test and not frappe.flags.in_migrate:
         frappe.throw(_("Please set GST Accounts in GST Settings"))
 
-    for d in gst_settings_accounts:
-        for acc, val in d.items():
+    for row in gst_accounts:
+        for fieldname in GST_ACCOUNT_FIELDS:
+            value = row.get(fieldname)
             if not account_wise:
-                gst_accounts.setdefault(acc, []).append(val)
-            elif val:
-                gst_accounts[val] = acc
+                result.setdefault(fieldname, []).append(value)
+            elif value:
+                result[value] = fieldname
 
-    return gst_accounts
+    return result
 
 
 def get_gst_accounts_by_type(company, account_type, throw=True):
@@ -349,32 +363,6 @@ def get_all_gst_accounts(company):
                 accounts_list.append(gst_account)
 
     return accounts_list
-
-
-def delete_custom_fields(custom_fields):
-    """
-    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
-    """
-
-    for doctypes, fields in custom_fields.items():
-        if isinstance(fields, dict):
-            # only one field
-            fields = [fields]
-
-        if isinstance(doctypes, str):
-            # only one doctype
-            doctypes = (doctypes,)
-
-        for doctype in doctypes:
-            frappe.db.delete(
-                "Custom Field",
-                {
-                    "fieldname": ("in", [field["fieldname"] for field in fields]),
-                    "dt": doctype,
-                },
-            )
-
-            frappe.clear_cache(doctype=doctype)
 
 
 def toggle_custom_fields(custom_fields, show):
@@ -463,3 +451,19 @@ def get_titlecase_version(word, all_caps=False, **kwargs):
 
     if word in ABBREVIATIONS:
         return word
+
+
+def delete_old_fields(fields, doctypes):
+    if isinstance(fields, str):
+        fields = (fields,)
+
+    if isinstance(doctypes, str):
+        doctypes = (doctypes,)
+
+    frappe.db.delete(
+        "Custom Field",
+        {
+            "fieldname": ("in", fields),
+            "dt": ("in", doctypes),
+        },
+    )

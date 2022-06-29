@@ -6,7 +6,7 @@ from erpnext.accounts.report.purchase_register.purchase_register import _execute
 
 
 def execute(filters=None):
-    values = _execute(
+    return _execute(
         filters,
         additional_table_columns=[
             dict(
@@ -22,8 +22,8 @@ def execute(filters=None):
                 width=120,
             ),
             dict(
-                fieldtype="Data",
-                label="Reverse Charge",
+                fieldtype="Check",
+                label="Is Reverse Charge",
                 fieldname="is_reverse_charge",
                 width=120,
             ),
@@ -31,12 +31,6 @@ def execute(filters=None):
                 fieldtype="Data",
                 label="GST Category",
                 fieldname="gst_category",
-                width=120,
-            ),
-            dict(
-                fieldtype="Data",
-                label="Export Type",
-                fieldname="export_type",
                 width=120,
             ),
             dict(
@@ -51,19 +45,6 @@ def execute(filters=None):
             "company_gstin",
             "is_reverse_charge",
             "gst_category",
-            "export_type",
             "ecommerce_gstin",
         ],
     )
-
-    index = next(
-        i
-        for i, column in enumerate(values[0])
-        if isinstance(column, dict) and column["fieldname"] == "is_reverse_charge"
-    )
-
-    # Result (values[1]) is returned as list of lists
-    for row in values[1]:
-        row[index] = "Y" if row[index] else "N"
-
-    return values

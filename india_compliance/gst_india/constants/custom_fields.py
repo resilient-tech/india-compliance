@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+import frappe
+
 from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
@@ -43,70 +45,6 @@ company_fields[0]["insert_after"] = "parent_company"
 CUSTOM_FIELDS = {
     "Company": company_fields,
     ("Customer", "Supplier"): party_fields,
-    # Invoice Fields
-    ("Purchase Invoice", "Sales Invoice"): [
-        {
-            "fieldname": "invoice_copy",
-            "label": "Invoice Copy",
-            "length": 30,
-            "fieldtype": "Select",
-            "insert_after": "language",
-            "print_hide": 1,
-            "allow_on_submit": 1,
-            "options": (
-                "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
-                " Supplier\nTriplicate for Supplier"
-            ),
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_section",
-            "label": "GST Details",
-            "fieldtype": "Section Break",
-            "insert_after": "invoice_copy",
-            "print_hide": 1,
-            "collapsible": 1,
-        },
-        {
-            "fieldname": "export_type",
-            "label": "Export Type",
-            "fieldtype": "Select",
-            "insert_after": "gst_section",
-            "print_hide": 1,
-            "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            "options": "\nWith Payment of Tax\nWithout Payment of Tax",
-            "translatable": 0,
-        },
-        {
-            "fieldname": "ecommerce_gstin",
-            "label": "E-commerce GSTIN",
-            "length": 15,
-            "fieldtype": "Data",
-            "insert_after": "export_type",
-            "print_hide": 1,
-            "translatable": 0,
-        },
-        {
-            "fieldname": "gst_col_break",
-            "fieldtype": "Column Break",
-            "insert_after": "ecommerce_gstin",
-        },
-        {
-            "fieldname": "reason_for_issuing_document",
-            "label": "Reason For Issuing document",
-            "fieldtype": "Select",
-            "insert_after": "gst_col_break",
-            "print_hide": 1,
-            "depends_on": "eval:doc.is_return == 1",
-            "length": 45,
-            "options": (
-                "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
-                " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
-                " of Provisional assessment\n07-Others"
-            ),
-            "translatable": 0,
-        },
-    ],
     # Purchase Fields
     ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [
         {
@@ -158,7 +96,44 @@ CUSTOM_FIELDS = {
             "default": 0,
         },
     ],
-    # Sales Fields
+    # Sales - Export with GST Payment
+    # POS Invoice excluded, since it isn't designed for exports
+    ("Quotation", "Sales Order", "Delivery Note", "Sales Invoice"): {
+        "fieldname": "is_export_with_gst",
+        "label": "Is Export With Payment of GST",
+        "fieldtype": "Check",
+        "insert_after": "is_reverse_charge",
+        "print_hide": 1,
+        "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
+        "default": 0,
+        "translatable": 0,
+    },
+    # Sales - GST Details Section
+    ("Sales Order", "Delivery Note", "Sales Invoice"): [
+        {
+            "fieldname": "gst_section",
+            "label": "GST Details",
+            "fieldtype": "Section Break",
+            "insert_after": "language",
+            "print_hide": 1,
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "ecommerce_gstin",
+            "label": "E-commerce GSTIN",
+            "length": 15,
+            "fieldtype": "Data",
+            "insert_after": "gst_section",
+            "print_hide": 1,
+            "translatable": 0,
+        },
+        {
+            "fieldname": "gst_col_break",
+            "fieldtype": "Column Break",
+            "insert_after": "ecommerce_gstin",
+        },
+    ],
+    # Sales GSTIN Fields
     ("Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"): [
         {
             "fieldname": "billing_address_gstin",
@@ -205,12 +180,12 @@ CUSTOM_FIELDS = {
         },
     ],
     # Sales Shipping Fields
-    ("Sales Invoice", "Delivery Note"): [
+    ("Delivery Note", "Sales Invoice"): [
         {
             "fieldname": "port_code",
             "label": "Port Code",
             "fieldtype": "Data",
-            "insert_after": "reason_for_issuing_document",
+            "insert_after": "gst_col_break",
             "print_hide": 1,
             "depends_on": "eval:doc.gst_category == 'Overseas' ",
             "length": 15,
@@ -276,7 +251,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
         },
     ],
-    # Sales Item Fields
+    # Taxable Value
     (
         "Delivery Note Item",
         "Sales Invoice Item",
@@ -293,12 +268,51 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
         },
     ],
+    "Sales Invoice": [
+        {
+            "fieldname": "invoice_copy",
+            "label": "Invoice Copy",
+            "length": 30,
+            "fieldtype": "Select",
+            "insert_after": "column_break_84",
+            "print_hide": 1,
+            "allow_on_submit": 1,
+            "options": (
+                "Original for Recipient\nDuplicate for Transporter\nDuplicate for"
+                " Supplier\nTriplicate for Supplier"
+            ),
+            "translatable": 0,
+        },
+        {
+            "fieldname": "reason_for_issuing_document",
+            "label": "Reason For Issuing Document",
+            "fieldtype": "Select",
+            "insert_after": "return_against",
+            "print_hide": 1,
+            "depends_on": "eval:doc.is_return == 1",
+            "length": 45,
+            "options": (
+                "\n01-Sales Return\n02-Post Sale Discount\n03-Deficiency in"
+                " services\n04-Correction in Invoice\n05-Change in POS\n06-Finalization"
+                " of Provisional assessment\n07-Others"
+            ),
+            "translatable": 0,
+        },
+    ],
     "Purchase Invoice": [
+        {
+            "fieldname": "gst_section",
+            "label": "GST Details",
+            "fieldtype": "Section Break",
+            "insert_after": "language",
+            "print_hide": 1,
+            "collapsible": 1,
+        },
         {
             "fieldname": "eligibility_for_itc",
             "label": "Eligibility For ITC",
             "fieldtype": "Select",
-            "insert_after": "reason_for_issuing_document",
+            "insert_after": "gst_section",
             "print_hide": 1,
             "options": (
                 "Input Service Distributor\nImport Of Service\nImport Of Capital"
@@ -309,10 +323,15 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
         {
+            "fieldname": "gst_col_break",
+            "fieldtype": "Column Break",
+            "insert_after": "eligibility_for_itc",
+        },
+        {
             "fieldname": "itc_integrated_tax",
             "label": "Availed ITC Integrated Tax",
             "fieldtype": "Currency",
-            "insert_after": "eligibility_for_itc",
+            "insert_after": "gst_col_break",
             "options": "Company:company:default_currency",
             "print_hide": 1,
         },
@@ -547,17 +566,24 @@ CUSTOM_FIELDS = {
     ],
 }
 
+reverse_charge_field = frappe._dict(
+    fieldname="is_reverse_charge",
+    label="Is Reverse Charge",
+    fieldtype="Check",
+    print_hide=1,
+    default=0,
+)
+
+# POS Invoice excluded, since it isn't designed for reverse charge transactions
 SALES_REVERSE_CHARGE_FIELDS = {
-    "Sales Invoice": [
-        {
-            "fieldname": "is_reverse_charge",
-            "label": "Is Reverse Charge",
-            "fieldtype": "Check",
-            "insert_after": "is_debit_note",
-            "print_hide": 1,
-            "default": 0,
-        },
-    ]
+    "Quotation": reverse_charge_field.copy().update(insert_after="customer_name"),
+    "Sales Order": reverse_charge_field.copy().update(
+        insert_after="skip_delivery_note"
+    ),
+    "Delivery Note": reverse_charge_field.copy().update(
+        insert_after="set_posting_time"
+    ),
+    "Sales Invoice": reverse_charge_field.copy().update(insert_after="is_debit_note"),
 }
 
 E_INVOICE_FIELDS = {

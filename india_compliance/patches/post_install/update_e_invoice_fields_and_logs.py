@@ -1,9 +1,14 @@
 import frappe
 
-from india_compliance.gst_india.utils import delete_custom_fields, parse_datetime
+from india_compliance.gst_india.utils import parse_datetime
+
+user = None
 
 
 def execute():
+    global user
+    user = frappe.session.user
+
     migrate_e_waybill_fields()
     migrate_e_invoice_fields()
     migrate_e_invoice_request_log()
@@ -44,8 +49,8 @@ def migrate_e_waybill_fields():
                 doc.ewaybill,
                 doc.ack_date or doc.creation,
                 doc.ack_date or doc.creation,
-                "Administrator",
-                "Administrator",
+                user,
+                user,
                 doc.name,
                 doc.ewaybill,
                 parse_datetime(doc.eway_bill_validity),
@@ -96,8 +101,8 @@ def migrate_e_invoice_fields():
                 doc.irn,
                 doc.ack_date,
                 doc.ack_date,
-                "Administrator",
-                "Administrator",
+                user,
+                user,
                 doc.irn,
                 doc.name,
                 doc.irn_cancelled,
@@ -141,6 +146,8 @@ def migrate_e_invoice_request_log():
         "modified_by",
         "integration_request_service",
         "status",
+        "url",
+        "request_headers",
         "data",
         "output",
         "reference_doctype",
@@ -156,14 +163,9 @@ def migrate_e_invoice_request_log():
                 doc.modified_by,
                 "Migrated from e-Invoice Request Log",
                 "Completed",
-                frappe.as_json(
-                    {
-                        "url": doc.url,
-                        "headers": frappe.parse_json(doc.headers),
-                        "data": frappe.parse_json(doc.data),
-                    },
-                    indent=4,
-                ),
+                doc.url,
+                doc.headers,
+                doc.data,
                 doc.response,
                 "Sales Invoice",
                 doc.reference_invoice,
@@ -299,15 +301,54 @@ def delete_e_invoice_fields():
     }
     delete_custom_fields(FIELDS_TO_DELETE)
 
-# TODO: perhaps these need to be removed in an ERPNext patch?
 
 def delete_old_doctypes():
     for doctype in ("E Invoice Settings", "E Invoice User", "E Invoice Request Log"):
-        frappe.delete_doc("DocType", doctype, force=True, ignore_permissions=True)
+        frappe.delete_doc(
+            "DocType",
+            doctype,
+            force=True,
+            ignore_permissions=True,
+            ignore_missing=True,
+        )
 
 
 def delete_old_reports():
     for report in ("E-Invoice Summary",):
         frappe.delete_doc(
-            "Report", report, force=True, ignore_permissions=True, ignore_on_trash=True
+            "Report",
+            report,
+            force=True,
+            ignore_permissions=True,
+            ignore_on_trash=True,
+            ignore_missing=True,
         )
+
+
+### Helper Function
+
+
+def delete_custom_fields(custom_fields):
+    """
+    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
+    """
+
+    for doctypes, fields in custom_fields.items():
+        if isinstance(fields, dict):
+            # only one field
+            fields = [fields]
+
+        if isinstance(doctypes, str):
+            # only one doctype
+            doctypes = (doctypes,)
+
+        for doctype in doctypes:
+            frappe.db.delete(
+                "Custom Field",
+                {
+                    "fieldname": ("in", [field["fieldname"] for field in fields]),
+                    "dt": doctype,
+                },
+            )
+
+            frappe.clear_cache(doctype=doctype)

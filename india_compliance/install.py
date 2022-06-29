@@ -14,16 +14,19 @@ POST_INSTALL_PATCHES = (
     "add_einvoice_status_field",
     "update_tax_category_for_rcm",
     "add_company_link_to_einvoice_settings",
+    "update_state_code_for_daman_and_diu"
     # India Compliance
+    "create_company_fixtures",
+    "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",
     "update_gst_accounts",
     "migrate_e_invoice_settings_to_gst_settings",
-    "update_reverse_charge_field",
+    "update_reverse_charge_and_export_type",
     "update_gstin_and_gst_category",
     "update_e_invoice_fields_and_logs",
     "delete_gst_e_invoice_print_format",
-    "remove_customer_gstin_field",
     "set_default_gst_settings",
+    "remove_old_fields",
 )
 
 
