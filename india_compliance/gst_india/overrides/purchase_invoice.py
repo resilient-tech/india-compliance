@@ -3,6 +3,7 @@ from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.transaction import (
+    validate_gstin_status,
     validate_mandatory_fields,
     validate_transaction,
 )
@@ -16,6 +17,7 @@ def validate(doc, method=None):
     update_itc_totals(doc)
     validate_mandatory_fields(doc, ("place_of_supply", "gst_category"))
     validate_supplier_gstin(doc)
+    validate_gstin_status(doc.supplier_gstin)
 
 
 def update_itc_totals(doc, method=None):
