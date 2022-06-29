@@ -28,8 +28,8 @@ def execute():
 
     if old_credentials := get_credentials_from_e_invoice_user():
         gst_settings = frappe.get_single("GST Settings")
-        gst_settings.extend("gst_credentials", old_credentials)
-        gst_settings.update_child_table("gst_credentials")
+        gst_settings.extend("credentials", old_credentials)
+        gst_settings.update_child_table("credentials")
 
     if sbool(old_settings.enable):
         toggle_custom_fields(E_INVOICE_FIELDS, True)
