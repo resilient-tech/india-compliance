@@ -17,6 +17,7 @@ POST_INSTALL_PATCHES = (
     "update_state_code_for_daman_and_diu",
     "update_itc_amounts",
     # India Compliance
+    "create_company_fixtures",
     "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",
     "update_gst_accounts",
