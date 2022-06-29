@@ -1,0 +1,35 @@
+.print-format .section-heading {
+	margin-top: 15px;
+	margin-bottom: 10px;
+	font-weight: bold;
+}
+
+
+.print-format .print-heading span.docname {
+	font-size: 15px;
+	color: inherit;
+}
+
+.print-format .info-section {
+	border-bottom: 1px solid #d1d8dd;
+	padding-bottom: 16px;
+}
+
+.print-format h6.address-heading {
+	font-weight: bold;
+	margin-top: 8px;
+	margin-bottom: 8px;
+}
+
+.print-format .e-invoice-table {
+	margin: 10px 0;
+}
+
+.print-format .qrcode {
+	width: 175px;
+}
+
+.print-format .no-preview-available {
+	color: var(--gray-500);
+	font-size: 14px;
+}

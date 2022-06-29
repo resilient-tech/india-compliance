@@ -34,12 +34,12 @@ class Gstr1Report(object):
 			NULLIF(billing_address_gstin, '') as billing_address_gstin,
 			place_of_supply,
 			ecommerce_gstin,
-			reverse_charge,
+			is_reverse_charge,
 			return_against,
 			is_return,
 			is_debit_note,
 			gst_category,
-			export_type,
+			is_export_with_gst as export_type,
 			port_code,
 			shipping_bill_number,
 			shipping_bill_date,
@@ -230,11 +230,7 @@ class Gstr1Report(object):
             elif fieldname in ("posting_date", "shipping_bill_date"):
                 row.append(formatdate(invoice_details.get(fieldname), "dd-MMM-YY"))
             elif fieldname == "export_type":
-                export_type = (
-                    "WPAY"
-                    if invoice_details.get(fieldname) == "With Payment of Tax"
-                    else "WOPAY"
-                )
+                export_type = "WPAY" if invoice_details.get(fieldname) else "WOPAY"
                 row.append(export_type)
             else:
                 row.append(invoice_details.get(fieldname))
@@ -261,8 +257,11 @@ class Gstr1Report(object):
                     taxable_value += abs(net_amount)
                 elif (
                     not tax_rate
-                    and self.filters.get("type_of_business") == "EXPORT"
-                    and invoice_details.get("export_type") == "Without Payment of Tax"
+                    and (
+                        self.filters.get("type_of_business") == "EXPORT"
+                        or invoice_details.get("gst_category") == "SEZ"
+                    )
+                    and not invoice_details.get("is_export_with_gst")
                 ):
                     taxable_value += abs(net_amount)
 
@@ -296,6 +295,7 @@ class Gstr1Report(object):
         )
 
         for d in invoice_data:
+            d.is_reverse_charge = "Y" if d.is_reverse_charge else "N"
             self.invoices.setdefault(d.invoice_number, d)
 
     def get_advance_entries(self):
@@ -479,14 +479,13 @@ class Gstr1Report(object):
             if (
                 invoice not in self.items_based_on_tax_rate
                 and invoice not in unidentified_gst_accounts_invoice
-                and self.invoices.get(invoice, {}).get("export_type")
-                == "Without Payment of Tax"
+                and not self.invoices.get(invoice, {}).get("is_export_with_gst")
                 and self.invoices.get(invoice, {}).get("gst_category")
                 in ("Overseas", "SEZ")
             ):
                 self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
-                    0, items.keys()
-                )
+                    0, []
+                ).extend(items)
 
     def get_columns(self):
         self.other_columns = []
@@ -543,7 +542,7 @@ class Gstr1Report(object):
                     "width": 100,
                 },
                 {
-                    "fieldname": "reverse_charge",
+                    "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
                 },
@@ -645,7 +644,7 @@ class Gstr1Report(object):
                     "width": 120,
                 },
                 {
-                    "fieldname": "reverse_charge",
+                    "fieldname": "is_reverse_charge",
                     "label": "Reverse Charge",
                     "fieldtype": "Data",
                 },
@@ -903,6 +902,10 @@ class Gstr1Report(object):
 
 @frappe.whitelist()
 def get_json(filters, report_name, data):
+    """
+    This function does not check for permissions since it only manipulates data sent to it
+    """
+
     filters = json.loads(filters)
     report_data = json.loads(data)
     gstin = get_company_gstin_number(
@@ -939,7 +942,9 @@ def get_json(filters, report_name, data):
 
     elif filters["type_of_business"] == "EXPORT":
         for item in report_data[:-1]:
-            res.setdefault(item["export_type"], []).append(item)
+            res.setdefault(item["export_type"], {}).setdefault(
+                item["invoice_number"], []
+            ).append(item)
 
         out = get_export_json(res)
         gst_json["exp"] = out
@@ -1006,7 +1011,7 @@ def get_b2b_json(res, gstin):
 
             inv_item = get_basic_invoice_detail(invoice[0])
             inv_item["pos"] = "%02d" % int(invoice[0]["place_of_supply"].split("-")[0])
-            inv_item["rchrg"] = invoice[0]["reverse_charge"]
+            inv_item["rchrg"] = invoice[0]["is_reverse_charge"]
             inv_item["inv_typ"] = get_invoice_type(invoice[0])
 
             if inv_item["pos"] == "00":
@@ -1135,24 +1140,31 @@ def get_b2cl_json(res, gstin):
 
 def get_export_json(res):
     out = []
-    for exp_type in res:
-        exp_item, inv = {"exp_typ": exp_type, "inv": []}, []
 
-        for row in res[exp_type]:
-            inv_item = get_basic_invoice_detail(row)
-            inv_item["itms"] = [
-                {
-                    "txval": flt(row["taxable_value"], 2),
-                    "rt": row["rate"] or 0,
-                    "iamt": 0,
-                    "csamt": 0,
-                }
-            ]
+    for export_type, invoice_wise_items in res.items():
+        export_type_invoices = []
 
-            inv.append(inv_item)
+        for items in invoice_wise_items.values():
+            invoice = get_basic_invoice_detail(items[0])
+            invoice_items = invoice.setdefault("itms", [])
 
-        exp_item["inv"] = inv
-        out.append(exp_item)
+            for item in items:
+                invoice_items.append(
+                    {
+                        "txval": flt(item["taxable_value"], 2),
+                        "rt": flt(item["rate"]),
+                        "iamt": (
+                            flt((item["taxable_value"] * flt(item["rate"])) / 100.0, 2)
+                            if export_type == "WPAY"
+                            else 0
+                        ),
+                        "csamt": flt(item.get("cess_amount"), 2) or 0,
+                    }
+                )
+
+            export_type_invoices.append(invoice)
+
+        out.append({"exp_typ": export_type, "inv": export_type_invoices})
 
     return out
 
@@ -1183,7 +1195,7 @@ def get_cdnr_reg_json(res, gstin):
                 "val": abs(flt(invoice[0]["invoice_value"])),
                 "ntty": invoice[0]["document_type"],
                 "pos": "%02d" % int(invoice[0]["place_of_supply"].split("-")[0]),
-                "rchrg": invoice[0]["reverse_charge"],
+                "rchrg": invoice[0]["is_reverse_charge"],
                 "inv_typ": get_invoice_type(invoice[0]),
             }
 
@@ -1286,7 +1298,6 @@ def get_rate_and_tax_details(row, gstin):
 
     # calculate tax amount added
     tax = flt((row["taxable_value"] * rate) / 100.0, 2)
-    frappe.errprint([tax, tax / 2])
     if (
         row.get("billing_address_gstin")
         and gstin[0:2] == row["billing_address_gstin"][0:2]

@@ -7,7 +7,6 @@ def execute():
     update_pan_for_company()
     update_na_gstin()
     update_gstin_and_gst_category()
-    delete_custom_fields()
 
 
 def update_pan_for_company():
@@ -122,15 +121,6 @@ def update_gstin_and_gst_category():
             "We have identified multiple GSTINs for a few parties and couldn't set"
             " newly created fields automatically for these. Please check for parties"
             " without GSTINs or addresses without GST Category and set approporiate"
-            " values.",
+            " values.\n",
             fg="yellow",
         )
-
-
-def delete_custom_fields():
-    for doctype, fields in {
-        "Company": ("pan_details",),
-        "Customer": ("export_type",),
-        "Supplier": ("export_type",),
-    }.items():
-        frappe.db.delete("Custom Field", {"dt": doctype, "fieldname": ("in", fields)})

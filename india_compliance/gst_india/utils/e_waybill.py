@@ -86,7 +86,7 @@ def _generate_e_waybill(doc, throw=True):
 
     frappe.msgprint(
         _("e-Waybill generated successfully")
-        if result.validUpto
+        if result.validUpto or result.EwbValidTill
         else _("e-Waybill (Part A) generated successfully"),
         indicator="green",
         alert=True,
@@ -100,7 +100,12 @@ def log_and_process_e_waybill_generation(doc, result):
 
     irn = doc.get("irn")
     e_waybill_number = str(result["ewayBillNo" if not irn else "EwbNo"])
-    doc.db_set("ewaybill", e_waybill_number)
+
+    data = {"ewaybill": e_waybill_number}
+    if distance := result.get("distance"):
+        data["distance"] = distance
+
+    doc.db_set(data)
 
     log_and_process_e_waybill(
         doc,
@@ -136,7 +141,12 @@ def _cancel_e_waybill(doc, values):
     """Separate function, since called in backend from e-invoice utils"""
 
     data = EWaybillData(doc).get_e_waybill_cancel_data(values)
-    api = EWaybillAPI if not doc.get("irn") else EInvoiceAPI
+    api = (
+        EInvoiceAPI
+        # Use e-invoice endpoint only for sandbox environment
+        if doc.get("irn") and frappe.conf.use_gst_api_sandbox
+        else EWaybillAPI
+    )
     result = api(doc.company_gstin).cancel_e_waybill(data)
     doc.db_set("ewaybill", "")
 
@@ -268,7 +278,6 @@ def update_transporter(*, doctype, docname, values):
 @frappe.whitelist()
 def fetch_e_waybill_data(*, doctype, docname, attach=False):
     doc = load_doc(doctype, docname, "write" if attach else "print")
-
     log = frappe.get_doc("e-Waybill Log", doc.ewaybill)
     if not log.is_latest_data:
         _fetch_e_waybill_data(doc, log)
@@ -408,11 +417,7 @@ def update_transaction(doc, values):
         "lr_date": values.lr_date,
         "mode_of_transport": values.mode_of_transport,
         "gst_vehicle_type": values.gst_vehicle_type,
-        "gst_category": values.gst_category,
     }
-
-    if doc.doctype == "Sales Invoice":
-        data["export_type"] = values.export_type
 
     doc.db_set(data)
 
@@ -529,7 +534,7 @@ class EWaybillData(GSTTransactionData):
         - Max 250 Items
         """
 
-        for fieldname in ("company_gstin", "company_address", "customer_address"):
+        for fieldname in ("company_address", "customer_address"):
             if not self.doc.get(fieldname):
                 frappe.throw(
                     _("{0} is required to generate e-Waybill").format(
@@ -639,7 +644,7 @@ class EWaybillData(GSTTransactionData):
         elif self.doc.gst_category == "Overseas":
             self.transaction_details.sub_supply_type = 3
 
-            if self.doc.export_type == "Without Payment of Tax":
+            if not self.doc.is_export_with_gst:
                 self.transaction_details.document_type = "BIL"
 
         if self.doc.doctype == "Delivery Note":
@@ -694,6 +699,12 @@ class EWaybillData(GSTTransactionData):
 
         if self.doc.gst_category == "SEZ":
             self.billing_address.state_number = 96
+
+    def get_address_details(self, *args, **kwargs):
+        address_details = super().get_address_details(*args, **kwargs)
+        address_details.state_number = int(address_details.state_number)
+
+        return address_details
 
     def get_transaction_data(self):
         if self.sandbox:

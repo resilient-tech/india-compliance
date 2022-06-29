@@ -9,7 +9,7 @@ function update_gstin_in_other_documents(doctype) {
 
             const { gstin, gst_category } = frm.doc;
             let message = __(
-                "You were using the GSTIN <strong>{0}</strong> in following other documents. Do you want to update these? <br>",
+                "You were using the GSTIN <strong>{0}</strong> in the following other documents:<br>",
                 [previous_gstin]
             );
 
@@ -22,11 +22,15 @@ function update_gstin_in_other_documents(doctype) {
                     message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
                 });
             }
+            message += `<br>Do you want to update these with the following new values?
+                        <br>
+                        <br><strong>GSTIN:</strong> ${gstin || "&lt;empty&gt;"}
+                        <br><strong>GST Category:</strong> ${gst_category}`;
 
             frappe.confirm(message, function () {
                 frappe.call({
                     method: "india_compliance.gst_india.overrides.party.update_docs_with_previous_gstin",
-                    args: { gstin, gst_category, docs_with_previous_gstin },
+                    args: { gstin: gstin || "", gst_category, docs_with_previous_gstin },
                 });
             });
         },
@@ -57,7 +61,7 @@ function validate_gstin(doctype) {
                 frm.doc.pan = pan;
                 frm.refresh_field("pan");
             }
-        }
+        },
     });
 }
 
@@ -79,6 +83,25 @@ function validate_pan(doctype) {
 
             frm.doc.pan = pan;
             frm.refresh_field("pan");
-        }
+        },
+    });
+}
+
+function show_overseas_disabled_warning(doctype) {
+    frappe.ui.form.on(doctype, {
+        after_save(frm) {
+            if (
+                !frappe.boot.gst_settings.enable_overseas_transactions &&
+                in_list(["SEZ", "Overseas"], frm.doc.gst_category)
+            ) {
+                frappe.msgprint({
+                    message: __(
+                        `SEZ/Overseas transactions are disabled in GST Settings.
+                        Please enable this setting to create transactions for this party.`
+                    ),
+                    indicator: "orange",
+                });
+            }
+        },
     });
 }

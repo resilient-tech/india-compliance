@@ -3,15 +3,17 @@
 
 import frappe
 from frappe import _
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.model.document import Document
 from frappe.utils import getdate
 
 from india_compliance.gst_india.api import set_session
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
-from india_compliance.gst_india.constants.e_invoice import E_INVOICE_FIELDS
-from india_compliance.gst_india.constants.e_waybill import E_WAYBILL_FIELDS
-from india_compliance.gst_india.utils import delete_custom_fields
+from india_compliance.gst_india.constants.custom_fields import (
+    E_INVOICE_FIELDS,
+    E_WAYBILL_FIELDS,
+    SALES_REVERSE_CHARGE_FIELDS,
+)
+from india_compliance.gst_india.utils import toggle_custom_fields
 
 
 class GSTSettings(Document):
@@ -19,6 +21,7 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
         self.update_dependant_fields()
+        self.validate_credentials()
         self.clear_gst_auth_session()
 
     def clear_gst_auth_session(self):
@@ -33,9 +36,6 @@ class GSTSettings(Document):
         if not self.enable_api:
             self.enable_e_invoice = 0
 
-        if not self.enable_e_waybill:
-            self.enable_e_waybill_from_dn = 0
-
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
 
@@ -43,7 +43,7 @@ class GSTSettings(Document):
             self.auto_generate_e_waybill = 1
 
     def on_update(self):
-        frappe.enqueue(self.update_custom_fields, queue="short", at_front=True)
+        self.update_custom_fields()
 
         # clear session boot cache
         frappe.cache().delete_keys("bootinfo")
@@ -87,11 +87,14 @@ class GSTSettings(Document):
 
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):
-            _update_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
+            toggle_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
 
         if self.has_value_changed("enable_e_invoice"):
-            _update_custom_fields(
-                E_INVOICE_FIELDS, self.enable_e_invoice and self.enable_api
+            toggle_custom_fields(E_INVOICE_FIELDS, self.enable_e_invoice)
+
+        if self.has_value_changed("enable_reverse_charge_in_sales"):
+            toggle_custom_fields(
+                SALES_REVERSE_CHARGE_FIELDS, self.enable_reverse_charge_in_sales
             )
 
     def validate_e_invoice_applicability_date(self):
@@ -112,9 +115,21 @@ class GSTSettings(Document):
                 )
             )
 
-
-def _update_custom_fields(fields, condition):
-    if condition:
-        create_custom_fields(fields, ignore_validate=True)
-    else:
-        delete_custom_fields(fields)
+    def validate_credentials(self):
+        if (
+            self.enable_api
+            and (self.enable_e_invoice or self.enable_e_waybill)
+            and all(
+                credential.service != "e-Waybill / e-Invoice"
+                for credential in self.credentials
+            )
+        ):
+            frappe.msgprint(
+                # TODO: Add Link to Documentation.
+                _(
+                    "Please set credentials for e-Waybill / e-Invoice to use API"
+                    " features"
+                ),
+                indicator="yellow",
+                alert=True,
+            )

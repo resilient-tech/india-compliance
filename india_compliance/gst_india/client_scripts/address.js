@@ -4,10 +4,11 @@ const DOCTYPE = "Address";
 
 validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
+show_overseas_disabled_warning(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     country(frm) {
-        set_state_options(frm);
+        ic.set_state_options(frm);
 
         if (!frm.doc.country) return;
 
@@ -18,13 +19,13 @@ frappe.ui.form.on(DOCTYPE, {
         }
     },
     async refresh(frm) {
-        set_state_options(frm);
+        ic.set_state_options(frm);
 
         // set default values for GST fields
         if (!frm.is_new() || !frm.doc.links || frm.doc.gstin) return;
 
         const row = frm.doc.links[0];
-        if (!["Customer", "Supplier", "Company"].includes(row.link_doctype)) return;
+        if (!ic.gstin_doctypes.includes(row.link_doctype)) return;
 
         // Try to get clean doc from locals
         let doc = frappe.get_doc(row.link_doctype, row.link_name);
@@ -48,13 +49,3 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("gst_category", doc.gst_category || "");
     },
 });
-
-function set_state_options(frm) {
-    const state_field = frm.get_field("state");
-    if (frm.doc.country !== "India") {
-        state_field.set_data([]);
-        return;
-    }
-
-    state_field.set_data(state_field.df.options_for_india || []);
-}

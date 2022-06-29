@@ -1,7 +1,8 @@
 import json
 
 import frappe
-from frappe import _, bold
+from frappe import _
+from frappe.contacts.doctype.address.address import get_address_display
 
 from india_compliance.gst_india.utils import (
     is_valid_pan,
@@ -37,7 +38,7 @@ def validate_pan(doc):
         frappe.throw(_("Invalid PAN format"))
 
 
-def set_docs_with_previous_gstin(doc, method=True):
+def set_docs_with_previous_gstin(doc, method=None):
     if not frappe.request or frappe.flags.in_update_docs_with_previous_gstin:
         return
 
@@ -58,7 +59,7 @@ def set_docs_with_previous_gstin(doc, method=True):
 def get_docs_with_previous_gstin(gstin, doctype, docname):
     docs_with_previous_gstin = {}
     for dt in ("Address", "Supplier", "Customer", "Company"):
-        for doc in frappe.get_all(dt, filters={"gstin": gstin}):
+        for doc in frappe.get_list(dt, filters={"gstin": gstin}):
             if doc.name == docname and doctype == dt:
                 continue
 
@@ -71,7 +72,6 @@ def get_docs_with_previous_gstin(gstin, doctype, docname):
 def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gstin):
     frappe.flags.in_update_docs_with_previous_gstin = True
     docs_with_previous_gstin = json.loads(docs_with_previous_gstin)
-    ignored_docs = {}
 
     for doctype, docnames in docs_with_previous_gstin.items():
         for docname in docnames:
@@ -80,30 +80,46 @@ def update_docs_with_previous_gstin(gstin, gst_category, docs_with_previous_gsti
                 doc.gstin = gstin
                 doc.gst_category = gst_category
                 doc.save()
-            except frappe.PermissionError:
-                frappe.clear_last_message()
-                ignored_docs.setdefault(doctype, []).append(docname)
             except Exception as e:
-                # TODO: handle this in better way
                 frappe.clear_last_message()
                 frappe.throw(
                     "Error updating {0} {1}:<br/> {2}".format(doctype, docname, str(e))
                 )
 
-    if not ignored_docs:
-        return frappe.msgprint(
-            _("Updated GSTIN in all documents"), indicator="green", alert=True
-        )
+    frappe.msgprint(_("GSTIN Updated"), indicator="green", alert=True)
 
-    message = _(
-        "Following documents could not be updated due to insufficient"
-        " permission:<br/><br/>"
-    )
 
-    for doctype, docnames in ignored_docs.items():
-        if not docnames:
-            continue
+def create_primary_address(doc, method=None):
+    """
+    Used to create primary address when creating party.
+    Modified version of erpnext.selling.doctype.customer.customer.create_primary_address
 
-        message += f"{bold(doctype)}:<br/>{'<br/>'.join(docnames)}"
+    ERPNext uses `address_line1` so we use `_address_line1` to avoid conflict.
+    """
 
-    frappe.msgprint(message, title=_("Insufficient Permission"), indicator="yellow")
+    if not doc.get("_address_line1"):
+        return
+
+    address = make_address(doc)
+    address_display = get_address_display(address.as_dict())
+
+    doc.db_set(f"{doc.doctype.lower()}_primary_address", address.name)
+    doc.db_set("primary_address", address_display)
+
+
+def make_address(doc):
+    return frappe.get_doc(
+        {
+            "doctype": "Address",
+            "address_title": doc.name,
+            "address_line1": doc.get("_address_line1"),
+            "address_line2": doc.get("address_line2"),
+            "city": doc.get("city"),
+            "state": doc.get("state"),
+            "pincode": doc.get("pincode"),
+            "country": doc.get("country"),
+            "gstin": doc.gstin,
+            "gst_category": doc.gst_category,
+            "links": [{"link_doctype": doc.doctype, "link_name": doc.name}],
+        }
+    ).insert()
