@@ -41,6 +41,11 @@ $ bench get-app india_compliance https://github.com/resilient-tech/india-complia
 $ bench --site [site_name] install-app india_compliance
 ```
 
+## Contributing
+
+1. [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
+1. [Pull Request Requirements](https://github.com/frappe/erpnext/wiki/Contribution-Guidelines)
+
 ## License
 
 GNU General Public License (v3)
