@@ -48,7 +48,7 @@ def execute():
         where parent in %s
         GROUP BY parent, account_head
     """,
-        (invoice_list),
+        (invoice_list,),
         as_dict=1,
     )
 
@@ -93,14 +93,14 @@ def get_gst_accounts(
     only_reverse_charge=0,
     only_non_reverse_charge=0,
 ):
-    filters = {"parent": "GST Settings"}
+    filters = {}
 
     if company:
-        filters.update({"company": company})
+        filters["company"] = company
     if only_reverse_charge:
-        filters.update({"account_type": "Reverse Charge"})
+        filters["account_type"] = "Reverse Charge"
     elif only_non_reverse_charge:
-        filters.update({"account_type": ("in", ("Input", "Output"))})
+        filters["account_type"] = ("!=", "Reverse Charge")
 
     settings = frappe.get_cached_doc("GST Settings", "GST Settings")
     gst_accounts = settings.get("gst_accounts", filters)
