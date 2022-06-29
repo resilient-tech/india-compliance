@@ -35,7 +35,10 @@ doctype_js = {
 }
 
 doctype_list_js = {
-    "Sales Invoice": "gst_india/client_scripts/sales_invoice_list.js",
+    "Sales Invoice": [
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/sales_invoice_list.js",
+    ]
 }
 
 doc_events = {
