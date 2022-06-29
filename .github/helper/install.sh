@@ -50,7 +50,7 @@ sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch version-14-beta
-bench setup requirements --dev
+bench setup requirements
 
 bench start &
 bench --site test_site reinstall --yes
