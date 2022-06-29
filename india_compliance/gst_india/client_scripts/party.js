@@ -105,3 +105,15 @@ function show_overseas_disabled_warning(doctype) {
         },
     });
 }
+
+function show_gstin_status_in_description(doctype) {
+    frappe.ui.form.on(doctype, {
+        onload(frm) {
+            if (!frm.doc.gstin) return;
+
+            frappe.db.get_value("GSTIN Detail", { 'name': frm.doc.gstin }, "status", (r) => {
+                frm.get_field('gstin').set_description(__('{0}', [r.status || "No status found"]));
+            });
+        }
+    });
+}

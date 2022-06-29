@@ -1,5 +1,3 @@
-from math import ceil
-
 import frappe
 from frappe import _
 
@@ -29,6 +27,10 @@ def get_gstin_info(gstin):
 
     validate_gstin(gstin)
     response = PublicAPI().get_gstin_info(gstin)
+
+    if response.sts:
+        update_gstin_detail(response.gstin, response.sts)
+
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
     )
@@ -46,6 +48,25 @@ def get_gstin_info(gstin):
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
     return gstin_info
+
+
+def update_gstin_detail(gstin, status):
+    """Update GSTIN status and last updated on in `GSTIN Detail` table"""
+
+    if frappe.db.exists("GSTIN Detail", gstin):
+        gstin_detail = frappe.get_doc("GSTIN Detail", gstin)
+    else:
+        gstin_detail = frappe.new_doc("GSTIN Detail")
+
+    gstin_detail.update(
+        {
+            "gstin": gstin,
+            "status": status,
+            "last_updated_on": frappe.utils.now_datetime(),
+        }
+    )
+
+    gstin_detail.save(ignore_permissions=True)
 
 
 def _get_address(address):
