@@ -2,8 +2,6 @@
 
 ### ERPNext app to simplify compliance with Indian Rules and Regulations.
 
-<br>
-
 ## Introduction
 
 India Compliance is an Open Source app to simplify compliance with Indian Rules and Regulations. It comes with powerful validations and customizations to make your compliance process more efficient and effective. Also, integrations with GST services would automate your business processes.
@@ -50,8 +48,9 @@ $ bench --site [site_name] install-app india_compliance
 
 GNU General Public License (v3)
 
+The India Compliance code is licensed as GNU General Public License (v3) and the Documentation is licensed as Creative Commons (CC-BY-SA-3.0).
 ## Credits
 
 -   [Frappe](https://frappe.io/)
 -   [ERPNext](https://erpnext.com/)
--   Community of Contributors
+-   Contributors
