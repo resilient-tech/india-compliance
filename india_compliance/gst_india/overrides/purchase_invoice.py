@@ -2,61 +2,23 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from india_compliance.gst_india.overrides.transaction import (
+    validate_mandatory_fields,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
-def validate_reverse_charge_transaction(doc, method):
-    country = frappe.get_cached_value("Company", doc.company, "country")
-
-    if country != "India":
+def validate(doc, method=None):
+    if validate_transaction(doc) is False:
         return
 
-    base_gst_tax = 0
-    base_reverse_charge_booked = 0
-
-    if doc.reverse_charge != "Y":
-        return
-
-    reverse_charge_accounts = get_gst_accounts_by_type(
-        doc.company, "Reverse Charge"
-    ).values()
-
-    input_gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
-
-    for tax in doc.get("taxes"):
-        if tax.account_head in input_gst_accounts:
-            if tax.add_deduct_tax == "Add":
-                base_gst_tax += tax.base_tax_amount_after_discount_amount
-            else:
-                base_gst_tax += tax.base_tax_amount_after_discount_amount
-        elif tax.account_head in reverse_charge_accounts:
-            if tax.add_deduct_tax == "Add":
-                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
-            else:
-                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
-
-    if base_gst_tax != base_reverse_charge_booked:
-        msg = _("Booked reverse charge is not equal to applied tax amount")
-        msg += "<br>"
-        msg += _(
-            "Please refer {gst_document_link} to learn more about how to setup and"
-            " create reverse charge invoice"
-        ).format(
-            gst_document_link=(
-                '<a href="https://docs.erpnext.com/docs/user/manual/en/regional/india/gst-setup">GST'
-                " Documentation</a>"
-            )
-        )
-
-        frappe.throw(msg)
+    update_itc_totals(doc)
+    validate_mandatory_fields(doc, ("place_of_supply", "gst_category"))
+    validate_supplier_gstin(doc)
 
 
-def update_itc_availed_fields(doc, method):
-    country = frappe.get_cached_value("Company", doc.company, "country")
-
-    if country != "India":
-        return
-
+def update_itc_totals(doc, method=None):
     # Initialize values
     doc.itc_integrated_tax = 0
     doc.itc_state_tax = 0
@@ -77,3 +39,11 @@ def update_itc_availed_fields(doc, method):
 
         if tax.account_head == gst_accounts.cess_account:
             doc.itc_cess_amount += flt(tax.base_tax_amount_after_discount_amount)
+
+
+def validate_supplier_gstin(doc):
+    if doc.company_gstin == doc.supplier_gstin:
+        frappe.throw(
+            _("Supplier GSTIN and Company GSTIN cannot be the same"),
+            title=_("Invalid Supplier GSTIN"),
+        )

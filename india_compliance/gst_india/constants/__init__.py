@@ -1,6 +1,10 @@
 import re
 
+from erpnext.stock.get_item_details import sales_doctypes
+
 TIMEZONE = "Asia/Kolkata"
+
+ABBREVIATIONS = {"SEZ", "GST", "CGST", "SGST", "IGST", "CESS", "HSN"}
 
 GST_ACCOUNT_FIELDS = (
     "cgst_account",
@@ -23,10 +27,10 @@ GST_CATEGORIES = {
     "Tax Deductor": "B2B",
 }
 
-EXPORT_TYPES = {
-    "With Payment of Tax": "WP",
-    "Without Payment of Tax": "WOP",
-}
+EXPORT_TYPES = (
+    "WOP",  # Without Payment of Tax [0]
+    "WP",  # With Payment of Tax [1]
+)
 
 STATE_NUMBERS = {
     "Andaman and Nicobar Islands": "35",
@@ -101,3 +105,9 @@ PINCODE_FORMAT = re.compile(r"^[1-9][0-9]{5}$")
 # Maximum length must be 16 characters. First character must be alphanumeric.
 # Subsequent characters can be alphanumeric, hyphens or slashes.
 GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
+
+# used to extract Distance (whole number) from string
+DISTANCE_REGEX = re.compile(r"\d+")
+
+INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
+SALES_DOCTYPES = set(sales_doctypes)

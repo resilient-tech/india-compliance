@@ -7,6 +7,9 @@ function setup_e_waybill_actions(doctype) {
         return;
 
     frappe.ui.form.on(doctype, {
+        mode_of_transport(frm) {
+            frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
+        },
         setup(frm) {
             if (!gst_settings.enable_api) return;
 
@@ -22,7 +25,8 @@ function setup_e_waybill_actions(doctype) {
             if (
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
-                !is_e_waybill_applicable(frm)
+                !is_e_waybill_applicable(frm) ||
+                (frm.doctype === "Delivery Note" && !frm.doc.customer_address)
             )
                 return;
 
@@ -41,7 +45,7 @@ function setup_e_waybill_actions(doctype) {
 
                 if (has_e_waybill_threshold_met(frm) && !frm.doc.is_return) {
                     frm.dashboard.add_comment(
-                        "e-Waybill is applicable for this invoice and not yet generated or updated.",
+                        __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
                         "yellow",
                         true
                     );
@@ -180,7 +184,6 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
         });
     };
 
-    const json_action_label = __("Download JSON");
     const json_action = async values => {
         const ewb_data = await frappe.xcall(
             "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
@@ -197,6 +200,11 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
 
     const fields = [
         {
+            label: "Part A",
+            fieldname: "section_part_a",
+            fieldtype: "Section Break",
+        },
+        {
             label: "Transporter",
             fieldname: "transporter",
             fieldtype: "Link",
@@ -212,23 +220,6 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             onchange: () => update_gst_tranporter_id(d),
         },
         {
-            label: "GST Transporter ID",
-            fieldname: "gst_transporter_id",
-            fieldtype: "Data",
-            default:
-                frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length == 15
-                    ? frm.doc.gst_transporter_id
-                    : "",
-            onchange: () => update_generate_dialog_title(d),
-        },
-        {
-            label: "Vehicle No",
-            fieldname: "vehicle_no",
-            fieldtype: "Data",
-            default: frm.doc.vehicle_no,
-            onchange: () => update_generate_dialog_title(d),
-        },
-        {
             label: "Distance (in km)",
             fieldname: "distance",
             fieldtype: "Float",
@@ -240,11 +231,34 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             fieldtype: "Column Break",
         },
         {
+            label: "GST Transporter ID",
+            fieldname: "gst_transporter_id",
+            fieldtype: "Data",
+            default:
+                frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length == 15
+                    ? frm.doc.gst_transporter_id
+                    : "",
+        },
+        // Sub Supply Type will be visible here for Delivery Note
+        {
+            label: "Part B",
+            fieldname: "section_part_b",
+            fieldtype: "Section Break",
+        },
+
+        {
+            label: "Vehicle No",
+            fieldname: "vehicle_no",
+            fieldtype: "Data",
+            default: frm.doc.vehicle_no,
+            onchange: () => update_generation_dialog(d),
+        },
+        {
             label: "Transport Receipt No",
             fieldname: "lr_no",
             fieldtype: "Data",
             default: frm.doc.lr_no,
-            onchange: () => update_generate_dialog_title(d),
+            onchange: () => update_generation_dialog(d),
         },
         {
             label: "Transport Receipt Date",
@@ -254,13 +268,17 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             mandatory_depends_on: "eval:doc.lr_no",
         },
         {
+            fieldtype: "Column Break",
+        },
+
+        {
             label: "Mode Of Transport",
             fieldname: "mode_of_transport",
             fieldtype: "Select",
             options: `\nRoad\nAir\nRail\nShip`,
             default: frm.doc.mode_of_transport,
             onchange: () => {
-                update_generate_dialog_title(d);
+                update_generation_dialog(d);
                 update_vehicle_type(d);
             },
         },
@@ -273,35 +291,10 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
             default: frm.doc.gst_vehicle_type,
         },
-        {
-            fieldtype: "Section Break",
-        },
-        {
-            fieldname: "gst_category",
-            label: "GST Category",
-            fieldtype: "Select",
-            options:
-                "\nRegistered Regular\nRegistered Composition\nUnregistered\nSEZ\nOverseas\nConsumer\nDeemed Export\nUIN Holders",
-            default: frm.doc.gst_category,
-        },
-        {
-            fieldtype: "Column Break",
-        },
-        {
-            fieldname: "export_type",
-            label: "Export Type",
-            fieldtype: "Select",
-            depends_on: 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
-            options: "\nWith Payment of Tax\nWithout Payment of Tax",
-            default: frm.doc.export_type,
-        },
     ];
 
     if (frm.doctype === "Delivery Note") {
-        const same_gstin =
-            (frm.doc.customer_gstin || frm.doc.billing_address_gstin) ==
-            frm.doc.company_gstin;
-
+        const same_gstin = frm.doc.billing_address_gstin == frm.doc.company_gstin;
         let options;
 
         if (frm.doc.is_return) {
@@ -323,7 +316,8 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
             }
         }
 
-        fields.push({
+        // Inserted at the end of Part A section
+        fields.splice(5, 0, {
             label: "Sub Supply Type",
             fieldname: "sub_supply_type",
             fieldtype: "Select",
@@ -334,9 +328,9 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
     }
 
     const d = new frappe.ui.Dialog({
-        title: __(get_generate_dialog_title(frm.doc)),
+        title: __("Generate e-Waybill"),
         fields,
-        primary_action_label: enable_api ? __("Generate") : json_action_label,
+        primary_action_label: get_primary_action_label_for_generation(frm.doc),
         primary_action(values) {
             d.hide();
 
@@ -346,7 +340,7 @@ function show_generate_e_waybill_dialog(frm, enable_api) {
                 json_action(values);
             }
         },
-        secondary_action_label: enable_api ? json_action_label : null,
+        secondary_action_label: enable_api ? __("Download JSON") : null,
         secondary_action: enable_api
             ? () => {
                   d.hide();
@@ -633,20 +627,28 @@ async function update_gst_tranporter_id(dialog) {
     dialog.set_value("gst_transporter_id", response.gst_transporter_id);
 }
 
-function update_generate_dialog_title(dialog) {
-    const title = get_generate_dialog_title(dialog.get_values(true));
+function update_generation_dialog(dialog) {
+    const dialog_values = dialog.get_values(true);
+    const primary_action_label = get_primary_action_label_for_generation(dialog_values);
+
     dialog.set_df_property(
         "gst_transporter_id",
         "reqd",
-        title == "Generate e-Waybill" ? 0 : 1
+        primary_action_label.includes("Part A") ? 1 : 0
     );
-    dialog.set_title(__(title));
+
+    set_primary_action_label(dialog, primary_action_label);
 }
 
-function get_generate_dialog_title(doc) {
-    return `Generate e-Waybill${
-        are_transport_details_available(doc) ? "" : " (Part A)"
-    }`;
+function get_primary_action_label_for_generation(doc) {
+    const { enable_api } = frappe.boot.gst_settings;
+    const label = enable_api ? __("Generate") : __("Download JSON");
+
+    if (are_transport_details_available(doc)) {
+        return label;
+    }
+
+    return label + " (Part A)";
 }
 
 function are_transport_details_available(doc) {
@@ -659,6 +661,12 @@ function are_transport_details_available(doc) {
 
 function update_vehicle_type(dialog) {
     dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+}
+
+function get_vehicle_type(doc) {
+    if (doc.mode_of_transport == "Road") return "Regular";
+    if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
+    return "";
 }
 
 /********
@@ -699,4 +707,10 @@ function get_e_waybill_file_name(docname) {
     }
 
     return `${prefix}_e-Waybill_Data_${frappe.utils.get_random(5)}.json`;
+}
+
+function set_primary_action_label(dialog, primary_action_label) {
+    dialog.get_primary_btn()
+      .removeClass("hide")
+      .html(primary_action_label);
 }
