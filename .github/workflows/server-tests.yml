@@ -14,14 +14,6 @@ on:
       - '**.md'
       - '**.html'
       - '**.csv'
-  
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch name'
-        default: 'version-14-beta'
-        required: false
-        type: string
 
 jobs:
   tests:
@@ -102,7 +94,6 @@ jobs:
           cd ~/frappe-bench/ && source env/bin/activate
           cd apps/india_compliance && pip install -r dev-requirements.txt
         env:
-          TYPE: server
           BRANCH: version-14-beta
 
       - name: Run Tests
