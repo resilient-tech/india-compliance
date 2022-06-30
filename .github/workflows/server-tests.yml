@@ -1,14 +1,15 @@
 name: Server Tests
 
 on:
-  push:
+  pull_request:
     paths-ignore:
       - '**.css'
       - '**.md'
       - '**.html'
       - '**.csv'
-  
-  pull_request:
+
+  push:
+    branches: [ develop ]
     paths-ignore:
       - '**.css'
       - '**.md'
