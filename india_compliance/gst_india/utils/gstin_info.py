@@ -1,9 +1,8 @@
-from math import ceil
-
 import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.public import PublicAPI
+from india_compliance.gst_india.constants import OVERSEAS, REGISTERED, TDS, UNBODY
 from india_compliance.gst_india.utils import titlecase, validate_gstin
 
 GST_CATEGORIES = {
@@ -29,6 +28,7 @@ def get_gstin_info(gstin):
 
     validate_gstin(gstin)
     response = PublicAPI().get_gstin_info(gstin)
+
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
     )
@@ -88,6 +88,22 @@ def _extract_address_lines(address):
         address_line1 = f"{address_line1}, {street}"
 
     return address_line1, address_line2
+
+
+@frappe.whitelist()
+def get_gst_category_from_gstin(gstin):
+    gst_category = "Unregistered"
+
+    if UNBODY.match(gstin):
+        gst_category = "UIN Holders"
+    elif TDS.match(gstin):
+        gst_category = "Tax Deductor"
+    elif OVERSEAS.match(gstin):
+        gst_category = "Overseas"
+    elif REGISTERED.match(gstin):
+        gst_category = "Registered Regular"
+
+    return frappe._dict(gst_category=gst_category)
 
 
 # ####### SAMPLE DATA for GST_CATEGORIES ########
