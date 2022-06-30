@@ -24,9 +24,6 @@ jobs:
     strategy:
       fail-fast: false
 
-      matrix:
-        container: [1, 2, 3]
-
     name: Python Unit Tests
 
     services:
@@ -92,36 +89,10 @@ jobs:
       - name: Install
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
-          cd ~/frappe-bench/ && source env/bin/activate
-          cd apps/india_compliance && pip install -r dev-requirements.txt
         env:
           BRANCH: version-14-beta
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
+        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
         env:
           TYPE: server
-
-      - name: Upload coverage data
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-${{ matrix.container }}
-          path: /home/runner/frappe-bench/sites/coverage.xml
-
-  coverage:
-    name: Coverage Wrap Up
-    needs: tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Clone
-        uses: actions/checkout@v2
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-
-      - name: Upload coverage data
-        uses: codecov/codecov-action@v2
-        with:
-          name: MariaDB
-          fail_ci_if_error: true
-          verbose: true
