@@ -1,5 +1,3 @@
-import os
-
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from frappe.test_runner import make_test_objects
