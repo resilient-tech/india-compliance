@@ -15,6 +15,14 @@ on:
       - '**.html'
       - '**.csv'
 
+   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch name'
+        default: 'version-14-beta'
+        required: false
+        type: string
+
 jobs:
   tests:
     runs-on: ubuntu-18.04
@@ -92,6 +100,7 @@ jobs:
           cd apps/india_compliance && pip install -r dev-requirements.txt
         env:
           TYPE: server
+          BRANCH: ${{ github.events.inputs.branch }}
 
       - name: Run Tests
         run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
