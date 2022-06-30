@@ -1,0 +1,207 @@
+{
+    "Company": [
+        {
+            "abbr": "_TIRC",
+            "company_name": "_Test Indian Registered Company",
+            "country": "India",
+            "default_currency": "INR",
+            "doctype": "Company",
+            "domain": "Manufacturing",
+            "chart_of_accounts": "Standard",
+            "enable_perpetual_inventory": 0,
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "abbr": "_TIUC",
+            "company_name": "_Test Indian Unregistered Company",
+            "country": "India",
+            "default_currency": "INR",
+            "doctype": "Company",
+            "domain": "Manufacturing",
+            "chart_of_accounts": "Standard",
+            "enable_perpetual_inventory": 0,
+            "gst_category": "Unregistered"
+        }
+    ],
+    "Item": [
+        {
+            "description": "_Test Trading Goods 1",
+            "doctype": "Item",
+            "is_stock_item": 1,
+            "item_code": "_Test Trading Goods 1",
+            "item_name": "_Test Trading Goods 1",
+            "valuation_rate": 100,
+            "gst_hsn_code": "61149090",
+            "item_defaults": [
+                {
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "expense_account": "Cost of Goods Sold - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Sales - _TIRC"
+                }
+            ]
+        }
+    ],
+    "Customer": [
+        {
+            "customer_name": "_Test Registered Customer",
+            "customer_type": "Company",
+            "gstin": "24AANFA2641L1ZF",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "customer_name": "_Test Registered Composition Customer",
+            "customer_type": "Individual",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "Registered Composition"
+        },
+        {
+            "customer_name": "_Test Unregistered Customer",
+            "customer_type": "Individual",
+            "gstin": "",
+            "gst_category": "Unregistered"
+        }
+    ],
+    "Supplier": [
+        {
+            "supplier_name": "_Test Registered Supplier",
+            "supplier_type": "Company",
+            "gstin": "29AABCR1718E1ZL",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "supplier_name": "_Test Registered Composition Supplier",
+            "supplier_type": "Individual",
+            "gstin": "33AAAAR6720M1ZG",
+            "gst_category": "Registered Composition"
+        },
+        {
+            "supplier_name": "_Test Unregistered Supplier",
+            "supplier_type": "Individual",
+            "gstin": "",
+            "gst_category": "Unregistered"
+        }
+    ],
+    "Address": [
+        {
+            "address_type": "Billing",
+            "address_line1": "Test Address - 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
+                }
+            ]
+        },
+        {
+            "address_type": "Billing",
+            "address_line1": "Test Address - 2",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Unregistered Company"
+                }
+            ]
+        },
+        {
+            "address_type": "Billing",
+            "address_line1": "Test Address - 3",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AANFA2641L1ZF",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                { "link_doctype": "Customer", "link_name": "_Test Registered Customer" }
+            ]
+        },
+        {
+            "address_type": "Billing",
+            "address_line1": "Test Address - 4",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AANCA4892J1Z8",
+            "gst_category": "SEZ",
+            "links": [
+                { "link_doctype": "Customer", "link_name": "_Test Registered Customer" }
+            ]
+        },
+        {
+            "address_type": "Billing",
+            "address_line1": "Test Address - 4",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Composition Customer"
+                }
+            ]
+        },
+        {
+            "address_type": "Billing",
+            "address_line1": "Test Address - 5",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "29AABCR1718E1ZL",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                { "link_doctype": "Supplier", "link_name": "_Test Registered Supplier" }
+            ]
+        },
+        {
+            "address_type": "Billing",
+            "address_line1": "Test Address - 6",
+            "city": "Test City",
+            "state": "Tamil Nadu",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "33AAAAR6720M1ZG",
+            "gst_category": "Registered Composition",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Composition Supplier"
+                }
+            ]
+        }
+    ]
+}
