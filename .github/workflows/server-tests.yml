@@ -93,7 +93,7 @@ jobs:
         env:
           TYPE: server
 
-      # - name: Run Tests
-      #   run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
-      #   env:
-      #     TYPE: server
+      - name: Run Tests
+        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
+        env:
+          TYPE: server
