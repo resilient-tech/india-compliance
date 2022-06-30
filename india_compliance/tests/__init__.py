@@ -26,7 +26,7 @@ def before_tests():
                 "country": "India",
                 "fy_start_date": f"{year}-04-01",
                 "fy_end_date": f"{year+1}-03-31",
-                "language": "english",
+                "language": "English",
                 "company_tagline": "Testing",
                 "email": "test@erpnext.com",
                 "password": "test",
@@ -47,7 +47,9 @@ def set_default_settings_for_tests():
 
 
 def create_test_records():
-    test_records = read_json("test_records")
+    test_records = frappe.get_file_json(
+        frappe.get_app_path("india_compliance", "tests", "test_records.json")
+    )
 
     for doctype, data in test_records.items():
         make_test_objects(doctype, data, reset=True)
@@ -71,12 +73,6 @@ def add_company_to_fy(data):
             doc.append("companies", {"company": company["company_name"]})
 
     doc.save(ignore_permissions=True)
-
-
-def read_json(name):
-    file_path = os.path.join(os.path.dirname(__file__), "{name}.json".format(name=name))
-    with open(file_path, "r") as f:
-        return frappe.parse_json(f.read())
 
 
 def create_sales_invoice(**args):
