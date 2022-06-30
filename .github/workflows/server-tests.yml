@@ -103,7 +103,7 @@ jobs:
           cd apps/india_compliance && pip install -r dev-requirements.txt
         env:
           TYPE: server
-          BRANCH: ${{ github.events.inputs.branch }}
+          BRANCH: version-14-beta
 
       - name: Run Tests
         run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
