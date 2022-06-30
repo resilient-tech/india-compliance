@@ -660,16 +660,22 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+    validate_gstin_status(
+        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+    )
 
 
 def validate_gstin_status(gstin):
     if not gstin:
         return
 
-    gstin_status = frappe.get_cached_value("GSTIN Detail", gstin, "status")
+    gstin_status = frappe.db.get_value("GSTIN Detail", gstin, "status")
 
-    if gstin_status == "Active":
+    if not gstin_status:
+        return
+
+    if gstin_status != "Active":
         frappe.throw(
-            _(f"Billing Address GSTIN is {gstin_status}"),
-            title=_("Invalid Billing Address GSTIN"),
+            _("Billing Address GSTIN is {0}".format(gstin_status)),
+            title=_("{0} Invalid Billing Address GSTIN".format(gstin_status)),
         )
