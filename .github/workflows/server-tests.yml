@@ -97,6 +97,30 @@ jobs:
           BRANCH: version-14-beta
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
+        run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
         env:
           TYPE: server
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-${{ matrix.container }}
+          path: /home/runner/frappe-bench/sites/coverage.xml
+
+  coverage:
+    name: Coverage Wrap Up
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Upload coverage data
+        uses: codecov/codecov-action@v2
+        with:
+          name: MariaDB
+          fail_ci_if_error: true
+          verbose: true
