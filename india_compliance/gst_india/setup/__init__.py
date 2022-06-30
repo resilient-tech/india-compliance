@@ -1,5 +1,3 @@
-import json
-
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now_datetime, nowdate
@@ -11,7 +9,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
-from india_compliance.gst_india.utils import read_data_file, toggle_custom_fields
+from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_fields
 
 
 def after_install():
@@ -41,7 +39,9 @@ def create_address_template():
     if frappe.db.exists("Address Template", "India"):
         return
 
-    address_html = read_data_file("address_template.html")
+    address_html = frappe.read_file(
+        get_data_file_path("address_template.html"), raise_not_found=True
+    )
 
     frappe.get_doc(
         {
@@ -77,7 +77,7 @@ def create_hsn_codes():
             code["hsn_code"],
             code["description"],
         ]
-        for code in json.loads(read_data_file("hsn_codes.json"))
+        for code in frappe.get_file_json(get_data_file_path("hsn_codes.json"))
     ]
 
     frappe.db.bulk_insert(
