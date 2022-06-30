@@ -7,15 +7,15 @@ on:
       - '**.md'
       - '**.html'
       - '**.csv'
-
+  
   pull_request:
     paths-ignore:
       - '**.css'
       - '**.md'
       - '**.html'
       - '**.csv'
-
-   workflow_dispatch:
+  
+  workflow_dispatch:
     inputs:
       branch:
         description: 'Branch name'
@@ -30,6 +30,9 @@ jobs:
 
     strategy:
       fail-fast: false
+
+      matrix:
+        container: [1, 2, 3]
 
     name: Python Unit Tests
 
