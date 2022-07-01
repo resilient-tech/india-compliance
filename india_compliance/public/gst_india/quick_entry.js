@@ -325,9 +325,12 @@ function map_gstin_info(doc, gstin_info) {
 
 function update_party_info(doc, gstin_info) {
     doc.gstin = doc._gstin;
-    const party_name_field = `${ic.get_party_type(doc.doctype).toLowerCase()}_name`;
-    doc[party_name_field] = gstin_info.business_name;
     doc.gst_category = gstin_info.gst_category;
+
+    if (!in_list(ic.gstin_doctypes, doc.doctype)) return;
+
+    const party_name_field = `${doc.doctype.toLowerCase()}_name`;
+    doc[party_name_field] = gstin_info.business_name;
 }
 
 function update_address_info(doc, address) {
