@@ -671,7 +671,8 @@ class EWaybillData(GSTTransactionData):
         self.company_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
-        self.shipping_address = self.billing_address
+        # billing state is changed for SEZ, hence copy()
+        self.shipping_address = self.billing_address.copy()
         self.dispatch_address = self.company_address
 
         if has_different_shipping_address and has_different_dispatch_address:
