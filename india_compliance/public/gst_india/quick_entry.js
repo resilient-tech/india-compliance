@@ -88,7 +88,6 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     : "",
                 ignore_validation: true,
                 onchange: () => {
-                    if (!this.api_enabled) return;
                     autofill_fields(this.dialog);
                 },
             },
@@ -270,14 +269,17 @@ frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
+    const country = dialog.fields_dict.country.value;
+
     if (!gstin || gstin.length != 15) {
         const pincode_field = dialog.fields_dict._pincode;
         pincode_field.set_data([]);
         pincode_field.df.onchange = null;
+        dialog.fields_dict.gst_category.set_value("Unregistered");
         return;
     }
 
-    const gstin_info = await get_gstin_info(dialog.doc);
+    const gstin_info = await get_gstin_info(gstin, country);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
 
@@ -304,12 +306,13 @@ function setup_pincode_field(dialog, gstin_info) {
     };
 }
 
-function get_gstin_info(doc) {
-    gstin = doc._gstin;
+function get_gstin_info(gstin, country) {
+    const method = !this.api_enabled ? "get_gst_category_from_gstin" : "get_gstin_info";
+    const args = !this.api_enabled ? { gstin, country } : { gstin };
 
     return frappe.call({
-        method: "india_compliance.gst_india.utils.gstin_info.get_gstin_info",
-        args: { gstin },
+        method: "india_compliance.gst_india.utils.gstin_info." + method,
+        args: args,
     })
         .then(r => r.message)
 }
@@ -325,16 +328,6 @@ function map_gstin_info(doc, gstin_info) {
 }
 
 function update_party_info(doc, gstin_info) {
-    if (!gstin_info.gst_category) {
-        frappe.call({
-            method: "india_compliance.gst_india.utils.gstin_info.get_gst_category_from_gstin",
-            args: { gstin },
-        }).then(r => {
-            doc.gst_category = r.message.gst_category;
-        })
-        return;
-    }
-
     doc.gstin = doc._gstin;
     const party_name_field = `${ic.get_party_type(doc.doctype).toLowerCase()}_name`;
     doc[party_name_field] = gstin_info.business_name;

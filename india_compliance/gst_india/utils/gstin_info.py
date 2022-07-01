@@ -91,14 +91,12 @@ def _extract_address_lines(address):
 
 
 @frappe.whitelist()
-def get_gst_category_from_gstin(gstin):
-    gst_category = "Unregistered"
-
+def get_gst_category_from_gstin(gstin, country=None):
     if UNBODY.match(gstin):
         gst_category = "UIN Holders"
     elif TDS.match(gstin):
         gst_category = "Tax Deductor"
-    elif OVERSEAS.match(gstin):
+    elif OVERSEAS.match(gstin) and country != "India":
         gst_category = "Overseas"
     elif REGISTERED.match(gstin):
         gst_category = "Registered Regular"
