@@ -88,7 +88,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     : "",
                 ignore_validation: true,
                 onchange: () => {
-                    autofill_fields(this.dialog);
+                    autofill_fields(this.dialog, this.api_enabled);
                 },
             },
         ];
@@ -267,7 +267,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
 frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
-async function autofill_fields(dialog) {
+async function autofill_fields(dialog, api_enabled) {
     const gstin = dialog.doc._gstin;
     const country = dialog.fields_dict.country.value;
 
@@ -279,7 +279,7 @@ async function autofill_fields(dialog) {
         return;
     }
 
-    const gstin_info = await get_gstin_info(gstin, country);
+    const gstin_info = await get_gstin_info(gstin, country, api_enabled);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
 
@@ -306,9 +306,9 @@ function setup_pincode_field(dialog, gstin_info) {
     };
 }
 
-function get_gstin_info(gstin, country) {
-    const method = !this.api_enabled ? "get_gst_category_from_gstin" : "get_gstin_info";
-    const args = !this.api_enabled ? { gstin, country } : { gstin };
+function get_gstin_info(gstin, country, api_enabled) {
+    const method = !api_enabled ? "get_gst_category_from_gstin" : "get_gstin_info";
+    const args = !api_enabled ? { gstin, country } : { gstin };
 
     return frappe.call({
         method: "india_compliance.gst_india.utils.gstin_info." + method,
