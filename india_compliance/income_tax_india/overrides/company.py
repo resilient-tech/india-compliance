@@ -1,10 +1,6 @@
-import json
-
 import frappe
 from frappe.utils import today
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
-
-from india_compliance.income_tax_india.utils import read_data_file
 
 
 def make_company_fixtures(doc, method=None):
@@ -97,7 +93,12 @@ def set_tax_withholding_category(company):
 
 def get_tds_details(accounts, fiscal_year_details):
     tds_details = []
-    tds_rules = json.loads(read_data_file("tds_details.json"))
+    tds_rules = frappe.get_file_json(
+        frappe.get_app_path(
+            "india_compliance", "income_tax_india", "data", "tds_details.json"
+        )
+    )
+
     for category in tds_rules:
         for rule in tds_rules[category]:
             tds_details.append(

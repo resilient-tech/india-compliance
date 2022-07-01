@@ -166,10 +166,8 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
-def read_data_file(file_name):
-    file_path = frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
-    with open(file_path, "r") as f:
-        return f.read()
+def get_data_file_path(file_name):
+    return frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
 
 
 def validate_gstin_check_digit(gstin, label="GSTIN"):
