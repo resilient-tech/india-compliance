@@ -89,7 +89,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 ignore_validation: true,
                 onchange: () => {
                     if (!this.api_enabled) return;
-                    autofill_fields(this.dialog);
+                    autofill_fields(this.dialog, this.api_enabled);
                 },
             },
         ];
@@ -268,16 +268,21 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
 frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
-async function autofill_fields(dialog) {
+async function autofill_fields(dialog, api_enabled) {
     const gstin = dialog.doc._gstin;
+    const gstin_field = dialog.get_field("_gstin");
+    let description = api_enabled && !gstin ? "Autofill party information by entering their GSTIN" : ""
+
     if (!gstin || gstin.length != 15) {
         const pincode_field = dialog.fields_dict._pincode;
         pincode_field.set_data([]);
         pincode_field.df.onchange = null;
+        gstin_field.set_description(description);
         return;
     }
 
     const gstin_info = await get_gstin_info(gstin);
+    gstin_field.set_description(gstin_info.status);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
 

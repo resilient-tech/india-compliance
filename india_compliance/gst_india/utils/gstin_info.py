@@ -1,5 +1,3 @@
-from math import ceil
-
 import frappe
 from frappe import _
 
@@ -37,6 +35,7 @@ def get_gstin_info(gstin):
         gstin=response.gstin,
         business_name=titlecase(business_name),
         gst_category=GST_CATEGORIES.get(response.dty, ""),
+        status=response.sts,
     )
 
     if permanent_address := response.get("pradr"):
