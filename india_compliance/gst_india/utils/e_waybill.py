@@ -1,3 +1,5 @@
+import os
+
 import frappe
 from frappe import _
 from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
@@ -332,13 +334,16 @@ def attach_e_waybill_pdf(doc, log=None):
 
 
 def delete_file(doc, filename):
+    filename, extn = os.path.splitext(filename)
+
     for file in frappe.get_all(
         "File",
-        filters={
-            "attached_to_doctype": doc.doctype,
-            "attached_to_name": doc.name,
-            "file_name": filename,
-        },
+        filters=[
+            ["attached_to_doctype", "=", doc.doctype],
+            ["attached_to_name", "=", doc.name],
+            ["file_name", "like", f"{filename}%"],
+            ["file_name", "like", f"%{extn}"],
+        ],
         pluck="name",
     ):
         frappe.delete_doc("File", file, force=True, ignore_permissions=True)
