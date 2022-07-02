@@ -147,14 +147,8 @@ def _cancel_e_waybill(doc, values):
         if doc.get("irn") and frappe.conf.use_gst_api_sandbox
         else EWaybillAPI
     )
-    result = api(doc.company_gstin).cancel_e_waybill(data)
-    doc.db_set("ewaybill", "")
 
-    frappe.msgprint(
-        _("e-Waybill cancelled successfully"),
-        indicator="green",
-        alert=True,
-    )
+    result = api(doc.company_gstin).cancel_e_waybill(data)
 
     log_and_process_e_waybill(
         doc,
@@ -165,6 +159,14 @@ def _cancel_e_waybill(doc, values):
             "cancel_remark": values.remark if values.remark else values.reason,
             "cancelled_on": parse_datetime(result.cancelDate, day_first=True),
         },
+    )
+
+    doc.db_set("ewaybill", "")
+
+    frappe.msgprint(
+        _("e-Waybill cancelled successfully"),
+        indicator="green",
+        alert=True,
     )
 
 
