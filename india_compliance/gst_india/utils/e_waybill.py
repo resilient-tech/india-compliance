@@ -171,6 +171,7 @@ def _cancel_e_waybill(doc, values):
 @frappe.whitelist()
 def update_vehicle_info(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
+    values = frappe.parse_json(values)
     doc.db_set(
         {
             "vehicle_no": values.vehicle_no.replace(" ", ""),
@@ -181,7 +182,6 @@ def update_vehicle_info(*, doctype, docname, values):
         }
     )
 
-    values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_vehicle_data(values)
     result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
 
