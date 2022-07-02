@@ -5,13 +5,13 @@ from frappe.utils import sbool
 
 
 def execute():
+    if not frappe.db.has_column("Sales Invoice", "signed_einvoice"):
+        return
+
     if not sbool(
         frappe.db.get_value("E Invoice Settings", None, "enable", ignore=True)
     ):
         set_e_invoice_statuses()
-
-    if not frappe.db.has_column("Sales Invoice", "signed_einvoice"):
-        return
 
     # set correct acknowledgement in e-invoices
     for name, signed_einvoice in frappe.get_all(
