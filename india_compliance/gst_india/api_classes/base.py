@@ -92,18 +92,27 @@ class BaseAPI:
             },
         )
 
-        if method == "POST":
-            request_args.json = json
-
-        response_json = None
         log = frappe._dict(
             url=request_args.url,
-            data=request_args.json if method == "POST" else request_args.params,
+            data=request_args.params,
             request_headers=request_args.headers.copy(),
         )
 
         # Don't log API secret
         log.request_headers.pop("x-api-key", None)
+
+        if method == "POST" and json:
+            request_args.json = json
+
+            if not request_args.params:
+                log.data = json
+            else:
+                log.data = {
+                    "params": request_args.params,
+                    "body": json,
+                }
+
+        response_json = None
 
         try:
             response = requests.request(method, **request_args)
