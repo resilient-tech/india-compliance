@@ -50,11 +50,11 @@ footer {
 
 /* TODO: change the image url for light mode */
 html[data-theme="light"] .footer-logo img {
-  content: url("https://www.resilient.tech/_nuxt/img/logo_white.1d040bc.png");
+  content: url("https://s3.ap-south-1.amazonaws.com/resilient.tech-public/logo.png");
 }
 
 html[data-theme="dark"] .footer-logo img {
-  content: url("https://www.resilient.tech/_nuxt/img/logo_white.1d040bc.png");
+  content: url("https://s3.ap-south-1.amazonaws.com/resilient.tech-public/logo_white.png");
 }
 
 @media screen and (max-width: 768px) {
