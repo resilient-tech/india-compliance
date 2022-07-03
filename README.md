@@ -8,7 +8,7 @@ India Compliance is an Open Source app to simplify compliance with Indian Rules 
 
 ## Key Features
 
-We aim to simplify the most routine compliances for you. In such a process, we currently offer a few key features:
+We aim to simplify the most routine compliances for you. In the process, we currently offer a few key features:
 
 - Powerful Validations
 - Configurable Settings
