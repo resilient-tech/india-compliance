@@ -11,6 +11,7 @@ app_license = "GNU General Public License (v3)"
 required_apps = ["erpnext"]
 
 after_install = "india_compliance.install.after_install"
+before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
 
 app_include_js = "gst_india.bundle.js"
@@ -26,20 +27,19 @@ doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
-    "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
-    "Purchase Order": "gst_india/client_scripts/purchase_order.js",
-    "Purchase Receipt": "gst_india/client_scripts/purchase_receipt.js",
     "Sales Invoice": [
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
-    "Sales Order": "gst_india/client_scripts/sales_order.js",
     "Supplier": "gst_india/client_scripts/supplier.js",
 }
 
 doctype_list_js = {
-    "Sales Invoice": "gst_india/client_scripts/sales_invoice_list.js",
+    "Sales Invoice": [
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/sales_invoice_list.js",
+    ]
 }
 
 doc_events = {
@@ -132,7 +132,9 @@ regional_overrides = {
             "india_compliance.gst_india.utils.get_itemised_tax_breakup_data"
         ),
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
-        "erpnext.accounts.party.get_regional_address_details": "india_compliance.gst_india.overrides.transaction.get_regional_address_details",
+        "erpnext.accounts.party.get_regional_address_details": (
+            "india_compliance.gst_india.overrides.transaction.update_party_details"
+        ),
         "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
         "erpnext.assets.doctype.asset.asset.get_depreciation_amount": (
             "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount"
