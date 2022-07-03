@@ -1,6 +1,6 @@
 # [India Compliance](href="https://www.indiacompliance.app/")
 
-### ERPNext app to simplify compliance with Indian Rules and Regulations
+ERPNext app to simplify compliance with Indian Rules and Regulations
 
 ## Introduction
 
@@ -12,8 +12,8 @@ We aim to simplify the most routine compliances for you. In such a process, we c
 
 - Powerful Validations
 - Configurable Settings
-- Autofill Party Information from GSTIN
-- Simplified e-Waybill Management
+- Autofill Party Information
+- e-Waybill Management
 - e-Invoice Automation
 - And much more.
 
