@@ -1,6 +1,8 @@
 import frappe
 from frappe.utils import nowdate, sbool
 
+from india_compliance.gst_india.constants import SALES_DOCTYPES
+
 
 def create_sales_invoice(**args):
     args = frappe._dict(args)
@@ -61,19 +63,22 @@ def create_purchase_invoice(**args):
     return pi
 
 
-def append_items(obj, args, abbr):
+def append_items(obj, args, abbr="_TIRC"):
     obj.append(
         "items",
         {
             "item_code": args.item_code or "_Test Trading Goods 1",
-            "qty": args.qty or 5,
-            "rate": args.rate or 50,
+            "qty": args.qty or 1,
+            "rate": args.rate or 100,
             "cost_center": f"Main - {abbr}",
+            "is_nil_exempt": args.is_nil_exempt,
+            "is_non_gst": args.is_non_gst,
+            "item_tax_template": args.item_tax_template,
         },
     )
 
 
-def append_taxes(obj, args, abbr):
+def append_taxes(obj, args, abbr="_TIRC"):
     if args.is_in_state or args.is_in_state_rcm:
         _append_taxes(obj, ["CGST", "SGST"], abbr)
     elif args.is_in_state is False or args.is_in_state_rcm is False:
@@ -85,12 +90,12 @@ def append_taxes(obj, args, abbr):
         _append_taxes(obj, "IGST RCM", abbr, rate=18)
 
 
-def _append_taxes(obj, accounts, abbr, is_sales=False, rate=9):
+def _append_taxes(obj, accounts, abbr="_TIRC", rate=9):
 
     if isinstance(accounts, str):
         accounts = [accounts]
 
-    if is_sales:
+    if obj.doctype in SALES_DOCTYPES:
         account_type = "Output Tax"
     else:
         account_type = "Input Tax"

@@ -1,15 +1,12 @@
 import unittest
-from unittest.mock import patch
 
 import frappe
 
-from india_compliance.gst_india.overrides.sales_invoice import validate_document_name
+from india_compliance.gst_india.overrides.sales_invoice import validate_invoice_number
 
 
 class TestUtils(unittest.TestCase):
-    @patch("frappe.get_cached_value")
-    def test_validate_document_name(self, mock_get_cached):
-        mock_get_cached.return_value = "India"  # mock country
+    def test_validate_document_name(self):
         posting_date = "2021-05-01"
 
         invalid_names = [
@@ -21,7 +18,7 @@ class TestUtils(unittest.TestCase):
         ]
         for name in invalid_names:
             doc = frappe._dict(name=name, posting_date=posting_date)
-            self.assertRaises(frappe.ValidationError, validate_document_name, doc)
+            self.assertRaises(frappe.ValidationError, validate_invoice_number, doc)
 
         valid_names = [
             "012345678901236",
@@ -33,19 +30,6 @@ class TestUtils(unittest.TestCase):
         for name in valid_names:
             doc = frappe._dict(name=name, posting_date=posting_date)
             try:
-                validate_document_name(doc)
+                validate_invoice_number(doc)
             except frappe.ValidationError:
                 self.fail("Valid name {} throwing error".format(name))
-
-    @patch("frappe.get_cached_value")
-    def test_validate_document_name_not_india(self, mock_get_cached):
-        mock_get_cached.return_value = "Not India"
-        doc = frappe._dict(name="SI$123", posting_date="2021-05-01")
-
-        try:
-            validate_document_name(doc)
-        except frappe.ValidationError:
-            self.fail(
-                "Regional validation related to India are being applied to other"
-                " countries"
-            )

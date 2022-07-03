@@ -7,27 +7,23 @@ import unittest
 import frappe
 from frappe.utils import getdate
 
-from india_compliance.tests.utils import create_purchase_invoice, create_sales_invoice
-
-test_dependencies = ["Territory", "Customer Group", "Supplier Group", "Item"]
+from india_compliance.gst_india.test_records import (
+    create_purchase_invoice,
+    create_sales_invoice,
+)
 
 
 class TestGSTR3BReport(unittest.TestCase):
     def setUp(self):
         frappe.set_user("Administrator")
+        filters = {"company": "_Test Indian Registered Company"}
 
-        frappe.db.sql(
-            "delete from `tabSales Invoice` where company='_Test Company GST'"
-        )
-        frappe.db.sql(
-            "delete from `tabPurchase Invoice` where company='_Test Company GST'"
-        )
-        frappe.db.sql(
-            "delete from `tabGSTR 3B Report` where company='_Test Company GST'"
-        )
+        for doctype in ("Sales Invoice", "Purchase Invoice", "GSTR 3B Report"):
+            frappe.db.delete("Sales Invoice", filters=filters)
 
-        get_item(properties={"is_nil_exempt": 1})
-        set_account_heads()
+    @classmethod
+    def tearDownClass(cls):
+        frappe.db.rollback()
 
     def test_gstr_3b_report(self):
         month_number_mapping = {
@@ -45,147 +41,62 @@ class TestGSTR3BReport(unittest.TestCase):
             12: "December",
         }
 
-        make_sales_invoice()
+        create_sales_invoices()
         create_purchase_invoices()
 
-        if frappe.db.exists(
-            "GSTR 3B Report",
-            "GSTR3B-March-2019-_Test Indian Registered Company-Billing",
-        ):
-            report = frappe.get_doc(
-                "GSTR 3B Report",
-                "GSTR3B-March-2019-_Test Indian Registered Company-Billing",
-            )
-            report.save()
-        else:
-            report = frappe.get_doc(
-                {
-                    "doctype": "GSTR 3B Report",
-                    "company": "_Test Indian Registered Company",
-                    "company_address": "_Test Indian Registered Company-Billing",
-                    "year": getdate().year,
-                    "month": month_number_mapping.get(getdate().month),
-                }
-            ).insert()
+        report = frappe.get_doc(
+            {
+                "doctype": "GSTR 3B Report",
+                "company": "_Test Indian Registered Company",
+                "company_address": "_Test Indian Registered Company-Billing",
+                "year": getdate().year,
+                "month": month_number_mapping.get(getdate().month),
+            }
+        ).insert()
 
         output = json.loads(report.json_output)
 
-        self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 54)
-        self.assertEqual(output["inter_sup"]["unreg_details"][0]["iamt"], 18),
-        self.assertEqual(output["sup_details"]["osup_nil_exmp"]["txval"], 100),
-        self.assertEqual(output["inward_sup"]["isup_details"][0]["intra"], 250)
-        self.assertEqual(output["itc_elg"]["itc_avl"][4]["samt"], 22.50)
-        self.assertEqual(output["itc_elg"]["itc_avl"][4]["camt"], 22.50)
+        self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 18)
+        self.assertEqual(output["sup_details"]["osup_det"]["txval"], 300)
+        self.assertEqual(output["sup_details"]["isup_rev"]["txval"], 100)
+        self.assertEqual(output["sup_details"]["isup_rev"]["camt"], 9)
+        self.assertEqual(output["itc_elg"]["itc_net"]["samt"], 40)
 
     def test_gst_rounding(self):
         gst_settings = frappe.get_doc("GST Settings")
         gst_settings.round_off_gst_values = 1
         gst_settings.save()
 
-        current_country = frappe.flags.country
-        frappe.flags.country = "India"
-
         si = create_sales_invoice(
             rate=216,
-            taxes="out-of-state",
+            is_in_state=True,
             do_not_submit=True,
         )
 
         # Check for 39 instead of 38.88
-        self.assertEqual(si.taxes[0].base_tax_amount_after_discount_amount, 39)
+        self.assertEqual(si.taxes[0].base_tax_amount_after_discount_amount, 19)
 
-        frappe.flags.country = current_country
         gst_settings.round_off_gst_values = 1
         gst_settings.save()
 
-    def test_gst_category_auto_update(self):
-        customer = frappe.get_doc("Customer", "_Test Unregistered Customer")
-        self.assertEqual(customer.gst_category, "Unregistered")
 
-        if not frappe.db.exists("Address", "_Test Unregistered Customer-Billing"):
-            frappe.get_doc(
-                {
-                    "address_line1": "Test Address - 8",
-                    "address_type": "Billing",
-                    "city": "_Test City",
-                    "state": "Karnataka",
-                    "country": "India",
-                    "doctype": "Address",
-                    "is_primary_address": 1,
-                    "gstin": "29AZWPS7135H1ZG",
-                    "links": [
-                        {
-                            "link_doctype": "Customer",
-                            "link_name": "_Test Unregistered Customer",
-                        }
-                    ],
-                }
-            ).insert()
-
-        customer.load_from_db()
-        self.assertEqual(customer.gst_category, "Registered Regular")
-
-        frappe.delete_doc("Address", "_Test Unregistered Customer-Billing")
-        customer.load_from_db()
-        self.assertEqual(customer.gst_category, "Unregistered")
-
-
-def make_sales_invoice():
-    create_sales_invoice(taxes="out-of-state")
-
+def create_sales_invoices():
+    create_sales_invoice(is_in_state=True)
     create_sales_invoice(
-        customer="_Test Registered Composition Customer", taxes="out-of-state"
+        customer="_Test Registered Composition Customer", is_in_state=False
     )
-
-    create_sales_invoice(customer="_Test Unregistered Customer", taxes="out-of-state")
-
-    create_sales_invoice(
-        customer="_Test Registered Customer", item="_Test Trading Goods 1"
-    )
+    create_sales_invoice(customer="_Test Unregistered Customer", is_in_state=True)
+    create_sales_invoice(is_nil_exempt=True)
 
 
 def create_purchase_invoices():
-    create_purchase_invoice(taxes="in-state")
-
-    pi1 = create_purchase_invoice(
-        item="_Test Trading Goods 1",
-        do_not_save=1,
+    create_purchase_invoice(is_in_state=True)
+    create_purchase_invoice(
+        is_in_state=False, supplier="_Test Registered Composition Supplier"
     )
-
-    pi1.shipping_address = "_Test Registered Supplier-Billing"
-    pi1.save()
-    pi1.submit()
-
-    create_purchase_invoice(item="_Test Trading Goods 1", rate=250, qty=1)
-
-
-def get_item(properties=None):
-    if not properties:
-        return
-
-    item = frappe.get_doc("Item", "_Test Trading Goods 1")
-    item.update(properties)
-    item.save()
-
-
-def set_account_heads():
-    gst_settings = frappe.get_doc("GST Settings")
-
-    gst_account = frappe.get_all(
-        "GST Account",
-        fields=["cgst_account", "sgst_account", "igst_account"],
-        filters={"company": "_Test Indian Registered Company"},
+    create_purchase_invoice(rate=250, qty=1, is_in_state=True)
+    create_purchase_invoice(
+        is_in_state_rcm=True,
+        supplier="_Test Unregistered Supplier",
+        is_reverse_charge=True,
     )
-
-    if not gst_account:
-        gst_settings.append(
-            "gst_accounts",
-            {
-                "company": "_Test Indian Registered Company",
-                "cgst_account": "Output Tax CGST - _GST",
-                "sgst_account": "Output Tax SGST - _GST",
-                "igst_account": "Output Tax IGST - _GST",
-            },
-        )
-
-        gst_settings.save()

@@ -204,13 +204,21 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
+    other_state_code = doc.company_gstin[:2]
+    if not is_sales_transaction:
+        if doc.supplier_gstin:
+            other_state_code = doc.supplier_gstin[:2]
+        elif doc.gst_category == "Unregistered" and doc.supplier_address:
+            other_state_code = frappe.db.get_value(
+                "Address",
+                doc.supplier_address,
+                "gst_state_number",
+            )
+        elif doc.gst_category == "Overseas":
+            other_state_code = "96"
+
     is_inter_state = (
-        doc.place_of_supply[:2]
-        != doc.get(
-            "company_gstin" if is_sales_transaction else "supplier_gstin",
-            default="",
-        )[:2]
-        or doc.gst_category == "SEZ"
+        doc.place_of_supply[:2] != other_state_code or doc.gst_category == "SEZ"
     )
 
     previous_row_references = set()

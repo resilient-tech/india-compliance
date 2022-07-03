@@ -37,6 +37,7 @@ def before_tests():
     frappe.db.commit()
 
     frappe.flags.country = "India"
+    frappe.flags.skip_test_records = True
 
 
 def set_default_settings_for_tests():
@@ -52,7 +53,7 @@ def create_test_records():
     )
 
     for doctype, data in test_records.items():
-        make_test_objects(doctype, data, reset=True)
+        make_test_objects(doctype, data, commit=True)
         if doctype == "Company":
             add_companies_to_fiscal_year(data)
 
