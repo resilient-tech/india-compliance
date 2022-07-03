@@ -1,42 +1,45 @@
 # [India Compliance](href="https://www.indiacompliance.app/")
 
-### ERPNext app to simplify compliance with Indian Rules and Regulations.
+### ERPNext app to simplify compliance with Indian Rules and Regulations
 
 ## Introduction
 
-India Compliance is an Open Source app to simplify compliance with Indian Rules and Regulations. It offers powerful validations and customizations to make your compliance process more efficient and effective. Also, integrations with GST services would automate your business processes.
+India Compliance is an Open Source app to simplify compliance with Indian Rules and Regulations. It offers powerful validations and customizations to make your compliance process efficient and effective. It also provides integration with GST services which will automate your business processes.
 
 ## Key Features
 
 We aim to simplify the most routine compliances for you. In such a process, we currently offer a few key features:
 
--   Autofill Party Information from GSTIN
--   Simplified e-Waybill Management
--   e-Invoice Automation
--   Configurable settings
--   And much more.
+- Powerful Validations
+- Configurable Settings
+- Autofill Party Information from GSTIN
+- Simplified e-Waybill Management
+- e-Invoice Automation
+- And much more.
 
-For a detailed overview of these features, please refer to the documentation.
+For a detailed overview of these features, please refer to the [documentation](https://docs.erpnext.com/docs/v14/user/manual/en/regional/india).
 
-We have lined up and are working on the following additional features:
+## Upcoming Features
 
--   Advanced Reconciliation for GSTR2A/2B with the purchase invoice
--   Quick and easy filing process for GSTR1 and GSTR3B
+We are working on the following additional features:
+
+- Advanced Reconciliation for GSTR2A/2B with the purchase invoice
+- Quick and easy filing process for GSTR1 and GSTR3B
 
 ## Installation
 
-You will need to simply install the `india-compliance` app on your site along with **frappe** and **ERPNext**, version-14 onwards.
+You will need to install the `india-compliance` app on your site after installing **Frappe** and **ERPNext**, version-14 onwards.
 
--   Download and add application [india-compliance](https://github.com/resilient-tech/india-compliance/) to your bench using:
+- Download and add application [india-compliance](https://github.com/resilient-tech/india-compliance/) to your bench using:
 
 ```bash
-$ bench get-app india_compliance https://github.com/resilient-tech/india-compliance/
+bench get-app https://github.com/resilient-tech/india-compliance.git
 ```
 
--   Install the app on a particular site:
+- Install the app on a particular site:
 
 ```bash
-$ bench --site [site_name] install-app india_compliance
+bench --site [site_name] install-app india_compliance
 ```
 
 ## Contributing
@@ -52,6 +55,6 @@ The India Compliance code is licensed as GNU General Public License (v3) and the
 
 ## Credits
 
--   [Frappe](https://frappe.io/)
--   [ERPNext](https://erpnext.com/)
--   Contributors
+- [Frappe](https://frappe.io/)
+- [ERPNext](https://erpnext.com/)
+- Contributors
