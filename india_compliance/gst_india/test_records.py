@@ -3,9 +3,9 @@ from frappe.utils import nowdate, sbool
 
 
 def create_sales_invoice(**args):
+    args = frappe._dict(args)
     abbr = frappe.get_cached_value("Company", args.company, "abbr") or "_TIRC"
     si = frappe.new_doc("Sales Invoice")
-    args = frappe._dict(args)
 
     si.update(
         {
@@ -23,11 +23,7 @@ def create_sales_invoice(**args):
         si.customer_address = args.customer_address
 
     append_items(si, args, abbr)
-
-    if args.is_in_state:
-        append_taxes(si, ["CGST", "SGST"], abbr, True)
-    elif args.is_in_state is False:
-        append_taxes(si, "IGST", abbr, True, 18)
+    append_taxes(si, args, abbr)
 
     if not args.do_not_save:
         si.insert()
@@ -38,9 +34,9 @@ def create_sales_invoice(**args):
 
 
 def create_purchase_invoice(**args):
+    args = frappe._dict(args)
     abbr = frappe.get_cached_value("Company", args.company, "abbr") or "_TIRC"
     pi = frappe.new_doc("Purchase Invoice")
-    args = frappe._dict(args)
 
     pi.update(
         {
@@ -55,16 +51,7 @@ def create_purchase_invoice(**args):
     )
 
     append_items(pi, args, abbr)
-
-    if args.is_in_state or args.is_in_state_rcm:
-        append_taxes(pi, ["CGST", "SGST"], abbr)
-    elif args.is_in_state is False or args.is_in_state_rcm is False:
-        append_taxes(pi, "IGST", abbr, rate=18)
-
-    if args.is_in_state_rcm:
-        append_taxes(pi, ["CGST RCM", "SGST RCM"], abbr)
-    elif args.is_in_state_rcm is False:
-        append_taxes(pi, "IGST RCM", abbr, rate=18)
+    append_taxes(pi, args, abbr)
 
     if not args.do_not_save:
         pi.insert()
@@ -74,7 +61,31 @@ def create_purchase_invoice(**args):
     return pi
 
 
-def append_taxes(obj, accounts, abbr, is_sales=False, rate=9):
+def append_items(obj, args, abbr):
+    obj.append(
+        "items",
+        {
+            "item_code": args.item_code or "_Test Trading Goods 1",
+            "qty": args.qty or 5,
+            "rate": args.rate or 50,
+            "cost_center": f"Main - {abbr}",
+        },
+    )
+
+
+def append_taxes(obj, args, abbr):
+    if args.is_in_state or args.is_in_state_rcm:
+        _append_taxes(obj, ["CGST", "SGST"], abbr)
+    elif args.is_in_state is False or args.is_in_state_rcm is False:
+        _append_taxes(obj, "IGST", abbr, rate=18)
+
+    if args.is_in_state_rcm:
+        _append_taxes(obj, ["CGST RCM", "SGST RCM"], abbr)
+    elif args.is_in_state_rcm is False:
+        _append_taxes(obj, "IGST RCM", abbr, rate=18)
+
+
+def _append_taxes(obj, accounts, abbr, is_sales=False, rate=9):
 
     if isinstance(accounts, str):
         accounts = [accounts]
@@ -97,15 +108,3 @@ def append_taxes(obj, accounts, abbr, is_sales=False, rate=9):
             taxes["add_deduct_tax"] = "Deduct"
 
         obj.append("taxes", taxes)
-
-
-def append_items(obj, args, abbr):
-    obj.append(
-        "items",
-        {
-            "item_code": args.item_code or "_Test Trading Goods 1",
-            "qty": args.qty or 5,
-            "rate": args.rate or 50,
-            "cost_center": f"Main - {abbr}",
-        },
-    )
