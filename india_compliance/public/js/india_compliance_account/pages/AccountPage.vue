@@ -71,7 +71,7 @@ export default {
   },
   computed: {
     last_synced_on() {
-      //TODO: confirm the format
+      // TODO: set based on user datetime format?
       let { last_usage_synced_on } = this.subscriptionDetails;
       last_usage_synced_on = last_usage_synced_on
         ? moment.unix(last_usage_synced_on)
