@@ -467,6 +467,8 @@ class EWaybillData(GSTTransactionData):
 
         self.get_transaction_details()
         self.get_item_list()
+        if len(self.item_list) > 250:
+            self.get_hsn_wise_item_list()
         self.get_party_address_details()
 
         return self.get_transaction_data()
@@ -806,3 +808,23 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
+
+    def get_hsn_wise_item_list(self):
+        hsn_wise_item_list = []
+        for item_details in self.item_list:
+            if item_details["hsnCode"] not in [
+                hsn["hsnCode"] for hsn in hsn_wise_item_list
+            ]:
+                hsn_wise_item_list.append(item_details)
+            else:
+                for hsn in hsn_wise_item_list:
+                    if item_details["hsnCode"] == hsn["hsnCode"]:
+                        hsn["itemNo"] = list((hsn["itemNo"], item_details["itemNo"]))
+                        hsn["productDesc"] = list(
+                            (hsn["productDesc"], item_details["productDesc"])
+                        )
+                        hsn["quantity"] += item_details["quantity"]
+                        hsn["taxableAmount"] += item_details["taxableAmount"]
+                        break
+
+        self.item_list = hsn_wise_item_list
