@@ -393,7 +393,7 @@ def titlecase(value):
 
 
 def get_titlecase_version(word, all_caps=False, **kwargs):
-    """Retruns abbreviation if found, else None"""
+    """Returns abbreviation if found, else None"""
 
     if not all_caps:
         word = word.upper()
