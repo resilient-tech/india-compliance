@@ -72,11 +72,12 @@ export default {
   computed: {
     last_synced_on() {
       //TODO: confirm the format
-      const { last_usage_synced_on } = this.subscriptionDetails;
-      return (
-        last_usage_synced_on &&
-        moment.unix(last_usage_synced_on).format("DD-MM-YYYY HH:mm A")
-      );
+      let { last_usage_synced_on } = this.subscriptionDetails;
+      last_usage_synced_on = last_usage_synced_on
+        ? moment.unix(last_usage_synced_on)
+        : moment();
+
+      return last_usage_synced_on.format("DD-MM-YYYY HH:mm A");
     },
 
     subscriptionDetails() {
