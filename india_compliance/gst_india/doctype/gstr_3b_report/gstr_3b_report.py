@@ -210,12 +210,12 @@ class GSTR3BReport(Document):
         if reverse_charge:
             condition += "AND is_reverse_charge = 1"
 
-        export_field = "is_export_with_gst," if doctype == "Sales Invoice" else ""
+        export_field = ", is_export_with_gst" if doctype == "Sales Invoice" else ""
 
         invoice_details = frappe.db.sql(
             """
             SELECT
-                name, gst_category, {export_field} place_of_supply
+                name, gst_category, place_of_supply {export_field}
             FROM
                 `tab{doctype}`
             WHERE
