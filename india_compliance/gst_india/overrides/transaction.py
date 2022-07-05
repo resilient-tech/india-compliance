@@ -205,11 +205,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             )
 
     is_inter_state = (
-        doc.place_of_supply[:2]
-        != doc.get(
-            "company_gstin" if is_sales_transaction else "supplier_gstin",
-            default="",
-        )[:2]
+        doc.place_of_supply[:2] != get_source_state_code(doc)
         or doc.gst_category == "SEZ"
     )
 
@@ -333,6 +329,30 @@ def validate_items(doc):
 
 def set_place_of_supply(doc, method=None):
     doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+
+def get_source_state_code(doc):
+    """
+    Returns opposite of Place of Supply.
+    """
+    source_state_code = doc.company_gstin[:2]
+
+    if doc.doctype not in SALES_DOCTYPES:
+        if doc.gst_category == "Overseas":
+            return "96"
+
+        if doc.gst_category == "Unregistered" and doc.supplier_address:
+            state = frappe.db.get_value(
+                "Address",
+                doc.supplier_address,
+                "state",
+            )
+            source_state_code = STATE_NUMBERS.get(state)
+
+        elif doc.supplier_gstin:
+            source_state_code = doc.supplier_gstin[:2]
+
+    return source_state_code
 
 
 def validate_hsn_codes(doc, method=None):
