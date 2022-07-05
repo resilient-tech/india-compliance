@@ -2,9 +2,6 @@ import frappe
 
 
 def execute():
-    if frappe.db.get_value("Global Defaults", None, "country") != "India":
-        return
-
     frappe.db.set_value(
         "Accounts Settings",
         None,

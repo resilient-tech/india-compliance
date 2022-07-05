@@ -11,6 +11,8 @@ from india_compliance.gst_india.constants.custom_fields import (
 from india_compliance.gst_india.setup.property_setters import get_property_setters
 from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_fields
 
+AFTER_INSTALL_PATCHES = ("overrides_tax_settings_in_accounts_settings",)
+
 
 def after_install():
     # Validation ignored for faster creation
@@ -28,6 +30,7 @@ def after_install():
     create_address_template()
     setup_default_gst_settings()
     create_hsn_codes()
+    run_after_install_patches()
 
 
 def create_property_setters():
@@ -112,3 +115,9 @@ def setup_default_gst_settings():
     # Hide the fields as not enabled by default
     for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
         toggle_custom_fields(fields, False)
+
+
+def run_after_install_patches():
+    print("\nPatching default settings...")
+    for patch in AFTER_INSTALL_PATCHES:
+        frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()

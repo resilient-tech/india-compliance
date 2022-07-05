@@ -75,7 +75,7 @@ def get_property_setters():
             "doctype": "Accounts Settings",
             "fieldname": "tax_settings_section",
             "property": "label",
-            "value": "Tax Settings (overridden by India Compliance)",
+            "value": "Tax Settings (Overridden by India Compliance)",
         },
         {
             "doctype": "Accounts Settings",
