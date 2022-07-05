@@ -71,6 +71,18 @@ def get_property_setters():
             "property": "read_only",
             "value": "1",
         },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "tax_settings_section",
+            "property": "label",
+            "value": "Tax Settings (overridden by India Compliance)",
+        },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "tax_settings_section",
+            "property": "collapsible",
+            "value": "1",
+        },
     ]
 
 

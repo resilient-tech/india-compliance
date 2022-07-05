@@ -28,6 +28,7 @@ POST_INSTALL_PATCHES = (
     "set_default_gst_settings",
     "remove_deprecated_docs",
     "remove_old_fields",
+    "overrides_tax_settings_in_accounts_settings",
 )
 
 
