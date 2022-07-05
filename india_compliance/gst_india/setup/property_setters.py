@@ -59,6 +59,18 @@ def get_property_setters():
             "property_type": "Check",
             "value": "1",
         },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "determine_address_tax_category_from",
+            "property": "read_only",
+            "value": "1",
+        },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "add_taxes_from_item_tax_template",
+            "property": "read_only",
+            "value": "1",
+        },
     ]
 
 
