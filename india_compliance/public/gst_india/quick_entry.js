@@ -270,7 +270,6 @@ frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
-
     if (!gstin || gstin.length != 15) {
         const pincode_field = dialog.fields_dict._pincode;
         pincode_field.set_data([]);
