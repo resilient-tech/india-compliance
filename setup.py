@@ -11,7 +11,7 @@ setup(
     version=version,
     description="ERPNext app to simplify compliance with Indian Rules and Regulations",
     author="Resilient Tech",
-    author_email="india.compliance@resilient.tech",
+    author_email="hello@indiacompliance.app",
     packages=find_packages(),
     zip_safe=False,
     include_package_data=True,
