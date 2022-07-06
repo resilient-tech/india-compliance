@@ -1,5 +1,7 @@
 function setup_e_waybill_actions(doctype) {
     const gst_settings = frappe.boot.gst_settings;
+    const enable_api = ic.is_api_enabled();
+
     if (
         !gst_settings.enable_e_waybill ||
         (doctype == "Delivery Note" && !gst_settings.enable_e_waybill_from_dn)
@@ -11,7 +13,7 @@ function setup_e_waybill_actions(doctype) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
         },
         setup(frm) {
-            if (!gst_settings.enable_api) return;
+            if (!enable_api) return;
 
             frappe.realtime.on("e_waybill_pdf_attached", () => {
                 frm.reload_doc();
@@ -37,7 +39,7 @@ function setup_e_waybill_actions(doctype) {
                         () =>
                             show_generate_e_waybill_dialog(
                                 frm,
-                                gst_settings.enable_api
+                                enable_api
                             ),
                         "e-Waybill"
                     );
@@ -54,7 +56,7 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            if (!gst_settings.enable_api || !is_e_waybill_generated_using_api(frm)) {
+            if (!enable_api || !is_e_waybill_generated_using_api(frm)) {
                 return;
             }
 
@@ -112,7 +114,7 @@ function setup_e_waybill_actions(doctype) {
                 !has_e_waybill_threshold_met(frm) ||
                 frm.doc.ewaybill ||
                 frm.doc.is_return ||
-                !gst_settings.enable_api ||
+                !enable_api ||
                 !gst_settings.auto_generate_e_waybill ||
                 (gst_settings.enable_e_invoice &&
                     gst_settings.auto_generate_e_invoice) ||
@@ -129,7 +131,7 @@ function setup_e_waybill_actions(doctype) {
         },
         before_cancel(frm) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action
-            if (!gst_settings.enable_api || frm.doc.irn || !frm.doc.ewaybill) return;
+            if (!enable_api || frm.doc.irn || !frm.doc.ewaybill) return;
 
             frappe.validated = false;
 
@@ -641,7 +643,7 @@ function update_generation_dialog(dialog) {
 }
 
 function get_primary_action_label_for_generation(doc) {
-    const { enable_api } = frappe.boot.gst_settings;
+    const enable_api = ic.is_api_enabled();
     const label = enable_api ? __("Generate") : __("Download JSON");
 
     if (are_transport_details_available(doc)) {

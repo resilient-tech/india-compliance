@@ -33,3 +33,13 @@ ic.set_state_options = function (frm) {
 };
 
 ic.gstin_doctypes = ["Customer", "Supplier", "Company"];
+
+ic.can_enable_api = function (gst_settings) {
+    return Boolean(gst_settings.api_secret || frappe.boot.ic_api_enabled);
+};
+
+ic.is_api_enabled = function () {
+    frappe.db.get_doc("GST Settings", "GST Settings").then(gst_settings => {
+        return (ic.can_enable_api(gst_settings) && !gst_settings.enable_api) ? true : false;
+    })
+};

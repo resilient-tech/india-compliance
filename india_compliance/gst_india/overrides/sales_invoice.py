@@ -7,6 +7,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_transaction,
 )
+from india_compliance.gst_india.utils.api import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
 
@@ -21,7 +22,7 @@ def onload(doc, method=None):
         as_dict=1,
     )
 
-    if not gst_settings.enable_api:
+    if not is_api_enabled():
         return
 
     if gst_settings.enable_e_waybill and doc.ewaybill:
