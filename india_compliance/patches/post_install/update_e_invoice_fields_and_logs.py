@@ -129,9 +129,10 @@ def migrate_e_invoice_request_log():
     if not frappe.db.table_exists("E Invoice Request Log"):
         return
 
-    docs = frappe.get_all(
+    docs = frappe.db.get_values(
         "E Invoice Request Log",
-        fields=(
+        filters={},
+        fieldname=(
             "user",
             "creation",
             "url",
@@ -144,6 +145,7 @@ def migrate_e_invoice_request_log():
             "name",
             "owner",
         ),
+        as_dict=True,
     )
 
     values = []
