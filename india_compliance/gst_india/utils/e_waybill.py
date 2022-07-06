@@ -467,11 +467,9 @@ class EWaybillData(GSTTransactionData):
 
         self.get_transaction_details()
         self.get_item_list()
-        if len(self.item_list) > 250:
-            self.get_hsn_wise_item_list()
         self.get_party_address_details()
 
-        return self.get_transaction_data()
+        return self.sanitize_data(self.get_transaction_data())
 
     def get_e_waybill_cancel_data(self, values):
         self.validate_if_e_waybill_is_set()
@@ -576,13 +574,9 @@ class EWaybillData(GSTTransactionData):
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        # TODO: Add support for HSN Summary
-        item_limit = 1000 if self.doc.get("irn") else 250
-        if len(self.doc.items) > item_limit:
+        if self.doc.get("irn") and len(self.doc.items) > 1000:
             frappe.throw(
-                _("e-Waybill cannot be generated for more than {0} items").format(
-                    item_limit
-                ),
+                _("e-Waybill cannot be generated for more than 1000 items"),
                 title=_("Invalid Data"),
             )
 
@@ -622,6 +616,43 @@ class EWaybillData(GSTTransactionData):
         if cancel_upto < get_datetime():
             frappe.throw(
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
+            )
+
+    def get_item_list(self):
+        if len(self.doc.items) < 250:
+            return super().get_item_list()
+
+        # Get HSN Wise Item List if more than 250 items
+        super().get_item_list(detailed=True)
+        hsn_wise_items = frappe._dict()
+
+        for item in self.item_list:
+            hsn_details = hsn_wise_items.setdefault(
+                (item.hsn_code, item.uom, item.tax_rate),
+                frappe._dict(
+                    hsn_code=item.hsn_code,
+                    uom=item.uom,
+                    item_name=item.item_name,
+                    cgst_rate=item.cgst_rate,
+                    sgst_rate=item.sgst_rate,
+                    igst_rate=item.igst_rate,
+                    cess_rate=item.cess_rate,
+                    cess_non_advol_rate=item.cess_non_advol_rate,
+                    qty=0,
+                    taxable_value=0,
+                ),
+            )
+            hsn_details.qty += item.qty
+            hsn_details.taxable_value += item.taxable_value
+
+        self.item_list = []
+        for hsn_details in hsn_wise_items.values():
+            self.item_list.append(self.get_item_data(hsn_details))
+
+        if len(self.item_list) > 250:
+            frappe.throw(
+                _("e-Waybill cannot be generated for more than 250 HSN Codes"),
+                title=_("Invalid Data"),
             )
 
     def update_transaction_details(self):
@@ -808,23 +839,3 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
-
-    def get_hsn_wise_item_list(self):
-        hsn_wise_item_list = []
-        for item_details in self.item_list:
-            if item_details["hsnCode"] not in [
-                hsn["hsnCode"] for hsn in hsn_wise_item_list
-            ]:
-                hsn_wise_item_list.append(item_details)
-            else:
-                for hsn in hsn_wise_item_list:
-                    if item_details["hsnCode"] == hsn["hsnCode"]:
-                        hsn["itemNo"] = list((hsn["itemNo"], item_details["itemNo"]))
-                        hsn["productDesc"] = list(
-                            (hsn["productDesc"], item_details["productDesc"])
-                        )
-                        hsn["quantity"] += item_details["quantity"]
-                        hsn["taxableAmount"] += item_details["taxableAmount"]
-                        break
-
-        self.item_list = hsn_wise_item_list

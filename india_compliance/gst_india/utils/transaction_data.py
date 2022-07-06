@@ -191,7 +191,7 @@ class GSTTransactionData:
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
-    def get_item_list(self):
+    def get_item_list(self, detailed=False):
         self.item_list = []
 
         for row in self.doc.items:
@@ -209,7 +209,9 @@ class GSTTransactionData:
             )
             self.update_item_details(item_details, row)
             self.get_item_tax_details(item_details, row)
-            self.item_list.append(self.get_item_data(item_details))
+            self.item_list.append(
+                item_details if detailed else self.get_item_data(item_details)
+            )
 
     def update_item_details(self, item_details, item):
         # to be overridden
