@@ -18,6 +18,9 @@ def execute():
 
 
 def migrate_e_waybill_fields():
+    if not frappe.db.has_column("Sales Invoice", "eway_bill_validity"):
+        return
+
     docs = frappe.get_all(
         "Sales Invoice",
         filters={"eway_bill_validity": ("not in", ("", None))},
@@ -64,6 +67,9 @@ def migrate_e_waybill_fields():
 
 
 def migrate_e_invoice_fields():
+    if not frappe.db.has_column("Sales Invoice", "irn_cancelled"):
+        return
+
     docs = frappe.get_all(
         "Sales Invoice",
         filters={"irn": ("not in", ("", None))},
@@ -120,6 +126,9 @@ def migrate_e_invoice_fields():
 
 
 def migrate_e_invoice_request_log():
+    if not frappe.db.table_exists("E Invoice Request Log"):
+        return
+
     docs = frappe.get_all(
         "E Invoice Request Log",
         fields=(

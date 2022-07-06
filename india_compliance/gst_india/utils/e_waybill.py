@@ -1,3 +1,5 @@
+import os
+
 import frappe
 from frappe import _
 from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
@@ -147,14 +149,8 @@ def _cancel_e_waybill(doc, values):
         if doc.get("irn") and frappe.conf.use_gst_api_sandbox
         else EWaybillAPI
     )
-    result = api(doc.company_gstin).cancel_e_waybill(data)
-    doc.db_set("ewaybill", "")
 
-    frappe.msgprint(
-        _("e-Waybill cancelled successfully"),
-        indicator="green",
-        alert=True,
-    )
+    result = api(doc.company_gstin).cancel_e_waybill(data)
 
     log_and_process_e_waybill(
         doc,
@@ -167,10 +163,19 @@ def _cancel_e_waybill(doc, values):
         },
     )
 
+    doc.db_set("ewaybill", "")
+
+    frappe.msgprint(
+        _("e-Waybill cancelled successfully"),
+        indicator="green",
+        alert=True,
+    )
+
 
 @frappe.whitelist()
 def update_vehicle_info(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
+    values = frappe.parse_json(values)
     doc.db_set(
         {
             "vehicle_no": values.vehicle_no.replace(" ", ""),
@@ -181,7 +186,6 @@ def update_vehicle_info(*, doctype, docname, values):
         }
     )
 
-    values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_vehicle_data(values)
     result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
 
@@ -330,13 +334,16 @@ def attach_e_waybill_pdf(doc, log=None):
 
 
 def delete_file(doc, filename):
+    filename, extn = os.path.splitext(filename)
+
     for file in frappe.get_all(
         "File",
-        filters={
-            "attached_to_doctype": doc.doctype,
-            "attached_to_name": doc.name,
-            "file_name": filename,
-        },
+        filters=[
+            ["attached_to_doctype", "=", doc.doctype],
+            ["attached_to_name", "=", doc.name],
+            ["file_name", "like", f"{filename}%"],
+            ["file_name", "like", f"%{extn}"],
+        ],
         pluck="name",
     ):
         frappe.delete_doc("File", file, force=True, ignore_permissions=True)
@@ -671,7 +678,8 @@ class EWaybillData(GSTTransactionData):
         self.company_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
-        self.shipping_address = self.billing_address
+        # billing state is changed for SEZ, hence copy()
+        self.shipping_address = self.billing_address.copy()
         self.dispatch_address = self.company_address
 
         if has_different_shipping_address and has_different_dispatch_address:
