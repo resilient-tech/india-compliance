@@ -89,10 +89,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 ignore_validation: true,
                 onchange: () => {
                     if (!this.api_enabled) return;
-                    const gstin = this.dialog.doc._gstin;
-                    let description = !gstin ? "Autofill party information by entering their GSTIN" : ""
-                    this.dialog.get_field("_gstin").set_description(description);
-                    autofill_fields(this.dialog, this.api_enabled);
+                    autofill_fields(this.dialog);
                 },
             },
         ];
@@ -273,7 +270,6 @@ frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
-    const gstin_field = dialog.get_field("_gstin");
 
     if (!gstin || gstin.length != 15) {
         const pincode_field = dialog.fields_dict._pincode;
@@ -283,18 +279,22 @@ async function autofill_fields(dialog) {
     }
 
     const gstin_info = await get_gstin_info(gstin);
-    set_gstin_status_description(gstin_field, gstin_info.status);
+    set_gstin_status(dialog.get_field("_gstin"), gstin_info.status);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
 
     setup_pincode_field(dialog, gstin_info);
 }
 
-function set_gstin_status_description(gstin_field, status) {
-    let indicator_color = in_list(["Cancelled", "Inactive"], status) ? "red" : "green";
+function set_gstin_status(gstin_field, status) {
+    const colour =
+        status == "Active" ? "green" : status == "Cancelled" ? "red" : "orange";
 
-    let gstin_status = `<div class="indicator ${indicator_color}" style="color: ${indicator_color}">Status: ${status}</div>`;
-    gstin_field.set_description(gstin_status);
+    gstin_field.set_description(
+        `<div class="indicator ${colour}" style="color: ${colour}">
+            Status: ${status}
+        </div>`
+    );
 }
 
 function setup_pincode_field(dialog, gstin_info) {
