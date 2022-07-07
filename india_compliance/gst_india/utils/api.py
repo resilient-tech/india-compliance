@@ -47,8 +47,6 @@ def is_conf_api_enabled():
 
 def is_api_enabled():
     gst_settings = frappe.get_single("GST Settings")
-    if (
-        is_conf_api_enabled() or gst_settings.api_secret
-    ) and not gst_settings.enable_api:
+    if gst_settings.enable_api or is_conf_api_enabled():
         return True
     return False

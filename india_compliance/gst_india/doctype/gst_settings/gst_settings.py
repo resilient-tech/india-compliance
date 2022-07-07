@@ -13,7 +13,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.utils import toggle_custom_fields
-from india_compliance.gst_india.utils.api import is_api_enabled, is_conf_api_enabled
+from india_compliance.gst_india.utils.api import is_api_enabled
 
 
 class GSTSettings(Document):
@@ -108,7 +108,7 @@ class GSTSettings(Document):
 
     def validate_credentials(self):
         if (
-            (self.enable_api or is_conf_api_enabled())
+            (is_api_enabled())
             and (self.enable_e_invoice or self.enable_e_waybill)
             and all(
                 credential.service != "e-Waybill / e-Invoice"

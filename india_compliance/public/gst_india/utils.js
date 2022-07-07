@@ -40,6 +40,6 @@ ic.can_enable_api = function (gst_settings) {
 
 ic.is_api_enabled = function () {
     frappe.db.get_doc("GST Settings", "GST Settings").then(gst_settings => {
-        return (ic.can_enable_api(gst_settings) && !gst_settings.enable_api) ? true : false;
+        return (ic.can_enable_api(gst_settings) || gst_settings.enable_api) ? true : false;
     })
 };
