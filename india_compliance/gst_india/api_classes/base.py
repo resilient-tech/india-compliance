@@ -9,6 +9,7 @@ from frappe.utils import sbool
 from india_compliance.gst_india.utils.api import (
     enqueue_integration_request,
     is_api_enabled,
+    is_conf_api_enabled,
 )
 
 BASE_URL = "https://asp.resilient.tech"
@@ -176,26 +177,42 @@ class BaseAPI:
             and response_json
             and response_json.get("error") == "access_denied"
         ):
-            frappe.throw(
-                _(
-                    "Error establishing connection to GSP. "
-                    "Please contact India Compliance API Support."
-                ),
-                title=_("GSP Connection Error"),
-            )
+            _throw("Access Denied")
 
         # ASP connectivity issues
         if status_code == 429:
-            frappe.throw(
-                _("Your India Compliance API credits have exhausted"),
-                title=_("API Credits Exhausted"),
-            )
+            _throw("Credits Exhausted")
 
         if status_code == 403:
-            frappe.throw(
-                _("Your India Compliance API key is invalid"),
-                title=_("Invalid API Key"),
-            )
+            _throw("Invalid API Key")
 
     def generate_request_id(self, length=12):
         return frappe.generate_hash(length=length)
+
+
+def _throw(error_type):
+    if error_type == "Access Denied":
+        title = _("GSP Connection Error")
+        message = _(
+            "Error establishing connection to GSP. "
+            "Please contact India Compliance API Support."
+        )
+
+        if is_conf_api_enabled():
+            message = _("GST API access denied. Please check your credentials.")
+
+    elif error_type == "Credits Exhausted":
+        title = _("API {0}").format(error_type)
+        message = _("Your India Compliance API credits have exhausted")
+
+        if is_conf_api_enabled():
+            message = _("Your India Compliance API credits have exhausted")
+
+    elif error_type == "Invalid API Key":
+        title = _(error_type)
+        message = _("Your India Compliance API key is invalid")
+
+        if is_conf_api_enabled():
+            message = _("Your API key is invalid")
+
+    frappe.throw(message, title=title)
