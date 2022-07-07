@@ -28,7 +28,6 @@ def get_gstin_info(gstin):
 
     validate_gstin(gstin)
     response = PublicAPI().get_gstin_info(gstin)
-
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
     )
@@ -92,18 +91,27 @@ def _extract_address_lines(address):
 
 @frappe.whitelist()
 def get_gst_category_from_gstin(gstin, country=None):
-    gst_category = "Unregistered"
+    """
+    This function is used to guess GST Category from GSTIN.
+    Used where gstin info API is not available or used.
+    """
+    if not gstin:
+        if country in ("India", "", None):
+            return "Unregistered"
+
+        return "Overseas"
+
+    if TDS.match(gstin):
+        return "Tax Deductor"
+
+    if REGISTERED.match(gstin):
+        return "Registered Regular"
 
     if UNBODY.match(gstin):
-        gst_category = "UIN Holders"
-    elif TDS.match(gstin):
-        gst_category = "Tax Deductor"
-    elif OVERSEAS.match(gstin) and country != "India":
-        gst_category = "Overseas"
-    elif REGISTERED.match(gstin):
-        gst_category = "Registered Regular"
+        return "UIN Holders"
 
-    return frappe._dict(gst_category=gst_category)
+    if OVERSEAS.match(gstin):
+        return "Overseas"
 
 
 # ####### SAMPLE DATA for GST_CATEGORIES ########

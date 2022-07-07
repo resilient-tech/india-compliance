@@ -105,3 +105,11 @@ function show_overseas_disabled_warning(doctype) {
         },
     });
 }
+
+function set_gst_category(doctype) {
+    frappe.ui.form.on(doctype, {
+        gstin(frm){
+             ic.set_gst_category(frm);
+        },
+    });
+}

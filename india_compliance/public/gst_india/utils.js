@@ -33,3 +33,22 @@ ic.set_state_options = function (frm) {
 };
 
 ic.gstin_doctypes = ["Customer", "Supplier", "Company"];
+
+ic.set_gst_category = function (frm) {
+    const gstin = frm.doc.gstin || frm.doc._gstin;
+    const country = frm.doc.country;
+
+    if (!gstin || gstin.length != 15) return;
+
+    frappe.call({
+        method: "india_compliance.gst_india.utils.gstin_info.get_gst_category_from_gstin",
+        args: {
+            gstin: gstin,
+            country: country,
+        },
+        callback: r => {
+            if (r.message)
+                frm.set_value("gst_category", r.message);
+        }
+    })
+}
