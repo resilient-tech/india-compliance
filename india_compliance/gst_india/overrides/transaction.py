@@ -179,6 +179,16 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
+    elif doc.gst_category == "Registered Composition" and (
+        idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
+    ):
+        _throw(
+            _(
+                "Cannot claim Input GST in Row #{0} since purchase is being made from a"
+                " dealer registered under Composition Scheme"
+            ).format(idx)
+        )
+
     elif not doc.is_reverse_charge:
         if idx := _get_matched_idx(
             rows_to_validate,
@@ -192,10 +202,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             )
 
         if not doc.supplier_gstin and (
-            idx := _get_matched_idx(
-                rows_to_validate,
-                get_gst_accounts_by_type(doc.company, "Input").values(),
-            )
+            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
         ):
             _throw(
                 _(
