@@ -11,6 +11,7 @@ from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
     get_place_of_supply,
+    validate_gst_category,
 )
 
 
@@ -480,6 +481,7 @@ def get_gst_details(party_details, doctype, company):
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
 
+    validate_party_details(party_details, is_sales_doctype)
     gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
 
     if is_sales_doctype:
@@ -530,6 +532,19 @@ def get_gst_details(party_details, doctype, company):
     gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
 
     return gst_details
+
+
+def validate_party_details(party_details, is_sales_doctype):
+    """
+    This function validates
+    - GST Category is present in party_details
+    - GST Category is valid
+    """
+    gstin_field = "billing_address_gstin" if is_sales_doctype else "supplier_gstin"
+    if not party_details.get("gst_category"):
+        frappe.throw(_("Please enure that GST Category is set in Party and/or Address"))
+
+    validate_gst_category(party_details.gst_category, party_details.get(gstin_field))
 
 
 def get_party_gst_details(party_details, is_sales_doctype):
