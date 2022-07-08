@@ -105,3 +105,12 @@ function show_overseas_disabled_warning(doctype) {
         },
     });
 }
+
+function set_gstin_query(doctype) {
+    frappe.ui.form.on(doctype, {
+        onload(frm) {
+            frm.get_field("gstin").df.ignore_validation = true;
+            frm.set_query("gstin", ic.get_gstin_query(frm.doc.name, doctype));
+        },
+    });
+}
