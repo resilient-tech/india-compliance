@@ -167,15 +167,22 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     # Sales / Purchase Validations
 
     if is_sales_transaction:
-        if (
-            doc.gst_category in ("SEZ", "Overseas")
-            and not doc.is_export_with_gst
-            and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
+        if is_export_without_payment_of_gst(doc) and (
+            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
         ):
             _throw(
                 _(
                     "Cannot charge GST in Row #{0} since export is without"
                     " payment of GST"
+                ).format(idx)
+            )
+
+        if doc.is_reverse_charge and (
+            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
+        ):
+            _throw(
+                _(
+                    "Cannot charge GST in Row #{0} since supply is under reverse charge"
                 ).format(idx)
             )
 
@@ -488,11 +495,24 @@ def get_gst_details(party_details, doctype, company):
         source_gstin = party_details.supplier_gstin
         destination_gstin = party_details.company_gstin
 
+    gst_details.taxes_and_charges = ""
+    gst_details.taxes = []
+
     # Internal transfer
     if destination_gstin and destination_gstin == source_gstin:
-        gst_details.taxes_and_charges = ""
-        gst_details.taxes = []
         return gst_details
+
+    # GST Not Applicable
+    if is_sales_doctype:
+        if (
+            is_export_without_payment_of_gst(party_details)
+            or party_details.is_reverse_charge
+        ):
+            return gst_details
+
+    else:
+        if not party_details.supplier_gstin:
+            return gst_details
 
     master_doctype = (
         "Sales Taxes and Charges Template"
@@ -639,6 +659,10 @@ def validate_reverse_charge_transaction(doc, method=None):
         frappe.throw(msg)
 
     doc.eligibility_for_itc = "ITC on Reverse Charge"
+
+
+def is_export_without_payment_of_gst(doc):
+    return doc.gst_category in ("SEZ", "Overseas") and not doc.is_export_with_gst
 
 
 def validate_transaction(doc, method=None):
