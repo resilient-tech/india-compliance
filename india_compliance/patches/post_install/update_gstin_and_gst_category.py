@@ -104,16 +104,14 @@ def update_gstin_and_gst_category():
                     gst_category = ""
                     print_warning = True
 
-                new_gst_categories.setdefault((doctype, gst_category), []).append(
-                    party.name
-                )
+                new_gst_categories.setdefault(gst_category, []).append(address.name)
 
     for (doctype, gstin), docnames in new_gstins.items():
         frappe.db.set_value(doctype, {"name": ("in", docnames)}, "gstin", gstin)
 
-    for (doctype, gst_category), docnames in new_gst_categories.items():
+    for gst_category, docnames in new_gst_categories.items():
         frappe.db.set_value(
-            doctype, {"name": ("in", docnames)}, "gst_category", gst_category
+            "Address", {"name": ("in", docnames)}, "gst_category", gst_category
         )
 
     if print_warning:
