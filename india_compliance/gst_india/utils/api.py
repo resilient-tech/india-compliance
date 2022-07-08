@@ -39,3 +39,14 @@ def pretty_json(obj):
         return obj
 
     return frappe.as_json(obj, indent=4)
+
+
+def is_conf_api_enabled():
+    return bool(frappe.conf.ic_api_secret or frappe.conf.ic_api_sandbox_mode)
+
+
+def is_api_enabled():
+    gst_settings = frappe.get_single("GST Settings")
+    if gst_settings.enable_api or is_conf_api_enabled():
+        return True
+    return False
