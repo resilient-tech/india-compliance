@@ -204,11 +204,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
-    is_inter_state = (
-        doc.place_of_supply[:2] != get_source_state_code(doc)
-        or doc.gst_category == "SEZ"
-    )
-
+    is_inter_state = is_inter_state_supply(doc)
     previous_row_references = set()
 
     for row in rows_to_validate:
@@ -329,6 +325,13 @@ def validate_items(doc):
 
 def set_place_of_supply(doc, method=None):
     doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+
+def is_inter_state_supply(doc):
+    return (
+        doc.place_of_supply[:2] != get_source_state_code(doc)
+        or doc.gst_category == "SEZ"
+    )
 
 
 def get_source_state_code(doc):
@@ -499,7 +502,10 @@ def get_gst_details(party_details, doctype, company):
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
 
-    gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
+    place_of_supply = {"place_of_supply": get_place_of_supply(party_details, doctype)}
+    # updating party details to check is_inter_state_supply
+    party_details.update(place_of_supply)
+    gst_details.update(place_of_supply)
 
     if is_sales_doctype:
         source_gstin = party_details.company_gstin
@@ -534,12 +540,11 @@ def get_gst_details(party_details, doctype, company):
     if not gst_details.place_of_supply or not party_details.company_gstin:
         return gst_details
 
-    is_inter_state = (
-        source_gstin and source_gstin[:2] != gst_details.place_of_supply[:2]
-    )
-
     default_tax = get_tax_template(
-        master_doctype, company, is_inter_state, party_details.company_gstin[:2]
+        master_doctype,
+        company,
+        is_inter_state_supply(party_details.update(doctype=doctype)),
+        party_details.company_gstin[:2],
     )
 
     if not default_tax:
