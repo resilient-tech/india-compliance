@@ -18,6 +18,9 @@ def execute():
 
 
 def migrate_e_waybill_fields():
+    if not frappe.db.has_column("Sales Invoice", "eway_bill_validity"):
+        return
+
     docs = frappe.get_all(
         "Sales Invoice",
         filters={"eway_bill_validity": ("not in", ("", None))},
@@ -64,6 +67,9 @@ def migrate_e_waybill_fields():
 
 
 def migrate_e_invoice_fields():
+    if not frappe.db.has_column("Sales Invoice", "irn_cancelled"):
+        return
+
     docs = frappe.get_all(
         "Sales Invoice",
         filters={"irn": ("not in", ("", None))},
@@ -120,9 +126,15 @@ def migrate_e_invoice_fields():
 
 
 def migrate_e_invoice_request_log():
-    docs = frappe.get_all(
+    if not frappe.db.table_exists("E Invoice Request Log"):
+        return
+
+    # Using db.get_values instead of get_all to avoid retrieving meta,
+    # since the DocType E Invoice Request Log gets deleted in ERPNext patch
+    docs = frappe.db.get_values(
         "E Invoice Request Log",
-        fields=(
+        filters={},
+        fieldname=(
             "user",
             "creation",
             "url",
@@ -135,6 +147,7 @@ def migrate_e_invoice_request_log():
             "name",
             "owner",
         ),
+        as_dict=True,
     )
 
     values = []
