@@ -7,7 +7,7 @@ from math import ceil
 from typing import List
 
 import pandas as pd
-from fuzzywuzzy import fuzz, process
+from thefuzz import fuzz, process
 
 import frappe
 from frappe.model.document import Document
