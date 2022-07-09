@@ -25,7 +25,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (!frm.is_new() || !frm.doc.links || frm.doc.gstin) return;
 
         const row = frm.doc.links[0];
-        if (!ic.gstin_doctypes.includes(row.link_doctype)) return;
+        if (!frappe.boot.gst_party_types.includes(row.link_doctype)) return;
 
         // Try to get clean doc from locals
         let doc = frappe.get_doc(row.link_doctype, row.link_name);

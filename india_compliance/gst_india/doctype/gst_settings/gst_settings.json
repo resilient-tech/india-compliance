@@ -1,6 +1,6 @@
 {
  "actions": [],
- "creation": "2022-06-13 22:41:43.355457",
+ "creation": "2022-06-29 07:45:13.261573",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -95,7 +95,7 @@
   {
    "fieldname": "credentials",
    "fieldtype": "Table",
-   "options": "GST Credentials"
+   "options": "GST Credential"
   },
   {
    "fieldname": "general_tab",
@@ -227,7 +227,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-06-14 08:57:22.354250",
+ "modified": "2022-06-29 07:46:51.237057",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

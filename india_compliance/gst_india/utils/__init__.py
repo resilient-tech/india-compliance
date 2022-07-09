@@ -169,10 +169,8 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
-def read_data_file(file_name):
-    file_path = frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
-    with open(file_path, "r") as f:
-        return f.read()
+def get_data_file_path(file_name):
+    return frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
 
 
 def read_json_data_file(filename):
@@ -279,41 +277,6 @@ def get_place_of_supply(party_details, doctype):
 
     if state := get_state(state_code):
         return f"{state_code}-{state}"
-
-
-def get_gst_accounts(
-    company=None,
-    account_wise=False,
-    only_reverse_charge=0,
-    only_non_reverse_charge=0,
-):
-    """DEPRECATED: use get_gst_accounts_by_type / get_all_gst_accounts instead"""
-
-    filters = {"parent": "GST Settings"}
-
-    if company:
-        filters.update({"company": company})
-    if only_reverse_charge:
-        filters.update({"account_type": "Reverse Charge"})
-    elif only_non_reverse_charge:
-        filters.update({"account_type": ("in", ("Input", "Output"))})
-
-    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
-    gst_accounts = settings.get("gst_accounts", filters)
-    result = frappe._dict()
-
-    if not gst_accounts and not frappe.flags.in_test and not frappe.flags.in_migrate:
-        frappe.throw(_("Please set GST Accounts in GST Settings"))
-
-    for row in gst_accounts:
-        for fieldname in GST_ACCOUNT_FIELDS:
-            value = row.get(fieldname)
-            if not account_wise:
-                result.setdefault(fieldname, []).append(value)
-            elif value:
-                result[value] = fieldname
-
-    return result
 
 
 def get_gst_accounts_by_type(company, account_type, throw=True):
@@ -444,7 +407,7 @@ def titlecase(value):
 
 
 def get_titlecase_version(word, all_caps=False, **kwargs):
-    """Retruns abbreviation if found, else None"""
+    """Returns abbreviation if found, else None"""
 
     if not all_caps:
         word = word.upper()
