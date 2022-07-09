@@ -1,4 +1,4 @@
-from math import ceil
+from string import whitespace
 
 import frappe
 from frappe import _
@@ -66,10 +66,8 @@ def _get_address(address):
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
 
-    STRIP_CHARS = "\n\t ,"
-
     for key in address:
-        address[key] = address[key].strip(STRIP_CHARS)
+        address[key] = address[key].strip(f"{whitespace},")
 
     address_line1 = ", ".join(
         value for key in ("bno", "flno", "bnm") if (value := address.get(key))
