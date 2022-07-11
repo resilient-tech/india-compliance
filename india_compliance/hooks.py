@@ -156,6 +156,12 @@ jinja = {
     ],
 }
 
+override_whitelisted_methods = {
+    "frappe.desk.desktop.get_desktop_page": (
+        "india_compliance.gst_india.overrides.desktop.get_desktop_page"
+    )
+}
+
 # Includes in <head>
 # ------------------
 
