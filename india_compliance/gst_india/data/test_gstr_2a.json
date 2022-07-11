@@ -91,7 +91,7 @@
       ]
     }
   ],
-  "cdnr": [
+  "cdn": [
     {
       "ctin": "01AAAAP1208Q1ZS",
       "cfs": "Y",
@@ -104,7 +104,7 @@
           "chksum": "AflJufPlFStqKBZ",
           "ntty": "C",
           "nt_num": "533515",
-          "nt_dt": "23-09-2016",
+          "nt_dt": "23-09-2018",
           "p_gst": "N",
           "inum": "915914",
           "idt": "23-09-2016",
@@ -138,7 +138,7 @@
       ]
     }
   ],
-  "cdnra": [
+  "cdna": [
     {
       "ctin": "01AAAAP1208Q1ZS",
       "cfs": "Y",
@@ -151,7 +151,7 @@
           "chksum": "AflJufPlFStqKBZ",
           "ntty": "C",
           "nt_num": "533515",
-          "nt_dt": "23-09-2016",
+          "nt_dt": "23-09-2018",
           "ont_num": "533515",
           "ont_dt": "23-09-2016",
           "p_gst": "N",

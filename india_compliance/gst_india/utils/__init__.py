@@ -1,5 +1,3 @@
-import json
-
 from dateutil import parser
 from pytz import timezone
 from titlecase import titlecase as _titlecase
@@ -7,7 +5,7 @@ from titlecase import titlecase as _titlecase
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import cstr, get_datetime, get_time_zone
+from frappe.utils import get_datetime, get_time_zone
 from frappe.utils.file_manager import get_file_path
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,

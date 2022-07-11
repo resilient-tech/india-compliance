@@ -83,8 +83,8 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                     title="Invalid Response Received.",
                 )
 
-            # making consistent with GSTR2b
-            json_data[category.value] = data
+            # making consistent with GSTR2a upload
+            json_data[action.lower()] = data
 
         save_gstr_2a(gstin, return_period, json_data)
 
@@ -112,6 +112,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
 
 def save_gstr_2a(gstin, return_period, json_data):
+    return_type = ReturnType.GSTR2A
     if (
         not json_data
         or json_data.get("gstin") != gstin
@@ -123,11 +124,21 @@ def save_gstr_2a(gstin, return_period, json_data):
             title="Invalid Response Received.",
         )
 
-    return save_gstr(gstin, ReturnType.GSTR2A, return_period, json_data)
+    for action, category in ACTIONS.items():
+        if action.lower() not in json_data:
+            continue
+
+        create_download_log(gstin, return_type.value, return_period, classification=category.value)
+
+        # making consistent with GSTR2b
+        json_data[category.value.lower()] = json_data.pop(action.lower())
+
+    return save_gstr(gstin, return_type, return_period, json_data)
 
 
 def save_gstr_2b(gstin, return_period, json_data):
     json_data = json_data.data
+    return_type = ReturnType.GSTR2B
     if (
         not json_data
         or json_data.get("gstin") != gstin
@@ -139,7 +150,8 @@ def save_gstr_2b(gstin, return_period, json_data):
             title="Invalid Response Received.",
         )
 
-    return save_gstr(gstin, ReturnType.GSTR2B, return_period, json_data.get("docdata"))
+    create_download_log(gstin, return_type.value, return_period)
+    return save_gstr(gstin, return_type, return_period, json_data.get("docdata"))
 
 
 # TODO: enqueue save_gstr
@@ -150,8 +162,6 @@ def save_gstr(gstin, return_type, return_period, json_data):
     :param return_period: str
     :param json_data: dict of list (GSTR category: suppliers)
     """
-    create_download_log(gstin, return_type.value, return_period)
-
     for category in GSTRCategory:
         gstr = get_data_handler(return_type, category)
         gstr(gstin, return_period, json_data).create_transactions(

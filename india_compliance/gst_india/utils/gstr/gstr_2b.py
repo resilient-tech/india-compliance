@@ -125,12 +125,13 @@ class GSTR2bISD(GSTR2b):
 
     def get_invoice_details(self, invoice):
         return {
-            "doc_type": get_mapped_value(invoice.doctyp, self.VALUE_MAPS.isd_type),
+            "doc_type": get_mapped_value(invoice.doctyp, self.VALUE_MAPS.isd_type_2b),
             "doc_number": invoice.docnum,
             "doc_date": parse_datetime(invoice.docdt, day_first=True),
             "itc_availability": get_mapped_value(
                 invoice.itcelg, self.VALUE_MAPS.yes_no
             ),
+            "document_value": invoice.igst + invoice.cgst + invoice.sgst + invoice.cess,
         }
 
     # item details are included in invoice details
@@ -146,7 +147,7 @@ class GSTR2bISDA(GSTR2bISD):
                 "original_doc_number": invoice.odocnum,
                 "original_doc_date": parse_datetime(invoice.odocdt, day_first=True),
                 "original_doc_type": get_mapped_value(
-                    invoice.odoctyp, self.VALUE_MAPS.isd_type
+                    invoice.odoctyp, self.VALUE_MAPS.isd_type_2b
                 ),
             }
         )
@@ -165,6 +166,7 @@ class GSTR2bIMPGSEZ(GSTR2b):
             "doc_date": parse_datetime(invoice.boedt, day_first=True),
             "is_amended": get_mapped_value(invoice.isamd, self.VALUE_MAPS.Y_N_to_check),
             "port_code": invoice.portcode,
+            "document_value": invoice.txval + invoice.igst + invoice.cess,
         }
 
     # item details are included in invoice details

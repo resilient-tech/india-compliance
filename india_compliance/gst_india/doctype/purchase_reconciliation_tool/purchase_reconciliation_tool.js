@@ -76,6 +76,7 @@ class PurchaseReconciliationTool {
                 },
             ],
             body: this.frm.get_field("summary_data").$wrapper,
+            frm: this.frm,
         });
 
         this.tabGroup.make();
@@ -306,7 +307,7 @@ async function download_gstr(
 
     const { message } = await frm.call(method, args);
     if (message && message.errorCode == "RETOTPREQUEST") {
-        const { otp } = await get_gstin_otp();
+        const otp = await get_gstin_otp();
         if (otp) download_gstr(frm, return_type, fiscal_year, only_missing, otp);
         return;
     }

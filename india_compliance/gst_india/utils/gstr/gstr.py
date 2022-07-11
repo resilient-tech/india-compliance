@@ -28,7 +28,8 @@ class GSTR:
             },
             "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
             "note_type": {"C": "Credit Note", "D": "Debit Note"},
-            "isd_type": {"ISDC": "ISD Credit Note", "ISDI": "ISD Invoice"},
+            "isd_type_2a": {"ISDCN": "ISD Credit Note", "ISD": "ISD Invoice"},
+            "isd_type_2b": {"ISDC": "ISD Credit Note", "ISDI": "ISD Invoice"},
             "amend_type": {
                 "R": "Receiver GSTIN Amended",
                 "N": "Invoice Number Amended",
