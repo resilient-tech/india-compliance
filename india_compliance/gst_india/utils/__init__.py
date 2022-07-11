@@ -173,13 +173,6 @@ def get_data_file_path(file_name):
     return frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
 
 
-def read_json_data_file(filename):
-    if not filename.endswith(".json"):
-        filename = filename + ".json"
-
-    return json.loads(read_data_file(filename))
-
-
 def validate_gstin_check_digit(gstin, label="GSTIN"):
     """
     Function to validate the check digit of the GSTIN.
