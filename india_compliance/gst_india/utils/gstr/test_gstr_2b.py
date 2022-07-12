@@ -31,7 +31,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2b_b2b(self):
         doc = self.get_doc(GSTRCategory.B2B)
-        self.assertDownloadLog()
+        self.assertImportLog()
         self.assertDocumentEqual(
             {
                 "company_gstin": "01AABCE2207R1Z5",

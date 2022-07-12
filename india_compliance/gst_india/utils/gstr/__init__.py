@@ -108,7 +108,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
         save_gstr_2b(gstin, return_period, response)
 
-    update_download_history(return_periods)
+    update_import_history(return_periods)
 
 
 def save_gstr_2a(gstin, return_period, json_data):
@@ -183,9 +183,9 @@ def get_data_handler(return_type, category):
     return getattr(GSTR_MODULES[return_type], class_name)
 
 
-def update_download_history(return_periods):
+def update_import_history(return_periods):
 
-    """Updates 2A data availability from 2B download"""
+    """Updates 2A data availability from 2B Import"""
 
     if not (
         inward_supplies := frappe.get_all(

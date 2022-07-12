@@ -24,7 +24,7 @@ class TestGSTRMixin:
         self.assertIsNotNone(docname)
         return frappe.get_doc(self.doctype, docname)
 
-    def assertDownloadLog(self, category=None):
+    def assertImportLog(self, category=None):
         if category:
             return_type = ReturnType.GSTR2A
         else:
@@ -89,7 +89,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2a_b2b(self):
         doc = self.get_doc(GSTRCategory.B2B)
-        self.assertDownloadLog(GSTRCategory.B2B)
+        self.assertImportLog(GSTRCategory.B2B)
         self.assertDocumentEqual(
             {
                 "doc_date": date(2016, 11, 24),
@@ -124,7 +124,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2a_b2ba(self):
         doc = self.get_doc(GSTRCategory.B2BA)
-        self.assertDownloadLog(GSTRCategory.B2BA)
+        self.assertImportLog(GSTRCategory.B2BA)
         self.assertDocumentEqual(
             {
                 "doc_date": date(2016, 11, 24),
@@ -171,7 +171,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2a_cdn(self):
         doc = self.get_doc(GSTRCategory.CDNR)
-        self.assertDownloadLog(GSTRCategory.CDNR)
+        self.assertImportLog(GSTRCategory.CDNR)
         self.assertDocumentEqual(
             {
                 "doc_date": date(2018, 9, 23),
@@ -211,7 +211,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2a_cdna(self):
         doc = self.get_doc(GSTRCategory.CDNRA)
-        self.assertDownloadLog(GSTRCategory.CDNRA)
+        self.assertImportLog(GSTRCategory.CDNRA)
         self.assertDocumentEqual(
             {
                 "doc_date": date(2018, 9, 23),
@@ -248,7 +248,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2a_isd(self):
         doc = self.get_doc(GSTRCategory.ISD)
-        self.assertDownloadLog(GSTRCategory.ISD)
+        self.assertImportLog(GSTRCategory.ISD)
         self.assertDocumentEqual(
             {
                 "doc_date": date(2016, 3, 3),
@@ -278,7 +278,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2a_impg(self):
         doc = self.get_doc(GSTRCategory.IMPG)
-        self.assertDownloadLog(GSTRCategory.IMPG)
+        self.assertImportLog(GSTRCategory.IMPG)
         self.assertDocumentEqual(
             {
                 "doc_date": date(2019, 11, 18),
@@ -300,7 +300,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     def test_gstr2a_impgsez(self):
         doc = self.get_doc(GSTRCategory.IMPGSEZ)
-        self.assertDownloadLog(GSTRCategory.IMPGSEZ)
+        self.assertImportLog(GSTRCategory.IMPGSEZ)
         self.assertDocumentEqual(
             {
                 "doc_date": date(2019, 11, 18),
