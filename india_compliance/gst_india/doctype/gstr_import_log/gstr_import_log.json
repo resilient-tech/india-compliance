@@ -52,7 +52,7 @@
  "modified": "2022-04-26 16:20:15.052567",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "GSTR Download Log",
+ "name": "GSTR Import Log",
  "owner": "Administrator",
  "permissions": [
   {

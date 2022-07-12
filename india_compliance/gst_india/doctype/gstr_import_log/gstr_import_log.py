@@ -5,7 +5,7 @@ import frappe
 from frappe.model.document import Document
 
 
-class GSTRDownloadLog(Document):
+class GSTRImportLog(Document):
     pass
 
 
@@ -35,7 +35,7 @@ def _create_download_log(
     data_not_found=False,
     classification=None,
 ):
-    doctype = "GSTR Download Log"
+    doctype = "GSTR Import Log"
     fields = {
         "gstin": gstin,
         "return_type": return_type,

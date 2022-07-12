@@ -569,7 +569,7 @@ def get_downloads_history(
         )
 
     return frappe.db.get_all(
-        "GSTR Download Log",
+        "GSTR Import Log",
         filters={
             "gstin": company_gstin,
             "return_type": return_type.value,

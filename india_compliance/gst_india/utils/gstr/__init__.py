@@ -49,7 +49,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
         for action, category in ACTIONS.items():
             # call api only if data is available
             if frappe.db.get_value(
-                "GSTR Download Log",
+                "GSTR Import Log",
                 {
                     "return_type": ReturnType.GSTR2A.value,
                     "return_period": return_period,
@@ -197,7 +197,7 @@ def update_download_history(return_periods):
     ):
         return
 
-    log = frappe.qb.DocType("GSTR Download Log")
+    log = frappe.qb.DocType("GSTR Import Log")
     (
         frappe.qb.update(log)
         .set(log.data_not_found, 0)

@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestGSTRDownloadLog(FrappeTestCase):
+class TestGSTRImportLog(FrappeTestCase):
     pass
