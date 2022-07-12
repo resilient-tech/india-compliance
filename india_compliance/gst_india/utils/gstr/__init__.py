@@ -153,12 +153,18 @@ def save_gstr_2b(gstin, return_period, json_data):
         )
 
     create_download_log(gstin, return_type.value, return_period)
-    save_gstr(gstin, return_type, return_period, json_data.get("docdata"))
+    save_gstr(
+        gstin,
+        return_type,
+        return_period,
+        json_data.get("docdata"),
+        json_data.get("gendt"),
+    )
 
 
 # TODO: enqueue save_gstr
 # TODO: show progress
-def save_gstr(gstin, return_type, return_period, json_data):
+def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
     """Save GSTR data to Inward Supply
 
     :param return_period: str
@@ -166,7 +172,7 @@ def save_gstr(gstin, return_type, return_period, json_data):
     """
     for category in GSTRCategory:
         gstr = get_data_handler(return_type, category)
-        gstr(gstin, return_period, json_data).create_transactions(
+        gstr(gstin, return_period, json_data, gen_date_2b).create_transactions(
             category,
             json_data.get(category.value.lower()),
         )

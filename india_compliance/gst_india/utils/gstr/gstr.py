@@ -38,10 +38,11 @@ class GSTR:
         }
     )
 
-    def __init__(self, gstin, return_period, data):
+    def __init__(self, gstin, return_period, data, gen_date_2b):
         self.gstin = gstin
         self.return_period = return_period
         self._data = data
+        self.gen_date_2b = gen_date_2b
         self.setup()
 
     def setup(self):
@@ -97,3 +98,6 @@ class GSTR:
 
     def get_key(self, key):
         return self.KEY_MAPS.get(key)
+
+    def set_key(self, key, value):
+        self.KEY_MAPS[key] = value

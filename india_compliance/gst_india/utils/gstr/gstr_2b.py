@@ -8,9 +8,7 @@ class GSTR2b(GSTR):
     def get_transaction(self, category, supplier, invoice):
         transaction = super().get_transaction(category, supplier, invoice)
         transaction.return_period_2b = self.return_period
-        transaction.gen_date_2b = parse_datetime(
-            self._data.get("gendt"), day_first=True
-        )
+        transaction.gen_date_2b = parse_datetime(self.gen_date_2b, day_first=True)
         return transaction
 
     def get_supplier_details(self, supplier):
@@ -36,8 +34,8 @@ class GSTR2b(GSTR):
 class GSTR2bB2B(GSTR2b):
     def setup(self):
         super().setup()
-        self.KEY_MAPS.items_key = "items"
-        self.KEY_MAPS.invoice_key = "inv"
+        self.set_key("invoice_key", "inv")
+        self.set_key("items_key", "items")
 
     def get_invoice_details(self, invoice):
         return {
@@ -87,7 +85,7 @@ class GSTR2bB2BA(GSTR2bB2B):
 class GSTR2bCDNR(GSTR2bB2B):
     def setup(self):
         super().setup()
-        self.KEY_MAPS.invoice_key = "nt"
+        self.set_key("invoice_key", "nt")
 
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
@@ -121,7 +119,7 @@ class GSTR2bCDNRA(GSTR2bCDNR):
 class GSTR2bISD(GSTR2b):
     def setup(self):
         super().setup()
-        self.KEY_MAPS.invoice_key = "doclist"
+        self.set_key("invoice_key", "doclist")
 
     def get_invoice_details(self, invoice):
         return {
@@ -157,7 +155,7 @@ class GSTR2bISDA(GSTR2bISD):
 class GSTR2bIMPGSEZ(GSTR2b):
     def setup(self):
         super().setup()
-        self.KEY_MAPS.invoice_key = "boe"
+        self.set_key("invoice_key", "boe")
 
     def get_invoice_details(self, invoice):
         return {
@@ -167,6 +165,7 @@ class GSTR2bIMPGSEZ(GSTR2b):
             "is_amended": get_mapped_value(invoice.isamd, self.VALUE_MAPS.Y_N_to_check),
             "port_code": invoice.portcode,
             "document_value": invoice.txval + invoice.igst + invoice.cess,
+            "itc_availability": "Yes",  # always available
         }
 
     # item details are included in invoice details

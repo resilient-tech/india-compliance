@@ -30,32 +30,17 @@ class TestGSTRMixin:
         else:
             return_type = ReturnType.GSTR2B
 
-        filters = {"company_gstin": self.gstin, "return_type": return_type}
+        filters = {"gstin": self.gstin, "return_type": return_type}
         if category:
             filters["classification"] = category.value
 
         docname, last_updated_on = frappe.get_value(
-            "GSTR Download Log", filters, ["name", "last_updated_on"]
+            self.log_doctype, filters, ["name", "last_updated_on"]
         )
         self.assertIsNotNone(docname)
         self.assertAlmostEqual(
             last_updated_on, get_datetime(), delta=timedelta(minutes=2)
         )
-
-    def assertInwardSupply(self, doc, expected_values, expected_item=None):
-        for key, value in expected_values.items():
-            print(key, value, doc.get(key))
-            self.assertEqual(doc.get(key), value)
-
-        if not expected_item:
-            return
-
-        items = doc.get("items")
-        self.assertIsNotNone(items)
-        self.assertEqual(len(items), 1)
-
-        for key, value in expected_item.items():
-            self.assertEqual(items[0].get(key), value)
 
 
 class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
@@ -66,6 +51,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         cls.gstin = "01AABCE2207R1Z5"
         cls.return_period = "032020"
         cls.doctype = "Inward Supply"
+        cls.log_doctype = "GSTR Download Log"
         cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2a.json")))
 
         save_gstr_2a(
@@ -76,15 +62,12 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
 
     @classmethod
     def tearDownClass(cls):
-        frappe.db.delete("Inward Supply", {"company_gstin": cls.gstin})
+        frappe.db.delete(cls.doctype, {"company_gstin": cls.gstin})
+        frappe.db.delete(cls.log_doctype, {"gstin": cls.gstin})
 
     @patch("india_compliance.gst_india.utils.gstr.save_gstr")
     @patch("india_compliance.gst_india.utils.gstr.GSTR2aAPI")
     def test_download_gstr_2a(self, mock_gstr_2a_api, mock_save_gstr):
-        mock_gstr_2a_api.return_value = Mock()
-        mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data  # noqa
-        mock_save_gstr.side_effect = mock_save_gstr_func  # noqa
-
         def mock_get_data(action, return_period, otp):
             if action in ["B2B", "B2BA", "CDN", "CDNA"]:
                 return frappe._dict({action.lower(): self.test_data[action.lower()]})
@@ -99,6 +82,9 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
             self.assertTrue("isd" not in json_data)
             self.assertListEqual(json_data.cdnr, self.test_data.cdn)
 
+        mock_gstr_2a_api.return_value = Mock()
+        mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data
+        mock_save_gstr.side_effect = mock_save_gstr_func
         download_gstr_2a(self.gstin, {self.return_period})
 
     def test_gstr2a_b2b(self):
