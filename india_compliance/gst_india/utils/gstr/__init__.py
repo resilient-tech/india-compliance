@@ -45,7 +45,7 @@ GSTR_MODULES = {
 def download_gstr_2a(gstin, return_periods, otp=None):
     api = GSTR2aAPI(gstin)
     for return_period in return_periods:
-        json_data = {"gstin": gstin, "fp": return_period}
+        json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         for action, category in ACTIONS.items():
             # call api only if data is available
             if frappe.db.get_value(
@@ -128,12 +128,14 @@ def save_gstr_2a(gstin, return_period, json_data):
         if action.lower() not in json_data:
             continue
 
-        create_download_log(gstin, return_type.value, return_period, classification=category.value)
+        create_download_log(
+            gstin, return_type.value, return_period, classification=category.value
+        )
 
         # making consistent with GSTR2b
         json_data[category.value.lower()] = json_data.pop(action.lower())
 
-    return save_gstr(gstin, return_type, return_period, json_data)
+    save_gstr(gstin, return_type, return_period, json_data)
 
 
 def save_gstr_2b(gstin, return_period, json_data):
@@ -151,7 +153,7 @@ def save_gstr_2b(gstin, return_period, json_data):
         )
 
     create_download_log(gstin, return_type.value, return_period)
-    return save_gstr(gstin, return_type, return_period, json_data.get("docdata"))
+    save_gstr(gstin, return_type, return_period, json_data.get("docdata"))
 
 
 # TODO: enqueue save_gstr
