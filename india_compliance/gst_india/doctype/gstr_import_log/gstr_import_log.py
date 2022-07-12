@@ -9,7 +9,7 @@ class GSTRImportLog(Document):
     pass
 
 
-def create_download_log(
+def create_import_log(
     gstin,
     return_type,
     return_period,
@@ -17,7 +17,7 @@ def create_download_log(
     classification=None,
 ):
     frappe.enqueue(
-        _create_download_log,
+        _create_import_log,
         queue="short",
         at_front=True,
         gstin=gstin,
@@ -28,7 +28,7 @@ def create_download_log(
     )
 
 
-def _create_download_log(
+def _create_import_log(
     gstin,
     return_type,
     return_period,

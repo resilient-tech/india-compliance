@@ -4,8 +4,8 @@ import frappe
 from frappe.query_builder.terms import Criterion
 
 from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
-from india_compliance.gst_india.doctype.gstr_download_log.gstr_download_log import (
-    create_download_log,
+from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
+    create_import_log,
 )
 from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
 
@@ -64,7 +64,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 return response
 
             if response.error_type == "no_docs_found":
-                create_download_log(
+                create_import_log(
                     gstin,
                     ReturnType.GSTR2A.value,
                     return_period,
@@ -98,7 +98,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             return response
 
         if response.error_type == "no_docs_found":
-            create_download_log(
+            create_import_log(
                 gstin, ReturnType.GSTR2B.value, return_period, data_not_found=True
             )
             continue
@@ -128,7 +128,7 @@ def save_gstr_2a(gstin, return_period, json_data):
         if action.lower() not in json_data:
             continue
 
-        create_download_log(
+        create_import_log(
             gstin, return_type.value, return_period, classification=category.value
         )
 
@@ -152,7 +152,7 @@ def save_gstr_2b(gstin, return_period, json_data):
             title="Invalid Response Received.",
         )
 
-    create_download_log(gstin, return_type.value, return_period)
+    create_import_log(gstin, return_type.value, return_period)
     save_gstr(
         gstin,
         return_type,
