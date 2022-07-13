@@ -19,7 +19,7 @@ def create_import_log(
     frappe.enqueue(
         _create_import_log,
         queue="short",
-        at_front=True,
+        now=frappe.flags.in_test,
         gstin=gstin,
         return_type=return_type,
         return_period=return_period,

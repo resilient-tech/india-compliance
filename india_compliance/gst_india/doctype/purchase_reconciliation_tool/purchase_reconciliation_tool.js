@@ -255,7 +255,7 @@ function _show_upload_gstr_dialog() {
 }
 
 async function fetch_download_history(frm, dialog, for_download = true) {
-    const { message } = await frm.call("get_download_history", {
+    const { message } = await frm.call("get_import_history", {
         return_type: dialog.get_value("return_type"),
         fiscal_year: dialog.get_value("fiscal_year"),
         for_download: for_download,
@@ -305,14 +305,13 @@ async function download_gstr(
         method = "download_gstr_2b";
     }
 
+    reco_tool.show_progress(frm, "download");
     const { message } = await frm.call(method, args);
     if (message && message.errorCode == "RETOTPREQUEST") {
         const otp = await get_gstin_otp();
         if (otp) download_gstr(frm, return_type, fiscal_year, only_missing, otp);
         return;
     }
-
-    reco_tool.show_progress_gstr_2a_2b(frm, return_type, "download");
 }
 
 function get_gstin_otp() {
@@ -334,102 +333,53 @@ function get_gstin_otp() {
     });
 }
 
-async function upload_gstr(frm, return_type, period, file_path) {
-    await frm.call("upload_gstr", { return_type, period, file_path });
-    reco_tool.show_progress_gstr_2a_2b(frm, return_type, "upload");
+function upload_gstr(frm, return_type, period, file_path) {
+    reco_tool.show_progress(frm, "upload");
+    frm.call("upload_gstr", { return_type, period, file_path });
 }
 
 // TODO: refactor progress
-reco_tool.show_progress_gstr_2a_2b = function (frm, return_type, type) {
+reco_tool.show_progress = function (frm, type) {
     if (type == "download") {
         frappe.run_serially([
-            () =>
-                create_or_update_progress(frm, return_type, "fetch_api_progress", type),
-            () =>
-                create_or_update_progress(
-                    frm,
-                    return_type,
-                    return_type === "GSTR 2A"
-                        ? "create_or_update_gstr_2a_progress"
-                        : "create_or_update_b2b_progress",
-                    type
-                ),
-            () =>
-                create_or_update_progress(
-                    frm,
-                    return_type,
-                    return_type == "GSTR 2B" ? "update_download_history_progress" : "",
-                    type
-                ),
+            () => update_progress(frm, "update_api_progress"),
+            () => update_progress(frm, "update_transactions_progress"),
         ]);
     } else if (type == "upload") {
-        frappe.run_serially([
-            () =>
-                create_or_update_progress(
-                    frm,
-                    return_type,
-                    return_type === "GSTR 2A"
-                        ? "create_or_update_gstr_2a_progress"
-                        : "create_or_update_b2b_progress",
-                    type
-                ),
-            () =>
-                create_or_update_progress(
-                    frm,
-                    return_type,
-                    return_type == "GSTR 2B" ? "update_download_history_progress" : "",
-                    type
-                ),
-        ]);
+        update_progress(frm, "update_transactions_progress");
     }
 };
 
-function create_or_update_progress(frm, return_type, method, type) {
+function update_progress(frm, method) {
     frappe.realtime.on(method, data => {
-        frm.import_in_progress = true;
-        console.log(data);
-        let percent, total, period;
+        const { current_progress } = data;
+        const message =
+            method == "update_api_progress"
+                ? __("Fetching data from GSTN")
+                : __("Updating Inward Supply for Return Period {0}", [
+                      data.return_period,
+                  ]);
 
-        total = "total_b2b_data" in data ? data.total_b2b_data : data.total_ret_periods;
-
-        period = type === "download" ? data.period : "";
-
-        percent = Math.floor((data.current_idx * 100) / total);
-
-        let message, msg;
-        if (data.success) {
-            let message_args = [data.current_idx, total, return_type, percent, period];
-
-            msg =
-                type == "upload"
-                    ? __("Updating {2} transactions...", message_args)
-                    : __("Downloading {2} records...", message_args);
-
-            if (type == "download" && method == "fetch_api_progress") {
-                message = __("Fetching {2} transactions...", message_args);
-            } else if (method === "update_download_history_progress") {
-                message = __(
-                    "Update download history for {2} {0} of {1}, {3}% completed",
-                    message_args
-                );
-            } else {
-                message = msg;
-            }
-        }
-
-        frm.dashboard.show_progress(__("Upload GSTR Progress"), percent, message);
+        frm.dashboard.show_progress("Import GSTR Progress", current_progress, message);
         frm.page.set_indicator(__("In Progress"), "orange");
-        if (data.current_idx === total) {
+        if (data.is_last_period) {
+            frm.flag_last_return_period = data.return_period;
+        }
+        if (
+            current_progress == 100 &&
+            method != "update_api_progress" &&
+            frm.flag_last_return_period == data.return_period
+        ) {
             setTimeout(() => {
                 frm.dashboard.hide();
                 frm.refresh();
-                frm.dashboard.set_headline(
-                    type == "upload"
-                        ? "Successfully uploaded"
-                        : "Successfully downloaded"
-                );
-            }, 2000);
-            frm.page.set_indicator(__("Success"), "green");
+                frm.page.set_indicator(__("Success"), "green");
+                frm.dashboard.set_headline("Successfully Imported");
+                setTimeout(() => {
+                    frm.page.clear_headline();
+                }, 2000);
+                frm.save();
+            }, 1000);
         }
     });
 }

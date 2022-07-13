@@ -52,8 +52,21 @@ class GSTR:
         if not suppliers:
             return
 
-        for transaction in self.get_all_transactions(category, suppliers):
+        transactions = self.get_all_transactions(category, suppliers)
+        total_transactions = len(transactions)
+        current_transaction = 0
+
+        for transaction in transactions:
             create_inward_supply(transaction)
+
+            current_transaction += 1
+            frappe.publish_realtime(
+                "update_transactions_progress",
+                {
+                    "current_progress": current_transaction * 100 / total_transactions,
+                    "return_period": self.return_period,
+                },
+            )
 
     def get_all_transactions(self, category, suppliers):
         transactions = []

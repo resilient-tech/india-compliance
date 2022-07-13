@@ -12,7 +12,7 @@ from thefuzz import fuzz, process
 import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import Sum
-from frappe.utils import cint, getdate
+from frappe.utils import add_months, cint, getdate
 
 from india_compliance.gst_india.utils import get_json_from_file
 from india_compliance.gst_india.utils.gstr import (
@@ -23,6 +23,8 @@ from india_compliance.gst_india.utils.gstr import (
     save_gstr_2a,
     save_gstr_2b,
 )
+
+GSTR2B_GEN_DATE = 13
 
 
 class PurchaseReconciliationTool(Document):
@@ -276,38 +278,40 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def download_gstr_2a(self, fiscal_year, force=False, otp=None):
-        periods = get_periods(fiscal_year)
+        return_type = ReturnType.GSTR2A
+        periods = get_periods(fiscal_year, return_type)
         if not force:
-            periods = self.get_periods_to_download(ReturnType.GSTR2A, periods)
+            periods = self.get_periods_to_download(return_type, periods)
 
         return download_gstr_2a(self.company_gstin, periods, otp)
 
     @frappe.whitelist()
     def download_gstr_2b(self, fiscal_year, otp=None):
+        return_type = ReturnType.GSTR2B
         periods = self.get_periods_to_download(
-            ReturnType.GSTR2B, get_periods(fiscal_year)
+            return_type, get_periods(fiscal_year, return_type)
         )
         return download_gstr_2b(self.company_gstin, periods, otp)
 
     def get_periods_to_download(self, return_type, periods):
-        existing_periods = get_downloads_history(
+        existing_periods = get_import_history(
             self.company_gstin,
             return_type,
             periods,
             pluck="return_period",
         )
 
-        return set(periods) - set(existing_periods)
+        return [period for period in periods if period not in existing_periods]
 
     @frappe.whitelist()
-    def get_download_history(self, return_type, fiscal_year, for_download=True):
+    def get_import_history(self, return_type, fiscal_year, for_download=True):
         # TODO: refactor this method
         if not return_type:
             return
 
         return_type = ReturnType(return_type)
-        periods = get_periods(fiscal_year)
-        history = get_downloads_history(self.company_gstin, return_type, periods)
+        periods = get_periods(fiscal_year, return_type)
+        history = get_import_history(self.company_gstin, return_type, periods)
 
         columns = [
             "Period",
@@ -531,7 +535,7 @@ def get_summary_data(
     return summary_data
 
 
-def get_periods(fiscal_year):
+def get_periods(fiscal_year, return_type: ReturnType):
     """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
 
     fiscal_year = frappe.db.get_value(
@@ -544,7 +548,7 @@ def get_periods(fiscal_year):
     if not fiscal_year:
         return []
 
-    end_date = min(fiscal_year.end_date, getdate())
+    end_date = min(fiscal_year.end_date, _getdate(return_type))
 
     # latest to oldest
     return tuple(reversed(_get_periods(fiscal_year.start_date, end_date)))
@@ -556,8 +560,14 @@ def _get_periods(start_date, end_date):
     return pd.date_range(start_date, end_date, freq="MS").strftime("%m%Y").tolist()
 
 
-# TODO: rearrange the code
-def get_downloads_history(
+def _getdate(return_type):
+    if return_type == ReturnType.GSTR2B and getdate().day <= GSTR2B_GEN_DATE:
+        return add_months(getdate(), -1)
+
+    return getdate()
+
+
+def get_import_history(
     company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
 ):
     if not (fields or pluck):

@@ -43,15 +43,33 @@ GSTR_MODULES = {
 
 
 def download_gstr_2a(gstin, return_periods, otp=None):
+    total_expected_requests = len(return_periods) * len(ACTIONS)
+    requests_made = 0
+
+    return_type = ReturnType.GSTR2A
     api = GSTR2aAPI(gstin)
     for return_period in return_periods:
+        is_last_period = return_periods[-1] == return_period
+
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         for action, category in ACTIONS.items():
+            requests_made += 1
+            frappe.publish_realtime(
+                "update_api_progress",
+                {
+                    "current_progress": requests_made * 100 / total_expected_requests,
+                    "return_period": return_period,
+                    "is_last_period": is_last_period,
+                },
+            )
+
             # call api only if data is available
+
             if frappe.db.get_value(
                 "GSTR Import Log",
                 {
-                    "return_type": ReturnType.GSTR2A.value,
+                    "gstin": gstin,
+                    "return_type": return_type.value,
                     "return_period": return_period,
                     "classification": category.value,
                 },
@@ -66,7 +84,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
             if response.error_type == "no_docs_found":
                 create_import_log(
                     gstin,
-                    ReturnType.GSTR2A.value,
+                    return_type.value,
                     return_period,
                     classification=category.value,
                     data_not_found=True,
@@ -162,13 +180,25 @@ def save_gstr_2b(gstin, return_period, json_data):
     )
 
 
-# TODO: enqueue save_gstr
-# TODO: show progress
 def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
+    frappe.enqueue(
+        _save_gstr,
+        queue="short",
+        now=frappe.flags.in_test,
+        gstin=gstin,
+        return_type=return_type,
+        return_period=return_period,
+        json_data=json_data,
+        gen_date_2b=gen_date_2b,
+    )
+
+
+def _save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
     """Save GSTR data to Inward Supply
 
     :param return_period: str
     :param json_data: dict of list (GSTR category: suppliers)
+    :param gen_date_2b: str (Date when GSTR 2B was generated)
     """
     for category in GSTRCategory:
         gstr = get_data_handler(return_type, category)
@@ -184,7 +214,6 @@ def get_data_handler(return_type, category):
 
 
 def update_import_history(return_periods):
-
     """Updates 2A data availability from 2B Import"""
 
     if not (

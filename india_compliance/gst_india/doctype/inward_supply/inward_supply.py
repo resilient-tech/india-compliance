@@ -15,7 +15,6 @@ class InwardSupply(Document):
 
 
 def create_inward_supply(transaction):
-    # TODO: implement bulk insert
     filters = {
         "doc_number": transaction.doc_number,
         "doc_date": transaction.doc_date,
