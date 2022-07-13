@@ -24,7 +24,7 @@ from india_compliance.gst_india.utils.gstr import (
     save_gstr_2b,
 )
 
-GSTR2B_GEN_DATE = 13
+GSTR2B_GEN_DATE = 14
 
 
 class PurchaseReconciliationTool(Document):
@@ -561,8 +561,11 @@ def _get_periods(start_date, end_date):
 
 
 def _getdate(return_type):
-    if return_type == ReturnType.GSTR2B and getdate().day <= GSTR2B_GEN_DATE:
-        return add_months(getdate(), -1)
+    if return_type == ReturnType.GSTR2B:
+        if getdate().day >= GSTR2B_GEN_DATE:
+            return add_months(getdate(), -1)
+        else:
+            return add_months(getdate(), -2)
 
     return getdate()
 
