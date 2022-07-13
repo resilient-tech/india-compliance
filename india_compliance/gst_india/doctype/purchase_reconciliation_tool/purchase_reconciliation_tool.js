@@ -12,12 +12,21 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
 
+    async company(frm) {
+        if (frm.doc.company) {
+            const options = await set_gstin_options(frm);
+            frm.set_value("company_gstin", options[0]);
+        }
+    },
+
     refresh(frm) {
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
 
         frm.add_custom_button("Download", () => show_gstr_dialog(frm));
         frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
+
+        if (frm.doc.company) set_gstin_options(frm);
     },
 
     purchase_period(frm) {
@@ -28,6 +37,19 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "inward_supply");
     },
 });
+
+async function set_gstin_options(frm) {
+    const { query, params } = ic.get_gstin_query(frm.doc.company);
+    const { message } = await frappe.call({
+        method: query,
+        args: params,
+    });
+
+    if (!message) return;
+    const gstin_field = frm.get_field("company_gstin");
+    gstin_field.set_data(message);
+    return message;
+}
 
 class PurchaseReconciliationTool {
     constructor(frm) {
