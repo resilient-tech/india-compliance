@@ -43,5 +43,11 @@ def run_post_install_patches():
         return
 
     print("\nPatching Existing Data...")
-    for patch in POST_INSTALL_PATCHES:
-        frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()
+    frappe.flags.in_patch = True
+
+    try:
+        for patch in POST_INSTALL_PATCHES:
+            frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()
+
+    finally:
+        frappe.flags.in_patch = False
