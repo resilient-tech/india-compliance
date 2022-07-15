@@ -57,7 +57,7 @@ async function update_gst_details(frm) {
             "is_reverse_charge"
         );
     } else {
-        party_fields.push("supplier_gstin");
+        party_fields.push("supplier_address", "supplier_gstin");
     }
 
     const party_details = Object.fromEntries(

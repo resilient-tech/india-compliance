@@ -25,8 +25,8 @@ POST_INSTALL_PATCHES = (
     "update_reverse_charge_and_export_type",
     "update_gstin_and_gst_category",
     "update_e_invoice_fields_and_logs",
-    "delete_gst_e_invoice_print_format",
     "set_default_gst_settings",
+    "remove_deprecated_docs",
     "remove_old_fields",
 )
 
@@ -43,5 +43,11 @@ def run_post_install_patches():
         return
 
     print("\nPatching Existing Data...")
-    for patch in POST_INSTALL_PATCHES:
-        frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()
+    frappe.flags.in_patch = True
+
+    try:
+        for patch in POST_INSTALL_PATCHES:
+            frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()
+
+    finally:
+        frappe.flags.in_patch = False
