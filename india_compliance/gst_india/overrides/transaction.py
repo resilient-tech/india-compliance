@@ -344,34 +344,32 @@ def set_place_of_supply(doc, method=None):
 
 
 def is_inter_state_supply(doc):
-    return (
+    return doc.gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
-        or doc.gst_category == "SEZ"
     )
 
 
 def get_source_state_code(doc):
     """
-    Returns opposite of Place of Supply.
+    Get the state code of the state from which goods / services are being supplied.
+    Logic opposite to that of utils.get_place_of_supply
     """
-    source_state_code = doc.company_gstin[:2]
 
-    if doc.doctype not in SALES_DOCTYPES:
-        if doc.gst_category == "Overseas":
-            return "96"
+    if doc.doctype in SALES_DOCTYPES:
+        return doc.company_gstin[:2]
 
-        if doc.gst_category == "Unregistered" and doc.supplier_address:
-            state = frappe.db.get_value(
-                "Address",
-                doc.supplier_address,
-                "state",
-            )
-            source_state_code = STATE_NUMBERS.get(state)
+    if doc.gst_category == "Overseas":
+        return "96"
 
-        elif doc.supplier_gstin:
-            source_state_code = doc.supplier_gstin[:2]
+    if doc.gst_category == "Unregistered" and doc.supplier_address:
+        return frappe.db.get_value(
+            "Address",
+            doc.supplier_address,
+            "gst_state_number",
+        )
 
-    return source_state_code
+    if doc.supplier_gstin:
+        return doc.supplier_gstin[:2]
 
 
 def validate_hsn_codes(doc, method=None):
@@ -519,10 +517,7 @@ def get_gst_details(party_details, doctype, company):
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
 
-    place_of_supply = {"place_of_supply": get_place_of_supply(party_details, doctype)}
-    # updating party details to check is_inter_state_supply
-    party_details.update(place_of_supply)
-    gst_details.update(place_of_supply)
+    gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
 
     if is_sales_transaction:
         source_gstin = party_details.company_gstin
@@ -560,7 +555,13 @@ def get_gst_details(party_details, doctype, company):
     default_tax = get_tax_template(
         master_doctype,
         company,
-        is_inter_state_supply(party_details.update(doctype=doctype)),
+        is_inter_state_supply(
+            frappe._dict(
+                doctype=doctype,
+                place_of_supply=gst_details.place_of_supply,
+                **party_details,
+            )
+        ),
         party_details.company_gstin[:2],
     )
 
