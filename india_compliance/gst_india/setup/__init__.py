@@ -26,8 +26,8 @@ def after_install():
 
     create_property_setters()
     create_address_template()
-    setup_default_gst_settings()
-    setup_default_accounts_settings()
+    set_default_gst_settings()
+    set_default_accounts_settings()
     create_hsn_codes()
 
 
@@ -90,7 +90,7 @@ def create_hsn_codes():
     )
 
 
-def setup_default_gst_settings():
+def set_default_gst_settings():
     settings = frappe.get_doc("GST Settings")
     settings.db_set(
         {
@@ -115,13 +115,18 @@ def setup_default_gst_settings():
         toggle_custom_fields(fields, False)
 
 
-def setup_default_accounts_settings():
+def set_default_accounts_settings():
     """
-    Accounts Settings overridden by India Compliance App
-    - Tax Category of only billing address should be used for tax template selection,
-        as the same is used for filing GSTR1
-    - Item Tax Templates have all GST accounts and are primarily used for selection of tax rates.
-        If setting `add_taxes_from_item_tax_template` is enabled, it will add all unnecessary accounts.
+    Accounts Settings overridden by India Compliance
+
+    - Determine Address Tax Category From:
+        This is overriden to be Billing Address, since that's the correct
+        address for determining GST applicablility
+
+    - Automatically Add Taxes and Charges from Item Tax Template:
+        This is overriden to be "No". Item Tax Templates are designed to have
+        all GST Accounts and are primarily used for selection of tax rate.
+        Setting this to "Yes" can lead to all GST Accounts being included in taxes.
     """
 
     frappe.db.set_value(
