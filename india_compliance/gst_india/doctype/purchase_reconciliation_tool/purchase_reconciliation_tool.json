@@ -12,6 +12,7 @@
   "purchase_period",
   "purchase_from_date",
   "purchase_to_date",
+  "action",
   "column_break_6",
   "inward_supply_period",
   "inward_supply_from_date",
@@ -37,19 +38,21 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "Previous Month",
+   "default": "Current Financial Year",
    "fieldname": "purchase_period",
    "fieldtype": "Select",
    "label": "Purchase Period",
    "options": "\nCurrent Month\nCurrent Quarter\nCurrent Financial Year\nPrevious Month\nPrevious Quarter\nPrevious Financial Year\nCustom"
   },
   {
+   "depends_on": "eval: doc.purchase_period == 'Custom'",
    "fieldname": "purchase_from_date",
    "fieldtype": "Date",
    "label": "From Date",
    "read_only_depends_on": "eval: doc.purchase_period != 'Custom'"
   },
   {
+   "depends_on": "eval: doc.purchase_period == 'Custom'",
    "fieldname": "purchase_to_date",
    "fieldtype": "Date",
    "label": "To Date",
@@ -67,12 +70,14 @@
    "options": "\nCurrent Month\nCurrent Quarter\nCurrent Financial Year\nPrevious Month\nPrevious Quarter\nPrevious Financial Year\nCustom"
   },
   {
+   "depends_on": "eval: doc.inward_supply_period == 'Custom'",
    "fieldname": "inward_supply_from_date",
    "fieldtype": "Date",
    "label": "From Date",
    "read_only_depends_on": "eval: doc.inward_supply_period != 'Custom'"
   },
   {
+   "depends_on": "eval: doc.inward_supply_period == 'Custom'",
    "fieldname": "inward_supply_to_date",
    "fieldtype": "Date",
    "label": "To Date",
@@ -91,13 +96,19 @@
    "fieldtype": "Code",
    "hidden": 1,
    "label": "Reconciliation Data"
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Autocomplete",
+   "label": "Action",
+   "options": "No Action\nAccept My Values\nAccept Supplier Values\nReject\nIgnore\nPending"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-13 15:32:51.107463",
+ "modified": "2022-07-15 10:33:08.877979",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",

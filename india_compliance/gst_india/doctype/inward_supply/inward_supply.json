@@ -278,7 +278,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Action",
-   "options": "No Action\nAccept My Values\nAccept Supplier Values\nReject\nIgnore\nPending"
+   "options": "No Action\nAccept My Values\nAccept Supplier Values\nIgnore\nPending"
   },
   {
    "fieldname": "link_doctype",
@@ -294,7 +294,7 @@
    "fieldname": "match_status",
    "fieldtype": "Select",
    "label": "Match Status",
-   "options": "\nExact Match\nPartial Match\nMismatch"
+   "options": "\nExact Match\nPartial Match\nMismatch\nUnlinked"
   },
   {
    "fieldname": "link_name",
@@ -351,7 +351,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-04-20 17:52:58.350429",
+ "modified": "2022-07-14 19:01:45.178365",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Inward Supply",
