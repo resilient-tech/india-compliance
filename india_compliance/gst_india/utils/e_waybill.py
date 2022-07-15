@@ -146,7 +146,7 @@ def _cancel_e_waybill(doc, values):
     api = (
         EInvoiceAPI
         # Use e-invoice endpoint only for sandbox environment
-        if doc.get("irn") and frappe.conf.use_gst_api_sandbox
+        if doc.get("irn") and frappe.conf.ic_api_sandbox_mode
         else EWaybillAPI
     )
 

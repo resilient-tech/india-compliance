@@ -13,8 +13,6 @@ def execute():
     migrate_e_invoice_fields()
     migrate_e_invoice_request_log()
     delete_e_invoice_fields()
-    delete_old_doctypes()
-    delete_old_reports()
 
 
 def migrate_e_waybill_fields():
@@ -129,9 +127,12 @@ def migrate_e_invoice_request_log():
     if not frappe.db.table_exists("E Invoice Request Log"):
         return
 
-    docs = frappe.get_all(
+    # Using db.get_values instead of get_all to avoid retrieving meta,
+    # since the DocType E Invoice Request Log gets deleted in ERPNext patch
+    docs = frappe.db.get_values(
         "E Invoice Request Log",
-        fields=(
+        filters={},
+        fieldname=(
             "user",
             "creation",
             "url",
@@ -144,6 +145,7 @@ def migrate_e_invoice_request_log():
             "name",
             "owner",
         ),
+        as_dict=True,
     )
 
     values = []
@@ -309,29 +311,6 @@ def delete_e_invoice_fields():
         ]
     }
     delete_custom_fields(FIELDS_TO_DELETE)
-
-
-def delete_old_doctypes():
-    for doctype in ("E Invoice Settings", "E Invoice User", "E Invoice Request Log"):
-        frappe.delete_doc(
-            "DocType",
-            doctype,
-            force=True,
-            ignore_permissions=True,
-            ignore_missing=True,
-        )
-
-
-def delete_old_reports():
-    for report in ("E-Invoice Summary",):
-        frappe.delete_doc(
-            "Report",
-            report,
-            force=True,
-            ignore_permissions=True,
-            ignore_on_trash=True,
-            ignore_missing=True,
-        )
 
 
 ### Helper Function
