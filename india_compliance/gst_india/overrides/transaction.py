@@ -452,11 +452,9 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    is_sales_doctype = doctype in SALES_DOCTYPES
-
     address_fields = (
         ("customer_address", "company_address")
-        if is_sales_doctype
+        if doctype in SALES_DOCTYPES
         else ("supplier_address", "shipping_address")
     )
 
