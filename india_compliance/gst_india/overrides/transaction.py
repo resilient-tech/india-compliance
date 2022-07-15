@@ -707,7 +707,7 @@ def validate_reverse_charge_transaction(doc, method=None):
 
 
 def is_export_without_payment_of_gst(doc):
-    return doc.gst_category in ("SEZ", "Overseas") and not doc.is_export_with_gst
+    return doc.gst_category in OVERSEAS_GST_CATEGORIES and not doc.is_export_with_gst
 
 
 def validate_transaction(doc, method=None):
