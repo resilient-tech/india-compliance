@@ -15,7 +15,7 @@ class BaseAPI:
     def __init__(self, *args, **kwargs):
         self.api_name = "GST"
         self.base_path = ""
-        self.sandbox = frappe.conf.use_gst_api_sandbox or frappe.flags.in_test
+        self.sandbox = frappe.conf.ic_api_sandbox_mode or frappe.flags.in_test
         self.settings = frappe.get_cached_doc("GST Settings")
         self.default_headers = {
             "x-api-key": self.settings.get_password("api_secret"),
@@ -92,21 +92,27 @@ class BaseAPI:
             },
         )
 
-        if method == "POST":
-            request_args.json = json
-
-        response_json = None
         log = frappe._dict(
             url=request_args.url,
-            data=request_args.json,
-            request_headers={
-                "headers": request_args.headers.copy(),
-                "params": request_args.params,
-            },
+            data=request_args.params,
+            request_headers=request_args.headers.copy(),
         )
 
         # Don't log API secret
         log.request_headers.pop("x-api-key", None)
+
+        if method == "POST" and json:
+            request_args.json = json
+
+            if not request_args.params:
+                log.data = json
+            else:
+                log.data = {
+                    "params": request_args.params,
+                    "body": json,
+                }
+
+        response_json = None
 
         try:
             response = requests.request(method, **request_args)
