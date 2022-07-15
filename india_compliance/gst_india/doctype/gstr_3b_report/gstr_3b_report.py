@@ -8,6 +8,8 @@ import os
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder import DatePart
+from frappe.query_builder.functions import Extract
 from frappe.utils import cstr, flt
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
@@ -203,70 +205,63 @@ class GSTR3BReport(Document):
         self.get_outward_tax_details(doctype)
 
     def get_outward_tax_invoices(self, doctype, reverse_charge=None):
-        self.invoices = []
-        self.invoice_detail_map = {}
-        condition = ""
+        self.invoice_map = {}
 
-        if reverse_charge:
-            condition += "AND is_reverse_charge = 1"
+        invoice = frappe.qb.DocType(doctype)
+        fields = [invoice.name, invoice.gst_category, invoice.place_of_supply]
 
-        invoice_details = frappe.db.sql(
-            """
-            SELECT
-                name, gst_category, is_export_with_gst, place_of_supply
-            FROM
-                `tab{doctype}`
-            WHERE
-                docstatus = 1
-                AND month(posting_date) = %s
-                AND year(posting_date) = %s
-                AND company = %s
-                AND company_gstin = %s
-                AND is_opening = 'No'
-                {reverse_charge}
-            ORDER BY name
-        """.format(
-                doctype=doctype, reverse_charge=condition
-            ),
-            (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
-            as_dict=1,
+        if doctype == "Sales Invoice":
+            fields.append(invoice.is_export_with_gst)
+
+        query = (
+            frappe.qb.from_(invoice)
+            .select(*fields)
+            .where(invoice.docstatus == 1)
+            .where(Extract(DatePart.month, invoice.posting_date).eq(self.month_no))
+            .where(Extract(DatePart.year, invoice.posting_date).eq(self.year))
+            .where(invoice.company == self.company)
+            .where(invoice.company_gstin == self.gst_details.get("gstin"))
+            .where(invoice.is_opening == "No")
         )
 
-        for d in invoice_details:
-            self.invoice_detail_map.setdefault(d.name, d)
-            self.invoices.append(d.name)
+        if reverse_charge:
+            query = query.where(invoice.is_reverse_charge == 1)
+
+        invoice_details = query.orderby(invoice.name).run(as_dict=True)
+        self.invoice_map = {d.name: d for d in invoice_details}
 
     def get_outward_items(self, doctype):
         self.invoice_items = frappe._dict()
         self.is_nil_exempt = []
         self.is_non_gst = []
 
-        if self.get("invoices"):
-            item_details = frappe.db.sql(
-                """
-                SELECT
-                    item_code, parent, taxable_value, base_net_amount, item_tax_rate,
-                    is_nil_exempt, is_non_gst
-                FROM
-                    `tab%s Item`
-                WHERE parent in (%s)
-            """
-                % (doctype, ", ".join(["%s"] * len(self.invoices))),
-                tuple(self.invoices),
-                as_dict=1,
-            )
+        if not self.invoice_map:
+            return
 
-            for d in item_details:
-                self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
-                self.invoice_items[d.parent][d.item_code] += d.get(
-                    "taxable_value", 0
-                ) or d.get("base_net_amount", 0)
+        item_details = frappe.db.sql(
+            f"""
+            SELECT
+                item_code, parent, taxable_value, base_net_amount, item_tax_rate,
+                is_nil_exempt, is_non_gst
+            FROM
+                `tab{doctype} Item`
+            WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
+            """,
+            tuple(self.invoice_map),
+            as_dict=1,
+        )
 
-                if d.is_nil_exempt and d.item_code not in self.is_nil_exempt:
-                    self.is_nil_exempt.append(d.item_code)
+        for d in item_details:
+            self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
+            self.invoice_items[d.parent][d.item_code] += d.get(
+                "taxable_value", 0
+            ) or d.get("base_net_amount", 0)
 
-                if d.is_non_gst and d.item_code not in self.is_non_gst:
-                    self.is_non_gst.append(d.item_code)
+            if d.is_nil_exempt and d.item_code not in self.is_nil_exempt:
+                self.is_nil_exempt.append(d.item_code)
+
+            if d.is_non_gst and d.item_code not in self.is_non_gst:
+                self.is_non_gst.append(d.item_code)
 
     def get_outward_tax_details(self, doctype):
         if doctype == "Sales Invoice":
@@ -278,93 +273,88 @@ class GSTR3BReport(Document):
         self.invoice_cess = frappe._dict()
         self.cgst_sgst_invoices = []
 
-        if self.get("invoices"):
-            tax_details = frappe.db.sql(
-                """
-                SELECT
-                    parent, account_head, item_wise_tax_detail, base_tax_amount_after_discount_amount
-                FROM `tab%s`
-                WHERE
-                    parenttype = %s and docstatus = 1
-                    and parent in (%s)
-                ORDER BY account_head
-            """
-                % (tax_template, "%s", ", ".join(["%s"] * len(self.invoices))),
-                tuple([doctype] + list(self.invoices)),
-            )
+        if not self.invoice_map:
+            return
 
-            for parent, account, item_wise_tax_detail, tax_amount in tax_details:
-                if account in self.account_heads.get("csamt"):
-                    self.invoice_cess.setdefault(parent, tax_amount)
-                else:
-                    if item_wise_tax_detail:
-                        try:
-                            item_wise_tax_detail = json.loads(item_wise_tax_detail)
-                            cgst_or_sgst = False
-                            if account in self.account_heads.get(
-                                "camt"
-                            ) or account in self.account_heads.get("samt"):
-                                cgst_or_sgst = True
+        tax_details = frappe.db.sql(
+            f"""
+            SELECT
+                parent, account_head, item_wise_tax_detail, base_tax_amount_after_discount_amount
+            FROM `tab{tax_template}`
+            WHERE
+                parenttype = %s and docstatus = 1
+                and parent in ({", ".join(["%s"] * len(self.invoice_map))})
+            ORDER BY account_head
+            """,
+            (doctype, *self.invoice_map.keys()),
+        )
 
-                            for item_code, tax_amounts in item_wise_tax_detail.items():
-                                if not (
-                                    cgst_or_sgst
-                                    or account in self.account_heads.get("iamt")
-                                    or (
-                                        item_code
-                                        in self.is_non_gst + self.is_nil_exempt
-                                    )
-                                ):
-                                    continue
+        for parent, account, item_wise_tax_detail, tax_amount in tax_details:
+            if account in self.account_heads.get("csamt"):
+                self.invoice_cess.setdefault(parent, tax_amount)
+            else:
+                if item_wise_tax_detail:
+                    try:
+                        item_wise_tax_detail = json.loads(item_wise_tax_detail)
+                        cgst_or_sgst = False
+                        if account in self.account_heads.get(
+                            "camt"
+                        ) or account in self.account_heads.get("samt"):
+                            cgst_or_sgst = True
 
-                                tax_rate = tax_amounts[0]
-                                if tax_rate:
-                                    if cgst_or_sgst:
-                                        tax_rate *= 2
-                                        if parent not in self.cgst_sgst_invoices:
-                                            self.cgst_sgst_invoices.append(parent)
+                        for item_code, tax_amounts in item_wise_tax_detail.items():
+                            if not (
+                                cgst_or_sgst
+                                or account in self.account_heads.get("iamt")
+                                or (item_code in self.is_non_gst + self.is_nil_exempt)
+                            ):
+                                continue
 
-                                    rate_based_dict = (
-                                        self.items_based_on_tax_rate.setdefault(
-                                            parent, {}
-                                        ).setdefault(tax_rate, [])
-                                    )
-                                    if item_code not in rate_based_dict:
-                                        rate_based_dict.append(item_code)
-                        except ValueError:
-                            continue
+                            tax_rate = tax_amounts[0]
+                            if tax_rate:
+                                if cgst_or_sgst:
+                                    tax_rate *= 2
+                                    if parent not in self.cgst_sgst_invoices:
+                                        self.cgst_sgst_invoices.append(parent)
 
-        if self.get("invoice_items"):
-            # Build itemised tax for export invoices, nil and exempted where tax table is blank
-            for invoice, items in self.invoice_items.items():
-                invoice_details = self.invoice_detail_map.get(invoice, {})
-                if (
-                    invoice not in self.items_based_on_tax_rate
-                    and not invoice_details.get("is_export_with_gst")
-                    and invoice_details.get("gst_category") == "Overseas"
-                ):
-                    self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
-                        0, items.keys()
-                    )
-                else:
-                    for item in items.keys():
-                        if (
-                            item in self.is_nil_exempt + self.is_non_gst
-                            and item
-                            not in self.items_based_on_tax_rate.get(invoice, {}).get(
-                                0, []
-                            )
-                        ):
-                            self.items_based_on_tax_rate.setdefault(
-                                invoice, {}
-                            ).setdefault(0, [])
-                            self.items_based_on_tax_rate[invoice][0].append(item)
+                                rate_based_dict = (
+                                    self.items_based_on_tax_rate.setdefault(
+                                        parent, {}
+                                    ).setdefault(tax_rate, [])
+                                )
+                                if item_code not in rate_based_dict:
+                                    rate_based_dict.append(item_code)
+                    except ValueError:
+                        continue
+
+        # Build itemised tax for export invoices, nil and exempted where tax table is blank
+        for invoice, items in self.invoice_items.items():
+            invoice_details = self.invoice_map.get(invoice, {})
+            if (
+                invoice not in self.items_based_on_tax_rate
+                and not invoice_details.get("is_export_with_gst")
+                and invoice_details.get("gst_category") == "Overseas"
+            ):
+                self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
+                    0, items.keys()
+                )
+            else:
+                for item in items.keys():
+                    if (
+                        item in self.is_nil_exempt + self.is_non_gst
+                        and item
+                        not in self.items_based_on_tax_rate.get(invoice, {}).get(0, [])
+                    ):
+                        self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
+                            0, []
+                        )
+                        self.items_based_on_tax_rate[invoice][0].append(item)
 
     def set_outward_taxable_supplies(self):
         inter_state_supply_details = {}
 
         for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
-            invoice_details = self.invoice_detail_map.get(inv, {})
+            invoice_details = self.invoice_map.get(inv, {})
             gst_category = invoice_details.get("gst_category")
             place_of_supply = (
                 invoice_details.get("place_of_supply") or "00-Other Territory"
