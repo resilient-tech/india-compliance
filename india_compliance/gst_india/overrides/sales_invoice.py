@@ -3,10 +3,7 @@ from frappe import _, bold
 from frappe.model import delete_doc
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import (
-    validate_mandatory_fields,
-    validate_transaction,
-)
+from india_compliance.gst_india.overrides.transaction import validate_transaction
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
 
@@ -52,7 +49,6 @@ def validate(doc, method=None):
         return
 
     validate_invoice_number(doc)
-    validate_mandatory_fields(doc, ("place_of_supply", "gst_category"))
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
 
