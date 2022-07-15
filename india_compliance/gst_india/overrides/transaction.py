@@ -220,15 +220,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
-    is_inter_state = (
-        doc.place_of_supply[:2]
-        != doc.get(
-            "company_gstin" if is_sales_transaction else "supplier_gstin",
-            default="",
-        )[:2]
-        or doc.gst_category == "SEZ"
-    )
-
+    is_inter_state = is_inter_state_supply(doc)
     previous_row_references = set()
 
     for row in rows_to_validate:
@@ -349,6 +341,35 @@ def validate_items(doc):
 
 def set_place_of_supply(doc, method=None):
     doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+
+def is_inter_state_supply(doc):
+    return doc.gst_category == "SEZ" or (
+        doc.place_of_supply[:2] != get_source_state_code(doc)
+    )
+
+
+def get_source_state_code(doc):
+    """
+    Get the state code of the state from which goods / services are being supplied.
+    Logic opposite to that of utils.get_place_of_supply
+    """
+
+    if doc.doctype in SALES_DOCTYPES:
+        return doc.company_gstin[:2]
+
+    if doc.gst_category == "Overseas":
+        return "96"
+
+    if doc.gst_category == "Unregistered" and doc.supplier_address:
+        return frappe.db.get_value(
+            "Address",
+            doc.supplier_address,
+            "gst_state_number",
+        )
+
+    if doc.supplier_gstin:
+        return doc.supplier_gstin[:2]
 
 
 def validate_hsn_codes(doc, method=None):
@@ -531,12 +552,17 @@ def get_gst_details(party_details, doctype, company):
     if not gst_details.place_of_supply or not party_details.company_gstin:
         return gst_details
 
-    is_inter_state = (
-        source_gstin and source_gstin[:2] != gst_details.place_of_supply[:2]
-    )
-
     default_tax = get_tax_template(
-        master_doctype, company, is_inter_state, party_details.company_gstin[:2]
+        master_doctype,
+        company,
+        is_inter_state_supply(
+            frappe._dict(
+                doctype=doctype,
+                place_of_supply=gst_details.place_of_supply,
+                **party_details,
+            )
+        ),
+        party_details.company_gstin[:2],
     )
 
     if not default_tax:
