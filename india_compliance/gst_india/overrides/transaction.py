@@ -176,15 +176,22 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     # Sales / Purchase Validations
 
     if is_sales_transaction:
-        if (
-            doc.gst_category in OVERSEAS_GST_CATEGORIES
-            and not doc.is_export_with_gst
-            and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
+        if is_export_without_payment_of_gst(doc) and (
+            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
         ):
             _throw(
                 _(
                     "Cannot charge GST in Row #{0} since export is without"
                     " payment of GST"
+                ).format(idx)
+            )
+
+        if doc.is_reverse_charge and (
+            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
+        ):
+            _throw(
+                _(
+                    "Cannot charge GST in Row #{0} since supply is under reverse charge"
                 ).format(idx)
             )
 
@@ -525,8 +532,27 @@ def get_gst_details(party_details, doctype, company):
         source_gstin = party_details.supplier_gstin
         destination_gstin = party_details.company_gstin
 
-    # Internal transfer
-    if destination_gstin and destination_gstin == source_gstin:
+    if (
+        (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
+        or (
+            is_sales_transaction
+            and (
+                is_export_without_payment_of_gst(party_details)
+                or party_details.is_reverse_charge
+            )
+        )
+        or (
+            not is_sales_transaction
+            and (
+                party_details.gst_category == "Registered Composition"
+                or (
+                    not party_details.is_reverse_charge
+                    and not party_details.supplier_gstin
+                )
+            )
+        )
+    ):
+        # GST Not Applicable
         gst_details.taxes_and_charges = ""
         gst_details.taxes = []
         return gst_details
@@ -551,7 +577,7 @@ def get_gst_details(party_details, doctype, company):
     if not gst_details.place_of_supply or not party_details.company_gstin:
         return gst_details
 
-    default_tax = get_tax_template(
+    if default_tax := get_tax_template(
         master_doctype,
         company,
         is_inter_state_supply(
@@ -562,13 +588,9 @@ def get_gst_details(party_details, doctype, company):
             )
         ),
         party_details.company_gstin[:2],
-    )
-
-    if not default_tax:
-        return gst_details
-
-    gst_details.taxes_and_charges = default_tax
-    gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
+    ):
+        gst_details.taxes_and_charges = default_tax
+        gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
 
     return gst_details
 
@@ -683,6 +705,10 @@ def validate_reverse_charge_transaction(doc, method=None):
         frappe.throw(msg)
 
     doc.eligibility_for_itc = "ITC on Reverse Charge"
+
+
+def is_export_without_payment_of_gst(doc):
+    return doc.gst_category in OVERSEAS_GST_CATEGORIES and not doc.is_export_with_gst
 
 
 def validate_transaction(doc, method=None):
