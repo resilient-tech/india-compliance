@@ -480,23 +480,25 @@ def get_gst_details(party_details, doctype, company):
      - taxes in the tax template
     """
 
-    is_sales_doctype = doctype in SALES_DOCTYPES
+    is_sales_transaction = doctype in SALES_DOCTYPES
 
     if isinstance(party_details, str):
         party_details = frappe.parse_json(party_details)
 
     gst_details = frappe._dict()
 
-    party_address_field = "customer_address" if is_sales_doctype else "supplier_address"
+    party_address_field = (
+        "customer_address" if is_sales_transaction else "supplier_address"
+    )
     if not party_details.get(party_address_field):
-        party_gst_details = get_party_gst_details(party_details, is_sales_doctype)
+        party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
         # updating party details to get correct place of supply
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
 
     gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
 
-    if is_sales_doctype:
+    if is_sales_transaction:
         source_gstin = party_details.company_gstin
         destination_gstin = party_details.billing_address_gstin
     else:
@@ -511,7 +513,7 @@ def get_gst_details(party_details, doctype, company):
 
     master_doctype = (
         "Sales Taxes and Charges Template"
-        if is_sales_doctype
+        if is_sales_transaction
         else "Purchase Taxes and Charges Template"
     )
 
@@ -546,11 +548,13 @@ def get_gst_details(party_details, doctype, company):
     return gst_details
 
 
-def get_party_gst_details(party_details, is_sales_doctype):
+def get_party_gst_details(party_details, is_sales_transaction):
     """fetch GSTIN and GST category from party"""
 
-    party_type = "Customer" if is_sales_doctype else "Supplier"
-    gstin_fieldname = "billing_address_gstin" if is_sales_doctype else "supplier_gstin"
+    party_type = "Customer" if is_sales_transaction else "Supplier"
+    gstin_fieldname = (
+        "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
+    )
 
     return frappe.db.get_value(
         party_type,
