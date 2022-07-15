@@ -545,8 +545,11 @@ def get_gst_details(party_details, doctype, company):
         or (
             not is_sales_transaction
             and (
-                not party_details.supplier_gstin
-                or party_details.gst_category == "Registered Composition"
+                party_details.gst_category == "Registered Composition"
+                or (
+                    not party_details.is_reverse_charge
+                    and not party_details.supplier_gstin
+                )
             )
         )
     ):
