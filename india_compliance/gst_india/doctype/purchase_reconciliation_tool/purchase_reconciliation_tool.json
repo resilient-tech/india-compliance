@@ -7,12 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
+  "column_break_2",
   "company_gstin",
   "column_break_3",
   "purchase_period",
   "purchase_from_date",
   "purchase_to_date",
-  "action",
   "column_break_6",
   "inward_supply_period",
   "inward_supply_from_date",
@@ -98,17 +98,15 @@
    "label": "Reconciliation Data"
   },
   {
-   "fieldname": "action",
-   "fieldtype": "Autocomplete",
-   "label": "Action",
-   "options": "No Action\nAccept My Values\nAccept Supplier Values\nReject\nIgnore\nPending"
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-15 10:33:08.877979",
+ "modified": "2022-07-15 10:39:20.372857",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
