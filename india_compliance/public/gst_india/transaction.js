@@ -48,7 +48,7 @@ async function update_gst_details(frm) {
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
         party_fields.push("customer_address", "billing_address_gstin");
     } else {
-        party_fields.push("supplier_gstin");
+        party_fields.push("supplier_address", "supplier_gstin");
     }
 
     const party_details = Object.fromEntries(

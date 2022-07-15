@@ -11,6 +11,7 @@ from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
     get_place_of_supply,
+    validate_gst_category,
 )
 
 
@@ -89,18 +90,20 @@ def is_indian_registered_company(doc):
     return True
 
 
-def validate_mandatory_fields(doc, fields):
+def validate_mandatory_fields(doc, fields, message=None):
     if isinstance(fields, str):
         fields = (fields,)
 
     for field in fields:
-        if not doc.get(field):
-            frappe.throw(
-                _("{0} is a mandatory field for creating a GST Compliant {1}").format(
-                    bold(_(doc.meta.get_label(field))),
-                    _(doc.doctype),
-                )
+        if not doc.get(field) or field == "gst_category":
+            error_message = _("{0} is a mandatory field for GST Transactions").format(
+                bold(_(doc.meta.get_label(field))),
             )
+
+            if message:
+                error_message += f". {message}"
+
+            frappe.throw(error_message, title=_("Missing Required Field"))
 
 
 def get_valid_accounts(company, is_sales_transaction=False):
@@ -480,7 +483,8 @@ def get_gst_details(party_details, doctype, company):
 
     gst_details = frappe._dict()
 
-    if not party_details.gst_category:
+    party_address_field = "customer_address" if is_sales_doctype else "supplier_address"
+    if not party_details.get(party_address_field):
         party_gst_details = get_party_gst_details(party_details, is_sales_doctype)
         # updating party details to get correct place of supply
         party_details.update(party_gst_details)
@@ -657,12 +661,17 @@ def validate_transaction(doc, method=None):
         return False
 
     set_place_of_supply(doc)
-    validate_mandatory_fields(doc, "company_gstin")
+    validate_mandatory_fields(doc, ("company_gstin", "place_of_supply"))
+    validate_mandatory_fields(
+        doc, "gst_category", _("Please ensure it is set in the Party and / or Address.")
+    )
     validate_overseas_gst_category(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
+        validate_gst_category(doc.gst_category, doc.billing_address_gstin)
         validate_hsn_codes(doc)
     else:
+        validate_gst_category(doc.gst_category, doc.supplier_gstin)
         validate_reverse_charge_transaction(doc)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
