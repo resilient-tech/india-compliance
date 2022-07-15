@@ -513,7 +513,7 @@ def get_gst_details(party_details, doctype, company):
     if isinstance(party_details, str):
         party_details = frappe.parse_json(party_details)
 
-    gst_details = frappe._dict()
+    gst_details = frappe._dict(taxes_and_charges="", taxes=[])
 
     party_address_field = (
         "customer_address" if is_sales_transaction else "supplier_address"
@@ -533,24 +533,27 @@ def get_gst_details(party_details, doctype, company):
         source_gstin = party_details.supplier_gstin
         destination_gstin = party_details.company_gstin
 
-    gst_details.taxes_and_charges = ""
-    gst_details.taxes = []
-
-    # Internal transfer
-    if destination_gstin and destination_gstin == source_gstin:
+    if (
+        (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
+        or (
+            is_sales_transaction
+            and (
+                is_export_without_payment_of_gst(party_details)
+                or party_details.is_reverse_charge
+            )
+        )
+        or (
+            not is_sales_transaction
+            and (
+                not party_details.supplier_gstin
+                or party_details.gst_category == "Registered Composition"
+            )
+        )
+    ):
+        # GST Not Applicable
+        gst_details.taxes_and_charges = ""
+        gst_details.taxes = []
         return gst_details
-
-    # GST Not Applicable
-    if is_sales_transaction:
-        if (
-            is_export_without_payment_of_gst(party_details)
-            or party_details.is_reverse_charge
-        ):
-            return gst_details
-
-    else:
-        if not party_details.supplier_gstin:
-            return gst_details
 
     master_doctype = (
         "Sales Taxes and Charges Template"
@@ -572,7 +575,7 @@ def get_gst_details(party_details, doctype, company):
     if not gst_details.place_of_supply or not party_details.company_gstin:
         return gst_details
 
-    default_tax = get_tax_template(
+    if default_tax := get_tax_template(
         master_doctype,
         company,
         is_inter_state_supply(
@@ -583,13 +586,9 @@ def get_gst_details(party_details, doctype, company):
             )
         ),
         party_details.company_gstin[:2],
-    )
-
-    if not default_tax:
-        return gst_details
-
-    gst_details.taxes_and_charges = default_tax
-    gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
+    ):
+        gst_details.taxes_and_charges = default_tax
+        gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
 
     return gst_details
 
