@@ -368,8 +368,7 @@ def get_source_state_code(doc):
             "gst_state_number",
         )
 
-    if doc.supplier_gstin:
-        return doc.supplier_gstin[:2]
+    return (doc.supplier_gstin or doc.company_gstin)[:2]
 
 
 def validate_hsn_codes(doc, method=None):
