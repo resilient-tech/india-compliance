@@ -1,3 +1,5 @@
+import click
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now_datetime, nowdate
@@ -129,6 +131,8 @@ def set_default_accounts_settings():
         Setting this to "Yes" can lead to all GST Accounts being included in taxes.
     """
 
+    show_accounts_settings_override_warning()
+
     frappe.db.set_value(
         "Accounts Settings",
         None,
@@ -136,4 +140,36 @@ def set_default_accounts_settings():
             "determine_address_tax_category_from": "Billing Address",
             "add_taxes_from_item_tax_template": 0,
         },
+    )
+
+
+def show_accounts_settings_override_warning():
+    """
+    Show warning if Determine Address Tax Category From is set to something
+    other than Billing Address.
+
+    Note:
+    Warning cannot be reliably shown for `add_taxes_from_item_tax_template`,
+    since it defaults to `1`
+    """
+
+    address_for_tax_category = frappe.db.get_value(
+        "Accounts Settings",
+        "Accounts Settings",
+        "determine_address_tax_category_from",
+    )
+
+    if not address_for_tax_category or address_for_tax_category == "Billing Address":
+        return
+
+    click.secho(
+        "Overriding Accounts Settings: Determine Address Tax Category From",
+        fg="yellow",
+        bold=True,
+    )
+
+    click.secho(
+        "This is being set as Billing Address, since that's the correct "
+        "address for determining GST applicablility.",
+        fg="yellow",
     )
