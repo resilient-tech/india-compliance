@@ -6,7 +6,11 @@ from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
-from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    OVERSEAS_GST_CATEGORIES,
+    SALES_DOCTYPES,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
@@ -14,14 +18,16 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
 )
 
+DOCTYPES_WITH_TAXABLE_VALUE = {
+    "Purchase Invoice",
+    "Delivery Note",
+    "Sales Invoice",
+    "POS Invoice",
+}
+
 
 def update_taxable_values(doc, valid_accounts):
-    if doc.doctype not in (
-        "Delivery Note",
-        "Sales Invoice",
-        "POS Invoice",
-        "Purchase Invoice",
-    ):
+    if doc.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
         return
 
     total_charges = 0
@@ -37,8 +43,8 @@ def update_taxable_values(doc, valid_accounts):
                 (
                     cint(row.row_id) - 1
                     for row in doc.taxes
-                    if row.charge_type == "On Previous Row Total"
-                    and row.tax_amount
+                    if row.tax_amount
+                    and row.charge_type == "On Previous Row Total"
                     and row.account_head in valid_accounts
                 ),
                 None,
@@ -171,7 +177,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 
     if is_sales_transaction:
         if (
-            doc.gst_category in ("SEZ", "Overseas")
+            doc.gst_category in OVERSEAS_GST_CATEGORIES
             and not doc.is_export_with_gst
             and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
         ):
@@ -397,7 +403,7 @@ def validate_hsn_codes(doc, method=None):
 
 
 def validate_overseas_gst_category(doc, method=None):
-    if doc.gst_category not in ("SEZ", "Overseas"):
+    if doc.gst_category not in OVERSEAS_GST_CATEGORIES:
         return
 
     overseas_enabled = frappe.get_cached_value(
@@ -668,11 +674,14 @@ def validate_transaction(doc, method=None):
     validate_overseas_gst_category(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
-        validate_gst_category(doc.gst_category, doc.billing_address_gstin)
         validate_hsn_codes(doc)
     else:
-        validate_gst_category(doc.gst_category, doc.supplier_gstin)
         validate_reverse_charge_transaction(doc)
+
+    validate_gst_category(
+        doc.gst_category,
+        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin,
+    )
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
