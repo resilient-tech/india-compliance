@@ -104,6 +104,9 @@ class PurchaseReconciliationTool(Document):
                     continue
 
                 for isup in inward_supplies.get(supplier_gstin)[:]:
+                    if summary_diff and not pur.bill_date.month == isup.bill_date.month:
+                        continue
+
                     if not self.is_doc_matching(pur, isup, rules):
                         continue
 
@@ -244,6 +247,53 @@ class PurchaseReconciliationTool(Document):
 
         return self.get_dict_for_key("supplier_gstin", data)
 
+    def query_purchase_invoice(self, additional_fields=None):
+        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
+        tax_fields = [
+            self.query_tax_amount(account).as_(tax[:-8])
+            for tax, account in gst_accounts.items()
+        ]
+
+        fields = [
+            "name",
+            "posting_date",
+            "supplier_name",
+            "supplier_gstin",
+            "bill_no",
+            "bill_date",
+            "place_of_supply",
+            self.pi.is_reverse_charge.as_("reverse_charge"),
+            Abs(self.pi.base_rounded_total).as_("base_rounded_total"),
+        ]
+
+        if additional_fields:
+            fields += additional_fields
+
+        return (
+            frappe.qb.from_(self.pi)
+            .join(self.pi_tax)
+            .on(self.pi_tax.parent == self.pi.name)
+            .where(self.company_gstin == self.pi.company_gstin)
+            .where(self.pi.docstatus == 1)
+            # Filter for B2B transactions where match can be made
+            .where(self.pi.supplier_gstin != "")
+            .where(self.pi.supplier_gstin.isnotnull())
+            .groupby(self.pi.name)
+            .select(*tax_fields, *fields)
+        )
+
+    def query_tax_amount(self, account):
+        return Sum(
+            Abs(
+                Case()
+                .when(
+                    self.pi_tax.account_head == account,
+                    self.pi_tax.base_tax_amount_after_discount_amount,
+                )
+                .else_(0)
+            )
+        )
+
     def get_inward_supply(self, category, amended_category):
         categories = [category, amended_category or None]
         query = self.query_inward_supply()
@@ -301,53 +351,6 @@ class PurchaseReconciliationTool(Document):
             )
             .groupby(self.gstr2_item.parent)
             .select(*fields, *tax_fields)
-        )
-
-    def query_purchase_invoice(self, additional_fields=None):
-        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
-        tax_fields = [
-            self.query_tax_amount(account).as_(tax[:-8])
-            for tax, account in gst_accounts.items()
-        ]
-
-        fields = [
-            "name",
-            "posting_date",
-            "supplier_name",
-            "supplier_gstin",
-            "bill_no",
-            "bill_date",
-            "place_of_supply",
-            self.pi.is_reverse_charge.as_("reverse_charge"),
-            Abs(self.pi.base_rounded_total).as_("base_rounded_total"),
-        ]
-
-        if additional_fields:
-            fields += additional_fields
-
-        return (
-            frappe.qb.from_(self.pi)
-            .join(self.pi_tax)
-            .on(self.pi_tax.parent == self.pi.name)
-            .where(self.company_gstin == self.pi.company_gstin)
-            .where(self.pi.docstatus == 1)
-            # Filter for B2B transactions where match can be made
-            .where(self.pi.supplier_gstin != "")
-            .where(self.pi.supplier_gstin.isnotnull())
-            .groupby(self.pi.name)
-            .select(*tax_fields, *fields)
-        )
-
-    def query_tax_amount(self, account):
-        return Sum(
-            Abs(
-                Case()
-                .when(
-                    self.pi_tax.account_head == account,
-                    self.pi_tax.base_tax_amount_after_discount_amount,
-                )
-                .else_(0)
-            )
         )
 
     def get_fy(self, date):
