@@ -90,21 +90,20 @@ def is_indian_registered_company(doc):
     return True
 
 
-def validate_mandatory_fields(doc, fields, message=""):
+def validate_mandatory_fields(doc, fields, message=None):
     if isinstance(fields, str):
         fields = (fields,)
 
     for field in fields:
-        if not doc.get(field):
-            frappe.throw(
-                _(
-                    "{0} is a mandatory field for creating a GST Compliant {1}. {2}"
-                ).format(
-                    bold(_(doc.meta.get_label(field))),
-                    _(doc.doctype),
-                    message,
-                )
+        if not doc.get(field) or field == "gst_category":
+            error_message = _("{0} is a mandatory field for GST Transactions").format(
+                bold(_(doc.meta.get_label(field))),
             )
+
+            if message:
+                error_message += f". {message}"
+
+            frappe.throw(error_message, title=_("Missing Required Field"))
 
 
 def get_valid_accounts(company, is_sales_transaction=False):
@@ -657,7 +656,7 @@ def validate_transaction(doc, method=None):
     set_place_of_supply(doc)
     validate_mandatory_fields(doc, ("company_gstin", "place_of_supply"))
     validate_mandatory_fields(
-        doc, "gst_category", "Please ensure it is set in Party and/or Address."
+        doc, "gst_category", _("Please ensure it is set in the Party and / or Address.")
     )
     validate_overseas_gst_category(doc)
 
