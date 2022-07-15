@@ -125,7 +125,7 @@ function get_gstr_dialog_fields() {
             label: "GST Return Type",
             fieldname: "return_type",
             fieldtype: "Select",
-            default: ReturnType.GSTR2A,
+            default: ReturnType.GSTR2B,
             options: [
                 { label: "GSTR 2A", value: ReturnType.GSTR2A },
                 { label: "GSTR 2B", value: ReturnType.GSTR2B },
