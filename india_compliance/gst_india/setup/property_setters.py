@@ -53,7 +53,7 @@ def get_property_setters():
             "value": "e-Waybill",
         },
         {
-            "doc_type": "Address",
+            "doctype": "Address",
             "doctype_or_field": "DocType",
             "property": "quick_entry",
             "property_type": "Check",
