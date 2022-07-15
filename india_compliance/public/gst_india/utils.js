@@ -1,18 +1,14 @@
 frappe.provide("ic");
 
-ic.get_gstin_query_for_company = company => {
-    if (!company) {
+ic.get_gstin_query = function (party, party_type = "Company") {
+    if (!party) {
         frappe.show_alert({
-            message: __("Please select Company to get GSTIN options"),
+            message: __("Please select {0} to get GSTIN options", [__(party_type)]),
             indicator: "yellow",
         });
         return;
     }
 
-    return ic.get_gstin_query(company, "Company");
-};
-
-ic.get_gstin_query = function (party, party_type) {
     return {
         query: "india_compliance.gst_india.utils.get_gstin_list",
         params: { party, party_type },
