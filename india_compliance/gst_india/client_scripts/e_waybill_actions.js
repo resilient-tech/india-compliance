@@ -1,4 +1,4 @@
-const api_enabled = ic.is_api_enabled(gst_settings);
+const api_enabled = ic.is_api_enabled();
 
 function setup_e_waybill_actions(doctype) {
     if (
