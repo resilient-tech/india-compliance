@@ -12,7 +12,11 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
+from india_compliance.gst_india.constants import (
+    EXPORT_TYPES,
+    GST_CATEGORIES,
+    OVERSEAS_GST_CATEGORIES,
+)
 from india_compliance.gst_india.constants.e_invoice import CANCEL_REASON_CODES
 from india_compliance.gst_india.utils import (
     load_doc,
@@ -321,7 +325,7 @@ class EInvoiceData(GSTTransactionData):
 
     def get_supply_type(self):
         supply_type = GST_CATEGORIES[self.doc.gst_category]
-        if self.doc.gst_category in ("Overseas", "SEZ"):
+        if self.doc.gst_category in OVERSEAS_GST_CATEGORIES:
             supply_type = f"{supply_type}{EXPORT_TYPES[self.doc.is_export_with_gst]}"
 
         return supply_type

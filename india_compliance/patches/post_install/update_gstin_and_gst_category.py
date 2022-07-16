@@ -2,6 +2,8 @@ import click
 
 import frappe
 
+from india_compliance.gst_india.constants import GST_PARTY_TYPES
+
 
 def execute():
     update_pan_for_company()
@@ -54,7 +56,7 @@ def update_gstin_and_gst_category():
             "`tabDynamic Link`.link_name",
         ),
         filters={
-            "link_doctype": ("!=", ""),
+            "link_doctype": ("in", GST_PARTY_TYPES),
             "link_name": ("!=", ""),
         },
     )
@@ -70,7 +72,7 @@ def update_gstin_and_gst_category():
     new_gst_categories = {}
     print_warning = False
 
-    for doctype in ("Customer", "Supplier", "Company"):
+    for doctype in GST_PARTY_TYPES:
         for party in frappe.get_all(doctype, fields=("name", "gstin", "gst_category")):
             address_list = address_map.get((doctype, party.name))
             if not address_list:
@@ -104,16 +106,14 @@ def update_gstin_and_gst_category():
                     gst_category = ""
                     print_warning = True
 
-                new_gst_categories.setdefault((doctype, gst_category), []).append(
-                    party.name
-                )
+                new_gst_categories.setdefault(gst_category, []).append(address.name)
 
     for (doctype, gstin), docnames in new_gstins.items():
         frappe.db.set_value(doctype, {"name": ("in", docnames)}, "gstin", gstin)
 
-    for (doctype, gst_category), docnames in new_gst_categories.items():
+    for gst_category, addresses in new_gst_categories.items():
         frappe.db.set_value(
-            doctype, {"name": ("in", docnames)}, "gst_category", gst_category
+            "Address", {"name": ("in", addresses)}, "gst_category", gst_category
         )
 
     if print_warning:

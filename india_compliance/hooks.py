@@ -6,7 +6,7 @@ app_publisher = "Resilient Tech"
 app_description = "ERPNext app to simplify compliance with Indian Rules and Regulations"
 app_icon = "octicon octicon-file-directory"
 app_color = "grey"
-app_email = "india.compliance@resilient.tech"
+app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
 required_apps = ["erpnext"]
 
@@ -50,7 +50,6 @@ doc_events = {
         ],
     },
     "Company": {
-        "after_insert": "india_compliance.gst_india.overrides.company.update_accounts_settings_for_taxes",
         "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
         "on_update": [
             "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
