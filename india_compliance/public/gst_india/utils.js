@@ -29,3 +29,11 @@ ic.set_state_options = function (frm) {
 
     state_field.set_data(frappe.boot.india_state_options || []);
 };
+
+ic.can_enable_api = function (gst_settings) {
+    return gst_settings.api_secret || frappe.boot.ic_api_enabled_from_conf;
+};
+
+ic.is_api_enabled = function (gst_settings) {
+    return ic.can_enable_api(gst_settings) && gst_settings.enable_api;
+};

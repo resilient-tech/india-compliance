@@ -14,3 +14,6 @@ def set_bootinfo(bootinfo):
 
     bootinfo["gst_settings"] = gst_settings
     bootinfo["india_state_options"] = list(STATE_NUMBERS)
+    bootinfo["ic_api_enabled_from_conf"] = bool(
+        frappe.conf.ic_api_secret or frappe.conf.ic_api_sandbox_mode
+    )
