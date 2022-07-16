@@ -1,5 +1,7 @@
 frappe.provide("ic");
 
+window.gst_settings = frappe.boot.gst_settings;
+
 ic.get_gstin_query = function (party, party_type = "Company") {
     if (!party) {
         frappe.show_alert({
@@ -30,10 +32,11 @@ ic.set_state_options = function (frm) {
     state_field.set_data(frappe.boot.india_state_options || []);
 };
 
-ic.can_enable_api = function (gst_settings) {
-    return gst_settings.api_secret || frappe.boot.ic_api_enabled_from_conf;
+ic.can_enable_api = function (settings) {
+    return settings.api_secret || frappe.boot.ic_api_enabled_from_conf;
 };
 
-ic.is_api_enabled = function (gst_settings) {
-    return ic.can_enable_api(gst_settings) && gst_settings.enable_api;
+ic.is_api_enabled = function (settings) {
+    if (!settings) settings = gst_settings;
+    return ic.can_enable_api(settings) && settings.enable_api;
 };

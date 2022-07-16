@@ -23,9 +23,6 @@ class GSTSettings(Document):
         self.validate_credentials()
 
     def update_dependant_fields(self):
-        if not self.api_secret:
-            self.enable_api = 0
-
         if not self.enable_api:
             self.enable_e_invoice = 0
 
