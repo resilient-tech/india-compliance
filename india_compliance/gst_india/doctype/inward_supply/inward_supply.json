@@ -15,14 +15,14 @@
   "column_break_8",
   "supplier_gstin",
   "section_break_8",
-  "doc_number",
+  "bill_no",
   "doc_type",
   "place_of_supply",
   "column_break_13",
-  "doc_date",
+  "bill_date",
   "supply_type",
   "classification",
-  "reverse_charge",
+  "is_reverse_charge",
   "section_break_16",
   "items",
   "document_value",
@@ -43,11 +43,11 @@
   "gen_date_2b",
   "section_break_32",
   "other_return_period",
-  "original_doc_number",
+  "original_bill_no",
   "is_amended",
   "column_break_36",
   "amendment_type",
-  "original_doc_date",
+  "original_bill_date",
   "original_doc_type",
   "section_break_22",
   "action",
@@ -108,11 +108,6 @@
    "label": "Document Details"
   },
   {
-   "fieldname": "doc_number",
-   "fieldtype": "Data",
-   "label": "Document Number"
-  },
-  {
    "fieldname": "doc_type",
    "fieldtype": "Select",
    "label": "Document Type",
@@ -128,11 +123,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "doc_date",
-   "fieldtype": "Date",
-   "label": "Document Date"
-  },
-  {
    "fieldname": "supply_type",
    "fieldtype": "Select",
    "label": "Supply Type",
@@ -143,12 +133,6 @@
    "fieldtype": "Select",
    "label": "Classification",
    "options": "\nB2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nIMPG\nIMPGSEZ"
-  },
-  {
-   "default": "0",
-   "fieldname": "reverse_charge",
-   "fieldtype": "Check",
-   "label": "Reverse Charge"
   },
   {
    "fieldname": "section_break_16",
@@ -237,11 +221,6 @@
    "label": "Amendment/Original Period"
   },
   {
-   "fieldname": "original_doc_number",
-   "fieldtype": "Data",
-   "label": "Original Document Number"
-  },
-  {
    "default": "0",
    "fieldname": "is_amended",
    "fieldtype": "Check",
@@ -255,11 +234,6 @@
    "fieldname": "amendment_type",
    "fieldtype": "Data",
    "label": "Amendment Type"
-  },
-  {
-   "fieldname": "original_doc_date",
-   "fieldtype": "Date",
-   "label": "Original Document Date"
   },
   {
    "fieldname": "original_doc_type",
@@ -347,11 +321,37 @@
    "fieldname": "gen_date_2b",
    "fieldtype": "Date",
    "label": "2B Generation Date"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_reverse_charge",
+   "fieldtype": "Check",
+   "label": "Reverse Charge"
+  },
+  {
+   "fieldname": "bill_no",
+   "fieldtype": "Data",
+   "label": "Document Number"
+  },
+  {
+   "fieldname": "bill_date",
+   "fieldtype": "Date",
+   "label": "Document Date"
+  },
+  {
+   "fieldname": "original_bill_no",
+   "fieldtype": "Data",
+   "label": "Original Document Number"
+  },
+  {
+   "fieldname": "original_bill_date",
+   "fieldtype": "Date",
+   "label": "Original Document Date"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-07-14 19:01:45.178365",
+ "modified": "2022-07-16 15:44:12.247380",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Inward Supply",

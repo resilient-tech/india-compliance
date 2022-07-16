@@ -56,18 +56,18 @@ class GSTR2aB2B(GSTR2a):
 
     def get_invoice_details(self, invoice):
         return {
-            "doc_number": invoice.inum,
+            "bill_no": invoice.inum,
             "supply_type": get_mapped_value(
                 invoice.inv_typ, self.VALUE_MAPS.gst_category
             ),
-            "doc_date": parse_datetime(invoice.idt, day_first=True),
+            "bill_date": parse_datetime(invoice.idt, day_first=True),
             "document_value": invoice.val,
             "place_of_supply": get_mapped_value(invoice.pos, self.VALUE_MAPS.states),
             "other_return_period": map_date_format(invoice.aspd, "%b-%y", "%m%Y"),
             "amendment_type": get_mapped_value(
                 invoice.atyp, self.VALUE_MAPS.amend_type
             ),
-            "reverse_charge": get_mapped_value(
+            "is_reverse_charge": get_mapped_value(
                 invoice.rchrg, self.VALUE_MAPS.Y_N_to_check
             ),
             "diffprcnt": get_mapped_value(
@@ -85,8 +85,8 @@ class GSTR2aB2BA(GSTR2aB2B):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "original_doc_number": invoice.oinum,
-                "original_doc_date": parse_datetime(invoice.oidt, day_first=True),
+                "original_bill_no": invoice.oinum,
+                "original_bill_date": parse_datetime(invoice.oidt, day_first=True),
             }
         )
         return invoice_details
@@ -101,9 +101,9 @@ class GSTR2aCDNR(GSTR2aB2B):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "doc_number": invoice.nt_num,
+                "bill_no": invoice.nt_num,
                 "doc_type": get_mapped_value(invoice.ntty, self.VALUE_MAPS.note_type),
-                "doc_date": parse_datetime(invoice.nt_dt, day_first=True),
+                "bill_date": parse_datetime(invoice.nt_dt, day_first=True),
             }
         )
         return invoice_details
@@ -114,8 +114,8 @@ class GSTR2aCDNRA(GSTR2aCDNR):
         invoice_details = super().get_invoice_details(invoice)
         invoice_details.update(
             {
-                "original_doc_number": invoice.ont_num,
-                "original_doc_date": parse_datetime(invoice.ont_dt, day_first=True),
+                "original_bill_no": invoice.ont_num,
+                "original_bill_date": parse_datetime(invoice.ont_dt, day_first=True),
                 "original_doc_type": get_mapped_value(
                     invoice.ntty, self.VALUE_MAPS.note_type
                 ),
@@ -134,8 +134,8 @@ class GSTR2aISD(GSTR2a):
             "doc_type": get_mapped_value(
                 invoice.isd_docty, self.VALUE_MAPS.isd_type_2a
             ),
-            "doc_number": invoice.docnum,
-            "doc_date": parse_datetime(invoice.docdt, day_first=True),
+            "bill_no": invoice.docnum,
+            "bill_date": parse_datetime(invoice.docdt, day_first=True),
             "itc_availability": get_mapped_value(
                 invoice.itc_elg, self.VALUE_MAPS.yes_no
             ),
@@ -168,8 +168,8 @@ class GSTR2aIMPG(GSTR2a):
     def get_invoice_details(self, invoice):
         return {
             "doc_type": "Bill of Entry",  # custom field
-            "doc_number": invoice.benum,
-            "doc_date": parse_datetime(invoice.bedt, day_first=True),
+            "bill_no": invoice.benum,
+            "bill_date": parse_datetime(invoice.bedt, day_first=True),
             "is_amended": get_mapped_value(invoice.amd, self.VALUE_MAPS.Y_N_to_check),
             "port_code": invoice.portcd,
             "document_value": invoice.txval + invoice.iamt + invoice.csamt,

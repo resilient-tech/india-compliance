@@ -92,8 +92,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.B2B)
         self.assertDocumentEqual(
             {
-                "doc_date": date(2016, 11, 24),
-                "doc_number": "S008400",
+                "bill_date": date(2016, 11, 24),
+                "bill_no": "S008400",
                 "doc_type": "Invoice",
                 "supplier_gstin": "01AABCE2207R1Z5",
                 "supply_type": "Regular",
@@ -127,8 +127,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.B2BA)
         self.assertDocumentEqual(
             {
-                "doc_date": date(2016, 11, 24),
-                "doc_number": "S008400",
+                "bill_date": date(2016, 11, 24),
+                "bill_no": "S008400",
                 "doc_type": "Invoice",
                 "supplier_gstin": "01AABCE2207R1Z5",
                 "supply_type": "Regular",
@@ -157,8 +157,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "diffprcnt": "0.65",
                 "other_return_period": "122018",
                 "amendment_type": "Receiver GSTIN Amended",
-                "original_doc_number": "S008400",
-                "original_doc_date": date(2016, 11, 24),
+                "original_bill_no": "S008400",
+                "original_bill_date": date(2016, 11, 24),
                 "is_amended": 1,
                 "sup_return_period": "042018",
                 "gstr_1_filled": 1,
@@ -174,8 +174,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.CDNR)
         self.assertDocumentEqual(
             {
-                "doc_date": date(2018, 9, 23),
-                "doc_number": "533515",
+                "bill_date": date(2018, 9, 23),
+                "bill_no": "533515",
                 "doc_type": "Credit Note",
                 "supplier_gstin": "01AAAAP1208Q1ZS",
                 "supply_type": "Regular",
@@ -214,8 +214,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.CDNRA)
         self.assertDocumentEqual(
             {
-                "doc_date": date(2018, 9, 23),
-                "doc_number": "533515",
+                "bill_date": date(2018, 9, 23),
+                "bill_no": "533515",
                 "doc_type": "Credit Note",
                 "supplier_gstin": "01AAAAP1208Q1ZS",
                 "supply_type": "Regular",
@@ -234,8 +234,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "diffprcnt": "1",
                 "other_return_period": "122018",
                 "amendment_type": "Receiver GSTIN Amended",
-                "original_doc_number": "533515",
-                "original_doc_date": date(2016, 9, 23),
+                "original_bill_no": "533515",
+                "original_bill_date": date(2016, 9, 23),
                 "original_doc_type": "Credit Note",
                 "sup_return_period": "112019",
                 "gstr_1_filled": 1,
@@ -251,8 +251,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.ISD)
         self.assertDocumentEqual(
             {
-                "doc_date": date(2016, 3, 3),
-                "doc_number": "S0080",
+                "bill_date": date(2016, 3, 3),
+                "bill_no": "S0080",
                 "doc_type": "ISD Invoice",
                 "supplier_gstin": "16DEFPS8555D1Z7",
                 "itc_availability": "Yes",
@@ -281,9 +281,9 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.IMPG)
         self.assertDocumentEqual(
             {
-                "doc_date": date(2019, 11, 18),
+                "bill_date": date(2019, 11, 18),
                 "port_code": "18272A",
-                "doc_number": "2566282",
+                "bill_no": "2566282",
                 "doc_type": "Bill of Entry",
                 "is_amended": 0,
                 "document_value": 246.54,
@@ -303,9 +303,9 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.IMPGSEZ)
         self.assertDocumentEqual(
             {
-                "doc_date": date(2019, 11, 18),
+                "bill_date": date(2019, 11, 18),
                 "port_code": "18272A",
-                "doc_number": "2566282",
+                "bill_no": "2566282",
                 "doc_type": "Bill of Entry",
                 "supplier_gstin": self.gstin,
                 "supplier_name": "GSTN",
