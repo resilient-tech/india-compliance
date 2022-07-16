@@ -42,7 +42,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: '3.10'
 
       - name: Setup Node
         uses: actions/setup-node@v2
@@ -90,7 +90,7 @@ jobs:
         run: |
           bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
         env:
-          BRANCH: version-14-beta
+          BRANCH: develop
 
       - name: Run Tests
         run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
