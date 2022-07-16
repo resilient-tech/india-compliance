@@ -41,9 +41,8 @@ def get_property_setters():
             "fieldname": "pincode",
             "property": "mandatory_depends_on",
             "value": (
-                "eval: doc.country == 'India' && frappe.boot.gst_settings &&"
-                " (frappe.boot.gst_settings.enable_e_invoice ||"
-                " frappe.boot.gst_settings.enable_e_waybill)"
+                "eval: doc.country == 'India' &&"
+                "(gst_settings.enable_e_invoice || gst_settings.enable_e_waybill)"
             ),
         },
         {

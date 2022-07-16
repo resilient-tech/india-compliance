@@ -9,7 +9,8 @@ def set_bootinfo(bootinfo):
     bootinfo["gst_party_types"] = GST_PARTY_TYPES
 
     gst_settings = frappe.get_cached_doc("GST Settings").as_dict()
-    for key in ("api_secret", "gst_accounts", "credentials"):
+    gst_settings.api_secret = "***" if gst_settings.api_secret else ""
+    for key in ("gst_accounts", "credentials"):
         gst_settings.pop(key, None)
 
     bootinfo["gst_settings"] = gst_settings
