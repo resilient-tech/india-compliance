@@ -18,7 +18,7 @@ party_fields = [
     {
         "fieldname": "gstin",
         "label": "GSTIN / UIN",
-        "fieldtype": "Data",
+        "fieldtype": "Autocomplete",
         "insert_after": "tax_details_section",
         "translatable": 0,
     },

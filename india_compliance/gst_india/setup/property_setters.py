@@ -53,10 +53,34 @@ def get_property_setters():
             "value": "e-Waybill",
         },
         {
-            "doc_type": "Address",
+            "doctype": "Address",
             "doctype_or_field": "DocType",
             "property": "quick_entry",
             "property_type": "Check",
+            "value": "1",
+        },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "determine_address_tax_category_from",
+            "property": "read_only",
+            "value": "1",
+        },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "add_taxes_from_item_tax_template",
+            "property": "read_only",
+            "value": "1",
+        },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "tax_settings_section",
+            "property": "label",
+            "value": "Tax Settings (Overridden by India Compliance)",
+        },
+        {
+            "doctype": "Accounts Settings",
+            "fieldname": "tax_settings_section",
+            "property": "collapsible",
             "value": "1",
         },
     ]

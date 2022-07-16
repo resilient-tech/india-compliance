@@ -215,7 +215,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
                     if (
                         !link_name ||
-                        !in_list(ic.gstin_doctypes, link_doctype)
+                        !in_list(frappe.boot.gst_party_types, link_doctype)
                     )
                         return;
 
@@ -257,7 +257,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         if (!doc) return;
 
         const { doctype, name } = doc;
-        if (in_list(ic.gstin_doctypes, doctype))
+        if (in_list(frappe.boot.gst_party_types, doctype))
             return { party_type: doctype, party: name };
 
         const party_type = ic.get_party_type(doctype);
@@ -325,9 +325,12 @@ function map_gstin_info(doc, gstin_info) {
 
 function update_party_info(doc, gstin_info) {
     doc.gstin = doc._gstin;
-    const party_name_field = `${ic.get_party_type(doc.doctype).toLowerCase()}_name`;
-    doc[party_name_field] = gstin_info.business_name;
     doc.gst_category = gstin_info.gst_category;
+
+    if (!in_list(frappe.boot.gst_party_types, doc.doctype)) return;
+
+    const party_name_field = `${doc.doctype.toLowerCase()}_name`;
+    doc[party_name_field] = gstin_info.business_name;
 }
 
 function update_address_info(doc, address) {
