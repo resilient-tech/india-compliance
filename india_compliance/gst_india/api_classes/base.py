@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import sbool
 
+from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
@@ -17,16 +18,20 @@ class BaseAPI:
         self.base_path = ""
         self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.settings = frappe.get_cached_doc("GST Settings")
-        self.default_headers = {
-            "x-api-key": self.settings.get_password("api_secret"),
-        }
-
-        if not self.settings.enable_api:
+        if not is_api_enabled(self.settings):
             frappe.throw(
                 _("Please enable API in GST Settings to use the {0} API").format(
                     self.api_name
                 )
             )
+
+        self.default_headers = {
+            "x-api-key": (
+                (self.settings.api_secret and self.settings.get_password("api_secret"))
+                or frappe.conf.ic_api_secret
+                or ""
+            )
+        }
 
         self.setup(*args, **kwargs)
 

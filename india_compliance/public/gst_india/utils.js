@@ -38,5 +38,5 @@ ic.can_enable_api = function (settings) {
 
 ic.is_api_enabled = function (settings) {
     if (!settings) settings = gst_settings;
-    return ic.can_enable_api(settings) && settings.enable_api;
+    return settings.enable_api && ic.can_enable_api(settings);
 };
