@@ -1,5 +1,5 @@
 const e_invoicing_enabled =
-    ic.is_api_enabled(gst_settings) && gst_settings.enable_e_invoice;
+    ic.is_api_enabled() && gst_settings.enable_e_invoice;
 
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
