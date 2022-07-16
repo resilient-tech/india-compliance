@@ -15,7 +15,7 @@ class BaseAPI:
     def __init__(self, *args, **kwargs):
         self.api_name = "GST"
         self.base_path = ""
-        self.sandbox = frappe.conf.ic_api_sandbox_mode or frappe.flags.in_test
+        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.settings = frappe.get_cached_doc("GST Settings")
         self.default_headers = {
             "x-api-key": self.settings.get_password("api_secret"),
@@ -58,7 +58,7 @@ class BaseAPI:
         if self.base_path:
             parts.insert(0, self.base_path)
 
-        if self.sandbox:
+        if self.sandbox_mode:
             parts.insert(0, "test")
 
         return urljoin(BASE_URL, "/".join(part.strip("/") for part in parts))
