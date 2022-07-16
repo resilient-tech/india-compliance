@@ -178,9 +178,10 @@ class BaseAPI:
             and response_json.get("error") == "access_denied"
         ):
             frappe.throw(
-                _(
-                    "Error establishing connection to GSP. "
-                    "Please contact India Compliance API Support."
+                _("Error establishing connection to GSP. Please contact {0}.").format(
+                    _("your Service Provider")
+                    if frappe.conf.ic_api_key
+                    else _("India Compliance API Support")
                 ),
                 title=_("GSP Connection Error"),
             )
