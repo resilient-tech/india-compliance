@@ -87,7 +87,7 @@
    "label": "Accounts"
   },
   {
-   "depends_on": "eval: doc.api_secret",
+   "depends_on": "eval: ic.is_api_enabled(doc)",
    "fieldname": "credentials_tab",
    "fieldtype": "Tab Break",
    "label": "Credentials"
@@ -228,7 +228,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-16 03:03:36.546055",
+ "modified": "2022-07-16 04:53:54.930820",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
