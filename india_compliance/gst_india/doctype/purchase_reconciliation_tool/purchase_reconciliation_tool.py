@@ -33,7 +33,7 @@ GSTR2B_GEN_DATE = 14
 
 
 class PurchaseReconciliationTool(Document):
-    FIELDS_TO_MATCH = ["fy", "bill_no", "place_of_supply", "reverse_charge", "tax"]
+    FIELDS_TO_MATCH = ["fy", "bill_no", "place_of_supply", "is_reverse_charge", "tax"]
     RULES = [
         {"Exact Match": ["E", "E", "E", "E", 0]},
         {"Exact Match": ["E", "F", "E", "E", 0]},
@@ -66,6 +66,8 @@ class PurchaseReconciliationTool(Document):
             ("IMPGSEZ", ""),
         ):
             self.reconcile(category, amended_category)
+
+        self.get_reconciliation_data()
 
     def reconcile(self, category, amended_category):
         """
@@ -252,6 +254,7 @@ class PurchaseReconciliationTool(Document):
         tax_fields = [
             self.query_tax_amount(account).as_(tax[:-8])
             for tax, account in gst_accounts.items()
+            if account
         ]
 
         fields = [
@@ -262,8 +265,8 @@ class PurchaseReconciliationTool(Document):
             "bill_no",
             "bill_date",
             "place_of_supply",
-            self.pi.is_reverse_charge.as_("reverse_charge"),
-            Abs(self.pi.base_rounded_total).as_("base_rounded_total"),
+            "is_reverse_charge",
+            Abs(self.pi.base_rounded_total).as_("document_value"),
         ]
 
         if additional_fields:
@@ -271,12 +274,13 @@ class PurchaseReconciliationTool(Document):
 
         return (
             frappe.qb.from_(self.pi)
-            .join(self.pi_tax)
+            .left_join(self.pi_tax)
             .on(self.pi_tax.parent == self.pi.name)
             .where(self.company_gstin == self.pi.company_gstin)
             .where(self.pi.docstatus == 1)
             # Filter for B2B transactions where match can be made
             .where(self.pi.supplier_gstin != "")
+            .where(self.pi.gst_category != "Registered Composition")
             .where(self.pi.supplier_gstin.isnotnull())
             .groupby(self.pi.name)
             .select(*tax_fields, *fields)
@@ -301,6 +305,7 @@ class PurchaseReconciliationTool(Document):
             query.where(
                 (self.gstr2.match_status == "") | (self.gstr2.match_status.isnull())
             )
+            .where(self.gstr2.action != "Ignore")
             .where(self.gstr2.classification.isin(categories))
             .run(as_dict=True)
         )
@@ -317,32 +322,13 @@ class PurchaseReconciliationTool(Document):
 
         return self.get_dict_for_key("supplier_gstin", data)
 
-    def query_inward_supply(self, additional_fields=None):
-        tax_fields = [
-            Sum(self.gstr2_item[field]).as_(field)
-            for field in ["taxable_value", "cgst", "sgst", "igst", "cess"]
-        ]
-
-        fields = [
-            self.gstr2.doc_number.as_("bill_no"),
-            self.gstr2.doc_date.as_("bill_date"),
-            "name",
-            "supplier_name",
-            "supplier_gstin",
-            "reverse_charge",
-            "place_of_supply",
-            "classification",
-            "document_value",
-        ]
-
-        if additional_fields:
-            fields += additional_fields
-
+    def query_inward_supply(self, additional_fields=None, for_summary=False):
+        fields = self.get_inward_supply_fields(additional_fields, for_summary)
         periods = _get_periods(self.inward_supply_from_date, self.inward_supply_to_date)
 
         return (
             frappe.qb.from_(self.gstr2)
-            .join(self.gstr2_item)
+            .left_join(self.gstr2_item)
             .on(self.gstr2_item.parent == self.gstr2.name)
             .where(self.company_gstin == self.gstr2.company_gstin)
             .where(
@@ -350,8 +336,64 @@ class PurchaseReconciliationTool(Document):
                 | (self.gstr2.sup_return_period.isin(periods))
             )
             .groupby(self.gstr2_item.parent)
-            .select(*fields, *tax_fields)
+            .select(*fields)
         )
+
+    def get_inward_supply_fields(
+        self, additional_fields=None, for_summary=False, table=None
+    ):
+        """
+        Returns fields for inward supply query.
+
+        Column name should be different where we join this query with purchase query.
+        Returns column names with 'isup_' prefix for summary where different table is provided.
+        """
+        if not table:
+            table = self.gstr2
+
+        fields = [
+            "bill_no",
+            "bill_date",
+            "document_value",
+            "name",
+            "supplier_gstin",
+            "is_reverse_charge",
+            "place_of_supply",
+            "classification",
+            "link_doctype",
+            "link_name",
+        ]
+
+        if additional_fields:
+            fields += additional_fields
+
+        fields = [
+            table[field].as_(f"isup_{field}" if for_summary else field)
+            for field in fields
+        ]
+
+        tax_fields = self.get_tax_fields_for_inward_supply(table, for_summary)
+
+        return [*fields, *tax_fields]
+
+    def get_tax_fields_for_inward_supply(self, table, for_summary):
+        """
+        Returns tax fields for inward supply query.
+        Where query is used as subquery, fields are fetch from table (subquery) instead of item table.
+        """
+        tax_fields = ["taxable_value", "cgst", "sgst", "igst", "cess"]
+
+        if table == self.gstr2:
+            tax_fields = [
+                Sum(self.gstr2_item[field]).as_(
+                    f"isup_{field}" if for_summary else field
+                )
+                for field in tax_fields
+            ]
+        else:
+            tax_fields = [table[field].as_(f"isup_{field}") for field in tax_fields]
+
+        return tax_fields
 
     def get_fy(self, date):
         if not date:
@@ -362,15 +404,6 @@ class PurchaseReconciliationTool(Document):
             return f"{date.year - 1}-{date.year}"
 
         return f"{date.year}-{date.year + 1}"
-
-    def get_dict_for_key(self, key, list):
-        new_dict = frappe._dict()
-        for data in list:
-            if data[key] in new_dict:
-                new_dict[data[key]].append(data)
-            else:
-                new_dict[data[key]] = [data]
-        return new_dict
 
     def get_cleaner_bill_no(self, bill_no, fy):
         """
@@ -395,6 +428,15 @@ class PurchaseReconciliationTool(Document):
             inv = inv.replace(replace, " ")
         inv = " ".join(inv.split()).lstrip("0")
         return inv
+
+    def get_dict_for_key(self, key, list):
+        new_dict = frappe._dict()
+        for data in list:
+            if data[key] in new_dict:
+                new_dict[data[key]].append(data)
+            else:
+                new_dict[data[key]] = [data]
+        return new_dict
 
     @frappe.whitelist()
     def upload_gstr(self, return_type, period, file_path):
@@ -546,123 +588,42 @@ class PurchaseReconciliationTool(Document):
         return [date1, date2]
 
     @frappe.whitelist()
-    def get_reconciliation_data(self, company_gstin, force=False):
-        if not force and self.reconciliation_data:
-            return self.reconciliation_data
+    def get_reconciliation_data(self):
+        purchase = self.query_purchase_invoice()
+        inward_supply = self.query_inward_supply()
 
-        # TODO: add more filters
-
-        purchase_invoice = frappe.qb.DocType("Purchase Invoice")
-        purchase_tax = frappe.qb.DocType("Purchase Taxes and Charges")
-        inward_supply = frappe.qb.DocType("Inward Supply")
-        inward_supply_item = frappe.qb.DocType("Inward Supply Item")
-
-        # TODO: do full outer joinap
-        self.reconciliation_data = (
-            frappe.qb.from_(purchase_invoice)
-            .left_join(purchase_tax)
-            .on(purchase_tax.parent == purchase_invoice.name)
-            .full_outer_join(inward_supply)
+        # this will not return missing in purchase (if any)
+        summary_data = (
+            purchase.left_join(inward_supply)
             .on(
                 (inward_supply.link_doctype == "Purchase Invoice")
-                & (inward_supply.link_name == purchase_invoice.name)
+                & (inward_supply.link_name == self.pi.name)
             )
-            .left_join(inward_supply_item)
-            .on(inward_supply_item.parent == inward_supply.name)
-            .where(company_gstin == purchase_invoice.company_gstin)
-            .where(purchase_invoice.is_return == 0)
-            .where(purchase_invoice.gst_category == "Registered Regular")
             .select(
-                purchase_invoice.name.as_("purchase_invoice_number"),
-                purchase_invoice.supplier_name,
-                purchase_invoice.supplier_gstin,
-                # from inward supply
-                inward_supply.name.as_("inward_supply_number"),
-                inward_supply.doc_number.as_("bill_no"),
-                inward_supply.doc_date.as_("bill_date"),
-                inward_supply.reverse_charge,
-                inward_supply.place_of_supply,
-                inward_supply.classification,
-                inward_supply.match_status,
-                Sum(inward_supply_item.taxable_value).as_("taxable_value"),
-                Sum(inward_supply_item.igst).as_("igst"),
-                Sum(inward_supply_item.cgst).as_("cgst"),
-                Sum(inward_supply_item.sgst).as_("sgst"),
-                Sum(inward_supply_item.cess).as_("cess"),
+                *self.get_inward_supply_fields(for_summary=True, table=inward_supply)
             )
+            .where(
+                (self.pi.posting_date[self.purchase_from_date : self.purchase_to_date])
+                | (
+                    (inward_supply.link_doctype == "Purchase Invoice")
+                    & (inward_supply.link_name == self.pi.name)
+                )
+            )
+            .run(as_dict=True)
         )
 
-
-@frappe.whitelist()
-def get_summary_data(
-    company_gstin,
-    purchase_from_date,
-    purchase_to_date,
-    inward_from_date,
-    inward_to_date,
-):
-    purchase = frappe.qb.DocType("Purchase Invoice")
-    taxes = frappe.qb.DocType("Purchase Taxes and Charges")
-    purchase_data = (
-        frappe.qb.from_(purchase)
-        .join(taxes)
-        .on(taxes.parent == purchase.name)
-        .where(
-            purchase.posting_date[purchase_from_date:purchase_to_date]
-        )  # TODO instead all purchases not matched yet but gst accounts affected, should come up here after a specific date.
-        .where(company_gstin == purchase.company_gstin)
-        .where(purchase.is_return == 0)
-        .where(purchase.gst_category == "Registered Regular")
-        # .where(purchase.bill_no.like("GST/%"))
-        .groupby(taxes.parent)
-        .select(
-            "name",
-            "supplier_name",
-            "supplier_gstin",
+        # add missing in purchase data
+        summary_data = summary_data + (
+            self.query_inward_supply(for_summary=True)
+            .where(
+                (self.gstr2.link_doctype != "Purchase Invoice")
+                | (self.gstr2.link_name == "")
+                | (self.gstr2.link_name.isnull())
+            )
+            .run(as_dict=True)
         )
-        .run(as_dict=True, debug=True)
-    )
 
-    inward_supply = frappe.qb.DocType("Inward Supply")
-    inward_supply_item = frappe.qb.DocType("Inward Supply Item")
-    inward_supply_data = (
-        frappe.qb.from_(inward_supply)
-        .join(inward_supply_item)
-        .on(inward_supply_item.parent == inward_supply.name)
-        .where(inward_supply.doc_date[inward_from_date:inward_to_date])
-        .where(company_gstin == inward_supply.company_gstin)
-        .where(inward_supply.action.isin(["No Action", "Pending"]))
-        .where(inward_supply.link_name.isnull())
-        .where(inward_supply.classification.isin(["B2B", "B2BA"]))
-        .where(inward_supply.doc_date < "2021-08-01")
-        .groupby(inward_supply_item.parent)
-        .select(
-            "name",
-            "supplier_name",
-            "supplier_gstin",
-            inward_supply.doc_number.as_("bill_no"),
-            inward_supply.doc_date.as_("bill_date"),
-            "reverse_charge",
-            "place_of_supply",
-            "classification",
-            Sum(inward_supply_item.taxable_value).as_("taxable_value"),
-            Sum(inward_supply_item.igst).as_("igst"),
-            Sum(inward_supply_item.cgst).as_("cgst"),
-            Sum(inward_supply_item.sgst).as_("sgst"),
-            Sum(inward_supply_item.cess).as_("cess"),
-        )
-        .run(as_dict=True, debug=True)
-    )
-
-    summary_data = []
-    summary_data.append(
-        {
-            "no_of_doc_purchase": len(purchase_data),
-            "no_of_inward_supp": len(inward_supply_data),
-            "purchase_data": purchase_data,
-        }
-    )
-    return summary_data
+        return summary_data
 
 
 def get_periods(fiscal_year, return_type: ReturnType):
