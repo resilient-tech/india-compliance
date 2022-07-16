@@ -1,3 +1,5 @@
+import click
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import now_datetime, nowdate
@@ -26,7 +28,8 @@ def after_install():
 
     create_property_setters()
     create_address_template()
-    setup_default_gst_settings()
+    set_default_gst_settings()
+    set_default_accounts_settings()
     create_hsn_codes()
 
 
@@ -89,7 +92,7 @@ def create_hsn_codes():
     )
 
 
-def setup_default_gst_settings():
+def set_default_gst_settings():
     settings = frappe.get_doc("GST Settings")
     settings.db_set(
         {
@@ -112,3 +115,61 @@ def setup_default_gst_settings():
     # Hide the fields as not enabled by default
     for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
         toggle_custom_fields(fields, False)
+
+
+def set_default_accounts_settings():
+    """
+    Accounts Settings overridden by India Compliance
+
+    - Determine Address Tax Category From:
+        This is overriden to be Billing Address, since that's the correct
+        address for determining GST applicablility
+
+    - Automatically Add Taxes and Charges from Item Tax Template:
+        This is overriden to be "No". Item Tax Templates are designed to have
+        all GST Accounts and are primarily used for selection of tax rate.
+        Setting this to "Yes" can lead to all GST Accounts being included in taxes.
+    """
+
+    show_accounts_settings_override_warning()
+
+    frappe.db.set_value(
+        "Accounts Settings",
+        None,
+        {
+            "determine_address_tax_category_from": "Billing Address",
+            "add_taxes_from_item_tax_template": 0,
+        },
+    )
+
+
+def show_accounts_settings_override_warning():
+    """
+    Show warning if Determine Address Tax Category From is set to something
+    other than Billing Address.
+
+    Note:
+    Warning cannot be reliably shown for `add_taxes_from_item_tax_template`,
+    since it defaults to `1`
+    """
+
+    address_for_tax_category = frappe.db.get_value(
+        "Accounts Settings",
+        "Accounts Settings",
+        "determine_address_tax_category_from",
+    )
+
+    if not address_for_tax_category or address_for_tax_category == "Billing Address":
+        return
+
+    click.secho(
+        "Overriding Accounts Settings: Determine Address Tax Category From",
+        fg="yellow",
+        bold=True,
+    )
+
+    click.secho(
+        "This is being set as Billing Address, since that's the correct "
+        "address for determining GST applicablility.",
+        fg="yellow",
+    )
