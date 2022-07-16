@@ -15,7 +15,7 @@ class EWaybillAPI(BaseAPI):
         if not self.settings.enable_e_waybill:
             frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
 
-        if self.sandbox:
+        if self.sandbox_mode:
             company_gstin = "05AAACG2115R1ZN"
             self.username = "05AAACG2115R1ZN"
             self.password = "abc123@@"
