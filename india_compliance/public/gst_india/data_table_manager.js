@@ -139,19 +139,12 @@ ic.DataTableManager = class DataTableManager {
                     // this.toggle_actions_menu_button(checked_items.length > 0);
                 },
             },
+            cellHeight: 34,
             ...this.options,
             columns: this.get_dt_columns(),
             data: this.data,
         };
         this.datatable = new frappe.DataTable(this.$wrapper.get(0), datatable_options);
         this.$datatable = $(`.${this.datatable.style.scopeClass}`);
-
-        // Custom Styling
-        $(".dt-scrollable", this.$datatable).css({
-            "overflow-y": "auto",
-            "margin-bottom": "2em",
-        });
-        $(".dt-row-filter", this.$datatable).css("height", "40px");
-        $(".dt-row-filter .dt-cell", this.$datatable).css("max-height", "40px");
     }
 }

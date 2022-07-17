@@ -1,0 +1,20 @@
+:root {
+    --dt-row-height: 34px;
+}
+
+.datatable .dt-scrollable {
+    overflow-y: auto !important;
+    margin-bottom: 2em;
+}
+
+.datatable .dt-scrollable .dt-row {
+    height: unset;
+}
+
+.datatable .dt-row-filter {
+    height: var(--dt-row-height);
+}
+
+.datatable .dt-row-filter .dt-cell {
+    max-height: var(--dt-row-height);
+}
