@@ -1,4 +1,0 @@
-python-barcode~=0.13.1
-titlecase~=2.3
-pandas~=1.4.2
-thefuzz~=0.19.0
