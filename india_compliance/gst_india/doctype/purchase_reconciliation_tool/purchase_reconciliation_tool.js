@@ -103,20 +103,27 @@ class PurchaseReconciliationTool {
                     width: 200,
                 },
                 {
-                    label: "No. of Doc Inward Supply",
-                    fieldname: "no_of_inward_supp",
-                    width: 200,
+                    label: "No. of Docs (GSTR | PR)",
+                    fieldname: "no_of_docs",
+                    width: 180,
 
                 },
                 {
-                    label: "No. of Doc Purchase",
-                    fieldname: "no_of_doc_purchase",
-                    width: 200,
+                    label: "Tax Diff (GSTR - PR)",
+                    fieldname: "tax_diff",
+                    width: 150,
                 },
                 {
-                    label: "Tax Diff",
-                    fieldname: "tax_diff",
-                    width: 200,
+                    label: "Download",
+                    fieldname: "download",
+                    fieldtype: "html",
+                    width: 100,
+                },
+                {
+                    label: "Email",
+                    fieldname: "email",
+                    fieldtype: "html",
+                    width: 100,
                 },
             ],
             data: this.get_summary_data(),
@@ -1524,7 +1531,7 @@ function _show_upload_gstr_dialog() {
 }
 
 async function fetch_download_history(frm, dialog, for_download = true) {
-    const { message } = await frm.call("get_download_history", {
+    const { message } = await frm.call("get_import_history", {
         return_type: dialog.get_value("return_type"),
         fiscal_year: dialog.get_value("fiscal_year"),
         for_download: for_download,
