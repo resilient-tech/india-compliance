@@ -29,7 +29,6 @@ class BaseAPI:
             "x-api-key": (
                 (self.settings.api_secret and self.settings.get_password("api_secret"))
                 or frappe.conf.ic_api_secret
-                or ""
             )
         }
 
