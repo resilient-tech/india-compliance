@@ -4,6 +4,7 @@ from frappe.model import delete_doc
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
 
@@ -14,11 +15,11 @@ def onload(doc, method=None):
     gst_settings = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
-        ("enable_api", "enable_e_waybill", "enable_e_invoice"),
+        ("enable_api", "enable_e_waybill", "enable_e_invoice", "api_secret"),
         as_dict=1,
     )
 
-    if not gst_settings.enable_api:
+    if not is_api_enabled(gst_settings):
         return
 
     if gst_settings.enable_e_waybill and doc.ewaybill:

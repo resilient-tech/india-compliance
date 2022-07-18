@@ -715,7 +715,7 @@ class EWaybillData(GSTTransactionData):
         return address_details
 
     def get_transaction_data(self):
-        if self.sandbox:
+        if self.sandbox_mode:
             self.transaction_details.update(
                 {
                     "company_gstin": "05AAACG2115R1ZN",
