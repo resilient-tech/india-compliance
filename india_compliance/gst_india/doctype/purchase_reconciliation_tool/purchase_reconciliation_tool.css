@@ -1,20 +1,33 @@
-:root {
+div[data-page-route="Purchase Reconciliation Tool"] {
     --dt-row-height: 34px;
 }
 
-.datatable .dt-scrollable {
+div[data-page-route="Purchase Reconciliation Tool"] [data-fieldname="summary_data"] .form-tabs-list {
+    border-bottom: 0px solid black;
+}
+
+div[data-page-route="Purchase Reconciliation Tool"] [data-fieldname="summary_data"] .section-body {
+    margin-top: 0;
+}
+
+
+div[data-page-route="Purchase Reconciliation Tool"] .title-area .indicator-pill {
+    display: none;
+}
+
+div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-scrollable {
     overflow-y: auto !important;
     margin-bottom: 2em;
 }
 
-.datatable .dt-scrollable .dt-row {
+div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-scrollable .dt-row {
     height: unset;
 }
 
-.datatable .dt-row-filter {
+div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-row-filter {
     height: var(--dt-row-height);
 }
 
-.datatable .dt-row-filter .dt-cell {
+div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-row-filter .dt-cell {
     max-height: var(--dt-row-height);
 }
