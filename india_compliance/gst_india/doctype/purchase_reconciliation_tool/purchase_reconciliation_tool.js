@@ -138,7 +138,6 @@ class PurchaseReconciliationTool {
                     fieldtype: "Link",
                     width: 200,
                     format: (value, row, column, data) => {
-                        console.log(value, row, column, data);
                         if (data && column.field === "supplier") {
                             column.docfield.link_onclick = `reco_tool.apply_filters(${JSON.stringify(
                                 {
@@ -158,15 +157,15 @@ class PurchaseReconciliationTool {
                                 ${data.supplier_gstin || ""}
                             </span>
                         `;
-                        let x = frappe.form.get_formatter(column.docfield.fieldtype)(
+
+                        return frappe.form.get_formatter(column.docfield.fieldtype)(
                             content,
                             column.docfield,
                             { always_show_decimals: true },
                             data
                         );
-                        console.log(x);
-                        return x
                     },
+                    dropdown: false,
                 },
                 {
                     label: "No. of Doc Inward Supply",

@@ -108,6 +108,7 @@ ic.DataTableManager = class DataTableManager {
             align,
             compareValue: compareFn,
             format: formatter,
+            dropdown: column.dropdown,
         };
     }
 
