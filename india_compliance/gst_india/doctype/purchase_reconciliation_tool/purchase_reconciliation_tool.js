@@ -11,7 +11,8 @@ const ReturnType = {
 };
 
 frappe.ui.form.on("Purchase Reconciliation Tool", {
-    setup(frm) {
+    async setup(frm) {
+        await frappe.require("purchase_reco_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
 
