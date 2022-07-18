@@ -6,8 +6,8 @@ from datetime import datetime
 from math import ceil
 from typing import List
 
-import pandas as pd
-from thefuzz import fuzz, process
+from dateutil.rrule import MONTHLY, rrule
+from rapidfuzz import fuzz, process
 
 import frappe
 from frappe.model.document import Document
@@ -96,7 +96,6 @@ class PurchaseReconciliationTool(Document):
 
             summary_diff = {}
             if match_status == "Residual Match":
-                match_status = "Mismatch"
                 summary_diff = self.get_summary_difference(
                     purchases[supplier_gstin], inward_supplies[supplier_gstin]
                 )
@@ -105,8 +104,8 @@ class PurchaseReconciliationTool(Document):
                 if summary_diff and not (abs(summary_diff[pur.bill_date.month]) < 2):
                     continue
 
-                for isup in inward_supplies.get(supplier_gstin)[:]:
-                    if summary_diff and not pur.bill_date.month == isup.bill_date.month:
+                for isup in inward_supplies[supplier_gstin][:]:
+                    if summary_diff and pur.bill_date.month != isup.bill_date.month:
                         continue
 
                     if not self.is_doc_matching(pur, isup, rules):
@@ -212,6 +211,9 @@ class PurchaseReconciliationTool(Document):
 
     def update_matching_doc(self, match_status, pur_name, isup_name):
         """Update matching doc for records."""
+
+        if match_status == "Residual Match":
+            match_status = "Mismatch"
 
         isup_fields = {
             "match_status": match_status,
@@ -584,7 +586,7 @@ class PurchaseReconciliationTool(Document):
 
         date1 = _get_first_day(start_month, start_year)
         date2 = _get_last_day(end_month, end_year)
-        date2 = datetime.strftime(date2 if date2 < now else now, "%Y-%m-%d")
+        date2 = date2 if date2 < now else now
         return [date1, date2]
 
     @frappe.whitelist()
@@ -648,7 +650,15 @@ def get_periods(fiscal_year, return_type: ReturnType):
 def _get_periods(start_date, end_date):
     """Returns a list of month (formatted as `MMYYYY`) in given date range"""
 
-    return pd.date_range(start_date, end_date, freq="MS").strftime("%m%Y").tolist()
+    if isinstance(start_date, str):
+        start_date = getdate(start_date)
+
+    if isinstance(end_date, str):
+        end_date = getdate(end_date)
+
+    return [
+        dt.strftime("%m%Y") for dt in rrule(MONTHLY, dtstart=start_date, until=end_date)
+    ]
 
 
 def _getdate(return_type):
@@ -663,7 +673,7 @@ def _getdate(return_type):
 
 def _get_first_day(month, year):
     """Returns first day of the month"""
-    return datetime.strftime(datetime(year, month, 1), "%Y-%m-%d")
+    return datetime(year, month, 1)
 
 
 def _get_last_day(month, year):

@@ -16,8 +16,8 @@ class InwardSupply(Document):
 
 def create_inward_supply(transaction):
     filters = {
-        "doc_number": transaction.doc_number,
-        "doc_date": transaction.doc_date,
+        "bill_no": transaction.bill_no,
+        "bill_date": transaction.bill_date,
         "classification": transaction.classification,
         "supplier_gstin": transaction.supplier_gstin,
     }
