@@ -431,8 +431,4 @@ def is_api_enabled(settings=None):
 
 
 def can_enable_api(settings):
-    return (
-        settings.api_secret
-        or frappe.conf.ic_api_secret
-        or frappe.conf.ic_api_sandbox_mode
-    )
+    return settings.api_secret or frappe.conf.ic_api_secret
