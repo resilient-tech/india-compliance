@@ -40,3 +40,17 @@ ic.is_api_enabled = function (settings) {
     if (!settings) settings = gst_settings;
     return settings.enable_api && ic.can_enable_api(settings);
 };
+
+ic.setup_tooltip = function (frm, tooltip_details) {
+    // we can use this function to setup tooltip for fields
+    // tooltip_details is a dictionary of fieldname: tooltip_text
+    // ToDo: Should we need to move this to a separate file using Class?
+
+    for (const [field, tooltip] of Object.entries(tooltip_details)) {
+        const tooltip_btn =
+            `<a class="btn-tooltip no-decoration text-muted" title="${__(tooltip)}">
+			    <i class="fa fa-info-circle"></i>
+		    </a>`;
+        $(tooltip_btn).appendTo(frm.get_field(field).$wrapper.find(".clearfix"));
+    }
+}

@@ -5,6 +5,11 @@
 // TODO: replace the demo data
 frappe.provide("reco_tool");
 
+const tooltip_info_required = {
+    "purchase_period": "Select Purchase Period",
+    "inward_supply_period": "Select Inward Supply Period",
+};
+
 const ReturnType = {
     GSTR2A: "GSTR2a",
     GSTR2B: "GSTR2b",
@@ -24,6 +29,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     refresh(frm) {
+        ic.setup_tooltip(frm, tooltip_info_required);
+
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
 
@@ -1633,8 +1640,8 @@ function update_progress(frm, method) {
             method == "update_api_progress"
                 ? __("Fetching data from GSTN")
                 : __("Updating Inward Supply for Return Period {0}", [
-                      data.return_period,
-                  ]);
+                    data.return_period,
+                ]);
 
         frm.dashboard.show_progress("Import GSTR Progress", current_progress, message);
         frm.page.set_indicator(__("In Progress"), "orange");
