@@ -10,6 +10,8 @@ const tooltip_info_required = {
     "inward_supply_period": "Select Inward Supply Period",
 };
 
+const api_enabled = ic.is_api_enabled();
+
 const ReturnType = {
     GSTR2A: "GSTR2a",
     GSTR2B: "GSTR2b",
@@ -34,8 +36,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
 
-        frm.add_custom_button("Download", () => show_gstr_dialog(frm));
-        frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
+        api_enabled ? frm.add_custom_button("Download", () => show_gstr_dialog(frm)) : frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
 
         // if (frm.doc.company) set_gstin_options(frm);
     },

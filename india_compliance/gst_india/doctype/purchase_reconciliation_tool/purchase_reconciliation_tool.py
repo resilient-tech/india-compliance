@@ -33,16 +33,34 @@ GSTR2B_GEN_DATE = 14
 
 
 class PurchaseReconciliationTool(Document):
-    FIELDS_TO_MATCH = ["fy", "bill_no", "place_of_supply", "is_reverse_charge", "tax"]
-    RULES = [
-        {"Exact Match": ["E", "E", "E", "E", 0]},
-        {"Exact Match": ["E", "F", "E", "E", 0]},
-        {"Partial Match": ["E", "E", "E", "E", 2]},
-        {"Partial Match": ["E", "F", "E", "E", 2]},
-        {"Mismatch": ["E", "E", "N", "N", "N"]},
-        {"Mismatch": ["E", "F", "N", "N", "N"]},
-        {"Residual Match": ["E", "N", "E", "E", 2]},
+    FIELDS_TO_MATCH = [
+        "fy",
+        "bill_no",
+        "place_of_supply",
+        "is_reverse_charge",
+        "cgst",
+        "sgst",
+        "igst",
+        "cess",
+        "document_value",
     ]
+    RULES = [
+        {"Exact Match": ["E", "E", "E", "E", 0, 0, 0, 0, 0]},
+        {"Suggested Match": ["E", "F", "E", "E", 0, 0, 0, 0, 0]},
+        {"Suggested Match": ["E", "E", "E", "E", 1, 1, 1, 1, 2]},
+        {"Suggested Match": ["E", "F", "E", "E", 1, 1, 1, 1, 2]},
+        {"Mismatch": ["E", "E", "N", "N", "N", "N", "N", "N", "N"]},
+        {"Mismatch": ["E", "F", "N", "N", "N", "N", "N", "N", "N"]},
+        {"Residual Match": ["E", "N", "E", "E", 1, 1, 1, 1, 2]},
+    ]
+
+    GST_CATEGORIES = {
+        "Registered Regular": "B2B",
+        "SEZ": "IMPGSEZ",
+        "Overseas": "IMPG",
+        "UIN Holders": "B2B",
+        "Tax Deductor": "B2B",
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -167,8 +185,8 @@ class PurchaseReconciliationTool(Document):
             E: Exact Match
             F: Fuzzy Match
             N: Mismatch
-            0: No Tax Difference
-            2: Tax Difference < 2
+          INT: Amount Difference <= INT
+
         """
 
         if rule == "E":
@@ -177,10 +195,8 @@ class PurchaseReconciliationTool(Document):
             return True
         elif rule == "F":
             return self.fuzzy_match(pur, isup)
-        elif rule == 0:
-            return self.get_tax_differece(pur, isup) == 0
-        elif rule == 2:
-            return self.get_tax_differece(pur, isup) < 2
+        elif isinstance(rule, int):
+            return self.get_amount_difference(pur, isup, field) <= rule
 
     def fuzzy_match(self, pur, isup):
         """
@@ -189,7 +205,7 @@ class PurchaseReconciliationTool(Document):
         - First check for partial ratio, with 100% confidence
         - Next check for approximate match, with 90% confidence
         """
-        if pur.bill_date.month != isup.bill_date.month:
+        if abs(pur.bill_date - isup.bill_date).days > 10:
             return False
 
         partial_ratio = fuzz.partial_ratio(pur._bill_no, isup._bill_no)
@@ -198,14 +214,21 @@ class PurchaseReconciliationTool(Document):
 
         return float(process.extractOne(pur._bill_no, [isup._bill_no])[1]) >= 90.0
 
-    def get_tax_differece(self, pur, isup):
-        return abs(self.get_total_tax(pur) - self.get_total_tax(isup))
+    def get_amount_difference(self, pur, isup, field):
+        if field == "cess":
+            self.update_cess_amount(pur)
 
-    def get_total_tax(self, doc):
+        return abs(pur.get(field, 0) - isup.get(field, 0))
+
+    def update_cess_amount(self, doc):
+        doc.cess = doc.get("cess", 0) + doc.get("cess_non_advol", 0)
+
+    def get_total_tax(self, doc, prefix=False):
         total_tax = 0
 
         for tax in GST_TAX_TYPES:
-            total_tax += doc[tax] if tax in doc else 0
+            tax = f"isup_{tax}" if prefix else tax
+            total_tax += doc.get(tax, 0)
 
         return total_tax
 
@@ -226,7 +249,7 @@ class PurchaseReconciliationTool(Document):
 
     def get_purchase(self, category):
         gst_category = (
-            ("Registered Regular",)
+            ("Registered Regular", "Tax Deductor")
             if category in ["B2B", "CDNR", "ISD"]
             else ("SEZ", "Overseas", "UIN Holders")
         )
@@ -261,8 +284,6 @@ class PurchaseReconciliationTool(Document):
 
         fields = [
             "name",
-            "posting_date",
-            "supplier_name",
             "supplier_gstin",
             "bill_no",
             "bill_date",
@@ -361,9 +382,6 @@ class PurchaseReconciliationTool(Document):
             "supplier_gstin",
             "is_reverse_charge",
             "place_of_supply",
-            "classification",
-            "link_doctype",
-            "link_name",
         ]
 
         if additional_fields:
@@ -383,17 +401,17 @@ class PurchaseReconciliationTool(Document):
         Returns tax fields for inward supply query.
         Where query is used as subquery, fields are fetch from table (subquery) instead of item table.
         """
-        tax_fields = ["taxable_value", "cgst", "sgst", "igst", "cess"]
-
         if table == self.gstr2:
             tax_fields = [
                 Sum(self.gstr2_item[field]).as_(
                     f"isup_{field}" if for_summary else field
                 )
-                for field in tax_fields
+                for field in GST_TAX_TYPES[:-1]
             ]
         else:
-            tax_fields = [table[field].as_(f"isup_{field}") for field in tax_fields]
+            tax_fields = [
+                table[field].as_(f"isup_{field}") for field in GST_TAX_TYPES[:-1]
+            ]
 
         return tax_fields
 
@@ -591,41 +609,279 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_reconciliation_data(self):
-        purchase = self.query_purchase_invoice()
-        inward_supply = self.query_inward_supply()
+        """
+        Get Reconciliation data based on standard filters
+        Returns
+            - Inward Supply: for the return month as per 2A and 2B
+            - Purchase Invoice: All invoices matching with inward supply (irrespective of purchase period choosen)
+                Unmatched Purchase Invoice for the period choosen
+        """
+        purchase = self.query_purchase_invoice(
+            additional_fields=[
+                "supplier",
+                "supplier_name",
+                "is_return",
+                "gst_category",
+                "ignore_reconciliation",
+            ]
+        )
+        isup_additional_fields = [
+            "supplier_name",
+            "classification",
+            "match_status",
+            "action",
+            "return_period_2b",
+        ]
+        inward_supply = self.query_inward_supply(
+            isup_additional_fields + ["link_doctype", "link_name"]
+        )
 
-        # this will not return missing in purchase (if any)
+        # this will not return missing in inward supply (if any)
         summary_data = (
-            purchase.left_join(inward_supply)
+            purchase.right_join(inward_supply)
             .on(
                 (inward_supply.link_doctype == "Purchase Invoice")
                 & (inward_supply.link_name == self.pi.name)
             )
             .select(
-                *self.get_inward_supply_fields(for_summary=True, table=inward_supply)
-            )
-            .where(
-                (self.pi.posting_date[self.purchase_from_date : self.purchase_to_date])
-                | (
-                    (inward_supply.link_doctype == "Purchase Invoice")
-                    & (inward_supply.link_name == self.pi.name)
+                *self.get_inward_supply_fields(
+                    isup_additional_fields,
+                    for_summary=True,
+                    table=inward_supply,
                 )
             )
             .run(as_dict=True)
         )
 
-        # add missing in purchase data
+        # add missing in inward supply
         summary_data = summary_data + (
-            self.query_inward_supply(for_summary=True)
-            .where(
-                (self.gstr2.link_doctype != "Purchase Invoice")
-                | (self.gstr2.link_name == "")
-                | (self.gstr2.link_name.isnull())
+            purchase.where(
+                self.pi.posting_date[self.purchase_from_date : self.purchase_to_date]
             )
+            .where((self.pi.inward_supply == "") | (self.pi.inward_supply.isnull()))
             .run(as_dict=True)
         )
-
+        self.process_reconciliation_data(summary_data)
         return summary_data
+
+    def process_reconciliation_data(self, summary_data):
+        fields_to_update = [
+            "supplier_name",
+            "supplier_gstin",
+            "place_of_supply",
+            "is_reverse_charge",
+            "bill_no",
+            "bill_date",
+        ]
+
+        def _update_doc(doc, differences):
+            # update differences
+            doc.differences = "<br> ".join(differences)
+
+            # remove columns
+            columns_to_remove = [
+                "isup_supplier_name",
+                "isup_supplier_gstin",
+                "isup_place_of_supply",
+                "isup_is_reverse_charge",
+                "gst_category",
+                "is_return",
+            ]
+            if isinstance(columns_to_remove, str):
+                columns_to_remove = (columns_to_remove,)
+
+            for column in columns_to_remove:
+                doc.pop(column, None)
+
+        # modify doc
+        for doc in summary_data:
+            differences = []
+
+            # update missing values
+            if not doc.name:
+                doc.isup_match_status = "Missing in PR"
+                for field in fields_to_update:
+                    doc[field] = doc.get(f"isup_{field}", "")
+
+                _update_doc(doc, differences)
+                continue
+
+            if not doc.isup_name:
+                doc.isup_match_status = "Missing in 2A/2B"
+                doc.isup_action = (
+                    "Ignore" if doc.pop("ignore_reconciliation", 0) == 1 else ""
+                )
+
+                classification = self.GST_CATEGORIES.get(doc.gst_category)
+                if doc.is_return and classification == "B2B":
+                    classification = "CDNR"
+
+                doc.isup_classification = classification
+                _update_doc(doc, differences)
+                continue
+
+            # update amount differences
+            doc.document_value_diff = doc.isup_document_value - doc.document_value
+            doc.tax_diff = self.get_total_tax(doc, True) - self.get_total_tax(doc)
+            self.update_cess_amount(doc)
+
+            if doc.isup_match_status not in ["Mismatch", "Manual Match"]:
+                if abs(doc.tax_diff) > 0.01 or abs(doc.document_value_diff) > 0.01:
+                    differences.append("Rounding Difference")
+
+                _update_doc(doc, differences)
+                continue
+
+            # update differences
+            for field in self.FIELDS_TO_MATCH:
+                isup_value = doc.get(f"isup_{field}")
+                label = frappe.unscrub(field)
+
+                if isinstance(doc.get(field), str):
+                    label = f"{label} - {isup_value}"
+
+                if isup_value != doc.get(field):
+                    differences.append(label)
+
+            _update_doc(doc, differences)
+
+    def get_reconciliation_columns(self):
+        return [
+            {
+                "fieldname": "name",
+                "label": "Purchase Invoice",
+                "fieldtype": "Link",
+            },
+            {
+                "fieldname": "supplier",
+                "label": "Supplier",
+                "fieldtype": "Link",
+            },
+            {
+                "fieldname": "supplier_name",
+                "label": "Supplier Name",
+            },
+            {
+                "fieldname": "supplier_gstin",
+                "label": "Supplier GSTIN",
+            },
+            {
+                "fieldname": "bill_no",
+                "label": "Bill No",
+            },
+            {
+                "fieldname": "bill_date",
+                "label": "Bill Date",
+                "fieldtype": "Date",
+            },
+            {
+                "fieldname": "place_of_supply",
+                "label": "Place of Supply",
+            },
+            {
+                "fieldname": "is_reverse_charge",
+                "label": "Reverse Charge",
+                "fieldtype": "Check",
+            },
+            {
+                "fieldname": "cgst",
+                "label": "CGST",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "sgst",
+                "label": "SGST",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "igst",
+                "label": "IGST",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "cess",
+                "label": "CESS",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "document_value",
+                "label": "Document Value",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "isup_name",
+                "label": "Inward Supply",
+                "fieldtype": "Link",
+            },
+            {
+                "fieldname": "isup_bill_no",
+                "label": "GSTR Bill No",
+            },
+            {
+                "fieldname": "isup_bill_date",
+                "label": "GSTR Bill Date",
+                "fieldtype": "Date",
+            },
+            {
+                "fieldname": "isup_cgst",
+                "label": "GSTR CGST",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "isup_sgst",
+                "label": "GSTR SGST",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "isup_igst",
+                "label": "GSTR IGST",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "isup_cess",
+                "label": "GSTR CESS",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "isup_document_value",
+                "label": "GSTR Document Value",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "isup_classification",
+                "label": "Category",
+                "fieldtype": "Select",
+            },
+            {
+                "fieldname": "isup_match_status",
+                "label": "Match Status",
+                "fieldtype": "Select",
+            },
+            {
+                "fieldname": "isup_action",
+                "label": "Action",
+                "fieldtype": "Select",
+            },
+            {
+                "fieldname": "isup_return_period_2b",
+                "label": "Return Period 2B",
+                "fieldtype": "select",
+            },
+            {
+                "fieldname": "tax_diff",
+                "label": "Tax Difference",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "document_value_diff",
+                "label": "Document Value Difference",
+                "fieldtype": "Float",
+            },
+            {
+                "fieldname": "differences",
+                "label": "Differences",
+            },
+        ]
 
 
 def get_periods(fiscal_year, return_type: ReturnType):
