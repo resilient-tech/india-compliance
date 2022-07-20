@@ -60,3 +60,5 @@ bench --verbose --site test_site install-app erpnext
 
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench --verbose --site test_site install-app india_compliance
+bench set-config ic_api_secret "$IC_API_SECRET"
+bench show-config
