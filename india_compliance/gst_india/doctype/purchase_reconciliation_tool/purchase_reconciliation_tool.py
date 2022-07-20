@@ -347,7 +347,9 @@ class PurchaseReconciliationTool(Document):
 
     def query_inward_supply(self, additional_fields=None, for_summary=False):
         fields = self.get_inward_supply_fields(additional_fields, for_summary)
-        periods = _get_periods(self.inward_supply_from_date, self.inward_supply_to_date)
+        self.isup_periods = _get_periods(
+            self.inward_supply_from_date, self.inward_supply_to_date
+        )
 
         return (
             frappe.qb.from_(self.gstr2)
@@ -355,8 +357,8 @@ class PurchaseReconciliationTool(Document):
             .on(self.gstr2_item.parent == self.gstr2.name)
             .where(self.company_gstin == self.gstr2.company_gstin)
             .where(
-                (self.gstr2.return_period_2b.isin(periods))
-                | (self.gstr2.sup_return_period.isin(periods))
+                (self.gstr2.return_period_2b.isin(self.isup_periods))
+                | (self.gstr2.sup_return_period.isin(self.isup_periods))
             )
             .groupby(self.gstr2_item.parent)
             .select(*fields)
@@ -662,7 +664,11 @@ class PurchaseReconciliationTool(Document):
             .run(as_dict=True)
         )
         self.process_reconciliation_data(summary_data)
-        return summary_data
+
+        return {
+            "data": summary_data,
+            "columns": self.get_reconciliation_columns(),
+        }
 
     def process_reconciliation_data(self, summary_data):
         fields_to_update = [
@@ -751,11 +757,13 @@ class PurchaseReconciliationTool(Document):
                 "fieldname": "name",
                 "label": "Purchase Invoice",
                 "fieldtype": "Link",
+                "options": "Purchase Invoice",
             },
             {
                 "fieldname": "supplier",
                 "label": "Supplier",
                 "fieldtype": "Link",
+                "options": "Supplier",
             },
             {
                 "fieldname": "supplier_name",
@@ -812,6 +820,7 @@ class PurchaseReconciliationTool(Document):
                 "fieldname": "isup_name",
                 "label": "Inward Supply",
                 "fieldtype": "Link",
+                "options": "Inward Supply",
             },
             {
                 "fieldname": "isup_bill_no",
@@ -851,21 +860,38 @@ class PurchaseReconciliationTool(Document):
                 "fieldname": "isup_classification",
                 "label": "Category",
                 "fieldtype": "Select",
+                "options": [cat.value for cat in GSTRCategory],
             },
             {
                 "fieldname": "isup_match_status",
                 "label": "Match Status",
                 "fieldtype": "Select",
+                "options": [
+                    "Exact Match",
+                    "Suggested Match",
+                    "Mismatch",
+                    "Manual Match",
+                    "Missing in 2A/2B",
+                    "Missing in PR",
+                ],
             },
             {
                 "fieldname": "isup_action",
                 "label": "Action",
                 "fieldtype": "Select",
+                "options": [
+                    "No Action",
+                    "Accept My Values",
+                    "Accept Supplier Values",
+                    "Ignore",
+                    "Pending",
+                ],
             },
             {
                 "fieldname": "isup_return_period_2b",
                 "label": "Return Period 2B",
                 "fieldtype": "select",
+                "options": self.isup_periods,
             },
             {
                 "fieldname": "tax_diff",
