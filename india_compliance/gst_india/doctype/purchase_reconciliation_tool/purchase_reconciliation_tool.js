@@ -6,8 +6,10 @@
 frappe.provide("reco_tool");
 
 const tooltip_info_required = {
-    "purchase_period": "Select Purchase Period",
-    "inward_supply_period": "Select Inward Supply Period",
+    purchase_period:
+        "Return purchases during this period where no match is found.\nAlso, all matching purchases will be returned (irrespective of the choosen period).",
+    inward_supply_period:
+        "Return all documents from GSTR 2A/2B during this return period.",
 };
 
 const api_enabled = ic.is_api_enabled();
@@ -36,7 +38,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
 
-        api_enabled ? frm.add_custom_button("Download", () => show_gstr_dialog(frm)) : frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
+        api_enabled
+            ? frm.add_custom_button("Download", () => show_gstr_dialog(frm))
+            : frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
 
         // if (frm.doc.company) set_gstin_options(frm);
     },

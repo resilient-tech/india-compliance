@@ -41,16 +41,19 @@ ic.is_api_enabled = function (settings) {
     return settings.enable_api && ic.can_enable_api(settings);
 };
 
-ic.setup_tooltip = function (frm, tooltip_details) {
-    // we can use this function to setup tooltip for fields
-    // tooltip_details is a dictionary of fieldname: tooltip_text
-    // ToDo: Should we need to move this to a separate file using Class?
+ic.setup_tooltip = function (frm, field_dict) {
+    /**
+     * Setup tooltip for fields to show details
+     * @param {Object} frm          Form object
+     * @param {Object} field_dict   Dictionary of fields with info to show
+     */
 
-    for (const [field, tooltip] of Object.entries(tooltip_details)) {
-        const tooltip_btn =
-            `<a class="btn-tooltip no-decoration text-muted" title="${__(tooltip)}">
+    for (const [field, tooltip] of Object.entries(field_dict)) {
+        const tooltip_btn = `<a class="btn-tooltip no-decoration text-muted" title="${__(
+            tooltip
+        )}">
 			    <i class="fa fa-info-circle"></i>
 		    </a>`;
         $(tooltip_btn).appendTo(frm.get_field(field).$wrapper.find(".clearfix"));
     }
-}
+};
