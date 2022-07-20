@@ -5,11 +5,11 @@
 // TODO: replace the demo data
 frappe.provide("reco_tool");
 
-const tooltip_info_required = {
+const tooltip_info = {
     purchase_period:
-        "Return purchases during this period where no match is found.\nAlso, all matching purchases will be returned (irrespective of the choosen period).",
+        "Returns purchases during this period where no match is found.",
     inward_supply_period:
-        "Return all documents from GSTR 2A/2B during this return period.",
+        "Returns all documents from GSTR 2A/2B during this return period.",
 };
 
 const api_enabled = ic.is_api_enabled();
@@ -33,7 +33,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     refresh(frm) {
-        ic.setup_tooltip(frm, tooltip_info_required);
+        ic.setup_tooltip(frm, tooltip_info);
 
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
