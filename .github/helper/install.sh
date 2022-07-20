@@ -23,24 +23,26 @@ mkdir ~/frappe-bench/sites/test_site
 cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites/test_site/
 
 
-mysql --host 127.0.0.1 --port 3306 -u root -e "SET GLOBAL character_set_server = 'utf8mb4'"
-mysql --host 127.0.0.1 --port 3306 -u root -e "SET GLOBAL collation_server = 'utf8mb4_unicode_ci'"
+mysql --host 127.0.0.1 --port 3306 -u root -e <<'EOF'
+SET GLOBAL character_set_server = 'utf8mb4'
+SET GLOBAL collation_server = 'utf8mb4_unicode_ci'
 
-mysql --host 127.0.0.1 --port 3306 -u root -e "CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient'"
-mysql --host 127.0.0.1 --port 3306 -u root -e "CREATE DATABASE test_resilient"
-mysql --host 127.0.0.1 --port 3306 -u root -e "GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost'"
+CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient'
+CREATE DATABASE test_resilient
+GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost'
 
-mysql --host 127.0.0.1 --port 3306 -u root -e "UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root'"
-mysql --host 127.0.0.1 --port 3306 -u root -e "FLUSH PRIVILEGES"
+UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root'
+FLUSH PRIVILEGES
+EOF
 
 
-install_whktml() {
+install_wkhtml() {
     wget -O /tmp/wkhtmltox.tar.xz https://github.com/frappe/wkhtmltopdf/raw/master/wkhtmltox-0.12.3_linux-generic-amd64.tar.xz
     tar -xf /tmp/wkhtmltox.tar.xz -C /tmp
     sudo mv /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
     sudo chmod o+x /usr/local/bin/wkhtmltopdf
 }
-install_whktml &
+install_wkhtml &
 
 cd ~/frappe-bench || exit
 
@@ -50,7 +52,6 @@ sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch "$BRANCH"
-bench setup requirements --dev
 
 bench start &
 bench --site test_site reinstall --yes
