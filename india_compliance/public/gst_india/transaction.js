@@ -81,7 +81,7 @@ async function update_gst_details(frm) {
 function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
         gst_category(frm) {
-            const { enable_overseas_transactions } = frappe.boot.gst_settings;
+            const { enable_overseas_transactions } = gst_settings;
             if (
                 !["SEZ", "Overseas"].includes(frm.doc.gst_category) ||
                 enable_overseas_transactions

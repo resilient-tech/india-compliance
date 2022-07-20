@@ -35,7 +35,7 @@ frappe.ui.form.on("GST Settings", {
     after_save(frm) {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
-        frappe.boot.gst_settings = frm.doc;
+        Object.assign(gst_settings, frm.doc);
     },
 });
 

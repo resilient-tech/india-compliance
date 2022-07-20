@@ -101,7 +101,7 @@ def validate_mandatory_fields(doc, fields, message=None):
         fields = (fields,)
 
     for field in fields:
-        if not doc.get(field) or field == "gst_category":
+        if not doc.get(field):
             error_message = _("{0} is a mandatory field for GST Transactions").format(
                 bold(_(doc.meta.get_label(field))),
             )
