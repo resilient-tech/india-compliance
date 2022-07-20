@@ -36,13 +36,13 @@ FLUSH PRIVILEGES;
 "
 
 
-install_wkhtml() {
+install_wkhtmltopdf() {
     wget -O /tmp/wkhtmltox.tar.xz https://github.com/frappe/wkhtmltopdf/raw/master/wkhtmltox-0.12.3_linux-generic-amd64.tar.xz
     tar -xf /tmp/wkhtmltox.tar.xz -C /tmp
     sudo mv /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
     sudo chmod o+x /usr/local/bin/wkhtmltopdf
 }
-install_wkhtml &
+install_wkhtmltopdf &
 
 cd ~/frappe-bench || exit
 
@@ -62,4 +62,3 @@ bench --verbose install-app erpnext
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench --verbose install-app india_compliance
 bench set-config ic_api_secret "$IC_API_SECRET"
-bench show-config
