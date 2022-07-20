@@ -1,4 +1,4 @@
-frappe.provide("ic")
+frappe.provide("ic");
 
 ic.DataTableManager = class DataTableManager {
     constructor(options) {
@@ -57,11 +57,6 @@ ic.DataTableManager = class DataTableManager {
             link_onclick: column.link_onclick,
             precision: column.precision,
         };
-        const align =
-            frappe.model.is_numeric_field(docfield) || docfield.fieldtype === "Date"
-                ? "right"
-                : "left";
-
         let compareFn = null;
         if (docfield.fieldtype === "Date") {
             compareFn = (cell, keyword) => {
@@ -105,7 +100,7 @@ ic.DataTableManager = class DataTableManager {
             docfield,
             width: column.width || 150,
             editable: !!column.editable,
-            align,
+            align: column.align,
             compareValue: compareFn,
             format: formatter,
             dropdown: column.dropdown,
@@ -148,4 +143,4 @@ ic.DataTableManager = class DataTableManager {
         this.datatable = new frappe.DataTable(this.$wrapper.get(0), datatable_options);
         this.$datatable = $(`.${this.datatable.style.scopeClass}`);
     }
-}
+};

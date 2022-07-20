@@ -6,8 +6,7 @@
 frappe.provide("reco_tool");
 
 const tooltip_info = {
-    purchase_period:
-        "Returns purchases during this period where no match is found.",
+    purchase_period: "Returns purchases during this period where no match is found.",
     inward_supply_period:
         "Returns all documents from GSTR 2A/2B during this return period.",
 };
@@ -112,31 +111,18 @@ class PurchaseReconciliationTool {
             columns: [
                 {
                     label: "Match Type",
-                    fieldname: "match_status",
+                    fieldname: "isup_match_status",
                     width: 200,
                 },
                 {
-                    label: "No. of Docs (GSTR | PR)",
+                    label: "No. of Docs (2A/2B | PR)",
                     fieldname: "no_of_docs",
                     width: 180,
-
                 },
                 {
-                    label: "Tax Diff (GSTR - PR)",
+                    label: "Tax Diff (2A/2B - PR)",
                     fieldname: "tax_diff",
-                    width: 150,
-                },
-                {
-                    label: "Download",
-                    fieldname: "download",
-                    fieldtype: "html",
-                    width: 100,
-                },
-                {
-                    label: "Email",
-                    fieldname: "email",
-                    fieldtype: "html",
-                    width: 100,
+                    width: 180,
                 },
             ],
             data: this.get_summary_data(),
@@ -156,8 +142,7 @@ class PurchaseReconciliationTool {
                                 {
                                     tab: "invoice_level",
                                     filters: {
-                                        supplier_name: data.supplier_name,
-                                        supplier_gstin: data.supplier_gstin,
+                                        supplier_name: data.supplier_gstin,
                                     },
                                 }
                             )})`;
@@ -181,18 +166,31 @@ class PurchaseReconciliationTool {
                     dropdown: false,
                 },
                 {
-                    label: "No. of Doc Inward Supply",
-                    fieldname: "no_of_inward_supp",
-                    width: 200,
+                    label: "No. of Docs (2A/2B | PR)",
+                    fieldname: "no_of_docs",
+                    width: 180,
                 },
                 {
-                    label: "No. of Doc Purchase",
-                    fieldname: "no_of_doc_purchase",
-                    width: 200,
-                },
-                {
+                    label: "Tax Diff (2A/2B - PR)",
                     fieldname: "tax_diff",
-                    label: "Tax Diff",
+                    width: 180,
+                },
+                {
+                    fieldname: "document_value_diff",
+                    label: "Document Diff (2A/2B - PR)",
+                    width: 200,
+                },
+                {
+                    label: "Download",
+                    fieldname: "download",
+                    fieldtype: "html",
+                    width: 100,
+                },
+                {
+                    label: "Email",
+                    fieldname: "email",
+                    fieldtype: "html",
+                    width: 100,
                 },
             ],
             options: {
@@ -204,48 +202,98 @@ class PurchaseReconciliationTool {
             $wrapper: this.tab_group.get_field("invoice_level_data").$wrapper,
             columns: [
                 {
-                    label: "Supplier Name",
+                    fieldname: "view",
+                    fieldtype: "html",
+                    width: 60,
+                    align: "center",
+                    format: (...args) => get_formatted(...args, "eye", reco_tool.trial),
+                },
+                {
+                    label: "Supplier",
                     fieldname: "supplier_name",
-                    fieldtype: "Link",
-                    doctype: "Supplier",
                     width: 200,
+                    format: (value, row, column, data) => {
+                        const content = `
+                            ${data.supplier_name}
+                            <br />
+                            <span style="font-size: 0.9em">
+                                ${data.supplier_gstin || ""}
+                            </span>
+                        `;
+
+                        return frappe.form.get_formatter(column.docfield.fieldtype)(
+                            content,
+                            column.docfield,
+                            { always_show_decimals: true },
+                            data
+                        );
+                    },
+                    dropdown: false,
                 },
                 {
-                    label: "GSTIN",
-                    fieldname: "supplier_gstin",
-                },
-                {
-                    label: "Inv No.",
+                    label: "Bill No.",
                     fieldname: "bill_no",
                     width: 120,
                 },
                 {
                     label: "Date",
                     fieldname: "bill_date",
-                },
-                {
-                    label: "Action Status",
+                    width: 120,
                 },
                 {
                     label: "Match Status",
+                    fieldname: "isup_match_status",
+                    width: 120,
                 },
                 {
-                    label: "Purchase Ref",
+                    label: "Purchase Invoice",
                     fieldname: "name",
+                    // fieldtype: "Link",
+                    // doctype: "Purchase Invoice",
+                    align: "center",
+                    width: 150,
+                    format: (value, row, column, data) => {
+                        const content = `<button class="btn">
+                                <i class="fa fa-link"></i>
+                            </button>`;
+
+                        return frappe.form.get_formatter(column.docfield.fieldtype)(
+                            content,
+                            column.docfield,
+                            { always_show_decimals: true },
+                            data
+                        );
+                    },
                 },
                 {
-                    label: "Inward Supp Ref",
+                    label: "Inward Supply",
+                    fieldname: "isup_name",
+                    fieldtype: "Link",
+                    doctype: "Inward Supply",
+                    width: 150,
                 },
                 {
-                    label: "Tax Diff",
+                    label: "Tax Diff (2A/2B - PR)",
+                    fieldname: "tax_diff",
+                    width: 180,
                 },
                 {
-                    label: "Mismatch",
+                    fieldname: "document_value_diff",
+                    label: "Document Diff (2A/2B - PR)",
+                    width: 180,
+                },
+                {
+                    fieldname: "differences",
+                    label: "Differences",
                 },
                 {
                     label: "Action",
+                    fieldname: "isup_action",
                 },
             ],
+            options: {
+                cellHeight: 55,
+            },
             data: this.get_invoice_level_data(),
         });
     }
@@ -1645,8 +1693,8 @@ function update_progress(frm, method) {
             method == "update_api_progress"
                 ? __("Fetching data from GSTN")
                 : __("Updating Inward Supply for Return Period {0}", [
-                    data.return_period,
-                ]);
+                      data.return_period,
+                  ]);
 
         frm.dashboard.show_progress("Import GSTR Progress", current_progress, message);
         frm.page.set_indicator(__("In Progress"), "orange");
@@ -1689,4 +1737,37 @@ reco_tool.apply_filters = function ({ tab, filters }) {
     }
 
     tab.data_table_manager.datatable.columnmanager.applyFilter(_filters);
+};
+
+function get_formatted(value, row, column, data, icon, callback) {
+    /**
+     * Returns custom ormated value for the row.
+     * @param {string} value        Current value of the row.
+     * @param {object} row          All values of current row
+     * @param {object} column       All properties of current column
+     * @param {object} data         All values in its core form for current row
+     * @param {string} icon         Return icon (font-awesome) as the content
+     * @param {function} callback   Callback on click of icon
+     */
+
+    let content;
+    if (icon && callback) content = get_icon(icon, callback, data);
+    if (value) content = value;
+
+    return frappe.form.get_formatter(column.docfield.fieldtype)(
+        content,
+        column.docfield,
+        { always_show_decimals: true },
+        data
+    );
+}
+
+function get_icon(icon, callback, data) {
+    return `<button class="btn" title="hello" onclick="${callback}(${data})">
+                <i class="fa fa-${icon}"></i>
+            </button>`;
+}
+
+reco_tool.trial = function (data) {
+    console.log("trial:", data);
 };
