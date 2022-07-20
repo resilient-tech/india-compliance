@@ -365,7 +365,7 @@ class EInvoiceData(GSTTransactionData):
         self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
     def get_invoice_data(self):
-        if self.sandbox:
+        if self.sandbox_mode:
             seller = {
                 "gstin": "01AMBPG7773M002",
                 "state_number": "01",
