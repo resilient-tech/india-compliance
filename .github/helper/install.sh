@@ -23,17 +23,17 @@ mkdir ~/frappe-bench/sites/test_site
 cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites/test_site/
 
 
-mysql --host 127.0.0.1 --port 3306 -u root -e <<'EOF'
-SET GLOBAL character_set_server = 'utf8mb4'
-SET GLOBAL collation_server = 'utf8mb4_unicode_ci'
+mysql --host 127.0.0.1 --port 3306 -u root -e "
+SET GLOBAL character_set_server = 'utf8mb4'; 
+SET GLOBAL collation_server = 'utf8mb4_unicode_ci'; 
 
-CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient'
-CREATE DATABASE test_resilient
-GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost'
+CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient'; 
+CREATE DATABASE test_resilient; 
+GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost'; 
 
-UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root'
-FLUSH PRIVILEGES
-EOF
+UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root'; 
+FLUSH PRIVILEGES;
+"
 
 
 install_wkhtml() {
