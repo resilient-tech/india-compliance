@@ -5,6 +5,8 @@
 // TODO: replace the demo data
 frappe.provide("reco_tool");
 
+const api_enabled = ic.is_api_enabled();
+
 const ReturnType = {
     GSTR2A: "GSTR2a",
     GSTR2B: "GSTR2b",
@@ -27,8 +29,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
 
-        frm.add_custom_button("Download", () => show_gstr_dialog(frm));
-        frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
+        api_enabled ? frm.add_custom_button("Download", () => show_gstr_dialog(frm)) : frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
 
         // if (frm.doc.company) set_gstin_options(frm);
     },
@@ -1633,8 +1634,8 @@ function update_progress(frm, method) {
             method == "update_api_progress"
                 ? __("Fetching data from GSTN")
                 : __("Updating Inward Supply for Return Period {0}", [
-                      data.return_period,
-                  ]);
+                    data.return_period,
+                ]);
 
         frm.dashboard.show_progress("Import GSTR Progress", current_progress, message);
         frm.page.set_indicator(__("In Progress"), "orange");
