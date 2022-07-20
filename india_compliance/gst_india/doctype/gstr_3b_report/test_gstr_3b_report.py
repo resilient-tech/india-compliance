@@ -91,9 +91,7 @@ def create_sales_invoices():
 
 def create_purchase_invoices():
     create_purchase_invoice(is_in_state=True)
-    create_purchase_invoice(
-        is_in_state=False, supplier="_Test Registered Composition Supplier"
-    )
+    create_purchase_invoice(supplier="_Test Registered Composition Supplier")
     create_purchase_invoice(rate=250, qty=1, is_in_state=True)
     create_purchase_invoice(
         is_in_state_rcm=True,
