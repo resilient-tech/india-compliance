@@ -49,11 +49,19 @@ ic.setup_tooltip = function (frm, field_dict) {
      */
 
     for (const [field, tooltip] of Object.entries(field_dict)) {
-        const tooltip_btn = `<a class="btn-tooltip no-decoration text-muted" title="${__(
-            tooltip
-        )}">
-			    <i class="fa fa-info-circle"></i>
-		    </a>`;
-        $(tooltip_btn).appendTo(frm.get_field(field).$wrapper.find(".clearfix"));
+        $field_area = frm.get_field(field).$wrapper.find(".clearfix");
+        $tooltip_btn = $(`<i class="fa fa-info-circle"></i>`).appendTo($field_area);
+
+        $tooltip_btn.popover({
+			trigger: 'hover',
+			placement: 'top',
+			content: () => {
+                return `<div class="text-medium">
+						${__(tooltip)}
+					</div>`
+            },
+			html: true
+		});
     }
 };
+
