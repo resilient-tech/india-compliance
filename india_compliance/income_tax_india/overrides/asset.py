@@ -34,7 +34,8 @@ def get_depreciation_amount(asset, depreciable_value, row):
                     rate_of_depreciation = rate_of_depreciation / 2
                     frappe.msgprint(
                         _(
-                            "As per IT Act, the rate of depreciation for the first depreciation entry is reduced by 50%."
+                            "As per IT Act, the rate of depreciation for the first"
+                            " depreciation entry is reduced by 50%."
                         )
                     )
 

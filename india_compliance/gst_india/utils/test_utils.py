@@ -46,5 +46,6 @@ class TestUtils(unittest.TestCase):
             validate_document_name(doc)
         except frappe.ValidationError:
             self.fail(
-                "Regional validation related to India are being applied to other countries"
+                "Regional validation related to India are being applied to other"
+                " countries"
             )
