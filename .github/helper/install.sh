@@ -53,12 +53,13 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch "$BRANCH"
 
+bench use test_site
 bench start &
-bench --site test_site reinstall --yes
+bench reinstall --yes
 
-bench --verbose --site test_site install-app erpnext
+bench --verbose install-app erpnext
 
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
-bench --verbose --site test_site install-app india_compliance
-bench --site test_site  set-config ic_api_secret "$IC_API_SECRET"
+bench --verbose install-app india_compliance
+bench set-config ic_api_secret "$IC_API_SECRET"
 bench show-config
