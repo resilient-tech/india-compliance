@@ -56,9 +56,11 @@ ic.setup_tooltip = function (frm, field_dict) {
 			trigger: 'hover',
 			placement: 'top',
 			content: () => {
-                return `<div class="text-medium">
-						${__(tooltip)}
-					</div>`
+                return `
+                    <div class="text-medium">
+                        ${__(tooltip)}
+                    </div>
+                `;
             },
 			html: true
 		});
