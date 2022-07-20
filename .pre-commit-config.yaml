@@ -16,10 +16,9 @@ repos:
           - id: check-ast
 
     - repo: https://github.com/psf/black
-      rev: 22.3.0
+      rev: 22.6.0
       hooks:
           - id: black
-            args: ["--preview"]
 
     - repo: https://github.com/timothycrosley/isort
       rev: 5.10.1
@@ -29,9 +28,8 @@ repos:
     - repo: https://gitlab.com/pycqa/flake8
       rev: 3.9.2
       hooks:
-        - id: flake8
-          additional_dependencies: [flake8-isort, flake8-bugbear]
-
+          - id: flake8
+            additional_dependencies: [flake8-isort, flake8-bugbear]
 
 ci:
     autoupdate_schedule: weekly
