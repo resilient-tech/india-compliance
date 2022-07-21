@@ -32,7 +32,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     refresh(frm) {
-        ic.setup_tooltip(frm, tooltip_info);
+        new ic.quick_info_popover(frm, tooltip_info);
 
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");

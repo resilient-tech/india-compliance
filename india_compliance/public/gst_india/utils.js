@@ -41,29 +41,4 @@ ic.is_api_enabled = function (settings) {
     return settings.enable_api && ic.can_enable_api(settings);
 };
 
-ic.setup_tooltip = function (frm, field_dict) {
-    /**
-     * Setup tooltip for fields to show details
-     * @param {Object} frm          Form object
-     * @param {Object} field_dict   Dictionary of fields with info to show
-     */
-
-    for (const [field, tooltip] of Object.entries(field_dict)) {
-        $field_area = frm.get_field(field).$wrapper.find(".clearfix");
-        $tooltip_btn = $(`<i class="fa fa-info-circle"></i>`).appendTo($field_area);
-
-        $tooltip_btn.popover({
-			trigger: 'hover',
-			placement: 'top',
-			content: () => {
-                return `
-                    <div class="text-medium">
-                        ${__(tooltip)}
-                    </div>
-                `;
-            },
-			html: true
-		});
-    }
-};
 
