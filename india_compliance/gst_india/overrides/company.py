@@ -42,15 +42,6 @@ def make_default_tax_templates(company: str, country: str):
     update_gst_settings(company)
 
 
-def update_accounts_settings_for_taxes(doc, method=None):
-    if doc.country != "India" or frappe.db.count("Company") > 1:
-        return
-
-    frappe.db.set_value(
-        "Accounts Settings", None, "add_taxes_from_item_tax_template", 0
-    )
-
-
 def update_gst_settings(company):
     # Will only add default GST accounts if present
     input_account_names = ["Input Tax CGST", "Input Tax SGST", "Input Tax IGST"]
