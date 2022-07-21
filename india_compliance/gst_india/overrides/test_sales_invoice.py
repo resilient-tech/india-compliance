@@ -5,8 +5,8 @@ import frappe
 from india_compliance.gst_india.overrides.sales_invoice import validate_invoice_number
 
 
-class TestUtils(unittest.TestCase):
-    def test_validate_document_name(self):
+class TestSalesInvoice(unittest.TestCase):
+    def test_validate_invoice_number(self):
         posting_date = "2021-05-01"
 
         invalid_names = [

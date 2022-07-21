@@ -9,7 +9,7 @@ import frappe
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     execute as run_report,
 )
-from india_compliance.gst_india.testutils import append_items, create_sales_invoice
+from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
 class TestHSNWiseSummaryReport(TestCase):
@@ -23,12 +23,11 @@ class TestHSNWiseSummaryReport(TestCase):
 
     def test_hsn_summary_for_invoice_with_duplicate_items(self):
         si = create_sales_invoice(do_not_save=1, is_in_state=True)
-        append_items(si, frappe._dict())
+        append_item(si)
 
         si.submit()
-        si.reload()
 
-        [columns, data] = run_report(
+        columns, data = run_report(
             filters=frappe._dict(
                 {
                     "company": "_Test Indian Registered Company",
