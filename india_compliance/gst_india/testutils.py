@@ -81,12 +81,12 @@ def append_items(obj, args, abbr="_TIRC"):
 def append_taxes(obj, args, abbr="_TIRC"):
     if args.is_in_state or args.is_in_state_rcm:
         _append_taxes(obj, ["CGST", "SGST"], abbr)
-    elif args.is_in_state is False or args.is_in_state_rcm is False:
+    elif args.is_out_state or args.is_out_state_rcm:
         _append_taxes(obj, "IGST", abbr, rate=18)
 
     if args.is_in_state_rcm:
         _append_taxes(obj, ["CGST RCM", "SGST RCM"], abbr)
-    elif args.is_in_state_rcm is False:
+    elif args.is_out_state_rcm:
         _append_taxes(obj, "IGST RCM", abbr, rate=18)
 
 

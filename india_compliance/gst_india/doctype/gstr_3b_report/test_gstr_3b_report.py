@@ -7,7 +7,7 @@ import unittest
 import frappe
 from frappe.utils import getdate
 
-from india_compliance.gst_india.test_records import (
+from india_compliance.gst_india.testutils import (
     create_purchase_invoice,
     create_sales_invoice,
 )
@@ -83,7 +83,7 @@ class TestGSTR3BReport(unittest.TestCase):
 def create_sales_invoices():
     create_sales_invoice(is_in_state=True)
     create_sales_invoice(
-        customer="_Test Registered Composition Customer", is_in_state=False
+        customer="_Test Registered Composition Customer", is_out_state=True
     )
     create_sales_invoice(customer="_Test Unregistered Customer", is_in_state=True)
     create_sales_invoice(is_nil_exempt=True)

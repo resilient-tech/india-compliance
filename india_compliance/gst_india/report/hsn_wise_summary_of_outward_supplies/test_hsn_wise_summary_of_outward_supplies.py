@@ -9,7 +9,7 @@ import frappe
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     execute as run_report,
 )
-from india_compliance.gst_india.test_records import append_items, create_sales_invoice
+from india_compliance.gst_india.testutils import append_items, create_sales_invoice
 
 
 class TestHSNWiseSummaryReport(TestCase):
