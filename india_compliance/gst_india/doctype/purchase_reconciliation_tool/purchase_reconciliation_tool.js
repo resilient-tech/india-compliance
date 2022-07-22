@@ -206,7 +206,7 @@ class PurchaseReconciliationTool {
                     fieldtype: "html",
                     width: 60,
                     align: "center",
-                    format: (...args) => get_formatted(...args, "eye", reco_tool.trial),
+                    format: (...args) => get_formatted(...args, "eye", reco_tool.show_detailed_dialog),
                 },
                 {
                     label: "Supplier",
@@ -1763,11 +1763,112 @@ function get_formatted(value, row, column, data, icon, callback) {
 }
 
 function get_icon(icon, callback, data) {
-    return `<button class="btn" title="hello" onclick="${callback}(${data})">
+    console.log(`${callback}${(data)}`, callback(data));
+    return `<button class="btn" title="hello" onclick="${callback}${(data)}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
 }
 
-reco_tool.trial = function (data) {
+reco_tool.show_detailed_dialog = function (data) {
     console.log("trial:", data);
+    const actions = {
+        primary_action_label: 'Accept My Values',
+        secondary_action_label: 'Unlink',
+    };
+
+    var d = new frappe.ui.Dialog({
+        title: "Detail View",
+        fields: [
+            {
+                fieldtype: "HTML",
+                fieldname: "detail_view",
+            }
+        ],
+        primary_action: function () {
+            d.hide();
+        },
+        primary_action_label: __(actions.primary_action_label),
+        secondary_action: function () {
+            d.hide();
+        },
+        secondary_action_label: __(actions.secondary_action_label),
+    });
+    d.fields_dict.detail_view.$wrapper.html(get_content_html(data));
+    d.show();
 };
+
+function get_content_html(data) {
+    let content_html = "";
+
+    content_html += `
+        <div class="container">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>2A / 2B</th>
+                    <th>Purchase</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Links</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Bill No</td>
+                    <td>${data.bill_no}</td>
+                    <td>${data.bill_no}</td>
+                </tr>
+                <tr>
+                    <td>Bill Date</td>
+                    <td>${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) }</td>
+                    <td>${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) }</td>
+                </tr>
+                <tr>
+                    <td>CGST</td>
+                    <td>${data.cgst}</td>
+                    <td>${data.cgst}</td>
+                </tr>
+                <tr>
+                    <td>SGST</td>
+                    <td>${data.sgst}</td>
+                    <td>${data.sgst}</td>
+                </tr>
+                <tr>
+                    <td>IGST</td>
+                    <td>${data.igst}</td>
+                    <td>${data.igst}</td>
+                </tr>
+                <tr>
+                    <td>CESS</td>
+                    <td>${data.cess}</td>
+                    <td>${data.cess}</td>
+                </tr>
+                <tr>
+                    <td>Tax Diff</td>
+                    <td>${data.tax_diff}</td>
+                    <td>${data.tax_diff}</td>
+                </tr>
+                <tr>
+                    <td>Total Value</td>
+                    <td>${data.total_value}</td>
+                    <td>${data.total_value}</td>
+                </tr>
+                <tr>
+                    <td>Value Diff</td>
+                    <td>${data.value_diff}</td>
+                    <td>${data.value_diff}</td>
+                </tr>
+                <tr>
+                    <td>Differences</td>
+                    <td>${data.differences}</td>
+                    <td>${data.differences}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    `;
+    return content_html;
+}
