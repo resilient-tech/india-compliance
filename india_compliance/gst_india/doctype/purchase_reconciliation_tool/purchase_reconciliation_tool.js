@@ -1812,57 +1812,57 @@ function get_content_html(data) {
             </thead>
             <tbody>
                 <tr>
-                    <td>Links</td>
+                    <th>Links</td>
                     <td></td>
                     <td></td>
                 </tr>
                 <tr>
-                    <td>Bill No</td>
+                    <th>Bill No</td>
                     <td>${data.bill_no}</td>
                     <td>${data.bill_no}</td>
                 </tr>
                 <tr>
-                    <td>Bill Date</td>
+                    <th>Bill Date</td>
                     <td>${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) }</td>
                     <td>${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) }</td>
                 </tr>
                 <tr>
-                    <td>CGST</td>
+                    <th>CGST</td>
                     <td>${data.cgst}</td>
                     <td>${data.cgst}</td>
                 </tr>
                 <tr>
-                    <td>SGST</td>
+                    <th>SGST</td>
                     <td>${data.sgst}</td>
                     <td>${data.sgst}</td>
                 </tr>
                 <tr>
-                    <td>IGST</td>
+                    <th>IGST</td>
                     <td>${data.igst}</td>
                     <td>${data.igst}</td>
                 </tr>
                 <tr>
-                    <td>CESS</td>
+                    <th>CESS</td>
                     <td>${data.cess}</td>
                     <td>${data.cess}</td>
                 </tr>
                 <tr>
-                    <td>Tax Diff</td>
+                    <th>Tax Diff</td>
                     <td>${data.tax_diff}</td>
                     <td>${data.tax_diff}</td>
                 </tr>
                 <tr>
-                    <td>Total Value</td>
+                    <th>Total Value</td>
                     <td>${data.total_value}</td>
                     <td>${data.total_value}</td>
                 </tr>
                 <tr>
-                    <td>Value Diff</td>
+                    <th>Value Diff</td>
                     <td>${data.value_diff}</td>
                     <td>${data.value_diff}</td>
                 </tr>
                 <tr>
-                    <td>Differences</td>
+                    <th>Differences</td>
                     <td>${data.differences}</td>
                     <td>${data.differences}</td>
                 </tr>
