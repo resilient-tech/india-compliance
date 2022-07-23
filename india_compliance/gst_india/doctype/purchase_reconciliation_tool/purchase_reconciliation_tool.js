@@ -817,606 +817,26 @@ class PurchaseReconciliationTool {
 
     get_invoice_level_data() {
         return [
-            {
-                supplier_name: "K Vijay Ispat Udyog",
-                supplier_gstin: "27AALFK9932E1Z0",
-                bill_no: "PINV-20-00517",
-                bill_date: "2020-11-21",
+            {'cgst': 427.5, 'sgst': 427.5, 'igst': 0.0, 'name': 'PINV-21-00926', 'supplier_gstin': '24AIXPR1887P1Z0', 'bill_no': '878/21-22', 'bill_date': '2022-02-02', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 0, 'document_value': 5605.0, 'supplier': 'Rai Crane Service', 'supplier_name': 'Rai Crane Service', 'ignore_reconciliation': 0, 'isup_bill_no': '878/21-22', 'isup_bill_date': '2022-02-02', 'isup_document_value': 5605.0, 'isup_name': 'GST-IS-256361', 'isup_classification': 'B2B', 'isup_match_status': 'Exact Match', 'isup_action': 'No Action', 'isup_return_period_2b': '042022', 'isup_cgst': 427.5, 'isup_sgst': 427.5, 'isup_igst': 0.0, 'isup_cess': 0.0, 'document_value_diff': 0.0, 'tax_diff': 0.0, 'cess': 0, 'differences': ''
             },
-            {
-                supplier_name: "Padmavati Steel and Engg Co",
-                supplier_gstin: "27AADPD5694C1ZV",
-                bill_no: "PINV-20-00519",
-                bill_date: "2020-11-20",
+            {'cgst': 247.5, 'sgst': 247.5, 'igst': 0.0, 'name': 'PINV-21-01021', 'supplier_gstin': '24AIXPR1887P1Z0', 'bill_no': '962/21-22', 'bill_date': '2022-02-03', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 0, 'document_value': 3245.0, 'supplier': 'Rai Crane Service', 'supplier_name': 'Rai Crane Service', 'ignore_reconciliation': 0, 'isup_bill_no': '962/21-22', 'isup_bill_date': '2022-02-03', 'isup_document_value': 3245.0, 'isup_name': 'GST-IS-256374', 'isup_classification': 'B2B', 'isup_match_status': 'Exact Match', 'isup_action': 'No Action', 'isup_return_period_2b': '042022', 'isup_cgst': 247.5, 'isup_sgst': 247.5, 'isup_igst': 0.0, 'isup_cess': 0.0, 'document_value_diff': 0.0, 'tax_diff': 0.0, 'cess': 0, 'differences': ''
             },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00441",
-                bill_date: "2020-09-29",
+            {'cgst': 0.0, 'sgst': 0.0, 'igst': 13554.0, 'name': 'PINV-21-01102', 'supplier_gstin': '27AQWPM0313Q1Z7', 'bill_no': '160/21-22', 'bill_date': '2022-03-21', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 0, 'document_value': 88854.0, 'supplier': 'Ruvin Tubes', 'supplier_name': 'Ruvin Tubes', 'ignore_reconciliation': 0, 'isup_bill_no': '160', 'isup_bill_date': '2022-03-21', 'isup_document_value': 88854.0, 'isup_name': 'GST-IS-256373', 'isup_classification': 'B2B', 'isup_match_status': 'Suggested Match', 'isup_action': 'No Action', 'isup_return_period_2b': '042022', 'isup_cgst': 0.0, 'isup_sgst': 0.0, 'isup_igst': 13554.0, 'isup_cess': 0.0, 'document_value_diff': 0.0, 'tax_diff': 0.0, 'cess': 0, 'differences': ''
             },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00433",
-                bill_date: "2020-09-25",
+            {'cgst': 9972.81, 'sgst': 9972.81, 'igst': 0.0, 'name': 'PINV-22-00001', 'supplier_gstin': '24ADCPG1409L1ZX', 'bill_no': '02/22-23', 'bill_date': '2022-04-01', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 0, 'document_value': 119674.0, 'supplier': 'S B Associates', 'supplier_name': 'S B Associates', 'ignore_reconciliation': 0, 'isup_bill_no': '02', 'isup_bill_date': '2022-04-01', 'isup_document_value': 130755.0, 'isup_name': 'GST-IS-256347', 'isup_classification': 'B2B', 'isup_match_status': 'Mismatch', 'isup_action': 'No Action', 'isup_return_period_2b': '042022', 'isup_cgst': 9972.81, 'isup_sgst': 9972.81, 'isup_igst': 0.0, 'isup_cess': 0.0, 'document_value_diff': 11081.0, 'tax_diff': 0.0, 'cess': 0, 'differences': 'Bill No - 02<br> Document Value'
             },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00389",
-                bill_date: "2020-09-14",
+            {'cgst': 95000.76, 'sgst': 95000.76, 'igst': 0.0, 'name': 'PINV-22-00004', 'supplier_gstin': '24AAACV7065K1Z3', 'bill_no': 'TKN/401', 'bill_date': '2022-04-15', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 0, 'document_value': 1245566.0, 'supplier': 'Bikaner Agrico', 'supplier_name': 'Bikaner Agrico', 'ignore_reconciliation': 0, 'isup_bill_no': 'TKN/401', 'isup_bill_date': '2022-04-15', 'isup_document_value': 1245566.0, 'isup_name': 'GST-IS-256364', 'isup_classification': 'B2B', 'isup_match_status': 'Exact Match', 'isup_action': 'No Action', 'isup_return_period_2b': '042022', 'isup_cgst': 95000.76, 'isup_sgst': 95000.76, 'isup_igst': 0.0, 'isup_cess': 0.0, 'document_value_diff': 0.0, 'tax_diff': 0.0, 'cess': 0, 'differences': ''
             },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00395",
-                bill_date: "2020-09-14",
+            {'cgst': 0.0, 'sgst': 0.0, 'igst': 292.5, 'name': 'PINV-22-00038', 'supplier_gstin': '27AARFT4915C1Z0', 'bill_no': '3265-GCN-5257', 'bill_date': '2022-04-13', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 1, 'document_value': 5850.0, 'supplier': 'Time Transport Kalamboli', 'supplier_name': 'Time Transport Kalamboli', 'isup_match_status': 'Missing in 2A/2B', 'isup_action': '', 'isup_classification': 'B2B', 'differences': ''
             },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00479",
-                bill_date: "2020-10-10",
+            {'cgst': 0.0, 'sgst': 0.0, 'igst': 27.5, 'name': 'PINV-22-00041', 'supplier_gstin': '27AARFT4915C1Z0', 'bill_no': '3222-GCN-5075', 'bill_date': '2022-04-04', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 1, 'document_value': 550.0, 'supplier': 'Time Transport Kalamboli', 'supplier_name': 'Time Transport Kalamboli', 'isup_match_status': 'Missing in 2A/2B', 'isup_action': '', 'isup_classification': 'B2B', 'differences': ''
             },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00465",
-                bill_date: "2020-10-09",
+            {'cgst': 0.0, 'sgst': 0.0, 'igst': 642.5, 'name': 'PINV-22-00043', 'supplier_gstin': '27AARFT4915C1Z0', 'bill_no': '3250-GCN-5216', 'bill_date': '2022-04-11', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 1, 'document_value': 12850.0, 'supplier': 'Time Transport Kalamboli', 'supplier_name': 'Time Transport Kalamboli', 'isup_match_status': 'Missing in 2A/2B', 'isup_action': '', 'isup_classification': 'B2B', 'differences': ''
             },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00478",
-                bill_date: "2020-10-07",
+            {'cgst': 0.0, 'sgst': 0.0, 'igst': 107.5, 'name': 'PINV-22-00044', 'supplier_gstin': '27AARFT4915C1Z0', 'bill_no': '3251-GCN-5219', 'bill_date': '2022-04-11', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 1, 'document_value': 2150.0, 'supplier': 'Time Transport Kalamboli', 'supplier_name': 'Time Transport Kalamboli', 'isup_match_status': 'Missing in 2A/2B', 'isup_action': '', 'isup_classification': 'B2B', 'differences': ''
             },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00451",
-                bill_date: "2020-10-07",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00450",
-                bill_date: "2020-10-05",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00449",
-                bill_date: "2020-10-02",
-            },
-            {
-                supplier_name: "Sanjay Bonny Forge Pvt Ltd",
-                supplier_gstin: "27AAKCS3246H1Z6",
-                bill_no: "PINV-20-00442",
-                bill_date: "2020-09-24",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00510",
-                bill_date: "2020-11-06",
-            },
-            {
-                supplier_name: "Divya Metal India",
-                supplier_gstin: "27APUPB5857M1Z3",
-                bill_no: "PINV-20-00379",
-                bill_date: "2020-09-11",
-            },
-            {
-                supplier_name: "Divya Metal India",
-                supplier_gstin: "27APUPB5857M1Z3",
-                bill_no: "PINV-20-00313",
-                bill_date: "2020-08-21",
-            },
-            {
-                supplier_name: "Sainest Tubes Pvt Ltd",
-                supplier_gstin: "24AAECS5018D1ZS",
-                bill_no: "PINV-20-00514",
-                bill_date: "2020-11-10",
-            },
-            {
-                supplier_name: "Shankarbhai Desai & Sons",
-                supplier_gstin: "24AENPD0387C1ZV",
-                bill_no: "PINV-20-00509",
-                bill_date: "2020-11-12",
-            },
-            {
-                supplier_name: "Jayesh Engineering",
-                supplier_gstin: "24ADNPT6484F1Z1",
-                bill_no: "PINV-20-00498",
-                bill_date: "2020-11-01",
-            },
-            {
-                supplier_name: "Nidhi Transport Service",
-                supplier_gstin: "24ABVPB2674D2ZQ",
-                bill_no: "PINV-20-00508",
-                bill_date: "2020-11-09",
-            },
-            {
-                supplier_name: "Shreya Pipe and Fittings",
-                supplier_gstin: "24ADVFS4123J1ZQ",
-                bill_no: "PINV-20-00507",
-                bill_date: "2020-11-09",
-            },
-            {
-                supplier_name: "Tapan Enterprise",
-                supplier_gstin: "24AEPPS0534Q1ZW",
-                bill_no: "PINV-20-00504",
-                bill_date: "2020-10-17",
-            },
-            {
-                supplier_name: "Natwarlal Hiralal Shah",
-                supplier_gstin: "24AFRPS0569Q1ZH",
-                bill_no: "PINV-20-00503",
-                bill_date: "2020-11-07",
-            },
-            {
-                supplier_name: "S B Associates",
-                supplier_gstin: "24ADCPG1409L1ZX",
-                bill_no: "PINV-20-00500",
-                bill_date: "2020-11-02",
-            },
-            {
-                supplier_name: "Jayhind Metal and Tubes",
-                supplier_gstin: "27AAIPS6329N1ZY",
-                bill_no: "PINV-20-00406",
-                bill_date: "2020-09-17",
-            },
-            {
-                supplier_name: "K B Forge Industries",
-                supplier_gstin: "24ACRPC1838M1ZD",
-                bill_no: "PINV-20-00488",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "K B Forge Industries",
-                supplier_gstin: "24ACRPC1838M1ZD",
-                bill_no: "PINV-20-00435",
-                bill_date: "2020-09-24",
-            },
-            {
-                supplier_name: "Metro Forge India",
-                supplier_gstin: "27AAIPB2425N1ZQ",
-                bill_no: "PINV-20-00360",
-                bill_date: "2020-09-07",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00495",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "Krit Corporation",
-                supplier_gstin: "24CASPS4511C1ZR",
-                bill_no: "PINV-20-00494",
-                bill_date: "2020-11-05",
-            },
-            {
-                supplier_name: "Raj Enterprise",
-                supplier_gstin: "24BFHPK5295N1ZV",
-                bill_no: "PINV-20-00491",
-                bill_date: "2020-10-31",
-            },
-            {
-                supplier_name: "SKM Impex - A Div of SKM Steels Ltd",
-                supplier_gstin: "24AADCS7801F1ZM",
-                bill_no: "PINV-20-00484",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "Topaz Piping Industries",
-                supplier_gstin: "24AAFFT1047H1ZF",
-                bill_no: "PINV-20-00485",
-                bill_date: "2020-10-30",
-            },
-            {
-                supplier_name: "S M Heat Treatment Works",
-                supplier_gstin: "24BWGPP6376K1ZY",
-                bill_no: "PINV-20-00486",
-                bill_date: "2020-10-28",
-            },
-            {
-                supplier_name: "Shree Bajrang Transport",
-                supplier_gstin: "24AFSPB1574M1Z6",
-                bill_no: "PINV-20-00489",
-                bill_date: "2020-10-30",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00487",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00482",
-                bill_date: "2020-10-24",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00476",
-                bill_date: "2020-10-16",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00475",
-                bill_date: "2020-10-15",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00474",
-                bill_date: "2020-10-15",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00461",
-                bill_date: "2020-10-09",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00460",
-                bill_date: "2020-10-09",
-            },
-            {
-                supplier_name: "Mitesh Metal and Alloys",
-                supplier_gstin: "27AIXPB6461D1Z3",
-                bill_no: "PINV-20-00351",
-                bill_date: "2020-09-06",
-            },
-            {
-                supplier_name: "Mitesh Metal and Alloys",
-                supplier_gstin: "27AIXPB6461D1Z3",
-                bill_no: "PINV-19-00595",
-                bill_date: "2019-08-22",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00483",
-                bill_date: "2020-10-28",
-            },
-            {
-                supplier_name: "Xiaomi Technology India Private Limited",
-                supplier_gstin: "27AAACX1645B1ZO",
-                bill_no: "PINV-20-00301",
-                bill_date: "2020-08-19",
-            },
-            {
-                supplier_name: "Hanco Pipe and Fitting",
-                supplier_gstin: "27CVQPK3283C1ZD",
-                bill_no: "PINV-20-00293",
-                bill_date: "2020-08-19",
-            },
-            {
-                supplier_name: "Shiv Shakti Pipe Fittings",
-                supplier_gstin: "27BKFPP9735B1ZZ",
-                bill_no: "PINV-20-00325",
-                bill_date: "2020-08-28",
-            },
-            {
-                supplier_name: "Hytech Pipe Fitting Pvt Ltd",
-                supplier_gstin: "24AAFCH1103D1ZG",
-                bill_no: "PINV-20-00477",
-                bill_date: "2020-10-19",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00481",
-                bill_date: "2020-10-22",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00471",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Express Roadlines",
-                supplier_gstin: "24AGCPP3351K1ZF",
-                bill_no: "PINV-20-00480",
-                bill_date: "2020-10-07",
-            },
-            {
-                supplier_name: "R K Distributors",
-                supplier_gstin: "24ABZPA5599C1ZC",
-                bill_no: "PINV-20-00434",
-                bill_date: "2020-09-28",
-            },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00312",
-                bill_date: "2020-08-20",
-            },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00277",
-                bill_date: "2020-08-10",
-            },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00269",
-                bill_date: "2020-08-05",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00420",
-                bill_date: "2020-09-17",
-            },
-            {
-                supplier_name: "Karan Enterprise",
-                supplier_gstin: "24AJEPS2985B1Z8",
-                bill_no: "PINV-20-00458",
-                bill_date: "2020-10-07",
-            },
-            {
-                supplier_name: "Jayhind Metal and Tubes",
-                supplier_gstin: "27AAIPS6329N1ZY",
-                bill_no: "PINV-20-00314",
-                bill_date: "2020-08-21",
-            },
-            {
-                supplier_name: "Divya Metal India",
-                supplier_gstin: "27APUPB5857M1Z3",
-                bill_no: "PINV-20-00287",
-                bill_date: "2020-08-18",
-            },
-            {
-                supplier_name: "Natwarlal Hiralal Shah",
-                supplier_gstin: "24AFRPS0569Q1ZH",
-                bill_no: "PINV-20-00470",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Kulubi Steel",
-                supplier_gstin: "24AABFK8892P1ZK",
-                bill_no: "PINV-20-00469",
-                bill_date: "2020-10-16",
-            },
-            {
-                supplier_name: "Nidhi Transport Service",
-                supplier_gstin: "24ABVPB2674D2ZQ",
-                bill_no: "PINV-20-00468",
-                bill_date: "2020-10-16",
-            },
-            {
-                supplier_name: "Santosh Steels",
-                supplier_gstin: "27AAAFS3466L1ZV",
-                bill_no: "PINV-20-00467",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Shreeji Enterprises",
-                supplier_gstin: "24ABBFS8099M1ZH",
-                bill_no: "PINV-20-00466",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Bureau Veritas India Private Ltd",
-                supplier_gstin: "24AABCB6767B2ZX",
-                bill_no: "PINV-20-00464",
-                bill_date: "2020-10-08",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00432",
-                bill_date: "2020-09-28",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00427",
-                bill_date: "2020-09-23",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00417",
-                bill_date: "2020-09-22",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00416",
-                bill_date: "2020-09-22",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00415",
-                bill_date: "2020-09-18",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00414",
-                bill_date: "2020-09-17",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00377",
-                bill_date: "2020-09-04",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00376",
-                bill_date: "2020-09-03",
-            },
-            {
-                supplier_name: "Sanjay Forge Pvt Ltd",
-                supplier_gstin: "27AADCS7826G1Z5",
-                bill_no: "PINV-20-00456",
-                bill_date: "2020-03-20",
-            },
-            {
-                supplier_name: "Sanjay Forge Pvt Ltd",
-                supplier_gstin: "27AADCS7826G1Z5",
-                bill_no: "PINV-R-20-00003",
-                bill_date: "2020-03-20",
-            },
-            {
-                supplier_name: "Sanjay Bonny Forge Pvt Ltd",
-                supplier_gstin: "27AAKCS3246H1Z6",
-                bill_no: "PINV-20-00278",
-                bill_date: "2020-08-10",
-            },
-            {
-                supplier_name: "Rajdhan Metal",
-                supplier_gstin: "27AAEPJ8093L1Z6",
-                bill_no: "PINV-20-00455",
-                bill_date: "2020-10-03",
-            },
-            {
-                supplier_name: "S B Associates",
-                supplier_gstin: "24ADCPG1409L1ZX",
-                bill_no: "PINV-20-00454",
-                bill_date: "2020-10-01",
-            },
-            {
-                supplier_name: "S M Heat Treatment Works",
-                supplier_gstin: "24BWGPP6376K1ZY",
-                bill_no: "PINV-20-00453",
-                bill_date: "2020-10-06",
-            },
-            {
-                supplier_name: "Nidhi Transport Service",
-                supplier_gstin: "24ABVPB2674D2ZQ",
-                bill_no: "PINV-20-00452",
-                bill_date: "2020-10-07",
-            },
-            {
-                supplier_name: "Rai Crane Service",
-                supplier_gstin: "24AIXPR1887P1Z0",
-                bill_no: "PINV-20-00446",
-                bill_date: "2020-10-06",
-            },
-            {
-                supplier_name: "Shree Khodiyar Transport",
-                supplier_gstin: "24AOYPP5222R1Z0",
-                bill_no: "PINV-20-00443",
-                bill_date: "2020-10-03",
-            },
-            {
-                supplier_name: "V Trans India Ltd",
-                supplier_gstin: "27AAACV1559Q2ZP",
-                bill_no: "PINV-20-00444",
-                bill_date: "2020-09-29",
-            },
-            {
-                supplier_name: "Tapan Enterprise",
-                supplier_gstin: "24AEPPS0534Q1ZW",
-                bill_no: "PINV-20-00439-1",
-                bill_date: "2020-09-09",
-            },
-            {
-                supplier_name: "Raj Enterprise",
-                supplier_gstin: "24BFHPK5295N1ZV",
-                bill_no: "PINV-20-00440",
-                bill_date: "2020-09-30",
-            },
-            {
-                supplier_name: "Shreeji Trading Company",
-                supplier_gstin: "24AATPM0382J1ZE",
-                bill_no: "PINV-20-00437",
-                bill_date: "2020-09-30",
-            },
-            {
-                supplier_name: "New Light Tube Corporation",
-                supplier_gstin: "27AHLPK8194K1ZK",
-                bill_no: "PINV-20-00392",
-                bill_date: "2020-08-24",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00422",
-                bill_date: "2020-09-01",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00421",
-                bill_date: "2020-09-01",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00429",
-                bill_date: "2020-09-30",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00426",
-                bill_date: "2020-09-28",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00410",
-                bill_date: "2020-09-19",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00409",
-                bill_date: "2020-09-18",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00397",
-                bill_date: "2020-09-16",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00396",
-                bill_date: "2020-09-16",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00390",
-                bill_date: "2020-09-15",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00383",
-                bill_date: "2020-09-12",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00369",
-                bill_date: "2020-09-09",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00368",
-                bill_date: "2020-09-08",
-            },
+            {'cgst': 0.0, 'sgst': 0.0, 'igst': 208.25, 'name': 'PINV-22-00048', 'supplier_gstin': '27AARFT4915C1Z0', 'bill_no': '3223-GCN-5076', 'bill_date': '2022-04-04', 'place_of_supply': '24-Gujarat', 'is_reverse_charge': 1, 'document_value': 4165.0, 'supplier': 'Time Transport Kalamboli', 'supplier_name': 'Time Transport Kalamboli', 'isup_match_status': 'Missing in 2A/2B', 'isup_action': '', 'isup_classification': 'B2B', 'differences': ''
+            }
         ];
     }
 }
@@ -1804,8 +1224,8 @@ function get_content_html(data) {
         <div class="container">
         <table class="table table-bordered">
             <thead>
-                <tr>
-                    <th>Description</th>
+                <tr class="text-center">
+                    <th></th>
                     <th>2A / 2B</th>
                     <th>Purchase</th>
                 </tr>
@@ -1813,62 +1233,70 @@ function get_content_html(data) {
             <tbody>
                 <tr>
                     <th>Links</td>
-                    <td></td>
-                    <td></td>
+                    <td class="text-center">
+                        ${get_doc_link('Purchase Invoice', data.name) || '-'}
+                    </td>
+                    <td class="text-center">
+                        ${get_doc_link('Inward Supply', data.isup_name) || '-'}
+                    </td>
                 </tr>
                 <tr>
                     <th>Bill No</td>
-                    <td>${data.bill_no}</td>
-                    <td>${data.bill_no}</td>
+                    <td class="text-center">${data.bill_no || '-'}</td>
+                    <td class="text-center">${data.isup_bill_no || '-'}</td>
                 </tr>
                 <tr>
                     <th>Bill Date</td>
-                    <td>${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) }</td>
-                    <td>${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) }</td>
+                    <td class="text-center">${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) || '-' }</td>
+                    <td class="text-center">${ frappe.format(`${data.isup_bill_date}`, {'fieldtype': 'Date'}) || '-'}</td>
                 </tr>
                 <tr>
                     <th>CGST</td>
-                    <td>${data.cgst}</td>
-                    <td>${data.cgst}</td>
+                    <td class="text-center">${data.cgst || 0.00}</td>
+                    <td class="text-center">${data.isup_cgst || 0.00}</td>
                 </tr>
                 <tr>
                     <th>SGST</td>
-                    <td>${data.sgst}</td>
-                    <td>${data.sgst}</td>
+                    <td class="text-center">${data.sgst || 0}</td>
+                    <td class="text-center">${data.isup_sgst || 0}</td>
                 </tr>
                 <tr>
                     <th>IGST</td>
-                    <td>${data.igst}</td>
-                    <td>${data.igst}</td>
+                    <td class="text-center">${data.igst || 0}</td>
+                    <td class="text-center">${data.isup_igst || 0}</td>
                 </tr>
                 <tr>
                     <th>CESS</td>
-                    <td>${data.cess}</td>
-                    <td>${data.cess}</td>
+                    <td class="text-center">${data.cess || 0}</td>
+                    <td class="text-center">${data.isup_cess || 0}</td>
                 </tr>
                 <tr>
                     <th>Tax Diff</td>
-                    <td>${data.tax_diff}</td>
-                    <td>${data.tax_diff}</td>
+                    <td class="text-center">${data.tax_diff || 0}</td>
+                    <td class="text-center">${data.tax_diff || 0}</td>
                 </tr>
                 <tr>
                     <th>Total Value</td>
-                    <td>${data.total_value}</td>
-                    <td>${data.total_value}</td>
+                    <td class="text-center">${data.document_value || 0}</td>
+                    <td class="text-center">${data.isup_document_value || 0}</td>
                 </tr>
                 <tr>
                     <th>Value Diff</td>
-                    <td>${data.value_diff}</td>
-                    <td>${data.value_diff}</td>
+                    <td class="text-center">${data.document_value_diff || 0}</td>
+                    <td class="text-center">${data.document_value_diff || 0}</td>
                 </tr>
                 <tr>
                     <th>Differences</td>
-                    <td>${data.differences}</td>
-                    <td>${data.differences}</td>
+                    <td class="text-center">${data.differences || 0}</td>
+                    <td class="text-center">${data.differences || 0}</td>
                 </tr>
             </tbody>
         </table>
     </div>
     `;
     return content_html;
+}
+
+function get_doc_link(doctype, name) {
+    return frappe.utils.get_form_link(doctype, name, true);
 }
