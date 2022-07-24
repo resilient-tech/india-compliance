@@ -132,6 +132,9 @@ class PurchaseReconciliationTool {
             $wrapper: this.tab_group.get_field("summary_data").$wrapper,
             columns: this.get_summary_columns(),
             data: this.get_summary_data(),
+            options: {
+                cellHeight: 55,
+            },
         });
 
         this.tabs.supplier_tab.data_table_manager = new ic.DataTableManager({
@@ -185,19 +188,19 @@ class PurchaseReconciliationTool {
                 width: 200,
             },
             {
-                label: "No. of 2A/2B Docs",
+                label: "Count <br>2A/2B Docs",
                 fieldname: "count_isup_docs",
                 width: 180,
                 align: "center",
             },
             {
-                label: "No. of Purchase Docs",
+                label: "Count <br>Purchase Docs",
                 fieldname: "count_pur_docs",
                 width: 180,
                 align: "center",
             },
             {
-                label: "Tax Difference <i class='fa fa-info-circle'></i>",
+                label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_diff",
                 width: 180,
                 align: "center",
@@ -211,7 +214,7 @@ class PurchaseReconciliationTool {
                 },
             },
             {
-                label: "Document Value Diff <i class='fa fa-info-circle'></i>",
+                label: "Document Value Diff <br>2A/2B - Purchase",
                 fieldname: "document_value_diff",
                 width: 200,
                 align: "center",
@@ -276,7 +279,7 @@ class PurchaseReconciliationTool {
                 label: "Supplier",
                 fieldname: "supplier",
                 fieldtype: "Link",
-                format: (value, row, column, data) => {
+                _value: (value, column, data) => {
                     if (data && column.field === "supplier") {
                         column.docfield.link_onclick = `reco_tool.apply_filters(${JSON.stringify(
                             {
@@ -288,20 +291,13 @@ class PurchaseReconciliationTool {
                         )})`;
                     }
 
-                    const content = `
+                    return `
                             ${data.supplier_name}
                             <br />
                             <span style="font-size: 0.9em">
                                 ${data.supplier_gstin || ""}
                             </span>
                         `;
-
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        content,
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
                 },
                 dropdown: false,
             },
@@ -319,41 +315,28 @@ class PurchaseReconciliationTool {
                 label: "Tax Difference <i class='fa fa-info-circle'></i>",
                 fieldname: "tax_diff",
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        format_number(value),
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
+                _value: (...args) => {
+                    return format_number(args[0]);
                 },
             },
             {
                 label: "Document Value Diff <i class='fa fa-info-circle'></i>",
                 fieldname: "document_value_diff",
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        format_number(value),
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
+                _value: (...args) => {
+                    return format_number(args[0]);
                 },
             },
             {
                 label: "% Action Taken",
                 fieldname: "action_taken",
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                _value: (...args) => {
+                    return (
                         roundNumber(
-                            (data.count_action_taken / data.total_docs) * 100,
+                            (args[2].count_action_taken / args[2].total_docs) * 100,
                             2
-                        ) + " %",
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
+                        ) + " %"
                     );
                 },
             },
@@ -361,15 +344,13 @@ class PurchaseReconciliationTool {
                 fieldname: "download",
                 fieldtype: "html",
                 width: 60,
-                format: (...args) =>
-                    get_formatted(...args, "download", reco_tool.trial),
+                _value: (...args) => get_icon(...args, "download"),
             },
             {
                 fieldname: "email",
                 fieldtype: "html",
                 width: 60,
-                format: (...args) =>
-                    get_formatted(...args, "envelope", reco_tool.trial),
+                _value: (...args) => get_icon(...args, "envelope"),
             },
         ];
     }
@@ -385,27 +366,18 @@ class PurchaseReconciliationTool {
                 fieldtype: "html",
                 width: 60,
                 align: "center",
-                format: (...args) => get_formatted(...args, "eye", reco_tool.trial),
+                _value: (...args) => get_icon(...args, "eye"),
             },
             {
                 label: "Supplier",
                 fieldname: "supplier_name",
                 width: 200,
-                format: (value, row, column, data) => {
-                    const content = `
-                            ${data.supplier_name}
+                _value: (...args) => {
+                    return `${args[2].supplier_name}
                             <br />
                             <span style="font-size: 0.9em">
-                                ${data.supplier_gstin || ""}
-                            </span>
-                        `;
-
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        content,
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
+                                ${args[2].supplier_gstin || ""}
+                            </span>`;
                 },
                 dropdown: false,
             },
@@ -779,35 +751,16 @@ reco_tool.apply_filters = function ({ tab, filters }) {
     tab.data_table_manager.datatable.columnmanager.applyFilter(_filters);
 };
 
-function get_formatted(value, row, column, data, icon, callback) {
+function get_icon(value, column, data, icon) {
     /**
      * Returns custom ormated value for the row.
      * @param {string} value        Current value of the row.
-     * @param {object} row          All values of current row
      * @param {object} column       All properties of current column
      * @param {object} data         All values in its core form for current row
      * @param {string} icon         Return icon (font-awesome) as the content
-     * @param {function} callback   Callback on click of icon
      */
 
-    let content;
-    if (icon && callback) content = get_icon(icon, callback, data);
-    if (value) content = value;
-
-    return frappe.form.get_formatter(column.docfield.fieldtype)(
-        content,
-        column.docfield,
-        { always_show_decimals: true },
-        data
-    );
-}
-
-function get_icon(icon, callback, data) {
-    return `<button class="btn" title="hello" onclick="${callback}(${data})">
+    return `<button class="btn" title="hello">
                 <i class="fa fa-${icon}"></i>
             </button>`;
 }
-
-reco_tool.trial = function (data) {
-    console.log("trial:", data);
-};

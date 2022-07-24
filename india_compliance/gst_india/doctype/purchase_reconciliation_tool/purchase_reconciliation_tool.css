@@ -24,7 +24,7 @@ div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-scrollable {
     min-height: calc(100vh - 450px);
 }
 
-div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-scrollable .dt-row {
+div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-row {
     height: unset;
 }
 
