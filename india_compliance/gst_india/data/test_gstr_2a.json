@@ -1,0 +1,232 @@
+{
+  "gstin": "01AABCE2207R1Z5",
+  "fp": "032020",
+  "b2b": [
+    {
+      "ctin": "01AABCE2207R1Z5",
+      "cfs": "Y",
+      "dtcancel": "27-Aug-19",
+      "cfs3b": "Y",
+      "fldtr1": "18-Nov-19",
+      "flprdr1": "Nov-19",
+      "inv": [
+        {
+          "chksum": "AflJufPlFStqKBZ",
+          "inum": "S008400",
+          "idt": "24-11-2016",
+          "val": 729248.16,
+          "pos": "06",
+          "rchrg": "N",
+          "inv_typ": "R",
+          "diff_percent": 1,
+          "aspd": "Dec-18",
+          "atyp": "R",
+          "srctyp": "e-Invoice",
+          "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+          "irngendate": "24-12-2019",
+          "itms": [
+            {
+              "num": 1,
+              "itm_det": {
+                "rt": 5,
+                "txval": 400,
+                "iamt": 0,
+                "camt": 200,
+                "samt": 200,
+                "csamt": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "b2ba": [
+    {
+      "ctin": "01AABCE2207R1Z5",
+      "cfs": "Y",
+      "dtcancel": "27-Aug-19",
+      "cfs3b": "Y",
+      "fldtr1": "12-May-20",
+      "flprdr1": "Apr-18",
+      "inv": [
+        {
+          "chksum": "AflJufPlFStqKBZ",
+          "inum": "S008400",
+          "idt": "24-11-2016",
+          "oinum": "S008400",
+          "oidt": "24-11-2016",
+          "val": 729248.16,
+          "pos": "06",
+          "rchrg": "N",
+          "inv_typ": "R",
+          "diff_percent": 0.65,
+          "aspd": "Dec-18",
+          "atyp": "R",
+          "itms": [
+            {
+              "num": 1,
+              "itm_det": {
+                "rt": 1,
+                "txval": 6210.99,
+                "iamt": 0,
+                "camt": 614.44,
+                "samt": 5.68,
+                "csamt": 621.09
+              }
+            },
+            {
+              "num": 2,
+              "itm_det": {
+                "rt": 2,
+                "txval": 1000.05,
+                "iamt": 0,
+                "camt": 887.44,
+                "samt": 5.68,
+                "csamt": 50.12
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "cdn": [
+    {
+      "ctin": "01AAAAP1208Q1ZS",
+      "cfs": "Y",
+      "dtcancel": "27-Aug-19",
+      "cfs3b": "Y",
+      "fldtr1": "12-May-20",
+      "flprdr1": "Apr-18",
+      "nt": [
+        {
+          "chksum": "AflJufPlFStqKBZ",
+          "ntty": "C",
+          "nt_num": "533515",
+          "nt_dt": "23-09-2018",
+          "p_gst": "N",
+          "inum": "915914",
+          "idt": "23-09-2016",
+          "val": 729248.16,
+          "diff_percent": 0.65,
+          "cflag": "A",
+          "updby": "R",
+          "d_flag": "Y",
+          "inv_typ": "R",
+          "pos": "06",
+          "rchrg": "N",
+          "aspd": "Dec-18",
+          "atyp": "R",
+          "srctyp": "e-Invoice",
+          "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
+          "irngendate": "24-12-2019",
+          "itms": [
+            {
+              "num": 1,
+              "itm_det": {
+                "rt": 10.1,
+                "txval": 6210.99,
+                "iamt": 0,
+                "camt": 614.44,
+                "samt": 5.68,
+                "csamt": 621.09
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "cdna": [
+    {
+      "ctin": "01AAAAP1208Q1ZS",
+      "cfs": "Y",
+      "dtcancel": "27-Aug-19",
+      "cfs3b": "Y",
+      "fldtr1": "18-Nov-19",
+      "flprdr1": "Nov-19",
+      "nt": [
+        {
+          "chksum": "AflJufPlFStqKBZ",
+          "ntty": "C",
+          "nt_num": "533515",
+          "nt_dt": "23-09-2018",
+          "ont_num": "533515",
+          "ont_dt": "23-09-2016",
+          "p_gst": "N",
+          "inum": "915914",
+          "idt": "23-09-2016",
+          "val": 729248.16,
+          "diff_percent": 1,
+          "d_flag": "Y",
+          "pos": "01",
+          "rchrg": "N",
+          "inv_typ": "R",
+          "aspd": "Dec-18",
+          "atyp": "R",
+          "itms": [
+            {
+              "num": 1,
+              "itm_det": {
+                "rt": 5,
+                "txval": 400,
+                "iamt": 0,
+                "camt": 200,
+                "samt": 200,
+                "csamt": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "isd": [
+    {
+      "ctin": "16DEFPS8555D1Z7",
+      "cfs": "Y",
+      "doclist": [
+        {
+          "chksum": "AflJufPlFStqKBZ",
+          "isd_docty": "ISD",
+          "docnum": "S0080",
+          "docdt": "03-03-2016",
+          "itc_elg": "Y",
+          "aspd": "Dec-18",
+          "atyp": "R",
+          "iamt": 20,
+          "camt": 20,
+          "samt": 20,
+          "cess": 20
+        }
+      ]
+    }
+  ],
+  "impg": [
+    {
+      "refdt": "28-11-2019",
+      "portcd": "18272A",
+      "benum": 2566282,
+      "bedt": "18-11-2019",
+      "txval": 123.02,
+      "iamt": 123.02,
+      "csamt": 0.5,
+      "amd": "N"
+    }
+  ],
+  "impgsez": [
+    {
+      "refdt": "28-11-2019",
+      "portcd": "18272A",
+      "benum": 2566282,
+      "bedt": "18-11-2019",
+      "sgstin": "01AABCE2207R1Z5",
+      "tdname": "GSTN",
+      "txval": 123.02,
+      "iamt": 123.02,
+      "csamt": 0.5,
+      "amd": "N"
+    }
+  ]
+}
