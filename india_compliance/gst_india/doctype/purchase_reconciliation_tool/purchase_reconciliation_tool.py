@@ -69,6 +69,10 @@ class PurchaseReconciliationTool(Document):
         self.pi = frappe.qb.DocType("Purchase Invoice")
         self.pi_tax = frappe.qb.DocType("Purchase Taxes and Charges")
 
+    def onload(self):
+        if hasattr(self, "reconciliation_data"):
+            self.set_onload("reconciliation_data", self.reconciliation_data)
+
     def validate(self):
         # set inward_supply_from_date to first day of the month
         date = getdate(self.inward_supply_from_date)
@@ -85,7 +89,7 @@ class PurchaseReconciliationTool(Document):
         ):
             self.reconcile(category, amended_category)
 
-        self.get_reconciliation_data()
+        self.reconciliation_data = self.get_reconciliation_data()
 
     def reconcile(self, category, amended_category):
         """
@@ -609,7 +613,6 @@ class PurchaseReconciliationTool(Document):
         date2 = date2 if date2 < now else now
         return [date1, date2]
 
-    @frappe.whitelist()
     def get_reconciliation_data(self):
         """
         Get Reconciliation data based on standard filters
@@ -727,8 +730,12 @@ class PurchaseReconciliationTool(Document):
                 continue
 
             # update amount differences
-            doc.document_value_diff = doc.isup_document_value - doc.document_value
-            doc.tax_diff = self.get_total_tax(doc, True) - self.get_total_tax(doc)
+            doc.document_value_diff = round(
+                doc.isup_document_value - doc.document_value, 2
+            )
+            doc.tax_diff = round(
+                self.get_total_tax(doc, True) - self.get_total_tax(doc), 2
+            )
             self.update_cess_amount(doc)
 
             if doc.isup_match_status not in ["Mismatch", "Manual Match"]:
