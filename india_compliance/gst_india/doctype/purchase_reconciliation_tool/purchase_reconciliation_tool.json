@@ -17,6 +17,8 @@
   "inward_supply_period",
   "inward_supply_from_date",
   "inward_supply_to_date",
+  "column_break_12",
+  "gst_return",
   "section_break_11",
   "reconciliation_html",
   "no_reconciliation_data"
@@ -101,13 +103,23 @@
    "fieldname": "no_reconciliation_data",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Reconcile to veiw the data\") }}</p>"
+  },
+  {
+   "fieldname": "column_break_12",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gst_return",
+   "fieldtype": "Select",
+   "label": "GST Return",
+   "options": "GSTR 2B\nBoth GSTR 2A & 2B"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-24 10:08:33.821302",
+ "modified": "2022-07-24 15:45:35.213244",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
