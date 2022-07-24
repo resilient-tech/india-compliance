@@ -39,6 +39,7 @@
   {
    "fieldname": "gst_accounts",
    "fieldtype": "Table",
+   "label": "Accounts",
    "options": "GST Account",
    "reqd": 1
   },
@@ -95,6 +96,7 @@
   {
    "fieldname": "credentials",
    "fieldtype": "Table",
+   "label": "Credentials",
    "options": "GST Credential"
   },
   {
@@ -228,7 +230,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-16 04:53:54.930820",
+ "modified": "2022-07-24 02:58:52.754837",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

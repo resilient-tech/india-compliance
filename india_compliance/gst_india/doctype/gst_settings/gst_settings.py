@@ -104,13 +104,25 @@ class GSTSettings(Document):
             )
 
     def validate_credentials(self):
-        if (
-            self.enable_api
-            and (self.enable_e_invoice or self.enable_e_waybill)
-            and all(
-                credential.service != "e-Waybill / e-Invoice"
-                for credential in self.credentials
+        if not self.enable_api:
+            return
+
+        for credential in self.credentials:
+            if credential.service == "Returns" or credential.password:
+                continue
+
+            frappe.throw(
+                _(
+                    "Row #{0}: Password is required when setting a GST Credential"
+                    " for {1}"
+                ).format(credential.idx, credential.service),
+                frappe.MandatoryError,
+                _("Missing Required Field"),
             )
+
+        if (self.enable_e_invoice or self.enable_e_waybill) and all(
+            credential.service != "e-Waybill / e-Invoice"
+            for credential in self.credentials
         ):
             frappe.msgprint(
                 # TODO: Add Link to Documentation.
