@@ -279,6 +279,7 @@ class PurchaseReconciliationTool {
                 label: "Supplier",
                 fieldname: "supplier",
                 fieldtype: "Link",
+                width: 200,
                 _value: (value, column, data) => {
                     if (data && column.field === "supplier") {
                         column.docfield.link_onclick = `reco_tool.apply_filters(${JSON.stringify(
@@ -302,27 +303,31 @@ class PurchaseReconciliationTool {
                 dropdown: false,
             },
             {
-                label: "No. of 2A/2B Docs",
+                label: "Count <br>2A/2B Docs",
                 fieldname: "count_isup_docs",
                 align: "center",
+                width: 150,
             },
             {
-                label: "No. of Purchase Docs",
+                label: "Count <br>Purchase Docs",
                 fieldname: "count_pur_docs",
                 align: "center",
+                width: 150,
             },
             {
-                label: "Tax Difference <i class='fa fa-info-circle'></i>",
+                label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_diff",
                 align: "center",
+                width: 150,
                 _value: (...args) => {
                     return format_number(args[0]);
                 },
             },
             {
-                label: "Document Value Diff <i class='fa fa-info-circle'></i>",
+                label: "Document Value Diff <br>2A/2B - Purchase",
                 fieldname: "document_value_diff",
                 align: "center",
+                width: 180,
                 _value: (...args) => {
                     return format_number(args[0]);
                 },
@@ -409,21 +414,32 @@ class PurchaseReconciliationTool {
                 fieldname: "isup_name",
                 fieldtype: "Link",
                 doctype: "Inward Supply",
+                align: "center",
                 width: 150,
             },
             {
-                label: "Tax Diff (2A/2B - PR)",
+                label: "Tax Diff <br>2A/2B - Purchase",
                 fieldname: "tax_diff",
-                width: 180,
+                width: 150,
+                align: "center",
+                _value: (...args) => {
+                    return format_number(args[0]);
+                },
             },
             {
                 fieldname: "document_value_diff",
-                label: "Document Diff (2A/2B - PR)",
+                label: "Document Diff <br>2A/2B - Purchase",
                 width: 180,
+                align: "center",
+                _value: (...args) => {
+                    return format_number(args[0]);
+                },
             },
             {
                 fieldname: "differences",
                 label: "Differences",
+                width: 150,
+                align: "Left",
             },
             {
                 label: "Action",
