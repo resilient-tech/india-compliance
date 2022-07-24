@@ -13,7 +13,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Abs, Sum
-from frappe.utils import add_months, getdate
+from frappe.utils import add_months, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
@@ -33,17 +33,18 @@ GSTR2B_GEN_DATE = 14
 
 
 class PurchaseReconciliationTool(Document):
-    FIELDS_TO_MATCH = [
-        "fy",
-        "bill_no",
-        "place_of_supply",
-        "is_reverse_charge",
-        "cgst",
-        "sgst",
-        "igst",
-        "cess",
-        "document_value",
-    ]
+    FIELDS_TO_MATCH = {
+        "fy": "Financial Year",
+        "bill_no": "Bill No",
+        "place_of_supply": "Place of Supply",
+        "is_reverse_charge": "Reverse Charge",
+        "cgst": "CGST",
+        "sgst": "SGST",
+        "igst": "IGST",
+        "cess": "CESS",
+        "document_value": "Document Value",
+    }
+    FIELDS_LIST = list(FIELDS_TO_MATCH.keys())
     RULES = [
         {"Exact Match": ["E", "E", "E", "E", 0, 0, 0, 0, 0]},
         {"Suggested Match": ["E", "F", "E", "E", 0, 0, 0, 0, 0]},
@@ -170,7 +171,7 @@ class PurchaseReconciliationTool(Document):
         """
 
         for field in self.FIELDS_TO_MATCH:
-            i = self.FIELDS_TO_MATCH.index(field)
+            i = self.FIELDS_LIST.index(field)
             if not self.is_field_matching(pur, isup, field, rules[i]):
                 return False
 
@@ -666,6 +667,13 @@ class PurchaseReconciliationTool(Document):
             .where((self.pi.inward_supply == "") | (self.pi.inward_supply.isnull()))
             .run(as_dict=True)
         )
+
+        # add missing in purchase invoice TODO: this should already a part of data from above right join. Figure out why it is not
+        summary_data = summary_data + (
+            self.query_inward_supply(isup_additional_fields, for_summary=True)
+            .where(self.gstr2.link_name == "")
+            .run(as_dict=True)
+        )
         self.process_reconciliation_data(summary_data)
 
         return {
@@ -718,7 +726,9 @@ class PurchaseReconciliationTool(Document):
             if not doc.isup_name:
                 doc.isup_match_status = "Missing in 2A/2B"
                 doc.isup_action = (
-                    "Ignore" if doc.pop("ignore_reconciliation", 0) == 1 else ""
+                    "Ignore"
+                    if doc.pop("ignore_reconciliation", 0) == 1
+                    else "No Action"
                 )
 
                 classification = self.GST_CATEGORIES.get(doc.gst_category)
@@ -730,10 +740,10 @@ class PurchaseReconciliationTool(Document):
                 continue
 
             # update amount differences
-            doc.document_value_diff = round(
+            doc.document_value_diff = rounded(
                 doc.isup_document_value - doc.document_value, 2
             )
-            doc.tax_diff = round(
+            doc.tax_diff = rounded(
                 self.get_total_tax(doc, True) - self.get_total_tax(doc), 2
             )
             self.update_cess_amount(doc)
@@ -747,13 +757,16 @@ class PurchaseReconciliationTool(Document):
 
             # update differences
             for field in self.FIELDS_TO_MATCH:
-                isup_value = doc.get(f"isup_{field}")
-                label = frappe.unscrub(field)
+                if field == "bill_no":
+                    continue
 
-                if isinstance(doc.get(field), str):
-                    label = f"{label} - {isup_value}"
+                isup_value = doc.get(f"isup_{field}")
 
                 if isup_value != doc.get(field):
+                    label = self.FIELDS_TO_MATCH[field]
+                    if isinstance(doc.get(field), str):
+                        label = f"{self.FIELDS_TO_MATCH[field]} - {isup_value}"
+
                     differences.append(label)
 
             _update_doc(doc, differences)

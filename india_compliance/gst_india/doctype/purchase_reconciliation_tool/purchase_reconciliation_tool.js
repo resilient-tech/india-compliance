@@ -71,6 +71,9 @@ class PurchaseReconciliationTool {
         this.tabs.invoice_tab.data_table_manager.datatable.refresh(
             this.get_invoice_data()
         );
+        this.tabs.supplier_tab.data_table_manager.datatable.refresh(
+            this.get_supplier_data()
+        );
         this.tabs.summary_tab.data_table_manager.datatable.refresh(
             this.get_summary_data()
         );
@@ -151,7 +154,6 @@ class PurchaseReconciliationTool {
 
     get_summary_data() {
         const data = {};
-        // summarize data by match_status and count name
         this.data?.forEach(row => {
             let new_row = data[row.isup_match_status];
             if (!new_row) {
@@ -183,75 +185,89 @@ class PurchaseReconciliationTool {
                 width: 200,
             },
             {
-                label: "No. of Docs (2A/2B | PR)",
-                fieldname: "no_of_docs",
+                label: "No. of 2A/2B Docs",
+                fieldname: "count_isup_docs",
                 width: 180,
                 align: "center",
             },
             {
-                label: "Tax Difference (2A/2B - PR)",
+                label: "No. of Purchase Docs",
+                fieldname: "count_pur_docs",
+                width: 180,
+                align: "center",
+            },
+            {
+                label: "Tax Difference <i class='fa fa-info-circle'></i>",
                 fieldname: "tax_diff",
                 width: 180,
                 align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        format_number(value),
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
             },
             {
-                label: "Document Value Difference (2A/2B - PR)",
+                label: "Document Value Diff <i class='fa fa-info-circle'></i>",
                 fieldname: "document_value_diff",
-                width: 180,
+                width: 200,
                 align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        format_number(value),
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
             },
             {
                 label: "% Action Taken",
                 fieldname: "action_taken",
                 width: 180,
                 align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        roundNumber(
+                            (data.count_action_taken / data.total_docs) * 100,
+                            2
+                        ) + " %",
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
             },
         ];
     }
 
     get_supplier_data() {
-        return [
-            {
-                supplier_name: "K Vijay Ispat Udyog",
-                supplier_gstin: "27AALFK9932E1Z0",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Padmavati Steel and Engg Co",
-                supplier_gstin: "27AADPD5694C1ZV",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Sainest Tubes Pvt Ltd",
-                supplier_gstin: "24AAECS5018D1ZS",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Shreya Pipe and Fittings",
-                supplier_gstin: "24ADVFS4123J1ZQ",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Xiaomi Technology India Private Limited",
-                supplier_gstin: "27AAACX1645B1ZO",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Kulubi Steel",
-                supplier_gstin: "24AABFK8892P1ZK",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Bluechip Computer System",
-                supplier_gstin: "24AANFB3091M1Z6",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "State Bank of India",
-                supplier_gstin: "27AAACS8577K2ZO",
-                no_of_doc_purchase: 13,
-            },
-        ];
+        const data = {};
+        this.data?.forEach(row => {
+            let new_row = data[row.supplier_gstin];
+            if (!new_row) {
+                new_row = data[row.supplier_gstin] = {
+                    supplier_name: row.supplier_name,
+                    supplier_gstin: row.supplier_gstin,
+                    count_isup_docs: 0,
+                    count_pur_docs: 0,
+                    count_action_taken: 0,
+                    total_docs: 0,
+                    tax_diff: 0,
+                    document_value_diff: 0,
+                };
+            }
+            if (row.isup_name) new_row.count_isup_docs += 1;
+            if (row.name) new_row.count_pur_docs += 1;
+            if (row.isup_action != "No Action") new_row.count_action_taken += 1;
+            new_row.total_docs += 1;
+            new_row.tax_diff += row.tax_diff || 0;
+            new_row.document_value_diff += row.document_value_diff || 0;
+        });
+        return Object.values(data);
     }
 
     get_supplier_columns() {
@@ -260,7 +276,6 @@ class PurchaseReconciliationTool {
                 label: "Supplier",
                 fieldname: "supplier",
                 fieldtype: "Link",
-                width: 200,
                 format: (value, row, column, data) => {
                     if (data && column.field === "supplier") {
                         column.docfield.link_onclick = `reco_tool.apply_filters(${JSON.stringify(
@@ -291,31 +306,70 @@ class PurchaseReconciliationTool {
                 dropdown: false,
             },
             {
-                label: "No. of Docs (2A/2B | PR)",
-                fieldname: "no_of_docs",
-                width: 180,
+                label: "No. of 2A/2B Docs",
+                fieldname: "count_isup_docs",
+                align: "center",
             },
             {
-                label: "Tax Diff (2A/2B - PR)",
+                label: "No. of Purchase Docs",
+                fieldname: "count_pur_docs",
+                align: "center",
+            },
+            {
+                label: "Tax Difference <i class='fa fa-info-circle'></i>",
                 fieldname: "tax_diff",
-                width: 180,
+                align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        format_number(value),
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
             },
             {
+                label: "Document Value Diff <i class='fa fa-info-circle'></i>",
                 fieldname: "document_value_diff",
-                label: "Document Diff (2A/2B - PR)",
-                width: 200,
+                align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        format_number(value),
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
             },
             {
-                label: "Download",
+                label: "% Action Taken",
+                fieldname: "action_taken",
+                align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        roundNumber(
+                            (data.count_action_taken / data.total_docs) * 100,
+                            2
+                        ) + " %",
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
+            },
+            {
                 fieldname: "download",
                 fieldtype: "html",
-                width: 100,
+                width: 60,
+                format: (...args) =>
+                    get_formatted(...args, "download", reco_tool.trial),
             },
             {
-                label: "Email",
                 fieldname: "email",
                 fieldtype: "html",
-                width: 100,
+                width: 60,
+                format: (...args) =>
+                    get_formatted(...args, "envelope", reco_tool.trial),
             },
         ];
     }
