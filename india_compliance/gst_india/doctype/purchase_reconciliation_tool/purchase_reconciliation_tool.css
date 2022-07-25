@@ -55,3 +55,19 @@ div[data-page-route="Purchase Reconciliation Tool"]
     margin-bottom: var(--margin-md);
     max-height: 100px;
 }
+
+.detail-view-head {
+    width: 15%;
+}
+
+.highlight-diff {
+    background-color: #ecdcd8;
+}
+
+.matched-row {
+    color: green;
+}
+
+td, .not-matched-row {
+    color: red;
+}

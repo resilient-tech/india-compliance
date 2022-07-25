@@ -162,7 +162,8 @@ class PurchaseReconciliationTool {
             "click",
             ".btn.eye",
             function (e) {
-                console.log(me.mapped_invoice_data[$(this).attr("data-name")]);
+                let data = me.mapped_invoice_data[$(this).attr("data-name")];
+                reco_tool.show_detailed_dialog(data);
             }
         );
     }
@@ -817,10 +818,12 @@ reco_tool.show_detailed_dialog = function (data) {
             }
         ],
         primary_action: function () {
+            // ToDo: Actions required here
             d.hide();
         },
         primary_action_label: __(actions.primary_action_label),
         secondary_action: function () {
+            // ToDo: Actions required here
             d.hide();
         },
         secondary_action_label: __(actions.secondary_action_label),
@@ -830,10 +833,25 @@ reco_tool.show_detailed_dialog = function (data) {
 };
 
 function get_content_html(data) {
-    return frappe.render_template('reco_tool_detail_view', {
-        data: data,
+    let option = "Select";
+    if (data.isup_match_status == "Missing in PR") {
+        option = "Link to PR";
+    }
+    else if (data.isup_match_status == "Missing in 2A/2B") {
+        option = "Link to 2A/2B";
+    }
+
+    const doc_links = {
         purchase_link: get_doc_link("Purchase Invoice", data.name),
         isup_link: get_doc_link("Inward Supply", data.isup_name),
+        link_option: option,
+    }
+
+
+    data = { ...data, ...doc_links };
+
+    return frappe.render_template('reco_tool_detail_view', {
+        data: data,
     });
 }
 

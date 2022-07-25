@@ -1,6 +1,23 @@
 <div class="container">
-	<table class="table table-bordered">
-		<thead>
+	<div class="row text-center">
+		<div class="col col-4">
+			<div>
+				<h6>Tax Difference</h6>
+			</div>
+		</div>
+		<div class="col col-4">
+			<div>
+				<h6>Taxable Value Diff</h6>
+			</div>
+		</div>
+		<div class="col col-4">
+			<div>
+				<h6>Differences</h6>
+			</div>
+		</div>
+	</div>
+	<table class="table table-bordered table-hover">
+		<thead class="detail-view-head">
 			<tr class="text-center">
 				<th></th>
 				<th>2A / 2B</th>
@@ -10,71 +27,85 @@
 		<tbody>
 			<tr>
 				<th>Document Links</td>
-				<td class="text-center">
-					{{ purchase_link }}
-				</td>
-				<td class="text-center">
-					{{ isup_link }}
-				</td>
+				<td class="text-center">{{ data.isup_link }}</td>
+				<td class="text-center">{{ data.purchase_link }}</td>
 			</tr>
 			<tr>
 				<th>Bill No</td>
-				<td class="text-center">{{ data.bill_no || '-' }}</td>
 				<td class="text-center">{{ data.isup_bill_no || '-' }}</td>
+				<td class="text-center">{{ data.bill_no || '-' }}</td>
 			</tr>
 			<tr>
 				<th>Bill Date</td>
-				<td class="text-center">{{ frappe.format(data.bill_date, {'fieldtype': 'Date'}) || '-' }}</td>
-				<td class="text-center">{{ frappe.format(data.isup_bill_date, {'fieldtype': 'Date'}) || '-' }}</td>
+				<td class="text-center">
+					{{ frappe.format(data.isup_bill_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+				<td class="text-center">
+					{{ frappe.format(data.bill_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+			</tr>
+			<tr>
+				<th>Place of Supply</th>
+				<td class="text-center">{{ data.place_of_supply }}</td>
+				<td class="text-center">{{ data.place_of_Supply }}</td>
+			</tr>
+			<tr>
+				<th>Reverse Charge</th>
+				<td class="text-center">Yes</td>
+				<td class="text-center">No</td>
 			</tr>
 			{% if data.cgst || data.isup_cgst %}
 			<tr>
 				<th>CGST</td>
-				<td class="text-center">{{ data.cgst || 0.00 }}</td>
-				<td class="text-center">{{ data.isup_cgst || 0.00 }}</td>
+				<td class="text-center">{{ data.isup_cgst || '-' }}</td>
+				<td class="text-center">{{ data.cgst || '-' }}</td>
 			</tr>
 			{% endif %}
 			{% if data.sgst || data.isup_sgst %}
 			<tr>
 				<th>SGST</td>
-				<td class="text-center">{{ data.sgst || 0 }}</td>
-				<td class="text-center">{{ data.isup_sgst || 0 }}</td>
+				<td class="text-center">{{ data.isup_sgst || '-' }}</td>
+				<td class="text-center">{{ data.sgst || '-' }}</td>
 			</tr>
 			{% endif %}
 			{% if data.igst || data.isup_igst %}
 			<tr>
 				<th>IGST</td>
-				<td class="text-center">{{ data.igst || 0 }}</td>
-				<td class="text-center">{{ data.isup_igst || 0 }}</td>
+				<td class="text-center">{{ data.isup_igst || '-' }}</td>
+				<td class="text-center">{{ data.igst || '-' }}</td>
 			</tr>
 			{% endif %}
 			{% if data.cess || data.isup_cess %}
 			<tr>
 				<th>CESS</td>
-				<td class="text-center">{{ data.cess || 0 }}</td>
-				<td class="text-center">{{ data.isup_cess || 0 }}</td>
+				<td class="text-center">{{ data.isup_cess || '-' }}</td>
+				<td class="text-center">{{ data.cess || '-' }}</td>
 			</tr>
 			{% endif %}
 			<tr>
+				<th>Taxable Amount</td>
+				<td class="text-center">{{ data.isup_taxable_value || '-' }}</td>
+				<td class="text-center">{{ data.taxable_value || '-' }}</td>
+			</tr>
+			<tr>
 				<th>Tax Difference</td>
-				<td class="text-center">{{ data.tax_diff || 0 }}</td>
-				<td class="text-center">{{ data.tax_diff || 0 }}</td>
+				<td class="text-center" colspan="2">{{ data.tax_diff || '-' }}</td>
 			</tr>
 			<tr>
-				<th>Document Value</td>
-				<td class="text-center">{{ data.document_value || 0 }}</td>
-				<td class="text-center">{{ data.isup_document_value || 0 }}</td>
-			</tr>
-			<tr>
-				<th>Value Diff</td>
-				<td class="text-center">{{ data.document_value_diff || 0 }}</td>
-				<td class="text-center">{{ data.document_value_diff || 0 }}</td>
+				<th>Taxable Value Diff</td>
+				<td class="text-center" colspan="2">{{ data.taxable_value_diff || '-' }}</td>
 			</tr>
 			<tr>
 				<th>Differences</td>
-				<td class="text-center">{{ data.differences || 0 }}</td>
-				<td class="text-center">{{ data.differences || 0 }}</td>
+				<td class="text-center" colspan="2">{{ data.differences || '-' }}</td>
 			</tr>
 		</tbody>
 	</table>
+	<div class="col col-6">
+		<label>Link To Missing Doc:</label>
+		<select class="form-control">
+			<option>Select</option>
+			<option value="{{ data.link_option }}">{{ data.link_option }}</option>
+		</select>
+	</div>
 </div>
