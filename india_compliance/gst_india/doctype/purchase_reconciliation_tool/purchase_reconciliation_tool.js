@@ -1218,85 +1218,13 @@ reco_tool.show_detailed_dialog = function (data) {
 };
 
 function get_content_html(data) {
-    let content_html = "";
-
-    content_html += `
-        <div class="container">
-        <table class="table table-bordered">
-            <thead>
-                <tr class="text-center">
-                    <th></th>
-                    <th>2A / 2B</th>
-                    <th>Purchase</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <th>Links</td>
-                    <td class="text-center">
-                        ${get_doc_link('Purchase Invoice', data.name) || '-'}
-                    </td>
-                    <td class="text-center">
-                        ${get_doc_link('Inward Supply', data.isup_name) || '-'}
-                    </td>
-                </tr>
-                <tr>
-                    <th>Bill No</td>
-                    <td class="text-center">${data.bill_no || '-'}</td>
-                    <td class="text-center">${data.isup_bill_no || '-'}</td>
-                </tr>
-                <tr>
-                    <th>Bill Date</td>
-                    <td class="text-center">${ frappe.format(`${data.bill_date}`, {'fieldtype': 'Date'}) || '-' }</td>
-                    <td class="text-center">${ frappe.format(`${data.isup_bill_date}`, {'fieldtype': 'Date'}) || '-'}</td>
-                </tr>
-                <tr>
-                    <th>CGST</td>
-                    <td class="text-center">${data.cgst || 0.00}</td>
-                    <td class="text-center">${data.isup_cgst || 0.00}</td>
-                </tr>
-                <tr>
-                    <th>SGST</td>
-                    <td class="text-center">${data.sgst || 0}</td>
-                    <td class="text-center">${data.isup_sgst || 0}</td>
-                </tr>
-                <tr>
-                    <th>IGST</td>
-                    <td class="text-center">${data.igst || 0}</td>
-                    <td class="text-center">${data.isup_igst || 0}</td>
-                </tr>
-                <tr>
-                    <th>CESS</td>
-                    <td class="text-center">${data.cess || 0}</td>
-                    <td class="text-center">${data.isup_cess || 0}</td>
-                </tr>
-                <tr>
-                    <th>Tax Diff</td>
-                    <td class="text-center">${data.tax_diff || 0}</td>
-                    <td class="text-center">${data.tax_diff || 0}</td>
-                </tr>
-                <tr>
-                    <th>Total Value</td>
-                    <td class="text-center">${data.document_value || 0}</td>
-                    <td class="text-center">${data.isup_document_value || 0}</td>
-                </tr>
-                <tr>
-                    <th>Value Diff</td>
-                    <td class="text-center">${data.document_value_diff || 0}</td>
-                    <td class="text-center">${data.document_value_diff || 0}</td>
-                </tr>
-                <tr>
-                    <th>Differences</td>
-                    <td class="text-center">${data.differences || 0}</td>
-                    <td class="text-center">${data.differences || 0}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    `;
-    return content_html;
+    return frappe.render_template('reco_tool_detail_view', {
+        data: data,
+        purchase_link: get_doc_link("Purchase Invoice", data.name),
+        isup_link: get_doc_link("Inward Supply", data.isup_name),
+    });
 }
 
 function get_doc_link(doctype, name) {
-    return frappe.utils.get_form_link(doctype, name, true);
+    return name ? frappe.utils.get_form_link(doctype, name, true) : "-";
 }

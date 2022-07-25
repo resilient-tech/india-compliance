@@ -1,0 +1,80 @@
+<div class="container">
+	<table class="table table-bordered">
+		<thead>
+			<tr class="text-center">
+				<th></th>
+				<th>2A / 2B</th>
+				<th>Purchase</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<th>Document Links</td>
+				<td class="text-center">
+					{{ purchase_link }}
+				</td>
+				<td class="text-center">
+					{{ isup_link }}
+				</td>
+			</tr>
+			<tr>
+				<th>Bill No</td>
+				<td class="text-center">{{ data.bill_no || '-' }}</td>
+				<td class="text-center">{{ data.isup_bill_no || '-' }}</td>
+			</tr>
+			<tr>
+				<th>Bill Date</td>
+				<td class="text-center">{{ frappe.format(data.bill_date, {'fieldtype': 'Date'}) || '-' }}</td>
+				<td class="text-center">{{ frappe.format(data.isup_bill_date, {'fieldtype': 'Date'}) || '-' }}</td>
+			</tr>
+			{% if data.cgst || data.isup_cgst %}
+			<tr>
+				<th>CGST</td>
+				<td class="text-center">{{ data.cgst || 0.00 }}</td>
+				<td class="text-center">{{ data.isup_cgst || 0.00 }}</td>
+			</tr>
+			{% endif %}
+			{% if data.sgst || data.isup_sgst %}
+			<tr>
+				<th>SGST</td>
+				<td class="text-center">{{ data.sgst || 0 }}</td>
+				<td class="text-center">{{ data.isup_sgst || 0 }}</td>
+			</tr>
+			{% endif %}
+			{% if data.igst || data.isup_igst %}
+			<tr>
+				<th>IGST</td>
+				<td class="text-center">{{ data.igst || 0 }}</td>
+				<td class="text-center">{{ data.isup_igst || 0 }}</td>
+			</tr>
+			{% endif %}
+			{% if data.cess || data.isup_cess %}
+			<tr>
+				<th>CESS</td>
+				<td class="text-center">{{ data.cess || 0 }}</td>
+				<td class="text-center">{{ data.isup_cess || 0 }}</td>
+			</tr>
+			{% endif %}
+			<tr>
+				<th>Tax Difference</td>
+				<td class="text-center">{{ data.tax_diff || 0 }}</td>
+				<td class="text-center">{{ data.tax_diff || 0 }}</td>
+			</tr>
+			<tr>
+				<th>Document Value</td>
+				<td class="text-center">{{ data.document_value || 0 }}</td>
+				<td class="text-center">{{ data.isup_document_value || 0 }}</td>
+			</tr>
+			<tr>
+				<th>Value Diff</td>
+				<td class="text-center">{{ data.document_value_diff || 0 }}</td>
+				<td class="text-center">{{ data.document_value_diff || 0 }}</td>
+			</tr>
+			<tr>
+				<th>Differences</td>
+				<td class="text-center">{{ data.differences || 0 }}</td>
+				<td class="text-center">{{ data.differences || 0 }}</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
