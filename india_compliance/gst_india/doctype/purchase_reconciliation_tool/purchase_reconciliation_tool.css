@@ -2,14 +2,17 @@ div[data-page-route="Purchase Reconciliation Tool"] {
     --dt-row-height: 34px;
 }
 
-div[data-page-route="Purchase Reconciliation Tool"] [data-fieldname="summary_data"] .form-tabs-list {
+div[data-page-route="Purchase Reconciliation Tool"]
+    [data-fieldname="reconciliation_html"]
+    .form-tabs-list {
     border-bottom: 0px solid black;
 }
 
-div[data-page-route="Purchase Reconciliation Tool"] [data-fieldname="summary_data"] .section-body {
+div[data-page-route="Purchase Reconciliation Tool"]
+    [data-fieldname="reconciliation_html"]
+    .section-body {
     margin-top: 0;
 }
-
 
 div[data-page-route="Purchase Reconciliation Tool"] .title-area .indicator-pill {
     display: none;
@@ -18,9 +21,10 @@ div[data-page-route="Purchase Reconciliation Tool"] .title-area .indicator-pill 
 div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-scrollable {
     overflow-y: auto !important;
     margin-bottom: 2em;
+    min-height: calc(100vh - 450px);
 }
 
-div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-scrollable .dt-row {
+div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-row {
     height: unset;
 }
 
@@ -30,4 +34,20 @@ div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-row-filter {
 
 div[data-page-route="Purchase Reconciliation Tool"] .datatable .dt-row-filter .dt-cell {
     max-height: var(--dt-row-height);
+}
+
+div[data-page-route="Purchase Reconciliation Tool"]
+    [data-fieldname="no_reconciliation_data"] {
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+div[data-page-route="Purchase Reconciliation Tool"]
+    [data-fieldname="no_reconciliation_data"]
+    > img {
+    margin-bottom: var(--margin-md);
+    max-height: 100px;
 }
