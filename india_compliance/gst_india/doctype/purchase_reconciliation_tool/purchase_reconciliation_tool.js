@@ -167,7 +167,7 @@ class PurchaseReconciliationTool {
                     count_action_taken: 0,
                     total_docs: 0,
                     tax_diff: 0,
-                    document_value_diff: 0,
+                    taxable_value_diff: 0,
                 };
             }
             if (row.isup_name) new_row.count_isup_docs += 1;
@@ -175,7 +175,7 @@ class PurchaseReconciliationTool {
             if (row.isup_action != "No Action") new_row.count_action_taken += 1;
             new_row.total_docs += 1;
             new_row.tax_diff += row.tax_diff || 0;
-            new_row.document_value_diff += row.document_value_diff || 0;
+            new_row.taxable_value_diff += row.taxable_value_diff || 0;
         });
         return Object.values(data);
     }
@@ -214,8 +214,8 @@ class PurchaseReconciliationTool {
                 },
             },
             {
-                label: "Document Value Diff <br>2A/2B - Purchase",
-                fieldname: "document_value_diff",
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_diff",
                 width: 200,
                 align: "center",
                 format: (value, row, column, data) => {
@@ -260,7 +260,7 @@ class PurchaseReconciliationTool {
                     count_action_taken: 0,
                     total_docs: 0,
                     tax_diff: 0,
-                    document_value_diff: 0,
+                    taxable_value_diff: 0,
                 };
             }
             if (row.isup_name) new_row.count_isup_docs += 1;
@@ -268,7 +268,7 @@ class PurchaseReconciliationTool {
             if (row.isup_action != "No Action") new_row.count_action_taken += 1;
             new_row.total_docs += 1;
             new_row.tax_diff += row.tax_diff || 0;
-            new_row.document_value_diff += row.document_value_diff || 0;
+            new_row.taxable_value_diff += row.taxable_value_diff || 0;
         });
         return Object.values(data);
     }
@@ -324,8 +324,8 @@ class PurchaseReconciliationTool {
                 },
             },
             {
-                label: "Document Value Diff <br>2A/2B - Purchase",
-                fieldname: "document_value_diff",
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_diff",
                 align: "center",
                 width: 180,
                 _value: (...args) => {
@@ -427,8 +427,8 @@ class PurchaseReconciliationTool {
                 },
             },
             {
-                fieldname: "document_value_diff",
-                label: "Document Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_diff",
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
                 width: 180,
                 align: "center",
                 _value: (...args) => {
