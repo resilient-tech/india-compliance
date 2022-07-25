@@ -697,14 +697,12 @@ class PurchaseReconciliationTool(Document):
 
         def _update_doc(doc, differences):
             # update differences
-            doc.differences = "<br> ".join(differences)
+            doc.differences = ", ".join(differences)
 
             # remove columns
             columns_to_remove = [
                 "isup_supplier_name",
                 "isup_supplier_gstin",
-                "isup_place_of_supply",
-                "isup_is_reverse_charge",
                 "gst_category",
                 "is_return",
             ]
