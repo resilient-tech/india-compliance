@@ -17,9 +17,11 @@
   "inward_supply_period",
   "inward_supply_from_date",
   "inward_supply_to_date",
-  "reconciliation_data",
+  "column_break_12",
+  "gst_return",
   "section_break_11",
-  "summary_data"
+  "reconciliation_html",
+  "no_reconciliation_data"
  ],
  "fields": [
   {
@@ -88,25 +90,36 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "summary_data",
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.__onload?.reconciliation_data",
+   "fieldname": "reconciliation_html",
    "fieldtype": "HTML"
   },
   {
-   "fieldname": "reconciliation_data",
-   "fieldtype": "Code",
-   "hidden": 1,
-   "label": "Reconciliation Data"
+   "depends_on": "eval: !doc.__onload?.reconciliation_data",
+   "fieldname": "no_reconciliation_data",
+   "fieldtype": "HTML",
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Reconcile to view the data\") }}</p>"
   },
   {
-   "fieldname": "column_break_2",
+   "fieldname": "column_break_12",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gst_return",
+   "fieldtype": "Select",
+   "label": "GST Return",
+   "options": "GSTR 2B\nBoth GSTR 2A & 2B"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-15 10:39:20.372857",
+ "modified": "2022-07-24 15:46:35.213244",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
