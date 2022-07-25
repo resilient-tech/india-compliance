@@ -153,6 +153,18 @@ class PurchaseReconciliationTool {
             },
             data: this.get_invoice_data(),
         });
+        this.set_listeners();
+    }
+
+    set_listeners() {
+        const me = this;
+        this.tabs.invoice_tab.data_table_manager.$datatable.on(
+            "click",
+            ".btn.eye",
+            function (e) {
+                console.log(me.mapped_invoice_data[$(this).attr("data-name")]);
+            }
+        );
     }
 
     get_summary_data() {
@@ -361,6 +373,10 @@ class PurchaseReconciliationTool {
     }
 
     get_invoice_data() {
+        this.mapped_invoice_data = {};
+        this.data?.forEach(row => {
+            this.mapped_invoice_data[get_hash(row)] = row;
+        });
         return this.data;
     }
 
@@ -775,10 +791,14 @@ function get_icon(value, column, data, icon) {
      * @param {object} data         All values in its core form for current row
      * @param {string} icon         Return icon (font-awesome) as the content
      */
-
-    return `<button class="btn" title="hello">
+    const hash = get_hash(data);
+    return `<button class="btn ${icon}" title="hello" data-name="${hash}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
+}
+
+function get_hash(data) {
+    if (data.name || data.isup_name) return data.name + "~" + data.isup_name;
 }
 
 reco_tool.show_detailed_dialog = function (data) {
