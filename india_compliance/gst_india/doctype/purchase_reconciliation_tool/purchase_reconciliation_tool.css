@@ -55,3 +55,10 @@ div[data-page-route="Purchase Reconciliation Tool"]
     margin-bottom: var(--margin-md);
     max-height: 100px;
 }
+
+div[data-page-route="Purchase Reconciliation Tool"] .dropdown-divider {
+    height: 0;
+    margin: 5px 0;
+    border-top: 1px solid var(--border-color);
+    padding: 0;
+}

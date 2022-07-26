@@ -703,6 +703,7 @@ class PurchaseReconciliationTool(Document):
             columns_to_remove = [
                 "isup_supplier_name",
                 "isup_supplier_gstin",
+                "ignore_reconciliation",
                 "gst_category",
                 "is_return",
             ]
@@ -729,7 +730,7 @@ class PurchaseReconciliationTool(Document):
                 doc.isup_match_status = "Missing in 2A/2B"
                 doc.isup_action = (
                     "Ignore"
-                    if doc.pop("ignore_reconciliation", 0) == 1
+                    if doc.get("ignore_reconciliation", 0) == 1
                     else "No Action"
                 )
 
@@ -766,9 +767,6 @@ class PurchaseReconciliationTool(Document):
 
                 if isup_value != doc.get(field):
                     label = self.FIELDS_TO_MATCH[field]
-                    if isinstance(doc.get(field), str):
-                        label = f"{self.FIELDS_TO_MATCH[field]} - {isup_value}"
-
                     differences.append(label)
 
             _update_doc(doc, differences)
@@ -924,6 +922,78 @@ class PurchaseReconciliationTool(Document):
                 "label": "Differences",
             },
         ]
+
+    @frappe.whitelist()
+    def unlink_documents(self, data):
+        if isinstance(data, str):
+            data = frappe.parse_json(data)
+
+        pur_docs = []
+        isup_docs = []
+        isup_actions = []
+        for doc in data:
+            pur_docs.append(doc.get("name"))
+            isup_docs.append(doc.get("isup_name"))
+            if doc.get("isup_action") not in ["Ignore", "Pending"]:
+                isup_actions.append(doc.get("isup_name"))
+
+        if pur_docs:
+            (
+                frappe.qb.update(PI)
+                .set("inward_supply", "")
+                .where(PI.name.isin(pur_docs))
+                .run()
+            )
+
+        if isup_docs:
+            (
+                frappe.qb.update(GSTR2)
+                .set("link_doctype", "")
+                .set("link_name", "")
+                .set("match_status", "Unlinked")
+                .where(GSTR2.name.isin(isup_docs))
+                .run()
+            )
+
+        if isup_actions:
+            (
+                frappe.qb.update(GSTR2)
+                .set("action", "No Action")
+                .where(GSTR2.name.isin(isup_actions))
+                .run()
+            )
+
+    @frappe.whitelist()
+    def apply_action(self, data, action):
+        if isinstance(data, str):
+            data = frappe.parse_json(data)
+
+        is_ignore_action = action == "Ignore"
+
+        isup_docs = []
+        pur_docs = []
+
+        for doc in data:
+            isup_docs.append(doc.get("isup_name"))
+
+            if is_ignore_action and not doc.isup_name:
+                pur_docs.append(doc.get("name"))
+
+        if isup_docs:
+            (
+                frappe.qb.update(GSTR2)
+                .set("action", action)
+                .where(GSTR2.name.isin(isup_docs))
+                .run()
+            )
+
+        if pur_docs:
+            (
+                frappe.qb.update(PI)
+                .set("ignore_reconciliation", 1)
+                .where(PI.name.isin(pur_docs))
+                .run()
+            )
 
 
 def get_periods(fiscal_year, return_type: ReturnType):
