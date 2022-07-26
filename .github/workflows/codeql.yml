@@ -12,8 +12,18 @@
 name: "CodeQL"
 
 on:
-  pull_request: { }
-  push: { }
+  pull_request:
+    paths:
+      - '**.js'
+      - '**.vue'
+      - '**.py'
+
+  push:
+    paths:
+      - '**.js'
+      - '**.vue'
+      - '**.py'
+
   schedule:
     - cron: '0 0 * * 1'
 
