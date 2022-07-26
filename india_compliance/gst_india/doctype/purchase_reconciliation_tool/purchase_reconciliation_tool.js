@@ -74,7 +74,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     after_save(frm) {
-        frm.purchase_reconciliation_tool.refresh(frm);
+        frm.purchase_reconciliation_tool.refresh(
+            frm.doc.__onload?.reconciliation_data?.data
+        );
     },
 });
 
@@ -82,21 +84,31 @@ class PurchaseReconciliationTool {
     constructor(frm) {
         this.init(frm);
         this.render_tab_group();
+        this.setup_filter_button();
         this.render_data_tables();
     }
 
     init(frm) {
         this.frm = frm;
-        this.data = frm.doc.__onload?.reconciliation_data?.data || [];
+        this.data = [];
+        this.filtered_data = this.data;
+        this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
         this._tabs = ["invoice", "supplier", "summary"];
-        this.get_filtered_data();
     }
 
-    refresh(frm) {
-        this.init(frm);
+    refresh(data) {
+        if (data) this.data = data;
+        this.apply_filters(!!data);
+
+        // data unchanged!
+        if (this.rendered_data == this.filtered_data) return;
+
         this._tabs.forEach(tab => {
             this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
         });
+
+        this.rendered_data = this.filtered_data;
+
     }
 
     render_tab_group() {
@@ -135,7 +147,7 @@ class PurchaseReconciliationTool {
                     fieldname: "invoice_data",
                 },
             ],
-            body: this.frm.get_field("reconciliation_html").$wrapper,
+            body: this.$wrapper,
             frm: this.frm,
         });
 
@@ -145,6 +157,58 @@ class PurchaseReconciliationTool {
         this.tabs = Object.fromEntries(
             this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
         );
+    }
+
+    setup_filter_button() {
+        this.filter_button = $(`<div class="filter-selector">
+			<button class="btn btn-default btn-sm filter-button">
+				<span class="filter-icon">
+					${frappe.utils.icon("filter")}
+				</span>
+				<span class="button-label hidden-xs">
+					${__("Filter")}
+				<span>
+			</button>
+		</div>`).appendTo(this.$wrapper.find(".form-tabs-list"));
+
+        this.filter_group = new ic.FilterGroup({
+            doctype: "Purchase Reconciliation Tool",
+            filter_button: this.filter_button,
+            filter_options: {
+                fieldname: "supplier",
+                filter_fields: [
+                    {
+                        label: "Supplier",
+                        fieldname: "supplier",
+                        fieldtype: "Link",
+                        options: "Supplier",
+                        parent: "Purchase Reconciliation Tool",
+                    },
+                ],
+            },
+            on_change: () => {
+                this.refresh();
+            },
+        });
+    }
+
+    apply_filters(force) {
+        const has_filters = this.filter_group.filters.length > 0;
+        if (!has_filters) {
+            this.filters = null;
+            this.filtered_data = this.data;
+            return;
+        }
+
+        const filters = this.filter_group.get_filters();
+        if (!force && this.filters === filters) return;
+
+        this.filters = filters;
+        this.filtered_data = this.data.filter(row => {
+            return filters.every(filter =>
+                ic.FILTER_OPERATORS[filter[2]](filter[3] || "", row[filter[1]] || "")
+            );
+        });
     }
 
     render_data_tables() {
@@ -461,10 +525,6 @@ class PurchaseReconciliationTool {
                 fieldname: "isup_action",
             },
         ];
-    }
-
-    get_filtered_data() {
-        this.filtered_data = this.data;
     }
 }
 
@@ -831,11 +891,11 @@ function unlink_documents(frm) {
         ...get_unlinked_docs(selected_rows),
         ...get_unlinked_docs(selected_rows, true),
     ];
-    const { reconciliation_data: reco } = frm.doc.__onload;
-    reco.data = reco.data.filter(row => !has_matching_row(row, selected_rows));
-    reco.data.push(...unlinked_docs);
-
-    refresh_purchase_reco_tool(invoice_tab, frm);
+    const reco_tool = frm.purchase_reconciliation_tool;
+    new_data = reco_tool.data.filter(row => !has_matching_row(row, selected_rows));
+    new_data.push(...unlinked_docs);
+    reco_tool.refresh(new_data);
+    after_successful_action(invoice_tab);
 }
 
 function get_unlinked_docs(selected_rows, isup = false) {
@@ -890,24 +950,21 @@ function apply_action(frm, action) {
         });
 
     // get affected rows
-    const { filtered_data } = frm.purchase_reconciliation_tool;
-    const { data } = frm.doc.__onload.reconciliation_data;
+    const { filtered_data, data } = frm.purchase_reconciliation_tool;
     const affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
 
     // update affected rows to backend and frontend
     frm.call("apply_action", { data: affected_rows, action });
-    data.map(row => {
+    data.forEach(row => {
         if (has_matching_row(row, affected_rows)) row.isup_action = action;
-        return row;
     });
 
-    refresh_purchase_reco_tool(tab, frm);
+    frm.purchase_reconciliation_tool.refresh(data);
+    after_successful_action(tab);
 }
 
-function refresh_purchase_reco_tool(tab, frm) {
-    tab.clear_checked_items();
-    frm.refresh();
-    frm.purchase_reconciliation_tool.refresh(frm);
+function after_successful_action(tab) {
+    if (tab) tab.clear_checked_items();
     frappe.show_alert({
         message: "Action applied successfully",
         indicator: "green",
