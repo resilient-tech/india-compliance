@@ -79,6 +79,9 @@ class PurchaseReconciliationTool(Document):
 
     def on_update(self):
         # reconcile purchases and inward supplies
+        if frappe.flags.in_install or frappe.flags.in_migrate:
+            return
+
         for category, amended_category in (
             ("B2B", "B2BA"),
             ("CDNR", "CDNRA"),
