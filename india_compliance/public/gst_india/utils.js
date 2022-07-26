@@ -41,4 +41,8 @@ Object.assign(ic, {
         if (!settings) settings = gst_settings;
         return settings.enable_api && ic.can_enable_api(settings);
     },
+
+    is_e_invoice_enabled() {
+        return ic.is_api_enabled() && gst_settings.enable_e_invoice;
+    }
 });
