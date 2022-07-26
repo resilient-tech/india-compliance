@@ -163,7 +163,7 @@ class PurchaseReconciliationTool {
             ".btn.eye",
             function (e) {
                 let data = me.mapped_invoice_data[$(this).attr("data-name")];
-                reco_tool.show_detailed_dialog(data);
+                reco_tool.show_detailed_dialog(me, data);
             }
         );
     }
@@ -802,51 +802,36 @@ function get_hash(data) {
     if (data.name || data.isup_name) return data.name + "~" + data.isup_name;
 }
 
-reco_tool.show_detailed_dialog = function (data) {
-    console.log("trial:", data);
-    const actions = {
-        primary_action_label: 'Accept My Values',
-        secondary_action_label: 'Unlink',
-    };
-
+reco_tool.show_detailed_dialog = function (me, data) {
+    console.log(data);
     var d = new frappe.ui.Dialog({
         title: "Detail View",
         fields: [
             {
                 fieldtype: "HTML",
+                fieldname: "purchase_reco_tool_cards",
+            },
+            ...get_document_link_fields(me, data),
+            {
+                fieldtype: "HTML",
                 fieldname: "detail_view",
             }
         ],
-        primary_action: function () {
-            // ToDo: Actions required here
-            d.hide();
-        },
-        primary_action_label: __(actions.primary_action_label),
-        secondary_action: function () {
-            // ToDo: Actions required here
-            d.hide();
-        },
-        secondary_action_label: __(actions.secondary_action_label),
     });
+    _add_custom_actions(d, data);
+
+    if (!in_list(["Missing in PR", "Missing in 2A/2B"], data.isup_match_status)) {
+        render_cards(data, d.fields_dict.purchase_reco_tool_cards.$wrapper);
+    }
     d.fields_dict.detail_view.$wrapper.html(get_content_html(data));
     d.show();
 };
 
 function get_content_html(data) {
-    let option = "Select";
-    if (data.isup_match_status == "Missing in PR") {
-        option = "Link to PR";
-    }
-    else if (data.isup_match_status == "Missing in 2A/2B") {
-        option = "Link to 2A/2B";
-    }
-
     const doc_links = {
         purchase_link: get_doc_link("Purchase Invoice", data.name),
         isup_link: get_doc_link("Inward Supply", data.isup_name),
-        link_option: option,
     }
-
 
     data = { ...data, ...doc_links };
 
@@ -855,6 +840,87 @@ function get_content_html(data) {
     });
 }
 
+function render_cards(data, purchase_reco_tool_cards) {
+    new ic.NumberCardManager({
+        $purchase_reco_tool_cards: purchase_reco_tool_cards,
+        tax_diff: data.tax_diff,
+        taxable_value_diff: data.taxable_value_diff,
+    });
+}
+
 function get_doc_link(doctype, name) {
     return name ? frappe.utils.get_form_link(doctype, name, true) : "-";
+}
+
+function get_document_link_fields(me, data) {
+    let doctype = "";
+
+    if (data.name && !data.isup_name) doctype = "Purchase Invoice";
+    else if (!data.name && data.isup_name) doctype = 'Purchase Invoice';
+
+    const fields = [
+        {
+            label: "GSTIN",
+            fieldtype: "Data",
+            fieldname: "supplier_gstin",
+            default: data.supplier_gstin,
+        },
+        {
+            fieldtype: "Column Break",
+            fieldname: "column_break_1",
+        },
+        {
+            label: "Date Range",
+            fieldtype: "DateRange",
+            fieldname: "date_range",
+            default: get_date_range(me, data),
+        },
+        {
+            fieldtype: "Section Break",
+            fieldname: "section_break_1",
+        },
+        {
+        label: `Link To (${doctype}):`,
+        fieldtype: "Link",
+        fieldname: "link_action",
+        options: doctype,
+        }
+    ];
+
+    return data.name && data.isup_name ? [] : fields
+};
+
+function get_date_range(me, data) {
+    const doc = me.frm.doc;
+    if (data.name && !data.isup_name) {
+        return [Date.parse(doc.inward_supply_from_date), Date.parse(doc.inward_supply_to_date)];
+    }
+    else if (!data.name && data.isup_name) {
+        return [Date.parse(doc.purchase_from_date), Date.parse(doc.purchase_to_date)];
+    }
+    return [];
+}
+
+function _add_custom_actions(d, data) {
+    let actions = [];
+    const match_actions = data.name && data.isup_name
+        ? ["Unlink", "Accept My Values", "Accept Supplier Values", "Pending"]
+        : [];
+
+    const pr_actions = data.isup_match_status == "Missing in PR"
+        ? ["Create", "Link", "Pending"]
+        : [];
+
+    const isup_actions = data.isup_match_status == "Missing in 2A/2B"
+        ? ["Link"]
+        : [];
+
+    actions.push(...pr_actions, ...isup_actions, ...match_actions, "Ignore");
+
+    actions.forEach(action => {
+        d.add_custom_action(action, () => {
+            // ToDo: Add action logic
+        },
+        'mr-2 btn-primary');
+    })
 }

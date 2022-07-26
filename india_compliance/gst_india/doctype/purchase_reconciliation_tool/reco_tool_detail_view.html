@@ -1,21 +1,4 @@
 <div class="container">
-	<div class="row text-center">
-		<div class="col col-4">
-			<div>
-				<h6>Tax Difference</h6>
-			</div>
-		</div>
-		<div class="col col-4">
-			<div>
-				<h6>Taxable Value Diff</h6>
-			</div>
-		</div>
-		<div class="col col-4">
-			<div>
-				<h6>Differences</h6>
-			</div>
-		</div>
-	</div>
 	<table class="table table-bordered table-hover">
 		<thead class="detail-view-head">
 			<tr class="text-center">
@@ -87,25 +70,6 @@
 				<td class="text-center">{{ data.isup_taxable_value || '-' }}</td>
 				<td class="text-center">{{ data.taxable_value || '-' }}</td>
 			</tr>
-			<tr>
-				<th>Tax Difference</td>
-				<td class="text-center" colspan="2">{{ data.tax_diff || '-' }}</td>
-			</tr>
-			<tr>
-				<th>Taxable Value Diff</td>
-				<td class="text-center" colspan="2">{{ data.taxable_value_diff || '-' }}</td>
-			</tr>
-			<tr>
-				<th>Differences</td>
-				<td class="text-center" colspan="2">{{ data.differences || '-' }}</td>
-			</tr>
 		</tbody>
 	</table>
-	<div class="col col-6">
-		<label>Link To Missing Doc:</label>
-		<select class="form-control">
-			<option>Select</option>
-			<option value="{{ data.link_option }}">{{ data.link_option }}</option>
-		</select>
-	</div>
 </div>
