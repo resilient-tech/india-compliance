@@ -13,16 +13,18 @@ name: "CodeQL"
 
 on:
   pull_request:
-    paths:
-      - '**.js'
-      - '**.vue'
-      - '**.py'
+    paths-ignore:
+      - "**.css"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
 
   push:
-    paths:
-      - '**.js'
-      - '**.vue'
-      - '**.py'
+    paths-ignore:
+      - "**.css"
+      - "**.md"
+      - "**.html"
+      - "**.csv"
 
   schedule:
     - cron: '0 0 * * 1'
