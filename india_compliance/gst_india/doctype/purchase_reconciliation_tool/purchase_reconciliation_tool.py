@@ -251,7 +251,6 @@ class PurchaseReconciliationTool(Document):
         }
 
         frappe.db.set_value("Inward Supply", isup_name, isup_fields)
-        frappe.db.set_value("Purchase Invoice", pur_name, "inward_supply", isup_name)
 
     def get_purchase(self, category):
         gst_category = (
@@ -264,7 +263,7 @@ class PurchaseReconciliationTool(Document):
         query = (
             self.query_purchase_invoice(["name"])
             .where(PI.posting_date[self.purchase_from_date : self.purchase_to_date])
-            .where((PI.inward_supply == "") | (PI.inward_supply.isnull()))
+            .where(PI.name.notin(self.query_matched_purchase_invoice()))
             .where(PI.ignore_reconciliation == 0)
             .where(PI.gst_category.isin(gst_category))
             .where(PI.is_return == is_return)
@@ -320,6 +319,13 @@ class PurchaseReconciliationTool(Document):
             .where(PI.supplier_gstin.isnotnull())
             .groupby(PI.name)
             .select(*tax_fields, *fields, pi_item.taxable_value)
+        )
+
+    def query_matched_purchase_invoice(self):
+        return (
+            frappe.qb.from_(GSTR2)
+            .select("link_name")
+            .where(GSTR2.link_doctype == "Purchase Invoice")
         )
 
     def query_tax_amount(self, account):
@@ -671,7 +677,7 @@ class PurchaseReconciliationTool(Document):
             purchase.where(
                 PI.posting_date[self.purchase_from_date : self.purchase_to_date]
             )
-            .where((PI.inward_supply == "") | (PI.inward_supply.isnull()))
+            .where(PI.name.notin(self.query_matched_purchase_invoice()))
             .run(as_dict=True)
         )
 
@@ -778,22 +784,12 @@ class PurchaseReconciliationTool(Document):
         if isinstance(data, str):
             data = frappe.parse_json(data)
 
-        pur_docs = []
         isup_docs = []
         isup_actions = []
         for doc in data:
-            pur_docs.append(doc.get("name"))
             isup_docs.append(doc.get("isup_name"))
             if doc.get("isup_action") not in ["Ignore", "Pending"]:
                 isup_actions.append(doc.get("isup_name"))
-
-        if pur_docs:
-            (
-                frappe.qb.update(PI)
-                .set("inward_supply", "")
-                .where(PI.name.isin(pur_docs))
-                .run()
-            )
 
         if isup_docs:
             (
