@@ -58,6 +58,7 @@ bench use test_site
 bench start &
 bench reinstall --yes
 
+bench --verbose install-app payments
 bench --verbose install-app erpnext
 
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
