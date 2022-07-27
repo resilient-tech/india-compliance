@@ -97,7 +97,11 @@ class PurchaseReconciliationTool {
     }
 
     refresh(data) {
-        if (data) this.data = data;
+        if (data) {
+            this.data = data;
+            this.refresh_filter_fields();
+        }
+
         this.apply_filters(!!data);
 
         // data unchanged!
@@ -108,7 +112,6 @@ class PurchaseReconciliationTool {
         });
 
         this.rendered_data = this.filtered_data;
-
     }
 
     render_tab_group() {
@@ -175,21 +178,90 @@ class PurchaseReconciliationTool {
             doctype: "Purchase Reconciliation Tool",
             filter_button: this.filter_button,
             filter_options: {
-                fieldname: "supplier",
-                filter_fields: [
-                    {
-                        label: "Supplier",
-                        fieldname: "supplier",
-                        fieldtype: "Link",
-                        options: "Supplier",
-                        parent: "Purchase Reconciliation Tool",
-                    },
-                ],
+                fieldname: "supplier_name",
+                filter_fields: this.get_filter_fields(),
             },
             on_change: () => {
                 this.refresh();
             },
         });
+    }
+
+    get_filter_fields() {
+        const fields = [
+            {
+                label: "Supplier Name",
+                fieldname: "supplier_name",
+                fieldtype: "Autocomplete",
+                options: this.get_autocomplete_options("supplier_name"),
+            },
+            {
+                label: "Supplier GSTIN",
+                fieldname: "supplier_gstin",
+                fieldtype: "Autocomplete",
+                options: this.get_autocomplete_options("supplier_gstin"),
+            },
+            {
+                label: "Match Status",
+                fieldname: "isup_match_status",
+                fieldtype: "Select",
+                options: [
+                    "Exact Match",
+                    "Suggested Match",
+                    "Mismatch",
+                    "Manual Match",
+                    "Missing in 2A/2B",
+                    "Missing in PR",
+                ],
+            },
+            {
+                label: "Action",
+                fieldname: "isup_action",
+                fieldtype: "Select",
+                options: [
+                    "No Action",
+                    "Accept My Values",
+                    "Accept Supplier Values",
+                    "Ignore",
+                    "Pending",
+                ],
+            },
+            {
+                label: "Classification",
+                fieldname: "isup_classification",
+                fieldtype: "Select",
+                options: [
+                    "B2B",
+                    "B2BA",
+                    "CDNR",
+                    "CDNRA",
+                    "ISD",
+                    "ISDA",
+                    "IMPG",
+                    "IMPGSEZ",
+                ],
+            },
+            {
+                label: "Is Reverse Charge",
+                fieldname: "is_reverse_charge",
+                fieldtype: "Check",
+            },
+        ];
+
+        fields.forEach(field => (field.parent = "Purchase Reconciliation Tool"));
+        return fields;
+    }
+
+    refresh_filter_fields() {
+        this.filter_group.filter_options.filter_fields = this.get_filter_fields();
+    }
+
+    get_autocomplete_options(field) {
+        const options = [];
+        this.data.forEach(row => {
+            if (row[field] && !options.includes(row[field])) options.push(row[field]);
+        });
+        return options;
     }
 
     apply_filters(force) {
@@ -892,7 +964,9 @@ function unlink_documents(frm) {
         ...get_unlinked_docs(selected_rows, true),
     ];
     const reco_tool = frm.purchase_reconciliation_tool;
-    new_data = reco_tool.data.filter(row => !has_matching_row(row, selected_rows));
+    const new_data = reco_tool.data.filter(
+        row => !has_matching_row(row, selected_rows)
+    );
     new_data.push(...unlinked_docs);
     reco_tool.refresh(new_data);
     after_successful_action(invoice_tab);
