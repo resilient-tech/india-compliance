@@ -39,8 +39,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "inward_supply");
 
         api_enabled
-            ? frm.add_custom_button("Download", () => show_gstr_dialog(frm))
-            : frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
+            ? frm.add_custom_button(__("Download"), () => show_gstr_dialog(frm))
+            : frm.add_custom_button(__("Upload"), () => show_gstr_dialog(frm, false));
 
         // add custom buttons
         if (!frm.purchase_reconciliation_tool?.data) return;

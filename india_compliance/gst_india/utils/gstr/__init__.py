@@ -1,6 +1,7 @@
 from enum import Enum
 
 import frappe
+from frappe import _
 from frappe.query_builder.terms import Criterion
 
 from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
@@ -96,8 +97,10 @@ def download_gstr_2a(gstin, return_periods, otp=None):
 
             if not (data := response.get(action.lower())):
                 frappe.throw(
-                    "Data received seems to be invalid from the GST Portal. Please try"
-                    " again or raise support ticket.",
+                    _(
+                        "Data received seems to be invalid from the GST Portal. Please try"
+                        " again or raise support ticket."
+                    ),
                     title="Invalid Response Received.",
                 )
 
@@ -137,8 +140,10 @@ def save_gstr_2a(gstin, return_period, json_data):
         or json_data.get("fp") != return_period
     ):
         frappe.throw(
-            "Data received seems to be invalid from the GST Portal. Please try"
-            " again or raise support ticket.",
+            _(
+                "Data received seems to be invalid from the GST Portal. Please try"
+                " again or raise support ticket."
+            ),
             title="Invalid Response Received.",
         )
 
@@ -165,8 +170,10 @@ def save_gstr_2b(gstin, return_period, json_data):
         or json_data.get("rtnprd") != return_period
     ):
         frappe.throw(
-            "Data received seems to be invalid from the GST Portal. Please try"
-            " again or raise support ticket.",
+            _(
+                "Data received seems to be invalid from the GST Portal. Please try"
+                " again or raise support ticket."
+            ),
             title="Invalid Response Received.",
         )
 
