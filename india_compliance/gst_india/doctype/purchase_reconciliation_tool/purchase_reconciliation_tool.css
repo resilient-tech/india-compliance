@@ -4,14 +4,25 @@ div[data-page-route="Purchase Reconciliation Tool"] {
 
 div[data-page-route="Purchase Reconciliation Tool"]
     [data-fieldname="reconciliation_html"]
-    .form-tabs-list {
-    border-bottom: 0px solid black;
+    .section-body {
+    margin-top: 0;
 }
 
 div[data-page-route="Purchase Reconciliation Tool"]
     [data-fieldname="reconciliation_html"]
-    .section-body {
-    margin-top: 0;
+    .form-tabs-list {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 0px solid black;
+    padding-right: var(--padding-lg);
+}
+
+div[data-page-route="Purchase Reconciliation Tool"]
+    [data-fieldname="reconciliation_html"]
+    .form-tabs-list
+    .filter-selector {
+    margin-bottom: 8px;
 }
 
 div[data-page-route="Purchase Reconciliation Tool"] .title-area .indicator-pill {
@@ -54,6 +65,13 @@ div[data-page-route="Purchase Reconciliation Tool"]
     > img {
     margin-bottom: var(--margin-md);
     max-height: 100px;
+}
+
+div[data-page-route="Purchase Reconciliation Tool"] .dropdown-divider {
+    height: 0;
+    margin: 5px 0;
+    border-top: 1px solid var(--border-color);
+    padding: 0;
 }
 
 .detail-view-head {

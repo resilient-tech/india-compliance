@@ -23,6 +23,11 @@ ic.DataTableManager = class DataTableManager {
         }
     }
 
+    refresh(data, columns) {
+        this.data = data;
+        this.datatable.refresh(data, columns);
+    }
+
     get_column(fieldname) {
         return this.columns_dict[fieldname];
     }
@@ -105,6 +110,13 @@ ic.DataTableManager = class DataTableManager {
     get_checked_items() {
         const indices = this.datatable.rowmanager.getCheckedRows();
         return indices.map(index => this.data[index]);
+    }
+
+    clear_checked_items() {
+        const { rowmanager } = this.datatable;
+        rowmanager
+            .getCheckedRows()
+            .map(rowIndex => rowmanager.checkRow(rowIndex, false));
     }
 
     render_datatable() {
