@@ -14,7 +14,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
     def setUpClass(cls):
         cls.gstin = "01AABCE2207R1Z5"
         cls.return_period = "032020"
-        cls.doctype = "Inward Supply"
+        cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
         cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2b.json")))
 

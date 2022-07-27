@@ -30,8 +30,8 @@ from india_compliance.gst_india.utils.gstr import (
 )
 
 GSTR2B_GEN_DATE = 14
-GSTR2 = frappe.qb.DocType("Inward Supply")
-GSTR2_ITEM = frappe.qb.DocType("Inward Supply Item")
+GSTR2 = frappe.qb.DocType("GST Inward Supply")
+GSTR2_ITEM = frappe.qb.DocType("GST Inward Supply Item")
 PI = frappe.qb.DocType("Purchase Invoice")
 PI_TAX = frappe.qb.DocType("Purchase Taxes and Charges")
 PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
@@ -250,7 +250,7 @@ class PurchaseReconciliationTool(Document):
             "link_name": pur_name,
         }
 
-        frappe.db.set_value("Inward Supply", isup_name, isup_fields)
+        frappe.db.set_value("GST Inward Supply", isup_name, isup_fields)
 
     def get_purchase(self, category):
         gst_category = (

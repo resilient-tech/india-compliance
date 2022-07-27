@@ -225,7 +225,7 @@ def update_import_history(return_periods):
 
     if not (
         inward_supplies := frappe.get_all(
-            "Inward Supply",
+            "GST Inward Supply",
             filters={"return_period_2b": ("in", return_periods)},
             fields=("sup_return_period as return_period", "classification"),
             distinct=True,

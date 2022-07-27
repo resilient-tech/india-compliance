@@ -561,10 +561,10 @@ class PurchaseReconciliationTool {
                 width: 150,
             },
             {
-                label: "Inward Supply",
+                label: "GST Inward Supply",
                 fieldname: "isup_name",
                 fieldtype: "Link",
-                doctype: "Inward Supply",
+                doctype: "GST Inward Supply",
                 align: "center",
                 width: 150,
             },
