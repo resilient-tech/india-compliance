@@ -7,25 +7,19 @@ ic.NumberCardManager = class NumberCardManager {
 	}
 
 	make_cards() {
-		this.$purchase_reco_tool_cards.empty();
+		/**
+		opts passed to each card
+			$wrapper: The div that holds the cards
+			cards: A List of dictionary to show information in the card
+			sucess: Valid condition to highlight the values in the card
+		**/
+
+		this.$wrapper.empty();
 		this.$cards = [];
 		this.$summary = $(`<div class="report-summary"></div>`)
 			.hide()
-			.appendTo(this.$purchase_reco_tool_cards);
-		var card_data = [
-			{
-				value: this.tax_diff,
-				label: "Tax Difference",
-				datatype: "Currency",
-				currency: this.currency,
-			},
-			{
-				value: this.taxable_value_diff,
-				label: "Taxable Value Difference",
-				datatype: "Currency",
-				currency: this.currency,
-			},
-		];
+			.appendTo(this.$wrapper);
+		var card_data = this.cards;
 
 		card_data.forEach((summary) => {
 			let number_card = new ic.NumberCard(summary);
@@ -36,7 +30,7 @@ ic.NumberCardManager = class NumberCardManager {
 
 		this.$cards.forEach((number_card) => {
 			number_card.set_value_color(
-				this.tax_diff == this.taxable_value_diff
+				this.condition
 					? "text-success"
 					: "text-danger"
 			);

@@ -5,6 +5,8 @@
 // TODO: replace the demo data
 frappe.provide("reco_tool");
 
+const reco_tool_detail_view_fields = ["bill_no", "bill_date", "cgst", "sgst", "igst", "cess", "is_reverse_charge", "place_of_supply"];
+
 const tooltip_info = {
     purchase_period: "Returns purchases during this period where no match is found.",
     inward_supply_period:
@@ -229,7 +231,7 @@ class PurchaseReconciliationTool {
         const me = this;
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
             let data = me.mapped_invoice_data[$(this).attr("data-name")];
-            reco_tool.show_detailed_dialog(me, data);
+            show_detailed_dialog(me, data);
         });
     }
 
@@ -993,8 +995,8 @@ function get_affected_rows(tab, selection, data) {
         );
 }
 
-function set_value_color(wrapper, data) {
-    ic.reco_tool_detail_view_fields.forEach(field => {
+function set_value_color (wrapper, data) {
+    reco_tool_detail_view_fields.forEach(field => {
         if (!data.name || !data.isup_name) return;
 
         if (!in_list(["place_of_supply", "is_reverse_charge"], field)) return;
@@ -1005,7 +1007,7 @@ function set_value_color(wrapper, data) {
     });
 }
 
-reco_tool.show_detailed_dialog = function (me, data) {
+function show_detailed_dialog (me, data) {
     const mapped_data = get_mapped_invoice_data(data);
 
     var d = new frappe.ui.Dialog({
@@ -1037,7 +1039,7 @@ reco_tool.show_detailed_dialog = function (me, data) {
 function get_mapped_invoice_data(data) {
     let mapped_data = Object.assign({}, data);
 
-    ic.reco_tool_detail_view_fields.forEach(field => {
+    reco_tool_detail_view_fields.forEach(field => {
         if (data.isup_name && !data.name) {
             delete mapped_data[field];
         } else if (data.name && !data.isup_name) {
@@ -1159,10 +1161,25 @@ function render_cards(data, purchase_reco_tool_cards) {
 
     if (doc_missing) return;
 
+    let cards =  [
+        {
+            value: data.tax_diff,
+            label: "Tax Difference",
+            datatype: "Currency",
+            currency: frappe.boot.sysdefaults.currency,
+        },
+        {
+            value: data.taxable_value_diff,
+            label: "Taxable Value Difference",
+            datatype: "Currency",
+            currency: frappe.boot.sysdefaults.currency,
+        },
+    ];
+
     new ic.NumberCardManager({
-        $purchase_reco_tool_cards: purchase_reco_tool_cards,
-        tax_diff: data.tax_diff,
-        taxable_value_diff: data.taxable_value_diff,
+        $wrapper: purchase_reco_tool_cards,
+        cards: cards,
+        condition: data.tax_diff == data.taxable_value_diff,
     });
 }
 
