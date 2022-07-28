@@ -41,6 +41,8 @@ ic.is_api_enabled = function (settings) {
     return settings.enable_api && ic.can_enable_api(settings);
 };
 
+ic.reco_tool_detail_view_fields = ["bill_no", "bill_date", "cgst", "sgst", "igst", "cess", "is_reverse_charge", "place_of_supply"];
+
 ic.setup_tooltip = function (frm, field_dict) {
     /**
      * Setup tooltip for fields to show details

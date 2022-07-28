@@ -82,10 +82,11 @@ div[data-page-route="Purchase Reconciliation Tool"] .dropdown-divider {
     background-color: #ecdcd8;
 }
 
-.matched-row {
-    color: green;
+.table > tbody > tr > td {
+    text-align: center;
 }
 
-td, .not-matched-row {
+.not-matched {
     color: red;
+    text-align: center;
 }
