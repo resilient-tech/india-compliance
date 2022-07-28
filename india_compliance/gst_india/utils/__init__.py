@@ -95,6 +95,32 @@ def get_gstin_list(party, party_type="Company"):
     return gstin_list
 
 
+@frappe.whitelist()
+def get_party_for_gstin(gstin, party_type="Supplier"):
+    if not gstin:
+        return
+
+    if party := frappe.db.get_value(
+        party_type, filters={"gstin": gstin}, fieldname="name"
+    ):
+        return party
+
+    address = frappe.qb.DocType("Address")
+    links = frappe.qb.DocType("Dynamic Link")
+    party = (
+        frappe.qb.from_(address)
+        .join(links)
+        .on(links.parent == address.name)
+        .select(links.link_name)
+        .where(links.link_doctype == party_type)
+        .where(address.gstin == gstin)
+        .limit(1)
+        .run()
+    )
+    if party:
+        return party[0][0]
+
+
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
     Validate GSTIN with following checks:

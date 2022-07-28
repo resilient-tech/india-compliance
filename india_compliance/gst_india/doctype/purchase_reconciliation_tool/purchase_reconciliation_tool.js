@@ -339,14 +339,28 @@ class PurchaseReconciliationTool {
             {
                 label: "Count <br>2A/2B Docs",
                 fieldname: "count_isup_docs",
-                width: 180,
+                width: 120,
                 align: "center",
             },
             {
                 label: "Count <br>Purchase Docs",
                 fieldname: "count_pur_docs",
+                width: 120,
+                align: "center",
+            },
+            {
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_diff",
                 width: 180,
                 align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        format_number(value),
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
@@ -363,23 +377,9 @@ class PurchaseReconciliationTool {
                 },
             },
             {
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
-                fieldname: "taxable_value_diff",
-                width: 200,
-                align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        format_number(value),
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
-                },
-            },
-            {
                 label: "% Action Taken",
                 fieldname: "action_taken",
-                width: 180,
+                width: 120,
                 align: "center",
                 format: (value, row, column, data) => {
                     return frappe.form.get_formatter(column.docfield.fieldtype)(
@@ -425,7 +425,7 @@ class PurchaseReconciliationTool {
     get_supplier_columns() {
         return [
             {
-                label: "Supplier",
+                label: "Supplier Name",
                 fieldname: "supplier_name",
                 fieldtype: "Link",
                 width: 200,
@@ -454,13 +454,22 @@ class PurchaseReconciliationTool {
                 label: "Count <br>2A/2B Docs",
                 fieldname: "count_isup_docs",
                 align: "center",
-                width: 150,
+                width: 120,
             },
             {
                 label: "Count <br>Purchase Docs",
                 fieldname: "count_pur_docs",
                 align: "center",
+                width: 120,
+            },
+            {
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_diff",
+                align: "center",
                 width: 150,
+                _value: (...args) => {
+                    return format_number(args[0]);
+                },
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
@@ -472,18 +481,10 @@ class PurchaseReconciliationTool {
                 },
             },
             {
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
-                fieldname: "taxable_value_diff",
-                align: "center",
-                width: 180,
-                _value: (...args) => {
-                    return format_number(args[0]);
-                },
-            },
-            {
                 label: "% Action <br>Taken",
                 fieldname: "action_taken",
                 align: "center",
+                width: 120,
                 _value: (...args) => {
                     return (
                         roundNumber(
@@ -526,9 +527,9 @@ class PurchaseReconciliationTool {
                 _value: (...args) => get_icon(...args, "eye"),
             },
             {
-                label: "Supplier",
+                label: "Supplier Name",
                 fieldname: "supplier_name",
-                width: 200,
+                width: 150,
                 _value: (...args) => {
                     return `${args[2].supplier_name}
                             <br />
@@ -540,12 +541,10 @@ class PurchaseReconciliationTool {
             {
                 label: "Bill No.",
                 fieldname: "bill_no",
-                width: 120,
             },
             {
                 label: "Date",
                 fieldname: "bill_date",
-                width: 120,
             },
             {
                 label: "Match Status",
@@ -553,24 +552,24 @@ class PurchaseReconciliationTool {
                 width: 120,
             },
             {
-                label: "Purchase Invoice",
+                label: "Purchase <br>Invoice",
                 fieldname: "name",
                 fieldtype: "Link",
                 doctype: "Purchase Invoice",
                 align: "center",
-                width: 150,
+                width: 120,
             },
             {
-                label: "GST Inward Supply",
+                label: "GST Inward <br>Supply",
                 fieldname: "isup_name",
                 fieldtype: "Link",
                 doctype: "GST Inward Supply",
                 align: "center",
-                width: 150,
+                width: 120,
             },
             {
-                label: "Tax Diff <br>2A/2B - Purchase",
-                fieldname: "tax_diff",
+                fieldname: "taxable_value_diff",
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
                 width: 150,
                 align: "center",
                 _value: (...args) => {
@@ -578,9 +577,9 @@ class PurchaseReconciliationTool {
                 },
             },
             {
-                fieldname: "taxable_value_diff",
-                label: "Taxable Amount Diff <br>2A/2B - Purchase",
-                width: 180,
+                label: "Tax Difference <br>2A/2B - Purchase",
+                fieldname: "tax_diff",
+                width: 120,
                 align: "center",
                 _value: (...args) => {
                     return format_number(args[0]);
@@ -944,6 +943,22 @@ function patch_set_active_tab(frm) {
     };
 }
 
+reco_tool.link_documents = async function (frm, pur_name, isup_name, alert = true) {
+    if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
+
+    // link documents & update data.
+    const { message: r } = await frm.call("link_documents", { pur_name, isup_name });
+    const reco_tool = frm.purchase_reconciliation_tool;
+    const new_data = reco_tool.data.filter(
+        row => !(row.name == pur_name || row.isup_name == isup_name)
+    );
+    new_data.push(...r);
+
+    reco_tool.refresh(new_data);
+    if (alert)
+        after_successful_action(frm.purchase_reconciliation_tool.tabs.invoice_tab);
+};
+
 function unlink_documents(frm) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
     const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
@@ -1064,4 +1079,74 @@ function get_affected_rows(tab, selection, data) {
                 selection.filter(row => row.isup_match_status == inv.isup_match_status)
                     .length
         );
+}
+
+async function create_new_purchase_invoice(inward_supply, company, company_gstin) {
+    if (inward_supply.isup_match_status != "Missing in PR") return;
+
+    const { message: supplier } = await frappe.call({
+        method: "india_compliance.gst_india.utils.get_party_for_gstin",
+        args: {
+            gstin: inward_supply.supplier_gstin,
+        },
+    });
+
+    let company_address;
+    await frappe.model.get_value(
+        "Address",
+        { gstin: company_gstin, is_your_company_address: 1 },
+        "name",
+        r => (company_address = r.name)
+    );
+
+    await frappe.new_doc("Purchase Invoice");
+    const pur_frm = cur_frm;
+
+    pur_frm.doc.bill_no = inward_supply.isup_bill_no;
+    pur_frm.doc.bill_date = inward_supply.isup_bill_date;
+    pur_frm.doc.is_reverse_charge = inward_supply.isup_is_reverse_charge;
+
+    _set_value(pur_frm, {
+        company: company,
+        supplier: supplier,
+        shipping_address: company_address,
+        billing_address: company_address,
+    });
+
+    function _set_value(frm, values) {
+        for (const key in values) {
+            if (values[key] == frm.doc[key]) continue;
+            frm.set_value(key, values[key]);
+        }
+    }
+
+    // validated this on save
+    pur_frm._inward_supply = {
+        company: company,
+        company_gstin: company_gstin,
+        isup_name: inward_supply.isup_name,
+        supplier_gstin: inward_supply.supplier_gstin,
+        bill_no: inward_supply.isup_bill_no,
+        bill_date: inward_supply.isup_bill_date,
+        is_reverse_charge: inward_supply.isup_is_reverse_charge,
+        place_of_supply: inward_supply.isup_place_of_supply,
+        cgst: inward_supply.isup_cgst,
+        sgst: inward_supply.isup_sgst,
+        igst: inward_supply.isup_igst,
+        cess: inward_supply.isup_cess,
+        taxable_value: inward_supply.isup_taxable_value,
+    };
+}
+
+async function set_gstin_options(frm) {
+    const { query, params } = ic.get_gstin_query(frm.doc.company);
+    const { message } = await frappe.call({
+        method: query,
+        args: params,
+    });
+
+    if (!message) return;
+    const gstin_field = frm.get_field("company_gstin");
+    gstin_field.set_data(message);
+    return message;
 }
