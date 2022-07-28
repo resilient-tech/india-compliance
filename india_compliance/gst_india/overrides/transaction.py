@@ -482,7 +482,7 @@ def update_party_details(party_details, doctype, company):
     address_fields = (
         ("customer_address", "company_address")
         if doctype in SALES_DOCTYPES
-        else ("supplier_address", "shipping_address")
+        else ("supplier_address", "billing_address")
     )
 
     # fetch GSTINs from addresses
