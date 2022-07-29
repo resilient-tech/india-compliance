@@ -21,7 +21,7 @@ const ReturnType = {
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     async setup(frm) {
         patch_set_active_tab(frm);
-        ic.setup_tooltip(frm, tooltip_info);
+        new ic.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reco_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
@@ -35,8 +35,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     refresh(frm) {
-        new ic.quick_info_popover(frm, tooltip_info);
-
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
 
