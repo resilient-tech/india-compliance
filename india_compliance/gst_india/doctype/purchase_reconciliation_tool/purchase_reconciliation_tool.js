@@ -1038,8 +1038,13 @@ function show_detailed_dialog (me, data) {
 
 function get_mapped_invoice_data(data) {
     let mapped_data = Object.assign({}, data);
+    mapped_data.supplier_gstin = mapped_data.supplier_gstin.replace(/\s+/g, '');
 
     reco_tool_detail_view_fields.forEach(field => {
+        if (field == "is_reverse_charge") {
+            mapped_data[field] = mapped_data[field] ? "Yes" : "No";
+            mapped_data[`isup_${field}`] = mapped_data[`isup_${field}`] ? "Yes" : "No";
+        }
         if (data.isup_name && !data.name) {
             delete mapped_data[field];
         } else if (data.name && !data.isup_name) {
@@ -1047,7 +1052,6 @@ function get_mapped_invoice_data(data) {
         }
     });
 
-    mapped_data.supplier_gstin = mapped_data.supplier_gstin.replace(/\s+/g, '');
     return mapped_data;
 }
 
