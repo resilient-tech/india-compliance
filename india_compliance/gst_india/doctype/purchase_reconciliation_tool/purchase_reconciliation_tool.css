@@ -74,16 +74,9 @@ div[data-page-route="Purchase Reconciliation Tool"] .dropdown-divider {
     padding: 0;
 }
 
-.detail-view-head {
-    width: 15%;
-}
-
-.highlight-diff {
-    background-color: #ecdcd8;
-}
-
 .table > tbody > tr > td {
     text-align: center;
+    width: 30%;
 }
 
 .not-matched {

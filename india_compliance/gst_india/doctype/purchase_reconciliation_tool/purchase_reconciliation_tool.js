@@ -1152,7 +1152,7 @@ function get_document_link_fields(me, data) {
     };
 
     if (data.name && !data.isup_name) {
-        doctype = "Inward Supply";
+        doctype = "GST Inward Supply";
         field_prefix = "inward_supply";
     }
     else if (!data.name && data.isup_name) {
@@ -1162,7 +1162,7 @@ function get_document_link_fields(me, data) {
 
     const date_range = get_date_range(me, field_prefix);
 
-    doctype == "Inward Supply"
+    doctype == "GST Inward Supply"
         ? date_filters.bill_date = ["between", date_range]
         : date_filters.posting_date = ["between", date_range];
 
@@ -1298,7 +1298,7 @@ function render_cards(data, purchase_reco_tool_cards) {
 function get_content_html(data) {
     const doc_links = {
         purchase_link: get_doc_link("Purchase Invoice", data.name),
-        isup_link: get_doc_link("Inward Supply", data.isup_name),
+        isup_link: get_doc_link("GST Inward Supply", data.isup_name),
     }
 
     data = { ...data, ...doc_links };
