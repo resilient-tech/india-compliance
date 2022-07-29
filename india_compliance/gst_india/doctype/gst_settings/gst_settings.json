@@ -12,6 +12,7 @@
   "enable_overseas_transactions",
   "round_off_gst_values",
   "column_break_4",
+  "validate_bill_no",
   "validate_hsn_code",
   "min_hsn_digits",
   "e_waybill_section",
@@ -225,12 +226,19 @@
    "fieldname": "autofill_party_info",
    "fieldtype": "Check",
    "label": "Autofill Party Information based on GSTIN"
+  },
+  {
+   "default": "1",
+   "description": "If enabled, Bill No shall become mandatory for purchases with GST. This will ensure smooth purchase reconciliation.",
+   "fieldname": "validate_bill_no",
+   "fieldtype": "Check",
+   "label": "Validate Bill No in Purchase Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-24 02:58:52.754837",
+ "modified": "2022-07-29 10:06:37.993064",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

@@ -47,7 +47,13 @@ def validate_supplier_gstin(doc):
 
 
 def validate_bill_no(doc):
-    if not doc.supplier_gstin or doc.bill_no:
+    if (
+        not doc.supplier_gstin
+        or doc.bill_no
+        or not frappe.get_cached_value(
+            "GST Settings", "GST Settings", "validate_bill_no"
+        )
+    ):
         return
 
     gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
