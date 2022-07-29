@@ -20,6 +20,9 @@ const ReturnType = {
 
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     async setup(frm) {
+        patch_set_active_tab(frm);
+        ic.setup_tooltip(frm, tooltip_info);
+
         await frappe.require("purchase_reco_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
@@ -38,10 +41,30 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "inward_supply");
 
         api_enabled
-            ? frm.add_custom_button("Download", () => show_gstr_dialog(frm))
-            : frm.add_custom_button("Upload", () => show_gstr_dialog(frm, false));
+            ? frm.add_custom_button(__("Download"), () => show_gstr_dialog(frm))
+            : frm.add_custom_button(__("Upload"), () => show_gstr_dialog(frm, false));
 
-        // if (frm.doc.company) set_gstin_options(frm);
+        // add custom buttons
+        if (!frm.purchase_reconciliation_tool?.data) return;
+        if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
+            frm.add_custom_button(
+                __("Unlink"),
+                () => unlink_documents(frm),
+                __("Actions")
+            );
+            frm.add_custom_button("dropdown-divider", () => {}, __("Actions"));
+        }
+        ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
+            action =>
+                frm.add_custom_button(
+                    __(action),
+                    () => apply_action(frm, action),
+                    __("Actions")
+                )
+        );
+        frm.$wrapper
+            .find("[data-label='dropdown-divider']")
+            .addClass("dropdown-divider");
     },
 
     purchase_period(frm) {
@@ -51,23 +74,59 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     inward_supply_period(frm) {
         fetch_date_range(frm, "inward_supply");
     },
+
+    after_save(frm) {
+        frm.purchase_reconciliation_tool.refresh(
+            frm.doc.__onload?.reconciliation_data?.data
+        );
+    },
 });
 
 class PurchaseReconciliationTool {
     constructor(frm) {
-        this.frm = frm;
+        this.init(frm);
         this.render_tab_group();
+        this.setup_filter_button();
         this.render_data_tables();
+    }
+
+    init(frm) {
+        this.frm = frm;
+        this.data = [];
+        this.filtered_data = this.data;
+        this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
+        this._tabs = ["invoice", "supplier", "summary"];
+    }
+
+    refresh(data) {
+        if (data) {
+            this.data = data;
+            this.refresh_filter_fields();
+        }
+
+        this.apply_filters(!!data);
+
+        // data unchanged!
+        if (this.rendered_data == this.filtered_data) return;
+
+        this._tabs.forEach(tab => {
+            this.tabs[`${tab}_tab`].refresh(this[`get_${tab}_data`]());
+        });
+
+        this.rendered_data = this.filtered_data;
     }
 
     render_tab_group() {
         this.tab_group = new frappe.ui.FieldGroup({
             fields: [
-                //hack: for the FieldGroup(Layout) to avoid rendering default tab
                 {
-                    label: "Summary",
+                    //hack: for the FieldGroup(Layout) to avoid rendering default "details" tab
+                    fieldtype: "Section Break",
+                },
+                {
+                    label: "Match Summary",
                     fieldtype: "Tab Break",
-                    fieldname: "summary",
+                    fieldname: "summary_tab",
                     active: 1,
                 },
                 {
@@ -75,25 +134,25 @@ class PurchaseReconciliationTool {
                     fieldname: "summary_data",
                 },
                 {
-                    label: "Supplier Level",
+                    label: "Supplier View",
                     fieldtype: "Tab Break",
-                    fieldname: "supplier_level",
+                    fieldname: "supplier_tab",
                 },
                 {
                     fieldtype: "HTML",
-                    fieldname: "supplier_level_data",
+                    fieldname: "supplier_data",
                 },
                 {
-                    label: "Invoice Level",
+                    label: "Document View",
                     fieldtype: "Tab Break",
-                    fieldname: "invoice_level",
+                    fieldname: "invoice_tab",
                 },
                 {
                     fieldtype: "HTML",
-                    fieldname: "invoice_level_data",
+                    fieldname: "invoice_data",
                 },
             ],
-            body: this.frm.get_field("summary_data").$wrapper,
+            body: this.$wrapper,
             frm: this.frm,
         });
 
@@ -105,1317 +164,438 @@ class PurchaseReconciliationTool {
         );
     }
 
+    setup_filter_button() {
+        this.filter_button = $(`<div class="filter-selector">
+			<button class="btn btn-default btn-sm filter-button">
+				<span class="filter-icon">
+					${frappe.utils.icon("filter")}
+				</span>
+				<span class="button-label hidden-xs">
+					${__("Filter")}
+				<span>
+			</button>
+		</div>`).appendTo(this.$wrapper.find(".form-tabs-list"));
+
+        this.filter_group = new ic.FilterGroup({
+            doctype: "Purchase Reconciliation Tool",
+            filter_button: this.filter_button,
+            filter_options: {
+                fieldname: "supplier_name",
+                filter_fields: this.get_filter_fields(),
+            },
+            on_change: () => {
+                this.refresh();
+            },
+        });
+    }
+
+    get_filter_fields() {
+        const fields = [
+            {
+                label: "Supplier Name",
+                fieldname: "supplier_name",
+                fieldtype: "Autocomplete",
+                options: this.get_autocomplete_options("supplier_name"),
+            },
+            {
+                label: "Supplier GSTIN",
+                fieldname: "supplier_gstin",
+                fieldtype: "Autocomplete",
+                options: this.get_autocomplete_options("supplier_gstin"),
+            },
+            {
+                label: "Match Status",
+                fieldname: "isup_match_status",
+                fieldtype: "Select",
+                options: [
+                    "Exact Match",
+                    "Suggested Match",
+                    "Mismatch",
+                    "Manual Match",
+                    "Missing in 2A/2B",
+                    "Missing in PR",
+                ],
+            },
+            {
+                label: "Action",
+                fieldname: "isup_action",
+                fieldtype: "Select",
+                options: [
+                    "No Action",
+                    "Accept My Values",
+                    "Accept Supplier Values",
+                    "Ignore",
+                    "Pending",
+                ],
+            },
+            {
+                label: "Classification",
+                fieldname: "isup_classification",
+                fieldtype: "Select",
+                options: [
+                    "B2B",
+                    "B2BA",
+                    "CDNR",
+                    "CDNRA",
+                    "ISD",
+                    "ISDA",
+                    "IMPG",
+                    "IMPGSEZ",
+                ],
+            },
+            {
+                label: "Is Reverse Charge",
+                fieldname: "is_reverse_charge",
+                fieldtype: "Check",
+            },
+        ];
+
+        fields.forEach(field => (field.parent = "Purchase Reconciliation Tool"));
+        return fields;
+    }
+
+    refresh_filter_fields() {
+        this.filter_group.filter_options.filter_fields = this.get_filter_fields();
+    }
+
+    get_autocomplete_options(field) {
+        const options = [];
+        this.data.forEach(row => {
+            if (row[field] && !options.includes(row[field])) options.push(row[field]);
+        });
+        return options;
+    }
+
+    apply_filters(force) {
+        const has_filters = this.filter_group.filters.length > 0;
+        if (!has_filters) {
+            this.filters = null;
+            this.filtered_data = this.data;
+            return;
+        }
+
+        const filters = this.filter_group.get_filters();
+        if (!force && this.filters === filters) return;
+
+        this.filters = filters;
+        this.filtered_data = this.data.filter(row => {
+            return filters.every(filter =>
+                ic.FILTER_OPERATORS[filter[2]](filter[3] || "", row[filter[1]] || "")
+            );
+        });
+    }
+
     render_data_tables() {
-        this.tabs.summary.data_table_manager = new ic.DataTableManager({
-            $wrapper: this.tab_group.get_field("summary_data").$wrapper,
-            columns: [
-                {
-                    label: "Match Type",
-                    fieldname: "isup_match_status",
-                    width: 200,
+        this._tabs.forEach(tab => {
+            this.tabs[`${tab}_tab`] = new ic.DataTableManager({
+                $wrapper: this.tab_group.get_field(`${tab}_data`).$wrapper,
+                columns: this[`get_${tab}_columns`](),
+                data: this[`get_${tab}_data`](),
+                options: {
+                    cellHeight: 55,
                 },
-                {
-                    label: "No. of Docs (2A/2B | PR)",
-                    fieldname: "no_of_docs",
-                    width: 180,
-                },
-                {
-                    label: "Tax Diff (2A/2B - PR)",
-                    fieldname: "tax_diff",
-                    width: 180,
-                },
-            ],
-            data: this.get_summary_data(),
+            });
         });
+        this.set_listeners();
+    }
 
-        this.tabs.supplier_level.data_table_manager = new ic.DataTableManager({
-            $wrapper: this.tab_group.get_field("supplier_level_data").$wrapper,
-            columns: [
-                {
-                    label: "Supplier",
-                    fieldname: "supplier",
-                    fieldtype: "Link",
-                    width: 200,
-                    format: (value, row, column, data) => {
-                        if (data && column.field === "supplier") {
-                            column.docfield.link_onclick = `reco_tool.apply_filters(${JSON.stringify(
-                                {
-                                    tab: "invoice_level",
-                                    filters: {
-                                        supplier_name: data.supplier_gstin,
-                                    },
-                                }
-                            )})`;
-                        }
-
-                        const content = `
-                            ${data.supplier_name}
-                            <br />
-                            <span style="font-size: 0.9em">
-                                ${data.supplier_gstin || ""}
-                            </span>
-                        `;
-
-                        return frappe.form.get_formatter(column.docfield.fieldtype)(
-                            content,
-                            column.docfield,
-                            { always_show_decimals: true },
-                            data
-                        );
-                    },
-                    dropdown: false,
-                },
-                {
-                    label: "No. of Docs (2A/2B | PR)",
-                    fieldname: "no_of_docs",
-                    width: 180,
-                },
-                {
-                    label: "Tax Diff (2A/2B - PR)",
-                    fieldname: "tax_diff",
-                    width: 180,
-                },
-                {
-                    fieldname: "document_value_diff",
-                    label: "Document Diff (2A/2B - PR)",
-                    width: 200,
-                },
-                {
-                    label: "Download",
-                    fieldname: "download",
-                    fieldtype: "html",
-                    width: 100,
-                },
-                {
-                    label: "Email",
-                    fieldname: "email",
-                    fieldtype: "html",
-                    width: 100,
-                },
-            ],
-            options: {
-                cellHeight: 55,
-            },
-            data: this.get_supplier_level_data(),
-        });
-        this.tabs.invoice_level.data_table_manager = new ic.DataTableManager({
-            $wrapper: this.tab_group.get_field("invoice_level_data").$wrapper,
-            columns: [
-                {
-                    fieldname: "view",
-                    fieldtype: "html",
-                    width: 60,
-                    align: "center",
-                    format: (...args) => get_formatted(...args, "eye", reco_tool.trial),
-                },
-                {
-                    label: "Supplier",
-                    fieldname: "supplier_name",
-                    width: 200,
-                    format: (value, row, column, data) => {
-                        const content = `
-                            ${data.supplier_name}
-                            <br />
-                            <span style="font-size: 0.9em">
-                                ${data.supplier_gstin || ""}
-                            </span>
-                        `;
-
-                        return frappe.form.get_formatter(column.docfield.fieldtype)(
-                            content,
-                            column.docfield,
-                            { always_show_decimals: true },
-                            data
-                        );
-                    },
-                    dropdown: false,
-                },
-                {
-                    label: "Bill No.",
-                    fieldname: "bill_no",
-                    width: 120,
-                },
-                {
-                    label: "Date",
-                    fieldname: "bill_date",
-                    width: 120,
-                },
-                {
-                    label: "Match Status",
-                    fieldname: "isup_match_status",
-                    width: 120,
-                },
-                {
-                    label: "Purchase Invoice",
-                    fieldname: "name",
-                    // fieldtype: "Link",
-                    // doctype: "Purchase Invoice",
-                    align: "center",
-                    width: 150,
-                    format: (value, row, column, data) => {
-                        const content = `<button class="btn">
-                                <i class="fa fa-link"></i>
-                            </button>`;
-
-                        return frappe.form.get_formatter(column.docfield.fieldtype)(
-                            content,
-                            column.docfield,
-                            { always_show_decimals: true },
-                            data
-                        );
-                    },
-                },
-                {
-                    label: "Inward Supply",
-                    fieldname: "isup_name",
-                    fieldtype: "Link",
-                    doctype: "Inward Supply",
-                    width: 150,
-                },
-                {
-                    label: "Tax Diff (2A/2B - PR)",
-                    fieldname: "tax_diff",
-                    width: 180,
-                },
-                {
-                    fieldname: "document_value_diff",
-                    label: "Document Diff (2A/2B - PR)",
-                    width: 180,
-                },
-                {
-                    fieldname: "differences",
-                    label: "Differences",
-                },
-                {
-                    label: "Action",
-                    fieldname: "isup_action",
-                },
-            ],
-            options: {
-                cellHeight: 55,
-            },
-            data: this.get_invoice_level_data(),
+    set_listeners() {
+        const me = this;
+        this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
+            console.log(me.mapped_invoice_data[$(this).attr("data-name")]);
         });
     }
 
     get_summary_data() {
+        const data = {};
+        this.filtered_data.forEach(row => {
+            let new_row = data[row.isup_match_status];
+            if (!new_row) {
+                new_row = data[row.isup_match_status] = {
+                    isup_match_status: row.isup_match_status,
+                    count_isup_docs: 0,
+                    count_pur_docs: 0,
+                    count_action_taken: 0,
+                    total_docs: 0,
+                    tax_diff: 0,
+                    taxable_value_diff: 0,
+                };
+            }
+            if (row.isup_name) new_row.count_isup_docs += 1;
+            if (row.name) new_row.count_pur_docs += 1;
+            if (row.isup_action != "No Action") new_row.count_action_taken += 1;
+            new_row.total_docs += 1;
+            new_row.tax_diff += row.tax_diff || 0;
+            new_row.taxable_value_diff += row.taxable_value_diff || 0;
+        });
+        return Object.values(data);
+    }
+
+    get_summary_columns() {
         return [
             {
-                supplier_name: "K Vijay Ispat Udyog",
-                supplier_gstin: "27AALFK9932E1Z0",
-                match_status: "Success",
-                no_of_inward_supp: 4,
-                no_of_doc_purchase: 150,
+                label: "Match Status",
+                fieldname: "isup_match_status",
+                width: 200,
+            },
+            {
+                label: "Count <br>2A/2B Docs",
+                fieldname: "count_isup_docs",
+                width: 120,
+                align: "center",
+            },
+            {
+                label: "Count <br>Purchase Docs",
+                fieldname: "count_pur_docs",
+                width: 120,
+                align: "center",
+            },
+            {
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_diff",
+                width: 180,
+                align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        format_number(value),
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
+            },
+            {
+                label: "Tax Difference <br>2A/2B - Purchase",
+                fieldname: "tax_diff",
+                width: 180,
+                align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        format_number(value),
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
+            },
+            {
+                label: "% Action Taken",
+                fieldname: "action_taken",
+                width: 120,
+                align: "center",
+                format: (value, row, column, data) => {
+                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                        roundNumber(
+                            (data.count_action_taken / data.total_docs) * 100,
+                            2
+                        ) + " %",
+                        column.docfield,
+                        { always_show_decimals: true },
+                        data
+                    );
+                },
             },
         ];
     }
 
-    get_supplier_level_data() {
+    get_supplier_data() {
+        const data = {};
+        this.filtered_data.forEach(row => {
+            let new_row = data[row.supplier_gstin];
+            if (!new_row) {
+                new_row = data[row.supplier_gstin] = {
+                    supplier_name: row.supplier_name,
+                    supplier_gstin: row.supplier_gstin,
+                    count_isup_docs: 0,
+                    count_pur_docs: 0,
+                    count_action_taken: 0,
+                    total_docs: 0,
+                    tax_diff: 0,
+                    taxable_value_diff: 0,
+                };
+            }
+            if (row.isup_name) new_row.count_isup_docs += 1;
+            if (row.name) new_row.count_pur_docs += 1;
+            if (row.isup_action != "No Action") new_row.count_action_taken += 1;
+            new_row.total_docs += 1;
+            new_row.tax_diff += row.tax_diff || 0;
+            new_row.taxable_value_diff += row.taxable_value_diff || 0;
+        });
+        return Object.values(data);
+    }
+
+    get_supplier_columns() {
         return [
             {
-                supplier_name: "K Vijay Ispat Udyog",
-                supplier_gstin: "27AALFK9932E1Z0",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Padmavati Steel and Engg Co",
-                supplier_gstin: "27AADPD5694C1ZV",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Sainest Tubes Pvt Ltd",
-                supplier_gstin: "24AAECS5018D1ZS",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Shreya Pipe and Fittings",
-                supplier_gstin: "24ADVFS4123J1ZQ",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Xiaomi Technology India Private Limited",
-                supplier_gstin: "27AAACX1645B1ZO",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Kulubi Steel",
-                supplier_gstin: "24AABFK8892P1ZK",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Infiniti Retail Limited CROMA",
-                supplier_gstin: "24AACCV1726H1ZK",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "TCR Advanced Engineering Pvt Ltd",
-                supplier_gstin: "24AABCT3473E1ZL",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Sai Steel and Engineering Co",
-                supplier_gstin: "27ADLFS6197C1ZN",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Kushal Copper Corporation",
-                supplier_gstin: "27AAFFK2716A1ZU",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "SKM Impex - A Div of SKM Steels Ltd",
-                supplier_gstin: "27AADCS7801F1ZG",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Moreshwar Engineers and Manufacturers",
-                supplier_gstin: "24BNLPS8562C1ZP",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Modsonic Instruments Mfg Co Pvt Ltd",
-                supplier_gstin: "24AACCM4706A1Z5",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Hytech Pipe Fitting Pvt Ltd",
-                supplier_gstin: "24AAFCH1103D1ZG",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Sun Metal and Alloys",
-                supplier_gstin: "27ADAFS4139H1Z2",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Shiv Shakti Enterprises",
-                supplier_gstin: "24ACGPB2963D1Z4",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Reliable Stainless",
-                supplier_gstin: "27AAZFR4704P1Z8",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Zip Technologies (Amazon)",
-                supplier_gstin: "07AAAFZ1851A1ZK",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Armko Pipe Fittings (I) Pvt Ltd",
-                supplier_gstin: "27AATCA0302R1ZB",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Arbuda Sales Agency",
-                supplier_gstin: "24AACFA7093D1ZR",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Krupali Roadways",
-                supplier_gstin: "24CTUPP4692N1ZK",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "M K Ispats",
-                supplier_gstin: "27BYMPK9036R1ZE",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Associated Road Carriers Ltd",
-                supplier_gstin: "36AACCA4861C1Z0",
-                no_of_doc_purchase: 5,
-            },
-            {
-                supplier_name: "Quick Sales and Services",
-                supplier_gstin: "24CGTPM5713R1ZJ",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Rajdhani Roadlines",
-                supplier_gstin: "24AGOPP6299C3ZX",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Sanghvi Industrial Corporation",
-                supplier_gstin: "27AAAPB8774G1ZP",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Genius Trading Co",
-                supplier_gstin: "27EHLPK1784F1Z1",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "SS Tube",
-                supplier_gstin: "27AZJPS4427R1ZF",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Unicorn Steel India",
-                supplier_gstin: "27AICPD6478K1ZY",
-                no_of_doc_purchase: 7,
-            },
-            {
-                supplier_name: "Krishna Traders",
-                supplier_gstin: "24COOPS7720F1ZN",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Array Energy Solution",
-                supplier_gstin: "24BNAPT4657C1Z3",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "VRP TELEMATICS PRIVATE LIMITED",
-                supplier_gstin: "24AACCV5763A1ZL",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Dynamic Forge and Fittings I Pvt Ltd",
-                supplier_gstin: "24AADCD2719H1ZY",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Gayatri Graphics",
-                supplier_gstin: "24ATCPS3705K1ZN",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Amar Equipments Pvt Ltd",
-                supplier_gstin: "27AADCA0201H1ZE",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Nageshwar Steels",
-                supplier_gstin: "24AAGFN7225G1ZE",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "SKM Impex - A Div of SKM Steels Ltd",
-                supplier_gstin: "24AADCS7801F1ZM",
-                no_of_doc_purchase: 16,
-            },
-            {
-                supplier_name: "Phone World",
-                supplier_gstin: "24FBAPS4876L1Z1",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Sanghvi Forging and Engineering Ltd",
-                supplier_gstin: "24AADCS2903E1ZV",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Shree Laxmi Global Logistics Private Limited",
-                supplier_gstin: "27AAACU5182C1ZH",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Shree Laxmi Global Logistics Private Limited",
-                supplier_gstin: "27AAWCS9887J1ZY",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Shree Laxmi Global Logistics Private Limited",
-                supplier_gstin: "27AACCO6217A1ZV",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Umakant Booksellers and Stationers",
-                supplier_gstin: "24AAXPT5104F1ZI",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Xcel Profile",
-                supplier_gstin: "24AYCPP9731B2ZK",
-                no_of_doc_purchase: 5,
-            },
-            {
-                supplier_name: "Shiv Aum Steels Pvt Ltd",
-                supplier_gstin: "27AAFCS9987G1ZL",
-                no_of_doc_purchase: 4,
-            },
-            {
-                supplier_name: "Faiz Engineering and Trading Co.",
-                supplier_gstin: "24BPXPP5388B1ZC",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Honest Surgical Co",
-                supplier_gstin: "24AZDPM1803F1ZW",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "M S Enterprise",
-                supplier_gstin: "24ALCPP3148H1Z8",
-                no_of_doc_purchase: 9,
-            },
-            {
-                supplier_name: "Shree Ganesh Heat Treatment",
-                supplier_gstin: "24COFPP3749L1ZH",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Sanjay Bonny Forge Pvt Ltd",
-                supplier_gstin: "27AAKCS3246H1Z6",
-                no_of_doc_purchase: 4,
-            },
-            {
-                supplier_name: "Metallica Metals India",
-                supplier_gstin: "27AAGFM6458A1ZC",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "B R Logistics",
-                supplier_gstin: "27ABZPY0827F1ZZ",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Alisha Plastics",
-                supplier_gstin: "24CCWPP2634K1Z1",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Shankarbhai Desai & Sons",
-                supplier_gstin: "24AENPD0387C1ZV",
-                no_of_doc_purchase: 8,
-            },
-            {
-                supplier_name: "TCI Freight",
-                supplier_gstin: "24AAACT7966R1ZH",
-                no_of_doc_purchase: 4,
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                no_of_doc_purchase: 42,
-            },
-            {
-                supplier_name: "Keval Electric",
-                supplier_gstin: "24ARXPP8336L1ZU",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Shree Laxmi Global Logistics Private Limited",
-                supplier_gstin: "27AABCO1164H1ZM",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Shree Laxmi Global Logistics Private Limited",
-                supplier_gstin: "27AABCE2879H1ZG",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Pari Computers Pvt Ltd",
-                supplier_gstin: "27AACCP5489K1ZT",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Patson Pipes and Tubes",
-                supplier_gstin: "24AAFFP6265R1ZK",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Santosh Steels",
-                supplier_gstin: "27AAAFS3466L1ZV",
-                no_of_doc_purchase: 4,
-            },
-            {
-                supplier_name: "Surbhi Computers",
-                supplier_gstin: "23ADSPJ1561E1ZQ",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Appario Retail Private Ltd",
-                supplier_gstin: "24AALCA0171E1Z5",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Forge Cast Alloy Pvt Ltd",
-                supplier_gstin: "27AABCF2875J1ZE",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "K B Engineers",
-                supplier_gstin: "24AGRPC4267G1ZD",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Tube Traders",
-                supplier_gstin: "24AACFT5218P1ZW",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Pattech Fitwell Tube Components",
-                supplier_gstin: "24AAOFP2063N1ZV",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Capricorn Identity Services Pvt Ltd",
-                supplier_gstin: "07AAVCS8838C1ZR",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Patni and Sons",
-                supplier_gstin: "24AOXPP8810N2Z0",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Sanghvi Office Equipments Pvt. Ltd",
-                supplier_gstin: "24AABCS5513Q1Z4",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Devki Nandan J Gupta Metals LLP",
-                supplier_gstin: "27AAKFD5904A1ZS",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Hilti India Pvt Ltd",
-                supplier_gstin: "27AAACH3583Q1Z0",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "V Trans India Ltd",
-                supplier_gstin: "27AAACV1559Q2ZP",
-                no_of_doc_purchase: 6,
-            },
-            {
-                supplier_name: "Rai Road Lines",
-                supplier_gstin: "24ACNPR8089F1Z0",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Neminath Traders",
-                supplier_gstin: "24ABVPJ7716N1ZX",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Pratap Sales Corporation",
-                supplier_gstin: "24ADVPC8766H1Z1",
-                no_of_doc_purchase: 5,
-            },
-            {
-                supplier_name: "Asbestos Engineering Co",
-                supplier_gstin: "24AYWPS8436Q1Z3",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Arihant Fasteners",
-                supplier_gstin: "24AACFA8028Q1Z7",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Sai NDT Services",
-                supplier_gstin: "24ABPFS1716F2Z7",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Bhaven Enterprise",
-                supplier_gstin: "24AAQPP6652F1ZE",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "Nidhi Transport Service",
-                supplier_gstin: "24ABVPB2674D2ZQ",
-                no_of_doc_purchase: 55,
-            },
-            {
-                supplier_name: "Viraansh Automobiles LLP",
-                supplier_gstin: "24AAQFV6875Q1ZX",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Shree Khodiyar Transport",
-                supplier_gstin: "24AOYPP5222R1Z0",
-                no_of_doc_purchase: 24,
-            },
-            {
-                supplier_name: "Go Digit General Insurance Ltd",
-                supplier_gstin: "29AACCO4128Q1ZW",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Karan Enterprise",
-                supplier_gstin: "24AJEPS2985B1Z8",
-                no_of_doc_purchase: 3,
-            },
-            {
-                supplier_name: "New Light Trading Co",
-                supplier_gstin: "27AAPPK5796C1Z9",
-                no_of_doc_purchase: 7,
-            },
-            {
-                supplier_name: "Artee Engineers",
-                supplier_gstin: "27AAUPT8710G1Z3",
-                no_of_doc_purchase: 24,
-            },
-            {
-                supplier_name: "Shree Rajesh Pipe Fittings & Flanges",
-                supplier_gstin: "27BJFPR1685D1Z2",
-                no_of_doc_purchase: 22,
-            },
-            {
-                supplier_name: "VRT Logistic",
-                supplier_gstin: "27CBYPK4332A1ZM",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Triveni Boiler Pvt Ltd",
-                supplier_gstin: "24AAECT6387N1ZO",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "The Tool Shop",
-                supplier_gstin: "33AWRPA6154E1ZP",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Sheetal Wood Packaging",
-                supplier_gstin: "24ATGPP3906R1Z5",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Press",
-                supplier_gstin: "24AGZPP0419P1ZN",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Mohandas & Sons",
-                supplier_gstin: "27AAAFM1588M1ZW",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "M Desai & Co",
-                supplier_gstin: "24AAHFM0964G1ZE",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "Kajal Plastics",
-                supplier_gstin: "24AYGPS3586F1Z5",
-                no_of_doc_purchase: 4,
-            },
-            {
-                supplier_name: "BT Water Treatment Pvt Ltd",
-                supplier_gstin: "24AADCB3208R1ZL",
-                no_of_doc_purchase: 2,
-            },
-            {
-                supplier_name: "Bluechip Computer System",
-                supplier_gstin: "24AANFB3091M1Z6",
-                no_of_doc_purchase: 1,
-            },
-            {
-                supplier_name: "State Bank of India",
-                supplier_gstin: "27AAACS8577K2ZO",
-                no_of_doc_purchase: 13,
+                label: "Supplier Name",
+                fieldname: "supplier_name",
+                fieldtype: "Link",
+                width: 200,
+                _value: (value, column, data) => {
+                    // if (data && column.field === "supplier_name") {
+                    //     column.docfield.link_onclick = `reco_tool.apply_filters(${JSON.stringify(
+                    //         {
+                    //             tab: "invoice_tab",
+                    //             filters: {
+                    //                 supplier_name: data.supplier_gstin,
+                    //             },
+                    //         }
+                    //     )})`;
+                    // }
+
+                    return `
+                            ${data.supplier_name}
+                            <br />
+                            <span style="font-size: 0.9em">
+                                ${data.supplier_gstin || ""}
+                            </span>
+                        `;
+                },
+            },
+            {
+                label: "Count <br>2A/2B Docs",
+                fieldname: "count_isup_docs",
+                align: "center",
+                width: 120,
+            },
+            {
+                label: "Count <br>Purchase Docs",
+                fieldname: "count_pur_docs",
+                align: "center",
+                width: 120,
+            },
+            {
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                fieldname: "taxable_value_diff",
+                align: "center",
+                width: 150,
+                _value: (...args) => {
+                    return format_number(args[0]);
+                },
+            },
+            {
+                label: "Tax Difference <br>2A/2B - Purchase",
+                fieldname: "tax_diff",
+                align: "center",
+                width: 150,
+                _value: (...args) => {
+                    return format_number(args[0]);
+                },
+            },
+            {
+                label: "% Action <br>Taken",
+                fieldname: "action_taken",
+                align: "center",
+                width: 120,
+                _value: (...args) => {
+                    return (
+                        roundNumber(
+                            (args[2].count_action_taken / args[2].total_docs) * 100,
+                            2
+                        ) + " %"
+                    );
+                },
+            },
+            {
+                fieldname: "download",
+                fieldtype: "html",
+                width: 60,
+                _value: (...args) => get_icon(...args, "download"),
+            },
+            {
+                fieldname: "email",
+                fieldtype: "html",
+                width: 60,
+                _value: (...args) => get_icon(...args, "envelope"),
             },
         ];
     }
 
-    get_invoice_level_data() {
+    get_invoice_data() {
+        this.mapped_invoice_data = {};
+        this.filtered_data.forEach(row => {
+            this.mapped_invoice_data[get_hash(row)] = row;
+        });
+        return this.filtered_data;
+    }
+
+    get_invoice_columns() {
         return [
             {
-                supplier_name: "K Vijay Ispat Udyog",
-                supplier_gstin: "27AALFK9932E1Z0",
-                bill_no: "PINV-20-00517",
-                bill_date: "2020-11-21",
+                fieldname: "view",
+                fieldtype: "html",
+                width: 60,
+                align: "center",
+                _value: (...args) => get_icon(...args, "eye"),
             },
             {
-                supplier_name: "Padmavati Steel and Engg Co",
-                supplier_gstin: "27AADPD5694C1ZV",
-                bill_no: "PINV-20-00519",
-                bill_date: "2020-11-20",
+                label: "Supplier Name",
+                fieldname: "supplier_name",
+                width: 150,
+                _value: (...args) => {
+                    return `${args[2].supplier_name}
+                            <br />
+                            <span style="font-size: 0.9em">
+                                ${args[2].supplier_gstin || ""}
+                            </span>`;
+                },
             },
             {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00441",
-                bill_date: "2020-09-29",
+                label: "Bill No.",
+                fieldname: "bill_no",
             },
             {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00433",
-                bill_date: "2020-09-25",
+                label: "Date",
+                fieldname: "bill_date",
             },
             {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00389",
-                bill_date: "2020-09-14",
+                label: "Match Status",
+                fieldname: "isup_match_status",
+                width: 120,
             },
             {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00395",
-                bill_date: "2020-09-14",
+                label: "Purchase <br>Invoice",
+                fieldname: "name",
+                fieldtype: "Link",
+                doctype: "Purchase Invoice",
+                align: "center",
+                width: 120,
             },
             {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00479",
-                bill_date: "2020-10-10",
+                label: "GST Inward <br>Supply",
+                fieldname: "isup_name",
+                fieldtype: "Link",
+                doctype: "GST Inward Supply",
+                align: "center",
+                width: 120,
             },
             {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00465",
-                bill_date: "2020-10-09",
+                fieldname: "taxable_value_diff",
+                label: "Taxable Amount Diff <br>2A/2B - Purchase",
+                width: 150,
+                align: "center",
+                _value: (...args) => {
+                    return format_number(args[0]);
+                },
             },
             {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00478",
-                bill_date: "2020-10-07",
+                label: "Tax Difference <br>2A/2B - Purchase",
+                fieldname: "tax_diff",
+                width: 120,
+                align: "center",
+                _value: (...args) => {
+                    return format_number(args[0]);
+                },
             },
             {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00451",
-                bill_date: "2020-10-07",
+                fieldname: "differences",
+                label: "Differences",
+                width: 150,
+                align: "Left",
             },
             {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00450",
-                bill_date: "2020-10-05",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00449",
-                bill_date: "2020-10-02",
-            },
-            {
-                supplier_name: "Sanjay Bonny Forge Pvt Ltd",
-                supplier_gstin: "27AAKCS3246H1Z6",
-                bill_no: "PINV-20-00442",
-                bill_date: "2020-09-24",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00510",
-                bill_date: "2020-11-06",
-            },
-            {
-                supplier_name: "Divya Metal India",
-                supplier_gstin: "27APUPB5857M1Z3",
-                bill_no: "PINV-20-00379",
-                bill_date: "2020-09-11",
-            },
-            {
-                supplier_name: "Divya Metal India",
-                supplier_gstin: "27APUPB5857M1Z3",
-                bill_no: "PINV-20-00313",
-                bill_date: "2020-08-21",
-            },
-            {
-                supplier_name: "Sainest Tubes Pvt Ltd",
-                supplier_gstin: "24AAECS5018D1ZS",
-                bill_no: "PINV-20-00514",
-                bill_date: "2020-11-10",
-            },
-            {
-                supplier_name: "Shankarbhai Desai & Sons",
-                supplier_gstin: "24AENPD0387C1ZV",
-                bill_no: "PINV-20-00509",
-                bill_date: "2020-11-12",
-            },
-            {
-                supplier_name: "Jayesh Engineering",
-                supplier_gstin: "24ADNPT6484F1Z1",
-                bill_no: "PINV-20-00498",
-                bill_date: "2020-11-01",
-            },
-            {
-                supplier_name: "Nidhi Transport Service",
-                supplier_gstin: "24ABVPB2674D2ZQ",
-                bill_no: "PINV-20-00508",
-                bill_date: "2020-11-09",
-            },
-            {
-                supplier_name: "Shreya Pipe and Fittings",
-                supplier_gstin: "24ADVFS4123J1ZQ",
-                bill_no: "PINV-20-00507",
-                bill_date: "2020-11-09",
-            },
-            {
-                supplier_name: "Tapan Enterprise",
-                supplier_gstin: "24AEPPS0534Q1ZW",
-                bill_no: "PINV-20-00504",
-                bill_date: "2020-10-17",
-            },
-            {
-                supplier_name: "Natwarlal Hiralal Shah",
-                supplier_gstin: "24AFRPS0569Q1ZH",
-                bill_no: "PINV-20-00503",
-                bill_date: "2020-11-07",
-            },
-            {
-                supplier_name: "S B Associates",
-                supplier_gstin: "24ADCPG1409L1ZX",
-                bill_no: "PINV-20-00500",
-                bill_date: "2020-11-02",
-            },
-            {
-                supplier_name: "Jayhind Metal and Tubes",
-                supplier_gstin: "27AAIPS6329N1ZY",
-                bill_no: "PINV-20-00406",
-                bill_date: "2020-09-17",
-            },
-            {
-                supplier_name: "K B Forge Industries",
-                supplier_gstin: "24ACRPC1838M1ZD",
-                bill_no: "PINV-20-00488",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "K B Forge Industries",
-                supplier_gstin: "24ACRPC1838M1ZD",
-                bill_no: "PINV-20-00435",
-                bill_date: "2020-09-24",
-            },
-            {
-                supplier_name: "Metro Forge India",
-                supplier_gstin: "27AAIPB2425N1ZQ",
-                bill_no: "PINV-20-00360",
-                bill_date: "2020-09-07",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00495",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "Krit Corporation",
-                supplier_gstin: "24CASPS4511C1ZR",
-                bill_no: "PINV-20-00494",
-                bill_date: "2020-11-05",
-            },
-            {
-                supplier_name: "Raj Enterprise",
-                supplier_gstin: "24BFHPK5295N1ZV",
-                bill_no: "PINV-20-00491",
-                bill_date: "2020-10-31",
-            },
-            {
-                supplier_name: "SKM Impex - A Div of SKM Steels Ltd",
-                supplier_gstin: "24AADCS7801F1ZM",
-                bill_no: "PINV-20-00484",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "Topaz Piping Industries",
-                supplier_gstin: "24AAFFT1047H1ZF",
-                bill_no: "PINV-20-00485",
-                bill_date: "2020-10-30",
-            },
-            {
-                supplier_name: "S M Heat Treatment Works",
-                supplier_gstin: "24BWGPP6376K1ZY",
-                bill_no: "PINV-20-00486",
-                bill_date: "2020-10-28",
-            },
-            {
-                supplier_name: "Shree Bajrang Transport",
-                supplier_gstin: "24AFSPB1574M1Z6",
-                bill_no: "PINV-20-00489",
-                bill_date: "2020-10-30",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00487",
-                bill_date: "2020-10-29",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00482",
-                bill_date: "2020-10-24",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00476",
-                bill_date: "2020-10-16",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00475",
-                bill_date: "2020-10-15",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00474",
-                bill_date: "2020-10-15",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00461",
-                bill_date: "2020-10-09",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00460",
-                bill_date: "2020-10-09",
-            },
-            {
-                supplier_name: "Mitesh Metal and Alloys",
-                supplier_gstin: "27AIXPB6461D1Z3",
-                bill_no: "PINV-20-00351",
-                bill_date: "2020-09-06",
-            },
-            {
-                supplier_name: "Mitesh Metal and Alloys",
-                supplier_gstin: "27AIXPB6461D1Z3",
-                bill_no: "PINV-19-00595",
-                bill_date: "2019-08-22",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00483",
-                bill_date: "2020-10-28",
-            },
-            {
-                supplier_name: "Xiaomi Technology India Private Limited",
-                supplier_gstin: "27AAACX1645B1ZO",
-                bill_no: "PINV-20-00301",
-                bill_date: "2020-08-19",
-            },
-            {
-                supplier_name: "Hanco Pipe and Fitting",
-                supplier_gstin: "27CVQPK3283C1ZD",
-                bill_no: "PINV-20-00293",
-                bill_date: "2020-08-19",
-            },
-            {
-                supplier_name: "Shiv Shakti Pipe Fittings",
-                supplier_gstin: "27BKFPP9735B1ZZ",
-                bill_no: "PINV-20-00325",
-                bill_date: "2020-08-28",
-            },
-            {
-                supplier_name: "Hytech Pipe Fitting Pvt Ltd",
-                supplier_gstin: "24AAFCH1103D1ZG",
-                bill_no: "PINV-20-00477",
-                bill_date: "2020-10-19",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00481",
-                bill_date: "2020-10-22",
-            },
-            {
-                supplier_name: "Shah Metal and Tubes",
-                supplier_gstin: "27ABSFS1482R1Z3",
-                bill_no: "PINV-20-00471",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Express Roadlines",
-                supplier_gstin: "24AGCPP3351K1ZF",
-                bill_no: "PINV-20-00480",
-                bill_date: "2020-10-07",
-            },
-            {
-                supplier_name: "R K Distributors",
-                supplier_gstin: "24ABZPA5599C1ZC",
-                bill_no: "PINV-20-00434",
-                bill_date: "2020-09-28",
-            },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00312",
-                bill_date: "2020-08-20",
-            },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00277",
-                bill_date: "2020-08-10",
-            },
-            {
-                supplier_name: "Shikhar Steel Corporation",
-                supplier_gstin: "27AVGPB2421B1ZE",
-                bill_no: "PINV-20-00269",
-                bill_date: "2020-08-05",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00420",
-                bill_date: "2020-09-17",
-            },
-            {
-                supplier_name: "Karan Enterprise",
-                supplier_gstin: "24AJEPS2985B1Z8",
-                bill_no: "PINV-20-00458",
-                bill_date: "2020-10-07",
-            },
-            {
-                supplier_name: "Jayhind Metal and Tubes",
-                supplier_gstin: "27AAIPS6329N1ZY",
-                bill_no: "PINV-20-00314",
-                bill_date: "2020-08-21",
-            },
-            {
-                supplier_name: "Divya Metal India",
-                supplier_gstin: "27APUPB5857M1Z3",
-                bill_no: "PINV-20-00287",
-                bill_date: "2020-08-18",
-            },
-            {
-                supplier_name: "Natwarlal Hiralal Shah",
-                supplier_gstin: "24AFRPS0569Q1ZH",
-                bill_no: "PINV-20-00470",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Kulubi Steel",
-                supplier_gstin: "24AABFK8892P1ZK",
-                bill_no: "PINV-20-00469",
-                bill_date: "2020-10-16",
-            },
-            {
-                supplier_name: "Nidhi Transport Service",
-                supplier_gstin: "24ABVPB2674D2ZQ",
-                bill_no: "PINV-20-00468",
-                bill_date: "2020-10-16",
-            },
-            {
-                supplier_name: "Santosh Steels",
-                supplier_gstin: "27AAAFS3466L1ZV",
-                bill_no: "PINV-20-00467",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Shreeji Enterprises",
-                supplier_gstin: "24ABBFS8099M1ZH",
-                bill_no: "PINV-20-00466",
-                bill_date: "2020-10-14",
-            },
-            {
-                supplier_name: "Bureau Veritas India Private Ltd",
-                supplier_gstin: "24AABCB6767B2ZX",
-                bill_no: "PINV-20-00464",
-                bill_date: "2020-10-08",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00432",
-                bill_date: "2020-09-28",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00427",
-                bill_date: "2020-09-23",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00417",
-                bill_date: "2020-09-22",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00416",
-                bill_date: "2020-09-22",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00415",
-                bill_date: "2020-09-18",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00414",
-                bill_date: "2020-09-17",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00377",
-                bill_date: "2020-09-04",
-            },
-            {
-                supplier_name: "Met Heat Engineers Pvt Ltd",
-                supplier_gstin: "24AABCM3871D1ZS",
-                bill_no: "PINV-20-00376",
-                bill_date: "2020-09-03",
-            },
-            {
-                supplier_name: "Sanjay Forge Pvt Ltd",
-                supplier_gstin: "27AADCS7826G1Z5",
-                bill_no: "PINV-20-00456",
-                bill_date: "2020-03-20",
-            },
-            {
-                supplier_name: "Sanjay Forge Pvt Ltd",
-                supplier_gstin: "27AADCS7826G1Z5",
-                bill_no: "PINV-R-20-00003",
-                bill_date: "2020-03-20",
-            },
-            {
-                supplier_name: "Sanjay Bonny Forge Pvt Ltd",
-                supplier_gstin: "27AAKCS3246H1Z6",
-                bill_no: "PINV-20-00278",
-                bill_date: "2020-08-10",
-            },
-            {
-                supplier_name: "Rajdhan Metal",
-                supplier_gstin: "27AAEPJ8093L1Z6",
-                bill_no: "PINV-20-00455",
-                bill_date: "2020-10-03",
-            },
-            {
-                supplier_name: "S B Associates",
-                supplier_gstin: "24ADCPG1409L1ZX",
-                bill_no: "PINV-20-00454",
-                bill_date: "2020-10-01",
-            },
-            {
-                supplier_name: "S M Heat Treatment Works",
-                supplier_gstin: "24BWGPP6376K1ZY",
-                bill_no: "PINV-20-00453",
-                bill_date: "2020-10-06",
-            },
-            {
-                supplier_name: "Nidhi Transport Service",
-                supplier_gstin: "24ABVPB2674D2ZQ",
-                bill_no: "PINV-20-00452",
-                bill_date: "2020-10-07",
-            },
-            {
-                supplier_name: "Rai Crane Service",
-                supplier_gstin: "24AIXPR1887P1Z0",
-                bill_no: "PINV-20-00446",
-                bill_date: "2020-10-06",
-            },
-            {
-                supplier_name: "Shree Khodiyar Transport",
-                supplier_gstin: "24AOYPP5222R1Z0",
-                bill_no: "PINV-20-00443",
-                bill_date: "2020-10-03",
-            },
-            {
-                supplier_name: "V Trans India Ltd",
-                supplier_gstin: "27AAACV1559Q2ZP",
-                bill_no: "PINV-20-00444",
-                bill_date: "2020-09-29",
-            },
-            {
-                supplier_name: "Tapan Enterprise",
-                supplier_gstin: "24AEPPS0534Q1ZW",
-                bill_no: "PINV-20-00439-1",
-                bill_date: "2020-09-09",
-            },
-            {
-                supplier_name: "Raj Enterprise",
-                supplier_gstin: "24BFHPK5295N1ZV",
-                bill_no: "PINV-20-00440",
-                bill_date: "2020-09-30",
-            },
-            {
-                supplier_name: "Shreeji Trading Company",
-                supplier_gstin: "24AATPM0382J1ZE",
-                bill_no: "PINV-20-00437",
-                bill_date: "2020-09-30",
-            },
-            {
-                supplier_name: "New Light Tube Corporation",
-                supplier_gstin: "27AHLPK8194K1ZK",
-                bill_no: "PINV-20-00392",
-                bill_date: "2020-08-24",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00422",
-                bill_date: "2020-09-01",
-            },
-            {
-                supplier_name: "P K Enterprise",
-                supplier_gstin: "24CBFPR3680H1ZH",
-                bill_no: "PINV-20-00421",
-                bill_date: "2020-09-01",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00429",
-                bill_date: "2020-09-30",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00426",
-                bill_date: "2020-09-28",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00410",
-                bill_date: "2020-09-19",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00409",
-                bill_date: "2020-09-18",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00397",
-                bill_date: "2020-09-16",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00396",
-                bill_date: "2020-09-16",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00390",
-                bill_date: "2020-09-15",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00383",
-                bill_date: "2020-09-12",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00369",
-                bill_date: "2020-09-09",
-            },
-            {
-                supplier_name: "Time Transport Co",
-                supplier_gstin: "24AADFT5917A1ZK",
-                bill_no: "PINV-20-00368",
-                bill_date: "2020-09-08",
+                label: "Action",
+                fieldname: "isup_action",
             },
         ];
     }
@@ -1720,54 +900,255 @@ function update_progress(frm, method) {
     });
 }
 
-reco_tool.apply_filters = function ({ tab, filters }) {
-    if (!cur_frm) return;
+// reco_tool.apply_filters = function ({ tab, filters }) {
+//     if (!cur_frm) return;
 
-    // Switch to the tab
-    const { tabs } = cur_frm.purchase_reconciliation_tool;
-    tab = tabs && (tabs[tab] || Object.values(tabs).find(tab => tab.is_active()));
-    tab.set_active();
+//     // Switch to the tab
+//     const { tabs } = cur_frm.purchase_reconciliation_tool;
+//     tab = tabs && (tabs[tab] || Object.values(tabs).find(tab => tab.is_active()));
+//     tab.set_active();
 
-    // apply filters
-    const _filters = {};
-    for (const [fieldname, filter] of Object.entries(filters)) {
-        const column = tab.data_table_manager.get_column(fieldname);
-        column.$filter_input.value = filter;
-        _filters[column.colIndex] = filter;
-    }
+//     // apply filters
+//     const _filters = {};
+//     for (const [fieldname, filter] of Object.entries(filters)) {
+//         const column = tab.data_table_manager.get_column(fieldname);
+//         column.$filter_input.value = filter;
+//         _filters[column.colIndex] = filter;
+//     }
 
-    tab.data_table_manager.datatable.columnmanager.applyFilter(_filters);
-};
+//     tab.data_table_manager.datatable.columnmanager.applyFilter(_filters);
+// };
 
-function get_formatted(value, row, column, data, icon, callback) {
+function get_icon(value, column, data, icon) {
     /**
      * Returns custom ormated value for the row.
      * @param {string} value        Current value of the row.
-     * @param {object} row          All values of current row
      * @param {object} column       All properties of current column
      * @param {object} data         All values in its core form for current row
      * @param {string} icon         Return icon (font-awesome) as the content
-     * @param {function} callback   Callback on click of icon
      */
-
-    let content;
-    if (icon && callback) content = get_icon(icon, callback, data);
-    if (value) content = value;
-
-    return frappe.form.get_formatter(column.docfield.fieldtype)(
-        content,
-        column.docfield,
-        { always_show_decimals: true },
-        data
-    );
-}
-
-function get_icon(icon, callback, data) {
-    return `<button class="btn" title="hello" onclick="${callback}(${data})">
+    const hash = get_hash(data);
+    return `<button class="btn ${icon}" title="hello" data-name="${hash}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
 }
 
-reco_tool.trial = function (data) {
-    console.log("trial:", data);
+function get_hash(data) {
+    if (data.name || data.isup_name) return data.name + "~" + data.isup_name;
+}
+
+function patch_set_active_tab(frm) {
+    const set_active_tab = frm.set_active_tab;
+    frm.set_active_tab = function (...args) {
+        set_active_tab.apply(this, args);
+        frm.refresh();
+    };
+}
+
+reco_tool.link_documents = async function (frm, pur_name, isup_name, alert = true) {
+    if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
+
+    // link documents & update data.
+    const { message: r } = await frm.call("link_documents", { pur_name, isup_name });
+    const reco_tool = frm.purchase_reconciliation_tool;
+    const new_data = reco_tool.data.filter(
+        row => !(row.name == pur_name || row.isup_name == isup_name)
+    );
+    new_data.push(...r);
+
+    reco_tool.refresh(new_data);
+    if (alert)
+        after_successful_action(frm.purchase_reconciliation_tool.tabs.invoice_tab);
 };
+
+function unlink_documents(frm) {
+    if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
+    const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
+    const selected_rows = invoice_tab.get_checked_items();
+
+    // validate selected rows
+    selected_rows.forEach(row => {
+        if (row.isup_match_status.includes("Missing"))
+            frappe.throw(
+                "You have selected rows where no match is available. Please remove them before unlinking."
+            );
+    });
+
+    // unlink documents & update table
+    frm.call("unlink_documents", selected_rows);
+    const unlinked_docs = [
+        ...get_unlinked_docs(selected_rows),
+        ...get_unlinked_docs(selected_rows, true),
+    ];
+    const reco_tool = frm.purchase_reconciliation_tool;
+    const new_data = reco_tool.data.filter(
+        row => !has_matching_row(row, selected_rows)
+    );
+    new_data.push(...unlinked_docs);
+    reco_tool.refresh(new_data);
+    after_successful_action(invoice_tab);
+}
+
+function get_unlinked_docs(selected_rows, isup = false) {
+    const fields_to_update = [
+        "bill_no",
+        "bill_date",
+        "place_of_supply",
+        "is_reverse_charge",
+    ];
+
+    return deepcopy(selected_rows).map(row => {
+        if (isup) row.name = null;
+        else row.isup_name = null;
+
+        if (isup)
+            fields_to_update.forEach(field => {
+                row[field] = row[`isup_${field}`];
+            });
+
+        row.tax_diff = "";
+        row.taxable_value_diff = "";
+        row.differences = "";
+
+        if (!(row.isup_action == "Ignore" || (isup && row.isup_action == "Pending")))
+            row.isup_action = "No Action";
+
+        if (!isup) row.isup_match_status = "Missing in 2A/2B";
+        else row.isup_match_status = "Missing in PR";
+
+        return row;
+    });
+}
+
+function deepcopy(array) {
+    return JSON.parse(JSON.stringify(array));
+}
+
+function apply_action(frm, action) {
+    const active_tab = frm.get_active_tab()?.df.fieldname;
+    if (!active_tab) return;
+
+    const tab = frm.purchase_reconciliation_tool.tabs[active_tab];
+    const selected_rows = tab.get_checked_items();
+
+    // validate selected rows
+    if (action != "Ignore")
+        selected_rows.forEach(row => {
+            if (row.isup_match_status == "Missing in 2A/2B")
+                frappe.throw(
+                    "You can only apply Ignore action on rows where data is Missing in 2A/2B. Please remove them before applying this action."
+                );
+        });
+
+    // get affected rows
+    const { filtered_data, data } = frm.purchase_reconciliation_tool;
+    const affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
+
+    // update affected rows to backend and frontend
+    frm.call("apply_action", { data: affected_rows, action });
+    data.forEach(row => {
+        if (has_matching_row(row, affected_rows)) row.isup_action = action;
+    });
+
+    frm.purchase_reconciliation_tool.refresh(data);
+    after_successful_action(tab);
+}
+
+function after_successful_action(tab) {
+    if (tab) tab.clear_checked_items();
+    frappe.show_alert({
+        message: "Action applied successfully",
+        indicator: "green",
+    });
+}
+
+function has_matching_row(row, array) {
+    return array.filter(item => JSON.stringify(item) === JSON.stringify(row)).length;
+}
+
+function get_affected_rows(tab, selection, data) {
+    if (tab == "invoice_tab") return selection;
+
+    if (tab == "supplier_tab")
+        return data.filter(
+            inv =>
+                selection.filter(row => row.supplier_gstin == inv.supplier_gstin).length
+        );
+
+    if (tab == "summary_tab")
+        return data.filter(
+            inv =>
+                selection.filter(row => row.isup_match_status == inv.isup_match_status)
+                    .length
+        );
+}
+
+async function create_new_purchase_invoice(inward_supply, company, company_gstin) {
+    if (inward_supply.isup_match_status != "Missing in PR") return;
+
+    const { message: supplier } = await frappe.call({
+        method: "india_compliance.gst_india.utils.get_party_for_gstin",
+        args: {
+            gstin: inward_supply.supplier_gstin,
+        },
+    });
+
+    let company_address;
+    await frappe.model.get_value(
+        "Address",
+        { gstin: company_gstin, is_your_company_address: 1 },
+        "name",
+        r => (company_address = r.name)
+    );
+
+    await frappe.new_doc("Purchase Invoice");
+    const pur_frm = cur_frm;
+
+    pur_frm.doc.bill_no = inward_supply.isup_bill_no;
+    pur_frm.doc.bill_date = inward_supply.isup_bill_date;
+    pur_frm.doc.is_reverse_charge = inward_supply.isup_is_reverse_charge;
+
+    _set_value(pur_frm, {
+        company: company,
+        supplier: supplier,
+        shipping_address: company_address,
+        billing_address: company_address,
+    });
+
+    function _set_value(frm, values) {
+        for (const key in values) {
+            if (values[key] == frm.doc[key]) continue;
+            frm.set_value(key, values[key]);
+        }
+    }
+
+    // validated this on save
+    pur_frm._inward_supply = {
+        company: company,
+        company_gstin: company_gstin,
+        isup_name: inward_supply.isup_name,
+        supplier_gstin: inward_supply.supplier_gstin,
+        bill_no: inward_supply.isup_bill_no,
+        bill_date: inward_supply.isup_bill_date,
+        is_reverse_charge: inward_supply.isup_is_reverse_charge,
+        place_of_supply: inward_supply.isup_place_of_supply,
+        cgst: inward_supply.isup_cgst,
+        sgst: inward_supply.isup_sgst,
+        igst: inward_supply.isup_igst,
+        cess: inward_supply.isup_cess,
+        taxable_value: inward_supply.isup_taxable_value,
+    };
+}
+
+async function set_gstin_options(frm) {
+    const { query, params } = ic.get_gstin_query(frm.doc.company);
+    const { message } = await frappe.call({
+        method: query,
+        args: params,
+    });
+
+    if (!message) return;
+    const gstin_field = frm.get_field("company_gstin");
+    gstin_field.set_data(message);
+    return message;
+}

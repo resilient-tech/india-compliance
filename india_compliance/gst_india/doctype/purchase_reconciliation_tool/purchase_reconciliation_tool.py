@@ -13,7 +13,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Abs, Sum
-from frappe.utils import add_months, getdate
+from frappe.utils import add_months, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
@@ -30,20 +30,26 @@ from india_compliance.gst_india.utils.gstr import (
 )
 
 GSTR2B_GEN_DATE = 14
+GSTR2 = frappe.qb.DocType("GST Inward Supply")
+GSTR2_ITEM = frappe.qb.DocType("GST Inward Supply Item")
+PI = frappe.qb.DocType("Purchase Invoice")
+PI_TAX = frappe.qb.DocType("Purchase Taxes and Charges")
+PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
 
 class PurchaseReconciliationTool(Document):
-    FIELDS_TO_MATCH = [
-        "fy",
-        "bill_no",
-        "place_of_supply",
-        "is_reverse_charge",
-        "cgst",
-        "sgst",
-        "igst",
-        "cess",
-        "document_value",
-    ]
+    FIELDS_TO_MATCH = {
+        "fy": "Financial Year",
+        "bill_no": "Bill No",
+        "place_of_supply": "Place of Supply",
+        "is_reverse_charge": "Reverse Charge",
+        "cgst": "CGST",
+        "sgst": "SGST",
+        "igst": "IGST",
+        "cess": "CESS",
+        "taxable_value": "Taxable Amount",
+    }
+    FIELDS_LIST = list(FIELDS_TO_MATCH.keys())
     RULES = [
         {"Exact Match": ["E", "E", "E", "E", 0, 0, 0, 0, 0]},
         {"Suggested Match": ["E", "F", "E", "E", 0, 0, 0, 0, 0]},
@@ -62,12 +68,9 @@ class PurchaseReconciliationTool(Document):
         "Tax Deductor": "B2B",
     }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.gstr2 = frappe.qb.DocType("Inward Supply")
-        self.gstr2_item = frappe.qb.DocType("Inward Supply Item")
-        self.pi = frappe.qb.DocType("Purchase Invoice")
-        self.pi_tax = frappe.qb.DocType("Purchase Taxes and Charges")
+    def onload(self):
+        if hasattr(self, "reconciliation_data"):
+            self.set_onload("reconciliation_data", self.reconciliation_data)
 
     def validate(self):
         # set inward_supply_from_date to first day of the month
@@ -76,6 +79,9 @@ class PurchaseReconciliationTool(Document):
 
     def on_update(self):
         # reconcile purchases and inward supplies
+        if frappe.flags.in_install or frappe.flags.in_migrate:
+            return
+
         for category, amended_category in (
             ("B2B", "B2BA"),
             ("CDNR", "CDNRA"),
@@ -85,7 +91,7 @@ class PurchaseReconciliationTool(Document):
         ):
             self.reconcile(category, amended_category)
 
-        self.get_reconciliation_data()
+        self.reconciliation_data = self.get_reconciliation_data()
 
     def reconcile(self, category, amended_category):
         """
@@ -166,7 +172,7 @@ class PurchaseReconciliationTool(Document):
         """
 
         for field in self.FIELDS_TO_MATCH:
-            i = self.FIELDS_TO_MATCH.index(field)
+            i = self.FIELDS_LIST.index(field)
             if not self.is_field_matching(pur, isup, field, rules[i]):
                 return False
 
@@ -244,8 +250,7 @@ class PurchaseReconciliationTool(Document):
             "link_name": pur_name,
         }
 
-        frappe.db.set_value("Inward Supply", isup_name, isup_fields)
-        frappe.db.set_value("Purchase Invoice", pur_name, "inward_supply", isup_name)
+        frappe.db.set_value("GST Inward Supply", isup_name, isup_fields)
 
     def get_purchase(self, category):
         gst_category = (
@@ -257,13 +262,11 @@ class PurchaseReconciliationTool(Document):
 
         query = (
             self.query_purchase_invoice(["name"])
-            .where(
-                self.pi.posting_date[self.purchase_from_date : self.purchase_to_date]
-            )
-            .where((self.pi.inward_supply == "") | (self.pi.inward_supply.isnull()))
-            .where(self.pi.ignore_reconciliation == 0)
-            .where(self.pi.gst_category.isin(gst_category))
-            .where(self.pi.is_return == is_return)
+            .where(PI.posting_date[self.purchase_from_date : self.purchase_to_date])
+            .where(PI.name.notin(self.query_matched_purchase_invoice()))
+            .where(PI.ignore_reconciliation == 0)
+            .where(PI.gst_category.isin(gst_category))
+            .where(PI.is_return == is_return)
         )
 
         data = query.run(as_dict=True)
@@ -289,33 +292,49 @@ class PurchaseReconciliationTool(Document):
             "bill_date",
             "place_of_supply",
             "is_reverse_charge",
-            Abs(self.pi.base_rounded_total).as_("document_value"),
         ]
 
         if additional_fields:
             fields += additional_fields
 
+        pi_item = (
+            frappe.qb.from_(PI_ITEM)
+            .select(
+                Abs(Sum(PI_ITEM.taxable_value)).as_("taxable_value"), PI_ITEM.parent
+            )
+            .groupby(PI_ITEM.parent)
+        )
+
         return (
-            frappe.qb.from_(self.pi)
-            .left_join(self.pi_tax)
-            .on(self.pi_tax.parent == self.pi.name)
-            .where(self.company_gstin == self.pi.company_gstin)
-            .where(self.pi.docstatus == 1)
+            frappe.qb.from_(PI)
+            .left_join(PI_TAX)
+            .on(PI_TAX.parent == PI.name)
+            .left_join(pi_item)
+            .on(pi_item.parent == PI.name)
+            .where(self.company_gstin == PI.company_gstin)
+            .where(PI.docstatus == 1)
             # Filter for B2B transactions where match can be made
-            .where(self.pi.supplier_gstin != "")
-            .where(self.pi.gst_category != "Registered Composition")
-            .where(self.pi.supplier_gstin.isnotnull())
-            .groupby(self.pi.name)
-            .select(*tax_fields, *fields)
+            .where(PI.supplier_gstin != "")
+            .where(PI.gst_category != "Registered Composition")
+            .where(PI.supplier_gstin.isnotnull())
+            .groupby(PI.name)
+            .select(*tax_fields, *fields, pi_item.taxable_value)
+        )
+
+    def query_matched_purchase_invoice(self):
+        return (
+            frappe.qb.from_(GSTR2)
+            .select("link_name")
+            .where(GSTR2.link_doctype == "Purchase Invoice")
         )
 
     def query_tax_amount(self, account):
-        return Sum(
-            Abs(
+        return Abs(
+            Sum(
                 Case()
                 .when(
-                    self.pi_tax.account_head == account,
-                    self.pi_tax.base_tax_amount_after_discount_amount,
+                    PI_TAX.account_head == account,
+                    PI_TAX.base_tax_amount_after_discount_amount,
                 )
                 .else_(0)
             )
@@ -325,11 +344,9 @@ class PurchaseReconciliationTool(Document):
         categories = [category, amended_category or None]
         query = self.query_inward_supply()
         data = (
-            query.where(
-                (self.gstr2.match_status == "") | (self.gstr2.match_status.isnull())
-            )
-            .where(self.gstr2.action != "Ignore")
-            .where(self.gstr2.classification.isin(categories))
+            query.where((GSTR2.match_status == "") | (GSTR2.match_status.isnull()))
+            .where(GSTR2.action != "Ignore")
+            .where(GSTR2.classification.isin(categories))
             .run(as_dict=True)
         )
 
@@ -347,22 +364,28 @@ class PurchaseReconciliationTool(Document):
 
     def query_inward_supply(self, additional_fields=None, for_summary=False):
         fields = self.get_inward_supply_fields(additional_fields, for_summary)
-        self.isup_periods = _get_periods(
+        isup_periods = _get_periods(
             self.inward_supply_from_date, self.inward_supply_to_date
         )
 
-        return (
-            frappe.qb.from_(self.gstr2)
-            .left_join(self.gstr2_item)
-            .on(self.gstr2_item.parent == self.gstr2.name)
-            .where(self.company_gstin == self.gstr2.company_gstin)
-            .where(
-                (self.gstr2.return_period_2b.isin(self.isup_periods))
-                | (self.gstr2.sup_return_period.isin(self.isup_periods))
-            )
-            .groupby(self.gstr2_item.parent)
+        query = (
+            frappe.qb.from_(GSTR2)
+            .left_join(GSTR2_ITEM)
+            .on(GSTR2_ITEM.parent == GSTR2.name)
+            .where(self.company_gstin == GSTR2.company_gstin)
+            .groupby(GSTR2_ITEM.parent)
             .select(*fields)
         )
+
+        if self.gst_return == "GSTR 2B":
+            query = query.where((GSTR2.return_period_2b.isin(isup_periods)))
+        else:
+            query = query.where(
+                (GSTR2.return_period_2b.isin(isup_periods))
+                | (GSTR2.sup_return_period.isin(isup_periods))
+            )
+
+        return query
 
     def get_inward_supply_fields(
         self, additional_fields=None, for_summary=False, table=None
@@ -374,12 +397,11 @@ class PurchaseReconciliationTool(Document):
         Returns column names with 'isup_' prefix for summary where different table is provided.
         """
         if not table:
-            table = self.gstr2
+            table = GSTR2
 
         fields = [
             "bill_no",
             "bill_date",
-            "document_value",
             "name",
             "supplier_gstin",
             "is_reverse_charge",
@@ -403,17 +425,14 @@ class PurchaseReconciliationTool(Document):
         Returns tax fields for inward supply query.
         Where query is used as subquery, fields are fetch from table (subquery) instead of item table.
         """
-        if table == self.gstr2:
+        fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
+        if table == GSTR2:
             tax_fields = [
-                Sum(self.gstr2_item[field]).as_(
-                    f"isup_{field}" if for_summary else field
-                )
-                for field in GST_TAX_TYPES[:-1]
+                Sum(GSTR2_ITEM[field]).as_(f"isup_{field}" if for_summary else field)
+                for field in fields
             ]
         else:
-            tax_fields = [
-                table[field].as_(f"isup_{field}") for field in GST_TAX_TYPES[:-1]
-            ]
+            tax_fields = [table[field].as_(f"isup_{field}") for field in fields]
 
         return tax_fields
 
@@ -609,14 +628,17 @@ class PurchaseReconciliationTool(Document):
         date2 = date2 if date2 < now else now
         return [date1, date2]
 
-    @frappe.whitelist()
-    def get_reconciliation_data(self):
+    def get_reconciliation_data(self, purchase_names=None, inward_supply_names=None):
         """
         Get Reconciliation data based on standard filters
         Returns
             - Inward Supply: for the return month as per 2A and 2B
             - Purchase Invoice: All invoices matching with inward supply (irrespective of purchase period choosen)
                 Unmatched Purchase Invoice for the period choosen
+
+        params:
+            - purchase_names: list of purchase invoice names (Optional)
+            - inward_supply_names: list of inward supply names (Optional)
         """
         purchase = self.query_purchase_invoice(
             additional_fields=[
@@ -632,18 +654,22 @@ class PurchaseReconciliationTool(Document):
             "classification",
             "match_status",
             "action",
-            "return_period_2b",
         ]
         inward_supply = self.query_inward_supply(
             isup_additional_fields + ["link_doctype", "link_name"]
         )
 
+        # get selective data for manually linked invoices
+        if inward_supply_names:
+            inward_supply = inward_supply.where(GSTR2.name.isin(inward_supply_names))
+            purchase = purchase.where(PI.name.isin(purchase_names))
+
         # this will not return missing in inward supply (if any)
-        summary_data = (
-            purchase.right_join(inward_supply)
+        reconciliation_data = (
+            purchase.join(inward_supply)
             .on(
                 (inward_supply.link_doctype == "Purchase Invoice")
-                & (inward_supply.link_name == self.pi.name)
+                & (inward_supply.link_name == PI.name)
             )
             .select(
                 *self.get_inward_supply_fields(
@@ -656,21 +682,30 @@ class PurchaseReconciliationTool(Document):
         )
 
         # add missing in inward supply
-        summary_data = summary_data + (
+        reconciliation_data = reconciliation_data + (
             purchase.where(
-                self.pi.posting_date[self.purchase_from_date : self.purchase_to_date]
+                PI.posting_date[self.purchase_from_date : self.purchase_to_date]
             )
-            .where((self.pi.inward_supply == "") | (self.pi.inward_supply.isnull()))
+            .where(PI.name.notin(self.query_matched_purchase_invoice()))
             .run(as_dict=True)
         )
-        self.process_reconciliation_data(summary_data)
 
+        # add missing in purchase invoice
+        missing_in_pr = self.query_inward_supply(
+            isup_additional_fields, for_summary=True
+        ).where(GSTR2.link_name == "")
+
+        if inward_supply_names:
+            missing_in_pr = missing_in_pr.where(GSTR2.name.isin(inward_supply_names))
+
+        reconciliation_data = reconciliation_data + missing_in_pr.run(as_dict=True)
+
+        self.process_reconciliation_data(reconciliation_data)
         return {
-            "data": summary_data,
-            "columns": self.get_reconciliation_columns(),
+            "data": reconciliation_data,
         }
 
-    def process_reconciliation_data(self, summary_data):
+    def process_reconciliation_data(self, reconciliation_data):
         fields_to_update = [
             "supplier_name",
             "supplier_gstin",
@@ -682,14 +717,13 @@ class PurchaseReconciliationTool(Document):
 
         def _update_doc(doc, differences):
             # update differences
-            doc.differences = "<br> ".join(differences)
+            doc.differences = ", ".join(differences)
 
             # remove columns
             columns_to_remove = [
                 "isup_supplier_name",
                 "isup_supplier_gstin",
-                "isup_place_of_supply",
-                "isup_is_reverse_charge",
+                "ignore_reconciliation",
                 "gst_category",
                 "is_return",
             ]
@@ -700,7 +734,7 @@ class PurchaseReconciliationTool(Document):
                 doc.pop(column, None)
 
         # modify doc
-        for doc in summary_data:
+        for doc in reconciliation_data:
             differences = []
 
             # update missing values
@@ -715,7 +749,9 @@ class PurchaseReconciliationTool(Document):
             if not doc.isup_name:
                 doc.isup_match_status = "Missing in 2A/2B"
                 doc.isup_action = (
-                    "Ignore" if doc.pop("ignore_reconciliation", 0) == 1 else ""
+                    "Ignore"
+                    if doc.get("ignore_reconciliation", 0) == 1
+                    else "No Action"
                 )
 
                 classification = self.GST_CATEGORIES.get(doc.gst_category)
@@ -727,12 +763,16 @@ class PurchaseReconciliationTool(Document):
                 continue
 
             # update amount differences
-            doc.document_value_diff = doc.isup_document_value - doc.document_value
-            doc.tax_diff = self.get_total_tax(doc, True) - self.get_total_tax(doc)
+            doc.taxable_value_diff = rounded(
+                doc.isup_taxable_value - doc.taxable_value, 2
+            )
+            doc.tax_diff = rounded(
+                self.get_total_tax(doc, True) - self.get_total_tax(doc), 2
+            )
             self.update_cess_amount(doc)
 
             if doc.isup_match_status not in ["Mismatch", "Manual Match"]:
-                if abs(doc.tax_diff) > 0.01 or abs(doc.document_value_diff) > 0.01:
+                if abs(doc.tax_diff) > 0.01 or abs(doc.taxable_value_diff) > 0.01:
                     differences.append("Rounding Difference")
 
                 _update_doc(doc, differences)
@@ -740,174 +780,122 @@ class PurchaseReconciliationTool(Document):
 
             # update differences
             for field in self.FIELDS_TO_MATCH:
-                isup_value = doc.get(f"isup_{field}")
-                label = frappe.unscrub(field)
+                if field == "bill_no":
+                    continue
 
-                if isinstance(doc.get(field), str):
-                    label = f"{label} - {isup_value}"
+                isup_value = doc.get(f"isup_{field}")
 
                 if isup_value != doc.get(field):
+                    label = self.FIELDS_TO_MATCH[field]
                     differences.append(label)
 
             _update_doc(doc, differences)
 
-    def get_reconciliation_columns(self):
-        return [
+    @frappe.whitelist()
+    def link_documents(self, pur_name, isup_name):
+        if not pur_name or not isup_name:
+            return
+
+        purchases = []
+        inward_supplies = []
+
+        # silently handle existing links
+        if isup_linked_with := frappe.db.get_value(
+            "GST Inward Supply", isup_name, "link_name"
+        ):
+            self._unlink_documents((isup_name,))
+            purchases.append(isup_linked_with)
+
+        if (
+            pur_linked_with := frappe.qb.from_(GSTR2)
+            .select("name")
+            .where(GSTR2.link_doctype == "Purchase Invoice")
+            .where(GSTR2.link_name == pur_name)
+            .run()
+        ):
+            self._unlink_documents((pur_linked_with,))
+            inward_supplies.append(pur_linked_with)
+
+        # link documents
+        frappe.db.set_value(
+            "GST Inward Supply",
+            isup_name,
             {
-                "fieldname": "name",
-                "label": "Purchase Invoice",
-                "fieldtype": "Link",
-                "options": "Purchase Invoice",
+                "link_doctype": "Purchase Invoice",
+                "link_name": pur_name,
+                "match_status": "Manual Match",
             },
-            {
-                "fieldname": "supplier",
-                "label": "Supplier",
-                "fieldtype": "Link",
-                "options": "Supplier",
-            },
-            {
-                "fieldname": "supplier_name",
-                "label": "Supplier Name",
-            },
-            {
-                "fieldname": "supplier_gstin",
-                "label": "Supplier GSTIN",
-            },
-            {
-                "fieldname": "bill_no",
-                "label": "Bill No",
-            },
-            {
-                "fieldname": "bill_date",
-                "label": "Bill Date",
-                "fieldtype": "Date",
-            },
-            {
-                "fieldname": "place_of_supply",
-                "label": "Place of Supply",
-            },
-            {
-                "fieldname": "is_reverse_charge",
-                "label": "Reverse Charge",
-                "fieldtype": "Check",
-            },
-            {
-                "fieldname": "cgst",
-                "label": "CGST",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "sgst",
-                "label": "SGST",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "igst",
-                "label": "IGST",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "cess",
-                "label": "CESS",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "document_value",
-                "label": "Document Value",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "isup_name",
-                "label": "Inward Supply",
-                "fieldtype": "Link",
-                "options": "Inward Supply",
-            },
-            {
-                "fieldname": "isup_bill_no",
-                "label": "GSTR Bill No",
-            },
-            {
-                "fieldname": "isup_bill_date",
-                "label": "GSTR Bill Date",
-                "fieldtype": "Date",
-            },
-            {
-                "fieldname": "isup_cgst",
-                "label": "GSTR CGST",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "isup_sgst",
-                "label": "GSTR SGST",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "isup_igst",
-                "label": "GSTR IGST",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "isup_cess",
-                "label": "GSTR CESS",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "isup_document_value",
-                "label": "GSTR Document Value",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "isup_classification",
-                "label": "Category",
-                "fieldtype": "Select",
-                "options": [cat.value for cat in GSTRCategory],
-            },
-            {
-                "fieldname": "isup_match_status",
-                "label": "Match Status",
-                "fieldtype": "Select",
-                "options": [
-                    "Exact Match",
-                    "Suggested Match",
-                    "Mismatch",
-                    "Manual Match",
-                    "Missing in 2A/2B",
-                    "Missing in PR",
-                ],
-            },
-            {
-                "fieldname": "isup_action",
-                "label": "Action",
-                "fieldtype": "Select",
-                "options": [
-                    "No Action",
-                    "Accept My Values",
-                    "Accept Supplier Values",
-                    "Ignore",
-                    "Pending",
-                ],
-            },
-            {
-                "fieldname": "isup_return_period_2b",
-                "label": "Return Period 2B",
-                "fieldtype": "select",
-                "options": self.isup_periods,
-            },
-            {
-                "fieldname": "tax_diff",
-                "label": "Tax Difference",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "document_value_diff",
-                "label": "Document Value Difference",
-                "fieldtype": "Float",
-            },
-            {
-                "fieldname": "differences",
-                "label": "Differences",
-            },
-        ]
+        )
+        purchases.append(pur_name)
+        inward_supplies.append(isup_name)
+
+        # get updated data
+        return self.get_reconciliation_data(purchases, inward_supplies).get("data")
+
+    @frappe.whitelist()
+    def unlink_documents(self, data):
+        if isinstance(data, str):
+            data = frappe.parse_json(data)
+
+        isup_docs = []
+        isup_actions = []
+        for doc in data:
+            isup_docs.append(doc.get("isup_name"))
+            if doc.get("isup_action") not in ["Ignore", "Pending"]:
+                isup_actions.append(doc.get("isup_name"))
+
+        self._unlink_documents(isup_docs, isup_actions)
+
+    def _unlink_documents(self, isup_docs, isup_actions=None):
+        if isup_docs:
+            (
+                frappe.qb.update(GSTR2)
+                .set("link_doctype", "")
+                .set("link_name", "")
+                .set("match_status", "Unlinked")
+                .where(GSTR2.name.isin(isup_docs))
+                .run()
+            )
+
+        if isup_actions:
+            (
+                frappe.qb.update(GSTR2)
+                .set("action", "No Action")
+                .where(GSTR2.name.isin(isup_actions))
+                .run()
+            )
+
+    @frappe.whitelist()
+    def apply_action(self, data, action):
+        if isinstance(data, str):
+            data = frappe.parse_json(data)
+
+        is_ignore_action = action == "Ignore"
+
+        isup_docs = []
+        pur_docs = []
+
+        for doc in data:
+            isup_docs.append(doc.get("isup_name"))
+
+            if is_ignore_action and not doc.isup_name:
+                pur_docs.append(doc.get("name"))
+
+        if isup_docs:
+            (
+                frappe.qb.update(GSTR2)
+                .set("action", action)
+                .where(GSTR2.name.isin(isup_docs))
+                .run()
+            )
+
+        if pur_docs:
+            (
+                frappe.qb.update(PI)
+                .set("ignore_reconciliation", 1)
+                .where(PI.name.isin(pur_docs))
+                .run()
+            )
 
 
 def get_periods(fiscal_year, return_type: ReturnType):

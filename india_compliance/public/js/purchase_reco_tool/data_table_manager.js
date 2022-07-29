@@ -23,6 +23,11 @@ ic.DataTableManager = class DataTableManager {
         }
     }
 
+    refresh(data, columns) {
+        this.data = data;
+        this.datatable.refresh(data, columns);
+    }
+
     get_column(fieldname) {
         return this.columns_dict[fieldname];
     }
@@ -47,9 +52,6 @@ ic.DataTableManager = class DataTableManager {
     }
 
     get_dt_column(column) {
-        const title = __(column.label || toTitle(column.fieldname));
-        column.fieldname ||= frappe.scrub(title);
-
         const docfield = {
             options: column.options || column.doctype,
             fieldname: column.fieldname,
@@ -57,6 +59,8 @@ ic.DataTableManager = class DataTableManager {
             link_onclick: column.link_onclick,
             precision: column.precision,
         };
+        column.width = column.width || 100;
+
         let compareFn = null;
         if (docfield.fieldtype === "Date") {
             compareFn = (cell, keyword) => {
@@ -69,41 +73,27 @@ ic.DataTableManager = class DataTableManager {
             };
         }
 
-        let formatter = column.format;
-        if (!formatter) {
-            formatter = (value, row, column, data) => {
-                let doc = null;
-                if (Array.isArray(row)) {
-                    doc = row.reduce((acc, curr) => {
-                        if (!curr.column.docfield) return acc;
-                        acc[curr.column.docfield.fieldname] = curr.content;
-                        return acc;
-                    }, {});
-                } else {
-                    doc = row;
-                }
+        let format = function (value, row, column, data) {
+            if (column._value) {
+                value = column._value(value, column, data);
+            }
 
-                return frappe.format(
-                    value,
-                    column.docfield,
-                    { always_show_decimals: true },
-                    doc
-                );
-            };
-        }
+            return frappe.form.get_formatter(column.docfield.fieldtype)(
+                value,
+                column.docfield,
+                { always_show_decimals: true },
+                data
+            );
+        };
 
         return {
             id: column.fieldname,
             field: column.fieldname,
-            name: title,
-            content: title,
+            name: column.label,
+            content: column.label,
+            format,
             docfield,
-            width: column.width || 150,
-            editable: !!column.editable,
-            align: column.align,
-            compareValue: compareFn,
-            format: formatter,
-            dropdown: column.dropdown,
+            ...column,
         };
     }
 
@@ -120,6 +110,13 @@ ic.DataTableManager = class DataTableManager {
     get_checked_items() {
         const indices = this.datatable.rowmanager.getCheckedRows();
         return indices.map(index => this.data[index]);
+    }
+
+    clear_checked_items() {
+        const { rowmanager } = this.datatable;
+        rowmanager
+            .getCheckedRows()
+            .map(rowIndex => rowmanager.checkRow(rowIndex, false));
     }
 
     render_datatable() {
