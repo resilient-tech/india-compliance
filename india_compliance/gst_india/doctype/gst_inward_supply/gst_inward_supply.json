@@ -142,7 +142,7 @@
    "fieldname": "items",
    "fieldtype": "Table",
    "label": "Items",
-   "options": "Inward Supply Item"
+   "options": "GST Inward Supply Item"
   },
   {
    "fieldname": "document_value",
@@ -351,10 +351,10 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-07-19 13:22:19.411693",
+ "modified": "2022-07-27 16:52:52.795724",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "Inward Supply",
+ "name": "GST Inward Supply",
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [

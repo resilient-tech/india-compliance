@@ -1,7 +1,7 @@
 import frappe
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.doctype.inward_supply.inward_supply import (
+from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
 

@@ -5,7 +5,7 @@ import frappe
 from frappe.model.document import Document
 
 
-class InwardSupply(Document):
+class GSTInwardSupply(Document):
     def before_save(self):
         if self.classification.endswith("A"):
             self.is_amended = True
@@ -22,10 +22,10 @@ def create_inward_supply(transaction):
         "supplier_gstin": transaction.supplier_gstin,
     }
 
-    if name := frappe.get_value("Inward Supply", filters):
-        inward_supply = frappe.get_doc("Inward Supply", name)
+    if name := frappe.get_value("GST Inward Supply", filters):
+        gst_inward_supply = frappe.get_doc("GST Inward Supply", name)
     else:
-        inward_supply = frappe.new_doc("Inward Supply")
+        gst_inward_supply = frappe.new_doc("GST Inward Supply")
 
-    inward_supply.update(transaction)
-    return inward_supply.save(ignore_permissions=True)
+    gst_inward_supply.update(transaction)
+    return gst_inward_supply.save(ignore_permissions=True)

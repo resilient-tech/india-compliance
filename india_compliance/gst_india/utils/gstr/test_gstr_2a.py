@@ -50,7 +50,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
     def setUpClass(cls):
         cls.gstin = "01AABCE2207R1Z5"
         cls.return_period = "032020"
-        cls.doctype = "Inward Supply"
+        cls.doctype = "GST Inward Supply"
         cls.log_doctype = "GSTR Import Log"
         cls.test_data = parse_json(read_file(get_data_file_path("test_gstr_2a.json")))
 
@@ -85,7 +85,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         mock_gstr_2a_api.return_value = Mock()
         mock_gstr_2a_api.return_value.get_data.side_effect = mock_get_data
         mock_save_gstr.side_effect = mock_save_gstr_func
-        download_gstr_2a(self.gstin, {self.return_period})
+        download_gstr_2a(self.gstin, (self.return_period,))
 
     def test_gstr2a_b2b(self):
         doc = self.get_doc(GSTRCategory.B2B)

@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestInwardSupply(FrappeTestCase):
+class TestGSTInwardSupply(FrappeTestCase):
     pass

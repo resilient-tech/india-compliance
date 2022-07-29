@@ -1,6 +1,3 @@
-const e_invoicing_enabled =
-    ic.is_api_enabled() && gst_settings.enable_e_invoice;
-
 frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
         if (!is_e_invoice_applicable(frm)) return;
@@ -62,7 +59,7 @@ frappe.ui.form.on("Sales Invoice", {
                 resolve();
             };
 
-            if (!is_irn_cancellable(frm) || !e_invoicing_enabled) {
+            if (!is_irn_cancellable(frm) || !ic.is_e_invoice_enabled()) {
                 const d = frappe.warn(
                     __("Cannot Cancel IRN"),
                     __(
@@ -162,7 +159,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
 
 function is_e_invoice_applicable(frm) {
     return (
-        e_invoicing_enabled &&
+        ic.is_e_invoice_enabled() &&
         frm.doc.docstatus == 1 &&
         frm.doc.company_gstin &&
         frm.doc.gst_category != "Unregistered" &&

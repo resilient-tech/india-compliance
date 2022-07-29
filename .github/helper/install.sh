@@ -51,12 +51,14 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
+bench get-app payments
 bench get-app erpnext --branch "$BRANCH"
 
 bench use test_site
 bench start &
 bench reinstall --yes
 
+bench --verbose install-app payments
 bench --verbose install-app erpnext
 
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
