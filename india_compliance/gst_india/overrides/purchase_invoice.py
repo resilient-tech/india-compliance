@@ -12,6 +12,7 @@ def validate(doc, method=None):
 
     update_itc_totals(doc)
     validate_supplier_gstin(doc)
+    validate_bill_no(doc)
 
 
 def update_itc_totals(doc, method=None):
@@ -42,4 +43,24 @@ def validate_supplier_gstin(doc):
         frappe.throw(
             _("Supplier GSTIN and Company GSTIN cannot be the same"),
             title=_("Invalid Supplier GSTIN"),
+        )
+
+
+def validate_bill_no(doc):
+    if not doc.supplier_gstin or doc.bill_no:
+        return
+
+    gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
+    for tax in doc.get("taxes"):
+        if (
+            tax.account_head not in gst_accounts
+            or not tax.base_tax_amount_after_discount_amount
+        ):
+            continue
+
+        frappe.throw(
+            _(
+                "Bill No is mandatory for a GST Purchase Invoice from a Registered Supplier."
+            ),
+            title=_("Missing Mandatory Field"),
         )
