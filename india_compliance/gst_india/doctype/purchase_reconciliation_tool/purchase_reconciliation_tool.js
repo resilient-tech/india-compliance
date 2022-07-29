@@ -1113,7 +1113,7 @@ function show_detailed_dialog (me, data) {
             }
         ],
     });
-    _add_custom_actions(d, mapped_data);
+    _add_custom_actions(d, me, mapped_data);
 
     const detail_view = d.fields_dict.detail_view.$wrapper;
 
@@ -1214,7 +1214,8 @@ function get_date_range(me, field_prefix) {
     return [from_date, to_date];
 }
 
-function _add_custom_actions(d, data) {
+function _add_custom_actions(d, me, data) {
+    const frm = me.frm;
     let actions = [];
     const match_actions = data.name && data.isup_name
         ? ["Unlink", "Accept My Values", "Accept Supplier Values", "Pending"]
@@ -1231,9 +1232,11 @@ function _add_custom_actions(d, data) {
     actions.push(...pr_actions, ...isup_actions, ...match_actions, "Ignore");
 
     actions.forEach(action => {
-        let btn_css_class = get_action_class(action);
+        let btn_css_class = get_button_css(action);
+
         d.add_custom_action(action, () => {
-            // ToDo: Add action logic
+            apply_custom_action(frm, data, action)
+            d.hide();
         },
         `mr-2 ${btn_css_class}`);
 
@@ -1243,10 +1246,26 @@ function _add_custom_actions(d, data) {
     d.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
 }
 
-function get_action_class(action) {
-    if (action == "Unlink") return "btn-warning";
-    if (in_list(["Pending", "Ignore"], action)) return "btn-secondary";
-    if (in_list(["Create", "Link", "Accept My Values", "Accept Supplier Values"], action)) return "btn-primary";
+function get_button_css(action) {
+    if (action == "Unlink") return "btn-danger";
+    if (action == "Pending") return "btn-secondary";
+    if (action == "Ignore") return "btn-secondary";
+    if (action == "Create") return "btn-primary";
+    if (action == "Link") return "btn-primary";
+    if (action == "Accept My Values") return "btn-primary";
+    if (action == "Accept Supplier Values") return "btn-primary";
+}
+
+function apply_custom_action(frm, data, action) {
+    if (action == "Unlink") {
+        unlink_documents(frm, data);
+    } else if (action == "Link") {
+        reco_tool.link_documents(frm, data.name, data.isup_name,true);
+    } else if (action == "Create") {
+        create_new_purchase_invoice(data, frm.doc.company, frm.doc.company_gstin);
+    } else {
+        apply_action(frm, action);
+    }
 }
 
 function render_cards(data, purchase_reco_tool_cards) {
