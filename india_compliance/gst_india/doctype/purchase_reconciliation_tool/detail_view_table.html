@@ -1,0 +1,75 @@
+<div class="container">
+	<table class="table table-bordered table-hover">
+		<thead>
+			<tr class="text-center">
+				<th></th>
+				<th>2A / 2B</th>
+				<th>Purchase</th>
+			</tr>
+		</thead>
+		<tbody data-label="detail-view-content">
+			<tr>
+				<th>Document Links</td>
+				<td data-label="name">{{ data.isup_link || '-' }}</td>
+				<td data-label="isup_name">{{ data.link || '-' }}</td>
+			</tr>
+			<tr>
+				<th>Bill No</td>
+				<td data-label="isup_bill_no">{{ data.isup_bill_no || '-' }}</td>
+				<td data-label="bill_no">{{ data.bill_no || '-' }}</td>
+			</tr>
+			<tr>
+				<th>Bill Date</td>
+				<td data-label="isup_bill_date">
+					{{ frappe.format(data.isup_bill_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+				<td data-label="bill_date">
+					{{ frappe.format(data.bill_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+			</tr>
+			<tr>
+				<th>Place of Supply</th>
+				<td data-label="isup_place_of_supply">{{ data.isup_place_of_supply || '-' }}</td>
+				<td data-label="place_of_supply">{{ data.place_of_supply || '-' }}</td>
+			</tr>
+			<tr>
+				<th>Reverse Charge</th>
+				<td data-label="isup_is_reverse_charge">{{ data.isup_is_reverse_charge || '-' }}</td>
+				<td data-label="is_reverse_charge">{{ data.is_reverse_charge || '-' }}</td>
+			</tr>
+			{% if data.cgst || data.isup_cgst %}
+			<tr>
+				<th>CGST</td>
+				<td>{{ data.isup_cgst || '-' }}</td>
+				<td>{{ data.cgst || '-' }}</td>
+			</tr>
+			{% endif %}
+			{% if data.sgst || data.isup_sgst %}
+			<tr>
+				<th>SGST</td>
+				<td>{{ data.isup_sgst || '-' }}</td>
+				<td>{{ data.sgst || '-' }}</td>
+			</tr>
+			{% endif %}
+			{% if data.igst || data.isup_igst %}
+			<tr>
+				<th>IGST</td>
+				<td>{{ data.isup_igst || '-' }}</td>
+				<td>{{ data.igst || '-' }}</td>
+			</tr>
+			{% endif %}
+			{% if data.cess || data.isup_cess %}
+			<tr>
+				<th>CESS</td>
+				<td>{{ data.isup_cess || '-' }}</td>
+				<td>{{ data.cess || '-' }}</td>
+			</tr>
+			{% endif %}
+			<tr>
+				<th>Taxable Amount</td>
+				<td>{{ data.isup_taxable_value || '-' }}</td>
+				<td>{{ data.taxable_value || '-' }}</td>
+			</tr>
+		</tbody>
+	</table>
+</div>

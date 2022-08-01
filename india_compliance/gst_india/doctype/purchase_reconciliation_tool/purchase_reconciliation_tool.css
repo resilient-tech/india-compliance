@@ -73,3 +73,13 @@ div[data-page-route="Purchase Reconciliation Tool"] .dropdown-divider {
     border-top: 1px solid var(--border-color);
     padding: 0;
 }
+
+.table > tbody > tr > td {
+    text-align: center;
+    width: 30%;
+}
+
+.not-matched {
+    color: red;
+    text-align: center;
+}
