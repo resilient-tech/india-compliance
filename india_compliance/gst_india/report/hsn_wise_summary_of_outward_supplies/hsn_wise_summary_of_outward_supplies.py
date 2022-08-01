@@ -23,25 +23,32 @@ def _execute(filters=None):
         filters = {}
     columns = get_columns()
 
+    output_gst_list = get_gst_accounts_by_type(filters.company, "Output").values()
+    output_gst_accounts = [account for account in output_gst_list if account]
+
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
     if item_list:
         itemised_tax, tax_columns = get_tax_accounts(
-            item_list, columns, company_currency
+            item_list, columns, company_currency, output_gst_accounts
         )
 
     data = []
     added_item = []
     for d in item_list:
         if (d.parent, d.item_code) not in added_item:
-            row = [d.gst_hsn_code, d.description, d.stock_uom, d.stock_qty, d.tax_rate]
+            row = [d.gst_hsn_code, d.description, d.stock_uom, d.stock_qty]
             total_tax = 0
+            tax_rate = 0
             for tax in tax_columns:
                 item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
+                if item_tax.get("is_gst_tax"):
+                    tax_rate += flt(item_tax.get("tax_rate", 0))
                 total_tax += flt(item_tax.get("tax_amount", 0))
 
-            row += [d.base_net_amount + total_tax]
-            row += [d.base_net_amount]
+            row += [tax_rate]
+            row += [d.taxable_value + total_tax]
+            row += [d.taxable_value]
 
             for tax in tax_columns:
                 item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
@@ -128,31 +135,30 @@ def get_items(filters):
 
     items = frappe.db.sql(
         """
-        select
+        SELECT
             `tabSales Invoice Item`.gst_hsn_code,
             `tabSales Invoice Item`.stock_uom,
-            sum(`tabSales Invoice Item`.stock_qty) as stock_qty,
-            sum(`tabSales Invoice Item`.base_net_amount) as base_net_amount,
-            sum(`tabSales Invoice Item`.base_price_list_rate) as base_price_list_rate,
+            sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
+            sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
+            sum(`tabSales Invoice Item`.base_price_list_rate) AS base_price_list_rate,
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
-            `tabGST HSN Code`.description,
-            json_extract(`tabSales Taxes and Charges`.item_wise_tax_detail,
-            concat('$."' , `tabSales Invoice Item`.item_code, '"[0]')) * count(distinct `tabSales Taxes and Charges`.name) as tax_rate
-        from
-            `tabSales Invoice`,
-            `tabSales Invoice Item`,
-            `tabGST HSN Code`,
-            `tabSales Taxes and Charges`
-        where
-            `tabSales Invoice`.name = `tabSales Invoice Item`.parent
-            and `tabSales Taxes and Charges`.parent = `tabSales Invoice`.name
-            and `tabSales Invoice`.docstatus = 1
-            and `tabSales Invoice Item`.gst_hsn_code is not NULL
-            and `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name %s %s
-        group by
+            `tabGST HSN Code`.description
+        FROM
+            `tabSales Invoice`
+            INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
+            INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name % s % s
+        WHERE
+            `tabSales Invoice`.docstatus = 1
+            AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL
+        GROUP BY
             `tabSales Invoice Item`.parent,
-            `tabSales Invoice Item`.item_code
+            `tabSales Invoice Item`.item_code,
+            `tabSales Invoice Item`.gst_hsn_code,
+            `tabSales Invoice Item`.uom
+        ORDER BY
+            `tabSales Invoice Item`.gst_hsn_code,
+            `tabSales Invoice Item`.uom
         """
         % (conditions, match_conditions),
         filters,
@@ -166,6 +172,7 @@ def get_tax_accounts(
     item_list,
     columns,
     company_currency,
+    output_gst_accounts,
     doctype="Sales Invoice",
     tax_doctype="Sales Taxes and Charges",
 ):
@@ -221,8 +228,14 @@ def get_tax_accounts(
                         continue
                     itemised_tax.setdefault(item_code, frappe._dict())
                     if isinstance(tax_data, list):
+                        tax_rate = 0
+                        is_gst_tax = 0
+                        if account_head in output_gst_accounts:
+                            is_gst_tax = 1
+                            tax_rate = tax_data[0]
                         tax_amount = tax_data[1]
                     else:
+                        tax_rate = 0
                         tax_amount = 0
 
                     for d in item_row_map.get(parent, {}).get(item_code, []):
@@ -232,9 +245,11 @@ def get_tax_accounts(
                                 account_head
                             ] = frappe._dict(
                                 {
+                                    "tax_rate": flt(tax_rate, 2),
+                                    "is_gst_tax": is_gst_tax,
                                     "tax_amount": flt(
                                         item_tax_amount, tax_amount_precision
-                                    )
+                                    ),
                                 }
                             )
             except ValueError:
@@ -242,14 +257,15 @@ def get_tax_accounts(
 
     tax_columns.sort()
     for account_head in tax_columns:
-        columns.append(
-            {
-                "label": account_head,
-                "fieldname": frappe.scrub(account_head),
-                "fieldtype": "Float",
-                "width": 110,
-            }
-        )
+        if account_head in output_gst_accounts:
+            columns.append(
+                {
+                    "label": account_head,
+                    "fieldname": frappe.scrub(account_head),
+                    "fieldtype": "Float",
+                    "width": 110,
+                }
+            )
 
     return itemised_tax, tax_columns
 
