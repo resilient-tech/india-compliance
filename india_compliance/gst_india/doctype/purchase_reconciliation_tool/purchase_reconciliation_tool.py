@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 from calendar import monthrange
-from datetime import datetime
+from datetime import date
 from math import ceil
 from typing import List
 
@@ -362,7 +362,9 @@ class PurchaseReconciliationTool(Document):
 
         return self.get_dict_for_key("supplier_gstin", data)
 
-    def query_inward_supply(self, additional_fields=None, for_summary=False):
+    def query_inward_supply(
+        self, additional_fields=None, for_summary=False, filter_period=True
+    ):
         fields = self.get_inward_supply_fields(additional_fields, for_summary)
         isup_periods = _get_periods(
             self.inward_supply_from_date, self.inward_supply_to_date
@@ -376,6 +378,9 @@ class PurchaseReconciliationTool(Document):
             .groupby(GSTR2_ITEM.parent)
             .select(*fields)
         )
+
+        if not filter_period:
+            return query
 
         if self.gst_return == "GSTR 2B":
             query = query.where((GSTR2.return_period_2b.isin(isup_periods)))
@@ -598,9 +603,9 @@ class PurchaseReconciliationTool(Document):
     # rules to match data with preference
     @frappe.whitelist()
     def get_date_range(self, period):
-        now = datetime.now()
-        start_month = end_month = month = now.month
-        start_year = end_year = year = now.year
+        today = getdate()
+        start_month = end_month = month = today.month
+        start_year = end_year = year = today.year
         quarter = ceil(month / 3)
 
         if "Previous Month" in period:
@@ -625,7 +630,7 @@ class PurchaseReconciliationTool(Document):
 
         date1 = _get_first_day(start_month, start_year)
         date2 = _get_last_day(end_month, end_year)
-        date2 = date2 if date2 < now else now
+        date2 = date2 if date2 < today else today
         return [date1, date2]
 
     def get_reconciliation_data(self, purchase_names=None, inward_supply_names=None):
@@ -737,6 +742,15 @@ class PurchaseReconciliationTool(Document):
         for doc in reconciliation_data:
             differences = []
 
+            # update amount differences
+            doc.taxable_value_diff = rounded(
+                doc.get("isup_taxable_value", 0) - doc.get("taxable_value", 0), 2
+            )
+            doc.tax_diff = rounded(
+                self.get_total_tax(doc, True) - self.get_total_tax(doc), 2
+            )
+            self.update_cess_amount(doc)
+
             # update missing values
             if not doc.name:
                 doc.isup_match_status = "Missing in PR"
@@ -754,22 +768,11 @@ class PurchaseReconciliationTool(Document):
                     else "No Action"
                 )
 
-                classification = self.GST_CATEGORIES.get(doc.gst_category)
-                if doc.is_return and classification == "B2B":
-                    classification = "CDNR"
+                classification = self.guess_classification(doc)
 
                 doc.isup_classification = classification
                 _update_doc(doc, differences)
                 continue
-
-            # update amount differences
-            doc.taxable_value_diff = rounded(
-                doc.isup_taxable_value - doc.taxable_value, 2
-            )
-            doc.tax_diff = rounded(
-                self.get_total_tax(doc, True) - self.get_total_tax(doc), 2
-            )
-            self.update_cess_amount(doc)
 
             if doc.isup_match_status not in ["Mismatch", "Manual Match"]:
                 if abs(doc.tax_diff) > 0.01 or abs(doc.taxable_value_diff) > 0.01:
@@ -790,6 +793,12 @@ class PurchaseReconciliationTool(Document):
                     differences.append(label)
 
             _update_doc(doc, differences)
+
+    def guess_classification(self, doc):
+        classification = self.GST_CATEGORIES.get(doc.gst_category)
+        if doc.is_return and classification == "B2B":
+            classification = "CDNR"
+        return classification
 
     @frappe.whitelist()
     def link_documents(self, pur_name, isup_name):
@@ -897,6 +906,52 @@ class PurchaseReconciliationTool(Document):
                 .run()
             )
 
+    @frappe.whitelist()
+    def get_link_options(self, doctype, filters):
+
+        if isinstance(filters, dict):
+            filters = frappe._dict(filters)
+
+        if doctype == "Purchase Invoice":
+            query = self.query_purchase_invoice(["gst_category", "is_return"])
+            table = PI
+        elif doctype == "GST Inward Supply":
+            query = self.query_inward_supply(
+                ["classification"], for_summary=True, filter_period=False
+            )
+            table = GSTR2
+
+        query = query.where(
+            table.supplier_gstin.like(f"%{filters.supplier_gstin}%")
+        ).where(table.bill_date[filters.bill_from_date : filters.bill_to_date])
+
+        if not filters.show_matched:
+            if doctype == "GST Inward Supply":
+                query = query.where(
+                    (table.link_name == "") | (table.link_name.isnull())
+                )
+
+            else:
+                query = query.where(
+                    table.name.notin(self.query_matched_purchase_invoice())
+                )
+
+        data = self._get_link_options(query.run(as_dict=True), doctype)
+        return data
+
+    def _get_link_options(self, data, doctype):
+        prefix = "isup_" if doctype == "GST Inward Supply" else ""
+
+        for row in data:
+            row.value = row.label = row[prefix + "name"]
+            if not row.get("isup_classification"):
+                row.isup_classification = self.guess_classification(row)
+
+            row.description = f"{row[prefix + 'bill_no']}, {row[prefix + 'bill_date']}, Taxable Amount: {row[prefix + 'taxable_value']}"
+            row.description += f", Tax Amount: {self.get_total_tax(row, prefix)}, {row['isup_classification']}"
+
+        return data
+
 
 def get_periods(fiscal_year, return_type: ReturnType):
     """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
@@ -943,12 +998,12 @@ def _getdate(return_type):
 
 def _get_first_day(month, year):
     """Returns first day of the month"""
-    return datetime(year, month, 1)
+    return date(year, month, 1)
 
 
 def _get_last_day(month, year):
     """Returns last day of the month"""
-    return datetime(year, month, monthrange(year, month)[1])
+    return date(year, month, monthrange(year, month)[1])
 
 
 def get_import_history(

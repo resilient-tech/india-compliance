@@ -5,8 +5,6 @@
 // TODO: replace the demo data
 frappe.provide("reco_tool");
 
-const reco_tool_detail_view_fields = ["bill_no", "bill_date", "cgst", "sgst", "igst", "cess", "is_reverse_charge", "place_of_supply"];
-
 const tooltip_info = {
     purchase_period: "Returns purchases during this period where no match is found.",
     inward_supply_period:
@@ -27,6 +25,11 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
         await frappe.require("purchase_reco_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
+
+        const { message: date_range } = await frm.call("get_date_range", {
+            period: "Current Finanical Year",
+        });
+        frm.current_financial_year = date_range;
     },
 
     async company(frm) {
@@ -302,8 +305,8 @@ class PurchaseReconciliationTool {
     set_listeners() {
         const me = this;
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
-            let data = me.mapped_invoice_data[$(this).attr("data-name")];
-            show_detailed_dialog(me, data);
+            const data = me.mapped_invoice_data[$(this).attr("data-name")];
+            me.dm = new DetailViewDialog(me.frm, data);
         });
     }
 
@@ -599,6 +602,320 @@ class PurchaseReconciliationTool {
                 fieldname: "isup_action",
             },
         ];
+    }
+}
+
+class DetailViewDialog {
+    html_fields = [
+        "name",
+        "bill_no",
+        "bill_date",
+        "taxable_value",
+        "cgst",
+        "sgst",
+        "igst",
+        "cess",
+        "is_reverse_charge",
+        "place_of_supply",
+    ];
+
+    constructor(frm, data) {
+        this.frm = frm;
+        this.data = data;
+        this.prefix = "isup_";
+
+        this.process_data();
+        this.init_dialog();
+        this.setup_actions();
+        this.render_html();
+        this.dialog.show();
+    }
+
+    process_data() {
+        this._data = {};
+        if (this.data["name"]) this._process_data("");
+        if (this.data["isup_name"]) this._process_data("isup_");
+
+        ["tax_diff", "taxable_value_diff", "supplier_name", "supplier_gstin"].forEach(
+            field => this._assign_value(field, this.data, "")
+        );
+    }
+
+    _process_data(prefix, data) {
+        if (!data) data = this.data;
+
+        this.html_fields.forEach(field => {
+            this._data[prefix + field] = null;
+            if (field == "name")
+                this._data[prefix + "link"] = this._get_link(data, prefix);
+
+            if (field == "is_reverse_charge" && data[prefix + "name"]) {
+                this._assign_value(field, data, prefix, true);
+                return;
+            }
+
+            if (data[prefix + "name"]) this._assign_value(field, data, prefix);
+        });
+    }
+
+    _assign_value(field, source_data, prefix, bool = false) {
+        field = prefix + field;
+        if (source_data[field] != null) {
+            if (bool) this._data[field] = source_data[field] ? "Yes" : "No";
+            else this._data[field] = source_data[field];
+        }
+    }
+
+    init_dialog() {
+        this.dialog = new frappe.ui.Dialog({
+            title: `Detail View (${this.data.isup_classification})`,
+            fields: [
+                ...this._get_document_link_fields(),
+                {
+                    fieldtype: "HTML",
+                    fieldname: "supplier_details",
+                    options: `<h5>${this._data.supplier_name} (${this._data.supplier_gstin})</h5>`,
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "diff_cards",
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "detail_table",
+                },
+            ],
+        });
+        this.set_link_options();
+    }
+
+    _get_document_link_fields() {
+        if (this.data.isup_match_status == "Missing in 2A/2B")
+            this.missing_doctype = "GST Inward Supply";
+        else if (this.data.isup_match_status == "Missing in PR")
+            this.missing_doctype = "Purchase Invoice";
+        else return [];
+
+        return [
+            {
+                label: "GSTIN",
+                fieldtype: "Data",
+                fieldname: "supplier_gstin",
+                default: this.data.supplier_gstin,
+                onchange: () => this.set_link_options(),
+            },
+            {
+                label: `Link with (${this.missing_doctype}):`,
+                fieldtype: "Autocomplete",
+                fieldname: "link_with",
+                onchange: () => this.refresh_data(),
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                label: "Date Range",
+                fieldtype: "DateRange",
+                fieldname: "date_range",
+                default: this.frm.current_financial_year,
+                onchange: () => this.set_link_options(),
+            },
+            {
+                label: "Show matched options",
+                fieldtype: "Check",
+                fieldname: "show_matched",
+                onchange: () => this.set_link_options(),
+            },
+            {
+                fieldtype: "Section Break",
+            },
+        ];
+    }
+
+    _get_date_range(field_prefix) {
+        const from_date_field = field_prefix + "_from_date";
+        const to_date_field = field_prefix + "_to_date";
+
+        return [this.frm.doc[from_date_field], this.frm.doc[to_date_field]];
+    }
+
+    async set_link_options() {
+        if (!this.missing_doctype) return;
+
+        this.filters = {
+            supplier_gstin: this.dialog.get_value("supplier_gstin"),
+            bill_from_date: this.dialog.get_value("date_range")[0],
+            bill_to_date: this.dialog.get_value("date_range")[1],
+            show_matched: this.dialog.get_value("show_matched"),
+        };
+
+        const { message } = await this.frm.call("get_link_options", {
+            doctype: this.missing_doctype,
+            filters: this.filters,
+        });
+
+        this.dialog.get_field("link_with").set_data(message);
+    }
+
+    setup_actions() {
+        // determine actions
+        let actions = [];
+        if (this.data.isup_match_status == "Missing in 2A/2B") actions.push("Link");
+        else if (this.data.isup_match_status == "Missing in PR")
+            actions.push("Create", "Link", "Pending");
+        else
+            actions.push(
+                "Unlink",
+                "Accept My Values",
+                "Accept Supplier Values",
+                "Pending"
+            );
+
+        actions.push("Ignore");
+
+        // setup actions
+        actions.forEach(action => {
+            this.dialog.add_custom_action(
+                action,
+                () => {
+                    this._apply_custom_action(action);
+                    this.dialog.hide();
+                },
+                `mr-2 ${this._get_button_css(action)}`
+            );
+        });
+
+        this.dialog.$wrapper
+            .find(".btn.btn-secondary.not-grey")
+            .removeClass("btn-secondary");
+        this.dialog.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
+    }
+
+    _apply_custom_action(action) {
+        if (action == "Unlink") {
+            unlink_documents(this.frm, [this.data]);
+        } else if (action == "Link") {
+            reco_tool.link_documents(
+                this.frm,
+                this._data.name,
+                this._data.isup_name,
+                true
+            );
+        } else if (action == "Create") {
+            create_new_purchase_invoice(
+                this.data,
+                this.frm.doc.company,
+                this.frm.doc.company_gstin
+            );
+        } else {
+            apply_action(this.frm, action, [this.data]);
+        }
+    }
+
+    _get_button_css(action) {
+        if (action == "Unlink") return "btn-danger not-grey";
+        if (action == "Pending") return "btn-secondary";
+        if (action == "Ignore") return "btn-secondary";
+        if (action == "Create") return "btn-primary not-grey";
+        if (action == "Link") return "btn-primary not-grey btn-link disabled";
+        if (action == "Accept My Values") return "btn-primary not-grey";
+        if (action == "Accept Supplier Values") return "btn-primary not-grey";
+    }
+
+    toggle_link_btn(disabled) {
+        const btn = this.dialog.$wrapper.find(".modal-footer .btn-link");
+        if (disabled) btn.addClass("disabled");
+        else btn.removeClass("disabled");
+    }
+
+    refresh_data() {
+        const field = this.dialog.get_field("link_with");
+        let row_data = [];
+        this.toggle_link_btn(true);
+        if (field.value) {
+            row_data = field._data.filter(row => row.value == field.value)[0];
+            this.toggle_link_btn(false);
+        }
+
+        if (this.data.isup_match_status == "Missing in 2A/2B")
+            this._process_data("isup_", row_data);
+        else this._process_data("", row_data);
+
+        this._data.taxable_value_diff =
+            this._data.taxable_value - this._data.isup_taxable_value;
+
+        const taxes = [];
+        ["cgst", "sgst", "igst", "cess"].forEach(tax => {
+            taxes.push(this._data[tax]);
+            if (this._data[`isup_${tax}`]) taxes.push(this._data[`isup_${tax}`] * -1);
+        });
+        this._data.tax_diff = taxes.reduce((a, b) => a + b, 0);
+        this.render_html();
+    }
+
+    render_html() {
+        this.render_cards();
+        this.render_table();
+    }
+
+    render_cards() {
+        let cards = [
+            {
+                value: this._data.tax_diff,
+                label: "Tax Difference",
+                datatype: "Currency",
+                currency: frappe.boot.sysdefaults.currency,
+                indicator: this._data.tax_diff == 0 ? "text-success" : "text-danger",
+            },
+            {
+                value: this._data.taxable_value_diff,
+                label: "Taxable Amount Difference",
+                datatype: "Currency",
+                currency: frappe.boot.sysdefaults.currency,
+                indicator:
+                    this._data.taxable_value_diff == 0 ? "text-success" : "text-danger",
+            },
+        ];
+
+        if (!this._data.name || !this._data.isup_name) cards = [];
+
+        new ic.NumberCardManager({
+            $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
+            cards: cards,
+        });
+    }
+
+    render_table() {
+        const detail_table = this.dialog.fields_dict.detail_table;
+        detail_table.html(
+            frappe.render_template("detail_view_table", {
+                data: this._data,
+            })
+        );
+        detail_table.$wrapper.removeClass("not-matched");
+        this._set_value_color(detail_table.$wrapper);
+    }
+
+    _set_value_color(wrapper) {
+        if (!this._data.name || !this._data.isup_name) return;
+
+        ["place_of_supply", "is_reverse_charge"].forEach(field => {
+            if (this._data[field] == this._data[this.prefix + field]) return;
+            wrapper
+                .find(`[data-label='${field}'], [data-label='${this.prefix}${field}']`)
+                .addClass("not-matched");
+        });
+    }
+
+    _get_link(data, prefix) {
+        if (!prefix && data.name)
+            return frappe.utils.get_form_link("Purchase Invoice", data.name, true);
+        else if (prefix && data.isup_name)
+            return frappe.utils.get_form_link(
+                "GST Inward Supply",
+                data.isup_name,
+                true
+            );
     }
 }
 
@@ -962,10 +1279,10 @@ reco_tool.link_documents = async function (frm, pur_name, isup_name, alert = tru
         after_successful_action(frm.purchase_reconciliation_tool.tabs.invoice_tab);
 };
 
-function unlink_documents(frm) {
+function unlink_documents(frm, selected_rows) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
     const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
-    const selected_rows = invoice_tab.get_checked_items();
+    if (!selected_rows) selected_rows = invoice_tab.get_checked_items();
 
     // validate selected rows
     selected_rows.forEach(row => {
@@ -1025,33 +1342,56 @@ function deepcopy(array) {
     return JSON.parse(JSON.stringify(array));
 }
 
-function apply_action(frm, action) {
+function apply_action(frm, action, selected_rows) {
     const active_tab = frm.get_active_tab()?.df.fieldname;
     if (!active_tab) return;
 
     const tab = frm.purchase_reconciliation_tool.tabs[active_tab];
-    const selected_rows = tab.get_checked_items();
-
-    // validate selected rows
-    if (action != "Ignore")
-        selected_rows.forEach(row => {
-            if (row.isup_match_status == "Missing in 2A/2B")
-                frappe.throw(
-                    "You can only apply Ignore action on rows where data is Missing in 2A/2B. Please remove them before applying this action."
-                );
-        });
+    if (!selected_rows) selected_rows = tab.get_checked_items();
 
     // get affected rows
     const { filtered_data, data } = frm.purchase_reconciliation_tool;
-    const affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
+    let affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
+
+    // validate affected rows
+    if (action.includes("Accept")) {
+        let warn = false;
+        affected_rows = affected_rows.filter(row => {
+            if (row.isup_match_status.includes("Missing")) {
+                warn = true;
+                return false;
+            }
+            return true;
+        });
+
+        if (warn)
+            frappe.msgprint(
+                "You can only Accept values where a match is available. Rows where match is missing will be ignored."
+            );
+    } else if (action != "Ignore") {
+        let warn = false;
+        affected_rows = affected_rows.filter(row => {
+            if (row.isup_match_status == "Missing in 2A/2B") {
+                warn = true;
+                return false;
+            }
+            return true;
+        });
+
+        if (warn)
+            frappe.msgprint(
+                "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+            );
+    }
 
     // update affected rows to backend and frontend
     frm.call("apply_action", { data: affected_rows, action });
-    data.forEach(row => {
+    const new_data = data.filter(row => {
         if (has_matching_row(row, affected_rows)) row.isup_action = action;
+        return true;
     });
 
-    frm.purchase_reconciliation_tool.refresh(data);
+    frm.purchase_reconciliation_tool.refresh(new_data);
     after_successful_action(tab);
 }
 
@@ -1084,233 +1424,6 @@ function get_affected_rows(tab, selection, data) {
         );
 }
 
-function set_value_color (wrapper, data) {
-    reco_tool_detail_view_fields.forEach(field => {
-        if (!data.name || !data.isup_name) return;
-
-        if (!in_list(["place_of_supply", "is_reverse_charge"], field)) return;
-
-        if (data[field] != data[`isup_${field}`]) {
-            wrapper.find(`[data-label='${field}'], [data-label='isup_${field}']`).addClass('not-matched');
-        }
-    });
-}
-
-function show_detailed_dialog (me, data) {
-    const mapped_data = get_mapped_invoice_data(data);
-
-    var d = new frappe.ui.Dialog({
-        title: "GSTR 2A / 2B vs Purchase Register",
-        fields: [
-            {
-                fieldtype: "HTML",
-                fieldname: "purchase_reco_tool_cards",
-            },
-            ...get_document_link_fields(me, mapped_data),
-            {
-                fieldtype: "HTML",
-                fieldname: "detail_view",
-            }
-        ],
-    });
-    _add_custom_actions(d, me, mapped_data);
-
-    const detail_view = d.fields_dict.detail_view.$wrapper;
-
-    // Render detail view dialog data
-    render_cards(mapped_data, d.fields_dict.purchase_reco_tool_cards.$wrapper);
-    detail_view.html(get_content_html(mapped_data));
-    set_value_color(detail_view, mapped_data);
-
-    d.show();
-};
-
-function get_mapped_invoice_data(data) {
-    let mapped_data = Object.assign({}, data);
-    mapped_data.supplier_gstin = mapped_data.supplier_gstin.replace(/\s+/g, '');
-
-    reco_tool_detail_view_fields.forEach(field => {
-        if (field == "is_reverse_charge") {
-            mapped_data[field] = mapped_data[field] ? "Yes" : "No";
-            mapped_data[`isup_${field}`] = mapped_data[`isup_${field}`] ? "Yes" : "No";
-        }
-        if (data.isup_name && !data.name) {
-            delete mapped_data[field];
-        } else if (data.name && !data.isup_name) {
-            delete mapped_data[`isup_${field}`];
-        }
-    });
-
-    return mapped_data;
-}
-
-function get_document_link_fields(me, data) {
-    let doctype = "";
-    let field_prefix = "";
-    let date_filters = {
-        'supplier_gstin': data.supplier_gstin
-    };
-
-    if (data.name && !data.isup_name) {
-        doctype = "GST Inward Supply";
-        field_prefix = "inward_supply";
-    }
-    else if (!data.name && data.isup_name) {
-        doctype = 'Purchase Invoice';
-        field_prefix = "purchase";
-    }
-
-    const date_range = get_date_range(me, field_prefix);
-
-    doctype == "GST Inward Supply"
-        ? date_filters.bill_date = ["between", date_range]
-        : date_filters.posting_date = ["between", date_range];
-
-    const fields = [
-        {
-            label: "GSTIN",
-            fieldtype: "Data",
-            fieldname: "supplier_gstin",
-            default: data.supplier_gstin,
-        },
-        {
-            fieldtype: "Column Break",
-            fieldname: "column_break_1",
-        },
-        {
-            label: "Date Range",
-            fieldtype: "DateRange",
-            fieldname: "date_range",
-            default: date_range,
-        },
-        {
-            fieldtype: "Section Break",
-            fieldname: "section_break_1",
-        },
-        {
-        label: `Link To (${doctype}):`,
-        fieldtype: "Link",
-        fieldname: "link_action",
-        options: doctype,
-        get_query() {
-                return {
-                    filters: date_filters
-                };
-            }
-        },
-    ];
-
-    return data.name && data.isup_name ? [] : fields
-};
-
-function get_date_range(me, field_prefix) {
-    const doc = me.frm.doc;
-    const from_date_field = field_prefix + "_from_date";
-    const to_date_field = field_prefix + "_to_date";
-
-    const from_date = moment(doc[from_date_field]).format("YYYY-MM-DD");
-    const to_date = moment(doc[to_date_field]).format("YYYY-MM-DD");
-
-    return [from_date, to_date];
-}
-
-function _add_custom_actions(d, me, data) {
-    const frm = me.frm;
-    let actions = [];
-    const match_actions = data.name && data.isup_name
-        ? ["Unlink", "Accept My Values", "Accept Supplier Values", "Pending"]
-        : [];
-
-    const pr_actions = data.isup_match_status == "Missing in PR"
-        ? ["Create", "Link", "Pending"]
-        : [];
-
-    const isup_actions = data.isup_match_status == "Missing in 2A/2B"
-        ? ["Link"]
-        : [];
-
-    actions.push(...pr_actions, ...isup_actions, ...match_actions, "Ignore");
-
-    actions.forEach(action => {
-        let btn_css_class = get_button_css(action);
-
-        d.add_custom_action(action, () => {
-            apply_custom_action(frm, data, action)
-            d.hide();
-        },
-        `mr-2 ${btn_css_class}`);
-
-        if (btn_css_class == 'btn-secondary') return;
-        d.$wrapper.find('.btn.btn-secondary').removeClass('btn-secondary');
-    })
-    d.$wrapper.find(".modal-footer").css("flex-direction", "inherit");
-}
-
-function get_button_css(action) {
-    if (action == "Unlink") return "btn-danger";
-    if (action == "Pending") return "btn-secondary";
-    if (action == "Ignore") return "btn-secondary";
-    if (action == "Create") return "btn-primary";
-    if (action == "Link") return "btn-primary";
-    if (action == "Accept My Values") return "btn-primary";
-    if (action == "Accept Supplier Values") return "btn-primary";
-}
-
-function apply_custom_action(frm, data, action) {
-    if (action == "Unlink") {
-        unlink_documents(frm, data);
-    } else if (action == "Link") {
-        reco_tool.link_documents(frm, data.name, data.isup_name,true);
-    } else if (action == "Create") {
-        create_new_purchase_invoice(data, frm.doc.company, frm.doc.company_gstin);
-    } else {
-        apply_action(frm, action);
-    }
-}
-
-function render_cards(data, purchase_reco_tool_cards) {
-    const doc_missing = in_list(["Missing in PR", "Missing in 2A/2B"], data.isup_match_status);
-
-    if (doc_missing) return;
-
-    let cards =  [
-        {
-            value: data.tax_diff,
-            label: "Tax Difference",
-            datatype: "Currency",
-            currency: frappe.boot.sysdefaults.currency,
-        },
-        {
-            value: data.taxable_value_diff,
-            label: "Taxable Value Difference",
-            datatype: "Currency",
-            currency: frappe.boot.sysdefaults.currency,
-        },
-    ];
-
-    new ic.NumberCardManager({
-        $wrapper: purchase_reco_tool_cards,
-        cards: cards,
-        condition: data.tax_diff == data.taxable_value_diff,
-    });
-}
-
-function get_content_html(data) {
-    const doc_links = {
-        purchase_link: get_doc_link("Purchase Invoice", data.name),
-        isup_link: get_doc_link("GST Inward Supply", data.isup_name),
-    }
-
-    data = { ...data, ...doc_links };
-
-    return frappe.render_template('reco_tool_detail_view', {
-        data: data,
-    });
-}
-
-function get_doc_link(doctype, name) {
-    return name ? frappe.utils.get_form_link(doctype, name, true) : "-";
-}
 async function create_new_purchase_invoice(inward_supply, company, company_gstin) {
     if (inward_supply.isup_match_status != "Missing in PR") return;
 

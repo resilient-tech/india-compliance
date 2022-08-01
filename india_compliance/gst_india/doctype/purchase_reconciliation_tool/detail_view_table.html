@@ -10,8 +10,8 @@
 		<tbody data-label="detail-view-content">
 			<tr>
 				<th>Document Links</td>
-				<td data-label="name">{{ data.isup_link }}</td>
-				<td data-label="isup_name">{{ data.purchase_link }}</td>
+				<td data-label="name">{{ data.isup_link || '-' }}</td>
+				<td data-label="isup_name">{{ data.link || '-' }}</td>
 			</tr>
 			<tr>
 				<th>Bill No</td>
