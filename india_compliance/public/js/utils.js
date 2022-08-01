@@ -46,20 +46,4 @@ Object.assign(ic, {
         return ic.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
-    setup_tooltip(frm, field_dict) {
-        /**
-         * Setup tooltip for fields to show details
-         * @param {Object} frm          Form object
-         * @param {Object} field_dict   Dictionary of fields with info to show
-         */
-
-        for (const [field, tooltip] of Object.entries(field_dict)) {
-            const tooltip_btn = `<a class="btn-tooltip no-decoration text-muted" title="${__(
-                tooltip
-            )}">
-			    <i class="fa fa-info-circle"></i>
-		    </a>`;
-            $(tooltip_btn).appendTo(frm.get_field(field).$wrapper.find(".clearfix"));
-        }
-    },
 });
