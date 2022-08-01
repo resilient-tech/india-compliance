@@ -74,7 +74,7 @@ div[data-page-route="Purchase Reconciliation Tool"] .dropdown-divider {
     padding: 0;
 }
 
-.table > tbody > tr > td {
+.modal-dialog div[data-fieldname="detail_table"] .table > tbody > tr > td {
     text-align: center;
     width: 30%;
 }

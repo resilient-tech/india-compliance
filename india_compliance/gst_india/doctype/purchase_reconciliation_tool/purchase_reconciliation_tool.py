@@ -544,6 +544,9 @@ class PurchaseReconciliationTool(Document):
             data[period] = []
             status = "🟢 &nbsp; Downloaded"
             for category in GSTRCategory:
+                if category.value == "ISDA" and return_type == ReturnType.GSTR2A:
+                    continue
+
                 download = next(
                     (
                         log

@@ -46,4 +46,22 @@ Object.assign(ic, {
         return ic.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
+    get_gstin_otp() {
+        return new Promise(resolve => {
+            frappe.prompt(
+                {
+                    fieldtype: "Data",
+                    label: "One Time Password",
+                    fieldname: "otp",
+                    reqd: 1,
+                    description:
+                        "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.",
+                },
+                function ({ otp }) {
+                    resolve(otp);
+                },
+                "Enter OTP"
+            );
+        });
+    },
 });
