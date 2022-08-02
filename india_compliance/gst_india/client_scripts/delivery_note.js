@@ -3,7 +3,6 @@ setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     after_save(frm) {
-        const { gst_settings } = frappe.boot;
         if (
             frm.doc.docstatus ||
             frm.doc.customer_address ||

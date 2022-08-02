@@ -13,14 +13,15 @@ from india_compliance.gst_india.constants.custom_fields import (
     E_WAYBILL_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
-from india_compliance.gst_india.utils import toggle_custom_fields
+from india_compliance.gst_india.utils import can_enable_api, toggle_custom_fields
 
 
 class GSTSettings(Document):
     def validate(self):
+        self.update_dependant_fields()
+        self.validate_enable_api()
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
-        self.update_dependant_fields()
         self.validate_credentials()
         self.clear_gst_auth_session()
 
@@ -30,12 +31,6 @@ class GSTSettings(Document):
             set_session(None)
 
     def update_dependant_fields(self):
-        if not self.api_secret:
-            self.enable_api = 0
-
-        if not self.enable_api:
-            self.enable_e_invoice = 0
-
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
 
@@ -116,13 +111,25 @@ class GSTSettings(Document):
             )
 
     def validate_credentials(self):
-        if (
-            self.enable_api
-            and (self.enable_e_invoice or self.enable_e_waybill)
-            and all(
-                credential.service != "e-Waybill / e-Invoice"
-                for credential in self.credentials
+        if not self.enable_api:
+            return
+
+        for credential in self.credentials:
+            if credential.service == "Returns" or credential.password:
+                continue
+
+            frappe.throw(
+                _(
+                    "Row #{0}: Password is required when setting a GST Credential"
+                    " for {1}"
+                ).format(credential.idx, credential.service),
+                frappe.MandatoryError,
+                _("Missing Required Field"),
             )
+
+        if (self.enable_e_invoice or self.enable_e_waybill) and all(
+            credential.service != "e-Waybill / e-Invoice"
+            for credential in self.credentials
         ):
             frappe.msgprint(
                 # TODO: Add Link to Documentation.
@@ -132,4 +139,17 @@ class GSTSettings(Document):
                 ),
                 indicator="yellow",
                 alert=True,
+            )
+
+    def validate_enable_api(self):
+        if (
+            self.enable_api
+            and self.has_value_changed("enable_api")
+            and not can_enable_api(self)
+        ):
+            frappe.throw(
+                _(
+                    "Please counfigure your India Compliance Account to "
+                    "enable API features"
+                )
             )
