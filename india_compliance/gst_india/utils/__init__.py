@@ -416,3 +416,19 @@ def delete_old_fields(fields, doctypes):
             "dt": ("in", doctypes),
         },
     )
+
+
+def is_api_enabled(settings=None):
+    if not settings:
+        settings = frappe.get_cached_value(
+            "GST Settings",
+            "GST Settings",
+            ("enable_api", "api_secret"),
+            as_dict=True,
+        )
+
+    return settings.enable_api and can_enable_api(settings)
+
+
+def can_enable_api(settings):
+    return settings.api_secret or frappe.conf.ic_api_secret

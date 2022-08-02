@@ -91,7 +91,7 @@ function show_overseas_disabled_warning(doctype) {
     frappe.ui.form.on(doctype, {
         after_save(frm) {
             if (
-                !frappe.boot.gst_settings.enable_overseas_transactions &&
+                !gst_settings.enable_overseas_transactions &&
                 in_list(["SEZ", "Overseas"], frm.doc.gst_category)
             ) {
                 frappe.msgprint({
@@ -102,6 +102,17 @@ function show_overseas_disabled_warning(doctype) {
                     indicator: "orange",
                 });
             }
+        },
+    });
+}
+
+function set_gstin_query(doctype) {
+    frappe.ui.form.on(doctype, {
+        onload(frm) {
+            if (frm.is_new()) return;
+
+            frm.get_field("gstin").df.ignore_validation = true;
+            frm.set_query("gstin", ic.get_gstin_query(frm.doc.name, doctype));
         },
     });
 }
