@@ -168,7 +168,7 @@
    "fieldname": "auto_generate_e_waybill",
    "fieldtype": "Check",
    "label": "Automatically Generate e-Waybill on Invoice Submission",
-   "read_only_depends_on": "eval: ic.is_e_invoice_enabled() && doc.auto_generate_e_invoice"
+   "read_only_depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_invoice && doc.auto_generate_e_invoice"
   },
   {
    "default": "1",
