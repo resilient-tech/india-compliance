@@ -12,6 +12,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     E_WAYBILL_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
+from india_compliance.gst_india.page.india_compliance_account import _set_auth_session
 from india_compliance.gst_india.utils import can_enable_api, toggle_custom_fields
 
 
@@ -22,6 +23,11 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
         self.validate_credentials()
+        self.clear_api_auth_session()
+
+    def clear_api_auth_session(self):
+        if self.has_value_changed("api_secret") and self.api_secret:
+            _set_auth_session(None)
 
     def update_dependant_fields(self):
         if self.attach_e_waybill_print:
