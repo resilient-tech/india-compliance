@@ -23,9 +23,9 @@ class GSTSettings(Document):
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
         self.validate_credentials()
-        self.clear_gst_auth_session()
+        self.clear_api_auth_session()
 
-    def clear_gst_auth_session(self):
+    def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
             _set_auth_session(None)
 
