@@ -2,7 +2,6 @@ import json
 
 import frappe
 from frappe import _, bold
-from frappe.model.utils import get_fetch_values
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
@@ -479,19 +478,6 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    address_fields = (
-        ("customer_address", "company_address")
-        if doctype in SALES_DOCTYPES
-        else ("supplier_address", "billing_address")
-    )
-
-    # fetch GSTINs from addresses
-    for address_field in address_fields:
-        if not (address := party_details.get(address_field)):
-            continue
-
-        party_details.update(get_fetch_values(doctype, address_field, address))
-
     party_details.update(get_gst_details(party_details, doctype, company))
 
 
