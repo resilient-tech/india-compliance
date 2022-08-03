@@ -24,14 +24,14 @@ cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites
 
 
 mysql --host 127.0.0.1 --port 3306 -u root -e "
-SET GLOBAL character_set_server = 'utf8mb4'; 
-SET GLOBAL collation_server = 'utf8mb4_unicode_ci'; 
+SET GLOBAL character_set_server = 'utf8mb4';
+SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
 
-CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient'; 
-CREATE DATABASE test_resilient; 
-GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost'; 
+CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient';
+CREATE DATABASE test_resilient;
+GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost';
 
-UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root'; 
+UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root';
 FLUSH PRIVILEGES;
 "
 
@@ -51,13 +51,12 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
+bench get-app payments
 bench get-app erpnext --branch "$BRANCH"
 
 bench use test_site
 bench start &
 bench reinstall --yes
-
-bench --verbose install-app erpnext
 
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench --verbose install-app india_compliance
