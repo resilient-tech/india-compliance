@@ -1,0 +1,24 @@
+{
+ "content": null,
+ "creation": "2022-02-25 13:28:27.343408",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2022-08-03 20:09:15.429993",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "india-compliance-account",
+ "owner": "Administrator",
+ "page_name": "india-compliance-account",
+ "restrict_to_domain": "",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "India Compliance Account"
+}
