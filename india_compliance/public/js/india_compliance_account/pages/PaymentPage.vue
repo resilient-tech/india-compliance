@@ -287,7 +287,7 @@ export default {
       const theme =
         document.documentElement.getAttribute("data-theme-mode") || "light";
 
-      var dropConfig = {
+      const dropConfig = {
         components: ["card", "netbanking", "app", "upi"],
         orderToken,
         onSuccess: async (data) => {

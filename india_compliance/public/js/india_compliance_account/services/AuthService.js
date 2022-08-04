@@ -1,12 +1,12 @@
 export async function get_api_secret() {
     return call_server_method(
-        "india_compliance.gst_india.api.get_gst_api_secret"
+        "india_compliance.gst_india.page.india_compliance_account.get_api_secret"
     );
 }
 
 export async function set_api_secret(api_secret) {
     return call_server_method(
-        "india_compliance.gst_india.api.set_gst_api_secret",
+        "india_compliance.gst_india.page.india_compliance_account.set_api_secret",
         { api_secret }
     );
 }
@@ -33,11 +33,11 @@ export function check_free_trial_eligibility(gstin) {
 }
 
 export function get_session() {
-    return call_server_method("india_compliance.gst_india.api.get_session");
+    return call_server_method("india_compliance.gst_india.page.india_compliance_account.get_auth_session");
 }
 
 export function set_session(session) {
-    call_server_method("india_compliance.gst_india.api.set_session", {
+    call_server_method("india_compliance.gst_india.page.india_compliance_account.set_auth_session", {
         session,
     });
 }
