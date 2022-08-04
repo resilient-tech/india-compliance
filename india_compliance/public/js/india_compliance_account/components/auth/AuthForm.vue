@@ -163,23 +163,25 @@ export default {
     async validateGstin(value) {
       const field = this.gstin;
       if (!value) value = field.value;
-      field.state = UiState.loading;
 
       field.error = null;
-      if (!value) field.error = "GSTIN is required";
-      else if (!validate_gst_number(value))
-        field.error = "Invalid GSTIN detected";
-      else {
-        const { message, error } = await check_free_trial_eligibility(value);
+      field.state = UiState.loading;
 
-        if (error) {
-          field.error = error;
-        } else {
-          this.submitLabel = message ? "Start Free Trial" : "Signup";
-        }
+      const set_error = (error_message) => {
+        field.error = error_message;
+        field.state = UiState.error;
       }
 
-      field.state = field.error ? UiState.error : UiState.success;
+      if (!value) return set_error("GSTIN is required");
+
+      value = ic.validate_gstin(value);
+      if (!value) return set_error("Invalid GSTIN detected");
+
+      const { message, error } = await check_free_trial_eligibility(value);
+      if (error) return set_error(error);
+
+      this.submitLabel = message ? "Start Free Trial" : "Signup";
+      field.state = UiState.success;
     },
   },
 };

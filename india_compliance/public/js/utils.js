@@ -1,7 +1,7 @@
+frappe.provide("ic");
 
 window.gst_settings = frappe.boot.gst_settings;
-
-frappe.provide("ic");
+const GSTIN_REGEX = /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
 
 Object.assign(ic, {
     get_gstin_query(party, party_type = "Company") {
@@ -46,58 +46,44 @@ Object.assign(ic, {
     is_e_invoice_enabled() {
         return ic.is_api_enabled() && gst_settings.enable_e_invoice;
     }
+
+    validate_gstin(gstin) {
+        if (!gstin || gstin.length !== 15) return;
+
+        gstin = gstin.toUpperCase();
+
+        if (GSTIN_REGEX.test(gstin) && is_gstin_check_digit_valid(gstin)) {
+            return gstin;
+        }
+    }
 });
 
 
+function is_gstin_check_digit_valid(gstin) {
+    /*
+    adapted from
+    https://gitlab.com/srikanthlogic/gstin-validator/-/blob/master/src/index.js
+    */
 
-frappe.provide("ic.utils");
+    const GSTIN_CODEPOINT_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const mod = GSTIN_CODEPOINT_CHARS.length;
 
-// GSTIN Validation
-// taken from: https://gitlab.com/srikanthlogic/gstin-validator/-/blob/master/src/index.js
+    let factor = 2;
+    let sum = 0;
 
-function calcCheckSum(gstin) {
-    var GSTN_CODEPOINT_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    var factor = 2;
-    var sum = 0;
-    var checkCodePoint = 0;
-    var mod = GSTN_CODEPOINT_CHARS.length;
-    var i;
-
-    for (i = gstin.length - 2; i >= 0; i--) {
-        var codePoint = -1;
-        for (var j = 0; j < GSTN_CODEPOINT_CHARS.length; j++) {
-            if (GSTN_CODEPOINT_CHARS[j] === gstin[i]) {
+    for (let i = gstin.length - 2; i >= 0; i--) {
+        let codePoint = -1;
+        for (let j = 0; j < GSTIN_CODEPOINT_CHARS.length; j++) {
+            if (GSTIN_CODEPOINT_CHARS[j] === gstin[i]) {
                 codePoint = j;
             }
         }
-        var digit = factor * codePoint;
+        let digit = factor * codePoint;
         factor = factor === 2 ? 1 : 2;
         digit = Math.floor(digit / mod) + (digit % mod);
         sum += digit;
     }
-    checkCodePoint = (mod - (sum % mod)) % mod;
-    return GSTN_CODEPOINT_CHARS[checkCodePoint];
+
+    const checkCodePoint = (mod - (sum % mod)) % mod;
+    return GSTIN_CODEPOINT_CHARS[checkCodePoint] === gstin[14];
 }
-
-// GSTIN Regex validation result
-function validatePattern(gstin) {
-    // eslint-disable-next-line max-len
-    var gstinRegexPattern =
-        /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
-    return gstinRegexPattern.test(gstin);
-}
-
-function isValidGSTNumber(gstin) {
-    gstin = gstin.toUpperCase();
-    if (gstin.length !== 15) {
-        return false;
-    }
-    if (validatePattern(gstin)) {
-        return gstin[14] === calcCheckSum(gstin.toUpperCase());
-    }
-    return false;
-}
-
-window.validate_gst_number = ic.utils.validate_gst_number = isValidGSTNumber;
-
-
