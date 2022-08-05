@@ -15,6 +15,7 @@
 <style scoped>
 footer {
   margin-top: 5em;
+  margin-bottom: 1em;
   padding: 2em 3em 3em 3em;
   display: flex;
   width: 100%;

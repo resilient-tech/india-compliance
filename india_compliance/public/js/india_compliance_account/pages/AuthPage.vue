@@ -71,9 +71,11 @@ export default {
 </script>
 
 <style scoped>
+.container.auth-page {
+  padding-top: 5em;
+}
 .main-content {
   width: 100%;
-  margin-top: 10em;
   display: flex;
   justify-content: center;
   align-items: center;
