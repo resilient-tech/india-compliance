@@ -18,7 +18,7 @@ def update_pan_for_company():
 
     company = frappe.qb.DocType("Company")
     frappe.qb.update(company).set(company.pan, company.pan_details).where(
-        company.pan_details.notin(("", None))
+        (company.pan_details == "") | (company.pan_details.isnull())
     ).run()
 
 

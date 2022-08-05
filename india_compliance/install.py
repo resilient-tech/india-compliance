@@ -1,6 +1,7 @@
 import click
 
 import frappe
+from frappe.installer import remove_from_installed_apps
 
 from india_compliance.gst_india.setup import after_install as setup_gst
 from india_compliance.income_tax_india.setup import after_install as setup_income_tax
@@ -32,9 +33,19 @@ POST_INSTALL_PATCHES = (
 
 
 def after_install():
-    setup_income_tax()
-    setup_gst()
-    run_post_install_patches()
+    try:
+        print("Setting up Income Tax...")
+        setup_income_tax()
+
+        print("Setting up GST...")
+        setup_gst()
+
+        print("Patching Existing Data...")
+        run_post_install_patches()
+    except Exception as e:
+        remove_from_installed_apps("india_compliance")
+        raise e
+
     click.secho("Thank you for installing India Compliance!", fg="green")
 
 
@@ -42,7 +53,6 @@ def run_post_install_patches():
     if not frappe.db.exists("Company", {"country": "India"}):
         return
 
-    print("\nPatching Existing Data...")
     frappe.flags.in_patch = True
 
     try:

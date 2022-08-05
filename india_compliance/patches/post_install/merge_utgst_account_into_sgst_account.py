@@ -28,13 +28,15 @@ def execute():
             frappe.db.set_value(DOCTYPE, row.name, "sgst_account", row.utgst_account)
             continue
 
-        frappe.rename_doc(
-            "Account",
-            row.utgst_account,
-            row.sgst_account,
-            merge=1,
-            force=1,
-        )
+        if row.utgst_account:
+            frappe.rename_doc(
+                "Account",
+                row.utgst_account,
+                row.sgst_account,
+                merge=1,
+                force=1,
+            )
+            frappe.db.set_value(DOCTYPE, row.name, "utgst_account", "")
 
     click.secho(
         "The UTGST Accounts set in your GST Settings have been merged into the"

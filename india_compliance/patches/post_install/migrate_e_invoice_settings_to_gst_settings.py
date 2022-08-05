@@ -28,7 +28,16 @@ def execute():
 
     if old_credentials := get_credentials_from_e_invoice_user():
         gst_settings = frappe.get_single("GST Settings")
-        gst_settings.extend("credentials", old_credentials)
+
+        gstin_with_existing_credentials = [
+            row.gstin for row in gst_settings.credentials
+        ]
+        for credential in old_credentials:
+            if credential.gstin in gstin_with_existing_credentials:
+                continue
+
+            gst_settings.extend("credentials", credential)
+
         gst_settings.update_child_table("credentials")
 
     if sbool(old_settings.enable):
