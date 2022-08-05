@@ -10,7 +10,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .page-heading {
   margin-top: 1.7em;
   font-size: 2em;
