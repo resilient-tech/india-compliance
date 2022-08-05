@@ -45,7 +45,7 @@ Object.assign(ic, {
 
     is_e_invoice_enabled() {
         return ic.is_api_enabled() && gst_settings.enable_e_invoice;
-    }
+    },
 
     validate_gstin(gstin) {
         if (!gstin || gstin.length !== 15) return;
