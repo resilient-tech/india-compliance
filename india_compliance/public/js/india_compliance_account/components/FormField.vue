@@ -22,7 +22,7 @@
         @input="$emit('input', $event.target.value)"
         @blur="$emit('blur', $event.target.value.trim())"
       />
-      <div class="sufix-icon">
+      <div class="suffix-icon">
         <Loading
           radius="15"
           color="var(--text-light)"
@@ -99,11 +99,6 @@ export default {
 </script>
 
 <style scoped>
-.form-control,
-.sufix-icon {
-  /* margin-bottom: 0.3rem; */
-}
-
 .input-error {
   margin-top: 0.2rem;
   color: var(--red-500);
@@ -115,7 +110,7 @@ export default {
   align-items: center;
 }
 
-.sufix-icon {
+.suffix-icon {
   right: 0.5em;
   position: absolute;
   z-index: 10;
