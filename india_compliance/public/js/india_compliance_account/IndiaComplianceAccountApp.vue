@@ -1,10 +1,12 @@
 <template>
   <div class="india-compliance-account">
     <transition name="fade">
-      <PreLoader v-if="isLoading" />
-      <transition name="fade" mode="out-in" v-else>
-        <router-view />
-      </transition>
+      <div class="content">
+          <PreLoader v-if="isLoading" />
+          <transition name="fade" mode="out-in" v-else>
+            <router-view />
+          </transition>
+      </div>
     </transition>
     <TheFooter />
   </div>
@@ -38,13 +40,16 @@ export default {
 </script>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s;
+.india-compliance-account {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.fade-enter,
-.fade-leave-to {
-  opacity: 0;
+.india-compliance-account > .content {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
