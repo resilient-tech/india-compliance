@@ -32,8 +32,8 @@ class IndiaComplianceAccountPage {
     }
 }
 
-frappe.provide("ic.page");
-ic.page.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
+frappe.provide("ic.pages");
+ic.pages.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
 
 frappe.provide("ic.gst_api");
 ic.gst_api.call = async function (endpoint, options) {
