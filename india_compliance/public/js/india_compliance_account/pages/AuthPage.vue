@@ -10,8 +10,8 @@
         <p class="change-view-btn">
           {{
             isAccountRegistered
-              ? "Don't have an Account?"
-              : "Already have an Account?"
+              ? "Don't have an account?"
+              : "Already have an account?"
           }}
           <a @click.prevent="toggleAuthView">
             {{ isAccountRegistered ? "Sign Up" : "Login" }}
