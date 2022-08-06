@@ -2,7 +2,11 @@ import json
 import random
 
 import frappe
-from frappe.utils.password import get_decrypted_password, set_encrypted_password
+from frappe.utils.password import (
+    get_decrypted_password,
+    remove_encrypted_password,
+    set_encrypted_password,
+)
 
 
 @frappe.whitelist()
@@ -21,11 +25,19 @@ def get_api_secret():
 def set_api_secret(api_secret: str):
     frappe.only_for("System Manager")
 
+    if not api_secret:
+        return logout()
+
     set_encrypted_password(
         "GST Settings", "GST Settings", api_secret, fieldname="api_secret"
     )
     frappe.db.set_value("GST Settings", None, "api_secret", "*" * random.randint(8, 16))
     _set_auth_session(None)
+
+
+def logout():
+    remove_encrypted_password("GST Settings", "GST Settings", fieldname="api_secret")
+    frappe.db.set_value("GST Settings", None, "api_secret", None)
 
 
 @frappe.whitelist()
