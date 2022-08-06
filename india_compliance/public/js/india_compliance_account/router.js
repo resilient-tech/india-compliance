@@ -34,10 +34,10 @@ const routes = [
         component: AccountPage,
         alias: "/account",
     },
-    {
-        path: "*",
-        component: PageNotFound,
-    },
+    // {
+    //     path: "*",
+    //     component: PageNotFound,
+    // },
 ];
 
 export default new VueRouter({
