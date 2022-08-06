@@ -9,6 +9,7 @@ import { get_api_secret } from "./services/AuthService";
 
 class IndiaComplianceAccountPage {
     constructor(wrapper) {
+        this.pageName = "india-compliance-account";
         this.containerId = "india-compliance-account-app-container";
 
         // Why need container? Because Vue replaces the element with the component.
@@ -28,6 +29,10 @@ class IndiaComplianceAccountPage {
             router,
             store,
             render: (h) => h(IndiaComplianceAccountApp),
+        });
+
+        $(frappe.pages[this.pageName]).on("show", () => {
+            router.replace({name: store.getters.isLoggedIn ? "home": "auth"});
         });
     }
 }
