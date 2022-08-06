@@ -11,13 +11,13 @@
         {{ feature }}
       </li>
     </ul>
-    <a
+    <!-- <a
       class="learn-more-btn"
       href="https://indiacompliance.app"
       target="_blank"
     >
       Learn More...</a
-    >
+    > -->
   </div>
 </template>
 <script>
