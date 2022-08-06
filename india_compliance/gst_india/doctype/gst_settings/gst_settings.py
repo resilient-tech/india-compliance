@@ -17,6 +17,12 @@ from india_compliance.gst_india.utils import can_enable_api, toggle_custom_field
 
 
 class GSTSettings(Document):
+    def onload(self):
+        if can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed"):
+            return
+
+        self.set_onload("can_show_promo", True)
+
     def validate(self):
         self.update_dependant_fields()
         self.validate_enable_api()
@@ -152,3 +158,9 @@ class GSTSettings(Document):
                     "enable API features"
                 )
             )
+
+
+@frappe.whitelist()
+def disable_api_promo():
+    if frappe.has_permission("GST Settings", "write"):
+        frappe.db.set_global("ic_api_promo_dismissed", 1)
