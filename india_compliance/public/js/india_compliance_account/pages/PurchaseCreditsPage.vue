@@ -31,7 +31,7 @@
               {{ buttonText }}
             </button>
           </div>
-          <div class="calculator-result">
+          <div class="calculator-result mt-5">
             <div class="row">
               <p class="col">Net Amount</p>
               <p class="col calculator-net-value">
@@ -81,9 +81,9 @@
               </p>
             </div>
           </div>
-          <a :href="learnMoreUrl" target="_blank" class="text-highlight text-right">
+          <!-- <a :href="learnMoreUrl" target="_blank" class="text-highlight text-right">
             learn more...
-          </a>
+          </a> -->
         </div>
       </div>
     </div>
