@@ -65,7 +65,6 @@ def download_gstr_2a(gstin, return_periods, otp=None):
             )
 
             # call api only if data is available
-
             if frappe.db.get_value(
                 "GSTR Import Log",
                 {
@@ -111,8 +110,22 @@ def download_gstr_2a(gstin, return_periods, otp=None):
 
 
 def download_gstr_2b(gstin, return_periods, otp=None):
+    total_expected_requests = len(return_periods)
+    requests_made = 0
+
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
+        is_last_period = return_periods[-1] == return_period
+        requests_made += 1
+        frappe.publish_realtime(
+            "update_api_progress",
+            {
+                "current_progress": requests_made * 100 / total_expected_requests,
+                "return_period": return_period,
+                "is_last_period": is_last_period,
+            },
+        )
+
         # TODO: skip if today is not greater than 14th return period's next months
         response = api.get_data(return_period, otp)
         if response.error_type == "otp_requested":
