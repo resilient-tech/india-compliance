@@ -40,6 +40,7 @@ PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 class PurchaseReconciliationTool(Document):
     FIELDS_TO_MATCH = {
         "fy": "Financial Year",
+        "supplier_gstin": "GSTIN",
         "bill_no": "Bill No",
         "place_of_supply": "Place of Supply",
         "is_reverse_charge": "Reverse Charge",
@@ -50,14 +51,21 @@ class PurchaseReconciliationTool(Document):
         "taxable_value": "Taxable Amount",
     }
     FIELDS_LIST = list(FIELDS_TO_MATCH.keys())
-    RULES = [
-        {"Exact Match": ["E", "E", "E", "E", 0, 0, 0, 0, 0]},
-        {"Suggested Match": ["E", "F", "E", "E", 0, 0, 0, 0, 0]},
-        {"Suggested Match": ["E", "E", "E", "E", 1, 1, 1, 1, 2]},
-        {"Suggested Match": ["E", "F", "E", "E", 1, 1, 1, 1, 2]},
-        {"Mismatch": ["E", "E", "N", "N", "N", "N", "N", "N", "N"]},
-        {"Mismatch": ["E", "F", "N", "N", "N", "N", "N", "N", "N"]},
-        {"Residual Match": ["E", "N", "E", "E", 1, 1, 1, 1, 2]},
+    GSTIN_RULES = [
+        {"Exact Match": ["E", "E", "E", "E", "E", 0, 0, 0, 0, 0]},
+        {"Suggested Match": ["E", "E", "F", "E", "E", 0, 0, 0, 0, 0]},
+        {"Suggested Match": ["E", "E", "E", "E", "E", 1, 1, 1, 1, 2]},
+        {"Suggested Match": ["E", "E", "F", "E", "E", 1, 1, 1, 1, 2]},
+        {"Mismatch": ["E", "E", "E", "N", "N", "N", "N", "N", "N", "N"]},
+        {"Mismatch": ["E", "E", "F", "N", "N", "N", "N", "N", "N", "N"]},
+        {"Residual Match": ["E", "E", "N", "E", "E", 1, 1, 1, 1, 2]},
+    ]
+
+    PAN_RULES = [
+        {"Mismatch": ["E", "N", "E", "E", "E", 1, 1, 1, 1, 2]},
+        {"Mismatch": ["E", "N", "F", "E", "E", 1, 1, 1, 1, 2]},
+        {"Mismatch": ["E", "N", "F", "N", "N", "N", "N", "N", "N", "N"]},
+        {"Residual Match": ["E", "N", "N", "E", "E", 1, 1, 1, 1, 2]},
     ]
 
     GST_CATEGORIES = {
@@ -91,17 +99,29 @@ class PurchaseReconciliationTool(Document):
         """
         Reconcile purchases and inward supplies for given category.
         """
+        # GSTIN Level matching
         purchases = self.get_purchase(category)
         inward_supplies = self.get_inward_supply(category, amended_category)
+        self._reconcile(self.GSTIN_RULES, purchases, inward_supplies, category)
 
+        # PAN Level matching
+        purchases = self.get_pan_level_data(purchases)
+        inward_supplies = self.get_pan_level_data(inward_supplies)
+        self._reconcile(self.PAN_RULES, purchases, inward_supplies, category)
+
+    def _reconcile(self, rules, purchases, inward_supplies, category):
         if not (purchases and inward_supplies):
             return
 
-        for rule_map in self.RULES:
+        for rule_map in rules:
             for match_status, rules in rule_map.items():
-                self._reconcile(purchases, inward_supplies, match_status, rules)
+                self.reconcile_for_rule(
+                    purchases, inward_supplies, match_status, rules, category
+                )
 
-    def _reconcile(self, purchases, inward_supplies, match_status, rules):
+    def reconcile_for_rule(
+        self, purchases, inward_supplies, match_status, rules, category
+    ):
         """
         Sequentially reconcile invoices as per rules list.
         - Reconciliation only done between invoices of same GSTIN.
@@ -113,7 +133,7 @@ class PurchaseReconciliationTool(Document):
                 continue
 
             summary_diff = {}
-            if match_status == "Residual Match":
+            if match_status == "Residual Match" and category != "CDNR":
                 summary_diff = self.get_summary_difference(
                     purchases[supplier_gstin], inward_supplies[supplier_gstin]
                 )
@@ -255,7 +275,7 @@ class PurchaseReconciliationTool(Document):
         is_return = 1 if category == "CDNR" else 0
 
         query = (
-            self.query_purchase_invoice(["name"])
+            self.query_purchase_invoice(is_return=is_return)
             .where(PI.posting_date[self.purchase_from_date : self.purchase_to_date])
             .where(PI.name.notin(self.query_matched_purchase_invoice()))
             .where(PI.ignore_reconciliation == 0)
@@ -271,7 +291,7 @@ class PurchaseReconciliationTool(Document):
 
         return self.get_dict_for_key("supplier_gstin", data)
 
-    def query_purchase_invoice(self, additional_fields=None):
+    def query_purchase_invoice(self, additional_fields=None, is_return=False):
         gst_accounts = get_gst_accounts_by_type(self.company, "Input")
         tax_fields = [
             self.query_tax_amount(account).as_(tax[:-8])
@@ -283,10 +303,15 @@ class PurchaseReconciliationTool(Document):
             "name",
             "supplier_gstin",
             "bill_no",
-            "bill_date",
             "place_of_supply",
             "is_reverse_charge",
         ]
+
+        if is_return:
+            # return is initiated by the customer. So bill date may not be available or known.
+            fields += [PI.posting_date.as_("bill_date")]
+        else:
+            fields += ["bill_date"]
 
         if additional_fields:
             fields += additional_fields
@@ -430,6 +455,15 @@ class PurchaseReconciliationTool(Document):
             tax_fields = [table[field].as_(f"isup_{field}") for field in fields]
 
         return tax_fields
+
+    def get_pan_level_data(self, data):
+        out = {}
+        for gstin, invoices in data.items():
+            pan = gstin[2:-3]
+            out.setdefault(pan, [])
+            out[pan].extend(invoices)
+
+        return out
 
     def get_fy(self, date):
         if not date:
