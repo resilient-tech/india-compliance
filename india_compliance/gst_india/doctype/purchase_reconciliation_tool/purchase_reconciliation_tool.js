@@ -1061,7 +1061,7 @@ class ImportDialog {
         const { message } = await this.frm.call(method, args);
         if (message && message.errorCode == "RETOTPREQUEST") {
             const otp = await ic.get_gstin_otp();
-            if (otp) download_gstr(only_missing, otp);
+            if (otp) this.download_gstr(only_missing, otp);
             return;
         }
     }

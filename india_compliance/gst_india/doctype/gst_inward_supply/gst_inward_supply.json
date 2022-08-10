@@ -268,7 +268,7 @@
    "fieldname": "match_status",
    "fieldtype": "Select",
    "label": "Match Status",
-   "options": "\nExact Match\nSuggested Match\nMismatch\nManual Match\nUnlinked"
+   "options": "\nExact Match\nSuggested Match\nMismatch\nManual Match\nUnlinked\nAmended"
   },
   {
    "fieldname": "link_name",
@@ -351,7 +351,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-07-29 11:10:46.964321",
+ "modified": "2022-08-01 16:33:07.796634",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

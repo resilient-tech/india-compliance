@@ -15,7 +15,7 @@ from frappe.query_builder import Case
 from frappe.query_builder.functions import Abs, Sum
 from frappe.utils import add_months, getdate, rounded
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES
+from india_compliance.gst_india.constants import GST_TAX_TYPES, ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_json_from_file,
@@ -82,14 +82,8 @@ class PurchaseReconciliationTool(Document):
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
 
-        for category, amended_category in (
-            ("B2B", "B2BA"),
-            ("CDNR", "CDNRA"),
-            ("ISD", "ISDA"),
-            ("IMPG", ""),
-            ("IMPGSEZ", ""),
-        ):
-            self.reconcile(category, amended_category)
+        for row in ORIGINAL_VS_AMENDED:
+            self.reconcile(row["original"], row["amended"])
 
         self.reconciliation_data = self.get_reconciliation_data()
 
@@ -353,12 +347,6 @@ class PurchaseReconciliationTool(Document):
         for doc in data:
             doc.fy = self.get_fy(doc.bill_date)
             doc._bill_no = self.get_cleaner_bill_no(doc.bill_no, doc.fy)
-            if doc.classification == amended_category:
-                # find B2B
-                # change action
-                # unmatch with purchase and add match with current B2BA and same status
-                # remove it from the list and remove B2B from the list if action in where filters above
-                pass
 
         return self.get_dict_for_key("supplier_gstin", data)
 
@@ -375,6 +363,7 @@ class PurchaseReconciliationTool(Document):
             .left_join(GSTR2_ITEM)
             .on(GSTR2_ITEM.parent == GSTR2.name)
             .where(self.company_gstin == GSTR2.company_gstin)
+            .where(GSTR2.match_status != "Amended")
             .groupby(GSTR2_ITEM.parent)
             .select(*fields)
         )
@@ -388,6 +377,7 @@ class PurchaseReconciliationTool(Document):
             query = query.where(
                 (GSTR2.return_period_2b.isin(isup_periods))
                 | (GSTR2.sup_return_period.isin(isup_periods))
+                | (GSTR2.other_return_period.isin(isup_periods))
             )
 
         return query
@@ -528,7 +518,7 @@ class PurchaseReconciliationTool(Document):
             return
 
         return_type = ReturnType(return_type)
-        periods = get_periods(fiscal_year, return_type)
+        periods = get_periods(fiscal_year, return_type, True)
         history = get_import_history(self.company_gstin, return_type, periods)
 
         columns = [
@@ -701,7 +691,7 @@ class PurchaseReconciliationTool(Document):
         # add missing in purchase invoice
         missing_in_pr = self.query_inward_supply(
             isup_additional_fields, for_summary=True
-        ).where(GSTR2.link_name == "")
+        ).where((GSTR2.link_name == "") | (GSTR2.link_name.isnull()))
 
         if inward_supply_names:
             missing_in_pr = missing_in_pr.where(GSTR2.name.isin(inward_supply_names))
@@ -956,7 +946,7 @@ class PurchaseReconciliationTool(Document):
         return data
 
 
-def get_periods(fiscal_year, return_type: ReturnType):
+def get_periods(fiscal_year, return_type: ReturnType, reversed=False):
     """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
 
     fiscal_year = frappe.db.get_value(
@@ -972,7 +962,7 @@ def get_periods(fiscal_year, return_type: ReturnType):
     end_date = min(fiscal_year.end_date, _getdate(return_type))
 
     # latest to oldest
-    return tuple(reversed(_get_periods(fiscal_year.start_date, end_date)))
+    return tuple(_reversed(_get_periods(fiscal_year.start_date, end_date), reversed))
 
 
 def _get_periods(start_date, end_date):
@@ -987,6 +977,12 @@ def _get_periods(start_date, end_date):
     return [
         dt.strftime("%m%Y") for dt in rrule(MONTHLY, dtstart=start_date, until=end_date)
     ]
+
+
+def _reversed(lst, reverse):
+    if reverse:
+        return reversed(lst)
+    return lst
 
 
 def _getdate(return_type):
