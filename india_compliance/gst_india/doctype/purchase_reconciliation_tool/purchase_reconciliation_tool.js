@@ -369,6 +369,16 @@ class PurchaseReconciliationTool {
             const data = me.mapped_invoice_data[$(this).attr("data-name")];
             me.dm = new DetailViewDialog(me.frm, data);
         });
+
+        // TODO: add filters on click
+        this.tabs.summary_tab.$datatable.on(
+            "click",
+            ".match-status",
+            async function (e) {
+                const match_status = $(this).text();
+                console.log(match_status);
+            }
+        );
     }
 
     get_summary_data() {
@@ -402,6 +412,7 @@ class PurchaseReconciliationTool {
                 label: "Match Status",
                 fieldname: "isup_match_status",
                 width: 200,
+                _value: (...args) => `<span class='match-status'>${args[0]}</span>`,
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -420,43 +431,26 @@ class PurchaseReconciliationTool {
                 fieldname: "taxable_value_diff",
                 width: 180,
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        format_number(value),
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_diff",
                 width: 180,
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        format_number(value),
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "% Action Taken",
                 fieldname: "action_taken",
                 width: 120,
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                _value: (...args) => {
+                    return (
                         roundNumber(
-                            (data.count_action_taken / data.total_docs) * 100,
+                            (args[2].count_action_taken / args[2].total_docs) * 100,
                             2
-                        ) + " %",
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
+                        ) + " %"
                     );
                 },
             },
@@ -534,18 +528,14 @@ class PurchaseReconciliationTool {
                 fieldname: "taxable_value_diff",
                 align: "center",
                 width: 150,
-                _value: (...args) => {
-                    return format_number(args[0]);
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_diff",
                 align: "center",
                 width: 150,
-                _value: (...args) => {
-                    return format_number(args[0]);
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "% Action <br>Taken",

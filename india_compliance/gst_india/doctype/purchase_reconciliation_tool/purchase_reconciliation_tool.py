@@ -751,10 +751,12 @@ class PurchaseReconciliationTool(Document):
             # update differences
             doc.differences = ", ".join(differences)
 
+            # update pan
+            doc.pan = doc.supplier_gstin[2:-3]
+
             # remove columns
             columns_to_remove = [
                 "isup_supplier_name",
-                "isup_supplier_gstin",
                 "ignore_reconciliation",
                 "gst_category",
                 "is_return",
