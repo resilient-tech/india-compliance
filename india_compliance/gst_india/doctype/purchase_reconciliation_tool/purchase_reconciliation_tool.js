@@ -1191,6 +1191,7 @@ class ExportData {
         this.me.get_supplier_columns().forEach(col => {
             if (col.label != null) this.supplier_header.push(col.label);
         });
+        this.supplier_header.splice(1, 0, "Supplier GSTIN")
 
         // Invoice View Headers
         this.invoice_header = [];
@@ -1275,7 +1276,8 @@ class ExportData {
         console.log("supplier_data", this.supplier_data);
         this.supplier_data.forEach(row => {
             let data = [
-                `${row["supplier_name"]}\n${row["supplier_gstin"]}`,
+                row["supplier_name"],
+                row["supplier_gstin"],
                 row["count_isup_docs"],
                 row["count_pur_docs"],
                 row["taxable_value_diff"],
@@ -1331,6 +1333,8 @@ class ExportData {
         */
         const file_name = this.download ? `${this.selected_row.supplier_gstin}_${this.selected_row.supplier_name}` : "purchase_reconciliation_report";
 
+        let sheet_names = ["Summary Data", "Invoice Data"];
+
         let params = {
             common_header: this.period_details,
             data: this.invoice_summary,
@@ -1338,9 +1342,12 @@ class ExportData {
             file_name: file_name,
         };
 
-        if (!this.download) params["supplier_summary"] = this.supplier_summary;
+        if (!this.download) {
+            params["supplier_summary"] = this.supplier_summary;
+            sheet_names.splice(1, 0, "Supplier Data");
+        }
+        params["sheet_names"] = sheet_names;
 
-        if (!("sheet_names" in params)) params["sheet_names"] = ["Summary Data", "Supplier Data", "Invoice Data"];
         return params;
     }
 

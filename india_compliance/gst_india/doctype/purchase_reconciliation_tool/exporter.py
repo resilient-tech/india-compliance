@@ -2,6 +2,7 @@ import openpyxl
 from openpyxl.formatting.rule import Rule
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.styles.differential import DifferentialStyle
+from openpyxl.utils import get_column_letter
 
 import frappe
 
@@ -37,7 +38,12 @@ class ExcelExporter:
         bg_fill = PatternFill(bgColor=bg_color, fill_type=fill_type)
         dxf = DifferentialStyle(font=text_style, fill=bg_fill)
 
-        rule = Rule(type="containsText", operator="containsText", text=text, dxf=dxf)
+        if text:
+            rule = Rule(
+                type="containsText", operator="containsText", text=text, dxf=dxf
+            )
+        else:
+            rule = Rule(type="cells", dxf=dxf)
         return rule
 
     def get_font_style(self, font_family="Calibri", font_size=9, bold=True, color=None):
@@ -47,18 +53,9 @@ class ExcelExporter:
         return font
 
     def get_pattern_fill(self, color, fill_type="solid"):
+        if not color:
+            return None
         return PatternFill(fgColor=color, fill_type=fill_type)
-
-    def update_header_data(
-        self, ws, header_list, row=1, start_column=1, increment_by=1
-    ):
-        for header in header_list:
-            cell = ws.cell(row=row, column=start_column)
-            cell.value = header.replace("<br>", "\n")
-            rule = self.highlight_cell(bg_color="e6b9b8", color="000000", text="Diff")
-            ws.conditional_formatting.add("A1:Y10", rule)
-            start_column += increment_by
-        return ws
 
     def setup_header_for_invoice_data(
         self, ws, alignment="center", font_size=9, range=None, color=None
@@ -77,6 +74,105 @@ class ExcelExporter:
                 cell.alignment = Alignment(
                     horizontal=alignment, vertical=alignment, wrap_text=True
                 )
+
+    def get_range(self, start_row, start_column, end_row, end_column):
+        start_column_letter = get_column_letter(start_column)
+        end_column_letter = get_column_letter(end_column)
+        range = f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
+        return range
+
+    def add_background_color(self, ws, additional_style):
+        for style in additional_style:
+            min_row = style.get("min_row")
+            max_row = style.get("max_row")
+            min_col = style.get("min_col")
+            max_col = style.get("max_col")
+            bg_color = style.get("bg_color")
+
+            for row in ws.iter_rows(
+                min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col
+            ):
+                for cell in row:
+                    self.apply_format(ws, cell=cell, bg_color=bg_color, update=True)
+
+            if style.get("move_range"):
+                move_col = style.get("move_col")
+                range = self.get_range(min_row, min_col, max_row, max_col)
+                print(range)
+                ws.move_range(range, rows=0, cols=move_col)
+
+    def apply_format(
+        self,
+        ws,
+        cell,
+        text_color="000000",
+        bg_color=None,
+        bold=False,
+        column_widths=None,
+        wrap_text=True,
+        vertical="bottom",
+        horizontal="general",
+        column=None,
+        update=False,
+    ):
+        if update:
+            if bg_color:
+                cell.fill = self.get_pattern_fill(bg_color)
+            return ws
+
+        cell.number_format = "0.00"
+        cell.font = self.get_font_style(color=text_color, bold=bold)
+        cell.alignment = Alignment(
+            horizontal=horizontal, vertical=vertical, wrap_text=wrap_text
+        )
+
+        if bg_color:
+            cell.fill = self.get_pattern_fill(bg_color)
+
+        if column_widths:
+            for i, column_width in enumerate(column_widths, 1):  # ,1 to start at 1
+                ws.column_dimensions[get_column_letter(i)].width = column_width
+
+        ws.row_dimensions[4].height = 30
+        ws.row_dimensions[5].height = 30
+
+        return ws
+
+    def append_data(
+        self,
+        ws,
+        data,
+        add_row=1,
+        add_column=1,
+        is_common_header=False,
+        column_widths=None,
+        bg_color=None,
+        wrap_text=True,
+        horizontal="general",
+        vertical="bottom",
+    ):
+        """data is a list of lists"""
+
+        for i, row in enumerate(data):
+            for j, val in enumerate(row):
+                cell = ws.cell(row=i + add_row, column=j + add_column)
+                if isinstance(val, str):
+                    val = val.replace("<br>", "\n")
+                cell.value = val
+
+                bold = True if is_common_header else False
+                self.apply_format(
+                    ws,
+                    cell,
+                    column=j + add_column,
+                    bold=bold,
+                    column_widths=column_widths,
+                    bg_color=bg_color,
+                    wrap_text=wrap_text,
+                    horizontal=horizontal,
+                    vertical=vertical,
+                )
+        return ws
 
     def update_data(self, ws, data_list, header, alignment="left", color=None):
         for i, data in enumerate(data_list):
@@ -121,11 +217,8 @@ class ExcelExporter:
     def add_worksheet(
         self,
         data,
-        header,
         sheet_name,
         position,
-        range,
-        header_color,
         sub_header_color=None,
         body_color="FFFFFF",
         font_size=9,
@@ -140,10 +233,13 @@ class ExcelExporter:
             workbook = self.create_workbook()
 
         worksheet = self.create_worksheet(workbook, sheet_name, position)
+        self.append_data(
+            worksheet, data, add_row=row, add_column=start_column, is_common_header=True
+        )
 
-        self.update_header_data(worksheet, header, row=row)
-        self.setup_header_for_invoice_data(worksheet, range=range, color=header_color)
-        self.update_data(worksheet, data, header, color=body_color)
+        # self.update_header_data(worksheet, header, row=row)
+        # self.setup_header_for_invoice_data(worksheet, range=range, color=header_color)
+        # self.update_data(worksheet, data, header, color=body_color)
 
         if save:
             self.save_workbook(workbook, file_name)
@@ -159,69 +255,155 @@ def export_data_to_xlsx(args, column_widths=None):
     exporter = ExcelExporter()
     workbook = exporter.create_workbook()
 
-    # 0th index of args array contains the header data
-
-    if args.get("match_summary"):
-        match_summary = args.match_summary[1:]
-        match_summary_header = args.match_summary[0]
-        exporter.add_worksheet(
-            data=match_summary,
-            header=match_summary_header,
-            sheet_name=args.sheet_names[0],
-            position=0,
-            range="A2:F2",
-            header_color="d9d9d9",
-            body_color="f2f2f2",
-            row=2,
-            workbook=workbook,
+    for i, sheet_name in enumerate(args.get("sheet_names")):
+        worksheet = exporter.create_worksheet(workbook, sheet_name, i)
+        exporter.append_data(
+            worksheet,
+            data=args.get("common_header"),
+            add_row=1,
+            add_column=1,
+            is_common_header=True,
+            wrap_text=False,
+            horizontal="left",
         )
 
-    if args.get("supplier_summary"):
-        supplier_summary = args.supplier_summary[1:]
-        supplier_summary_header = args.supplier_summary[0]
-        exporter.add_worksheet(
-            data=supplier_summary,
-            header=supplier_summary_header,
-            sheet_name=args.sheet_names[1],
-            position=1,
-            range="A2:F2",
-            header_color="d9d9d9",
-            body_color="f2f2f2",
-            row=2,
-            workbook=workbook,
+        # 0th index of args array contains the header data
+        if sheet_name == "Summary Data" and args.get("match_summary"):
+            data = args.match_summary[1:]
+            data_header = [args.match_summary[0]]
+            column_widths = [20, 20, 12, 18, 18, 12]
+            header_color = "d9d9d9"
+            body_color = "f2f2f2"
+            add_row = 5
+            additional_style = [
+                {
+                    "min_row": 6,
+                    "min_col": 4,
+                    "max_col": 5,
+                    "bg_color": "f2dcdb",
+                }
+            ]
+
+        if sheet_name == "Supplier Data" and args.get("supplier_summary"):
+            data = args.supplier_summary[1:]
+            data_header = [args.supplier_summary[0]]
+            column_widths = [20, 20, 12, 12, 18, 18, 12]
+            header_color = "d9d9d9"
+            body_color = "f2f2f2"
+            add_row = 5
+            additional_style = [
+                {
+                    "min_row": 6,
+                    "min_col": 5,
+                    "max_col": 6,
+                    "bg_color": "f2dcdb",
+                }
+            ]
+
+        if sheet_name == "Invoice Data" and args.get("data"):
+            data = args.data[1:]
+            data_header = args.data[0]
+
+            # column_widths
+            isup_pr_column_widths = [12] * 18
+            column_widths = [20, 20, 20, 15, 11, 12, 12]
+            column_widths.extend(isup_pr_column_widths)
+            add_row = 4
+            additional_style = [
+                {
+                    "min_row": 6,
+                    "min_col": 6,
+                    "max_col": 7,
+                    "bg_color": "f2dcdb",
+                },
+                {
+                    "min_row": 4,
+                    "max_row": 4,
+                    "min_col": 1,
+                    "max_col": 2,
+                    "move_col": 7,
+                    "bg_color": "c6d9f1",
+                    "move_range": True,
+                },
+            ]
+
+        # To add header data to the sheet
+        exporter.append_data(
+            worksheet,
+            data_header,
+            add_row=add_row,
+            add_column=1,
+            is_common_header=True,
+            column_widths=column_widths,
+            bg_color=header_color,
+            horizontal="center",
+            vertical="center",
         )
 
-    if args.get("data"):
-        invoice_summary = args.data[1:]
-        inv_main_header = args.data[0][0]
-        inv_sub_header = args.data[0][1]
-
-        # Invoice Summary Sheet
-        ws1 = workbook.create_sheet(
-            args.sheet_names[2], 2 if args.get("supplier_summary") else 1
+        # To add data to the sheet
+        exporter.append_data(
+            worksheet,
+            data,
+            add_row=6,
+            add_column=1,
+            is_common_header=False,
+            column_widths=column_widths,
+            bg_color=body_color,
+            wrap_text=False,
         )
 
-        if inv_main_header:
-            exporter.update_header_data(ws1, inv_main_header, 1, 8, 9)
-            exporter.setup_header_for_invoice_data(
-                ws1, font_size=12, range="H1:P2", color="c6d9f1"
-            )
+        rule = exporter.highlight_cell(bg_color="e6b9b8", color="000000", text="Diff")
+        worksheet.conditional_formatting.add("A1:Y10", rule)
 
-        if inv_sub_header:
-            exporter.update_header_data(ws1, inv_sub_header, 2, 1, 1)
-            exporter.setup_header_for_invoice_data(
-                ws1, font_size=12, range="Q1:Y2", color="d7e4bd"
-            )
+        # To add additional background color to the sheet
+        exporter.add_background_color(worksheet, additional_style)
 
-        if args.get("data"):
-            ws1.merge_cells("H1:P1")
-            ws1.merge_cells("Q1:Y1")
+    # if args.get("supplier_summary"):
+    #     supplier_summary = args.supplier_summary[1:]
+    #     supplier_summary_header = args.supplier_summary[0]
+    #     exporter.add_worksheet(
+    #         data=supplier_summary,
+    #         header=supplier_summary_header,
+    #         sheet_name=args.sheet_names[1],
+    #         position=1,
+    #         range="A2:F2",
+    #         header_color="d9d9d9",
+    #         body_color="f2f2f2",
+    #         row=2,
+    #         workbook=workbook,
+    #     )
 
-        exporter.setup_header_for_invoice_data(ws1, range="A2:E2", color="d9d9d9")
-        exporter.setup_header_for_invoice_data(ws1, range="F2:G2", color="e6b9b8")
-        exporter.setup_header_for_invoice_data(ws1, range="A2:Y2")
+    # if args.get("data"):
+    #     invoice_summary = args.data[1:]
+    #     inv_main_header = args.data[0][0]
+    #     inv_sub_header = args.data[0][1]
 
-        exporter.update_data(ws1, invoice_summary, inv_sub_header, color="f2f2f2")
+    #     # Invoice Summary Sheet
+    #     ws1 = workbook.create_sheet(
+    #         args.sheet_names[2], 2 if args.get("supplier_summary") else 1
+    #     )
+
+    #     if inv_main_header:
+    #         exporter.update_header_data(ws1, inv_main_header, 1, 8, 9)
+    #         exporter.setup_header_for_invoice_data(
+    #             ws1, font_size=12, range="H1:P2", color="c6d9f1"
+    #         )
+
+    #     if inv_sub_header:
+    #         exporter.update_header_data(ws1, inv_sub_header, 2, 1, 1)
+    #         exporter.setup_header_for_invoice_data(
+    #             ws1, font_size=12, range="Q1:Y2", color="d7e4bd"
+    #         )
+
+    #     if args.get("data"):
+    #         ws1.merge_cells("H1:P1")
+    #         ws1.merge_cells("Q1:Y1")
+
+    #     exporter.setup_header_for_invoice_data(ws1, range="A2:E2", color="d9d9d9")
+    #     exporter.setup_header_for_invoice_data(ws1, range="F2:G2", color="e6b9b8")
+    #     exporter.setup_header_for_invoice_data(ws1, range="A2:Y2")
+
+    #     exporter.update_data(ws1, invoice_summary, inv_sub_header, color="f2f2f2")
 
     exporter.remove_worksheet(workbook, "Sheet")
     exporter.save_workbook(workbook, f"{args.get('file_name')}.xlsx")
