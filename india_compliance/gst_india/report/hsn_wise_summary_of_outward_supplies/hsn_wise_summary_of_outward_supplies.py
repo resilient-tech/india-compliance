@@ -10,6 +10,7 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import cstr, flt, getdate
 import erpnext
 
+from india_compliance.gst_india.constants.e_waybill import UOMS
 from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -131,10 +132,10 @@ def get_items(filters):
     conditions = get_conditions(filters)
     match_conditions = frappe.build_match_conditions("Sales Invoice")
     if match_conditions:
-        match_conditions = " and {0} ".format(match_conditions)
+        conditions += f" and {match_conditions} "
 
     items = frappe.db.sql(
-        """
+        f"""
         SELECT
             `tabSales Invoice Item`.gst_hsn_code,
             `tabSales Invoice Item`.stock_uom,
@@ -147,10 +148,10 @@ def get_items(filters):
         FROM
             `tabSales Invoice`
             INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
-            INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name % s % s
+            INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
         WHERE
             `tabSales Invoice`.docstatus = 1
-            AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL
+            AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
         GROUP BY
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
@@ -159,8 +160,7 @@ def get_items(filters):
         ORDER BY
             `tabSales Invoice Item`.gst_hsn_code,
             `tabSales Invoice Item`.uom
-        """
-        % (conditions, match_conditions),
+        """,
         filters,
         as_dict=1,
     )
@@ -215,7 +215,11 @@ def get_tax_accounts(
 
     for parent, account_head, item_wise_tax_detail, tax_amount in tax_details:
 
-        if account_head not in tax_columns and tax_amount:
+        if (
+            account_head in output_gst_accounts
+            and account_head not in tax_columns
+            and tax_amount
+        ):
             # as description is text editor earlier and markup can break the column convention in reports
             tax_columns.append(account_head)
 
@@ -306,7 +310,7 @@ def get_json(filters, report_name, data):
         getdate(filters["to_date"]).year,
     )
 
-    gst_json = {"version": "GST3.0.3", "hash": "hash", "gstin": gstin, "fp": fp}
+    gst_json = {"version": "GST3.1.2", "hash": "hash", "gstin": gstin, "fp": fp}
 
     gst_json["hsn"] = {"data": get_hsn_wise_json_data(filters, report_data)}
 
@@ -333,11 +337,12 @@ def get_hsn_wise_json_data(filters, report_data):
     count = 1
 
     for hsn in report_data:
+        UOM = UOM if (UOM := hsn.get("stock_uom").upper()) in UOMS else "OTH"
         row = {
             "num": count,
             "hsn_sc": hsn.get("gst_hsn_code"),
-            "desc": hsn.get("description"),
-            "uqc": hsn.get("stock_uom").upper(),
+            "desc": hsn.get("description")[:30],
+            "uqc": UOM,
             "qty": hsn.get("stock_qty"),
             "rt": flt(hsn.get("tax_rate"), 2),
             "txval": flt(hsn.get("taxable_amount", 2)),
