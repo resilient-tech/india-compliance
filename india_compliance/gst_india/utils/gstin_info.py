@@ -79,9 +79,10 @@ def _extract_address_lines(address):
         titlecase(value) for key in ("loc", "city") if (value := address.get(key))
     )
 
-    if not (street := titlecase(address.get("st", ""))):
+    if not (street := address.get("st")):
         return address_line1, address_line2
 
+    street = titlecase(street)
     if len(address_line1) > len(address_line2):
         address_line2 = f"{street}, {address_line2}"
     else:
