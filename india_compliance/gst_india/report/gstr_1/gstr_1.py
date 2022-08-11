@@ -9,6 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, formatdate, getdate
 
+from india_compliance.gst_india.constants import OVERSEAS_GST_CATEGORIES
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 B2C_LIMIT = 2_50_000
@@ -481,7 +482,7 @@ class Gstr1Report(object):
                 and invoice not in unidentified_gst_accounts_invoice
                 and not self.invoices.get(invoice, {}).get("is_export_with_gst")
                 and self.invoices.get(invoice, {}).get("gst_category")
-                in ("Overseas", "SEZ")
+                in OVERSEAS_GST_CATEGORIES
             ):
                 self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
                     0, []
