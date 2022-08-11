@@ -115,3 +115,26 @@ DISTANCE_REGEX = re.compile(r"\d+")
 
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
+
+ORIGINAL_VS_AMENDED = (
+    {
+        "original": "B2B",
+        "amended": "B2BA",
+    },
+    {
+        "original": "CDNR",
+        "amended": "CDNRA",
+    },
+    {
+        "original": "ISD",
+        "amended": "ISDA",
+    },
+    {
+        "original": "IMPG",
+        "amended": "",
+    },
+    {
+        "original": "IMPGSEZ",
+        "amended": "",
+    },
+)

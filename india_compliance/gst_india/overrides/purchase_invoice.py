@@ -66,7 +66,7 @@ def validate_with_inward_supply(doc):
     # mismatch for taxable_value
     taxable_value = sum([item.taxable_value for item in doc.items])
     if taxable_value != doc._inward_supply.get("taxable_value"):
-        mismatch_fields["taxable_value"] = doc._inward_supply.get("taxable_value")
+        mismatch_fields["Taxable Value"] = doc._inward_supply.get("taxable_value")
 
     # mismatch for taxes
     gst_accounts = get_gst_accounts_by_type(doc.company, "Input")
@@ -78,7 +78,7 @@ def validate_with_inward_supply(doc):
         if tax_amount == doc._inward_supply.get(tax):
             continue
 
-        mismatch_fields[tax] = doc._inward_supply.get(tax)
+        mismatch_fields[tax.upper()] = doc._inward_supply.get(tax)
 
     if mismatch_fields:
         message = (

@@ -26,10 +26,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         await frappe.require("purchase_reco_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
 
-        const { message: date_range } = await frm.call("get_date_range", {
-            period: "Current Finanical Year",
-        });
-        frm.current_financial_year = date_range;
+        frm.trigger("set_default_financial_year");
     },
 
     async company(frm) {
@@ -41,7 +38,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     refresh(frm) {
         // allow save for even  for no changes to the form
-        frm.doc.__unsaved = true;
 
         fetch_date_range(frm, "purchase");
         fetch_date_range(frm, "inward_supply");
@@ -76,18 +72,80 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.add_custom_button(__("Export"), () => new ExportData(frm.purchase_reconciliation_tool, null, false));
     },
 
+    before_save(frm) {
+        frm.doc.__unsaved = true;
+    },
+
     purchase_period(frm) {
         fetch_date_range(frm, "purchase");
     },
 
     inward_supply_period(frm) {
         fetch_date_range(frm, "inward_supply");
+        frm.trigger("set_default_financial_year");
     },
 
     after_save(frm) {
         frm.purchase_reconciliation_tool.refresh(
             frm.doc.__onload?.reconciliation_data?.data
         );
+    },
+
+    async set_default_financial_year(frm) {
+        const { message: date_range } = await frm.call("get_date_range", {
+            period:
+                frm.doc.inward_supply_period == "Previous Financial Year"
+                    ? "Previous Financial Year"
+                    : "Current Finanical Year",
+        });
+        frm.current_financial_year = date_range;
+    },
+
+    show_progress(frm, type) {
+        if (type == "download") {
+            frappe.run_serially([
+                () => frm.events.update_progress(frm, "update_api_progress"),
+                () => frm.events.update_progress(frm, "update_transactions_progress"),
+            ]);
+        } else if (type == "upload") {
+            frm.events.update_progress(frm, "update_transactions_progress");
+        }
+    },
+
+    update_progress(frm, method) {
+        frappe.realtime.on(method, data => {
+            const { current_progress } = data;
+            const message =
+                method == "update_api_progress"
+                    ? __("Fetching data from GSTN")
+                    : __("Updating Inward Supply for Return Period {0}", [
+                        data.return_period,
+                    ]);
+
+            frm.dashboard.show_progress(
+                "Import GSTR Progress",
+                current_progress,
+                message
+            );
+            if (data.is_last_period) {
+                frm.flag_last_return_period = data.return_period;
+            }
+            if (
+                current_progress == 100 &&
+                method != "update_api_progress" &&
+                frm.flag_last_return_period == data.return_period
+            ) {
+                setTimeout(() => {
+                    frm.dashboard.hide();
+                    frm.refresh();
+                    frm.dashboard.set_headline("Successfully Imported");
+                    setTimeout(() => {
+                        frm.dashboard.clear_headline();
+                    }, 2000);
+                    frm.save();
+                }, 1000);
+            }
+        });
     },
 });
 
@@ -319,6 +377,16 @@ class PurchaseReconciliationTool {
             const selected_row = me.supplier_data[$(this).attr("data-name")];
             new ExportData(me, selected_row);
         });
+
+        // TODO: add filters on click
+        this.tabs.summary_tab.$datatable.on(
+            "click",
+            ".match-status",
+            async function (e) {
+                const match_status = $(this).text();
+                console.log(match_status);
+            }
+        );
     }
 
     get_summary_data() {
@@ -352,6 +420,7 @@ class PurchaseReconciliationTool {
                 label: "Match Status",
                 fieldname: "isup_match_status",
                 width: 200,
+                _value: (...args) => `<span class='match-status'>${args[0]}</span>`,
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -370,43 +439,26 @@ class PurchaseReconciliationTool {
                 fieldname: "taxable_value_diff",
                 width: 180,
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        format_number(value),
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_diff",
                 width: 180,
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
-                        format_number(value),
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
-                    );
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "% Action Taken",
                 fieldname: "action_taken",
                 width: 120,
                 align: "center",
-                format: (value, row, column, data) => {
-                    return frappe.form.get_formatter(column.docfield.fieldtype)(
+                _value: (...args) => {
+                    return (
                         roundNumber(
-                            (data.count_action_taken / data.total_docs) * 100,
+                            (args[2].count_action_taken / args[2].total_docs) * 100,
                             2
-                        ) + " %",
-                        column.docfield,
-                        { always_show_decimals: true },
-                        data
+                        ) + " %"
                     );
                 },
             },
@@ -484,18 +536,14 @@ class PurchaseReconciliationTool {
                 fieldname: "taxable_value_diff",
                 align: "center",
                 width: 150,
-                _value: (...args) => {
-                    return format_number(args[0]);
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
                 fieldname: "tax_diff",
                 align: "center",
                 width: 150,
-                _value: (...args) => {
-                    return format_number(args[0]);
-                },
+                _value: (...args) => format_number(args[0]),
             },
             {
                 label: "% Action <br>Taken",
@@ -1065,17 +1113,17 @@ class ImportDialog {
             method = "download_gstr_2b";
         }
 
-        reco_tool.show_progress(this.frm, "download");
+        this.frm.events.show_progress(this.frm, "download");
         const { message } = await this.frm.call(method, args);
         if (message && message.errorCode == "RETOTPREQUEST") {
             const otp = await ic.get_gstin_otp();
-            if (otp) download_gstr(only_missing, otp);
+            if (otp) this.download_gstr(only_missing, otp);
             return;
         }
     }
 
     upload_gstr(period, file_path) {
-        reco_tool.show_progress(frm, "upload");
+        this.frm.events.show_progress(this.frm, "upload");
         this.frm.call("upload_gstr", {
             return_type: this.return_type,
             period,
@@ -1138,6 +1186,7 @@ class ExportData {
     inv_fields = {
         "bill_no": "Bill No",
         "bill_date": "Bill Date",
+        "supplier_gstin": "GSTIN",
         "place_of_supply": "Place of Supply",
         "is_reverse_charge": "Reverse Charge",
         "taxable_value": "Taxable Value",
@@ -1202,7 +1251,7 @@ class ExportData {
             "Action Status",
             "Match Status",
             "Supplier Name",
-            "Supplier GSTIN",
+            "PAN",
             "Classification",
             "Taxable Value Difference",
             "Tax Difference",
@@ -1213,6 +1262,7 @@ class ExportData {
     }
 
     process_data() {
+        console.log(this.selected_row);
         if (this.download) {
             const filters = [[this.me.frm.doctype, 'supplier_gstin', '=', this.selected_row.supplier_gstin, false]];
 
@@ -1222,6 +1272,9 @@ class ExportData {
         this.data = this.me.filtered_data;
         this.summary_data = this.me.get_summary_data();
         this.supplier_data = this.me.get_supplier_data();
+        console.log(this.data);
+        console.log(this.summary_data);
+        console.log(this.supplier_data);
 
         for (const [key, value] of Object.entries(this.inv_fields)) {
             if (key == "is_reverse_charge") {
@@ -1229,7 +1282,6 @@ class ExportData {
                 return;
             }
         };
-        console.log(this.data);
     }
 
     _assign_value(field, source_data, prefix, bool = false) {
@@ -1301,7 +1353,7 @@ class ExportData {
                 row[this.prefix + "action"],
                 row[this.prefix + "match_status"],
                 row["supplier_name"],
-                row["supplier_gstin"],
+                row["pan"],
                 row[this.prefix + "classification"],
                 row["taxable_value_diff"],
                 row["tax_diff"],
@@ -1364,6 +1416,16 @@ class ExportData {
     }
 }
 
+async function set_default_financial_year(frm) {
+    const { message: date_range } = await frm.call("get_date_range", {
+        period:
+            frm.doc.inward_supply_period == "Previous Financial Year"
+                ? "Previous Financial Year"
+                : "Current Finanical Year",
+    });
+    frm.current_financial_year = date_range;
+}
+
 async function fetch_date_range(frm, field_prefix) {
     const from_date_field = field_prefix + "_from_date";
     const to_date_field = field_prefix + "_to_date";
@@ -1376,71 +1438,6 @@ async function fetch_date_range(frm, field_prefix) {
     frm.set_value(from_date_field, message[0]);
     frm.set_value(to_date_field, message[1]);
 }
-
-// TODO: refactor progress
-reco_tool.show_progress = function (frm, type) {
-    if (type == "download") {
-        frappe.run_serially([
-            () => update_progress(frm, "update_api_progress"),
-            () => update_progress(frm, "update_transactions_progress"),
-        ]);
-    } else if (type == "upload") {
-        update_progress(frm, "update_transactions_progress");
-    }
-};
-
-function update_progress(frm, method) {
-    frappe.realtime.on(method, data => {
-        const { current_progress } = data;
-        const message =
-            method == "update_api_progress"
-                ? __("Fetching data from GSTN")
-                : __("Updating Inward Supply for Return Period {0}", [
-                    data.return_period,
-                ]);
-
-        frm.dashboard.show_progress("Import GSTR Progress", current_progress, message);
-        frm.page.set_indicator(__("In Progress"), "orange");
-        if (data.is_last_period) {
-            frm.flag_last_return_period = data.return_period;
-        }
-        if (
-            current_progress == 100 &&
-            method != "update_api_progress" &&
-            frm.flag_last_return_period == data.return_period
-        ) {
-            setTimeout(() => {
-                frm.dashboard.hide();
-                frm.refresh();
-                frm.page.set_indicator(__("Success"), "green");
-                frm.dashboard.set_headline("Successfully Imported");
-                setTimeout(() => {
-                    frm.page.clear_headline();
-                }, 2000);
-                frm.save();
-            }, 1000);
-        }
-    });
-}
-
-// reco_tool.apply_filters = function ({ tab, filters }) {
-//     if (!cur_frm) return;
-
-//     // Switch to the tab
-//     const { tabs } = cur_frm.purchase_reconciliation_tool;
-//     tab = tabs && (tabs[tab] || Object.values(tabs).find(tab => tab.is_active()));
-//     tab.set_active();
-
-//     // apply filters
-//     const _filters = {};
-//     for (const [fieldname, filter] of Object.entries(filters)) {
-//         const column = tab.data_table_manager.get_column(fieldname);
-//         column.$filter_input.value = filter;
-//         _filters[column.colIndex] = filter;
-//     }
-
-//     tab.data_table_manager.datatable.columnmanager.applyFilter(_filters);
-// };
 
 function get_icon(value, column, data, icon) {
     /**
