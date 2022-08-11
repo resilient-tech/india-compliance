@@ -44,5 +44,5 @@ class TestHSNWiseSummaryReport(TestCase):
         self.assertTrue(filtered_rows)
 
         hsn_row = filtered_rows[0]
-        self.assertEquals(hsn_row["stock_qty"], 4.0)
-        self.assertEquals(hsn_row["total_amount"], 436)
+        self.assertEquals(hsn_row["stock_qty"], 2.0)
+        self.assertEquals(hsn_row["total_amount"], 236)
