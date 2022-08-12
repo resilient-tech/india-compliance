@@ -169,7 +169,7 @@
    "fieldname": "auto_generate_e_waybill",
    "fieldtype": "Check",
    "label": "Automatically Generate e-Waybill on Invoice Submission",
-   "read_only_depends_on": "eval: doc.enable_e_invoice && doc.auto_generate_e_invoice"
+   "read_only_depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_invoice && doc.auto_generate_e_invoice"
   },
   {
    "default": "1",
@@ -238,7 +238,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-29 10:06:37.993064",
+ "modified": "2022-07-29 02:58:52.754837",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

@@ -127,6 +127,12 @@ def migrate_e_invoice_request_log():
     if not frappe.db.table_exists("E Invoice Request Log"):
         return
 
+    if frappe.db.exists(
+        "Integration Request",
+        {"integration_request_service": "Migrated from e-Invoice Request Log"},
+    ):
+        return
+
     # Using db.get_values instead of get_all to avoid retrieving meta,
     # since the DocType E Invoice Request Log gets deleted in ERPNext patch
     docs = frappe.db.get_values(
