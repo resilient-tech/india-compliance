@@ -21,7 +21,11 @@ function fetch_gst_details(doctype) {
 
     // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
-        event_fields.push("customer_address");
+        event_fields.push(
+            "customer_address",
+            "is_export_with_gst",
+            "is_reverse_charge"
+        );
     } else {
         event_fields.push("supplier_address");
     }
@@ -46,9 +50,14 @@ async function update_gst_details(frm) {
     const party_fields = ["tax_category", "gst_category", "company_gstin", party_type];
 
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
-        party_fields.push("customer_address", "billing_address_gstin");
+        party_fields.push(
+            "customer_address",
+            "billing_address_gstin",
+            "is_export_with_gst",
+            "is_reverse_charge"
+        );
     } else {
-        party_fields.push("supplier_gstin");
+        party_fields.push("supplier_address", "supplier_gstin");
     }
 
     const party_details = Object.fromEntries(
@@ -72,7 +81,7 @@ async function update_gst_details(frm) {
 function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
         gst_category(frm) {
-            const { enable_overseas_transactions } = frappe.boot.gst_settings;
+            const { enable_overseas_transactions } = gst_settings;
             if (
                 !["SEZ", "Overseas"].includes(frm.doc.gst_category) ||
                 enable_overseas_transactions

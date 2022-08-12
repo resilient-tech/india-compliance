@@ -1,10 +1,10 @@
+const GSTIN_FIELD_DESCRIPTION = __("Autofill party information by entering their GSTIN");
+
 class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
         this.skip_redirect_on_error = true;
-
-        const { gst_settings } = frappe.boot;
-        this.api_enabled = gst_settings.enable_api && gst_settings.autofill_party_info;
+        this.api_enabled = ic.is_api_enabled() && gst_settings.autofill_party_info;
     }
 
     render_dialog() {
@@ -83,9 +83,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 label: "GSTIN",
                 fieldname: "_gstin",
                 fieldtype: "Autocomplete",
-                description: this.api_enabled
-                    ? __("Autofill party information by entering their GSTIN")
-                    : "",
+                description: this.api_enabled ? GSTIN_FIELD_DESCRIPTION : "",
                 ignore_validation: true,
                 onchange: () => {
                     if (!this.api_enabled)
@@ -217,7 +215,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
                     if (
                         !link_name ||
-                        !in_list(ic.gstin_doctypes, link_doctype)
+                        !in_list(frappe.boot.gst_party_types, link_doctype)
                     )
                         return;
 
@@ -259,7 +257,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         if (!doc) return;
 
         const { doctype, name } = doc;
-        if (in_list(ic.gstin_doctypes, doctype))
+        if (in_list(frappe.boot.gst_party_types, doctype))
             return { party_type: doctype, party: name };
 
         const party_type = ic.get_party_type(doctype);
@@ -272,18 +270,33 @@ frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
+    const gstin_field = dialog.get_field("_gstin");
+
     if (!gstin || gstin.length != 15) {
         const pincode_field = dialog.fields_dict._pincode;
         pincode_field.set_data([]);
         pincode_field.df.onchange = null;
+
+        gstin_field.set_description(GSTIN_FIELD_DESCRIPTION);
         return;
     }
 
     const gstin_info = await get_gstin_info(gstin);
+    set_gstin_description(gstin_field, gstin_info.status);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
 
     setup_pincode_field(dialog, gstin_info);
+}
+
+function set_gstin_description(gstin_field, status) {
+    const STATUS_COLORS = {"Active": "green", "Cancelled": "red"};
+
+    gstin_field.set_description(
+        `<div class="indicator ${STATUS_COLORS[status] || "orange"}">
+            Status:&nbsp;<strong>${status}</strong>
+        </div>`
+    );
 }
 
 function setup_pincode_field(dialog, gstin_info) {
@@ -327,9 +340,12 @@ function map_gstin_info(doc, gstin_info) {
 
 function update_party_info(doc, gstin_info) {
     doc.gstin = doc._gstin;
-    const party_name_field = `${ic.get_party_type(doc.doctype).toLowerCase()}_name`;
-    doc[party_name_field] = gstin_info.business_name;
     doc.gst_category = gstin_info.gst_category;
+
+    if (!in_list(frappe.boot.gst_party_types, doc.doctype)) return;
+
+    const party_name_field = `${doc.doctype.toLowerCase()}_name`;
+    doc[party_name_field] = gstin_info.business_name;
 }
 
 function update_address_info(doc, address) {
