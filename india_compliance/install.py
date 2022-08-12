@@ -2,6 +2,7 @@ import click
 
 import frappe
 
+from india_compliance.gst_india.constants import BUG_REPORT_URL
 from india_compliance.gst_india.setup import after_install as setup_gst
 from india_compliance.income_tax_india.setup import after_install as setup_income_tax
 
@@ -32,9 +33,25 @@ POST_INSTALL_PATCHES = (
 
 
 def after_install():
-    setup_income_tax()
-    setup_gst()
-    run_post_install_patches()
+    try:
+        print("Setting up Income Tax...")
+        setup_income_tax()
+
+        print("Setting up GST...")
+        setup_gst()
+
+        print("Patching Existing Data...")
+        run_post_install_patches()
+
+    except Exception as e:
+        click.secho(
+            "Installation for India Compliance failed due to an error."
+            " Please try re-installing the app or"
+            f" report the issue on {BUG_REPORT_URL} if not resolved.",
+            fg="bright_red",
+        )
+        raise e
+
     click.secho("Thank you for installing India Compliance!", fg="green")
 
 
@@ -42,7 +59,6 @@ def run_post_install_patches():
     if not frappe.db.exists("Company", {"country": "India"}):
         return
 
-    print("\nPatching Existing Data...")
     frappe.flags.in_patch = True
 
     try:
