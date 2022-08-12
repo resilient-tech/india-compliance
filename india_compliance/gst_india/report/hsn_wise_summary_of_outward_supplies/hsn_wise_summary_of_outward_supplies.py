@@ -10,6 +10,7 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import cstr, flt, getdate
 import erpnext
 
+from india_compliance.gst_india.constants.e_waybill import UOMS
 from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -23,25 +24,33 @@ def _execute(filters=None):
         filters = {}
     columns = get_columns()
 
+    output_gst_accounts = [
+        account
+        for account in get_gst_accounts_by_type(filters.company, "Output").values()
+        if account
+    ]
+
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
     if item_list:
         itemised_tax, tax_columns = get_tax_accounts(
-            item_list, columns, company_currency
+            item_list, columns, company_currency, output_gst_accounts
         )
 
     data = []
     added_item = []
     for d in item_list:
         if (d.parent, d.item_code) not in added_item:
-            row = [d.gst_hsn_code, d.description, d.stock_uom, d.stock_qty, d.tax_rate]
+            row = [d.gst_hsn_code, d.description, d.stock_uom, d.stock_qty]
             total_tax = 0
+            tax_rate = 0
             for tax in tax_columns:
                 item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
+                if item_tax.get("is_gst_tax"):
+                    tax_rate += flt(item_tax.get("tax_rate", 0))
                 total_tax += flt(item_tax.get("tax_amount", 0))
 
-            row += [d.base_net_amount + total_tax]
-            row += [d.base_net_amount]
+            row += [tax_rate, d.taxable_value + total_tax, d.taxable_value]
 
             for tax in tax_columns:
                 item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
@@ -124,37 +133,35 @@ def get_items(filters):
     conditions = get_conditions(filters)
     match_conditions = frappe.build_match_conditions("Sales Invoice")
     if match_conditions:
-        match_conditions = " and {0} ".format(match_conditions)
+        conditions += f" and {match_conditions} "
 
     items = frappe.db.sql(
-        """
-        select
+        f"""
+        SELECT
             `tabSales Invoice Item`.gst_hsn_code,
             `tabSales Invoice Item`.stock_uom,
-            sum(`tabSales Invoice Item`.stock_qty) as stock_qty,
-            sum(`tabSales Invoice Item`.base_net_amount) as base_net_amount,
-            sum(`tabSales Invoice Item`.base_price_list_rate) as base_price_list_rate,
+            sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
+            sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
+            sum(`tabSales Invoice Item`.base_price_list_rate) AS base_price_list_rate,
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
-            `tabGST HSN Code`.description,
-            json_extract(`tabSales Taxes and Charges`.item_wise_tax_detail,
-            concat('$."' , `tabSales Invoice Item`.item_code, '"[0]')) * count(distinct `tabSales Taxes and Charges`.name) as tax_rate
-        from
-            `tabSales Invoice`,
-            `tabSales Invoice Item`,
-            `tabGST HSN Code`,
-            `tabSales Taxes and Charges`
-        where
-            `tabSales Invoice`.name = `tabSales Invoice Item`.parent
-            and `tabSales Taxes and Charges`.parent = `tabSales Invoice`.name
-            and `tabSales Invoice`.docstatus = 1
-            and `tabSales Invoice Item`.gst_hsn_code is not NULL
-            and `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name %s %s
-        group by
+            `tabGST HSN Code`.description
+        FROM
+            `tabSales Invoice`
+            INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
+            INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
+        WHERE
+            `tabSales Invoice`.docstatus = 1
+            AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
+        GROUP BY
             `tabSales Invoice Item`.parent,
-            `tabSales Invoice Item`.item_code
-        """
-        % (conditions, match_conditions),
+            `tabSales Invoice Item`.item_code,
+            `tabSales Invoice Item`.gst_hsn_code,
+            `tabSales Invoice Item`.uom
+        ORDER BY
+            `tabSales Invoice Item`.gst_hsn_code,
+            `tabSales Invoice Item`.uom
+        """,
         filters,
         as_dict=1,
     )
@@ -166,6 +173,7 @@ def get_tax_accounts(
     item_list,
     columns,
     company_currency,
+    output_gst_accounts,
     doctype="Sales Invoice",
     tax_doctype="Sales Taxes and Charges",
 ):
@@ -208,7 +216,11 @@ def get_tax_accounts(
 
     for parent, account_head, item_wise_tax_detail, tax_amount in tax_details:
 
-        if account_head not in tax_columns and tax_amount:
+        if (
+            account_head in output_gst_accounts
+            and account_head not in tax_columns
+            and tax_amount
+        ):
             # as description is text editor earlier and markup can break the column convention in reports
             tax_columns.append(account_head)
 
@@ -220,10 +232,16 @@ def get_tax_accounts(
                     if not frappe.db.get_value("Item", item_code, "gst_hsn_code"):
                         continue
                     itemised_tax.setdefault(item_code, frappe._dict())
+
+                    tax_rate = 0
+                    is_gst_tax = 0
+                    tax_amount = 0
                     if isinstance(tax_data, list):
+                        if account_head in output_gst_accounts:
+                            is_gst_tax = 1
+                            tax_rate = tax_data[0]
+
                         tax_amount = tax_data[1]
-                    else:
-                        tax_amount = 0
 
                     for d in item_row_map.get(parent, {}).get(item_code, []):
                         item_tax_amount = tax_amount
@@ -232,9 +250,11 @@ def get_tax_accounts(
                                 account_head
                             ] = frappe._dict(
                                 {
+                                    "tax_rate": flt(tax_rate, 2),
+                                    "is_gst_tax": is_gst_tax,
                                     "tax_amount": flt(
                                         item_tax_amount, tax_amount_precision
-                                    )
+                                    ),
                                 }
                             )
             except ValueError:
@@ -242,6 +262,9 @@ def get_tax_accounts(
 
     tax_columns.sort()
     for account_head in tax_columns:
+        if account_head not in output_gst_accounts:
+            continue
+
         columns.append(
             {
                 "label": account_head,
@@ -290,7 +313,7 @@ def get_json(filters, report_name, data):
         getdate(filters["to_date"]).year,
     )
 
-    gst_json = {"version": "GST3.0.3", "hash": "hash", "gstin": gstin, "fp": fp}
+    gst_json = {"version": "GST3.1.2", "hash": "hash", "gstin": gstin, "fp": fp}
 
     gst_json["hsn"] = {"data": get_hsn_wise_json_data(filters, report_data)}
 
@@ -317,11 +340,15 @@ def get_hsn_wise_json_data(filters, report_data):
     count = 1
 
     for hsn in report_data:
+        uom = hsn.get("stock_uom", "").upper()
+        if uom not in UOMS:
+            uom = "OTH"
+
         row = {
             "num": count,
             "hsn_sc": hsn.get("gst_hsn_code"),
-            "desc": hsn.get("description"),
-            "uqc": hsn.get("stock_uom").upper(),
+            "desc": hsn.get("description")[:30],
+            "uqc": uom,
             "qty": hsn.get("stock_qty"),
             "rt": flt(hsn.get("tax_rate"), 2),
             "txval": flt(hsn.get("taxable_amount", 2)),
