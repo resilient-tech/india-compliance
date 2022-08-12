@@ -1,3 +1,5 @@
+const GSTIN_FIELD_DESCRIPTION = __("Autofill party information by entering their GSTIN");
+
 class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
@@ -81,9 +83,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 label: "GSTIN",
                 fieldname: "_gstin",
                 fieldtype: "Autocomplete",
-                description: this.api_enabled
-                    ? __("Autofill party information by entering their GSTIN")
-                    : "",
+                description: this.api_enabled ? GSTIN_FIELD_DESCRIPTION : "",
                 ignore_validation: true,
                 onchange: () => {
                     if (!this.api_enabled) return;
@@ -268,28 +268,31 @@ frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
+    const gstin_field = dialog.get_field("_gstin");
+
     if (!gstin || gstin.length != 15) {
         const pincode_field = dialog.fields_dict._pincode;
         pincode_field.set_data([]);
         pincode_field.df.onchange = null;
+
+        gstin_field.set_description(GSTIN_FIELD_DESCRIPTION);
         return;
     }
 
     const gstin_info = await get_gstin_info(gstin);
-    set_gstin_status(dialog.get_field("_gstin"), gstin_info.status);
+    set_gstin_description(gstin_field, gstin_info.status);
     map_gstin_info(dialog.doc, gstin_info);
     dialog.refresh();
 
     setup_pincode_field(dialog, gstin_info);
 }
 
-function set_gstin_status(gstin_field, status) {
-    const colour =
-        status == "Active" ? "green" : status == "Cancelled" ? "red" : "orange";
+function set_gstin_description(gstin_field, status) {
+    const STATUS_COLORS = {"Active": "green", "Cancelled": "red"};
 
     gstin_field.set_description(
-        `<div class="indicator ${colour}" style="color: ${colour}">
-            Status: ${status}
+        `<div class="indicator ${STATUS_COLORS[status] || "orange"}">
+            Status:&nbsp;<strong>${status}</strong>
         </div>`
     );
 }
