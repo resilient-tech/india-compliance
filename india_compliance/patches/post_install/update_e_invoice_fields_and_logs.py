@@ -127,10 +127,9 @@ def migrate_e_invoice_request_log():
     if not frappe.db.table_exists("E Invoice Request Log"):
         return
 
-    if frappe.db.get_value(
+    if frappe.db.exists(
         "Integration Request",
         {"integration_request_service": "Migrated from e-Invoice Request Log"},
-        "name",
     ):
         return
 

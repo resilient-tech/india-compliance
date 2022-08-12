@@ -18,27 +18,23 @@ def execute():
         .run()
     )
 
-    if old_settings.applicable_from:
-        frappe.db.set_value(
-            "GST Settings",
-            "GST Settings",
-            "e_invoice_applicable_from",
-            old_settings.applicable_from,
-        )
+    if not old_settings.applicable_from:
+        return
+
+    gst_settings = frappe.get_doc("GST Settings")
+    gst_settings.e_invoice_applicable_from = old_settings.applicable_from
 
     if old_credentials := get_credentials_from_e_invoice_user():
-        gst_settings = frappe.get_single("GST Settings")
+        gst_settings.extend("credentials", old_credentials)
+        frappe.db.delete("E Invoice User")
 
-        gstin_with_existing_credentials = [
-            row.gstin for row in gst_settings.credentials
-        ]
-        for credential in old_credentials:
-            if credential.gstin in gstin_with_existing_credentials:
-                continue
+    gst_settings.flags.update(
+        ignore_mandatory=True,
+        ignore_validate=True,
+        ignore_permissions=True,
+    )
 
-            gst_settings.extend("credentials", credential)
-
-        gst_settings.update_child_table("credentials")
+    gst_settings.save()
 
     if sbool(old_settings.enable):
         toggle_custom_fields(E_INVOICE_FIELDS, True)

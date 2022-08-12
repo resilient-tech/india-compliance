@@ -2,6 +2,7 @@ import click
 
 import frappe
 
+from india_compliance.gst_india.constants import BUG_REPORT_URL
 from india_compliance.gst_india.setup import after_install as setup_gst
 from india_compliance.income_tax_india.setup import after_install as setup_income_tax
 
@@ -41,10 +42,13 @@ def after_install():
 
         print("Patching Existing Data...")
         run_post_install_patches()
+
     except Exception as e:
         click.secho(
-            "Error occoured while installing India Compliance. Kindly try re-installing the app or report the issue on https://github.com/resilient-tech/india-compliance/issues if not resolved.",
-            fg="red",
+            "Installation for India Compliance failed due to an error."
+            " Please try re-installing the app or"
+            f" report the issue on {BUG_REPORT_URL} if not resolved.",
+            fg="bright_red",
         )
         raise e
 

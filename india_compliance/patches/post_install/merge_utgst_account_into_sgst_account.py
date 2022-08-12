@@ -22,21 +22,27 @@ def execute():
     if not gst_accounts:
         return
 
-    for row in gst_accounts:
-        # SGST account was set as not mandatory by user?
-        if not row.sgst_account:
-            frappe.db.set_value(DOCTYPE, row.name, "sgst_account", row.utgst_account)
-            continue
+    values_to_set = {"utgst_account": ""}
 
-        if row.utgst_account:
-            frappe.rename_doc(
-                "Account",
-                row.utgst_account,
-                row.sgst_account,
-                merge=1,
-                force=1,
+    for row in gst_accounts:
+        if not row.sgst_account:
+            # SGST account was set as not mandatory by user?
+            frappe.db.set_value(
+                DOCTYPE,
+                row.name,
+                {"sgst_account": row.utgst_account, **values_to_set},
             )
-            frappe.db.set_value(DOCTYPE, row.name, "utgst_account", "")
+            return
+
+        frappe.rename_doc(
+            "Account",
+            row.utgst_account,
+            row.sgst_account,
+            merge=1,
+            force=1,
+        )
+
+        frappe.db.set_value(DOCTYPE, row.name, values_to_set)
 
     click.secho(
         "The UTGST Accounts set in your GST Settings have been merged into the"
