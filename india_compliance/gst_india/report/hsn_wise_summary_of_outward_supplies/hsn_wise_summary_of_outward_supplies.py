@@ -24,8 +24,11 @@ def _execute(filters=None):
         filters = {}
     columns = get_columns()
 
-    output_gst_list = get_gst_accounts_by_type(filters.company, "Output").values()
-    output_gst_accounts = [account for account in output_gst_list if account]
+    output_gst_accounts = [
+        account
+        for account in get_gst_accounts_by_type(filters.company, "Output").values()
+        if account
+    ]
 
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
@@ -47,9 +50,7 @@ def _execute(filters=None):
                     tax_rate += flt(item_tax.get("tax_rate", 0))
                 total_tax += flt(item_tax.get("tax_amount", 0))
 
-            row += [tax_rate]
-            row += [d.taxable_value + total_tax]
-            row += [d.taxable_value]
+            row += [tax_rate, d.taxable_value + total_tax, d.taxable_value]
 
             for tax in tax_columns:
                 item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
@@ -231,16 +232,16 @@ def get_tax_accounts(
                     if not frappe.db.get_value("Item", item_code, "gst_hsn_code"):
                         continue
                     itemised_tax.setdefault(item_code, frappe._dict())
+
+                    tax_rate = 0
+                    is_gst_tax = 0
+                    tax_amount = 0
                     if isinstance(tax_data, list):
-                        tax_rate = 0
-                        is_gst_tax = 0
                         if account_head in output_gst_accounts:
                             is_gst_tax = 1
                             tax_rate = tax_data[0]
+
                         tax_amount = tax_data[1]
-                    else:
-                        tax_rate = 0
-                        tax_amount = 0
 
                     for d in item_row_map.get(parent, {}).get(item_code, []):
                         item_tax_amount = tax_amount
@@ -261,15 +262,17 @@ def get_tax_accounts(
 
     tax_columns.sort()
     for account_head in tax_columns:
-        if account_head in output_gst_accounts:
-            columns.append(
-                {
-                    "label": account_head,
-                    "fieldname": frappe.scrub(account_head),
-                    "fieldtype": "Float",
-                    "width": 110,
-                }
-            )
+        if account_head not in output_gst_accounts:
+            continue
+
+        columns.append(
+            {
+                "label": account_head,
+                "fieldname": frappe.scrub(account_head),
+                "fieldtype": "Float",
+                "width": 110,
+            }
+        )
 
     return itemised_tax, tax_columns
 
@@ -337,12 +340,15 @@ def get_hsn_wise_json_data(filters, report_data):
     count = 1
 
     for hsn in report_data:
-        UOM = UOM if (UOM := hsn.get("stock_uom").upper()) in UOMS else "OTH"
+        uom = hsn.get("stock_uom", "").upper()
+        if uom not in UOMS:
+            uom = "OTH"
+
         row = {
             "num": count,
             "hsn_sc": hsn.get("gst_hsn_code"),
             "desc": hsn.get("description")[:30],
-            "uqc": UOM,
+            "uqc": uom,
             "qty": hsn.get("stock_qty"),
             "rt": flt(hsn.get("tax_rate"), 2),
             "txval": flt(hsn.get("taxable_amount", 2)),
