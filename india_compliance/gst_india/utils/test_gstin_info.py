@@ -93,6 +93,7 @@ class TestGstinInfo(unittest.TestCase):
                 "gstin": "24AAUPV7468F1ZW",
                 "business_name": "Shalibhadra Metal Corporation",
                 "gst_category": "Registered Regular",
+                "status": "Active",
                 "all_addresses": [
                     {
                         "address_line1": "Plot No. 420, National Highway No. 8",
