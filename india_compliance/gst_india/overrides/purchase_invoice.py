@@ -12,7 +12,7 @@ def validate(doc, method=None):
 
     update_itc_totals(doc)
     validate_supplier_gstin(doc)
-    validate_bill_no(doc)
+    validate_supplier_invoice_number(doc)
 
 
 def update_itc_totals(doc, method=None):
@@ -46,27 +46,29 @@ def validate_supplier_gstin(doc):
         )
 
 
-def validate_bill_no(doc):
+def validate_supplier_invoice_number(doc):
+    # TODO: needs redeign, JS implementation and tests
+    return
+
     if (
-        not doc.supplier_gstin
-        or doc.bill_no
+        doc.bill_no
+        or not doc.supplier_gstin
         or not frappe.get_cached_value(
-            "GST Settings", "GST Settings", "validate_bill_no"
+            "GST Settings", "GST Settings", "require_supplier_invoice_no"
         )
     ):
         return
 
     gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
-    for tax in doc.get("taxes"):
-        if (
-            tax.account_head not in gst_accounts
-            or not tax.base_tax_amount_after_discount_amount
-        ):
-            continue
 
+    if any(
+        tax.base_tax_amount_after_discount_amount and tax.account_head in gst_accounts
+        for tax in doc.taxes
+    ):
         frappe.throw(
             _(
-                "Bill No is mandatory for a GST Purchase Invoice from a Registered Supplier."
+                "Bill No is mandatory for a GST Purchase Invoice from a Registered"
+                " Supplier."
             ),
             title=_("Missing Mandatory Field"),
         )

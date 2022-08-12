@@ -98,7 +98,7 @@ def set_default_gst_settings():
         {
             "hsn_wise_tax_breakup": 1,
             "enable_reverse_charge_in_sales": 0,
-            "validate_bill_no": 1,
+            "require_supplier_invoice_no": 1,
             "validate_hsn_code": 1,
             "min_hsn_digits": 6,
             "enable_e_waybill": 1,

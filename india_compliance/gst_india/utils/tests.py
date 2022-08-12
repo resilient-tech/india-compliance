@@ -38,6 +38,9 @@ def create_transaction(**data):
         ):
             transaction.eligibility_for_itc = "All Other ITC"
 
+        if "bill_no" not in data:
+            transaction.bill_no = frappe.generate_hash(length=5)
+
     company_abbr = frappe.get_cached_value("Company", data.company, "abbr") or "_TIRC"
     append_item(transaction, data, company_abbr)
 
