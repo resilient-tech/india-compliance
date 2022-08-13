@@ -23,6 +23,11 @@ class ExcelExporter:
         workbook.remove(workbook[sheet_name])
         return workbook
 
+    def add_header(self, headers):
+        headers = []
+        for header in headers:
+            pass
+
     def highlight_cell(
         self,
         fill_type="solid",

@@ -981,6 +981,12 @@ class PurchaseReconciliationTool(Document):
 
         return data
 
+    @frappe.whitelist()
+    def export_data_to_xlsx(self, data, headers):
+        """Exports data to an xlsx file"""
+        e = BuildExcel(export_data=data, export_header=headers)
+        e.build_response()
+
 
 def get_periods(fiscal_year, return_type: ReturnType, reversed=False):
     """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
@@ -1062,3 +1068,100 @@ def get_import_history(
         fields=fields,
         pluck=pluck,
     )
+
+
+class BuildExcel(PurchaseReconciliationTool):
+    INV_FIELDS = {
+        "bill_no": "Bill No",
+        "bill_date": "Bill Date",
+        "supplier_gstin": "GSTIN",
+        "place_of_supply": "Place of Supply",
+        "is_reverse_charge": "Reverse Charge",
+        "taxable_value": "Taxable Value",
+        "cgst": "CGST",
+        "sgst": "SGST",
+        "igst": "IGST",
+        "cess": "CESS",
+    }
+    COLOR_PALLATE = {
+        "dark_gray": "d9d9d9",
+        "light_gray": "f2f2f2",
+        "dark_pink": "e6b9b8",
+        "light_pink": "f2dcdb",
+        "sky_blue": "c6d9f1",
+        "light_blue": "dce6f2",
+        "green": "d7e4bd",
+        "light_green": "ebf1de",
+    }
+
+    def __init__(
+        self,
+        export_data=None,
+        export_header=None,
+    ):
+        self.prefix = "isup_"
+        self.data = export_data
+        self.export_header = export_header
+        self.set_headers()
+
+    def set_common_header(self):
+        """Common header for all sheets"""
+        period = f"{self.inward_supply_from_date} to {self.inward_supply_to_date}"
+        label = "2B" if self.gst_return == "GSTR 2B" else "2A/2B"
+
+        self.common_header = {}
+        self.common_header.setdefault(
+            "header",
+            [
+                ["Company Name", self.company],
+                ["GSTIN", self.company_gstin],
+                [f"Return Period ({label})", period],
+            ],
+        )
+        self.common_header.setdefault("width", {"description": 20, "data": 20})
+
+    def set_headers(self):
+        self.headers = self.build_csv_array(self.export_header)
+        print(self.headers)
+
+    def build_csv_array(self, data):
+        """Builds an array of csv data"""
+        csv_array = []
+
+        for row in data:
+            csv_array.append(self.build_csv_row(row))
+        return csv_array
+
+    def build_csv_row(self, row):
+        """Builds a csv row"""
+        csv_row = []
+
+        for data in row:
+            csv_row.append(data.get("label"))
+        return csv_row
+
+    def build_column_width(self):
+        """Builds the column width"""
+        pass
+
+    def process_data(self):
+        for key, value in self.INV_FIELDS.items():
+            if key == "is_reverse_charge":
+                self.assign_value(key, self.data, self.prefix, True)
+                return
+
+    def assign_value(self, field, source_data, prefix, bool=False):
+        # Handle multiple rows for reverse charge yes no
+        isup_field = self.prefix + field
+        for row in source_data:
+            if row.get(field) is not None:
+                if bool:
+                    row[field] = "Yes" if row[field] else "No"
+                    row[isup_field] = "Yes" if row[isup_field] else "No"
+                else:
+                    row[field] = row.field
+
+    def build_response(self):
+        """Builds the response"""
+        # ToDo: Build response to be export in excel format
+        pass

@@ -69,7 +69,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             .addClass("dropdown-divider");
 
         // Export button
-        frm.add_custom_button(__("Export"), () => new ExportData(frm.purchase_reconciliation_tool, null, false));
+        frm.add_custom_button(__("Export"), () => frm.purchase_reconciliation_tool.apply_data_export());
     },
 
     before_save(frm) {
@@ -375,7 +375,7 @@ class PurchaseReconciliationTool {
         this.tabs.supplier_tab.$datatable.on("click", ".btn.download", function (e) {
             // Export selected rows to XLSX
             const selected_row = me.supplier_data[$(this).attr("data-name")];
-            new ExportData(me, selected_row);
+            me.apply_data_export(selected_row);
         });
 
         // TODO: add filters on click
@@ -661,6 +661,39 @@ class PurchaseReconciliationTool {
                 fieldname: "isup_action",
             },
         ];
+    }
+
+    get_filtered_data(selected_row = null) {
+        if (selected_row) {
+            const filters = [[this.frm.doctype, 'supplier_gstin', '=', selected_row.supplier_gstin, false]];
+
+            this.apply_filters(true, filters);
+        }
+
+        let filtered_data = Object.assign({},
+            {
+                'match_summary': this.get_summary_data(),
+                'supplier_summary': this.get_supplier_data(),
+                'invoice_summary': this.filtered_data
+            }
+        );
+
+        return filtered_data;
+    }
+
+    apply_data_export(selected_row = null) {
+        this.filtered_data = this.get_filtered_data(selected_row);
+
+        this.headers = [];
+        this.headers.push(
+            this.get_summary_columns(),
+            this.get_supplier_columns(),
+        );
+
+        this.frm.call("export_data_to_xlsx", {
+            'data': this.filtered_data,
+            'headers': this.headers,
+        });
     }
 }
 
@@ -1182,6 +1215,7 @@ class ImportDialog {
     }
 }
 
+// ToDo: ExportData class will be removed once we have a proper export feature
 class ExportData {
     inv_fields = {
         "bill_no": "Bill No",
