@@ -61,3 +61,4 @@ bench reinstall --yes
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench --verbose install-app india_compliance
 bench set-config ic_api_secret "$IC_API_SECRET"
+bench setup requirements --dev
