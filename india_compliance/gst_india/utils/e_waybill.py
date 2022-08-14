@@ -469,7 +469,7 @@ class EWaybillData(GSTTransactionData):
         self.get_item_list()
         self.get_party_address_details()
 
-        return self.sanitize_data(self.get_transaction_data())
+        return self.get_transaction_data()
 
     def get_e_waybill_cancel_data(self, values):
         self.validate_if_e_waybill_is_set()
@@ -638,6 +638,7 @@ class EWaybillData(GSTTransactionData):
                     igst_rate=item.igst_rate,
                     cess_rate=item.cess_rate,
                     cess_non_advol_rate=item.cess_non_advol_rate,
+                    item_no=item.item_no,
                     qty=0,
                     taxable_value=0,
                 ),
