@@ -1,7 +1,9 @@
 import click
 
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.custom.doctype.custom_field.custom_field import (
+    create_custom_fields as _create_custom_fields,
+)
 from frappe.utils import now_datetime, nowdate
 
 from india_compliance.gst_india.constants.custom_fields import (
@@ -15,22 +17,27 @@ from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_f
 
 
 def after_install():
-    # Validation ignored for faster creation
-    # Will not fail if a core field with same name already exists (!)
-    # Will update a custom field if it already exists
-    for fields in (
-        CUSTOM_FIELDS,
-        SALES_REVERSE_CHARGE_FIELDS,
-        E_INVOICE_FIELDS,
-        E_WAYBILL_FIELDS,
-    ):
-        create_custom_fields(fields, ignore_validate=True)
-
+    create_custom_fields()
     create_property_setters()
     create_address_template()
     set_default_gst_settings()
     set_default_accounts_settings()
     create_hsn_codes()
+
+
+def create_custom_fields():
+    # Validation ignored for faster creation
+    # Will not fail if a core field with same name already exists (!)
+    # Will update a custom field if it already exists
+    _create_custom_fields(
+        _get_custom_fields_to_create(
+            CUSTOM_FIELDS,
+            SALES_REVERSE_CHARGE_FIELDS,
+            E_INVOICE_FIELDS,
+            E_WAYBILL_FIELDS,
+        ),
+        ignore_validate=True,
+    )
 
 
 def create_property_setters():
@@ -175,3 +182,16 @@ def show_accounts_settings_override_warning():
         "address for determining GST applicablility.",
         fg="yellow",
     )
+
+
+def _get_custom_fields_to_create(*custom_fields_list):
+    result = {}
+
+    for custom_fields in custom_fields_list:
+        for doctypes, fields in custom_fields.items():
+            if isinstance(fields, dict):
+                fields = [fields]
+
+            result.setdefault(doctypes, []).extend(fields)
+
+    return result
