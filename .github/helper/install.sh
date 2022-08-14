@@ -51,14 +51,13 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
-bench get-app payments
-bench get-app erpnext --branch "$BRANCH"
+bench get-app erpnext --branch "$BRANCH" --resolve-deps
+bench get-app india_compliance "${GITHUB_WORKSPACE}"
+bench setup requirements --dev
 
 bench use test_site
 bench start &
 bench reinstall --yes
 
-bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench --verbose install-app india_compliance
 bench set-config ic_api_secret "$IC_API_SECRET"
-bench setup requirements --dev
