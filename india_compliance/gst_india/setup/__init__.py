@@ -142,6 +142,8 @@ def set_default_accounts_settings():
         },
     )
 
+    frappe.db.set_default("add_taxes_from_item_tax_template", 0)
+
 
 def show_accounts_settings_override_warning():
     """
