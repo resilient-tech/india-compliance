@@ -304,7 +304,7 @@ class TestTransaction(FrappeTestCase):
                 "account_head": "Freight and Forwarding Charges - _TIRC",
                 "description": "Freight",
                 "tax_amount": 20,
-                "cost_center": f"Main - _TIRC",
+                "cost_center": "Main - _TIRC",
             },
         )
 
@@ -332,7 +332,7 @@ class TestTransaction(FrappeTestCase):
                 "account_head": "Freight and Forwarding Charges - _TIRC",
                 "description": "Freight",
                 "tax_amount": 20,
-                "cost_center": f"Main - _TIRC",
+                "cost_center": "Main - _TIRC",
             },
         )
         doc.insert()
@@ -441,7 +441,7 @@ class TestTransaction(FrappeTestCase):
                 "account_head": f"{'Input' if self.is_sales_doctype else 'Output'} Tax IGST - _TIRC",
                 "description": "IGST",
                 "rate": 18,
-                "cost_center": f"Main - _TIRC",
+                "cost_center": "Main - _TIRC",
             },
         )
 
@@ -491,7 +491,7 @@ class TestTransaction(FrappeTestCase):
                 "account_head": "Freight and Forwarding Charges - _TIRC",
                 "description": "Freight",
                 "tax_amount": 20,
-                "cost_center": f"Main - _TIRC",
+                "cost_center": "Main - _TIRC",
             },
         )
 
@@ -517,7 +517,7 @@ class TestTransaction(FrappeTestCase):
                 "account_head": "Freight and Forwarding Charges - _TIRC",
                 "description": "Freight",
                 "tax_amount": 20,
-                "cost_center": f"Main - _TIRC",
+                "cost_center": "Main - _TIRC",
             },
         )
 
