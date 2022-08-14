@@ -8,14 +8,14 @@ from india_compliance.gst_india.constants import (
     REVERSE_CHARGE_COLUMNS,
 )
 
-overseas_enabled, reverse_charge_enabled = frappe.get_cached_value(
-    "GST Settings",
-    "GST Settings",
-    ("enable_overseas_transactions", "enable_reverse_charge_in_sales"),
-)
-
 
 def execute(filters=None):
+    overseas_enabled, reverse_charge_enabled = frappe.get_cached_value(
+        "GST Settings",
+        "GST Settings",
+        ("enable_overseas_transactions", "enable_reverse_charge_in_sales"),
+    )
+
     additional_table_columns = [
         dict(
             fieldtype="Data",
