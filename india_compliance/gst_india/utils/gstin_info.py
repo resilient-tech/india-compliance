@@ -4,7 +4,6 @@ import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.public import PublicAPI
-from india_compliance.gst_india.constants import OVERSEAS, REGISTERED, TDS, UNBODY
 from india_compliance.gst_india.utils import titlecase, validate_gstin
 
 GST_CATEGORIES = {
@@ -91,31 +90,6 @@ def _extract_address_lines(address):
         address_line1 = f"{address_line1}, {street}"
 
     return address_line1, address_line2
-
-
-@frappe.whitelist()
-def get_gst_category_from_gstin(gstin, country=None):
-    """
-    This function is used to guess GST Category from GSTIN.
-    Used where gstin info API is not available or used.
-    """
-    if not gstin:
-        if country in ("India", "", None):
-            return "Unregistered"
-
-        return "Overseas"
-
-    if TDS.match(gstin):
-        return "Tax Deductor"
-
-    if REGISTERED.match(gstin):
-        return "Registered Regular"
-
-    if UNBODY.match(gstin):
-        return "UIN Holders"
-
-    if OVERSEAS.match(gstin):
-        return "Overseas"
 
 
 # ####### SAMPLE DATA for GST_CATEGORIES ########
