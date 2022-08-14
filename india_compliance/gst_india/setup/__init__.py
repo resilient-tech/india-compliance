@@ -1,7 +1,9 @@
 import click
 
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.custom.doctype.custom_field.custom_field import (
+    create_custom_fields as _create_custom_fields,
+)
 from frappe.utils import now_datetime, nowdate
 
 from india_compliance.gst_india.constants.custom_fields import (
@@ -15,11 +17,19 @@ from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_f
 
 
 def after_install():
+    create_custom_fields()
+    create_property_setters()
+    create_address_template()
+    set_default_gst_settings()
+    set_default_accounts_settings()
+    create_hsn_codes()
+
+
+def create_custom_fields():
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
-
-    create_custom_fields(
+    _create_custom_fields(
         _get_custom_fields_to_create(
             CUSTOM_FIELDS,
             SALES_REVERSE_CHARGE_FIELDS,
@@ -28,12 +38,6 @@ def after_install():
         ),
         ignore_validate=True,
     )
-
-    create_property_setters()
-    create_address_template()
-    set_default_gst_settings()
-    set_default_accounts_settings()
-    create_hsn_codes()
 
 
 def create_property_setters():
