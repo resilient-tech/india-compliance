@@ -128,10 +128,8 @@ function set_gstin_query(doctype) {
 function set_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
         gstin(frm) {
-            frm.set_value(
-                "gst_category",
-                ic.guess_gst_category(frm.doc.gstin, frm.doc.country)
-            );
+            const category = ic.guess_gst_category(frm.doc.gstin, frm.doc.country);
+            frm.set_value("gst_category", category);
         },
     });
 }

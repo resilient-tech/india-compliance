@@ -88,18 +88,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 description: this.api_enabled ? GSTIN_FIELD_DESCRIPTION : "",
                 ignore_validation: true,
                 onchange: () => {
-                    if (!this.api_enabled) {
-                        this.dialog.set_value(
-                            "gst_category",
-                            ic.guess_gst_category(
-                                this.dialog.doc._gstin,
-                                this.dialog.doc.country
-                            )
-                        );
-                        return;
-                    }
+                    const d = this.dialog;
+                    if (this.api_enabled) return autofill_fields(d);
 
-                    autofill_fields(this.dialog);
+                    const category = ic.guess_gst_category(d.doc._gstin, d.doc.country);
+                    d.set_value("gst_category", category);
                 },
             },
         ];
