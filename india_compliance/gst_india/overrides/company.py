@@ -1,10 +1,8 @@
-import json
-
 import frappe
 from frappe import _
 from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
 
-from india_compliance.gst_india.utils import read_data_file
+from india_compliance.gst_india.utils import get_data_file_path
 
 
 def delete_gst_settings_for_company(doc, method=None):
@@ -39,18 +37,9 @@ def make_default_tax_templates(company: str, country: str):
 
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
-    default_taxes = json.loads(read_data_file("tax_defaults.json"))
+    default_taxes = frappe.get_file_json(get_data_file_path("tax_defaults.json"))
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
-
-
-def update_accounts_settings_for_taxes(doc, method=None):
-    if doc.country != "India" or frappe.db.count("Company") > 1:
-        return
-
-    frappe.db.set_value(
-        "Accounts Settings", None, "add_taxes_from_item_tax_template", 0
-    )
 
 
 def update_gst_settings(company):

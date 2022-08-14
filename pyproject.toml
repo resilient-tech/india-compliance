@@ -1,3 +1,21 @@
+[project]
+name = "india_compliance"
+authors = [
+	{ name = "Resilient Tech", email = "hello@indiacompliance.app" }
+]
+description = "ERPNext app to simplify compliance with Indian Rules and Regulations"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+	"python-barcode~=0.13.1",
+	"titlecase~=2.3",
+	"rapidfuzz~=2.1.4"
+]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
 [tool.isort]
 profile = "black"
 known_frappe = "frappe"

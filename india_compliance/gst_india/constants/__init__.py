@@ -16,6 +16,8 @@ GST_ACCOUNT_FIELDS = (
 
 GST_TAX_TYPES = tuple(field[:-8] for field in GST_ACCOUNT_FIELDS)
 
+GST_PARTY_TYPES = ("Customer", "Supplier", "Company")
+
 GST_CATEGORIES = {
     "Registered Regular": "B2B",
     "Registered Composition": "B2B",
@@ -26,6 +28,8 @@ GST_CATEGORIES = {
     "UIN Holders": "B2B",
     "Tax Deductor": "B2B",
 }
+
+OVERSEAS_GST_CATEGORIES = {"Overseas", "SEZ"}
 
 EXPORT_TYPES = (
     "WOP",  # Without Payment of Tax [0]
@@ -111,6 +115,8 @@ DISTANCE_REGEX = re.compile(r"\d+")
 
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
+
+BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 
 EXPORT_TYPE_COLUMNS = dict(
     fieldtype="Check",
