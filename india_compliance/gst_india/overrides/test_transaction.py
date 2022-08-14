@@ -119,7 +119,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(Company GSTIN is a mandatory.*)$"),
+            re.compile(r"^(.*is a mandatory field for GST Transactions.*)$"),
             doc.save,
         )
 
@@ -139,7 +139,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(GST Category is a mandatory.*)$"),
+            re.compile(r"^(.*is a mandatory field for GST Transactions.*)$"),
             doc.save,
         )
 
