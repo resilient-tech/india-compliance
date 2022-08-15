@@ -170,7 +170,7 @@ export default {
       const set_error = (error_message) => {
         field.error = error_message;
         field.state = UiState.error;
-      }
+      };
 
       if (!value) return set_error("GSTIN is required");
 
