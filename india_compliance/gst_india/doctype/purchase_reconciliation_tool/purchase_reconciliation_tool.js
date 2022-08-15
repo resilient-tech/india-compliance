@@ -684,15 +684,8 @@ class PurchaseReconciliationTool {
     apply_data_export(selected_row = null) {
         this.filtered_data = this.get_filtered_data(selected_row);
 
-        this.headers = [];
-        this.headers.push(
-            this.get_summary_columns(),
-            this.get_supplier_columns(),
-        );
-
         this.frm.call("export_data_to_xlsx", {
             'data': this.filtered_data,
-            'headers': this.headers,
         });
     }
 }

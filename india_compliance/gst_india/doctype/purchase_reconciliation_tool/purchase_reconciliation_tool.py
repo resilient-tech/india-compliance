@@ -982,9 +982,9 @@ class PurchaseReconciliationTool(Document):
         return data
 
     @frappe.whitelist()
-    def export_data_to_xlsx(self, data, headers):
+    def export_data_to_xlsx(self, data):
         """Exports data to an xlsx file"""
-        e = BuildExcel(export_data=data, export_header=headers)
+        e = BuildExcel(doc=self, export_data=data)
         e.build_response()
 
 
@@ -1071,58 +1071,58 @@ def get_import_history(
 
 
 class BuildExcel(PurchaseReconciliationTool):
-    INV_FIELDS = {
-        "bill_no": "Bill No",
-        "bill_date": "Bill Date",
-        "supplier_gstin": "GSTIN",
-        "place_of_supply": "Place of Supply",
-        "is_reverse_charge": "Reverse Charge",
-        "taxable_value": "Taxable Value",
-        "cgst": "CGST",
-        "sgst": "SGST",
-        "igst": "IGST",
-        "cess": "CESS",
-    }
-    COLOR_PALLATE = {
-        "dark_gray": "d9d9d9",
-        "light_gray": "f2f2f2",
-        "dark_pink": "e6b9b8",
-        "light_pink": "f2dcdb",
-        "sky_blue": "c6d9f1",
-        "light_blue": "dce6f2",
-        "green": "d7e4bd",
-        "light_green": "ebf1de",
-    }
+    COLOR_PALLATE = frappe._dict(
+        {
+            "dark_gray": "d9d9d9",
+            "light_gray": "f2f2f2",
+            "dark_pink": "e6b9b8",
+            "light_pink": "f2dcdb",
+            "sky_blue": "c6d9f1",
+            "light_blue": "dce6f2",
+            "green": "d7e4bd",
+            "light_green": "ebf1de",
+        }
+    )
 
     def __init__(
         self,
+        doc=None,
         export_data=None,
-        export_header=None,
     ):
         self.prefix = "isup_"
+        self.doc = doc
         self.data = export_data
-        self.export_header = export_header
+        self.match_summary_columns = self.get_match_summary_columns()
+        self.supplier_columns = self.get_supplier_columns()
+        self.invoice_columns = self.get_invoice_columns()
         self.set_headers()
+
+    def set_headers(self):
+        self.set_common_header()
+
+        # Build headers for each row as array
+        self.summary_header = self.build_csv_row(self.match_summary_columns, True)
+        self.supplier_header = self.build_csv_row(self.supplier_columns, True)
+        self.invoice_header = self.build_csv_row(self.invoice_columns, True)
 
     def set_common_header(self):
         """Common header for all sheets"""
-        period = f"{self.inward_supply_from_date} to {self.inward_supply_to_date}"
-        label = "2B" if self.gst_return == "GSTR 2B" else "2A/2B"
+        from_date = self.doc.inward_supply_from_date
+        to_date = self.doc.inward_supply_to_date
+
+        period = f"{from_date} to {to_date}"
+        label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
 
         self.common_header = {}
         self.common_header.setdefault(
             "header",
             [
-                ["Company Name", self.company],
-                ["GSTIN", self.company_gstin],
+                ["Company Name", self.doc.company],
+                ["GSTIN", self.doc.company_gstin],
                 [f"Return Period ({label})", period],
             ],
         )
         self.common_header.setdefault("width", {"description": 20, "data": 20})
-
-    def set_headers(self):
-        self.headers = self.build_csv_array(self.export_header)
-        print(self.headers)
 
     def build_csv_array(self, data):
         """Builds an array of csv data"""
@@ -1132,17 +1132,14 @@ class BuildExcel(PurchaseReconciliationTool):
             csv_array.append(self.build_csv_row(row))
         return csv_array
 
-    def build_csv_row(self, row):
+    def build_csv_row(self, row, header=False):
         """Builds a csv row"""
         csv_row = []
 
         for data in row:
-            csv_row.append(data.get("label"))
+            if header:
+                csv_row.append(data.get("label"))
         return csv_row
-
-    def build_column_width(self):
-        """Builds the column width"""
-        pass
 
     def process_data(self):
         for key, value in self.INV_FIELDS.items():
@@ -1165,3 +1162,432 @@ class BuildExcel(PurchaseReconciliationTool):
         """Builds the response"""
         # ToDo: Build response to be export in excel format
         pass
+
+    def get_match_summary_columns(self):
+        return [
+            {
+                "label": "Match Status",
+                "fieldname": "match_status",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Count 2A/2B Docs",
+                "fieldname": "count_2a_2b_docs",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "#,##0",
+            },
+            {
+                "label": "Count Purchase Docs",
+                "fieldname": "count_purchase_docs",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "#,##0",
+            },
+            {
+                "label": "Taxable Amount Diff 2A/2B - Purchase",
+                "fieldname": "taxable_amount_diff",
+                "bg_color": self.COLOR_PALLATE.dark_pink,
+                "bg_color_data": self.COLOR_PALLATE.light_pink,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "0.00",
+            },
+            {
+                "label": "Tax Difference 2A/2B - Purchase",
+                "fieldname": "tax_diff",
+                "bg_color": self.COLOR_PALLATE.dark_pink,
+                "bg_color_data": self.COLOR_PALLATE.light_pink,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "0.00",
+            },
+            {
+                "label": "%Action Taken",
+                "fieldname": "action_taken",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "left",
+                "format": "0.00%",
+            },
+        ]
+
+    def get_supplier_columns(self):
+        return [
+            {
+                "label": "Supplier Name",
+                "fieldname": "supplier_name",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Supplier GSTIN",
+                "fieldname": "supplier_gstin",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "center",
+            },
+            {
+                "label": "Count 2A/2B Docs",
+                "fieldname": "count_2a_2b_docs",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "#,##0",
+            },
+            {
+                "label": "Count Purchase Docs",
+                "fieldname": "count_purchase_docs",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "#,##0",
+            },
+            {
+                "label": "Taxable Amount Diff 2A/2B - Purchase",
+                "fieldname": "taxable_amount_diff",
+                "bg_color": self.COLOR_PALLATE.dark_pink,
+                "bg_color_data": self.COLOR_PALLATE.light_pink,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "0.00",
+            },
+            {
+                "label": "Tax Difference 2A/2B - Purchase",
+                "fieldname": "tax_diff",
+                "bg_color": self.COLOR_PALLATE.dark_pink,
+                "bg_color_data": self.COLOR_PALLATE.light_pink,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "general",
+                "format": "0.00",
+            },
+            {
+                "label": "%Action Taken",
+                "fieldname": "action_taken",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+                "format": "0.00%",
+            },
+        ]
+
+    def get_invoice_columns(self):
+        pr_columns = [
+            {
+                "label": "Bill No",
+                "fieldname": "bill_no",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Bill Date",
+                "fieldname": "bill_date",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "GSTIN",
+                "fieldname": "supplier_gstin",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": "place_of_supply",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Reverse Charge",
+                "fieldname": "is_reverse_charge",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": "taxable_value",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "CGST",
+                "fieldname": "cgst",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "SGST",
+                "fieldname": "sgst",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "IGST",
+                "fieldname": "igst",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "CESS",
+                "fieldname": "cess",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+        ]
+        isup_columns = [
+            {
+                "label": "Bill No",
+                "fieldname": "isup_bill_no",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Bill Date",
+                "fieldname": "isup_bill_date",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "GSTIN",
+                "fieldname": "isup_supplier_gstin",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": "isup_place_of_supply",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Reverse Charge",
+                "fieldname": "isup_is_reverse_charge",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": "isup_taxable_value",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "CGST",
+                "fieldname": "isup_cgst",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "SGST",
+                "fieldname": "isup_sgst",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "IGST",
+                "fieldname": "isup_igst",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+            {
+                "label": "CESS",
+                "fieldname": "isup_cess",
+                "bg_color": self.COLOR_PALLATE.sky_blue,
+                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "format": "0.00",
+            },
+        ]
+        inv_columns = [
+            {
+                "label": "Action Status",
+                "fieldname": "action_status",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Match Status",
+                "fieldname": "match_status",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Supplier Name",
+                "fieldname": "supplier_name",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 20,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "PAN",
+                "fieldname": "pan",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 15,
+                "align_header": "center",
+                "align_data": "center",
+            },
+            {
+                "label": "Classification",
+                "fieldname": "classification",
+                "bg_color": self.COLOR_PALLATE.dark_gray,
+                "bg_color_data": self.COLOR_PALLATE.light_gray,
+                "bold": 1,
+                "width": 11,
+                "align_header": "center",
+                "align_data": "left",
+            },
+            {
+                "label": "Taxable Value Difference",
+                "fieldname": "taxable_value_diff",
+                "bg_color": self.COLOR_PALLATE.dark_pink,
+                "bg_color_data": self.COLOR_PALLATE.light_pink,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "general",
+            },
+            {
+                "label": "Tax Difference",
+                "fieldname": "tax_diff",
+                "bg_color": self.COLOR_PALLATE.dark_pink,
+                "bg_color_data": self.COLOR_PALLATE.light_pink,
+                "bold": 1,
+                "width": 12,
+                "align_header": "center",
+                "align_data": "general",
+            },
+        ]
+        inv_columns.extend(isup_columns)
+        inv_columns.extend(pr_columns)
+        return inv_columns
