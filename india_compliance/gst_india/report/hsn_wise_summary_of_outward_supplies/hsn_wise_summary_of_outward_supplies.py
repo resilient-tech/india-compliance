@@ -46,8 +46,7 @@ def _execute(filters=None):
             tax_rate = 0
             for tax in tax_columns:
                 item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
-                if item_tax.get("is_gst_tax"):
-                    tax_rate += flt(item_tax.get("tax_rate", 0))
+                tax_rate += flt(item_tax.get("tax_rate", 0))
                 total_tax += flt(item_tax.get("tax_amount", 0))
 
             row += [tax_rate, d.taxable_value + total_tax, d.taxable_value]
@@ -174,14 +173,12 @@ def get_tax_accounts(
     columns,
     company_currency,
     output_gst_accounts,
-    doctype="Sales Invoice",
-    tax_doctype="Sales Taxes and Charges",
 ):
+    tax_doctype = "Sales Taxes and Charges"
     item_row_map = {}
     tax_columns = []
     invoice_item_row = {}
     itemised_tax = {}
-    conditions = ""
 
     tax_amount_precision = (
         get_field_precision(
@@ -198,67 +195,48 @@ def get_tax_accounts(
         ).append(d)
 
     tax_details = frappe.db.sql(
-        """
-        select
-            parent, account_head, item_wise_tax_detail,
-            base_tax_amount_after_discount_amount
-        from `tab%s`
-        where
-            parenttype = %s and docstatus = 1
-            and (description is not null and description != '')
-            and parent in (%s)
-            %s
-        order by description
-    """
-        % (tax_doctype, "%s", ", ".join(["%s"] * len(invoice_item_row)), conditions),
-        tuple([doctype] + list(invoice_item_row)),
+        f"""
+            select
+                parent, account_head, item_wise_tax_detail,
+                base_tax_amount_after_discount_amount
+            from `tab{tax_doctype}`
+            where
+                parenttype = "Sales Invoice" and docstatus = 1
+                and (description is not null and description != '')
+                and (item_wise_tax_detail is not null and item_wise_tax_detail != '')
+                and parent in ({", ".join(frappe.db.escape(invoice) for invoice in invoice_item_row)})
+                and account_head in ({", ".join(frappe.db.escape(account) for account in output_gst_accounts)})
+            order by description
+        """,
     )
 
     for parent, account_head, item_wise_tax_detail, tax_amount in tax_details:
-
-        if (
-            account_head in output_gst_accounts
-            and account_head not in tax_columns
-            and tax_amount
-        ):
+        if account_head not in tax_columns and tax_amount:
             # as description is text editor earlier and markup can break the column convention in reports
             tax_columns.append(account_head)
 
-        if item_wise_tax_detail:
-            try:
-                item_wise_tax_detail = json.loads(item_wise_tax_detail)
+        try:
+            for item_code, tax_data in json.loads(item_wise_tax_detail).items():
+                if (
+                    not frappe.db.get_value("Item", item_code, "gst_hsn_code")
+                    or not tax_data
+                ):
+                    continue
 
-                for item_code, tax_data in item_wise_tax_detail.items():
-                    if not frappe.db.get_value("Item", item_code, "gst_hsn_code"):
-                        continue
-                    itemised_tax.setdefault(item_code, frappe._dict())
+                tax_rate = tax_data[0]
+                tax_amount = tax_data[1]
 
-                    tax_rate = 0
-                    is_gst_tax = 0
-                    tax_amount = 0
-                    if isinstance(tax_data, list):
-                        if account_head in output_gst_accounts:
-                            is_gst_tax = 1
-                            tax_rate = tax_data[0]
+                if not tax_amount:
+                    continue
 
-                        tax_amount = tax_data[1]
+                item_taxes = itemised_tax.setdefault((parent, item_code), {})
+                item_taxes[account_head] = frappe._dict(
+                    tax_rate=flt(tax_rate, 2),
+                    tax_amount=flt(tax_amount, tax_amount_precision),
+                )
 
-                    for d in item_row_map.get(parent, {}).get(item_code, []):
-                        item_tax_amount = tax_amount
-                        if item_tax_amount:
-                            itemised_tax.setdefault((parent, item_code), {})[
-                                account_head
-                            ] = frappe._dict(
-                                {
-                                    "tax_rate": flt(tax_rate, 2),
-                                    "is_gst_tax": is_gst_tax,
-                                    "tax_amount": flt(
-                                        item_tax_amount, tax_amount_precision
-                                    ),
-                                }
-                            )
-            except ValueError:
-                continue
+        except ValueError:
+            continue
 
     tax_columns.sort()
     for account_head in tax_columns:
