@@ -13,9 +13,15 @@
       <strong>{{ email }}</strong>
     </p>
 
-    <button @click.stop="changeEmail" class="btn btn-primary btn-sm">
-      Change Email
-    </button>
+    <div class="actions">
+      <button @click.stop="changeEmail" class="btn btn-secondary btn-sm">
+        Change Email
+      </button>
+
+      <button @click.stop="refresh" class="btn btn-primary btn-sm">
+        Refresh
+      </button>
+    </div>
   </div>
 </template>
 
@@ -32,6 +38,11 @@ export default {
       await this.$store.dispatch("setSession", null);
       this.$router.replace({ name: "auth" });
     },
+
+    async refresh() {
+      await this.$store.dispatch("initAuth");
+      this.$router.replace({ name: "auth" });
+    }
   },
 
   beforeRouteEnter(to, from, next) {
@@ -46,7 +57,7 @@ export default {
 
 <style scoped>
 .mail-sent-page {
-  margin: 100px 0;
+  margin: 70px 0;
 }
 
 .mail-box-img {
@@ -68,5 +79,13 @@ export default {
   .message {
     font-size: 1.1em;
   }
+}
+
+.actions button {
+  margin-left: 5px;
+}
+
+.actions button:first-child {
+  margin-left: 0;
 }
 </style>
