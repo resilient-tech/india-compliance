@@ -223,8 +223,7 @@ def get_tax_accounts(
                 ):
                     continue
 
-                tax_rate = tax_data[0]
-                tax_amount = tax_data[1]
+                tax_rate, tax_amount = tax_data
 
                 if not tax_amount:
                     continue
