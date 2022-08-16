@@ -8,7 +8,15 @@ import frappe
 
 
 class ExcelExporter:
-    def __init__(self):
+    def __init__(
+        self,
+        sheets,
+        filters,
+        merged_headers,
+        headers,
+        data,
+        file_name,
+    ):
         pass
 
     def create_workbook(self):
@@ -22,6 +30,23 @@ class ExcelExporter:
     def remove_worksheet(self, workbook, sheet_name):
         workbook.remove(workbook[sheet_name])
         return workbook
+
+    def build_csv_array(self, data):
+        """Builds an array of csv data"""
+        csv_array = []
+
+        for row in data:
+            csv_array.append(self.build_csv_row(row))
+        return csv_array
+
+    def build_csv_row(self, row, header=False):
+        """Builds a csv row"""
+        csv_row = []
+
+        for data in row:
+            if header:
+                csv_row.append(data.get("label"))
+        return csv_row
 
     def add_header(self, headers):
         headers = []

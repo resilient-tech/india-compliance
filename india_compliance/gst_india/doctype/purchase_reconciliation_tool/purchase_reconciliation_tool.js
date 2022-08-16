@@ -682,10 +682,14 @@ class PurchaseReconciliationTool {
     }
 
     apply_data_export(selected_row = null) {
-        this.filtered_data = this.get_filtered_data(selected_row);
+        this.data_to_export = this.get_filtered_data(selected_row);
+        let is_download = selected_row ? true : false;
+
+        if (is_download) delete this.data_to_export.supplier_summary;
 
         this.frm.call("export_data_to_xlsx", {
-            'data': this.filtered_data,
+            'data': this.data_to_export,
+            'download': is_download
         });
     }
 }
@@ -1209,239 +1213,239 @@ class ImportDialog {
 }
 
 // ToDo: ExportData class will be removed once we have a proper export feature
-class ExportData {
-    inv_fields = {
-        "bill_no": "Bill No",
-        "bill_date": "Bill Date",
-        "supplier_gstin": "GSTIN",
-        "place_of_supply": "Place of Supply",
-        "is_reverse_charge": "Reverse Charge",
-        "taxable_value": "Taxable Value",
-        "cgst": "CGST",
-        "sgst": "SGST",
-        "igst": "IGST",
-        "cess": "CESS",
-    };
+// class ExportData {
+//     inv_fields = {
+//         "bill_no": "Bill No",
+//         "bill_date": "Bill Date",
+//         "supplier_gstin": "GSTIN",
+//         "place_of_supply": "Place of Supply",
+//         "is_reverse_charge": "Reverse Charge",
+//         "taxable_value": "Taxable Value",
+//         "cgst": "CGST",
+//         "sgst": "SGST",
+//         "igst": "IGST",
+//         "cess": "CESS",
+//     };
 
-    constructor(me, selected_row, download = true) {
-        this.me = me;
-        this.selected_row = selected_row;
-        this.prefix = "isup_";
-        this.download = download;
+//     constructor(me, selected_row, download = true) {
+//         this.me = me;
+//         this.selected_row = selected_row;
+//         this.prefix = "isup_";
+//         this.download = download;
 
-        this.map_headers();
-        this.process_data();
-        this.build_xlsx_array_for_export();
-        this.args = this.prepare_args();
-        this.export_xlsx_report(this.args);
-    }
+//         this.map_headers();
+//         this.process_data();
+//         this.build_xlsx_array_for_export();
+//         this.args = this.prepare_args();
+//         this.export_xlsx_report(this.args);
+//     }
 
-    set_column_widths() {
-        this.column_widths = []
-        this.me.get_invoice_columns().forEach((col) => {
-            if (col.width != null) this.column_widths.push(col.width);
-        });
-    }
+//     set_column_widths() {
+//         this.column_widths = []
+//         this.me.get_invoice_columns().forEach((col) => {
+//             if (col.width != null) this.column_widths.push(col.width);
+//         });
+//     }
 
-    map_headers() {
-        // Period Details
-        const period = `${this.me.frm.doc.inward_supply_from_date} to ${this.me.frm.doc.inward_supply_to_date}`;
-        const label = this.me.frm.doc.gst_return === "GSTR 2B" ? "2B" : "2A/2B";
+//     map_headers() {
+//         // Period Details
+//         const period = `${this.me.frm.doc.inward_supply_from_date} to ${this.me.frm.doc.inward_supply_to_date}`;
+//         const label = this.me.frm.doc.gst_return === "GSTR 2B" ? "2B" : "2A/2B";
 
-        this.period_details = [];
-        this.period_details.push(
-            ["Company Name", this.me.frm.doc.company],
-            ["GSTIN", this.me.frm.doc.company_gstin],
-            [`Return Period (${label})`, period],
-        );
+//         this.period_details = [];
+//         this.period_details.push(
+//             ["Company Name", this.me.frm.doc.company],
+//             ["GSTIN", this.me.frm.doc.company_gstin],
+//             [`Return Period (${label})`, period],
+//         );
 
 
-        // Match Summary Headers
-        this.summary_header = [];
-        this.me.get_summary_columns().forEach(col => {
-            this.summary_header.push(col.label);
-        });
+//         // Match Summary Headers
+//         this.summary_header = [];
+//         this.me.get_summary_columns().forEach(col => {
+//             this.summary_header.push(col.label);
+//         });
 
-        // Supplier View Headers
-        this.supplier_header = [];
-        this.me.get_supplier_columns().forEach(col => {
-            if (col.label != null) this.supplier_header.push(col.label);
-        });
-        this.supplier_header.splice(1, 0, "Supplier GSTIN")
+//         // Supplier View Headers
+//         this.supplier_header = [];
+//         this.me.get_supplier_columns().forEach(col => {
+//             if (col.label != null) this.supplier_header.push(col.label);
+//         });
+//         this.supplier_header.splice(1, 0, "Supplier GSTIN")
 
-        // Invoice View Headers
-        this.invoice_header = [];
-        this.inv_header = ["2A / 2B Data", "Purchase Data"];
-        this.isup_headers = Object.values(this.inv_fields);
-        this.pr_headers = this.isup_headers;
-        this.inv_sub_header = [
-            "Action Status",
-            "Match Status",
-            "Supplier Name",
-            "PAN",
-            "Classification",
-            "Taxable Value Difference",
-            "Tax Difference",
-        ]
-            .concat(this.isup_headers)
-            .concat(this.pr_headers);
-        this.invoice_header.push(this.inv_header, this.inv_sub_header);
-    }
+//         // Invoice View Headers
+//         this.invoice_header = [];
+//         this.inv_header = ["2A / 2B Data", "Purchase Data"];
+//         this.isup_headers = Object.values(this.inv_fields);
+//         this.pr_headers = this.isup_headers;
+//         this.inv_sub_header = [
+//             "Action Status",
+//             "Match Status",
+//             "Supplier Name",
+//             "PAN",
+//             "Classification",
+//             "Taxable Value Difference",
+//             "Tax Difference",
+//         ]
+//             .concat(this.isup_headers)
+//             .concat(this.pr_headers);
+//         this.invoice_header.push(this.inv_header, this.inv_sub_header);
+//     }
 
-    process_data() {
-        console.log(this.selected_row);
-        if (this.download) {
-            const filters = [[this.me.frm.doctype, 'supplier_gstin', '=', this.selected_row.supplier_gstin, false]];
+//     process_data() {
+//         console.log(this.selected_row);
+//         if (this.download) {
+//             const filters = [[this.me.frm.doctype, 'supplier_gstin', '=', this.selected_row.supplier_gstin, false]];
 
-            this.me.apply_filters(true, filters);
-        }
+//             this.me.apply_filters(true, filters);
+//         }
 
-        this.data = this.me.filtered_data;
-        this.summary_data = this.me.get_summary_data();
-        this.supplier_data = this.me.get_supplier_data();
-        console.log(this.data);
-        console.log(this.summary_data);
-        console.log(this.supplier_data);
+//         this.data = this.me.filtered_data;
+//         this.summary_data = this.me.get_summary_data();
+//         this.supplier_data = this.me.get_supplier_data();
+//         console.log(this.data);
+//         console.log(this.summary_data);
+//         console.log(this.supplier_data);
 
-        for (const [key, value] of Object.entries(this.inv_fields)) {
-            if (key == "is_reverse_charge") {
-                this._assign_value(key, this.data, this.prefix, true);
-                return;
-            }
-        };
-    }
+//         for (const [key, value] of Object.entries(this.inv_fields)) {
+//             if (key == "is_reverse_charge") {
+//                 this._assign_value(key, this.data, this.prefix, true);
+//                 return;
+//             }
+//         };
+//     }
 
-    _assign_value(field, source_data, prefix, bool = false) {
-        // ToDo: Handle multiple rows for reverse charge yes no
-        let isup_field = prefix + field;
-        source_data.forEach(row => {
-            if (row[field] != null) {
-                if (bool) {
-                    row[field] = row[field] ? "Yes" : "No";
-                    row[isup_field] = row[isup_field] ? "Yes" : "No";
-                }
-                else row[field] = row[field];
-            }
-        });
-    }
+//     _assign_value(field, source_data, prefix, bool = false) {
+//         // ToDo: Handle multiple rows for reverse charge yes no
+//         let isup_field = prefix + field;
+//         source_data.forEach(row => {
+//             if (row[field] != null) {
+//                 if (bool) {
+//                     row[field] = row[field] ? "Yes" : "No";
+//                     row[isup_field] = row[isup_field] ? "Yes" : "No";
+//                 }
+//                 else row[field] = row[field];
+//             }
+//         });
+//     }
 
-    build_xlsx_array_for_export() {
-        // Build Array for Export to Excel
-        this.build_summary_array();
-        this.build_supplier_array();
-        this.build_invoice_array();
-    }
+//     build_xlsx_array_for_export() {
+//         // Build Array for Export to Excel
+//         this.build_summary_array();
+//         this.build_supplier_array();
+//         this.build_invoice_array();
+//     }
 
-    build_summary_array() {
-        this.match_summary = [];
-        this.summary_data.forEach(row => {
-            let data = [
-                row[this.prefix + "match_status"],
-                row["count_isup_docs"],
-                row["count_pur_docs"],
-                row["taxable_value_diff"],
-                row["tax_diff"],
-                row["count_action_taken"],
-            ];
-            this.match_summary.push(data);
-        });
+//     build_summary_array() {
+//         this.match_summary = [];
+//         this.summary_data.forEach(row => {
+//             let data = [
+//                 row[this.prefix + "match_status"],
+//                 row["count_isup_docs"],
+//                 row["count_pur_docs"],
+//                 row["taxable_value_diff"],
+//                 row["tax_diff"],
+//                 row["count_action_taken"],
+//             ];
+//             this.match_summary.push(data);
+//         });
 
-        // append header list at 0th index of summary_data
-        this.match_summary.unshift(this.summary_header);
-    }
+//         // append header list at 0th index of summary_data
+//         this.match_summary.unshift(this.summary_header);
+//     }
 
-    build_supplier_array() {
-        this.supplier_summary = [];
-        console.log("supplier_data", this.supplier_data);
-        this.supplier_data.forEach(row => {
-            let data = [
-                row["supplier_name"],
-                row["supplier_gstin"],
-                row["count_isup_docs"],
-                row["count_pur_docs"],
-                row["taxable_value_diff"],
-                row["tax_diff"],
-                row["count_action_taken"],
-            ];
-            this.supplier_summary.push(data);
-        });
+//     build_supplier_array() {
+//         this.supplier_summary = [];
+//         console.log("supplier_data", this.supplier_data);
+//         this.supplier_data.forEach(row => {
+//             let data = [
+//                 row["supplier_name"],
+//                 row["supplier_gstin"],
+//                 row["count_isup_docs"],
+//                 row["count_pur_docs"],
+//                 row["taxable_value_diff"],
+//                 row["tax_diff"],
+//                 row["count_action_taken"],
+//             ];
+//             this.supplier_summary.push(data);
+//         });
 
-        // append header list at 0th index of suppier_summary
-        this.supplier_summary.unshift(this.supplier_header);
-        console.log("supplier_summary", this.supplier_summary);
-    }
+//         // append header list at 0th index of suppier_summary
+//         this.supplier_summary.unshift(this.supplier_header);
+//         console.log("supplier_summary", this.supplier_summary);
+//     }
 
-    build_invoice_array() {
-        this.invoice_summary = [];
+//     build_invoice_array() {
+//         this.invoice_summary = [];
 
-        this.data.forEach(row => {
-            let invoice_data = [], pr_data = [], isup_data = [];
-            invoice_data.push(
-                row[this.prefix + "action"],
-                row[this.prefix + "match_status"],
-                row["supplier_name"],
-                row["pan"],
-                row[this.prefix + "classification"],
-                row["taxable_value_diff"],
-                row["tax_diff"],
-            )
-            for (const [key, value] of Object.entries(this.inv_fields)) {
-                pr_data.push(row[key]);
-                isup_data.push(row[this.prefix + key]);
-            };
-            isup_data.map((val) => {
-                invoice_data.push(val);
-            });
-            pr_data.map((val) => {
-                invoice_data.push(val);
-            });
-            this.invoice_summary.push(invoice_data);
-        });
-        // append header list at 0th index of invoice_summary
-        this.invoice_summary.unshift(this.invoice_header);
-    }
+//         this.data.forEach(row => {
+//             let invoice_data = [], pr_data = [], isup_data = [];
+//             invoice_data.push(
+//                 row[this.prefix + "action"],
+//                 row[this.prefix + "match_status"],
+//                 row["supplier_name"],
+//                 row["pan"],
+//                 row[this.prefix + "classification"],
+//                 row["taxable_value_diff"],
+//                 row["tax_diff"],
+//             )
+//             for (const [key, value] of Object.entries(this.inv_fields)) {
+//                 pr_data.push(row[key]);
+//                 isup_data.push(row[this.prefix + key]);
+//             };
+//             isup_data.map((val) => {
+//                 invoice_data.push(val);
+//             });
+//             pr_data.map((val) => {
+//                 invoice_data.push(val);
+//             });
+//             this.invoice_summary.push(invoice_data);
+//         });
+//         // append header list at 0th index of invoice_summary
+//         this.invoice_summary.unshift(this.invoice_header);
+//     }
 
-    prepare_args() {
-        // Export to Excel
-        /* Params:
-            @common_header: Header to apply in all sheets
-            @data: Array of Invoice Data
-            @match_summary: Array of Match Summary Data
-            @supplier_summary: Array of Supplier Summary Data
-            @sheet_names: Array of worksheet names to be created in excel
-        */
-        const file_name = this.download ? `${this.selected_row.supplier_gstin}_${this.selected_row.supplier_name}` : "purchase_reconciliation_report";
+//     prepare_args() {
+//         // Export to Excel
+//         /* Params:
+//             @common_header: Header to apply in all sheets
+//             @data: Array of Invoice Data
+//             @match_summary: Array of Match Summary Data
+//             @supplier_summary: Array of Supplier Summary Data
+//             @sheet_names: Array of worksheet names to be created in excel
+//         */
+//         const file_name = this.download ? `${this.selected_row.supplier_gstin}_${this.selected_row.supplier_name}` : "purchase_reconciliation_report";
 
-        let sheet_names = ["Summary Data", "Invoice Data"];
+//         let sheet_names = ["Summary Data", "Invoice Data"];
 
-        let params = {
-            common_header: this.period_details,
-            data: this.invoice_summary,
-            match_summary: this.match_summary,
-            file_name: file_name,
-        };
+//         let params = {
+//             common_header: this.period_details,
+//             data: this.invoice_summary,
+//             match_summary: this.match_summary,
+//             file_name: file_name,
+//         };
 
-        if (!this.download) {
-            params["supplier_summary"] = this.supplier_summary;
-            sheet_names.splice(1, 0, "Supplier Data");
-        }
-        params["sheet_names"] = sheet_names;
+//         if (!this.download) {
+//             params["supplier_summary"] = this.supplier_summary;
+//             sheet_names.splice(1, 0, "Supplier Data");
+//         }
+//         params["sheet_names"] = sheet_names;
 
-        return params;
-    }
+//         return params;
+//     }
 
-    export_xlsx_report(params) {
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.exporter.export_data_to_xlsx",
-            args: { args: params },
-            callback: function (r) {
-                if (r.message) {
-                    after_successful_action();
-                }
-            }
-        });
-    }
-}
+//     export_xlsx_report(params) {
+//         frappe.call({
+//             method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.exporter.export_data_to_xlsx",
+//             args: { args: params },
+//             callback: function (r) {
+//                 if (r.message) {
+//                     after_successful_action();
+//                 }
+//             }
+//         });
+//     }
+// }
 
 async function set_default_financial_year(frm) {
     const { message: date_range } = await frm.call("get_date_range", {

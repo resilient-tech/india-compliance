@@ -982,10 +982,10 @@ class PurchaseReconciliationTool(Document):
         return data
 
     @frappe.whitelist()
-    def export_data_to_xlsx(self, data):
+    def export_data_to_xlsx(self, data, download=False):
         """Exports data to an xlsx file"""
-        e = BuildExcel(doc=self, export_data=data)
-        e.build_response()
+        e = BuildExcel(doc=self, export_data=data, download=download)
+        e.export_data()
 
 
 def get_periods(fiscal_year, return_type: ReturnType, reversed=False):
@@ -1088,91 +1088,151 @@ class BuildExcel(PurchaseReconciliationTool):
         self,
         doc=None,
         export_data=None,
+        download=False,
     ):
+        self.is_download = download
         self.prefix = "isup_"
+        self.reverse_charge_field = "is_reverse_charge"
         self.doc = doc
         self.data = export_data
-        self.match_summary_columns = self.get_match_summary_columns()
-        self.supplier_columns = self.get_supplier_columns()
-        self.invoice_columns = self.get_invoice_columns()
+        self.get_filters()
+        self.build_sheet_names()
+        self.merge_headers()
         self.set_headers()
+        self.process_data()
+
+    def get_filters(self):
+        """Add filters to the sheet"""
+
+        label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
+        self.period = (
+            f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
+        )
+
+        self.filters = frappe._dict(
+            {
+                "Company Name": self.doc.company,
+                "GSTIN": self.doc.company_gstin,
+                f"Return Period ({label})": self.period,
+            }
+        )
+
+    def build_sheet_names(self):
+        """Builds sheet names for the excel file"""
+
+        self.sheets = ["Summary Data", "Invoice Data"]
+
+        if not self.is_download:
+            self.sheets.insert(1, "Supplier Data")
+
+    def merge_headers(self):
+        """Initializes merged_headers for the excel file"""
+
+        self.merged_headers = frappe._dict(
+            {
+                "2A / 2B": ["isup_bill_no", "isup_cess_amount"],
+                "Purchase Data": ["bill_no", "cess_amount"],
+            }
+        )
 
     def set_headers(self):
-        self.set_common_header()
+        """
+        Sets headers for the excel file
+            - headers: list of dictionaries containing header names, width and other properties
+        """
+        self.headers = [
+            self.get_match_summary_columns(),
+            self.get_invoice_columns(),
+        ]
 
-        # Build headers for each row as array
-        self.summary_header = self.build_csv_row(self.match_summary_columns, True)
-        self.supplier_header = self.build_csv_row(self.supplier_columns, True)
-        self.invoice_header = self.build_csv_row(self.invoice_columns, True)
-
-    def set_common_header(self):
-        """Common header for all sheets"""
-        from_date = self.doc.inward_supply_from_date
-        to_date = self.doc.inward_supply_to_date
-
-        period = f"{from_date} to {to_date}"
-        label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
-
-        self.common_header = {}
-        self.common_header.setdefault(
-            "header",
-            [
-                ["Company Name", self.doc.company],
-                ["GSTIN", self.doc.company_gstin],
-                [f"Return Period ({label})", period],
-            ],
-        )
-        self.common_header.setdefault("width", {"description": 20, "data": 20})
-
-    def build_csv_array(self, data):
-        """Builds an array of csv data"""
-        csv_array = []
-
-        for row in data:
-            csv_array.append(self.build_csv_row(row))
-        return csv_array
-
-    def build_csv_row(self, row, header=False):
-        """Builds a csv row"""
-        csv_row = []
-
-        for data in row:
-            if header:
-                csv_row.append(data.get("label"))
-        return csv_row
+        if not self.is_download:
+            self.headers.insert(1, self.get_supplier_columns())
 
     def process_data(self):
-        for key, value in self.INV_FIELDS.items():
-            if key == "is_reverse_charge":
-                self.assign_value(key, self.data, self.prefix, True)
-                return
+        """Processes data for the excel file
+        - data_to_export: multiple list of dictionaries containing data to export in each sheet of the excel file
+        """
 
-    def assign_value(self, field, source_data, prefix, bool=False):
-        # Handle multiple rows for reverse charge yes no
+        self.data_to_export = []
+
+        for idx, header in enumerate(self.headers):
+            if idx == 0:
+                data = self.data.get("match_summary")
+            elif idx == 1 and not self.is_download:
+                data = self.data.get("supplier_summary")
+            else:
+                data = self.data.get("invoice_summary")
+
+            self.data_to_export.append(self._process_data(data, header))
+
+    def _process_data(self, data, columns):
+        """return required list of dict for the excel file"""
+        mapped_data = []
+
+        for row in data:
+            invoice_dict = {}
+            for column in columns:
+                if column.get("fieldname") in row:
+                    fieldname = column.get("fieldname")
+                    self.assign_value(fieldname, row, invoice_dict)
+
+                    if fieldname == self.reverse_charge_field:
+                        self.assign_value(fieldname, row, invoice_dict, bool=True)
+
+            mapped_data.append(invoice_dict)
+        return mapped_data
+
+    def assign_value(self, field, source_data, target_data, bool=False):
+        # assign values to given field and set reverse charge yes no
         isup_field = self.prefix + field
-        for row in source_data:
-            if row.get(field) is not None:
-                if bool:
-                    row[field] = "Yes" if row[field] else "No"
-                    row[isup_field] = "Yes" if row[isup_field] else "No"
-                else:
-                    row[field] = row.field
 
-    def build_response(self):
-        """Builds the response"""
-        # ToDo: Build response to be export in excel format
-        pass
+        if source_data.get(field) is not None:
+            if bool:
+                target_data[field] = "Yes" if source_data[field] else "No"
+                target_data[isup_field] = "Yes" if source_data[isup_field] else "No"
+            else:
+                target_data[field] = source_data[field]
+
+    def export_data(self):
+        """Exports data to an excel file"""
+        from gst_india.doctype.purchase_reconciliation_tool.exporter import (
+            ExcelExporter,
+        )
+
+        file_name = self.get_file_name()
+
+        ExcelExporter(
+            sheets=self.sheets,
+            filters=self.filters,
+            merged_headers=self.merged_headers,
+            headers=self.headers,
+            data=self.data_to_export,
+            file_name=file_name,
+        )
+
+    def get_file_name(self):
+        """Returns file name for the excel file"""
+        file_name = f"{self.data.get('invoice_summary')[0].get('supplier_name')}"
+
+        if not self.is_download:
+            file_name = f"purchase_reconciliation_report_{self.period}"
+        file_name.replace(" ", "_")
+
+        return file_name
 
     def get_match_summary_columns(self):
+        """
+        Defaults:
+            - bold: 1
+            - align_header: "center"
+            - width: 20
+        """
         return [
             {
                 "label": "Match Status",
-                "fieldname": "match_status",
+                "fieldname": "isup_match_status",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1180,9 +1240,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_2a_2b_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "#,##0",
             },
@@ -1191,9 +1248,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_purchase_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "#,##0",
             },
@@ -1202,9 +1256,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "taxable_amount_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "0.00",
             },
@@ -1213,9 +1264,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "tax_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "0.00",
             },
@@ -1224,9 +1272,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "action_taken",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "left",
                 "format": "0.00%",
             },
@@ -1239,9 +1284,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "supplier_name",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1249,9 +1291,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "supplier_gstin",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "center",
             },
             {
@@ -1259,9 +1298,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_2a_2b_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "#,##0",
             },
@@ -1270,9 +1306,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_purchase_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "#,##0",
             },
@@ -1281,9 +1314,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "taxable_amount_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "0.00",
             },
@@ -1292,9 +1322,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "tax_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "general",
                 "format": "0.00",
             },
@@ -1303,9 +1330,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "action_taken",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
                 "format": "0.00%",
             },
@@ -1318,9 +1343,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "bill_no",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1328,9 +1351,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "bill_date",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1338,9 +1359,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "supplier_gstin",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1348,9 +1367,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "place_of_supply",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1358,9 +1375,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "is_reverse_charge",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1368,9 +1383,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "taxable_value",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1378,9 +1391,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "cgst",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1388,9 +1399,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "sgst",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1398,9 +1407,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "igst",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1408,9 +1415,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "cess",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
         ]
@@ -1420,9 +1425,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_bill_no",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1430,9 +1433,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_bill_date",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1440,9 +1441,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_supplier_gstin",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1450,9 +1449,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_place_of_supply",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1460,9 +1457,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_is_reverse_charge",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1470,9 +1465,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_taxable_value",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1480,9 +1473,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_cgst",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1490,9 +1481,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_sgst",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1500,9 +1489,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_igst",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
             {
@@ -1510,31 +1497,23 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_cess",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "format": "0.00",
             },
         ]
         inv_columns = [
             {
                 "label": "Action Status",
-                "fieldname": "action_status",
+                "fieldname": "isup_action",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
                 "label": "Match Status",
-                "fieldname": "match_status",
+                "fieldname": "isup_match_status",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1542,9 +1521,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "supplier_name",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
-                "width": 20,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1552,19 +1528,15 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "pan",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
                 "width": 15,
-                "align_header": "center",
                 "align_data": "center",
             },
             {
                 "label": "Classification",
-                "fieldname": "classification",
+                "fieldname": "isup_classification",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "bold": 1,
                 "width": 11,
-                "align_header": "center",
                 "align_data": "left",
             },
             {
@@ -1572,9 +1544,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "taxable_value_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "general",
             },
             {
@@ -1582,9 +1552,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "tax_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "bold": 1,
                 "width": 12,
-                "align_header": "center",
                 "align_data": "general",
             },
         ]
