@@ -24,8 +24,7 @@ from india_compliance.gst_india.utils.tests import (
         ("Sales Order",),
         ("Delivery Note",),
         ("Sales Invoice",),
-        ## Not designed to be created from backend
-        ## Get party details, field fetch, etc doesn't'
+        # TODO: Fix in ERPNext
         # ("POS Invoice"),
     ],
 )
@@ -60,7 +59,7 @@ class TestTransaction(FrappeTestCase):
             gst_category="Unregistered",
         )
 
-        # No validation error should occour for unregistered customers
+        # No validation error should occur for unregistered customers
         self.assertDocumentEqual({"gst_category": "Unregistered", "taxes": []}, doc)
 
     def test_transaction_for_foreign_company(self):
@@ -76,7 +75,7 @@ class TestTransaction(FrappeTestCase):
             currency="USD",
         )
 
-        # No validation error should occour for unregistered customers
+        # No validation error should occur for unregistered customers
         self.assertDocumentEqual({"gst_category": "Unregistered", "taxes": []}, doc)
 
     def test_transaction_with_gst_and_non_gst_items(self):
