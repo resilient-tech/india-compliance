@@ -984,8 +984,8 @@ class PurchaseReconciliationTool(Document):
     @frappe.whitelist()
     def export_data_to_xlsx(self, data, download=False):
         """Exports data to an xlsx file"""
-        e = BuildExcel(doc=self, export_data=data, download=download)
-        e.export_data()
+        build_data = BuildExcel(doc=self, export_data=data, download=download)
+        build_data.export_data()
 
 
 def get_periods(fiscal_year, return_type: ReturnType, reversed=False):
@@ -1095,11 +1095,54 @@ class BuildExcel(PurchaseReconciliationTool):
         self.reverse_charge_field = "is_reverse_charge"
         self.doc = doc
         self.data = export_data
-        self.get_filters()
-        self.build_sheet_names()
-        self.merge_headers()
+        self.prepare_data()
+
+    def prepare_data(self):
+        """Prepare data for export"""
         self.set_headers()
-        self.process_data()
+        self.get_filters()
+        self.merge_headers()
+
+    def export_data(self):
+        """Exports data to an excel file"""
+        from india_compliance.gst_india.doctype.purchase_reconciliation_tool.exporter import (
+            ExcelExporter,
+        )
+
+        file_name = self.get_file_name()
+
+        e = ExcelExporter()
+
+        wb = e.create_worksheet(
+            sheet_name="Match Summary Data",
+            filters=self.filters,
+            headers=self.match_summary_header,
+            data=self.get_match_summary_data(),
+            file_name=file_name,
+        )
+
+        if not self.is_download:
+            wb = e.create_worksheet(
+                workbook=wb,
+                sheet_name="Supplier Data",
+                filters=self.filters,
+                headers=self.supplier_header,
+                data=self.get_supplier_data(),
+                file_name=file_name,
+            )
+
+        e.create_worksheet(
+            workbook=wb,
+            sheet_name="Invoice Data",
+            filters=self.filters,
+            merged_headers=self.merged_headers,
+            headers=self.invoice_header,
+            data=self.get_invoice_data(),
+            file_name=file_name,
+        )
+
+        e.remove_worksheet(wb, "Sheet")
+        e.save_workbook(wb, file_name)
 
     def get_filters(self):
         """Add filters to the sheet"""
@@ -1117,14 +1160,6 @@ class BuildExcel(PurchaseReconciliationTool):
             }
         )
 
-    def build_sheet_names(self):
-        """Builds sheet names for the excel file"""
-
-        self.sheets = ["Summary Data", "Invoice Data"]
-
-        if not self.is_download:
-            self.sheets.insert(1, "Supplier Data")
-
     def merge_headers(self):
         """Initializes merged_headers for the excel file"""
 
@@ -1138,48 +1173,43 @@ class BuildExcel(PurchaseReconciliationTool):
     def set_headers(self):
         """
         Sets headers for the excel file
-            - headers: list of dictionaries containing header names, width and other properties
         """
-        self.headers = [
-            self.get_match_summary_columns(),
-            self.get_invoice_columns(),
-        ]
+        self.match_summary_header = self.get_match_summary_columns()
+        self.supplier_header = self.get_supplier_columns()
+        self.invoice_header = self.get_invoice_columns()
 
-        if not self.is_download:
-            self.headers.insert(1, self.get_supplier_columns())
+    def get_match_summary_data(self):
+        """Returns match summary data"""
+        return self.process_data(
+            self.data.get("match_summary"),
+            self.match_summary_header,
+        )
 
-    def process_data(self):
-        """Processes data for the excel file
-        - data_to_export: multiple list of dictionaries containing data to export in each sheet of the excel file
-        """
+    def get_supplier_data(self):
+        """Returns supplier data"""
+        return self.process_data(
+            self.data.get("supplier_summary"), self.supplier_header
+        )
 
-        self.data_to_export = []
+    def get_invoice_data(self):
+        """Returns invoice data"""
+        return self.process_data(self.data.get("invoice_summary"), self.invoice_header)
 
-        for idx, header in enumerate(self.headers):
-            if idx == 0:
-                data = self.data.get("match_summary")
-            elif idx == 1 and not self.is_download:
-                data = self.data.get("supplier_summary")
-            else:
-                data = self.data.get("invoice_summary")
-
-            self.data_to_export.append(self._process_data(data, header))
-
-    def _process_data(self, data, columns):
+    def process_data(self, data, columns):
         """return required list of dict for the excel file"""
         mapped_data = []
 
         for row in data:
-            invoice_dict = {}
+            data_dict = {}
             for column in columns:
                 if column.get("fieldname") in row:
                     fieldname = column.get("fieldname")
-                    self.assign_value(fieldname, row, invoice_dict)
+                    self.assign_value(fieldname, row, data_dict)
 
                     if fieldname == self.reverse_charge_field:
-                        self.assign_value(fieldname, row, invoice_dict, bool=True)
+                        self.assign_value(fieldname, row, data_dict, bool=True)
 
-            mapped_data.append(invoice_dict)
+            mapped_data.append(data_dict)
         return mapped_data
 
     def assign_value(self, field, source_data, target_data, bool=False):
@@ -1189,42 +1219,34 @@ class BuildExcel(PurchaseReconciliationTool):
         if source_data.get(field) is not None:
             if bool:
                 target_data[field] = "Yes" if source_data[field] else "No"
-                target_data[isup_field] = "Yes" if source_data[isup_field] else "No"
+                target_data[isup_field] = "Yes" if source_data.get(isup_field) else "No"
             else:
                 target_data[field] = source_data[field]
-
-    def export_data(self):
-        """Exports data to an excel file"""
-        from gst_india.doctype.purchase_reconciliation_tool.exporter import (
-            ExcelExporter,
-        )
-
-        file_name = self.get_file_name()
-
-        ExcelExporter(
-            sheets=self.sheets,
-            filters=self.filters,
-            merged_headers=self.merged_headers,
-            headers=self.headers,
-            data=self.data_to_export,
-            file_name=file_name,
-        )
 
     def get_file_name(self):
         """Returns file name for the excel file"""
         file_name = f"{self.data.get('invoice_summary')[0].get('supplier_name')}"
-
+        print(self.is_download)
         if not self.is_download:
             file_name = f"purchase_reconciliation_report_{self.period}"
         file_name.replace(" ", "_")
 
         return file_name
 
+    def build_sheet_names(self):
+        """Builds sheet names for the excel file"""
+
+        self.sheets = ["Summary Data", "Invoice Data"]
+
+        if not self.is_download:
+            self.sheets.insert(1, "Supplier Data")
+
     def get_match_summary_columns(self):
         """
         Defaults:
             - bold: 1
             - align_header: "center"
+            - align_data: "general"
             - width: 20
         """
         return [
@@ -1240,7 +1262,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_2a_2b_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "general",
                 "format": "#,##0",
             },
             {
@@ -1248,7 +1269,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_purchase_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "general",
                 "format": "#,##0",
             },
             {
@@ -1256,7 +1276,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "taxable_amount_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "align_data": "general",
                 "format": "0.00",
             },
             {
@@ -1264,7 +1283,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "tax_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "align_data": "general",
                 "format": "0.00",
             },
             {
@@ -1298,7 +1316,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_2a_2b_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "general",
                 "format": "#,##0",
             },
             {
@@ -1306,7 +1323,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "count_purchase_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "general",
                 "format": "#,##0",
             },
             {
@@ -1314,7 +1330,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "taxable_amount_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "align_data": "general",
                 "format": "0.00",
             },
             {
@@ -1322,7 +1337,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "tax_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "align_data": "general",
                 "format": "0.00",
             },
             {
@@ -1545,7 +1559,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "width": 12,
-                "align_data": "general",
             },
             {
                 "label": "Tax Difference",
@@ -1553,7 +1566,6 @@ class BuildExcel(PurchaseReconciliationTool):
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "width": 12,
-                "align_data": "general",
             },
         ]
         inv_columns.extend(isup_columns)
