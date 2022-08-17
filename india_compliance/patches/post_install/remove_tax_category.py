@@ -119,8 +119,9 @@ def update_tax_templates():
             doc.db_set(update_values)
 
     if show_alert:
-        frappe.msgprint(
-            "State wise Tax Categories are no longer supported. If you maintain state wise GST accounts, please merge them manually."
+        click.secho(
+            "Looks like you are using State wise Tax Categories. They are no longer required and hence not supported.",
+            color="yellow",
         )
 
 
