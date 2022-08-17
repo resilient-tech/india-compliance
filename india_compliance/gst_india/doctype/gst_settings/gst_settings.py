@@ -18,10 +18,20 @@ from india_compliance.gst_india.utils import can_enable_api, toggle_custom_field
 
 class GSTSettings(Document):
     def onload(self):
+        self.set_can_show_promo()
+        self.set_not_switched_to_simplified_tax()
+
+    def set_can_show_promo(self):
         if can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed"):
             return
 
         self.set_onload("can_show_promo", True)
+
+    def set_not_switched_to_simplified_tax(self):
+        if frappe.db.get_global("ic_switched_to_simplified_tax"):
+            return
+
+        self.set_onload("not_switched_to_simplified_tax", True)
 
     def validate(self):
         self.update_dependant_fields()

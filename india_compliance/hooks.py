@@ -87,6 +87,9 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
+    "Purchase Taxes and Charges Template": {
+        "validate": "india_compliance.gst_india.overrides.taxes_and_charges_template.validate",
+    },
     "Sales Invoice": {
         "on_trash": (
             "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
@@ -98,6 +101,9 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+    },
+    "Sales Taxes and Charges Template": {
+        "validate": "india_compliance.gst_india.overrides.taxes_and_charges_template.validate",
     },
     "Supplier": {
         "validate": [

@@ -23,6 +23,21 @@ frappe.ui.form.on("GST Settings", {
         });
     },
     onload: show_ic_api_promo,
+    refresh(frm) {
+        if (!frm.doc.__onload?.not_switched_to_simplified_tax) return;
+
+        const message = __(`Are you sure you want to switch to simplified tax setup?
+         This will remove all existing configurations for Tax Category. Read
+         more about this in the <a href='#'>documentation</a>.`);
+
+        frm.add_custom_button(__("Switch to simplified tax setup"), () => {
+            frappe.confirm(message, () => {
+                frappe.xcall(
+                    "india_compliance.patches.post_install.remove_tax_category.switch_to_simplified_tax"
+                );
+            });
+        });
+    },
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
         frm.set_value("fetch_e_waybill_data", 1);

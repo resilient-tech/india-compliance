@@ -107,6 +107,8 @@ def set_default_gst_settings():
             "enable_reverse_charge_in_sales": 0,
             "validate_hsn_code": 1,
             "min_hsn_digits": 6,
+            "reverse_charge_for_unregistered_purchase": 1,
+            "reverse_charge_threshold": 5000,
             "enable_e_waybill": 1,
             "e_waybill_threshold": 50000,
             # Default API Settings

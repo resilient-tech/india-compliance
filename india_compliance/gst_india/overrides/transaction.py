@@ -5,11 +5,7 @@ from frappe import _, bold
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
-from india_compliance.gst_india.constants import (
-    OVERSEAS_GST_CATEGORIES,
-    SALES_DOCTYPES,
-    STATE_NUMBERS,
-)
+from india_compliance.gst_india.constants import OVERSEAS_GST_CATEGORIES, SALES_DOCTYPES
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
@@ -84,7 +80,7 @@ def update_taxable_values(doc, valid_accounts):
 
 
 def is_indian_registered_company(doc):
-    if not doc.company_gstin:
+    if not doc.get("company_gstin"):
         country, gst_category = frappe.get_cached_value(
             "Company", doc.company, ("country", "gst_category")
         )
@@ -478,11 +474,11 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    party_details.update(get_gst_details(party_details, doctype, company))
+    party_details.update(get_gst_details(party_details, doctype, company, True))
 
 
 @frappe.whitelist()
-def get_gst_details(party_details, doctype, company):
+def get_gst_details(party_details, doctype, company, has_party_changed=False):
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)
@@ -492,7 +488,6 @@ def get_gst_details(party_details, doctype, company):
      - tax template
      - taxes in the tax template
     """
-
     is_sales_transaction = doctype in SALES_DOCTYPES
 
     if isinstance(party_details, str):
@@ -504,44 +499,50 @@ def get_gst_details(party_details, doctype, company):
         "customer_address" if is_sales_transaction else "supplier_address"
     )
     if not party_details.get(party_address_field):
-        party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
+        party_details["get_gstin_details"] = True
+
+    if not is_sales_transaction and has_party_changed:
+        party_details["get_reverse_charge_details"] = True
+
+    if party_gst_details := get_party_gst_details(party_details, is_sales_transaction):
         # updating party details to get correct place of supply
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
 
     gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
-
-    if is_sales_transaction:
-        source_gstin = party_details.company_gstin
-        destination_gstin = party_details.billing_address_gstin
-    else:
-        source_gstin = party_details.supplier_gstin
-        destination_gstin = party_details.company_gstin
-
-    if (
-        (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
-        or (
-            is_sales_transaction
-            and (
-                is_export_without_payment_of_gst(party_details)
-                or party_details.is_reverse_charge
+    gst_details.update(
+        get_tax_template(
+            frappe._dict(
+                **party_details,
+                doctype=doctype,
+                company=company,
+                place_of_supply=gst_details.place_of_supply,
             )
         )
-        or (
-            not is_sales_transaction
-            and (
-                party_details.gst_category == "Registered Composition"
-                or (
-                    not party_details.is_reverse_charge
-                    and not party_details.supplier_gstin
-                )
-            )
-        )
+    )
+
+    return gst_details
+
+
+@frappe.whitelist()
+def get_tax_template(doc):
+    if isinstance(doc, str):
+        doc = frappe.parse_json(doc)
+
+    out = frappe._dict(taxes_and_charges="", taxes=[])
+
+    is_sales_transaction = doc.doctype in SALES_DOCTYPES
+    no_gst_on_sales = is_export_without_payment_of_gst(doc) or doc.is_reverse_charge
+    no_gst_on_purchase = doc.gst_category == "Registered Composition" or (
+        not doc.is_reverse_charge and not doc.supplier_gstin
+    )
+
+    if (  # Internal Transfer
+        (doc.company_gstin == (doc.billing_address_gstin or doc.supplier_gstin))
+        or (is_sales_transaction and no_gst_on_sales)
+        or (not is_sales_transaction and no_gst_on_purchase)
     ):
-        # GST Not Applicable
-        gst_details.taxes_and_charges = ""
-        gst_details.taxes = []
-        return gst_details
+        return out
 
     master_doctype = (
         "Sales Taxes and Charges Template"
@@ -549,36 +550,20 @@ def get_gst_details(party_details, doctype, company):
         else "Purchase Taxes and Charges Template"
     )
 
-    tax_template_by_category = get_tax_template_based_on_category(
-        master_doctype, company, party_details
-    )
+    # TEMPLATE BY CATEGORY SHALL BE DEPRECATED FOR INDIA
+    if template := get_tax_template_by_category(doc, master_doctype):
+        out.taxes_and_charges = template
+        out.taxes = get_taxes_and_charges(master_doctype, template)
+        return out
 
-    if tax_template_by_category:
-        gst_details.taxes_and_charges = tax_template_by_category
-        gst_details.taxes = get_taxes_and_charges(
-            master_doctype, tax_template_by_category
-        )
-        return gst_details
+    if not doc.place_of_supply or not doc.company_gstin:
+        return out
 
-    if not gst_details.place_of_supply or not party_details.company_gstin:
-        return gst_details
+    if template := _get_tax_template(doc, master_doctype):
+        out.taxes_and_charges = template
+        out.taxes = get_taxes_and_charges(master_doctype, template)
 
-    if default_tax := get_tax_template(
-        master_doctype,
-        company,
-        is_inter_state_supply(
-            frappe._dict(
-                doctype=doctype,
-                place_of_supply=gst_details.place_of_supply,
-                **party_details,
-            )
-        ),
-        party_details.company_gstin[:2],
-    ):
-        gst_details.taxes_and_charges = default_tax
-        gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
-
-    return gst_details
+    return out
 
 
 def get_party_gst_details(party_details, is_sales_transaction):
@@ -589,50 +574,36 @@ def get_party_gst_details(party_details, is_sales_transaction):
         "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
     )
 
+    fields = []
+    if party_details.get("get_gstin_details"):
+        fields.extend(["gst_category", f"gstin as {gstin_fieldname}"])
+
+    if party_details.get("get_reverse_charge_details"):
+        fields.append("is_reverse_charge")
+
     return frappe.db.get_value(
-        party_type,
-        party_details[party_type.lower()],
-        ("gst_category", f"gstin as {gstin_fieldname}"),
-        as_dict=True,
+        party_type, party_details[party_type.lower()], fields, as_dict=True
     )
 
 
-def get_tax_template_based_on_category(master_doctype, company, party_details):
-    if not party_details.tax_category:
+def get_tax_template_by_category(doc, master_doctype):
+    if not doc.tax_category:
         return
 
-    default_tax = frappe.db.get_value(
+    return frappe.db.get_value(
         master_doctype,
-        {"company": company, "tax_category": party_details.tax_category},
+        {"company": doc.company, "tax_category": doc.tax_category},
         "name",
     )
 
-    return default_tax
 
+def _get_tax_template(doc, master_doctype):
 
-def get_tax_template(master_doctype, company, is_inter_state, state_code):
-    tax_categories = frappe.get_all(
-        "Tax Category",
-        fields=["name", "is_inter_state", "gst_state"],
-        filters={
-            "is_inter_state": 1 if is_inter_state else 0,
-            "is_reverse_charge": 0,
-            "disabled": 0,
-        },
-    )
+    filters = {"company": doc.company, "is_inter_state": is_inter_state_supply(doc)}
+    if doc.doctype not in SALES_DOCTYPES:
+        filters["is_reverse_charge"] = doc.is_reverse_charge or 0
 
-    default_tax = ""
-
-    for tax_category in tax_categories:
-        if STATE_NUMBERS.get(tax_category.gst_state) == state_code or (
-            not default_tax and not tax_category.gst_state
-        ):
-            default_tax = frappe.db.get_value(
-                master_doctype,
-                {"company": company, "disabled": 0, "tax_category": tax_category.name},
-                "name",
-            )
-    return default_tax
+    return frappe.db.get_value(master_doctype, filters, "name")
 
 
 def set_item_tax_from_hsn_code(item):

@@ -369,7 +369,15 @@ CUSTOM_FIELDS = {
             "depends_on": "eval:doc.is_transporter",
             "read_only_depends_on": "eval:doc.gstin",
             "translatable": 0,
-        }
+        },
+        {
+            "fieldname": "is_reverse_charge",
+            "label": "Is Reverse Charge by Default",
+            "fieldtype": "Check",
+            "insert_after": "gst_transporter_id",
+            "depends_on": "eval:doc.gst_category == 'Registered Regular'",
+            "translatable": 0,
+        },
     ],
     "Address": [
         {
@@ -514,33 +522,22 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
     ],
-    "Tax Category": [
+    ("Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"): [
         {
             "fieldname": "is_inter_state",
             "label": "Is Inter State",
             "fieldtype": "Check",
-            "insert_after": "disabled",
+            "insert_after": "is_default",
             "print_hide": 1,
-        },
+        }
+    ],
+    "Purchase Taxes and Charges Template": [
         {
             "fieldname": "is_reverse_charge",
             "label": "Is Reverse Charge",
             "fieldtype": "Check",
             "insert_after": "is_inter_state",
             "print_hide": 1,
-        },
-        {
-            "fieldname": "tax_category_column_break",
-            "fieldtype": "Column Break",
-            "insert_after": "is_reverse_charge",
-        },
-        {
-            "fieldname": "gst_state",
-            "label": "Source State",
-            "fieldtype": "Select",
-            "options": state_options,
-            "insert_after": "company",
-            "translatable": 0,
         },
     ],
     "Item": [

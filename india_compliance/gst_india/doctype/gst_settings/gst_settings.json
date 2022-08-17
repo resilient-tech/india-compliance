@@ -14,6 +14,8 @@
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
+  "reverse_charge_for_unregistered_purchase",
+  "reverse_charge_threshold",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
@@ -225,12 +227,26 @@
    "fieldname": "autofill_party_info",
    "fieldtype": "Check",
    "label": "Autofill Party Information based on GSTIN"
+  },
+  {
+   "default": "5000",
+   "depends_on": "eval: doc.reverse_charge_for_unregistered_purchase",
+   "fieldname": "reverse_charge_threshold",
+   "fieldtype": "Currency",
+   "label": "Invoice Value Threshold for Reverse Charge Purchases"
+  },
+  {
+   "default": "1",
+   "description": "Purchase transaction above the threshold set below, shall be marked as reverse charge transaction by default",
+   "fieldname": "reverse_charge_for_unregistered_purchase",
+   "fieldtype": "Check",
+   "label": "Default Reverse Charge for Purchase from Unregistered Suppliers"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-07-26 02:58:52.754837",
+ "modified": "2022-08-17 16:25:30.987232",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

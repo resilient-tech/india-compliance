@@ -1,33 +1,4 @@
 {
-    "tax_categories": [
-        {
-            "title": "In-State",
-            "is_inter_state": 0,
-            "gst_state": ""
-        },
-        {
-            "title": "Out-State",
-            "is_inter_state": 1,
-            "gst_state": ""
-        },
-        {
-            "title": "Reverse Charge In-State",
-            "is_inter_state": 0,
-            "is_reverse_charge": 1,
-            "gst_state": ""
-        },
-        {
-            "title": "Reverse Charge Out-State",
-            "is_inter_state": 1,
-            "is_reverse_charge": 1,
-            "gst_state": ""
-        },
-        {
-            "title": "Registered Composition",
-            "is_inter_state": 0,
-            "gst_state": ""
-        }
-    ],
     "chart_of_accounts": {
         "*": {
             "item_tax_templates": [
@@ -310,8 +281,7 @@
                                 "account_type": "Tax"
                             }
                         }
-                    ],
-                    "tax_category": "In-State"
+                    ]
                 },
                 {
                     "title": "Output GST Out-state",
@@ -324,7 +294,7 @@
                             }
                         }
                     ],
-                    "tax_category": "Out-State"
+                    "is_inter_state": 1
                 }
             ],
             "purchase_tax_templates": [
@@ -347,8 +317,7 @@
                                 "account_type": "Tax"
                             }
                         }
-                    ],
-                    "tax_category": "In-State"
+                    ]
                 },
                 {
                     "title": "Input GST Out-state",
@@ -362,7 +331,7 @@
                             }
                         }
                     ],
-                    "tax_category": "Out-State"
+                    "is_inter_state": 1
                 },
                 {
                     "title": "Input GST RCM In-state",
@@ -402,7 +371,7 @@
                             "add_deduct_tax": "Deduct"
                         }
                     ],
-                    "tax_category": "Reverse Charge In-State"
+                    "is_reverse_charge": 1
                 },
                 {
                     "title": "Input GST RCM Out-state",
@@ -425,7 +394,8 @@
                             "add_deduct_tax": "Deduct"
                         }
                     ],
-                    "tax_category": "Reverse Charge Out-State"
+                    "is_inter_state": 1,
+                    "is_reverse_charge": 1
                 }
             ]
         }
