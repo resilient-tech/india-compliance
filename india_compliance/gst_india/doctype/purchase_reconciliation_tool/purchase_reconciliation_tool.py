@@ -1102,6 +1102,9 @@ class BuildExcel(PurchaseReconciliationTool):
         self.set_headers()
         self.get_filters()
         self.merge_headers()
+        self.get_match_summary_data()
+        self.get_supplier_data()
+        self.get_invoice_data()
 
     def export_data(self):
         """Exports data to an excel file"""
@@ -1113,31 +1116,31 @@ class BuildExcel(PurchaseReconciliationTool):
 
         e = ExcelExporter()
 
-        wb = e.create_worksheet(
+        wb = e.make_xlsx(
             sheet_name="Match Summary Data",
             filters=self.filters,
             headers=self.match_summary_header,
-            data=self.get_match_summary_data(),
+            data=self.match_summary_data,
             file_name=file_name,
         )
 
         if not self.is_download:
-            wb = e.create_worksheet(
+            wb = e.make_xlsx(
                 workbook=wb,
                 sheet_name="Supplier Data",
                 filters=self.filters,
                 headers=self.supplier_header,
-                data=self.get_supplier_data(),
+                data=self.supplier_data,
                 file_name=file_name,
             )
 
-        e.create_worksheet(
+        e.make_xlsx(
             workbook=wb,
             sheet_name="Invoice Data",
             filters=self.filters,
             merged_headers=self.merged_headers,
             headers=self.invoice_header,
-            data=self.get_invoice_data(),
+            data=self.invoice_data,
             file_name=file_name,
         )
 
@@ -1165,8 +1168,8 @@ class BuildExcel(PurchaseReconciliationTool):
 
         self.merged_headers = frappe._dict(
             {
-                "2A / 2B": ["isup_bill_no", "isup_cess_amount"],
-                "Purchase Data": ["bill_no", "cess_amount"],
+                "2A / 2B": ["isup_bill_no", "isup_cess"],
+                "Purchase Data": ["bill_no", "cess"],
             }
         )
 
@@ -1180,23 +1183,28 @@ class BuildExcel(PurchaseReconciliationTool):
 
     def get_match_summary_data(self):
         """Returns match summary data"""
-        return self.process_data(
+        self.match_summary_data = self.process_data(
             self.data.get("match_summary"),
             self.match_summary_header,
         )
 
     def get_supplier_data(self):
         """Returns supplier data"""
-        return self.process_data(
+        self.supplier_data = self.process_data(
             self.data.get("supplier_summary"), self.supplier_header
         )
 
     def get_invoice_data(self):
         """Returns invoice data"""
-        return self.process_data(self.data.get("invoice_summary"), self.invoice_header)
+        self.invoice_data = self.process_data(
+            self.data.get("invoice_summary"), self.invoice_header
+        )
 
     def process_data(self, data, columns):
         """return required list of dict for the excel file"""
+        if not data:
+            return
+
         mapped_data = []
 
         for row in data:
@@ -1225,21 +1233,17 @@ class BuildExcel(PurchaseReconciliationTool):
 
     def get_file_name(self):
         """Returns file name for the excel file"""
-        file_name = f"{self.data.get('invoice_summary')[0].get('supplier_name')}"
-        print(self.is_download)
+        invoice_summary = self.data.get("invoice_summary")[0]
+        supplier_name = invoice_summary.get("supplier_name")
+        supplier_gstin = invoice_summary.get("supplier_gstin")
+
+        file_name = f"{supplier_name}_{supplier_gstin}"
+
         if not self.is_download:
-            file_name = f"purchase_reconciliation_report_{self.period}"
+            file_name = f"{supplier_gstin}_{self.period}_report"
         file_name.replace(" ", "_")
 
         return file_name
-
-    def build_sheet_names(self):
-        """Builds sheet names for the excel file"""
-
-        self.sheets = ["Summary Data", "Invoice Data"]
-
-        if not self.is_download:
-            self.sheets.insert(1, "Supplier Data")
 
     def get_match_summary_columns(self):
         """
@@ -1258,28 +1262,28 @@ class BuildExcel(PurchaseReconciliationTool):
                 "align_data": "left",
             },
             {
-                "label": "Count 2A/2B Docs",
-                "fieldname": "count_2a_2b_docs",
+                "label": "Count \n 2A/2B Docs",
+                "fieldname": "count_isup_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
             },
             {
-                "label": "Count Purchase Docs",
-                "fieldname": "count_purchase_docs",
+                "label": "Count \n Purchase Docs",
+                "fieldname": "count_pur_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
             },
             {
-                "label": "Taxable Amount Diff 2A/2B - Purchase",
-                "fieldname": "taxable_amount_diff",
+                "label": "Taxable Amount Diff \n 2A/2B - Purchase",
+                "fieldname": "taxable_value_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "format": "0.00",
             },
             {
-                "label": "Tax Difference 2A/2B - Purchase",
+                "label": "Tax Difference \n 2A/2B - Purchase",
                 "fieldname": "tax_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
@@ -1287,7 +1291,7 @@ class BuildExcel(PurchaseReconciliationTool):
             },
             {
                 "label": "%Action Taken",
-                "fieldname": "action_taken",
+                "fieldname": "count_action_taken",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "align_data": "left",
@@ -1312,28 +1316,28 @@ class BuildExcel(PurchaseReconciliationTool):
                 "align_data": "center",
             },
             {
-                "label": "Count 2A/2B Docs",
-                "fieldname": "count_2a_2b_docs",
+                "label": "Count \n 2A/2B Docs",
+                "fieldname": "count_isup_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
             },
             {
-                "label": "Count Purchase Docs",
-                "fieldname": "count_purchase_docs",
+                "label": "Count \n Purchase Docs",
+                "fieldname": "count_pur_docs",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
             },
             {
-                "label": "Taxable Amount Diff 2A/2B - Purchase",
-                "fieldname": "taxable_amount_diff",
+                "label": "Taxable Amount Diff \n 2A/2B - Purchase",
+                "fieldname": "taxable_value_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "format": "0.00",
             },
             {
-                "label": "Tax Difference 2A/2B - Purchase",
+                "label": "Tax Difference \n 2A/2B - Purchase",
                 "fieldname": "tax_diff",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
@@ -1341,7 +1345,7 @@ class BuildExcel(PurchaseReconciliationTool):
             },
             {
                 "label": "%Action Taken",
-                "fieldname": "action_taken",
+                "fieldname": "count_action_taken",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "width": 12,
@@ -1355,80 +1359,80 @@ class BuildExcel(PurchaseReconciliationTool):
             {
                 "label": "Bill No",
                 "fieldname": "bill_no",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "align_data": "left",
             },
             {
                 "label": "Bill Date",
                 "fieldname": "bill_date",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "align_data": "left",
             },
             {
                 "label": "GSTIN",
                 "fieldname": "supplier_gstin",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "align_data": "left",
             },
             {
                 "label": "Place of Supply",
                 "fieldname": "place_of_supply",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "align_data": "left",
             },
             {
                 "label": "Reverse Charge",
                 "fieldname": "is_reverse_charge",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "align_data": "left",
             },
             {
                 "label": "Taxable Value",
                 "fieldname": "taxable_value",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "format": "0.00",
             },
             {
                 "label": "CGST",
                 "fieldname": "cgst",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "format": "0.00",
             },
             {
                 "label": "SGST",
                 "fieldname": "sgst",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "format": "0.00",
             },
             {
                 "label": "IGST",
                 "fieldname": "igst",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "format": "0.00",
             },
             {
                 "label": "CESS",
                 "fieldname": "cess",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
+                "bg_color": self.COLOR_PALLATE.green,
+                "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "format": "0.00",
             },

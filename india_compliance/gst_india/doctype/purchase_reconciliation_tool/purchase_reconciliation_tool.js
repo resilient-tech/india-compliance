@@ -672,8 +672,8 @@ class PurchaseReconciliationTool {
 
         let filtered_data = Object.assign({},
             {
-                'match_summary': this.summary_data,
-                'supplier_summary': this.supplier_data,
+                'match_summary': this.get_summary_data(),
+                'supplier_summary': this.get_supplier_data(),
                 'invoice_summary': this.filtered_data
             }
         );

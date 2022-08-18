@@ -1,9 +1,10 @@
 import openpyxl
 
 # from openpyxl.formatting.rule import Rule
-# from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.styles import Alignment, Font, PatternFill
+
 # from openpyxl.styles.differential import DifferentialStyle
-# from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter
 
 
 class ExcelExporter:
@@ -16,7 +17,7 @@ class ExcelExporter:
 
         return workbook
 
-    def create_worksheet(self, *args, **kwargs):
+    def make_xlsx(self, *args, **kwargs):
         """
         Make xlsx file
         :param workbook - Object of excel file/ workbook
@@ -63,154 +64,177 @@ class ExcelExporter:
 class CreateWorksheet:
     def __init__(self):
         self.row_dimension = 1
+        self.column_dimension = 1
 
     def create_worksheet(
         self,
         workbook,
         sheet_name,
-        filters,
-        headers,
         data,
+        headers,
+        filters=None,
         merged_headers=None,
     ):
         """Create worksheet"""
+        self.headers = headers
+        self.data = data
+
         ws = workbook.create_sheet(sheet_name)
-        self.add_data(ws, filters)
+
+        if filters:
+            self.filters = filters
+            self.add_data(ws, self.filters)
+
+        if merged_headers:
+            self.merged_headers = merged_headers
+            self.add_data(ws, self.merged_headers, merge=True)
+
+        self.add_data(ws, self.headers, is_header=True)
+        self.add_data(ws, self.data)
+
         return ws
 
-    def add_data(self, ws, data):
+    def add_data(self, ws, data, is_header=False, merge=False):
         """Adds header data to the sheet"""
-        data = self.parse_dict(data)
+        parsed_data = self.parse_data(data, is_header)
 
-        for i, row in enumerate(data):
-            ws.append(row)
-            self.row_dimension += i
+        for i, row in enumerate(parsed_data, 1):
+            for j, val in enumerate(row):
+                cell = ws.cell(row=self.row_dimension, column=j + 1)
 
+                if merge:
+                    self.append_merged_header(ws)
+                else:
+                    self.get_properties(column=j)
+                    self.apply_style(
+                        ws,
+                        self.row_dimension,
+                        j + 1,
+                        font_size=self.font_size,
+                        bold=self.bold,
+                        horizontal_align=self.align_header,
+                        width=self.width,
+                        bg_color=self.bg_color,
+                        format=self.format,
+                    )
+                    cell.value = val
+            self.row_dimension += 1
         return ws
 
-    def parse_dict(self, data):
-        """Convert Dictionary Key-value dictionary to List of Lists"""
+    def append_merged_header(self, ws):
+        for key, value in self.merged_headers.items():
+            start_column = self.get_column_index(value[0])
+            end_column = self.get_column_index(value[1])
+
+            range = self.get_range(
+                start_row=self.row_dimension,
+                start_column=start_column,
+                end_row=self.row_dimension,
+                end_column=end_column,
+            )
+
+            ws.cell(row=self.row_dimension, column=start_column).value = key
+            ws.merge_cells(range)
+            self.apply_style(ws, self.row_dimension, start_column)
+
+    def get_column_index(self, column_name):
+        """Get column index from column name"""
+        for (idx, field) in enumerate(self.headers, 1):
+            if field["fieldname"] == column_name:
+                return idx
+
+    def apply_style(
+        self,
+        ws,
+        row,
+        column,
+        font_family="Calibri",
+        font_size=9,
+        bold=True,
+        horizontal_align="general",
+        vertical_align="bottom",
+        width=20,
+        bg_color=None,
+        border=None,
+        format=None,
+    ):
+        """Apply style to cell"""
+        cell = ws.cell(row=row, column=column)
+        cell.font = Font(
+            name=font_family,
+            size=font_size,
+            bold=bold,
+        )
+        cell.alignment = Alignment(
+            horizontal=horizontal_align,
+            vertical=vertical_align,
+        )
+        cell.number_format = format if format else "General"
+
+        if bg_color:
+            cell.fill = PatternFill(
+                fill_type="solid",
+                fgColor=bg_color,
+            )
+        ws.column_dimensions[get_column_letter(column)].width = width
+
+    def get_properties(self, column=None):
+        """Get all properties defined in a header for cell"""
+        if not column:
+            column = self.column_dimension
+
+        properties = self.headers[column]
+
+        self.bg_color = properties.get("bg_color")
+        self.font_family = properties.get("font_family")
+        self.font_size = properties.get("font_size")
+        self.bold = properties.get("bold")
+        self.align_header = properties.get("align_header")
+        self.align_data = properties.get("align_data")
+        self.format = properties.get("format")
+        self.width = properties.get("width") or 20
+        self.height = properties.get("height")
+
+    def parse_data(self, data, is_header=False):
+        """Convert data to List of Lists"""
         csv_list = []
 
         if isinstance(data, dict):
             for key, value in data.items():
-                csv_list.append([key, value])
+                if isinstance(value, list):
+                    csv_list.append(list(data.keys()))
+                    return csv_list
+                else:
+                    csv_list.append([key, value])
 
+        if isinstance(data, list):
+            if is_header:
+                csv_list.append(self.build_csv_header(data))
+            else:
+                csv_list = self.build_csv_array(data)
         return csv_list
 
     def build_csv_array(self, data):
+        """Builds a csv data array"""
         csv_array = []
 
         for row in data:
-            csv_array.append(self.build_csv_row(row))
+            csv_array.append(list(row.values()))
+
         return csv_array
 
-    def build_csv_row(self, row, header=False):
+    def build_csv_header(self, row):
         """Builds a csv row"""
         csv_row = []
 
         for data in row:
-            if header:
-                csv_row.append(data.get("label"))
+            csv_row.append(data.get("label"))
         return csv_row
 
-    # def apply_format(
-    #     self,
-    #     ws,
-    #     row=None,
-    #     column=None,
-    #     bold=True,
-    #     font_size=9,
-    #     column_widths=None,
-    #     wrap_text=False,
-    #     align_header="center",
-    #     align_data="general",
-    # ):
-    #     """Applies formatting to the cell"""
-    #     default_bold_font = self.get_font_style()
+    def get_range(self, start_row, start_column, end_row, end_column):
+        start_column_letter = get_column_letter(start_column)
+        end_column_letter = get_column_letter(end_column)
 
-    #     if row_dimensions is not None:
-    #         ws.row_dimensions[row].font = default_bold_font
-    #         ws.row_dimensions[row].alignment = Alignment(horizontal=align_header)
-    #         return row_dimensions
+        range = f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
 
-    #     if update:
-    #         if bg_color:
-    #             cell.fill = self.get_pattern_fill(bg_color)
-    #         return ws
-
-    #     cell.number_format = "0.00"
-    #     cell.font = self.get_font_style(color=text_color, bold=bold)
-    #     cell.alignment = Alignment(
-    #         horizontal=horizontal, vertical=vertical, wrap_text=wrap_text
-    #     )
-
-    #     if bg_color:
-    #         cell.fill = self.get_pattern_fill(bg_color)
-
-    #     if column_widths:
-    #         for i, column_width in enumerate(column_widths, 1):  # ,1 to start at 1
-    #             ws.column_dimensions[get_column_letter(i)].width = column_width
-
-    #     ws.row_dimensions[4].height = 30
-    #     ws.row_dimensions[5].height = 30
-
-    #     return ws
-
-    # def highlight_cell(
-    #     self,
-    #     fill_type="solid",
-    #     font_size=9,
-    #     bold=True,
-    #     color="FFFF00",
-    #     bg_color="FFFFFF",
-    #     text=None,
-    # ):
-    #     """Hightlight cell based on text"""
-
-    #     text_style = self.get_font_style(color=color)
-    #     bg_fill = PatternFill(bgColor=bg_color, fill_type=fill_type)
-    #     dxf = DifferentialStyle(font=text_style, fill=bg_fill)
-
-    #     if text:
-    #         rule = Rule(
-    #             type="containsText", operator="containsText", text=text, dxf=dxf
-    #         )
-    #     else:
-    #         rule = Rule(type="cells", dxf=dxf)
-    #     return rule
-
-    # def get_font_style(self, font_family="Calibri", font_size=9, bold=True):
-    #     font = Font(size=font_size, name=font_family, bold=bold)
-    #     return font
-
-    # def get_pattern_fill(self, color, fill_type="solid"):
-    #     if not color:
-    #         return None
-    #     return PatternFill(fgColor=color, fill_type=fill_type)
-
-    # def get_range(self, start_row, start_column, end_row, end_column):
-    #     start_column_letter = get_column_letter(start_column)
-    #     end_column_letter = get_column_letter(end_column)
-    #     range = f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
-    #     return range
-
-    # def add_background_color(self, ws, additional_style):
-    #     for style in additional_style:
-    #         min_row = style.get("min_row")
-    #         max_row = style.get("max_row")
-    #         min_col = style.get("min_col")
-    #         max_col = style.get("max_col")
-    #         bg_color = style.get("bg_color")
-
-    #         for row in ws.iter_rows(
-    #             min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col
-    #         ):
-    #             for cell in row:
-    #                 self.apply_format(ws, cell=cell, bg_color=bg_color, update=True)
-
-    #         if style.get("move_range"):
-    #             move_col = style.get("move_col")
-    #             range = self.get_range(min_row, min_col, max_row, max_col)
-    #             print(range)
-    #             ws.move_range(range, rows=0, cols=move_col)
+        return range
