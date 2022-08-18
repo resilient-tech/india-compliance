@@ -84,7 +84,7 @@ def update_taxable_values(doc, valid_accounts):
 
 
 def is_indian_registered_company(doc):
-    if not doc.company_gstin:
+    if not doc.get("company_gstin"):
         country, gst_category = frappe.get_cached_value(
             "Company", doc.company, ("country", "gst_category")
         )
@@ -111,23 +111,24 @@ def validate_mandatory_fields(doc, fields, message=None):
             frappe.throw(error_message, title=_("Missing Required Field"))
 
 
-def get_valid_accounts(company, is_sales_transaction=False):
+def get_valid_accounts(company, for_sales=False, for_purchase=False):
     all_valid_accounts = []
     intra_state_accounts = []
     inter_state_accounts = []
 
-    def add_to_valid_accounts(account_type):
+    account_types = set()
+    if for_sales:
+        account_types.add("Output")
+
+    if for_purchase:
+        account_types.update(("Input", "Reverse Charge"))
+
+    for account_type in account_types:
         accounts = get_gst_accounts_by_type(company, account_type)
         all_valid_accounts.extend(accounts.values())
         intra_state_accounts.append(accounts.cgst_account)
         intra_state_accounts.append(accounts.sgst_account)
         inter_state_accounts.append(accounts.igst_account)
-
-    if is_sales_transaction:
-        add_to_valid_accounts("Output")
-    else:
-        add_to_valid_accounts("Input")
-        add_to_valid_accounts("Reverse Charge")
 
     return all_valid_accounts, intra_state_accounts, inter_state_accounts
 
@@ -169,7 +170,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         frappe.throw(message, title=title or _("Invalid GST Account"))
 
     all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-        doc.company, is_sales_transaction
+        doc.company, is_sales_transaction, not is_sales_transaction
     )
 
     # Sales / Purchase Validations

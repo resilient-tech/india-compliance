@@ -82,7 +82,7 @@ class TestGSTR3BReport(unittest.TestCase):
 
 def create_sales_invoices():
     create_sales_invoice(is_in_state=True)
-    create_sales_invoice(is_nil_exempt=True)
+    create_sales_invoice(is_nil_rated=True)
     create_sales_invoice(
         customer="_Test Registered Composition Customer",
         is_out_state=True,

@@ -69,6 +69,9 @@ doc_events = {
         ),
     },
     "Item": {"validate": "india_compliance.gst_india.overrides.item.validate_hsn_code"},
+    "Item Tax Template": {
+        "validate": "india_compliance.gst_india.overrides.item_tax_template.validate"
+    },
     "Payment Entry": {
         "validate": (
             "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"

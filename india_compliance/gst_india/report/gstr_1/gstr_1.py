@@ -368,7 +368,7 @@ class Gstr1Report(object):
 
         items = frappe.db.sql(
             """
-			select item_code, parent, taxable_value, base_net_amount, item_tax_rate, is_nil_exempt,
+			select item_code, parent, taxable_value, base_net_amount, item_tax_rate, is_nil_rated, is_exempted,
 			is_non_gst from `tab%s Item`
 			where parent in (%s)
 		"""
@@ -394,14 +394,12 @@ class Gstr1Report(object):
                     ).setdefault(d.item_code, [])
                     tax_rate_dict.append(rate)
 
-            if d.is_nil_exempt:
-                self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
-                if item_tax_rate:
-                    self.nil_exempt_non_gst[d.parent][0] += d.get("taxable_value", 0)
-                else:
-                    self.nil_exempt_non_gst[d.parent][1] += d.get("taxable_value", 0)
+            self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
+            if d.is_nil_rated:
+                self.nil_exempt_non_gst[d.parent][0] += d.get("taxable_value", 0)
+            elif d.is_exempted:
+                self.nil_exempt_non_gst[d.parent][1] += d.get("taxable_value", 0)
             elif d.is_non_gst:
-                self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
                 self.nil_exempt_non_gst[d.parent][2] += d.get("taxable_value", 0)
 
     def get_items_based_on_tax_rate(self):
