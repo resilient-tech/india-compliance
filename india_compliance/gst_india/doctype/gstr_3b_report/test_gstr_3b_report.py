@@ -55,7 +55,6 @@ class TestGSTR3BReport(unittest.TestCase):
         ).insert()
 
         output = json.loads(report.json_output)
-
         self.assertEqual(output["sup_details"]["osup_det"]["iamt"], 18)
         self.assertEqual(output["sup_details"]["osup_det"]["txval"], 300)
         self.assertEqual(output["sup_details"]["isup_rev"]["txval"], 100)
@@ -82,7 +81,7 @@ class TestGSTR3BReport(unittest.TestCase):
 
 def create_sales_invoices():
     create_sales_invoice(is_in_state=True)
-    create_sales_invoice(is_nil_rated=True)
+    create_sales_invoice(item_code="_Test Nil Rated Item", is_nil_rated=True)
     create_sales_invoice(
         customer="_Test Registered Composition Customer",
         is_out_state=True,

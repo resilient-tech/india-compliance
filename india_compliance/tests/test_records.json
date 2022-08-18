@@ -43,6 +43,33 @@
                     "income_account": "Sales - _TIRC"
                 }
             ]
+        },
+        {
+            "description": "_Test Nil Rated Item",
+            "doctype": "Item",
+            "is_stock_item": 1,
+            "item_code": "_Test Nil Rated Item",
+            "item_name": "_Test Nil Rated Item",
+            "valuation_rate": 100,
+            "gst_hsn_code": "61149090",
+            "item_defaults": [
+                {
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "expense_account": "Cost of Goods Sold - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Sales - _TIRC"
+                }
+            ],
+            "taxes": [
+                {
+                    "item_tax_template": "Nil Rated - _TIRC"
+                },
+                {
+                    "item_tax_template": "Nil Rated - _TIUC"
+                }
+            ]
         }
     ],
     "Customer": [
