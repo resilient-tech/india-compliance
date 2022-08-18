@@ -64,6 +64,7 @@ CUSTOM_FIELDS = {
             "insert_after": "supplier_gstin",
             "read_only": 1,
             "print_hide": 1,
+            # values set to None to remove them from earlier installations
             "options": None,
             "default": None,
             "fetch_from": "supplier_address.gst_category",
@@ -154,6 +155,7 @@ CUSTOM_FIELDS = {
             "insert_after": "billing_address_gstin",
             "read_only": 1,
             "print_hide": 1,
+            # values set to None to remove them from earlier installations
             "options": None,
             "default": None,
             "fetch_from": "customer_address.gst_category",
