@@ -34,16 +34,12 @@ class ExcelExporter:
         # Create workbook if not passed or return existing workbook
         wb = self.get_workbook(kwargs.get("workbook"))
 
+        if "workbook" not in kwargs:
+            kwargs["workbook"] = wb
+
         # ToDo: Create a new sheet
         cs = CreateWorksheet()
-        cs.create_worksheet(
-            wb,
-            sheet_name=kwargs.get("sheet_name"),
-            filters=kwargs.get("filters"),
-            merged_headers=kwargs.get("merged_headers"),
-            headers=kwargs.get("headers"),
-            data=kwargs.get("data"),
-        )
+        cs.create_worksheet(**kwargs)
 
         self.save_workbook(wb, kwargs.get("file_name"))
         return wb
@@ -68,46 +64,39 @@ class CreateWorksheet:
 
     def create_worksheet(
         self,
-        workbook,
-        sheet_name,
-        data,
-        headers,
-        filters=None,
-        merged_headers=None,
+        **kwargs,
     ):
         """Create worksheet"""
-        self.headers = headers
-        self.data = data
+        wb = kwargs.get("workbook")
+        self.headers = kwargs.get("headers")
+        self.data = kwargs.get("data")
 
-        ws = workbook.create_sheet(sheet_name)
+        self.ws = wb.create_sheet(kwargs.get("sheet_name"))
 
-        if filters:
-            self.filters = filters
-            self.add_data(ws, self.filters)
+        if kwargs.get("filters"):
+            self.filters = kwargs.get("filters")
+            self.add_data(self.filters)
 
-        if merged_headers:
-            self.merged_headers = merged_headers
-            self.add_data(ws, self.merged_headers, merge=True)
+        if kwargs.get("merged_headers"):
+            self.merged_headers = kwargs.get("merged_headers")
+            self.add_data(self.merged_headers, merge=True)
 
-        self.add_data(ws, self.headers, is_header=True)
-        self.add_data(ws, self.data)
+        self.add_data(self.headers, is_header=True)
+        self.add_data(self.data)
 
-        return ws
-
-    def add_data(self, ws, data, is_header=False, merge=False):
+    def add_data(self, data, is_header=False, merge=False):
         """Adds header data to the sheet"""
         parsed_data = self.parse_data(data, is_header)
 
         for i, row in enumerate(parsed_data, 1):
             for j, val in enumerate(row):
-                cell = ws.cell(row=self.row_dimension, column=j + 1)
+                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
 
                 if merge:
-                    self.append_merged_header(ws)
+                    self.append_merged_header()
                 else:
                     self.get_properties(column=j)
                     self.apply_style(
-                        ws,
                         self.row_dimension,
                         j + 1,
                         font_size=self.font_size,
@@ -119,9 +108,8 @@ class CreateWorksheet:
                     )
                     cell.value = val
             self.row_dimension += 1
-        return ws
 
-    def append_merged_header(self, ws):
+    def append_merged_header(self):
         for key, value in self.merged_headers.items():
             start_column = self.get_column_index(value[0])
             end_column = self.get_column_index(value[1])
@@ -133,9 +121,9 @@ class CreateWorksheet:
                 end_column=end_column,
             )
 
-            ws.cell(row=self.row_dimension, column=start_column).value = key
-            ws.merge_cells(range)
-            self.apply_style(ws, self.row_dimension, start_column)
+            self.ws.cell(row=self.row_dimension, column=start_column).value = key
+            self.ws.merge_cells(range)
+            self.apply_style(self.row_dimension, start_column)
 
     def get_column_index(self, column_name):
         """Get column index from column name"""
@@ -145,7 +133,6 @@ class CreateWorksheet:
 
     def apply_style(
         self,
-        ws,
         row,
         column,
         font_family="Calibri",
@@ -159,7 +146,7 @@ class CreateWorksheet:
         format=None,
     ):
         """Apply style to cell"""
-        cell = ws.cell(row=row, column=column)
+        cell = self.ws.cell(row=row, column=column)
         cell.font = Font(
             name=font_family,
             size=font_size,
@@ -176,7 +163,7 @@ class CreateWorksheet:
                 fill_type="solid",
                 fgColor=bg_color,
             )
-        ws.column_dimensions[get_column_letter(column)].width = width
+        self.ws.column_dimensions[get_column_letter(column)].width = width
 
     def get_properties(self, column=None):
         """Get all properties defined in a header for cell"""
