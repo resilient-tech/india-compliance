@@ -38,8 +38,8 @@ class ExcelExporter:
             kwargs["workbook"] = wb
 
         # ToDo: Create a new sheet
-        cs = CreateWorksheet()
-        cs.create_worksheet(**kwargs)
+        cs = Worksheet(**kwargs)
+        cs.create_worksheet()
 
         self.save_workbook(wb, kwargs.get("file_name"))
         return wb
@@ -57,34 +57,32 @@ class ExcelExporter:
             wb.remove(wb[sheet_name])
 
 
-class CreateWorksheet:
-    def __init__(self):
+class Worksheet:
+    def __init__(self, **kwargs):
         self.row_dimension = 1
         self.column_dimension = 1
 
+        for (k, v) in kwargs.items():
+            setattr(self, k, v)
+
     def create_worksheet(
         self,
-        **kwargs,
     ):
         """Create worksheet"""
-        wb = kwargs.get("workbook")
-        self.headers = kwargs.get("headers")
-        self.data = kwargs.get("data")
+        self.ws = self.workbook.create_sheet(self.sheet_name)
 
-        self.ws = wb.create_sheet(kwargs.get("sheet_name"))
-
-        if kwargs.get("filters"):
-            self.filters = kwargs.get("filters")
+        if hasattr(self, "filters"):
             self.add_data(self.filters)
 
-        if kwargs.get("merged_headers"):
-            self.merged_headers = kwargs.get("merged_headers")
+        if hasattr(self, "merged_headers"):
             self.add_data(self.merged_headers, merge=True)
 
-        self.add_data(self.headers, is_header=True)
-        self.add_data(self.data)
+        if hasattr(self, "headers"):
+            self.add_data(self.headers, is_header=True)
 
-    def add_data(self, data, is_header=False, merge=False):
+        self.add_data(self.data, is_data=True)
+
+    def add_data(self, data, is_header=False, is_data=False, merge=False):
         """Adds header data to the sheet"""
         parsed_data = self.parse_data(data, is_header)
 
@@ -95,16 +93,12 @@ class CreateWorksheet:
                 if merge:
                     self.append_merged_header()
                 else:
-                    self.get_properties(column=j)
                     self.apply_style(
                         self.row_dimension,
                         j + 1,
-                        font_size=self.font_size,
-                        bold=self.bold,
-                        horizontal_align=self.align_header,
-                        width=self.width,
-                        bg_color=self.bg_color,
-                        format=self.format,
+                        column_index=j,
+                        is_header=is_header,
+                        is_data=is_data,
                     )
                     cell.value = val
             self.row_dimension += 1
@@ -122,8 +116,15 @@ class CreateWorksheet:
             )
 
             self.ws.cell(row=self.row_dimension, column=start_column).value = key
+
             self.ws.merge_cells(range)
-            self.apply_style(self.row_dimension, start_column)
+
+            self.apply_style(
+                self.row_dimension,
+                start_column,
+                column_index=start_column,
+                is_header=True,
+            )
 
     def get_column_index(self, column_name):
         """Get column index from column name"""
@@ -131,56 +132,67 @@ class CreateWorksheet:
             if field["fieldname"] == column_name:
                 return idx
 
-    def apply_style(
-        self,
-        row,
-        column,
-        font_family="Calibri",
-        font_size=9,
-        bold=True,
-        horizontal_align="general",
-        vertical_align="bottom",
-        width=20,
-        bg_color=None,
-        border=None,
-        format=None,
-    ):
+    def apply_style(self, row, column, column_index, is_header=False, is_data=False):
         """Apply style to cell"""
+        self.get_properties(column_index, is_header, is_data)
+
         cell = self.ws.cell(row=row, column=column)
         cell.font = Font(
-            name=font_family,
-            size=font_size,
-            bold=bold,
+            name=self.font_family,
+            size=self.font_size,
+            bold=self.bold,
         )
         cell.alignment = Alignment(
-            horizontal=horizontal_align,
-            vertical=vertical_align,
+            horizontal=self.horizontal_align,
+            vertical=self.vertical_align,
+            wrap_text=self.wrap_text,
         )
-        cell.number_format = format if format else "General"
+        cell.number_format = self.format if self.format else "General"
 
-        if bg_color:
+        if self.bg_color:
             cell.fill = PatternFill(
                 fill_type="solid",
-                fgColor=bg_color,
+                fgColor=self.bg_color,
             )
-        self.ws.column_dimensions[get_column_letter(column)].width = width
+        self.ws.column_dimensions[get_column_letter(column)].width = self.width
+        self.ws.row_dimensions[row].height = self.height
 
-    def get_properties(self, column=None):
+    def get_properties(self, column=None, is_header=False, is_data=False):
         """Get all properties defined in a header for cell"""
         if not column:
             column = self.column_dimension
 
         properties = self.headers[column]
 
-        self.bg_color = properties.get("bg_color")
-        self.font_family = properties.get("font_family")
-        self.font_size = properties.get("font_size")
-        self.bold = properties.get("bold")
-        self.align_header = properties.get("align_header")
-        self.align_data = properties.get("align_data")
-        self.format = properties.get("format")
-        self.width = properties.get("width") or 20
-        self.height = properties.get("height")
+        self.font_family = "Calibri"
+        self.font_size = 9
+        self.bold = True
+        self.align_header = "center"
+        self.align_data = "general"
+        self.format = "General"
+        self.width = 20
+        self.height = 20
+        self.vertical_align = "bottom"
+        self.wrap_text = False
+        self.bg_color = None
+
+        for (k, v) in properties.items():
+            setattr(self, k, v)
+
+        if is_header:
+            self.horizontal_align = self.align_header
+            self.bg_color = self.bg_color
+            self.font_size = self.font_size
+            self.vertical_align = "center"
+            self.wrap_text = True
+            self.height = 30
+        elif is_data:
+            self.horizontal_align = self.align_data
+            self.bg_color = self.bg_color_data
+            self.bold = False
+        else:
+            self.horizontal_align = self.align_data
+            self.bg_color = None
 
     def parse_data(self, data, is_header=False):
         """Convert data to List of Lists"""

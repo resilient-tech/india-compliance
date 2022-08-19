@@ -1070,7 +1070,7 @@ def get_import_history(
     )
 
 
-class BuildExcel(PurchaseReconciliationTool):
+class BuildExcel:
     COLOR_PALLATE = frappe._dict(
         {
             "dark_gray": "d9d9d9",
@@ -1377,7 +1377,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "supplier_gstin",
                 "bg_color": self.COLOR_PALLATE.green,
                 "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
+                "width": 15,
                 "align_data": "left",
             },
             {
@@ -1459,7 +1459,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "fieldname": "isup_supplier_gstin",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
+                "width": 15,
                 "align_data": "left",
             },
             {
@@ -1563,6 +1563,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "width": 12,
+                "format": "0.00",
             },
             {
                 "label": "Tax Difference",
@@ -1570,6 +1571,7 @@ class BuildExcel(PurchaseReconciliationTool):
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "width": 12,
+                "format": "0.00",
             },
         ]
         inv_columns.extend(isup_columns)
