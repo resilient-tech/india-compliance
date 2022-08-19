@@ -1,9 +1,7 @@
+import collections
+
 import openpyxl
-
-# from openpyxl.formatting.rule import Rule
 from openpyxl.styles import Alignment, Font, PatternFill
-
-# from openpyxl.styles.differential import DifferentialStyle
 from openpyxl.utils import get_column_letter
 
 
@@ -65,9 +63,7 @@ class Worksheet:
         for (k, v) in kwargs.items():
             setattr(self, k, v)
 
-    def create_worksheet(
-        self,
-    ):
+    def create_worksheet(self):
         """Create worksheet"""
         self.ws = self.workbook.create_sheet(self.sheet_name)
 
@@ -82,7 +78,12 @@ class Worksheet:
 
         self.add_data(self.data, is_data=True)
 
-    def add_data(self, data, is_header=False, is_data=False, merge=False):
+        if hasattr(self, "add_totals") and self.add_totals:
+            self.add_total_row(self.data)
+
+    def add_data(
+        self, data, is_header=False, is_data=False, merge=False, is_total=False
+    ):
         """Adds header data to the sheet"""
         parsed_data = self.parse_data(data, is_header)
 
@@ -99,9 +100,24 @@ class Worksheet:
                         column_index=j,
                         is_header=is_header,
                         is_data=is_data,
+                        is_total=is_total,
                     )
                     cell.value = val
             self.row_dimension += 1
+
+    def add_total_row(self, data):
+        """Add total row to the sheet"""
+        counter = collections.Counter()
+
+        for row in data:
+            counter.update(row)
+
+        total_row = list(counter.values())
+        total_row.pop(0)
+        total_row.insert(0, "Totals")
+
+        self.replace_string(total_row, skip_value="Totals")
+        self.add_data(total_row, is_header=True, is_total=True)
 
     def append_merged_header(self):
         for key, value in self.merged_headers.items():
@@ -132,9 +148,11 @@ class Worksheet:
             if field["fieldname"] == column_name:
                 return idx
 
-    def apply_style(self, row, column, column_index, is_header=False, is_data=False):
+    def apply_style(
+        self, row, column, column_index, is_header=False, is_data=False, is_total=False
+    ):
         """Apply style to cell"""
-        self.get_properties(column_index, is_header, is_data)
+        self.get_properties(column_index, is_header, is_data, is_total)
 
         cell = self.ws.cell(row=row, column=column)
         cell.font = Font(
@@ -157,7 +175,9 @@ class Worksheet:
         self.ws.column_dimensions[get_column_letter(column)].width = self.width
         self.ws.row_dimensions[row].height = self.height
 
-    def get_properties(self, column=None, is_header=False, is_data=False):
+    def get_properties(
+        self, column=None, is_header=False, is_data=False, is_total=False
+    ):
         """Get all properties defined in a header for cell"""
         if not column:
             column = self.column_dimension
@@ -186,6 +206,9 @@ class Worksheet:
             self.vertical_align = "center"
             self.wrap_text = True
             self.height = 30
+            if is_total:
+                self.horizontal_align = self.align_data
+                self.height = 20
         elif is_data:
             self.horizontal_align = self.align_data
             self.bg_color = self.bg_color_data
@@ -207,28 +230,29 @@ class Worksheet:
                     csv_list.append([key, value])
 
         if isinstance(data, list):
-            if is_header:
-                csv_list.append(self.build_csv_header(data))
-            else:
-                csv_list = self.build_csv_array(data)
+            csv_list = self.build_csv_array(data, is_header)
+
         return csv_list
 
-    def build_csv_array(self, data):
+    def build_csv_array(self, data, is_header=False):
         """Builds a csv data array"""
         csv_array = []
-
-        for row in data:
-            csv_array.append(list(row.values()))
-
-        return csv_array
-
-    def build_csv_header(self, row):
-        """Builds a csv row"""
         csv_row = []
 
-        for data in row:
-            csv_row.append(data.get("label"))
-        return csv_row
+        for row in data:
+            if isinstance(row, dict):
+                if is_header:
+                    csv_row.append(row.get("label"))
+                else:
+                    csv_array.append(list(row.values()))
+            else:
+                csv_array.append(data)
+                break
+
+        if len(csv_row) >= 1:
+            csv_array.append(csv_row)
+
+        return csv_array
 
     def get_range(self, start_row, start_column, end_row, end_column):
         start_column_letter = get_column_letter(start_column)
@@ -237,3 +261,13 @@ class Worksheet:
         range = f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
 
         return range
+
+    def replace_string(self, data_list, skip_value=None):
+        """Replace string with empty string in Total Row"""
+
+        for i, data in enumerate(data_list):
+            if isinstance(data, str):
+                if data == skip_value:
+                    continue
+                data_list[i] = ""
+        return data_list

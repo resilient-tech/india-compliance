@@ -1122,6 +1122,7 @@ class BuildExcel:
             headers=self.match_summary_header,
             data=self.match_summary_data,
             file_name=file_name,
+            add_totals=True,
         )
 
         if not self.is_download:
@@ -1132,6 +1133,7 @@ class BuildExcel:
                 headers=self.supplier_header,
                 data=self.supplier_data,
                 file_name=file_name,
+                add_totals=True,
             )
 
         e.make_xlsx(
@@ -1142,6 +1144,7 @@ class BuildExcel:
             headers=self.invoice_header,
             data=self.invoice_data,
             file_name=file_name,
+            add_totals=True,
         )
 
         e.remove_worksheet(wb, "Sheet")
@@ -1294,8 +1297,8 @@ class BuildExcel:
                 "fieldname": "count_action_taken",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "left",
                 "format": "0.00%",
+                "width": 12,
             },
         ]
 
@@ -1349,7 +1352,6 @@ class BuildExcel:
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "width": 12,
-                "align_data": "left",
                 "format": "0.00%",
             },
         ]
