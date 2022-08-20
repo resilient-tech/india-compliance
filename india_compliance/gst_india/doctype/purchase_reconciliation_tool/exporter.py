@@ -1,6 +1,7 @@
 import collections
 
 import openpyxl
+from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
@@ -75,11 +76,14 @@ class Worksheet:
 
         if hasattr(self, "headers"):
             self.add_data(self.headers, is_header=True)
+            self.data_row = self.row_dimension
 
         self.add_data(self.data, is_data=True)
 
         if hasattr(self, "add_totals") and self.add_totals:
             self.add_total_row(self.data)
+
+        self.apply_conditional_formatting()
 
     def add_data(
         self, data, is_header=False, is_data=False, merge=False, is_total=False
@@ -103,6 +107,7 @@ class Worksheet:
                         is_total=is_total,
                     )
                     cell.value = val
+
             self.row_dimension += 1
 
     def add_total_row(self, data):
@@ -142,12 +147,6 @@ class Worksheet:
                 is_header=True,
             )
 
-    def get_column_index(self, column_name):
-        """Get column index from column name"""
-        for (idx, field) in enumerate(self.headers, 1):
-            if field["fieldname"] == column_name:
-                return idx
-
     def apply_style(
         self, row, column, column_index, is_header=False, is_data=False, is_total=False
     ):
@@ -174,6 +173,38 @@ class Worksheet:
             )
         self.ws.column_dimensions[get_column_letter(column)].width = self.width
         self.ws.row_dimensions[row].height = self.height
+
+    def apply_conditional_formatting(self):
+        """Apply conditional formatting to cell"""
+
+        for i, row in enumerate(self.headers, 1):
+            if "formula" not in row:
+                continue
+
+            end_column = (
+                self.get_column_index(row.get("compare_field")) or self.ws.max_column
+            )
+
+            range = self.get_range(
+                start_row=self.data_row,
+                start_column=self.get_column_index(row["fieldname"]),
+                end_row=self.ws.max_row,
+                end_column=end_column - 1,
+            )
+
+            self.ws.conditional_formatting.add(
+                range,
+                FormulaRule(
+                    formula=[self.formula],
+                    stopIfTrue=True,
+                    font=Font(
+                        name=self.font_family,
+                        size=self.font_size,
+                        bold=self.bold,
+                        color="FF0000",
+                    ),
+                ),
+            )
 
     def get_properties(
         self, column=None, is_header=False, is_data=False, is_total=False
@@ -254,13 +285,24 @@ class Worksheet:
 
         return csv_array
 
-    def get_range(self, start_row, start_column, end_row, end_column):
+    def get_range(
+        self, start_row, start_column, end_row, end_column, conditional_format=False
+    ):
         start_column_letter = get_column_letter(start_column)
         end_column_letter = get_column_letter(end_column)
 
         range = f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
 
+        if conditional_format:
+            range = f"${start_column_letter}${start_row}:${end_column_letter}${end_row}"
+
         return range
+
+    def get_column_index(self, column_name):
+        """Get column index from column name"""
+        for (idx, field) in enumerate(self.headers, 1):
+            if field["fieldname"] == column_name:
+                return idx
 
     def replace_string(self, data_list, skip_value=None):
         """Replace string with empty string in Total Row"""

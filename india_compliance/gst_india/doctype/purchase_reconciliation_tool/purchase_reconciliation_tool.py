@@ -1365,6 +1365,7 @@ class BuildExcel:
                 "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
                 "align_data": "left",
+                "formula": "IF(ISBLANK(H6), FALSE, H6<>R6)",
             },
             {
                 "label": "Bill Date",
@@ -1447,6 +1448,8 @@ class BuildExcel:
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
                 "width": 12,
                 "align_data": "left",
+                "compare_field": "bill_no",
+                "formula": "IF(ISBLANK(R6), FALSE, H6<>R6)",
             },
             {
                 "label": "Bill Date",
