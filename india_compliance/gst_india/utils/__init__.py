@@ -121,6 +121,27 @@ def get_party_for_gstin(gstin, party_type="Supplier"):
         return party[0][0]
 
 
+@frappe.whitelist()
+def get_party_contact_details(party, party_type="Supplier"):
+    if not party:
+        return
+
+    filters = [
+        ["Dynamic Link", "link_doctype", "=", party_type],
+        ["Dynamic Link", "link_name", "=", party],
+    ]
+
+    contact = frappe.db.get_value("Contact", filters=filters)
+
+    if not contact:
+        return
+
+    from frappe.contacts.doctype.contact.contact import get_contact_details
+
+    contact_details = get_contact_details(contact)
+    return contact_details
+
+
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
     """
     Validate GSTIN with following checks:
