@@ -58,13 +58,6 @@ CUSTOM_FIELDS_TO_DELETE = {
         },
     ],
 }
-DEFAULT_CATEGORIES = [
-    "In-State",
-    "Out-State",
-    "Reverse Charge In-State",
-    "Reverse Charge Out-State",
-    "Registered Composition",
-]
 
 
 def execute():
@@ -126,12 +119,7 @@ def update_tax_templates():
 
 
 def opt_out_needed():
-    categories = frappe.get_all(DOCTYPE, pluck="name")
-    for category in categories:
-        if category not in DEFAULT_CATEGORIES:
-            return True
-
-    for doctype in ["Customer", "Supplier", "Item Tax"]:
+    for doctype in ["Customer", "Supplier", "Address", "Item Tax"]:
         if frappe.db.get_value(doctype, filters={"tax_category": ["!=", ""]}):
             return True
 

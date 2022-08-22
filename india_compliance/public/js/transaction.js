@@ -189,6 +189,5 @@ function toggle_reverse_charge(frm, enable) {
     )
         return;
 
-    console.log("here", enable);
     frm.set_value("is_reverse_charge", enable);
 }
