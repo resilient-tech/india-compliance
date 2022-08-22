@@ -10,7 +10,9 @@
     </h2>
     <p class="message">
       Almost there! We've sent a verification email to
-      <strong>{{ email }}</strong>
+      <strong>{{ email }}</strong>.
+      <br>
+      Please click the button in that email to confirm your email address.
     </p>
 
     <div class="actions">
