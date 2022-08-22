@@ -981,15 +981,6 @@ class PurchaseReconciliationTool(Document):
 
         return data
 
-    @frappe.whitelist()
-    def export_data_to_xlsx(self, data, download=False):
-        """Exports data to an xlsx file"""
-        build_data = BuildExcel(doc=self, export_data=data, download=download)
-        build_data.export_data()
-        frappe.msgprint(
-            "Get files from your Downloads folder", indicator="green", alert=True
-        )
-
 
 def get_periods(fiscal_year, return_type: ReturnType, reversed=False):
     """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
@@ -1073,6 +1064,16 @@ def get_import_history(
     )
 
 
+@frappe.whitelist()
+def export_data_to_xlsx(data, doc, download=False):
+    """Exports data to an xlsx file"""
+    build_data = BuildExcel(doc=doc, export_data=data, download=download)
+    build_data.export_data()
+    frappe.msgprint(
+        "Get files from your Downloads folder", indicator="green", alert=True
+    )
+
+
 class BuildExcel:
     COLOR_PALLATE = frappe._dict(
         {
@@ -1093,11 +1094,11 @@ class BuildExcel:
         export_data=None,
         download=False,
     ):
-        self.is_download = download
+        self.is_download = frappe.parse_json(download)
         self.prefix = "isup_"
         self.reverse_charge_field = "is_reverse_charge"
-        self.doc = doc
-        self.data = export_data
+        self.doc = frappe.parse_json(doc)
+        self.data = frappe.parse_json(export_data)
         self.prepare_data()
 
     def prepare_data(self):
@@ -1139,7 +1140,7 @@ class BuildExcel:
                 add_totals=True,
             )
 
-        e.make_xlsx(
+        wb = e.make_xlsx(
             workbook=wb,
             sheet_name="Invoice Data",
             filters=self.filters,
@@ -1150,8 +1151,8 @@ class BuildExcel:
             add_totals=True,
         )
 
-        e.remove_worksheet(wb, "Sheet")
-        e.save_workbook(wb, file_name)
+        wb = e.remove_worksheet(wb, "Sheet")
+        e.build_xlsx_response(wb, file_name)
 
     def get_filters(self):
         """Add filters to the sheet"""

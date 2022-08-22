@@ -687,10 +687,17 @@ class PurchaseReconciliationTool {
 
         if (is_download) delete this.data_to_export.supplier_summary;
 
-        this.frm.call("export_data_to_xlsx", {
-            'data': this.data_to_export,
-            'download': is_download
-        });
+        // removed onload data to avoid RequestURI too long error
+        let doc = this.frm.doc;
+        delete doc["__onload"];
+
+        window.open(
+            frappe.urllib.get_full_url(
+                `/api/method/india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx?data=${JSON.stringify(this.data_to_export)}
+                &doc=${JSON.stringify(doc)}
+                &download=${is_download}`
+            )
+        );
     }
 }
 

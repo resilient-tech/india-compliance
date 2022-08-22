@@ -1,5 +1,5 @@
 import collections
-import os
+from io import BytesIO
 
 import openpyxl
 from openpyxl.formatting.rule import FormulaRule
@@ -43,25 +43,34 @@ class ExcelExporter:
         cs = Worksheet(**kwargs)
         cs.create_worksheet()
 
-        self.save_workbook(wb, kwargs.get("file_name"))
         return wb
 
-    def save_workbook(self, wb, file_name):
+    def save_workbook(self, wb, file_name=None):
         """Save workbook"""
-        if file_name[-4:] != ".xlsx":
-            file_name = f"{file_name}.xlsx"
+        if file_name:
+            wb.save(file_name)
+            return wb
 
-        file_path = os.path.join(
-            os.path.expanduser("~"), "Downloads"
-        ) or frappe.get_site_path("private", "files")
-        file = os.path.join(file_path, file_name)
-
-        wb.save(file)
+        xlsx_file = BytesIO()
+        wb.save(xlsx_file)
+        return xlsx_file
 
     def remove_worksheet(self, wb, sheet_name):
         """Remove worksheet"""
         if sheet_name in wb.sheetnames:
             wb.remove(wb[sheet_name])
+        return wb
+
+    def build_xlsx_response(self, wb, file_name):
+        # write out response as a xlsx type
+        if file_name[-4:] != ".xlsx":
+            file_name = f"{file_name}.xlsx"
+
+        xlsx_file = self.save_workbook(wb)
+
+        frappe.local.response["filename"] = file_name
+        frappe.local.response["filecontent"] = xlsx_file.getvalue()
+        frappe.local.response["type"] = "binary"
 
 
 class Worksheet:
