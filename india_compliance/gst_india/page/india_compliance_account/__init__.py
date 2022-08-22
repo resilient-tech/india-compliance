@@ -32,7 +32,12 @@ def set_api_secret(api_secret: str):
         "GST Settings", "GST Settings", api_secret, fieldname="api_secret"
     )
     frappe.db.set_value("GST Settings", None, "api_secret", "*" * random.randint(8, 16))
+    post_login()
+
+
+def post_login():
     _set_auth_session(None)
+    _disable_api_promo()
 
 
 def logout():
@@ -64,3 +69,7 @@ def set_auth_session(session: str = None):
 
 def _set_auth_session(session):
     frappe.db.set_global("ic_auth_session", session)
+
+
+def _disable_api_promo():
+    frappe.db.set_global("ic_api_promo_dismissed", 1)
