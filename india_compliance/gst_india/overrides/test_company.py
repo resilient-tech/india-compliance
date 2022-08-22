@@ -43,4 +43,4 @@ class TestCompanyFixtures(FrappeTestCase):
 
     def test_tax_defaults_setup(self):
         # Check for tax category creations.
-        self.assertTrue(frappe.db.exists("Tax Category", "Reverse Charge In State"))
+        self.assertTrue(frappe.db.exists("Tax Category", "Reverse Charge In-State"))
