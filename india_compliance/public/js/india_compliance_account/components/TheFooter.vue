@@ -7,7 +7,9 @@
     </ul>
     <div class="footer-logo">
       <p>ASP Services by</p>
-      <img src="" alt="footer-logo" />
+      <a href="https://www.resilient.tech" target="_blank">
+        <img src="" alt="footer-logo" />
+      </a>
     </div>
   </footer>
 </template>
