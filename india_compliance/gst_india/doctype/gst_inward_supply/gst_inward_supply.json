@@ -131,6 +131,8 @@
   {
    "fieldname": "classification",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Classification",
    "options": "\nB2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nIMPG\nIMPGSEZ"
   },
@@ -250,7 +252,7 @@
    "default": "No Action",
    "fieldname": "action",
    "fieldtype": "Select",
-   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Action",
    "options": "No Action\nAccept My Values\nAccept Supplier Values\nIgnore\nPending"
   },
@@ -267,6 +269,8 @@
   {
    "fieldname": "match_status",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Match Status",
    "options": "\nExact Match\nSuggested Match\nMismatch\nManual Match\nUnlinked\nAmended"
   },
@@ -331,11 +335,13 @@
   {
    "fieldname": "bill_no",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "label": "Document Number"
   },
   {
    "fieldname": "bill_date",
    "fieldtype": "Date",
+   "in_list_view": 1,
    "label": "Document Date"
   },
   {
@@ -351,7 +357,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-08-01 16:33:07.796634",
+ "modified": "2022-08-20 13:12:37.797876",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
@@ -375,5 +381,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "supplier_name",
  "track_changes": 1
 }

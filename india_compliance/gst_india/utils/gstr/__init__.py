@@ -3,10 +3,16 @@ from enum import Enum
 import frappe
 from frappe import _
 from frappe.query_builder.terms import Criterion
+from frappe.utils import get_datetime
 
-from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
+from india_compliance.gst_india.api_classes.returns import (
+    GSTR2aAPI,
+    GSTR2bAPI,
+    ReturnsAPI,
+)
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
+    toggle_scheduled_jobs,
 )
 from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
 
@@ -46,6 +52,7 @@ GSTR_MODULES = {
 def download_gstr_2a(gstin, return_periods, otp=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
     requests_made = 0
+    queued_message = False
 
     return_type = ReturnType.GSTR2A
     api = GSTR2aAPI(gstin)
@@ -91,6 +98,18 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 )
                 continue
 
+            if response.error_type == "queued":
+                create_import_log(
+                    gstin,
+                    return_type.value,
+                    return_period,
+                    classification=category.value,
+                    request_id=response.requestid,
+                    retry_after_mins=response.retryTimeInMinutes,
+                )
+                queued_message = True
+                continue
+
             if response.error_type:
                 continue
 
@@ -108,10 +127,14 @@ def download_gstr_2a(gstin, return_periods, otp=None):
 
         save_gstr_2a(gstin, return_period, json_data)
 
+    if queued_message:
+        show_queued_message()
+
 
 def download_gstr_2b(gstin, return_periods, otp=None):
     total_expected_requests = len(return_periods)
     requests_made = 0
+    queued_message = False
 
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
@@ -137,12 +160,24 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             )
             continue
 
+        if response.error_type == "queued":
+            create_import_log(
+                gstin,
+                ReturnType.GSTR2B.value,
+                return_period,
+                request_id=response.requestid,
+                retry_after_mins=response.retryTimeInMinutes,
+            )
+            queued_message = True
+            continue
+
         if response.error_type:
             continue
 
         save_gstr_2b(gstin, return_period, response)
 
-    update_import_history(return_periods)
+    if queued_message:
+        show_queued_message()
 
 
 def save_gstr_2a(gstin, return_period, json_data):
@@ -198,13 +233,15 @@ def save_gstr_2b(gstin, return_period, json_data):
         json_data.get("docdata"),
         json_data.get("gendt"),
     )
+    update_import_history(return_period)
 
 
 def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
     frappe.enqueue(
         _save_gstr,
-        queue="short",
+        queue="long",
         now=frappe.flags.in_test,
+        timeout=1800,
         gstin=gstin,
         return_type=return_type,
         return_period=return_period,
@@ -259,4 +296,81 @@ def update_import_history(return_periods):
             )
         )
         .run()
+    )
+
+
+def _download_gstr_2a(gstin, return_period, json_data):
+    json_data.gstin = gstin
+    json_data.fp = return_period
+    save_gstr_2a(gstin, return_period, json_data)
+
+
+GSTR_FUNCTIONS = {
+    ReturnType.GSTR2A.value: _download_gstr_2a,
+    ReturnType.GSTR2B.value: save_gstr_2b,
+}
+
+
+def download_queued_request():
+    queued_requests = frappe.get_all(
+        "GSTR Import Log",
+        filters={"request_id": ["is", "set"]},
+        fields=[
+            "name",
+            "gstin",
+            "return_type",
+            "classification",
+            "return_period",
+            "request_id",
+            "request_time",
+        ],
+    )
+
+    if not queued_requests:
+        return toggle_scheduled_jobs(stopped=True)
+
+    for doc in queued_requests:
+        if get_datetime(doc.request_time) > get_datetime():
+            continue
+
+        frappe.enqueue(_download_queued_request, queue="short", doc=doc)
+
+
+def _download_queued_request(doc):
+    try:
+        api = ReturnsAPI(doc.gstin)
+        response = api.get_return_status(
+            doc.return_period,
+            doc.request_id,
+        )
+    except Exception:
+        return frappe.db.delete("GSTR Import Log", {"name": doc.name})
+
+    if response.error_type == "otp_requested":
+        return toggle_scheduled_jobs(stopped=True)
+
+    if response.error_type == "no_docs_found":
+        return create_import_log(
+            doc.gstin,
+            doc.return_type,
+            doc.return_period,
+            doc.classification,
+            data_not_found=True,
+        )
+
+    if response.error_type == "queued":
+        return
+
+    if response.error_type:
+        return frappe.db.delete("GSTR Import Log", {"name": doc.name})
+
+    GSTR_FUNCTIONS[doc.return_type](doc.gstin, doc.return_period, response)
+
+
+def show_queued_message():
+    frappe.msgprint(
+        _(
+            "Some returns are queued for download at GSTN as there may be over"
+            " 10000 records. Please check the imports after about 35 minutes."
+        )
     )

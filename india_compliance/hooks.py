@@ -14,6 +14,14 @@ after_install = "india_compliance.install.after_install"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
 
+scheduler_events = {
+    "cron": {
+        "*/5 * * * *": [
+            "india_compliance.gst_india.utils.gstr.download_queued_request"
+        ],
+    }
+}
+
 app_include_js = "gst_india.bundle.js"
 
 doctype_js = {

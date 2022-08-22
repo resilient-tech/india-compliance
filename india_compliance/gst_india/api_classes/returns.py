@@ -13,6 +13,7 @@ class ReturnsAPI(BaseAPI):
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
         "RET2B1018": "requested_before_cutoff_date",
+        "RETINPROGRESS": "queued",
     }
 
     def setup(self, company_gstin):
@@ -26,25 +27,33 @@ class ReturnsAPI(BaseAPI):
                 "username": self.username,
             }
         )
+        self.base_path = "returns"
 
     def handle_failed_response(self, response_json):
         if response_json.get("errorCode") in self.IGNORED_ERROR_CODES:
             return True
 
-    def get(self, action, return_period, otp=None, params=None):
+    def get(self, action, return_period, otp=None, params=None, requestid=None):
+        self.requestid = requestid or self.generate_request_id()
         response = super().get(
             params={"action": action, "gstin": self.company_gstin, **(params or {})},
             headers={
-                "requestid": self.generate_request_id(),
+                "requestid": self.requestid,
                 "ret_period": return_period,
                 "otp": otp,
             },
         )
 
+        response.requestid = self.requestid
         if error_type := self.IGNORED_ERROR_CODES.get(response.errorCode):
             response.error_type = error_type
 
         return response
+
+    def get_return_status(self, return_period, requestid, otp=None):
+        return self.get(
+            "RETSTATUS", return_period, otp, {"ret_period": return_period}, requestid
+        )
 
 
 class GSTR2bAPI(ReturnsAPI):

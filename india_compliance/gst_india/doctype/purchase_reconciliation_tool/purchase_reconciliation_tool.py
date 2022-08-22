@@ -586,6 +586,8 @@ class PurchaseReconciliationTool(Document):
                     status = "🟢 &nbsp; Downloaded"
                     if download.data_not_found:
                         status = "🔵 &nbsp; Data Not Found"
+                    if download.request_id:
+                        status = "🔵 &nbsp; Queued"
 
                 if not for_download:
                     status = status.replace("Downloaded", "Uploaded")
@@ -1050,6 +1052,7 @@ def get_import_history(
             "classification",
             "data_not_found",
             "last_updated_on",
+            "request_id",
         )
 
     return frappe.db.get_all(
