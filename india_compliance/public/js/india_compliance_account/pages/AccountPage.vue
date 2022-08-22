@@ -33,7 +33,7 @@
             <!-- <a href="#"><li>Check API Status</li></a> -->
             <a href="https://discuss.erpnext.com/c/erpnext/india-compliance/65"><li>Community Forum</li></a>
             <a href="https://github.com/resilient-tech/india-compliance/issues/new"><li>Report a Bug</li></a>
-            <a href="mailto:api-support@indiacompliance.app"><li>Get API Support</li></a>
+            <a href="mailto:api-support@indiacompliance.app"><li>API Support</li></a>
             <a @click.prevent="logout"><li>Logout</li></a>
           </ul>
         </div>
