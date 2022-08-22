@@ -986,6 +986,9 @@ class PurchaseReconciliationTool(Document):
         """Exports data to an xlsx file"""
         build_data = BuildExcel(doc=self, export_data=data, download=download)
         build_data.export_data()
+        frappe.msgprint(
+            "Get files from your Downloads folder", indicator="green", alert=True
+        )
 
 
 def get_periods(fiscal_year, return_type: ReturnType, reversed=False):

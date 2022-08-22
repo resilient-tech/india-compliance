@@ -1,9 +1,12 @@
 import collections
+import os
 
 import openpyxl
 from openpyxl.formatting.rule import FormulaRule
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+
+import frappe
 
 
 class ExcelExporter:
@@ -48,7 +51,12 @@ class ExcelExporter:
         if file_name[-4:] != ".xlsx":
             file_name = f"{file_name}.xlsx"
 
-        wb.save(file_name)
+        file_path = os.path.join(
+            os.path.expanduser("~"), "Downloads"
+        ) or frappe.get_site_path("private", "files")
+        file = os.path.join(file_path, file_name)
+
+        wb.save(file)
 
     def remove_worksheet(self, wb, sheet_name):
         """Remove worksheet"""
