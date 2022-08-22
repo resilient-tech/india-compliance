@@ -11,7 +11,7 @@
     <p class="message">
       Almost there! We've sent a verification email to
       <strong>{{ email }}</strong>.
-      <br>
+      <br />
       Please click the button in that email to confirm your email address.
     </p>
 
