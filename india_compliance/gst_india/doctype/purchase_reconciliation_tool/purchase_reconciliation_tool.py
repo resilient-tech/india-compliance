@@ -1069,9 +1069,6 @@ def export_data_to_xlsx(data, doc, download=False):
     """Exports data to an xlsx file"""
     build_data = BuildExcel(doc=doc, export_data=data, download=download)
     build_data.export_data()
-    frappe.msgprint(
-        "Get files from your Downloads folder", indicator="green", alert=True
-    )
 
 
 class BuildExcel:
