@@ -40,7 +40,9 @@ function setup_e_waybill_actions(doctype) {
 
                 if (has_e_waybill_threshold_met(frm) && !frm.doc.is_return) {
                     frm.dashboard.add_comment(
-                        __("e-Waybill is applicable for this invoice, but not yet generated or updated."),
+                        __(
+                            "e-Waybill is applicable for this invoice, but not yet generated or updated."
+                        ),
                         "yellow",
                         true
                     );
@@ -590,9 +592,9 @@ function is_e_waybill_applicable(frm) {
     // means company is Indian and not Unregistered
     if (!frm.doc.company_gstin) return;
 
-    // atleast one item is not a service
+    // at least one item is not a service
     for (let item of frm.doc.items) {
-        if (!item.gst_hsn_code.startsWith("99")) return true;
+        if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99")) return true;
     }
 }
 
@@ -705,7 +707,5 @@ function get_e_waybill_file_name(docname) {
 }
 
 function set_primary_action_label(dialog, primary_action_label) {
-    dialog.get_primary_btn()
-      .removeClass("hide")
-      .html(primary_action_label);
+    dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
 }
