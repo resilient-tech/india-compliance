@@ -691,13 +691,17 @@ class PurchaseReconciliationTool {
         let doc = this.frm.doc;
         delete doc["__onload"];
 
-        window.open(
-            frappe.urllib.get_full_url(
-                `/api/method/india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx?data=${JSON.stringify(this.data_to_export)}
-                &doc=${JSON.stringify(doc)}
-                &download=${is_download}`
-            )
-        );
+        let get_url = "/api/method/india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx";
+
+        var export_params = () => {
+            return {
+                data: JSON.stringify(this.data_to_export),
+                doc: JSON.stringify(doc),
+                download: is_download
+            }
+        }
+        open_url_post(get_url, export_params());
+
     }
 }
 
