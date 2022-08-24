@@ -1,0 +1,124 @@
+.page-container[data-page-route="india-compliance-account"] {
+    min-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+
+    --bg-red: var(--red-100);
+
+    .text-highlight {
+        color: var(--primary-color) !important;
+    }
+
+    /* Page styles */
+
+    .ic-account-page .form-message {
+        margin: 0em 4em;
+    }
+
+    .ic-account-page .main-content {
+        width: 100%;
+        margin-top: 2em;
+        display: flex;
+        padding: 0 4em;
+        column-gap: 4em;
+        row-gap: 2em;
+        justify-content: stretch;
+    }
+
+    .ic-account-page .main-content .card {
+        justify-content: space-between;
+        padding: 2em 3.5em;
+        flex: 1;
+        border-radius: var(--border-radius-md);
+        box-shadow: var(--card-shadow);
+        background-color: var(--card-bg);
+        border: 0px solid black;
+    }
+
+    .ic-account-page .main-content .card .title {
+        font-size: 1.7em;
+        font-weight: 600;
+    }
+
+    @media screen and (max-width: 1200px) {
+        .ic-account-page {
+            font-size: 0.9em;
+        }
+
+        .ic-account-page .main-content .card {
+            padding-left: 2.5em;
+            padding-right: 2.5em;
+        }
+    }
+
+    @media (max-width: 992px) {
+        .ic-account-page {
+            font-size: 0.8em;
+        }
+
+        .ic-account-page .form-message {
+            margin: 0em 1.5em;
+        }
+
+        .ic-account-page .main-content {
+            column-gap: 3em;
+            padding: 0 1.5em;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .ic-account-page {
+            font-size: 1em;
+        }
+
+        .main-content {
+            flex-direction: column;
+            row-gap: 3em;
+        }
+
+        .ic-account-page .title {
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .ic-account-page {
+            font-size: 0.9em;
+        }
+    }
+
+    @media (max-width: 400px) {
+        .ic-account-page {
+            font-size: 0.8em;
+        }
+    }
+
+    // Vue Transitions
+
+    /* Fade */
+    .fade-enter-active,
+    .fade-leave-active {
+        transition: opacity 0.3s;
+    }
+    .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+        opacity: 0;
+    }
+
+    /* Slide */
+    .slide-leave-active,
+    .slide-enter-active {
+        overflow: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .slide-enter-to,
+    .slide-leave {
+        max-height: 100px;
+    }
+
+    .slide-enter,
+    .slide-leave-to {
+        max-height: 0;
+        margin: 0;
+    }
+}

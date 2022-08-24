@@ -429,6 +429,11 @@ def get_titlecase_version(word, all_caps=False, **kwargs):
     if not all_caps:
         word = word.upper()
 
+    elif word.endswith("IDC"):
+        # GIDC, MIDC, etc.
+        # case maintained if word is already in all caps
+        return word
+
     if word in ABBREVIATIONS:
         return word
 

@@ -116,6 +116,8 @@ DISTANCE_REGEX = re.compile(r"\d+")
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
 
+BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
+
 ORIGINAL_VS_AMENDED = (
     {
         "original": "B2B",
