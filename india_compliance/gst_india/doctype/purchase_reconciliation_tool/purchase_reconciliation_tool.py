@@ -1244,7 +1244,7 @@ class BuildExcel:
         file_name = f"{supplier_name}_{supplier_gstin}"
 
         if not self.is_download:
-            file_name = f"{supplier_gstin}_{self.period}_report"
+            file_name = f"{self.doc.company_gstin}_{self.period}_report"
         file_name.replace(" ", "_")
 
         return file_name
