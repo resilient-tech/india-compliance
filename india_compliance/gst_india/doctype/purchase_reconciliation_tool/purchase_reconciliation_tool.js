@@ -378,6 +378,11 @@ class PurchaseReconciliationTool {
             me.apply_data_export(selected_row);
         });
 
+        this.tabs.supplier_tab.$datatable.on("click", ".btn.envelope", function (e) {
+            const data = me.supplier_data[$(this).attr("data-name")];
+            me.dm = new EmailDialog(me.frm, data);
+        });
+
         // TODO: add filters on click
         this.tabs.summary_tab.$datatable.on(
             "click",
@@ -1223,6 +1228,64 @@ class ImportDialog {
     }
 }
 
+class EmailDialog {
+    constructor(frm, data) {
+        this.frm = frm;
+        this.data = data;
+        this.prepare_data();
+    }
+
+    prepare_data() {
+        this.subject = `Reconciliation for ${this.data.supplier_name}-${this.data.supplier_gstin}`;
+        this.message = this.get_email_message();
+        this.get_recipients().then((recipients) => {
+            this.recipients = recipients;
+        }).then(() => {
+            this.show_email_dialog();
+        });
+    }
+
+    show_email_dialog() {
+        new frappe.views.CommunicationComposer({
+            doc: this.frm.doc,
+            frm: this.frm,
+            subject: this.subject,
+            recipients: this.recipients || [],
+            attach_document_print: false,
+            message: this.message,
+        });
+    }
+
+    get_email_message() {
+        const from_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_from_date);
+        const to_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_to_date);
+
+
+        let message = "";
+        message += `
+            Hello,<br><br>We have made purchase reconciliation for the period ${from_date} to ${to_date} for purchases made by ${this.frm.doc.company} from you.<br><br>
+            Attached is the sheet for your reference.<br><br>
+        `
+        return message;
+    }
+
+    async get_recipients() {
+        let contact_email;
+
+        await frappe.call({
+            method: "india_compliance.gst_india.utils.get_party_contact_details",
+            args: {
+                'party': this.data.supplier_name,
+            },
+            callback: (r) => {
+                contact_email = r.message['contact_email'];
+            }
+        });
+
+        return contact_email;
+    }
+}
+
 async function set_default_financial_year(frm) {
     const { message: date_range } = await frm.call("get_date_range", {
         period:
@@ -1264,7 +1327,6 @@ function get_icon(value, column, data, icon) {
 function get_hash(data) {
     if (data.name || data.isup_name) return data.name + "~" + data.isup_name;
     if (data.supplier_gstin) return data.supplier_gstin;
-
 }
 
 function patch_set_active_tab(frm) {
