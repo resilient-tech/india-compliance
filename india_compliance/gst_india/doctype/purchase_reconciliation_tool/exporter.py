@@ -26,7 +26,7 @@ class ExcelExporter:
         :param data: A list of dictionary to append data to sheet
         """
 
-        Worksheet(workbook=self.wb, **kwargs).create()
+        Worksheet().create(workbook=self.wb, **kwargs)
 
     def save_workbook(self, file_name=None):
         """Save workbook"""
@@ -56,34 +56,31 @@ class ExcelExporter:
 
 
 class Worksheet:
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.row_dimension = 1
         self.column_dimension = 1
 
-        for (k, v) in kwargs.items():
-            setattr(self, k, v)
-
-        if not hasattr(self, "add_totals"):
-            self.add_totals = True
-
-    def create(self):
+    def create(
+        self,
+        workbook,
+        sheet_name,
+        headers,
+        data,
+        filters=None,
+        merged_headers=None,
+        add_totals=True,
+    ):
         """Create worksheet"""
-        self.ws = self.workbook.create_sheet(self.sheet_name)
+        self.headers = headers
 
-        if hasattr(self, "filters"):
-            self.add_data(self.filters)
+        self.ws = workbook.create_sheet(sheet_name)
+        self.add_data(filters)
+        self.add_data(merged_headers, merge=True)
+        self.add_data(headers, is_header=True)
+        self.add_data(data, is_data=True)
 
-        if hasattr(self, "merged_headers"):
-            self.add_data(self.merged_headers, merge=True)
-
-        if hasattr(self, "headers"):
-            self.add_data(self.headers, is_header=True)
-            self.data_row = self.row_dimension
-
-        self.add_data(self.data, is_data=True)
-
-        if self.add_totals:
-            self.add_total_row(self.data)
+        if add_totals:
+            self.add_total_row(data)
 
         self.apply_conditional_formatting()
 
@@ -91,6 +88,12 @@ class Worksheet:
         self, data, is_header=False, is_data=False, merge=False, is_total=False
     ):
         """Adds header data to the sheet"""
+        if not data:
+            return
+
+        if is_data:
+            self.data_row = self.row_dimension
+
         parsed_data = self.parse_data(data, is_header)
 
         for i, row in enumerate(parsed_data, 1):
@@ -98,7 +101,7 @@ class Worksheet:
                 cell = self.ws.cell(row=self.row_dimension, column=j + 1)
 
                 if merge:
-                    self.append_merged_header()
+                    self.append_merged_header(data)
                 else:
                     self.apply_style(
                         self.row_dimension,
@@ -126,8 +129,8 @@ class Worksheet:
         self.replace_string(total_row, skip_value="Totals")
         self.add_data(total_row, is_header=True, is_total=True)
 
-    def append_merged_header(self):
-        for key, value in self.merged_headers.items():
+    def append_merged_header(self, merged_headers):
+        for key, value in merged_headers.items():
             start_column = self.get_column_index(value[0])
             end_column = self.get_column_index(value[1])
 
@@ -287,18 +290,14 @@ class Worksheet:
 
         return csv_array
 
-    def get_range(
-        self, start_row, start_column, end_row, end_column, conditional_format=False
-    ):
+    def get_range(self, start_row, start_column, end_row, end_column, freeze=False):
         start_column_letter = get_column_letter(start_column)
         end_column_letter = get_column_letter(end_column)
 
-        range = f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
+        if freeze:
+            return f"${start_column_letter}${start_row}:${end_column_letter}${end_row}"
 
-        if conditional_format:
-            range = f"${start_column_letter}${start_row}:${end_column_letter}${end_row}"
-
-        return range
+        return f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
 
     def get_column_index(self, column_name):
         """Get column index from column name"""
@@ -311,7 +310,7 @@ class Worksheet:
 
         for i, data in enumerate(data_list):
             if isinstance(data, str):
-                if data == skip_value:
-                    continue
-                data_list[i] = ""
+                if data != skip_value:
+                    data_list[i] = ""
+
         return data_list
