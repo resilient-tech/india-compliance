@@ -1,4 +1,3 @@
-import collections
 from io import BytesIO
 
 import openpyxl
@@ -117,16 +116,17 @@ class Worksheet:
 
     def add_total_row(self, data):
         """Add total row to the sheet"""
-        counter = collections.Counter()
+        total_row = []
 
-        for row in data:
-            counter.update(row)
+        for idx, property in enumerate(self.headers, 1):
+            if idx == 1:
+                total_row.append("Totals")
+            elif property.get("fieldtype") in ("Float", "Int"):
+                range = self.get_range(self.data_row, idx, self.ws.max_row, idx)
+                total_row.append(f"=SUM({range})")
+            else:
+                total_row.append("")
 
-        total_row = list(counter.values())
-        total_row.pop(0)
-        total_row.insert(0, "Totals")
-
-        self.replace_string(total_row, skip_value="Totals")
         self.add_data(total_row, is_header=True, is_total=True)
 
     def append_merged_header(self, merged_headers):
@@ -215,8 +215,6 @@ class Worksheet:
         self, column=None, is_header=False, is_data=False, is_total=False
     ):
         """Get all properties defined in a header for cell"""
-        if not column:
-            column = self.column_dimension
 
         properties = self.headers[column]
 
@@ -260,12 +258,15 @@ class Worksheet:
         if isinstance(data, dict):
             for key, value in data.items():
                 if isinstance(value, list):
+                    # To get keys from Merged headers having keys and list of columns to merge
                     csv_list.append(list(data.keys()))
                     return csv_list
                 else:
+                    # To get filters value key as Label and it's value
                     csv_list.append([key, value])
 
         if isinstance(data, list):
+            # For Headers and Data
             csv_list = self.build_csv_array(data, is_header)
 
         return csv_list
@@ -278,13 +279,17 @@ class Worksheet:
         for row in data:
             if isinstance(row, dict):
                 if is_header:
+                    # Fetch label from list of dict from headers
                     csv_row.append(row.get("label"))
                 else:
+                    # Fetch only values from list of dictionary
                     csv_array.append(list(row.values()))
             else:
+                # If it's a single list with element only
                 csv_array.append(data)
                 break
 
+        # Only append to csv_array if csv_row has multiple values
         if len(csv_row) >= 1:
             csv_array.append(csv_row)
 
@@ -304,13 +309,3 @@ class Worksheet:
         for (idx, field) in enumerate(self.headers, 1):
             if field["fieldname"] == column_name:
                 return idx
-
-    def replace_string(self, data_list, skip_value=None):
-        """Replace string with empty string in Total Row"""
-
-        for i, data in enumerate(data_list):
-            if isinstance(data, str):
-                if data != skip_value:
-                    data_list[i] = ""
-
-        return data_list

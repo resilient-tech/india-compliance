@@ -1260,6 +1260,7 @@ class BuildExcel:
             {
                 "label": "Count \n 2A/2B Docs",
                 "fieldname": "count_isup_docs",
+                "fieldtype": "Int",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
@@ -1267,6 +1268,7 @@ class BuildExcel:
             {
                 "label": "Count \n Purchase Docs",
                 "fieldname": "count_pur_docs",
+                "fieldtype": "Int",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
@@ -1274,6 +1276,7 @@ class BuildExcel:
             {
                 "label": "Taxable Amount Diff \n 2A/2B - Purchase",
                 "fieldname": "taxable_value_diff",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "format": "0.00",
@@ -1281,6 +1284,7 @@ class BuildExcel:
             {
                 "label": "Tax Difference \n 2A/2B - Purchase",
                 "fieldname": "tax_diff",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "format": "0.00",
@@ -1314,6 +1318,7 @@ class BuildExcel:
             {
                 "label": "Count \n 2A/2B Docs",
                 "fieldname": "count_isup_docs",
+                "fieldtype": "Int",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
@@ -1321,6 +1326,7 @@ class BuildExcel:
             {
                 "label": "Count \n Purchase Docs",
                 "fieldname": "count_pur_docs",
+                "fieldtype": "Int",
                 "bg_color": self.COLOR_PALLATE.dark_gray,
                 "bg_color_data": self.COLOR_PALLATE.light_gray,
                 "format": "#,##0",
@@ -1328,6 +1334,7 @@ class BuildExcel:
             {
                 "label": "Taxable Amount Diff \n 2A/2B - Purchase",
                 "fieldname": "taxable_value_diff",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "format": "0.00",
@@ -1335,6 +1342,7 @@ class BuildExcel:
             {
                 "label": "Tax Difference \n 2A/2B - Purchase",
                 "fieldname": "tax_diff",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "format": "0.00",
@@ -1395,6 +1403,7 @@ class BuildExcel:
             {
                 "label": "Taxable Value",
                 "fieldname": "taxable_value",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.green,
                 "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
@@ -1403,6 +1412,7 @@ class BuildExcel:
             {
                 "label": "CGST",
                 "fieldname": "cgst",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.green,
                 "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
@@ -1411,6 +1421,7 @@ class BuildExcel:
             {
                 "label": "SGST",
                 "fieldname": "sgst",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.green,
                 "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
@@ -1419,6 +1430,7 @@ class BuildExcel:
             {
                 "label": "IGST",
                 "fieldname": "igst",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.green,
                 "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
@@ -1427,6 +1439,7 @@ class BuildExcel:
             {
                 "label": "CESS",
                 "fieldname": "cess",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.green,
                 "bg_color_data": self.COLOR_PALLATE.light_green,
                 "width": 12,
@@ -1479,6 +1492,7 @@ class BuildExcel:
             {
                 "label": "Taxable Value",
                 "fieldname": "isup_taxable_value",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
                 "width": 12,
@@ -1487,6 +1501,7 @@ class BuildExcel:
             {
                 "label": "CGST",
                 "fieldname": "isup_cgst",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
                 "width": 12,
@@ -1495,6 +1510,7 @@ class BuildExcel:
             {
                 "label": "SGST",
                 "fieldname": "isup_sgst",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
                 "width": 12,
@@ -1503,6 +1519,7 @@ class BuildExcel:
             {
                 "label": "IGST",
                 "fieldname": "isup_igst",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
                 "width": 12,
@@ -1511,6 +1528,7 @@ class BuildExcel:
             {
                 "label": "CESS",
                 "fieldname": "isup_cess",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.sky_blue,
                 "bg_color_data": self.COLOR_PALLATE.light_blue,
                 "width": 12,
@@ -1558,6 +1576,7 @@ class BuildExcel:
             {
                 "label": "Taxable Value Difference",
                 "fieldname": "taxable_value_diff",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "width": 12,
@@ -1566,6 +1585,7 @@ class BuildExcel:
             {
                 "label": "Tax Difference",
                 "fieldname": "tax_diff",
+                "fieldtype": "Float",
                 "bg_color": self.COLOR_PALLATE.dark_pink,
                 "bg_color_data": self.COLOR_PALLATE.light_pink,
                 "width": 12,
