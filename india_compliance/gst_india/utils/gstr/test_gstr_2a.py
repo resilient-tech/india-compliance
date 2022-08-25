@@ -174,7 +174,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.CDNR)
         self.assertDocumentEqual(
             {
-                "bill_date": date(2018, 9, 23),
+                "bill_date": date(2016, 9, 23),
                 "bill_no": "533515",
                 "doc_type": "Credit Note",
                 "supplier_gstin": "01AAAAP1208Q1ZS",
@@ -214,7 +214,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         self.assertImportLog(GSTRCategory.CDNRA)
         self.assertDocumentEqual(
             {
-                "bill_date": date(2018, 9, 23),
+                "bill_date": date(2016, 9, 23),
                 "bill_no": "533515",
                 "doc_type": "Credit Note",
                 "supplier_gstin": "01AAAAP1208Q1ZS",

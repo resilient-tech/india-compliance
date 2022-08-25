@@ -19,6 +19,7 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES, ORIGINAL_VS_AMEN
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_json_from_file,
+    get_party_for_gstin,
 )
 from india_compliance.gst_india.utils.gstr import (
     GSTRCategory,
@@ -84,6 +85,7 @@ class PurchaseReconciliationTool(Document):
         # set inward_supply_from_date to first day of the month
         date = getdate(self.inward_supply_from_date)
         self.inward_supply_from_date = _get_first_day(date.month, date.year)
+        self.gstin_party_map = frappe._dict()
 
     def on_update(self):
         # reconcile purchases and inward supplies
@@ -627,9 +629,6 @@ class PurchaseReconciliationTool(Document):
         except Exception:
             pass
 
-    # filters
-    # get 2 data sets
-    # rules to match data with preference
     @frappe.whitelist()
     def get_date_range(self, period):
         today = getdate()
@@ -788,6 +787,9 @@ class PurchaseReconciliationTool(Document):
                 for field in fields_to_update:
                     doc[field] = doc.get(f"isup_{field}", "")
 
+                if not doc.supplier_name:
+                    doc.supplier_name = self.guess_supplier_name(doc.supplier_gstin)
+
                 _update_doc(doc, differences)
                 continue
 
@@ -830,6 +832,14 @@ class PurchaseReconciliationTool(Document):
         if doc.is_return and classification == "B2B":
             classification = "CDNR"
         return classification
+
+    def guess_supplier_name(self, gstin):
+        if party := self.gstin_party_map.get(gstin):
+            return party
+
+        return self.gstin_party_map.setdefault(
+            gstin, get_party_for_gstin(gstin) or "Unknown"
+        )
 
     @frappe.whitelist()
     def link_documents(self, pur_name, isup_name):

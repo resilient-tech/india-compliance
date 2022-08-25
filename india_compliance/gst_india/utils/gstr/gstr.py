@@ -38,7 +38,8 @@ class GSTR:
         }
     )
 
-    def __init__(self, gstin, return_period, data, gen_date_2b):
+    def __init__(self, company, gstin, return_period, data, gen_date_2b):
+        self.company = company
         self.gstin = gstin
         self.return_period = return_period
         self._data = data
@@ -89,6 +90,7 @@ class GSTR:
 
     def get_transaction(self, category, supplier, invoice):
         return frappe._dict(
+            company=self.company,
             company_gstin=self.gstin,
             # TODO: change classification to gstr_category
             classification=category.value,

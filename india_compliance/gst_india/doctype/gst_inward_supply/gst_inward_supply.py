@@ -80,6 +80,7 @@ def update_docs_for_amendment(doc):
         # handle future amendments
         if (
             original.match_status == "Amended"
+            and original.link_name
             and original.link_name != doc.name
             and doc.is_new()
         ):
@@ -179,8 +180,8 @@ def ensure_valid_match(doc, original):
         {
             "match_status": "Amended",
             "action": "No Action",
-            "link_doctype": "",
-            "link_name": "",
+            "link_doctype": None,
+            "link_name": None,
         }
     )
 
