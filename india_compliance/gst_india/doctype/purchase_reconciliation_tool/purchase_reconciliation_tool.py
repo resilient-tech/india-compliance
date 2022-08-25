@@ -1115,41 +1115,33 @@ class BuildExcel:
 
         file_name = self.get_file_name()
 
-        e = ExcelExporter()
+        excel = ExcelExporter()
 
-        wb = e.make_xlsx(
+        excel.create_sheet(
             sheet_name="Match Summary Data",
             filters=self.filters,
             headers=self.match_summary_header,
             data=self.match_summary_data,
-            file_name=file_name,
-            add_totals=True,
         )
 
         if not self.is_download:
-            wb = e.make_xlsx(
-                workbook=wb,
+            excel.create_sheet(
                 sheet_name="Supplier Data",
                 filters=self.filters,
                 headers=self.supplier_header,
                 data=self.supplier_data,
-                file_name=file_name,
-                add_totals=True,
             )
 
-        wb = e.make_xlsx(
-            workbook=wb,
+        excel.create_sheet(
             sheet_name="Invoice Data",
             filters=self.filters,
             merged_headers=self.merged_headers,
             headers=self.invoice_header,
             data=self.invoice_data,
-            file_name=file_name,
-            add_totals=True,
         )
 
-        wb = e.remove_worksheet(wb, "Sheet")
-        e.build_xlsx_response(wb, file_name)
+        excel.remove_sheet("Sheet")
+        excel.export(file_name)
 
     def get_filters(self):
         """Add filters to the sheet"""

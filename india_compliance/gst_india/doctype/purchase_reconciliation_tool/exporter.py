@@ -11,18 +11,11 @@ import frappe
 
 class ExcelExporter:
     def __init__(self):
-        pass
+        self.wb = openpyxl.Workbook()
 
-    def get_workbook(self, workbook=None):
-        if not workbook:
-            workbook = openpyxl.Workbook()
-
-        return workbook
-
-    def make_xlsx(self, *args, **kwargs):
+    def create_sheet(self, **kwargs):
         """
-        Make xlsx file
-        :param workbook - Object of excel file/ workbook
+        create worksheet
         :param sheet_name - name for the worksheet
         :param filters - A data dictionary to added in sheet
         :param merged_headers - A dict of List
@@ -31,42 +24,31 @@ class ExcelExporter:
             }
         :param headers: A List of dictionary (cell properties will be optional)
         :param data: A list of dictionary to append data to sheet
-        :param file_name: Name of excel file/workbook
         """
-        # Create workbook if not passed or return existing workbook
-        wb = self.get_workbook(kwargs.get("workbook"))
 
-        if "workbook" not in kwargs:
-            kwargs["workbook"] = wb
+        Worksheet(workbook=self.wb, **kwargs).create()
 
-        # ToDo: Create a new sheet
-        cs = Worksheet(**kwargs)
-        cs.create_worksheet()
-
-        return wb
-
-    def save_workbook(self, wb, file_name=None):
+    def save_workbook(self, file_name=None):
         """Save workbook"""
         if file_name:
-            wb.save(file_name)
-            return wb
+            self.wb.save(file_name)
+            return self.wb
 
         xlsx_file = BytesIO()
-        wb.save(xlsx_file)
+        self.wb.save(xlsx_file)
         return xlsx_file
 
-    def remove_worksheet(self, wb, sheet_name):
+    def remove_sheet(self, sheet_name):
         """Remove worksheet"""
-        if sheet_name in wb.sheetnames:
-            wb.remove(wb[sheet_name])
-        return wb
+        if sheet_name in self.wb.sheetnames:
+            self.wb.remove(self.wb[sheet_name])
 
-    def build_xlsx_response(self, wb, file_name):
+    def export(self, file_name):
         # write out response as a xlsx type
         if file_name[-4:] != ".xlsx":
             file_name = f"{file_name}.xlsx"
 
-        xlsx_file = self.save_workbook(wb)
+        xlsx_file = self.save_workbook()
 
         frappe.local.response["filename"] = file_name
         frappe.local.response["filecontent"] = xlsx_file.getvalue()
@@ -81,7 +63,10 @@ class Worksheet:
         for (k, v) in kwargs.items():
             setattr(self, k, v)
 
-    def create_worksheet(self):
+        if not hasattr(self, "add_totals"):
+            self.add_totals = True
+
+    def create(self):
         """Create worksheet"""
         self.ws = self.workbook.create_sheet(self.sheet_name)
 
@@ -97,7 +82,7 @@ class Worksheet:
 
         self.add_data(self.data, is_data=True)
 
-        if hasattr(self, "add_totals") and self.add_totals:
+        if self.add_totals:
             self.add_total_row(self.data)
 
         self.apply_conditional_formatting()
