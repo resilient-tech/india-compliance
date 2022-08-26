@@ -21,7 +21,18 @@ def create_transaction(**data):
     if not transaction.company:
         transaction.company = "_Test Indian Registered Company"
 
-    if not transaction.posting_date:
+    # Update mandatory transaction dates
+    if transaction.doctype in ["Purchase Order", "Quotation", "Sales Order"]:
+        if not transaction.transaction_date:
+            transaction.transaction_date = getdate()
+
+        if transaction.doctype == "Sales Order":
+            transaction.delivery_date = getdate()
+
+        if transaction.doctype == "Purchase Order":
+            transaction.schedule_date = getdate()
+
+    elif not transaction.posting_date:
         transaction.posting_date = getdate()
 
     if transaction.doctype in SALES_DOCTYPES:
@@ -37,6 +48,14 @@ def create_transaction(**data):
             and not transaction.eligibility_for_itc
         ):
             transaction.eligibility_for_itc = "All Other ITC"
+
+    if transaction.doctype == "POS Invoice":
+        transaction.append(
+            "payments",
+            {
+                "mode_of_payment": "Cash",
+            },
+        )
 
     company_abbr = frappe.get_cached_value("Company", data.company, "abbr") or "_TIRC"
     append_item(transaction, data, company_abbr)
@@ -78,11 +97,20 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
             "is_non_gst": data.is_non_gst,
             "item_tax_template": data.item_tax_template,
             "gst_hsn_code": data.gst_hsn_code,
+            "warehouse": f"Stores - {company_abbr}",
+            "expense_account": f"Cost of Goods Sold - {company_abbr}",
         },
     )
 
 
-def _append_taxes(transaction, accounts, company_abbr="_TIRC", rate=9):
+def _append_taxes(
+    transaction,
+    accounts,
+    company_abbr="_TIRC",
+    rate=9,
+    charge_type="On Net Total",
+    row_id=None,
+):
     if isinstance(accounts, str):
         accounts = [accounts]
 
@@ -93,7 +121,8 @@ def _append_taxes(transaction, accounts, company_abbr="_TIRC", rate=9):
 
     for account in accounts:
         tax = {
-            "charge_type": "On Net Total",
+            "charge_type": charge_type,
+            "row_id": row_id,
             "account_head": f"{account_type} {account} - {company_abbr}",
             "description": account,
             "rate": rate,

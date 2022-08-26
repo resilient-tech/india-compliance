@@ -62,7 +62,7 @@ ic.gst_api.call = async function (endpoint, options) {
 
         if (options.body) args.body = JSON.stringify(options.body);
 
-        response = await fetch(url, args);
+        const response = await fetch(url, args);
         const data = await response.json();
         if (response.ok) return { success: true, ...data };
 

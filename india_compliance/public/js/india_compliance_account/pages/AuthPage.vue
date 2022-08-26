@@ -59,7 +59,7 @@ export default {
   beforeRouteEnter(to, from, next) {
     next((vm) => {
       if (vm.$store.getters.isLoggedIn)
-        return next({ name: "account", replace: true });
+        return next({ name: "home", replace: true });
 
       if (vm.$store.getters.hasSession)
         return next({ name: "mailSent", replace: true });

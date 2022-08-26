@@ -22,3 +22,7 @@ known_frappe = "frappe"
 known_erpnext = "erpnext"
 no_lines_before = ["ERPNEXT"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FRAPPE", "ERPNEXT", "FIRSTPARTY", "LOCALFOLDER"]
+
+[tool.bench.dev-dependencies]
+parameterized = "~=0.8.1"
+responses = "~=0.21.0"
