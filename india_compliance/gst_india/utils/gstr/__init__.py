@@ -175,6 +175,14 @@ def download_gstr_2b(gstin, return_periods, otp=None):
         if response.error_type:
             continue
 
+        # Handle multiple files for GSTR2B
+        if response.data and (file_count := response.data.get("fc")):
+            for file_num in range(1, file_count + 1):
+                r = api.get_data(return_period, otp, file_num)
+                save_gstr_2b(gstin, return_period, r)
+
+            continue  # skip first response if file_count is greater than 1
+
         save_gstr_2b(gstin, return_period, response)
 
     if queued_message:
