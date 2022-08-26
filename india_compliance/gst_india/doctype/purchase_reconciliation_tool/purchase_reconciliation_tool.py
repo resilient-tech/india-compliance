@@ -1196,36 +1196,52 @@ class BuildExcel:
             self.data.get("invoice_summary"), self.invoice_header
         )
 
-    def process_data(self, data, columns):
+    def process_data(self, data, column_list):
         """return required list of dict for the excel file"""
         if not data:
             return
 
         mapped_data = []
 
+        purchase_fields = [field.get("fieldname") for field in self.pr_columns]
+
         for row in data:
             data_dict = {}
-            for column in columns:
-                if column.get("fieldname") in row:
-                    fieldname = column.get("fieldname")
-                    self.assign_value(fieldname, row, data_dict)
+            for column in column_list:
+                fieldname = column.get("fieldname")
 
-                    if fieldname == self.reverse_charge_field:
-                        self.assign_value(fieldname, row, data_dict, bool=True)
+                if fieldname not in row:
+                    row[fieldname] = None
+
+                if (
+                    row.get("isup_name")
+                    and not row.get("name")
+                    and fieldname in purchase_fields
+                ):
+                    row[fieldname] = None
+
+                self.assign_value(fieldname, row, data_dict)
+
+                if fieldname in (
+                    self.reverse_charge_field,
+                    f"{self.prefix}{self.reverse_charge_field}",
+                ):
+                    self.assign_value(fieldname, row, data_dict, bool=True)
 
             mapped_data.append(data_dict)
         return mapped_data
 
     def assign_value(self, field, source_data, target_data, bool=False):
         # assign values to given field and set reverse charge yes no
-        isup_field = self.prefix + field
 
         if source_data.get(field) is not None:
             if bool:
                 target_data[field] = "Yes" if source_data[field] else "No"
-                target_data[isup_field] = "Yes" if source_data.get(isup_field) else "No"
             else:
                 target_data[field] = source_data[field]
+
+        else:
+            target_data[field] = ""
 
     def get_file_name(self):
         """Returns file name for the excel file"""
@@ -1358,7 +1374,7 @@ class BuildExcel:
         ]
 
     def get_invoice_columns(self):
-        pr_columns = [
+        self.pr_columns = [
             {
                 "label": "Bill No",
                 "fieldname": "bill_no",
@@ -1446,7 +1462,7 @@ class BuildExcel:
                 "format": "0.00",
             },
         ]
-        isup_columns = [
+        self.isup_columns = [
             {
                 "label": "Bill No",
                 "fieldname": "isup_bill_no",
@@ -1592,6 +1608,6 @@ class BuildExcel:
                 "format": "0.00",
             },
         ]
-        inv_columns.extend(isup_columns)
-        inv_columns.extend(pr_columns)
+        inv_columns.extend(self.isup_columns)
+        inv_columns.extend(self.pr_columns)
         return inv_columns

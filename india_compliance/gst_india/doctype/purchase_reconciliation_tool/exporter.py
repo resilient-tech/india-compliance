@@ -73,49 +73,122 @@ class Worksheet:
         self.headers = headers
 
         self.ws = workbook.create_sheet(sheet_name)
-        self.add_data(filters)
-        self.add_data(merged_headers, merge=True)
-        self.add_data(headers, is_header=True)
-        self.add_data(data, is_data=True)
+        self.add_filters(filters)
+        self.add_merged_header(merged_headers)
+        self.add_headers(headers)
+        self.add_data(data)
 
         if add_totals:
-            self.add_total_row(data)
+            self.add_total_row()
 
         self.apply_conditional_formatting()
 
-    def add_data(
-        self, data, is_header=False, is_data=False, merge=False, is_total=False
-    ):
-        """Adds header data to the sheet"""
-        if not data:
+    def add_filters(self, filter_data):
+        if not filter_data:
             return
 
-        if is_data:
-            self.data_row = self.row_dimension
+        parsed_data = self.parse_data(filter_data)
 
-        parsed_data = self.parse_data(data, is_header)
+        for i, row in enumerate(parsed_data, 1):
+            for j, val in enumerate(row):
+                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
+                self.apply_style(
+                    self.row_dimension,
+                    j + 1,
+                    column_index=j,
+                )
+                cell.value = val
+
+            self.row_dimension += 1
+
+    def add_merged_header(self, merged_headers):
+        if not merged_headers:
+            return
+
+        for key, value in merged_headers.items():
+            merge_from_idx = self.get_column_index(value[0])
+            merge_to_idx = self.get_column_index(value[1])
+
+            range = self.get_range(
+                start_row=self.row_dimension,
+                start_column=merge_from_idx,
+                end_row=self.row_dimension,
+                end_column=merge_to_idx,
+            )
+
+            self.ws.cell(row=self.row_dimension, column=merge_from_idx).value = key
+
+            self.ws.merge_cells(range)
+
+            self.apply_style(
+                self.row_dimension,
+                merge_from_idx,
+                column_index=merge_from_idx,
+                is_header=True,
+            )
+
+        self.row_dimension += 1
+
+    def add_headers(self, header_data):
+        if not header_data:
+            return
+
+        parsed_data = self.parse_data(header_data, is_header=True)
 
         for i, row in enumerate(parsed_data, 1):
             for j, val in enumerate(row):
                 cell = self.ws.cell(row=self.row_dimension, column=j + 1)
 
-                if merge:
-                    self.append_merged_header(data)
-                else:
-                    self.apply_style(
-                        self.row_dimension,
-                        j + 1,
-                        column_index=j,
-                        is_header=is_header,
-                        is_data=is_data,
-                        is_total=is_total,
-                    )
-                    cell.value = val
+                self.apply_style(
+                    self.row_dimension, j + 1, column_index=j, is_header=True
+                )
+                cell.value = val
 
             self.row_dimension += 1
 
-    def add_total_row(self, data):
+    def add_data(self, data):
+        if not data:
+            return
+
+        self.data_row = self.row_dimension
+
+        parsed_data = self.parse_data(data)
+
+        for i, row in enumerate(parsed_data, 1):
+            for j, val in enumerate(row):
+                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
+
+                self.apply_style(
+                    self.row_dimension, j + 1, column_index=j, is_data=True
+                )
+                cell.value = val
+
+            self.row_dimension += 1
+
+    def add_total_row(self):
         """Add total row to the sheet"""
+
+        total_row = self.get_totals()
+
+        parsed_data = self.parse_data(total_row)
+
+        for i, row in enumerate(parsed_data, 1):
+            for j, val in enumerate(row):
+                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
+
+                self.apply_style(
+                    self.row_dimension,
+                    j + 1,
+                    column_index=j,
+                    is_header=True,
+                    is_total=True,
+                )
+                cell.value = val
+
+            self.row_dimension += 1
+
+    def get_totals(self):
+        """build total row array of fields to be calculated"""
         total_row = []
 
         for idx, property in enumerate(self.headers, 1):
@@ -127,30 +200,7 @@ class Worksheet:
             else:
                 total_row.append("")
 
-        self.add_data(total_row, is_header=True, is_total=True)
-
-    def append_merged_header(self, merged_headers):
-        for key, value in merged_headers.items():
-            start_column = self.get_column_index(value[0])
-            end_column = self.get_column_index(value[1])
-
-            range = self.get_range(
-                start_row=self.row_dimension,
-                start_column=start_column,
-                end_row=self.row_dimension,
-                end_column=end_column,
-            )
-
-            self.ws.cell(row=self.row_dimension, column=start_column).value = key
-
-            self.ws.merge_cells(range)
-
-            self.apply_style(
-                self.row_dimension,
-                start_column,
-                column_index=start_column,
-                is_header=True,
-            )
+        return total_row
 
     def apply_style(
         self, row, column, column_index, is_header=False, is_data=False, is_total=False
