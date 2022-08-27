@@ -55,6 +55,35 @@ class ExcelExporter:
 
 
 class Worksheet:
+    data_format = frappe._dict(
+        {
+            "font_family": "Calibri",
+            "font_size": 9,
+            "bold": True,
+            "horizontal": "general",
+            "number_format": "General",
+            "width": 20,
+            "height": 20,
+            "vertical": "center",
+            "wrap_text": False,
+            "bg_color": "f2f2f2",
+        }
+    )
+
+    header_format = frappe._dict(
+        {
+            "font_family": "Calibri",
+            "font_size": 9,
+            "bold": True,
+            "horizontal": "center",
+            "width": 20,
+            "height": 30,
+            "vertical": "center",
+            "wrap_text": True,
+            "bg_color": "d9d9d9",
+        }
+    )
+
     def __init__(self):
         self.row_dimension = 1
         self.column_dimension = 1
@@ -73,33 +102,15 @@ class Worksheet:
         self.headers = headers
 
         self.ws = workbook.create_sheet(sheet_name)
-        self.add_filters(filters)
+        self.add_data(filters)
         self.add_merged_header(merged_headers)
-        self.add_headers(headers)
-        self.add_data(data)
+        self.add_data(headers, is_header=True)
+        self.add_data(data, is_data=True)
 
         if add_totals:
             self.add_total_row()
 
         self.apply_conditional_formatting()
-
-    def add_filters(self, filter_data):
-        if not filter_data:
-            return
-
-        parsed_data = self.parse_data(filter_data)
-
-        for i, row in enumerate(parsed_data, 1):
-            for j, val in enumerate(row):
-                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
-                self.apply_style(
-                    self.row_dimension,
-                    j + 1,
-                    column_index=j,
-                )
-                cell.value = val
-
-            self.row_dimension += 1
 
     def add_merged_header(self, merged_headers):
         if not merged_headers:
@@ -120,46 +131,34 @@ class Worksheet:
 
             self.ws.merge_cells(range)
 
-            self.apply_style(
-                self.row_dimension,
-                merge_from_idx,
-                column_index=merge_from_idx,
+            self.apply_format(
+                row=self.row_dimension,
+                column=merge_from_idx,
+                index=merge_from_idx,
                 is_header=True,
             )
 
         self.row_dimension += 1
 
-    def add_headers(self, header_data):
-        if not header_data:
-            return
-
-        parsed_data = self.parse_data(header_data, is_header=True)
-
-        for i, row in enumerate(parsed_data, 1):
-            for j, val in enumerate(row):
-                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
-
-                self.apply_style(
-                    self.row_dimension, j + 1, column_index=j, is_header=True
-                )
-                cell.value = val
-
-            self.row_dimension += 1
-
-    def add_data(self, data):
+    def add_data(self, data, is_header=False, is_data=False, is_total=False):
         if not data:
             return
 
-        self.data_row = self.row_dimension
+        if is_data:
+            self.data_row = self.row_dimension
 
-        parsed_data = self.parse_data(data)
+        parsed_data = self.parse_data(data, is_header)
 
-        for i, row in enumerate(parsed_data, 1):
-            for j, val in enumerate(row):
-                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
-
-                self.apply_style(
-                    self.row_dimension, j + 1, column_index=j, is_data=True
+        for row in parsed_data:
+            for j, val in enumerate(row, 1):
+                cell = self.ws.cell(row=self.row_dimension, column=j)
+                self.apply_format(
+                    row=self.row_dimension,
+                    column=j,
+                    index=j - 1,
+                    is_header=is_header,
+                    is_data=is_data,
+                    is_total=is_total,
                 )
                 cell.value = val
 
@@ -170,22 +169,29 @@ class Worksheet:
 
         total_row = self.get_totals()
 
-        parsed_data = self.parse_data(total_row)
+        self.add_data(total_row, is_header=True, is_total=True)
 
-        for i, row in enumerate(parsed_data, 1):
-            for j, val in enumerate(row):
-                cell = self.ws.cell(row=self.row_dimension, column=j + 1)
+    def apply_format(
+        self, row, column, index, is_header=False, is_data=False, is_total=False
+    ):
+        """Get style if defined or apply default format to the cell"""
 
-                self.apply_style(
-                    self.row_dimension,
-                    j + 1,
-                    column_index=j,
-                    is_header=True,
-                    is_total=True,
-                )
-                cell.value = val
+        style = self.data_format
 
-            self.row_dimension += 1
+        if is_header:
+            style = self.get_header_style(index)
+            if is_total:
+                style.update({"horizontal": "general", "height": 20})
+        elif is_data:
+            style = self.get_data_style(index)
+            style.update({"bold": False})
+        else:
+            style.update(
+                {
+                    "bg_color": None,
+                }
+            )
+        self.apply_style(row, column, style)
 
     def get_totals(self):
         """build total row array of fields to be calculated"""
@@ -202,47 +208,67 @@ class Worksheet:
 
         return total_row
 
-    def apply_style(
-        self, row, column, column_index, is_header=False, is_data=False, is_total=False
-    ):
+    def get_header_style(self, index):
+        properties = self.headers[index]
+
+        header_style = self.header_format.copy()
+
+        if header_format := properties.get("header_format"):
+            header_style.update(header_format)
+
+        return header_style
+
+    def get_data_style(self, index):
+        properties = self.headers[index]
+
+        data_style = self.data_format.copy()
+
+        if data_format := properties.get("data_format"):
+            data_style.update(data_format)
+
+        return data_style
+
+    def apply_style(self, row, column, style):
         """Apply style to cell"""
-        self.get_properties(column_index, is_header, is_data, is_total)
 
         cell = self.ws.cell(row=row, column=column)
         cell.font = Font(
-            name=self.font_family,
-            size=self.font_size,
-            bold=self.bold,
+            name=style.get("font_family"),
+            size=style.get("font_size"),
+            bold=style.get("bold"),
         )
         cell.alignment = Alignment(
-            horizontal=self.horizontal_align,
-            vertical=self.vertical_align,
-            wrap_text=self.wrap_text,
+            horizontal=style.get("horizontal"),
+            vertical=style.get("vertical"),
+            wrap_text=style.get("wrap_text"),
         )
-        cell.number_format = self.format if self.format else "General"
+        cell.number_format = style.get("number_format") or "General"
 
-        if self.bg_color:
+        if style.get("bg_color"):
             cell.fill = PatternFill(
                 fill_type="solid",
-                fgColor=self.bg_color,
+                fgColor=style.get("bg_color"),
             )
-        self.ws.column_dimensions[get_column_letter(column)].width = self.width
-        self.ws.row_dimensions[row].height = self.height
+
+        self.ws.column_dimensions[get_column_letter(column)].width = style.get("width")
+        self.ws.row_dimensions[row].height = style.get("height")
 
     def apply_conditional_formatting(self):
         """Apply conditional formatting to cell"""
 
         for i, row in enumerate(self.headers, 1):
-            if "formula" not in row:
+            if "formula" not in row.get("data_format"):
                 continue
 
-            end_column = (
-                self.get_column_index(row.get("compare_field")) or self.ws.max_column
-            )
+            formula = row.get("data_format").get("formula")
+            compare_field = row.get("data_format").get("compare_field")
+
+            start_column = self.get_column_index(row["fieldname"])
+            end_column = self.get_column_index(compare_field) or self.ws.max_column
 
             range = self.get_range(
                 start_row=self.data_row,
-                start_column=self.get_column_index(row["fieldname"]),
+                start_column=start_column,
                 end_row=self.ws.max_row,
                 end_column=end_column - 1,
             )
@@ -250,56 +276,16 @@ class Worksheet:
             self.ws.conditional_formatting.add(
                 range,
                 FormulaRule(
-                    formula=[self.formula],
+                    formula=[formula],
                     stopIfTrue=True,
                     font=Font(
-                        name=self.font_family,
-                        size=self.font_size,
-                        bold=self.bold,
+                        name=self.data_format.get("font_family"),
+                        size=self.data_format.get("font_size"),
+                        bold=True,
                         color="FF0000",
                     ),
                 ),
             )
-
-    def get_properties(
-        self, column=None, is_header=False, is_data=False, is_total=False
-    ):
-        """Get all properties defined in a header for cell"""
-
-        properties = self.headers[column]
-
-        self.font_family = "Calibri"
-        self.font_size = 9
-        self.bold = True
-        self.align_header = "center"
-        self.align_data = "general"
-        self.format = "General"
-        self.width = 20
-        self.height = 20
-        self.vertical_align = "bottom"
-        self.wrap_text = False
-        self.bg_color = None
-
-        for (k, v) in properties.items():
-            setattr(self, k, v)
-
-        if is_header:
-            self.horizontal_align = self.align_header
-            self.bg_color = self.bg_color
-            self.font_size = self.font_size
-            self.vertical_align = "center"
-            self.wrap_text = True
-            self.height = 30
-            if is_total:
-                self.horizontal_align = self.align_data
-                self.height = 20
-        elif is_data:
-            self.horizontal_align = self.align_data
-            self.bg_color = self.bg_color_data
-            self.bold = False
-        else:
-            self.horizontal_align = self.align_data
-            self.bg_color = None
 
     def parse_data(self, data, is_header=False):
         """Convert data to List of Lists"""

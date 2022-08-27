@@ -1260,6 +1260,8 @@ class BuildExcel:
     def get_match_summary_columns(self):
         """
         Defaults:
+            - bg_color: self.COLOR_PALLATE.dark_gray
+            - bg_color_data": self.COLOR_PALLATE.light_gray
             - bold: 1
             - align_header: "center"
             - align_data: "general"
@@ -1269,48 +1271,49 @@ class BuildExcel:
             {
                 "label": "Match Status",
                 "fieldname": "isup_match_status",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "left",
+                "data_format": {"horizontal": "left"},
+                "header_format": {"horizontal": "center"},
             },
             {
                 "label": "Count \n 2A/2B Docs",
                 "fieldname": "count_isup_docs",
                 "fieldtype": "Int",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "format": "#,##0",
+                "data_format": {"number_format": "#,##0"},
             },
             {
                 "label": "Count \n Purchase Docs",
                 "fieldname": "count_pur_docs",
                 "fieldtype": "Int",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "format": "#,##0",
+                "data_format": {"number_format": "#,##0"},
             },
             {
                 "label": "Taxable Amount Diff \n 2A/2B - Purchase",
                 "fieldname": "taxable_value_diff",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.dark_pink,
-                "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
             },
             {
                 "label": "Tax Difference \n 2A/2B - Purchase",
                 "fieldname": "tax_diff",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.dark_pink,
-                "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
             },
             {
                 "label": "%Action Taken",
                 "fieldname": "count_action_taken",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "format": "0.00%",
+                "data_format": {"number_format": "0.00%"},
                 "width": 12,
             },
         ]
@@ -1320,56 +1323,58 @@ class BuildExcel:
             {
                 "label": "Supplier Name",
                 "fieldname": "supplier_name",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "left",
+                "data_format": {"horizontal": "left"},
             },
             {
                 "label": "Supplier GSTIN",
                 "fieldname": "supplier_gstin",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "center",
+                "data_format": {"horizontal": "left"},
             },
             {
                 "label": "Count \n 2A/2B Docs",
                 "fieldname": "count_isup_docs",
                 "fieldtype": "Int",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "format": "#,##0",
+                "data_format": {"number_format": "#,##0"},
             },
             {
                 "label": "Count \n Purchase Docs",
                 "fieldname": "count_pur_docs",
                 "fieldtype": "Int",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "format": "#,##0",
+                "data_format": {
+                    "number_format": "#,##0",
+                },
             },
             {
                 "label": "Taxable Amount Diff \n 2A/2B - Purchase",
                 "fieldname": "taxable_value_diff",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.dark_pink,
-                "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
             },
             {
                 "label": "Tax Difference \n 2A/2B - Purchase",
                 "fieldname": "tax_diff",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.dark_pink,
-                "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
             },
             {
                 "label": "%Action Taken",
                 "fieldname": "count_action_taken",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "width": 12,
-                "format": "0.00%",
+                "data_format": {"number_format": "0.00%"},
+                "header_format": {
+                    "width": 12,
+                },
             },
         ]
 
@@ -1378,234 +1383,316 @@ class BuildExcel:
             {
                 "label": "Bill No",
                 "fieldname": "bill_no",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "align_data": "left",
-                "formula": "IF(ISBLANK(H6), FALSE, H6<>R6)",
+                "data_format": {
+                    "horizontal": "left",
+                    "formula": "IF(ISBLANK(H6), FALSE, H6<>R6)",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "Bill Date",
                 "fieldname": "bill_date",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "GSTIN",
                 "fieldname": "supplier_gstin",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 15,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 15,
+                },
             },
             {
                 "label": "Place of Supply",
                 "fieldname": "place_of_supply",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "Reverse Charge",
                 "fieldname": "is_reverse_charge",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "Taxable Value",
                 "fieldname": "taxable_value",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "CGST",
                 "fieldname": "cgst",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "SGST",
                 "fieldname": "sgst",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "IGST",
                 "fieldname": "igst",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
             {
                 "label": "CESS",
                 "fieldname": "cess",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.green,
-                "bg_color_data": self.COLOR_PALLATE.light_green,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
             },
         ]
         self.isup_columns = [
             {
                 "label": "Bill No",
                 "fieldname": "isup_bill_no",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "align_data": "left",
-                "compare_field": "bill_no",
-                "formula": "IF(ISBLANK(R6), FALSE, H6<>R6)",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                    "compare_field": "bill_no",
+                    "formula": "IF(ISBLANK(R6), FALSE, H6<>R6)",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "Bill Date",
                 "fieldname": "isup_bill_date",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "GSTIN",
                 "fieldname": "isup_supplier_gstin",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 15,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 15,
+                },
             },
             {
                 "label": "Place of Supply",
                 "fieldname": "isup_place_of_supply",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "Reverse Charge",
                 "fieldname": "isup_is_reverse_charge",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "align_data": "left",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "Taxable Value",
                 "fieldname": "isup_taxable_value",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "CGST",
                 "fieldname": "isup_cgst",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "SGST",
                 "fieldname": "isup_sgst",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "IGST",
                 "fieldname": "isup_igst",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
             {
                 "label": "CESS",
                 "fieldname": "isup_cess",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.sky_blue,
-                "bg_color_data": self.COLOR_PALLATE.light_blue,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
             },
         ]
         inv_columns = [
             {
                 "label": "Action Status",
                 "fieldname": "isup_action",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "left",
+                "data_format": {"horizontal": "left"},
             },
             {
                 "label": "Match Status",
                 "fieldname": "isup_match_status",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "left",
+                "data_format": {"horizontal": "left"},
             },
             {
                 "label": "Supplier Name",
                 "fieldname": "supplier_name",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "align_data": "left",
+                "data_format": {"horizontal": "left"},
             },
             {
                 "label": "PAN",
                 "fieldname": "pan",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "width": 15,
-                "align_data": "center",
+                "data_format": {"horizontal": "center"},
+                "header_format": {
+                    "width": 15,
+                },
             },
             {
                 "label": "Classification",
                 "fieldname": "isup_classification",
-                "bg_color": self.COLOR_PALLATE.dark_gray,
-                "bg_color_data": self.COLOR_PALLATE.light_gray,
-                "width": 11,
-                "align_data": "left",
+                "data_format": {"horizontal": "left"},
+                "header_format": {
+                    "width": 11,
+                },
             },
             {
                 "label": "Taxable Value Difference",
                 "fieldname": "taxable_value_diff",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.dark_pink,
-                "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                    "width": 12,
+                },
             },
             {
                 "label": "Tax Difference",
                 "fieldname": "tax_diff",
                 "fieldtype": "Float",
-                "bg_color": self.COLOR_PALLATE.dark_pink,
-                "bg_color_data": self.COLOR_PALLATE.light_pink,
-                "width": 12,
-                "format": "0.00",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                    "width": 12,
+                },
             },
         ]
         inv_columns.extend(self.isup_columns)
