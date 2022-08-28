@@ -1,3 +1,5 @@
+from collections import Counter
+
 import frappe
 
 
@@ -92,7 +94,7 @@ def get_naming_series_property(doctype, fieldname, new_options, prepend=True):
     else:
         options = existing_options + new_options
 
-    options = "\n".join(options)
+    options = "\n".join([*Counter(options)])
 
     return {
         "doctype": doctype,
