@@ -696,16 +696,16 @@ class PurchaseReconciliationTool {
         let doc = this.frm.doc;
         delete doc["__onload"];
 
-        let get_url = "/api/method/india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx";
+        let get_url = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx";
 
         var export_params = () => {
             return {
                 data: JSON.stringify(this.data_to_export),
                 doc: JSON.stringify(doc),
-                download: is_download
+                download: is_download,
             }
         }
-        open_url_post(get_url, export_params());
+        open_url_post(`/api/method/${get_url}`, export_params());
 
     }
 }
@@ -1232,12 +1232,29 @@ class EmailDialog {
     constructor(frm, data) {
         this.frm = frm;
         this.data = data;
-        this.prepare_data();
+        this.get_xlsx_data();
     }
 
-    prepare_data() {
+    get_xlsx_data() {
+        let export_data = this.frm.purchase_reconciliation_tool.get_filtered_data(this.data);
+
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.get_xlsx_report",
+            args: {
+                data: JSON.stringify(export_data),
+                doc: JSON.stringify(this.frm.doc),
+            },
+            callback: (r) => {
+                this.prepare_email_args(r.message);
+            }
+        })
+    }
+
+    prepare_email_args(attachment) {
         this.subject = `Reconciliation for ${this.data.supplier_name}-${this.data.supplier_gstin}`;
         this.message = this.get_email_message();
+        this.attachment = attachment;
+
         this.get_recipients().then((recipients) => {
             this.recipients = recipients;
         }).then(() => {
@@ -1246,14 +1263,14 @@ class EmailDialog {
     }
 
     show_email_dialog() {
-        new frappe.views.CommunicationComposer({
-            doc: this.frm.doc,
-            frm: this.frm,
+        let args = {
             subject: this.subject,
             recipients: this.recipients || [],
             attach_document_print: false,
             message: this.message,
-        });
+            attachments: this.attachment
+        }
+        new frappe.views.CommunicationComposer(args);
     }
 
     get_email_message() {

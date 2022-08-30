@@ -1065,6 +1065,33 @@ def get_import_history(
 
 
 @frappe.whitelist()
+def get_xlsx_report(data, doc):
+    build_data = BuildExcel(doc=doc, export_data=data, download=True, email=True)
+
+    xlsx_file, filename = build_data.export_data()
+    xlsx_data = xlsx_file.getvalue()
+
+    # Upload attachment for email xlsx data using communication make() method
+    folder = frappe.form_dict.folder or "Home"
+    file_url = frappe.form_dict.file_url or ""
+
+    file = frappe.get_doc(
+        {
+            "doctype": "File",
+            "attached_to_doctype": "Purchase Reconciliation Tool",
+            "folder": folder,
+            "file_name": f"{filename}.xlsx",
+            "file_url": file_url,
+            "is_private": 0,
+            "content": xlsx_data,
+        }
+    )
+    file.save(ignore_permissions=True)
+
+    return [file]
+
+
+@frappe.whitelist()
 def export_data_to_xlsx(data, doc, download=False):
     """Exports data to an xlsx file"""
     build_data = BuildExcel(doc=doc, export_data=data, download=download)
@@ -1085,13 +1112,9 @@ class BuildExcel:
         }
     )
 
-    def __init__(
-        self,
-        doc=None,
-        export_data=None,
-        download=False,
-    ):
+    def __init__(self, doc=None, export_data=None, download=False, email=False):
         self.is_download = frappe.parse_json(download)
+        self.send_email = frappe.parse_json(email)
         self.prefix = "isup_"
         self.reverse_charge_field = "is_reverse_charge"
         self.doc = frappe.parse_json(doc)
@@ -1141,6 +1164,11 @@ class BuildExcel:
         )
 
         excel.remove_sheet("Sheet")
+
+        if self.send_email:
+            xlsx_data = excel.save_workbook()
+            return [xlsx_data, file_name]
+
         excel.export(file_name)
 
     def get_filters(self):
