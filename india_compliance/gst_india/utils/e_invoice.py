@@ -236,7 +236,7 @@ class EInvoiceData(GSTTransactionData):
             )
             item_details.update(
                 {
-                    "batch_number": batch_no,
+                    "batch_no": batch_no,
                     "batch_expiry_date": format_date(
                         batch_expiry_date, self.DATE_FORMAT
                     ),
