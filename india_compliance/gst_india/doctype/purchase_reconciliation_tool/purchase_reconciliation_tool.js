@@ -669,16 +669,21 @@ class PurchaseReconciliationTool {
     }
 
     get_filtered_data(selected_row = null) {
+        let supplier_data;
+
         if (selected_row) {
             const filters = [[this.frm.doctype, 'supplier_gstin', '=', selected_row.supplier_gstin, false]];
 
             this.apply_filters(true, filters);
+            supplier_data = this.supplier_data[selected_row.supplier_gstin];
+        } else {
+            supplier_data = this.get_supplier_data();
         }
 
         let filtered_data = Object.assign({},
             {
                 'match_summary': this.get_summary_data(),
-                'supplier_summary': this.get_supplier_data(),
+                'supplier_summary': supplier_data,
                 'invoice_summary': this.filtered_data
             }
         );

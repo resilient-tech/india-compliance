@@ -1127,7 +1127,8 @@ class BuildExcel:
         self.get_filters()
         self.merge_headers()
         self.get_match_summary_data()
-        self.get_supplier_data()
+        if not self.is_download:
+            self.get_supplier_data()
         self.get_invoice_data()
 
     def export_data(self):
