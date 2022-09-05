@@ -9,6 +9,7 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
+    ITEM_LIMIT,
     SUB_SUPPLY_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
 )
@@ -538,7 +539,6 @@ class EWaybillData(GSTTransactionData):
         - Overseas Returns are not allowed
         - Basic transporter details must be present
         - Grand Total Amount must be greater than Criteria
-        - Max 250 Items
         """
 
         for fieldname in ("company_address", "customer_address"):
@@ -573,16 +573,6 @@ class EWaybillData(GSTTransactionData):
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
-
-        # TODO: Add support for HSN Summary
-        item_limit = 1000 if self.doc.get("irn") else 250
-        if len(self.doc.items) > item_limit:
-            frappe.throw(
-                _("e-Waybill cannot be generated for more than {0} items").format(
-                    item_limit
-                ),
-                title=_("Invalid Data"),
-            )
 
         self.validate_non_gst_items()
 
@@ -621,6 +611,43 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )
+
+    def get_all_item_details(self):
+        if len(self.doc.items) <= ITEM_LIMIT:
+            return super().get_all_item_details()
+
+        hsn_wise_items = {}
+
+        for item in super().get_all_item_details():
+            hsn_wise_details = hsn_wise_items.setdefault(
+                (item.hsn_code, item.uom, item.tax_rate),
+                frappe._dict(
+                    hsn_code=item.hsn_code,
+                    uom=item.uom,
+                    item_name="",
+                    cgst_rate=item.cgst_rate,
+                    sgst_rate=item.sgst_rate,
+                    igst_rate=item.igst_rate,
+                    cess_rate=item.cess_rate,
+                    cess_non_advol_rate=item.cess_non_advol_rate,
+                    item_no=item.item_no,
+                    qty=0,
+                    taxable_value=0,
+                ),
+            )
+
+            hsn_wise_details.qty += item.qty
+            hsn_wise_details.taxable_value += item.taxable_value
+
+        if len(hsn_wise_items) > ITEM_LIMIT:
+            frappe.throw(
+                _("e-Waybill can only be generated for upto {0} HSN/SAC Codes").format(
+                    ITEM_LIMIT
+                ),
+                title=_("HSN/SAC Limit Exceeded"),
+            )
+
+        return hsn_wise_items.values()
 
     def update_transaction_details(self):
         # first HSN Code for goods
