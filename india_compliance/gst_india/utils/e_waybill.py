@@ -447,7 +447,7 @@ class EWaybillData(GSTTransactionData):
 
     def get_data(self):
         self.validate_transaction()
-        self.get_transporter_details()
+        self.set_transporter_details()
 
         if irn := self.doc.get("irn"):
             # Via e-Invoice
@@ -465,9 +465,9 @@ class EWaybillData(GSTTransactionData):
                 }
             )
 
-        self.get_transaction_details()
-        self.get_item_list()
-        self.get_party_address_details()
+        self.set_transaction_details()
+        self.set_item_list()
+        self.set_party_address_details()
 
         return self.get_transaction_data()
 
@@ -485,7 +485,7 @@ class EWaybillData(GSTTransactionData):
         self.validate_if_e_waybill_is_set()
         self.check_e_waybill_validity()
         self.validate_mode_of_transport()
-        self.get_transporter_details()
+        self.set_transporter_details()
 
         dispatch_address_name = (
             self.doc.dispatch_address_name
@@ -662,7 +662,7 @@ class EWaybillData(GSTTransactionData):
                 }
             )
 
-    def get_party_address_details(self):
+    def set_party_address_details(self):
         transaction_type = 1
         has_different_shipping_address = (
             self.doc.shipping_address_name
