@@ -129,5 +129,5 @@ def _get_dashboard_data(data, items):
         # insert after reference for better presentation
         transactions.insert(2, section)
 
-    data["transactions"] = transactions
+    data.transactions = transactions
     return data
