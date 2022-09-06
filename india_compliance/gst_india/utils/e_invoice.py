@@ -17,7 +17,10 @@ from india_compliance.gst_india.constants import (
     GST_CATEGORIES,
     OVERSEAS_GST_CATEGORIES,
 )
-from india_compliance.gst_india.constants.e_invoice import CANCEL_REASON_CODES
+from india_compliance.gst_india.constants.e_invoice import (
+    CANCEL_REASON_CODES,
+    ITEM_LIMIT,
+)
 from india_compliance.gst_india.utils import (
     load_doc,
     parse_datetime,
@@ -210,6 +213,14 @@ class EInvoiceData(GSTTransactionData):
     def validate_transaction(self):
         super().validate_transaction()
         validate_e_invoice_applicability(self.doc, self.settings)
+
+        if len(self.doc.items) > ITEM_LIMIT:
+            frappe.throw(
+                _("e-Invoice can only be generated for upto {0} items").format(
+                    ITEM_LIMIT
+                ),
+                title=_("Item Limit Exceeded"),
+            )
 
     def update_item_details(self, item_details, item):
         item_details.update(
