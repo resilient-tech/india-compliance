@@ -156,6 +156,11 @@ jinja = {
     ],
 }
 
+override_doctype_dashboards = {
+    "Sales Invoice": "india_compliance.gst_india.overrides.sales_invoice.get_sales_invoice_dashboard",
+    "Delivery Note": "india_compliance.gst_india.overrides.delivery_note.get_delivery_note_dashboard",
+}
+
 # Includes in <head>
 # ------------------
 

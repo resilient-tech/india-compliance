@@ -107,3 +107,27 @@ def ignore_logs_on_trash(doc, method=None):
         "e-Invoice Log",
         "Integration Request",
     )
+
+
+def get_sales_invoice_dashboard(data):
+    return _get_dashboard_data(data, ("e-Waybill Log", "e-Invoice Log"))
+
+
+def _get_dashboard_data(data, items):
+    if not is_api_enabled():
+        return data
+
+    if not data.non_standard_fieldnames:
+        data.non_standard_fieldnames = {}
+
+    data.non_standard_fieldnames["e-Waybill Log"] = "reference_name"
+    section = {"label": "GST Logs", "items": items}
+    transactions = data.get("transactions", [])
+    if not transactions or len(transactions) < 2:
+        transactions.append(section)
+    else:
+        # insert after reference for better presentation
+        transactions.insert(2, section)
+
+    data["transactions"] = transactions
+    return data
