@@ -68,7 +68,13 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
+    "GL Entry": {
+        "validate": "india_compliance.gst_india.overrides.gl_entry.validate",
+    },
     "Item": {"validate": "india_compliance.gst_india.overrides.item.validate_hsn_code"},
+    "Journal Entry": {
+        "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
+    },
     "Payment Entry": {
         "validate": (
             "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
@@ -126,6 +132,7 @@ doc_events = {
 
 regional_overrides = {
     "India": {
+        "erpnext.controllers.accounts_controller.update_gl_dict": "india_compliance.gst_india.overrides.gl_entry.update_gl_dict",
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header",
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": (
             "india_compliance.gst_india.utils.get_itemised_tax_breakup_data"

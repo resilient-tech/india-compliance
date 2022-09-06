@@ -16,3 +16,4 @@ def execute():
     delete_old_fields("reason_for_issuing_document", "Purchase Invoice")
     delete_old_fields("pan_details", "Company")
     delete_old_fields("export_type", ("Customer", "Supplier"))
+    delete_old_fields("company_address", "Journal Entry")

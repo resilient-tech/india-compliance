@@ -300,6 +300,7 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
     )
 
 
+@frappe.whitelist()
 def get_all_gst_accounts(company):
     if not company:
         frappe.throw(_("Please set Company first"))

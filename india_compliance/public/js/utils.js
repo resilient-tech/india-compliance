@@ -1,9 +1,20 @@
 frappe.provide("ic");
 
 window.gst_settings = frappe.boot.gst_settings;
-const GSTIN_REGEX = /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
+const GSTIN_REGEX =
+    /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
 
 Object.assign(ic, {
+    async get_gstin_options(party, party_type = "Company") {
+        const { query, params } = ic.get_gstin_query(party, party_type);
+        const { message } = await frappe.call({
+            method: query,
+            args: params,
+        });
+
+        return message || [];
+    },
+
     get_gstin_query(party, party_type = "Company") {
         if (!party) {
             frappe.show_alert({
@@ -17,6 +28,18 @@ Object.assign(ic, {
             query: "india_compliance.gst_india.utils.get_gstin_list",
             params: { party, party_type },
         };
+    },
+
+    async get_account_options(company) {
+        if (!company) return;
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.utils.get_all_gst_accounts",
+            args: {
+                company,
+            },
+        });
+
+        return message || [];
     },
 
     get_party_type(doctype) {
@@ -55,9 +78,8 @@ Object.assign(ic, {
         if (GSTIN_REGEX.test(gstin) && is_gstin_check_digit_valid(gstin)) {
             return gstin;
         }
-    }
+    },
 });
-
 
 function is_gstin_check_digit_valid(gstin) {
     /*
