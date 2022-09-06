@@ -8,10 +8,11 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 
 class EWaybillAPI(BaseAPI):
-    def setup(self, company_gstin=None):
-        self.api_name = "e-Waybill"
-        self.base_path = "ewb/ewayapi"
+    API_NAME = "e-Waybill"
+    BASE_PATH = "ewb/ewayapi"
+    SENSITIVE_HEADERS = ("x-api-key", "password")
 
+    def setup(self, company_gstin=None):
         if not self.settings.enable_e_waybill:
             frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
 
