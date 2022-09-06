@@ -98,3 +98,5 @@ UOMS = {
     "UNT": "UNITS",
     "YDS": "YARDS",
 }
+
+ITEM_LIMIT = 250
