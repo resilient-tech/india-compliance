@@ -34,7 +34,7 @@ class GSTTransactionData:
             for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
         }
 
-    def get_transaction_details(self):
+    def set_transaction_details(self):
         rounding_adjustment = self.rounded(self.doc.rounding_adjustment)
         if self.doc.is_return:
             rounding_adjustment = -rounding_adjustment
@@ -61,13 +61,13 @@ class GSTTransactionData:
             }
         )
         self.update_transaction_details()
-        self.get_transaction_tax_details()
+        self.update_transaction_tax_details()
 
     def update_transaction_details(self):
         # to be overrridden
         pass
 
-    def get_transaction_tax_details(self):
+    def update_transaction_tax_details(self):
         tax_totals = [f"total_{tax}_amount" for tax in GST_TAX_TYPES]
 
         for key in tax_totals:
@@ -128,7 +128,7 @@ class GSTTransactionData:
 
         return True
 
-    def get_transporter_details(self):
+    def set_transporter_details(self):
         self.transaction_details.distance = (
             self.doc.distance if self.doc.distance and self.doc.distance < 4000 else 0
         )
@@ -191,8 +191,8 @@ class GSTTransactionData:
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
-    def get_item_list(self):
-        self.item_list = []
+    def get_all_item_details(self):
+        all_item_details = []
 
         for row in self.doc.items:
             uom = row.uom.upper()
@@ -208,14 +208,22 @@ class GSTTransactionData:
                 }
             )
             self.update_item_details(item_details, row)
-            self.get_item_tax_details(item_details, row)
+            self.update_item_tax_details(item_details, row)
+            all_item_details.append(item_details)
+
+        return all_item_details
+
+    def set_item_list(self):
+        self.item_list = []
+
+        for item_details in self.get_all_item_details():
             self.item_list.append(self.get_item_data(item_details))
 
     def update_item_details(self, item_details, item):
         # to be overridden
         pass
 
-    def get_item_tax_details(self, item_details, item):
+    def update_item_tax_details(self, item_details, item):
         for tax in GST_TAX_TYPES:
             item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 

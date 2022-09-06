@@ -201,10 +201,10 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 class EInvoiceData(GSTTransactionData):
     def get_data(self):
         self.validate_transaction()
-        self.get_transaction_details()
-        self.get_item_list()
-        self.get_transporter_details()
-        self.get_party_address_details()
+        self.set_transaction_details()
+        self.set_item_list()
+        self.set_transporter_details()
+        self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
     def validate_transaction(self):
@@ -236,7 +236,7 @@ class EInvoiceData(GSTTransactionData):
             )
             item_details.update(
                 {
-                    "batch_number": batch_no,
+                    "batch_no": batch_no,
                     "batch_expiry_date": format_date(
                         batch_expiry_date, self.DATE_FORMAT
                     ),
@@ -330,7 +330,7 @@ class EInvoiceData(GSTTransactionData):
 
         return supply_type
 
-    def get_party_address_details(self):
+    def set_party_address_details(self):
         self.billing_address = self.get_address_details(
             self.doc.customer_address,
             validate_gstin=self.doc.gst_category != "Overseas",
