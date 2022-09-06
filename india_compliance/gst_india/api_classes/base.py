@@ -13,15 +13,17 @@ BASE_URL = "https://asp.resilient.tech"
 
 
 class BaseAPI:
+    API_NAME = "GST"
+    BASE_PATH = ""
+    SENSITIVE_HEADERS = ("x-api-key",)
+
     def __init__(self, *args, **kwargs):
-        self.api_name = "GST"
-        self.base_path = ""
         self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.settings = frappe.get_cached_doc("GST Settings")
         if not is_api_enabled(self.settings):
             frappe.throw(
                 _("Please enable API in GST Settings to use the {0} API").format(
-                    self.api_name
+                    self.API_NAME
                 )
             )
 
@@ -47,7 +49,7 @@ class BaseAPI:
                 _(
                     "Please set the relevant credentials in GST Settings to use the"
                     " {0} API"
-                ).format(self.api_name),
+                ).format(self.API_NAME),
                 frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
             )
@@ -59,8 +61,8 @@ class BaseAPI:
     def get_url(self, *parts):
         parts = list(parts)
 
-        if self.base_path:
-            parts.insert(0, self.base_path)
+        if self.BASE_PATH:
+            parts.insert(0, self.BASE_PATH)
 
         if self.sandbox_mode:
             parts.insert(0, "test")
@@ -96,14 +98,18 @@ class BaseAPI:
             },
         )
 
+        log_headers = request_args.headers.copy()
+
+        # Mask sensitive headers
+        for header in self.SENSITIVE_HEADERS:
+            if header in log_headers:
+                log_headers[header] = "*****"
+
         log = frappe._dict(
             url=request_args.url,
             data=request_args.params,
-            request_headers=request_args.headers.copy(),
+            request_headers=log_headers,
         )
-
-        # Don't log API secret
-        log.request_headers.pop("x-api-key", None)
 
         if method == "POST" and json:
             request_args.json = json
