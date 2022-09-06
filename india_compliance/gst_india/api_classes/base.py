@@ -98,16 +98,18 @@ class BaseAPI:
             },
         )
 
-        log = frappe._dict(
-            url=request_args.url,
-            data=request_args.params,
-            request_headers=request_args.headers.copy(),
-        )
+        log_headers = request_args.headers.copy()
 
         # Mask sensitive headers
         for header in self.SENSITIVE_HEADERS:
-            if header in log["request_headers"]:
-                log["request_headers"][header] = "*****"
+            if header in log_headers:
+                log_headers[header] = "*****"
+
+        log = frappe._dict(
+            url=request_args.url,
+            data=request_args.params,
+            request_headers=log_headers,
+        )
 
         if method == "POST" and json:
             request_args.json = json
