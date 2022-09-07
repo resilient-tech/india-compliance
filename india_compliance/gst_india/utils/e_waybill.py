@@ -450,8 +450,12 @@ class EWaybillData(GSTTransactionData):
         self.validate_transaction()
         self.set_transporter_details()
 
-        if irn := self.doc.get("irn"):
-            # Via e-Invoice
+        # Via e-Invoice if not Return or Debit Note
+        # Handles following error when generating e-Waybill using IRN:
+        # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
+        if irn := self.doc.get("irn") and not (
+            self.doc.is_return or self.doc.is_debit_note
+        ):
             return self.sanitize_data(
                 {
                     "Irn": irn,
@@ -689,6 +693,14 @@ class EWaybillData(GSTTransactionData):
                 }
             )
 
+        if self.sandbox_mode:
+            self.transaction_details.update(
+                {
+                    "company_gstin": "05AAACG2115R1ZN",
+                    "name": random_string(6).lstrip("0"),
+                }
+            )
+
     def set_party_address_details(self):
         transaction_type = 1
         has_different_shipping_address = (
@@ -701,13 +713,13 @@ class EWaybillData(GSTTransactionData):
             and self.doc.company_address != self.doc.dispatch_address_name
         )
 
-        self.billing_address = self.get_address_details(self.doc.customer_address)
-        self.company_address = self.get_address_details(self.doc.company_address)
+        self.to_address = self.get_address_details(self.doc.customer_address)
+        self.from_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
         # billing state is changed for SEZ, hence copy()
-        self.shipping_address = self.billing_address.copy()
-        self.dispatch_address = self.company_address
+        self.shipping_address = self.to_address.copy()
+        self.dispatch_address = self.from_address
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
@@ -733,7 +745,22 @@ class EWaybillData(GSTTransactionData):
         self.transaction_details.transaction_type = transaction_type
 
         if self.doc.gst_category == "SEZ":
-            self.billing_address.state_number = 96
+            self.to_address.state_number = 96
+
+        if self.sandbox_mode:
+            self.from_address.gstin = "05AAACG2115R1ZN"
+            self.to_address.gstin = (
+                "05AAACG2140A1ZL"
+                if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
+                else "05AAACG2115R1ZN"
+            )
+
+        if self.doc.is_return:
+            self.from_address, self.to_address = self.to_address, self.from_address
+            self.dispatch_address, self.shipping_address = (
+                self.shipping_address,
+                self.dispatch_address,
+            )
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -742,20 +769,6 @@ class EWaybillData(GSTTransactionData):
         return address_details
 
     def get_transaction_data(self):
-        if self.sandbox_mode:
-            self.transaction_details.update(
-                {
-                    "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6).lstrip("0"),
-                }
-            )
-            self.company_address.gstin = "05AAACG2115R1ZN"
-            self.billing_address.gstin = (
-                "05AAACG2140A1ZL"
-                if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
-                else "05AAACG2115R1ZN"
-            )
-
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
@@ -765,21 +778,21 @@ class EWaybillData(GSTTransactionData):
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.company_address.address_title,
-            "fromGstin": self.company_address.gstin,
+            "fromTrdName": self.from_address.address_title,
+            "fromGstin": self.from_address.gstin,
             "fromAddr1": self.dispatch_address.address_line1,
             "fromAddr2": self.dispatch_address.address_line2,
             "fromPlace": self.dispatch_address.city,
             "fromPincode": self.dispatch_address.pincode,
-            "fromStateCode": self.company_address.state_number,
+            "fromStateCode": self.from_address.state_number,
             "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.billing_address.address_title,
-            "toGstin": self.billing_address.gstin,
+            "toTrdName": self.to_address.address_title,
+            "toGstin": self.to_address.gstin,
             "toAddr1": self.shipping_address.address_line1,
             "toAddr2": self.shipping_address.address_line2,
             "toPlace": self.shipping_address.city,
             "toPincode": self.shipping_address.pincode,
-            "toStateCode": self.billing_address.state_number,
+            "toStateCode": self.to_address.state_number,
             "actToStateCode": self.shipping_address.state_number,
             "totalValue": self.transaction_details.base_total,
             "cgstValue": self.transaction_details.total_cgst_amount,

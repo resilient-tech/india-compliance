@@ -257,11 +257,24 @@ class EInvoiceData(GSTTransactionData):
     def update_transaction_details(self):
         invoice_type = "INV"
 
-        if self.doc.is_return:
+        if self.doc.is_debit_note:
+            invoice_type = "DBN"
+
+        elif self.doc.is_return:
             invoice_type = "CRN"
 
-        elif self.doc.is_debit_note:
-            invoice_type = "DBN"
+            if return_against := self.doc.return_against:
+                self.transaction_details.update(
+                    {
+                        "original_name": return_against,
+                        "original_date": format_date(
+                            frappe.db.get_value(
+                                "Sales Invoice", return_against, "posting_date"
+                            ),
+                            self.DATE_FORMAT,
+                        ),
+                    }
+                )
 
         self.transaction_details.update(
             {
@@ -275,20 +288,6 @@ class EInvoiceData(GSTTransactionData):
                 "place_of_supply": self.doc.place_of_supply.split("-")[0],
             }
         )
-
-        # Credit Note Details
-        if self.doc.is_return and (return_against := self.doc.return_against):
-            self.transaction_details.update(
-                {
-                    "original_name": return_against,
-                    "original_date": format_date(
-                        frappe.db.get_value(
-                            "Sales Invoice", return_against, "posting_date"
-                        ),
-                        self.DATE_FORMAT,
-                    ),
-                }
-            )
 
         self.update_payment_details()
 
