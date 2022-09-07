@@ -73,3 +73,18 @@
     width: 95px !important;
     image-rendering: -webkit-optimize-contrast;
 }
+
+.print-format .watermark {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: 120px;
+    font-weight: 500px;
+    display: grid;
+    justify-content: center;
+    align-content: center;
+    opacity: 0.1;
+    transform: rotate(-45deg);
+}

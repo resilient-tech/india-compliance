@@ -6,6 +6,9 @@
 
 <html lang="en">
     <body>
+        {% if doc.is_cancelled %}
+        <div class="watermark">Cancelled</div>
+        {% endif %}
         <div class="page-layout">
             <table class="table borderless">
                 <tbody>
