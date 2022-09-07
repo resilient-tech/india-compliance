@@ -19,6 +19,7 @@ function setup_e_waybill_actions(doctype) {
                     message: __("e-Waybill PDF attached successfully"),
                 });
             });
+            frappe.realtime.on("reload_doc", () => frm.reload_doc());
         },
         refresh(frm) {
             if (

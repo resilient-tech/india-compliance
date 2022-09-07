@@ -324,17 +324,10 @@ def attach_e_waybill_pdf(doc, log=None):
     pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
     delete_file(doc, pdf_filename)
     save_file(pdf_filename, pdf_content, doc.doctype, doc.name, is_private=1)
-
-    if not frappe.request:
-        # trigger reload_doc if called in background
-        frappe.publish_realtime(
-            "e_waybill_pdf_attached",
-            doctype=doc.doctype,
-            docname=doc.name,
-        )
+    _publish_realtime(doc, "e_waybill_pdf_attached")
 
 
-def delete_file(doc, filename):
+def delete_file(doc, filename, force_reload=False):
     filename, extn = os.path.splitext(filename)
 
     for file in frappe.get_all(
@@ -348,6 +341,15 @@ def delete_file(doc, filename):
         pluck="name",
     ):
         frappe.delete_doc("File", file, force=True, ignore_permissions=True)
+
+    if force_reload:
+        _publish_realtime(doc, "reload_doc")
+
+
+def _publish_realtime(doc, event):
+    if not frappe.request:
+        # trigger reload_doc if called in background
+        frappe.publish_realtime(event, doctype=doc.doctype, docname=doc.name)
 
 
 #######################################################################################
@@ -387,6 +389,11 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         log.add_comment(text=comment)
 
     frappe.db.commit()
+
+    ### Delete PDF for cancelled e-Waybill
+
+    if log_data.get("is_cancelled"):
+        delete_file(doc, f"e-Waybill_{log.name}.pdf", force_reload=True)
 
     ### Fetch Data
 
