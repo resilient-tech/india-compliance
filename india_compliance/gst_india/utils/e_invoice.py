@@ -89,7 +89,7 @@ def generate_e_invoice(docname, throw=True):
     )
 
     if result.EwbNo:
-        log_and_process_e_waybill_generation(doc, result)
+        log_and_process_e_waybill_generation(doc, result, with_irn=True)
 
     frappe.msgprint(
         _("e-Invoice generated successfully"),

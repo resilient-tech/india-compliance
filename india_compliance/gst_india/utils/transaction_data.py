@@ -142,15 +142,17 @@ class GSTTransactionData:
                     "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
                     "vehicle_no": self.sanitize_value(self.doc.vehicle_no, 1),
                     "lr_no": self.sanitize_value(self.doc.lr_no, 2, max_length=15),
-                    "lr_date": format_date(self.doc.lr_date, self.DATE_FORMAT)
-                    if self.doc.lr_no
-                    else "",
+                    "lr_date": (
+                        format_date(self.doc.lr_date, self.DATE_FORMAT)
+                        if self.doc.lr_no
+                        else ""
+                    ),
                     "gst_transporter_id": self.doc.gst_transporter_id or "",
-                    "transporter_name": self.sanitize_value(
-                        self.doc.transporter_name, 3, max_length=25
-                    )
-                    if self.doc.transporter_name
-                    else "",
+                    "transporter_name": (
+                        self.sanitize_value(self.doc.transporter_name, 3, max_length=25)
+                        if self.doc.transporter_name
+                        else ""
+                    ),
                 }
             )
 

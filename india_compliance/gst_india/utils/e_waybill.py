@@ -66,7 +66,11 @@ def generate_e_waybill(*, doctype, docname, values=None):
 
 def _generate_e_waybill(doc, throw=True):
     try:
-        data = EWaybillData(doc).get_data()
+        # Via e-Invoice API if not Return or Debit Note
+        # Handles following error when generating e-Waybill using IRN:
+        # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
+        with_irn = doc.irn and not (doc.is_return or doc.is_debit_note)
+        data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
         if throw:
@@ -83,9 +87,9 @@ def _generate_e_waybill(doc, throw=True):
         )
         return
 
-    api = EWaybillAPI if not doc.get("irn") else EInvoiceAPI
+    api = EWaybillAPI if not with_irn else EInvoiceAPI
     result = api(doc.company_gstin).generate_e_waybill(data)
-    log_and_process_e_waybill_generation(doc, result)
+    log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
     frappe.msgprint(
         _("e-Waybill generated successfully")
@@ -98,11 +102,10 @@ def _generate_e_waybill(doc, throw=True):
     return send_updated_doc(doc)
 
 
-def log_and_process_e_waybill_generation(doc, result):
+def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     """Separate function, since called in backend from e-invoice utils"""
 
-    irn = doc.get("irn")
-    e_waybill_number = str(result["ewayBillNo" if not irn else "EwbNo"])
+    e_waybill_number = str(result["ewayBillNo" if not with_irn else "EwbNo"])
 
     data = {"ewaybill": e_waybill_number}
     if distance := result.get("distance"):
@@ -115,12 +118,12 @@ def log_and_process_e_waybill_generation(doc, result):
         {
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
-                result.get("ewayBillDate" if not irn else "EwbDt"),
-                day_first=not irn,
+                result.get("ewayBillDate" if not with_irn else "EwbDt"),
+                day_first=not with_irn,
             ),
             "valid_upto": parse_datetime(
-                result.get("validUpto" if not irn else "EwbValidTill"),
-                day_first=not irn,
+                result.get("validUpto" if not with_irn else "EwbValidTill"),
+                day_first=not with_irn,
             ),
             "reference_doctype": doc.doctype,
             "reference_name": doc.name,
@@ -146,8 +149,13 @@ def _cancel_e_waybill(doc, values):
     data = EWaybillData(doc).get_e_waybill_cancel_data(values)
     api = (
         EInvoiceAPI
-        # Use e-invoice endpoint only for sandbox environment
-        if doc.get("irn") and frappe.conf.ic_api_sandbox_mode
+        # Use EInvoiceAPI only for sandbox environment
+        # if e-Waybill has been created using IRN
+        if (
+            frappe.conf.ic_api_sandbox_mode
+            and doc.irn
+            and not (doc.is_return or doc.is_debit_note)
+        )
         else EWaybillAPI
     )
 
@@ -446,19 +454,14 @@ class EWaybillData(GSTTransactionData):
         self.validate_settings()
         self.validate_doctype_for_e_waybill()
 
-    def get_data(self):
+    def get_data(self, *, with_irn=False):
         self.validate_transaction()
         self.set_transporter_details()
 
-        # Via e-Invoice if not Return or Debit Note
-        # Handles following error when generating e-Waybill using IRN:
-        # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
-        if irn := self.doc.get("irn") and not (
-            self.doc.is_return or self.doc.is_debit_note
-        ):
+        if with_irn:
             return self.sanitize_data(
                 {
-                    "Irn": irn,
+                    "Irn": self.doc.irn,
                     "Distance": self.transaction_details.distance,
                     "TransMode": str(self.transaction_details.mode_of_transport),
                     "TransId": self.transaction_details.gst_transporter_id,
@@ -826,10 +829,9 @@ class EWaybillData(GSTTransactionData):
             ).items():
                 data[value] = data.pop(key)
 
-        else:
-            self.sanitize_data(data)
+            return data
 
-        return data
+        return self.sanitize_data(data)
 
     def get_item_data(self, item_details):
         return {
