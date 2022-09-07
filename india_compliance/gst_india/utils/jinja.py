@@ -8,6 +8,7 @@ from barcode.writer import ImageWriter
 
 from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
+    SUPPLY_TYPES,
     TRANSPORT_MODES,
     TRANSPORT_TYPES,
 )
@@ -22,6 +23,12 @@ def add_spacing(string, interval):
 
     string = str(string)
     return " ".join(string[i : i + interval] for i in range(0, len(string), interval))
+
+
+def get_supply_type(code):
+    for supply_type, _code in SUPPLY_TYPES.items():
+        if _code == code:
+            return supply_type
 
 
 def get_sub_supply_type(code):

@@ -26,6 +26,11 @@ UPDATE_VEHICLE_REASON_CODES = {
     "Others": "3",
 }
 
+SUPPLY_TYPES = {
+    "Inward": "I",
+    "Outward": "O",
+}
+
 SUB_SUPPLY_TYPES = {
     "Supply": 1,
     "Import": 2,
