@@ -111,8 +111,7 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.is_return ||
                 !ic.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
-                (gst_settings.enable_e_invoice &&
-                    gst_settings.auto_generate_e_invoice) ||
+                gst_settings.enable_e_invoice ||
                 !is_e_waybill_applicable(frm)
             )
                 return;
