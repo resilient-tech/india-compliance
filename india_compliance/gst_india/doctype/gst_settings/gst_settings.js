@@ -28,8 +28,10 @@ frappe.ui.form.on("GST Settings", {
         frm.set_value("fetch_e_waybill_data", 1);
     },
     auto_generate_e_invoice(frm) {
-        if (!frm.doc.enable_e_invoice || !frm.doc.auto_generate_e_invoice) return;
-        frm.set_value("auto_generate_e_waybill", 1);
+        if (!frm.doc.enable_e_invoice) return;
+        if (frm.doc.auto_generate_e_invoice)
+            frm.set_value("auto_generate_e_waybill", 1);
+        else frm.set_value("auto_generate_e_waybill", 0);
     },
     enable_e_invoice(frm) {
         if (!frm.doc.enable_e_invoice || !frm.doc.auto_generate_e_invoice) return;

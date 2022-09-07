@@ -42,8 +42,11 @@ class GSTSettings(Document):
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
 
-        if self.enable_e_invoice and self.auto_generate_e_invoice:
-            self.auto_generate_e_waybill = 1
+        if self.enable_e_invoice:
+            if self.auto_generate_e_invoice:
+                self.auto_generate_e_waybill = 1
+            else:
+                self.auto_generate_e_waybill = 0
 
     def on_update(self):
         self.update_custom_fields()
