@@ -27,8 +27,8 @@ UPDATE_VEHICLE_REASON_CODES = {
 }
 
 SUPPLY_TYPES = {
-    "Inward": "I",
-    "Outward": "O",
+    "I": "Inward",
+    "O": "Outward",
 }
 
 SUB_SUPPLY_TYPES = {

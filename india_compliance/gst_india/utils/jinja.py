@@ -26,9 +26,7 @@ def add_spacing(string, interval):
 
 
 def get_supply_type(code):
-    for supply_type, _code in SUPPLY_TYPES.items():
-        if _code == code:
-            return supply_type
+    return SUPPLY_TYPES[code]
 
 
 def get_sub_supply_type(code):
