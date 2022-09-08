@@ -42,7 +42,11 @@ def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
     try:
         data = EInvoiceData(doc).get_data()
-        api = EInvoiceAPI(doc.company_gstin)
+        api = EInvoiceAPI(
+            doc.company_gstin,
+            reference_doctype=doc.doctype,
+            reference_name=doc.name,
+        )
         result = api.generate_irn(data)
 
         # Handle Duplicate IRN
@@ -115,7 +119,12 @@ def cancel_e_invoice(docname, values):
         "Cnlrem": values.remark if values.remark else values.reason,
     }
 
-    result = EInvoiceAPI(doc.company_gstin).cancel_irn(data)
+    result = EInvoiceAPI(
+        doc.company_gstin,
+        reference_doctype=doc.doctype,
+        reference_name=doc.name,
+    ).cancel_irn(data)
+
     doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
 
     log_e_invoice(

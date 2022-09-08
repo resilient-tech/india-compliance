@@ -88,7 +88,12 @@ def _generate_e_waybill(doc, throw=True):
         return
 
     api = EWaybillAPI if not with_irn else EInvoiceAPI
-    result = api(doc.company_gstin).generate_e_waybill(data)
+    result = api(
+        doc.company_gstin,
+        reference_doctype=doc.doctype,
+        reference_name=doc.name,
+    ).generate_e_waybill(data)
+
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
     frappe.msgprint(
@@ -159,7 +164,11 @@ def _cancel_e_waybill(doc, values):
         else EWaybillAPI
     )
 
-    result = api(doc.company_gstin).cancel_e_waybill(data)
+    result = api(
+        doc.company_gstin,
+        reference_doctype=doc.doctype,
+        reference_name=doc.name,
+    ).cancel_e_waybill(data)
 
     log_and_process_e_waybill(
         doc,
@@ -196,7 +205,11 @@ def update_vehicle_info(*, doctype, docname, values):
     )
 
     data = EWaybillData(doc).get_update_vehicle_data(values)
-    result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
+    result = EWaybillAPI(
+        doc.company_gstin,
+        reference_doctype=doc.doctype,
+        reference_name=doc.name,
+    ).update_vehicle_info(data)
 
     frappe.msgprint(
         _("Vehicle Info updated successfully"),
@@ -239,7 +252,11 @@ def update_transporter(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
-    EWaybillAPI(doc.company_gstin).update_transporter(data)
+    EWaybillAPI(
+        doc.company_gstin,
+        reference_doctype=doc.doctype,
+        reference_name=doc.name,
+    ).update_transporter(data)
 
     frappe.msgprint(
         _("Transporter Info updated successfully"),
@@ -310,7 +327,12 @@ def fetch_e_waybill_data(*, doctype, docname, attach=False):
 
 
 def _fetch_e_waybill_data(doc, log):
-    result = EWaybillAPI(doc.company_gstin).get_e_waybill(log.e_waybill_number)
+    result = EWaybillAPI(
+        doc.company_gstin,
+        reference_doctype=doc.doctype,
+        reference_name=doc.name,
+    ).get_e_waybill(log.e_waybill_number)
+
     log.db_set(
         {
             "data": frappe.as_json(result, indent=4),
