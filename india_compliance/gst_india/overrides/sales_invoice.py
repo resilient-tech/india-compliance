@@ -105,7 +105,6 @@ def ignore_logs_on_trash(doc, method=None):
     delete_doc.doctypes_to_skip += (
         "e-Waybill Log",
         "e-Invoice Log",
-        "Integration Request",
     )
 
 
