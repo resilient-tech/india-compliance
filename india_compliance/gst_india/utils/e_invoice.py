@@ -400,6 +400,12 @@ class EInvoiceData(GSTTransactionData):
                 else:
                     self.transaction_details.place_of_supply = "01"
 
+        if self.doc.is_return:
+            self.dispatch_address, self.shipping_address = (
+                self.shipping_address,
+                self.dispatch_address,
+            )
+
         return {
             "Version": "1.1",
             "TranDtls": {
