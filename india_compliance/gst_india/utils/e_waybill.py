@@ -696,14 +696,6 @@ class EWaybillData(GSTTransactionData):
                 }
             )
 
-        if self.sandbox_mode:
-            self.transaction_details.update(
-                {
-                    "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6).lstrip("0"),
-                }
-            )
-
     def set_party_address_details(self):
         transaction_type = 1
         has_different_shipping_address = (
@@ -750,7 +742,21 @@ class EWaybillData(GSTTransactionData):
         if self.doc.gst_category == "SEZ":
             self.to_address.state_number = 96
 
+    def get_address_details(self, *args, **kwargs):
+        address_details = super().get_address_details(*args, **kwargs)
+        address_details.state_number = int(address_details.state_number)
+
+        return address_details
+
+    def get_transaction_data(self):
         if self.sandbox_mode:
+            self.transaction_details.update(
+                {
+                    "company_gstin": "05AAACG2115R1ZN",
+                    "name": random_string(6).lstrip("0"),
+                }
+            )
+
             self.from_address.gstin = "05AAACG2115R1ZN"
             self.to_address.gstin = (
                 "05AAACG2140A1ZL"
@@ -765,13 +771,6 @@ class EWaybillData(GSTTransactionData):
                 self.dispatch_address,
             )
 
-    def get_address_details(self, *args, **kwargs):
-        address_details = super().get_address_details(*args, **kwargs)
-        address_details.state_number = int(address_details.state_number)
-
-        return address_details
-
-    def get_transaction_data(self):
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
