@@ -107,3 +107,21 @@ def ignore_logs_on_trash(doc, method=None):
         "e-Invoice Log",
         "Integration Request",
     )
+
+
+def get_dashboard_data(data):
+    return update_dashboard_with_gst_logs(data, "e-Waybill Log", "e-Invoice Log")
+
+
+def update_dashboard_with_gst_logs(data, *log_doctypes):
+    if not is_api_enabled():
+        return data
+
+    data.setdefault("non_standard_fieldnames", {})["e-Waybill Log"] = "reference_name"
+    transactions = data.setdefault("transactions", [])
+
+    # GST Logs section looks best at the 3rd position
+    # If there are less than 2 transactions, insert will be equivalent to append
+    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
+
+    return data
