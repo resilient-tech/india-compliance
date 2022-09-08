@@ -102,10 +102,11 @@ def validate_billing_address_gstin(doc):
 
 def ignore_logs_on_trash(doc, method=None):
     # TODO: design better way to achieve this
-    delete_doc.doctypes_to_skip += (
-        "e-Waybill Log",
-        "e-Invoice Log",
-    )
+    if "e-Waybill Log" not in delete_doc.doctypes_to_skip:
+        delete_doc.doctypes_to_skip += (
+            "e-Waybill Log",
+            "e-Invoice Log",
+        )
 
 
 def get_dashboard_data(data):
