@@ -54,7 +54,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => unlink_documents(frm),
                 __("Actions")
             );
-            frm.add_custom_button("dropdown-divider", () => { }, __("Actions"));
+            frm.add_custom_button("dropdown-divider", () => {}, __("Actions"));
         }
         ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
             action =>
@@ -69,7 +69,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             .addClass("dropdown-divider");
 
         // Export button
-        frm.add_custom_button(__("Export"), () => frm.purchase_reconciliation_tool.apply_data_export());
+        frm.add_custom_button(__("Export"), () =>
+            frm.purchase_reconciliation_tool.export_data()
+        );
     },
 
     before_save(frm) {
@@ -119,8 +121,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 method == "update_api_progress"
                     ? __("Fetching data from GSTN")
                     : __("Updating Inward Supply for Return Period {0}", [
-                        data.return_period,
-                    ]);
+                          data.return_period,
+                      ]);
 
             frm.dashboard.show_progress(
                 "Import GSTR Progress",
@@ -333,15 +335,16 @@ class PurchaseReconciliationTool {
         return options;
     }
 
-    apply_filters(force, custom_filter = null) {
-        const has_filters = this.filter_group.filters.length > 0 || custom_filter;
+    apply_filters(force, supplier_filter) {
+        const has_filters = this.filter_group.filters.length > 0 || supplier_filter;
         if (!has_filters) {
             this.filters = null;
             this.filtered_data = this.data;
             return;
         }
 
-        let filters = !custom_filter ? this.filter_group.get_filters() : custom_filter;
+        let filters = this.filter_group.get_filters();
+        if (supplier_filter) filters.push(supplier_filter);
         if (!force && this.filters === filters) return;
 
         this.filters = filters;
@@ -373,13 +376,16 @@ class PurchaseReconciliationTool {
             me.dm = new DetailViewDialog(me.frm, data);
         });
         this.tabs.supplier_tab.$datatable.on("click", ".btn.download", function (e) {
-            // Export selected rows to XLSX
-            const selected_row = me.supplier_data[$(this).attr("data-name")];
-            me.apply_data_export(selected_row);
+            const selected_row = me.tabs.supplier_tab.data.find(
+                r => r.supplier_gstin === $(this).attr("data-name")
+            );
+            me.export_data(selected_row);
         });
 
         this.tabs.supplier_tab.$datatable.on("click", ".btn.envelope", function (e) {
-            const data = me.supplier_data[$(this).attr("data-name")];
+            const data = me.tabs.supplier_tab.data.find(
+                r => r.supplier_gstin === $(this).attr("data-name")
+            );
             me.dm = new EmailDialog(me.frm, data);
         });
 
@@ -394,12 +400,58 @@ class PurchaseReconciliationTool {
         );
     }
 
+    export_data(selected_row = null) {
+        this.data_to_export = this.get_filtered_data(selected_row);
+        let is_download = selected_row ? true : false;
+
+        if (is_download) delete this.data_to_export.supplier_summary;
+
+        // removed onload data to avoid RequestURI too long error
+        let doc = this.frm.doc;
+        delete doc["__onload"];
+
+        let get_url =
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx";
+
+        var export_params = () => {
+            return {
+                data: JSON.stringify(this.data_to_export),
+                doc: JSON.stringify(doc),
+                download: is_download,
+            };
+        };
+        open_url_post(`/api/method/${get_url}`, export_params());
+    }
+
+    get_filtered_data(selected_row = null) {
+        if (selected_row) {
+            const supplier_filter = [
+                this.frm.doctype,
+                "supplier_gstin",
+                "=",
+                selected_row.supplier_gstin,
+                false,
+            ];
+            this.apply_filters(true, supplier_filter);
+        }
+
+        let filtered_data = Object.assign(
+            {},
+            {
+                match_summary: this.get_summary_data(),
+                supplier_summary: this.get_supplier_data(),
+                invoice_summary: this.filtered_data,
+            }
+        );
+        return filtered_data;
+    }
+
     get_summary_data() {
-        this.summary_data = {};
+        const data = {};
         this.filtered_data.forEach(row => {
-            let new_row = this.summary_data[row.isup_match_status];
+            let new_row = data[row.isup_match_status];
             if (!new_row) {
-                new_row = this.summary_data[row.isup_match_status] = {
+                new_row = data[row.isup_match_status] = {
                     isup_match_status: row.isup_match_status,
                     count_isup_docs: 0,
                     count_pur_docs: 0,
@@ -416,7 +468,7 @@ class PurchaseReconciliationTool {
             new_row.tax_diff += row.tax_diff || 0;
             new_row.taxable_value_diff += row.taxable_value_diff || 0;
         });
-        return Object.values(this.summary_data);
+        return Object.values(data);
     }
 
     get_summary_columns() {
@@ -471,11 +523,11 @@ class PurchaseReconciliationTool {
     }
 
     get_supplier_data() {
-        this.supplier_data = {};
+        const data = {};
         this.filtered_data.forEach(row => {
-            let new_row = this.supplier_data[row.supplier_gstin];
+            let new_row = data[row.supplier_gstin];
             if (!new_row) {
-                new_row = this.supplier_data[row.supplier_gstin] = {
+                new_row = data[row.supplier_gstin] = {
                     supplier_name: row.supplier_name,
                     supplier_gstin: row.supplier_gstin,
                     count_isup_docs: 0,
@@ -493,7 +545,7 @@ class PurchaseReconciliationTool {
             new_row.tax_diff += row.tax_diff || 0;
             new_row.taxable_value_diff += row.taxable_value_diff || 0;
         });
-        return Object.values(this.supplier_data);
+        return Object.values(data);
     }
 
     get_supplier_columns() {
@@ -666,52 +718,6 @@ class PurchaseReconciliationTool {
                 fieldname: "isup_action",
             },
         ];
-    }
-
-    get_filtered_data(selected_row = null) {
-        let supplier_data;
-
-        if (selected_row) {
-            const filters = [[this.frm.doctype, 'supplier_gstin', '=', selected_row.supplier_gstin, false]];
-
-            this.apply_filters(true, filters);
-            supplier_data = this.supplier_data[selected_row.supplier_gstin];
-        } else {
-            supplier_data = this.get_supplier_data();
-        }
-
-        let filtered_data = Object.assign({},
-            {
-                'match_summary': this.get_summary_data(),
-                'supplier_summary': supplier_data,
-                'invoice_summary': this.filtered_data
-            }
-        );
-
-        return filtered_data;
-    }
-
-    apply_data_export(selected_row = null) {
-        this.data_to_export = this.get_filtered_data(selected_row);
-        let is_download = selected_row ? true : false;
-
-        if (is_download) delete this.data_to_export.supplier_summary;
-
-        // removed onload data to avoid RequestURI too long error
-        let doc = this.frm.doc;
-        delete doc["__onload"];
-
-        let get_url = "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx";
-
-        var export_params = () => {
-            return {
-                data: JSON.stringify(this.data_to_export),
-                doc: JSON.stringify(doc),
-                download: is_download,
-            }
-        }
-        open_url_post(`/api/method/${get_url}`, export_params());
-
     }
 }
 
@@ -1241,7 +1247,9 @@ class EmailDialog {
     }
 
     get_xlsx_data() {
-        let export_data = this.frm.purchase_reconciliation_tool.get_filtered_data(this.data);
+        let export_data = this.frm.purchase_reconciliation_tool.get_filtered_data(
+            this.data
+        );
 
         frappe.call({
             method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.get_xlsx_report",
@@ -1249,10 +1257,10 @@ class EmailDialog {
                 data: JSON.stringify(export_data),
                 doc: JSON.stringify(this.frm.doc),
             },
-            callback: (r) => {
+            callback: r => {
                 this.prepare_email_args(r.message);
-            }
-        })
+            },
+        });
     }
 
     prepare_email_args(attachment) {
@@ -1260,11 +1268,13 @@ class EmailDialog {
         this.message = this.get_email_message();
         this.attachment = attachment;
 
-        this.get_recipients().then((recipients) => {
-            this.recipients = recipients;
-        }).then(() => {
-            this.show_email_dialog();
-        });
+        this.get_recipients()
+            .then(recipients => {
+                this.recipients = recipients;
+            })
+            .then(() => {
+                this.show_email_dialog();
+            });
     }
 
     show_email_dialog() {
@@ -1273,21 +1283,22 @@ class EmailDialog {
             recipients: this.recipients || [],
             attach_document_print: false,
             message: this.message,
-            attachments: this.attachment
-        }
+            attachments: this.attachment,
+        };
         new frappe.views.CommunicationComposer(args);
     }
 
     get_email_message() {
-        const from_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_from_date);
+        const from_date = frappe.datetime.str_to_user(
+            this.frm.doc.inward_supply_from_date
+        );
         const to_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_to_date);
-
 
         let message = "";
         message += `
             Hello,<br><br>We have made purchase reconciliation for the period ${from_date} to ${to_date} for purchases made by ${this.frm.doc.company} from you.<br><br>
             Attached is the sheet for your reference.<br><br>
-        `
+        `;
         return message;
     }
 
@@ -1297,11 +1308,11 @@ class EmailDialog {
         await frappe.call({
             method: "india_compliance.gst_india.utils.get_party_contact_details",
             args: {
-                'party': this.data.supplier_name,
+                party: this.data.supplier_name,
             },
-            callback: (r) => {
-                contact_email = r.message['contact_email'];
-            }
+            callback: r => {
+                contact_email = r.message["contact_email"];
+            },
         });
 
         return contact_email;
@@ -1341,7 +1352,7 @@ function get_icon(value, column, data, icon) {
      */
 
     const hash = get_hash(data);
-    return `<button class="btn ${icon}" title="hello" data-name="${hash}">
+    return `<button class="btn ${icon}" data-name="${hash}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
 }
@@ -1589,4 +1600,3 @@ async function set_gstin_options(frm) {
     gstin_field.set_data(message);
     return message;
 }
-
