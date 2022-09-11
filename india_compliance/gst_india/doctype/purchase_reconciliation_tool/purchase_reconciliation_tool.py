@@ -916,7 +916,7 @@ class PurchaseReconciliationTool(Document):
         for doc in data:
             isup_docs.append(doc.get("isup_name"))
 
-            if is_ignore_action and not doc.isup_name:
+            if is_ignore_action and not doc.get("isup_name"):
                 pur_docs.append(doc.get("name"))
 
         if isup_docs:

@@ -400,27 +400,20 @@ class PurchaseReconciliationTool {
         );
     }
 
-    export_data(selected_row = null) {
+    export_data(selected_row) {
         this.data_to_export = this.get_filtered_data(selected_row);
-        let is_download = selected_row ? true : false;
-
-        if (is_download) delete this.data_to_export.supplier_summary;
+        if (selected_row) delete this.data_to_export.supplier_summary;
 
         // removed onload data to avoid RequestURI too long error
-        let doc = this.frm.doc;
-        delete doc["__onload"];
-
-        let get_url =
+        delete this.frm.doc["__onload"];
+        const url =
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx";
 
-        var export_params = () => {
-            return {
-                data: JSON.stringify(this.data_to_export),
-                doc: JSON.stringify(doc),
-                download: is_download,
-            };
-        };
-        open_url_post(`/api/method/${get_url}`, export_params());
+        open_url_post(`/api/method/${url}`, {
+            data: JSON.stringify(this.data_to_export),
+            doc: JSON.stringify(this.frm.doc),
+            download: !!selected_row,
+        });
     }
 
     get_filtered_data(selected_row = null) {
@@ -435,15 +428,11 @@ class PurchaseReconciliationTool {
             this.apply_filters(true, supplier_filter);
         }
 
-        let filtered_data = Object.assign(
-            {},
-            {
-                match_summary: this.get_summary_data(),
-                supplier_summary: this.get_supplier_data(),
-                invoice_summary: this.filtered_data,
-            }
-        );
-        return filtered_data;
+        return {
+            match_summary: this.get_summary_data(),
+            supplier_summary: this.get_supplier_data(),
+            invoice_summary: this.filtered_data,
+        };
     }
 
     get_summary_data() {
@@ -1247,7 +1236,7 @@ class EmailDialog {
     }
 
     get_xlsx_data() {
-        let export_data = this.frm.purchase_reconciliation_tool.get_filtered_data(
+        const export_data = this.frm.purchase_reconciliation_tool.get_filtered_data(
             this.data
         );
 
@@ -1278,7 +1267,7 @@ class EmailDialog {
     }
 
     show_email_dialog() {
-        let args = {
+        const args = {
             subject: this.subject,
             recipients: this.recipients || [],
             attach_document_print: false,
@@ -1294,28 +1283,21 @@ class EmailDialog {
         );
         const to_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_to_date);
 
-        let message = "";
-        message += `
-            Hello,<br><br>We have made purchase reconciliation for the period ${from_date} to ${to_date} for purchases made by ${this.frm.doc.company} from you.<br><br>
-            Attached is the sheet for your reference.<br><br>
-        `;
+        let message = "Hello,<br><br>";
+        message += `We have made purchase reconciliation for the period ${from_date} to ${to_date} for purchases made by ${this.frm.doc.company} from you.<br><br>`;
+        message += `You are reqested to kindly make necessary corrections to GST Portal your end if required. Attached is the sheet for your reference.<br><br>`;
         return message;
     }
 
     async get_recipients() {
-        let contact_email;
-
-        await frappe.call({
+        const { message } = await frappe.call({
             method: "india_compliance.gst_india.utils.get_party_contact_details",
             args: {
                 party: this.data.supplier_name,
             },
-            callback: r => {
-                contact_email = r.message["contact_email"];
-            },
         });
 
-        return contact_email;
+        return message.contact_email;
     }
 }
 
