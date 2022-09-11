@@ -12,8 +12,10 @@ function setup_e_waybill_actions(doctype) {
         setup(frm) {
             if (!ic.is_api_enabled()) return;
 
-            frappe.realtime.on("e_waybill_pdf_attached", () => {
-                frm.reload_doc();
+            frappe.realtime.on("e_waybill_pdf_attached", (message) => {
+                frappe.model.sync_docinfo(message);
+                frm.refresh();
+
                 frappe.show_alert({
                     indicator: "green",
                     message: __("e-Waybill PDF attached successfully"),
