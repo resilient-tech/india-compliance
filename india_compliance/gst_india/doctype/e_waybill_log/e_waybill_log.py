@@ -10,7 +10,7 @@ from india_compliance.gst_india.utils.e_waybill import _fetch_e_waybill_data
 
 
 class eWaybillLog(Document):
-    def before_print(self, print_settings):
+    def before_print(self, print_settings=None):
         if self.data and self.is_latest_data:
             return
 
