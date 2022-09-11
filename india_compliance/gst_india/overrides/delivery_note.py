@@ -4,4 +4,6 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 
 
 def get_dashboard_data(data):
-    return update_dashboard_with_gst_logs(data, "e-Waybill Log")
+    return update_dashboard_with_gst_logs(
+        "Delivery Note", data, "e-Waybill Log", "Integration Request"
+    )

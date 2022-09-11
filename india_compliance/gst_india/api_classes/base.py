@@ -18,7 +18,6 @@ class BaseAPI:
     SENSITIVE_HEADERS = ("x-api-key",)
 
     def __init__(self, *args, **kwargs):
-        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.settings = frappe.get_cached_doc("GST Settings")
         if not is_api_enabled(self.settings):
             frappe.throw(
@@ -27,12 +26,14 @@ class BaseAPI:
                 )
             )
 
+        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.default_headers = {
             "x-api-key": (
                 (self.settings.api_secret and self.settings.get_password("api_secret"))
                 or frappe.conf.ic_api_secret
             )
         }
+        self.default_log_values = {}
 
         self.setup(*args, **kwargs)
 
@@ -106,6 +107,7 @@ class BaseAPI:
                 log_headers[header] = "*****"
 
         log = frappe._dict(
+            **self.default_log_values,
             url=request_args.url,
             data=request_args.params,
             request_headers=log_headers,

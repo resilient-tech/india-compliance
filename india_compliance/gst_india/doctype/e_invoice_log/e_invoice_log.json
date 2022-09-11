@@ -122,7 +122,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2022-06-24 20:41:23.301087",
+ "modified": "2022-09-08 11:51:24.704300",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
@@ -150,7 +150,6 @@
    "share": 1
   }
  ],
- "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

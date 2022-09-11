@@ -12,9 +12,16 @@ class EInvoiceAPI(BaseAPI):
     BASE_PATH = "ei/api"
     SENSITIVE_HEADERS = BaseAPI.SENSITIVE_HEADERS + ("password",)
 
-    def setup(self, company_gstin=None):
+    def setup(self, doc=None, *, company_gstin=None):
         if not self.settings.enable_e_invoice:
             frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
+
+        if doc:
+            company_gstin = doc.company_gstin
+            self.default_log_values.update(
+                reference_doctype=doc.doctype,
+                reference_name=doc.name,
+            )
 
         if self.sandbox_mode:
             company_gstin = "01AMBPG7773M002"

@@ -110,14 +110,27 @@ def ignore_logs_on_trash(doc, method=None):
 
 
 def get_dashboard_data(data):
-    return update_dashboard_with_gst_logs(data, "e-Waybill Log", "e-Invoice Log")
+    return update_dashboard_with_gst_logs(
+        "Sales Invoice", data, "e-Waybill Log", "e-Invoice Log", "Integration Request"
+    )
 
 
-def update_dashboard_with_gst_logs(data, *log_doctypes):
+def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
     if not is_api_enabled():
         return data
 
-    data.setdefault("non_standard_fieldnames", {})["e-Waybill Log"] = "reference_name"
+    data.setdefault("non_standard_fieldnames", {}).update(
+        {
+            "e-Waybill Log": "reference_name",
+            "Integration Request": "reference_docname",
+        }
+    )
+
+    data.setdefault("dynamic_links", {}).update(
+        reference_docname=[doctype, "reference_doctype"],
+        reference_name=[doctype, "reference_doctype"],
+    )
+
     transactions = data.setdefault("transactions", [])
 
     # GST Logs section looks best at the 3rd position
