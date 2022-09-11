@@ -17,7 +17,7 @@ class BaseAPI:
     BASE_PATH = ""
     SENSITIVE_HEADERS = ("x-api-key",)
 
-    def __init__(self, *args, reference_doctype=None, reference_name=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")
         if not is_api_enabled(self.settings):
             frappe.throw(
@@ -33,10 +33,7 @@ class BaseAPI:
                 or frappe.conf.ic_api_secret
             )
         }
-        self.default_log_values = {
-            "reference_doctype": reference_doctype,
-            "reference_name": reference_name,
-        }
+        self.default_log_values = {}
 
         self.setup(*args, **kwargs)
 
