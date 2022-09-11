@@ -2,6 +2,7 @@ import os
 
 import frappe
 from frappe import _
+from frappe.desk.form.load import get_docinfo
 from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
 from frappe.utils.file_manager import save_file
 
@@ -306,8 +307,6 @@ def fetch_e_waybill_data(*, doctype, docname, attach=False):
         alert=True,
     )
 
-    return send_updated_doc(doc, set_docinfo=True)
-
 
 def _fetch_e_waybill_data(doc, log):
     result = EWaybillAPI(doc).get_e_waybill(log.e_waybill_number)
@@ -332,11 +331,13 @@ def attach_e_waybill_pdf(doc, log=None):
     pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
     delete_file(doc, pdf_filename)
     save_file(pdf_filename, pdf_content, doc.doctype, doc.name, is_private=1)
+    get_docinfo(doc)
 
     if not frappe.request:
-        # trigger reload_doc if called in background
+        # trigger docinfo sync if called in background
         frappe.publish_realtime(
             "e_waybill_pdf_attached",
+            {"docinfo": frappe.response["docinfo"]},
             doctype=doc.doctype,
             docname=doc.name,
         )
