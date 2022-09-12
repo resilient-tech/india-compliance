@@ -12,9 +12,11 @@ function setup_e_waybill_actions(doctype) {
         setup(frm) {
             if (!ic.is_api_enabled()) return;
 
-            frappe.realtime.on("e_waybill_pdf_attached", (message) => {
+            frappe.realtime.on("e_waybill_pdf_update", message => {
                 frappe.model.sync_docinfo(message);
-                frm.refresh();
+                frm.attachments && frm.attachments.refresh();
+
+                if (message.pdf_deleted) return;
 
                 frappe.show_alert({
                     indicator: "green",
