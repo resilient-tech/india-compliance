@@ -40,7 +40,11 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (has_e_waybill_threshold_met(frm) && !frm.doc.is_return && !frm.doc.is_debit_note) {
+                if (
+                    has_e_waybill_threshold_met(frm) &&
+                    !frm.doc.is_return &&
+                    !frm.doc.is_debit_note
+                ) {
                     frm.dashboard.add_comment(
                         __(
                             "e-Waybill is applicable for this invoice, but not yet generated or updated."
@@ -596,8 +600,9 @@ function is_e_waybill_applicable(frm) {
     if (!frm.doc.company_gstin) return;
 
     // at least one item is not a service
-    for (let item of frm.doc.items) {
-        if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty != 0) return true;
+    for (const item of frm.doc.items) {
+        if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0)
+            return true;
     }
 }
 
