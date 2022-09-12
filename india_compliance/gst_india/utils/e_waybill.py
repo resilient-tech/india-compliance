@@ -411,7 +411,7 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     frappe.db.commit()
 
     if log.is_cancelled:
-        delete_file(doc, get_pdf_filename(doc.e_waybill))
+        delete_file(doc, get_pdf_filename(log.name))
         publish_pdf_update(doc, pdf_deleted=True)
 
     ### Fetch Data
