@@ -11,12 +11,12 @@
     }
 }
 
-.print-format tbody > tr > td, .print-format tbody > tr > th {
+.print-format tbody > tr > td,
+.print-format tbody > tr > th {
     padding: 6px !important;
     border-top: None;
     color: black;
 }
-
 
 .print-format h1.title {
     font-size: 18px;
@@ -47,16 +47,15 @@
     font-weight: bold;
 }
 
-.print-format .vehicle-info td, .print-format .vehicle-info th {
+.print-format .vehicle-info td,
+.print-format .vehicle-info th {
     border: 0px !important;
     border-top: 1px solid black !important;
 }
 
-
-
 .print-format table.table {
     width: 520px;
-    margin: 15px
+    margin: 15px;
 }
 
 .print-format .ewb-no-span {
@@ -68,7 +67,8 @@
     margin: 8px 0 16px;
 }
 
-.print-format table td img.barcode, .print-format table td img.qr-code {
+.print-format table td img.barcode,
+.print-format table td img.qr-code {
     margin-top: 5px;
     width: 95px !important;
     image-rendering: -webkit-optimize-contrast;
