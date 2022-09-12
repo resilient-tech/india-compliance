@@ -328,19 +328,10 @@ def attach_e_waybill_pdf(doc, log=None):
         as_pdf=True,
     )
 
-    pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
+    pdf_filename = get_pdf_filename(doc.ewaybill)
     delete_file(doc, pdf_filename)
     save_file(pdf_filename, pdf_content, doc.doctype, doc.name, is_private=1)
-    get_docinfo(doc)
-
-    if not frappe.request:
-        # trigger docinfo sync if called in background
-        frappe.publish_realtime(
-            "e_waybill_pdf_attached",
-            {"docinfo": frappe.response["docinfo"]},
-            doctype=doc.doctype,
-            docname=doc.name,
-        )
+    publish_pdf_update(doc)
 
 
 def delete_file(doc, filename):
@@ -357,6 +348,28 @@ def delete_file(doc, filename):
         pluck="name",
     ):
         frappe.delete_doc("File", file, force=True, ignore_permissions=True)
+
+
+def publish_pdf_update(doc, pdf_deleted=False):
+    get_docinfo(doc)
+
+    # if it's a request, frappe.response["docinfo"] will get synced automatically
+    if frappe.request:
+        return
+
+    frappe.publish_realtime(
+        "e_waybill_pdf_update",
+        {
+            "docinfo": frappe.response["docinfo"],
+            "pdf_deleted": pdf_deleted,
+        },
+        doctype=doc.doctype,
+        docname=doc.name,
+    )
+
+
+def get_pdf_filename(e_waybill_number):
+    return f"e-Waybill_{e_waybill_number}.pdf"
 
 
 #######################################################################################
@@ -396,6 +409,10 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         log.add_comment(text=comment)
 
     frappe.db.commit()
+
+    if log.is_cancelled:
+        delete_file(doc, get_pdf_filename(doc.e_waybill))
+        publish_pdf_update(doc, pdf_deleted=True)
 
     ### Fetch Data
 
