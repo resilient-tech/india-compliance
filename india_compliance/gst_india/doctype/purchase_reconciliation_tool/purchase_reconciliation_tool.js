@@ -407,12 +407,12 @@ class PurchaseReconciliationTool {
         // removed onload data to avoid RequestURI too long error
         delete this.frm.doc["__onload"];
         const url =
-            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.export_data_to_xlsx";
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
 
         open_url_post(`/api/method/${url}`, {
             data: JSON.stringify(this.data_to_export),
             doc: JSON.stringify(this.frm.doc),
-            download: !!selected_row,
+            is_supplier_specific: !!selected_row,
         });
     }
 
@@ -1232,16 +1232,16 @@ class EmailDialog {
     constructor(frm, data) {
         this.frm = frm;
         this.data = data;
-        this.get_xlsx_data();
+        this.get_attachment();
     }
 
-    get_xlsx_data() {
+    get_attachment() {
         const export_data = this.frm.purchase_reconciliation_tool.get_filtered_data(
             this.data
         );
 
         frappe.call({
-            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.get_xlsx_report",
+            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.generate_excel_attachment",
             args: {
                 data: JSON.stringify(export_data),
                 doc: JSON.stringify(this.frm.doc),

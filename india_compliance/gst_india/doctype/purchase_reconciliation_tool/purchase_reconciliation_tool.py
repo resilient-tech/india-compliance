@@ -20,6 +20,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_json_from_file,
 )
+from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
     GSTRCategory,
     ReturnType,
@@ -1065,8 +1066,8 @@ def get_import_history(
 
 
 @frappe.whitelist()
-def get_xlsx_report(data, doc):
-    build_data = BuildExcel(doc=doc, export_data=data, download=True, email=True)
+def generate_excel_attachment(data, doc):
+    build_data = BuildExcel(doc, data, is_supplier_specific=True, email=True)
 
     xlsx_file, filename = build_data.export_data()
     xlsx_data = xlsx_file.getvalue()
@@ -1087,15 +1088,22 @@ def get_xlsx_report(data, doc):
         }
     )
     file.save(ignore_permissions=True)
-
     return [file]
 
 
 @frappe.whitelist()
-def export_data_to_xlsx(data, doc, download=False):
-    """Exports data to an xlsx file"""
-    build_data = BuildExcel(doc=doc, export_data=data, download=download)
+def download_excel_report(data, doc, is_supplier_specific=False):
+    build_data = BuildExcel(doc, data, is_supplier_specific)
     build_data.export_data()
+
+
+def parse_params(fun):
+    def wrapper(*args, **kwargs):
+        args = [frappe.parse_json(arg) for arg in args]
+        kwargs = {k: frappe.parse_json(v) for k, v in kwargs.items()}
+        return fun(*args, **kwargs)
+
+    return wrapper
 
 
 class BuildExcel:
@@ -1112,66 +1120,64 @@ class BuildExcel:
         }
     )
 
-    def __init__(self, doc=None, export_data=None, download=False, email=False):
-        self.is_download = frappe.parse_json(download)
-        self.send_email = frappe.parse_json(email)
-        self.prefix = "isup_"
-        self.reverse_charge_field = "is_reverse_charge"
-        self.doc = frappe.parse_json(doc)
-        self.data = frappe.parse_json(export_data)
-        self.prepare_data()
-
-    def prepare_data(self):
-        """Prepare data for export"""
+    @parse_params
+    def __init__(self, doc, data, is_supplier_specific=False, email=False):
+        """
+        :param doc: purchase reconciliation tool doc
+        :param data: data to be exported
+        :param is_supplier_specific: if true, data will be downloded for specific supplier
+        :param email: send the file as email
+        """
+        self.doc = doc
+        self.data = data
+        self.is_supplier_specific = is_supplier_specific
+        self.email = email
         self.set_headers()
-        self.get_filters()
-        self.merge_headers()
-        self.get_match_summary_data()
-        self.get_supplier_data()
-        self.get_invoice_data()
+        self.set_filters()
 
     def export_data(self):
         """Exports data to an excel file"""
-        from india_compliance.gst_india.doctype.purchase_reconciliation_tool.exporter import (
-            ExcelExporter,
-        )
-
-        file_name = self.get_file_name()
-
         excel = ExcelExporter()
-
         excel.create_sheet(
             sheet_name="Match Summary Data",
             filters=self.filters,
             headers=self.match_summary_header,
-            data=self.match_summary_data,
+            data=self.get_match_summary_data(),
         )
 
-        if not self.is_download:
+        if not self.is_supplier_specific:
             excel.create_sheet(
                 sheet_name="Supplier Data",
                 filters=self.filters,
                 headers=self.supplier_header,
-                data=self.supplier_data,
+                data=self.get_supplier_data(),
             )
 
         excel.create_sheet(
             sheet_name="Invoice Data",
             filters=self.filters,
-            merged_headers=self.merged_headers,
+            merged_headers=self.get_merge_headers(),
             headers=self.invoice_header,
-            data=self.invoice_data,
+            data=self.get_invoice_data(),
         )
 
         excel.remove_sheet("Sheet")
 
-        if self.send_email:
+        file_name = self.get_file_name()
+        if self.email:
             xlsx_data = excel.save_workbook()
             return [xlsx_data, file_name]
 
         excel.export(file_name)
 
-    def get_filters(self):
+    def set_headers(self):
+        """Sets headers for the excel file"""
+
+        self.match_summary_header = self.get_match_summary_columns()
+        self.supplier_header = self.get_supplier_columns()
+        self.invoice_header = self.get_invoice_columns()
+
+    def set_filters(self):
         """Add filters to the sheet"""
 
         label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
@@ -1187,103 +1193,72 @@ class BuildExcel:
             }
         )
 
-    def merge_headers(self):
-        """Initializes merged_headers for the excel file"""
-
-        self.merged_headers = frappe._dict(
+    def get_merge_headers(self):
+        """Returns merged_headers for the excel file"""
+        return frappe._dict(
             {
                 "2A / 2B": ["isup_bill_no", "isup_cess"],
                 "Purchase Data": ["bill_no", "cess"],
             }
         )
 
-    def set_headers(self):
-        """
-        Sets headers for the excel file
-        """
-        self.match_summary_header = self.get_match_summary_columns()
-        self.supplier_header = self.get_supplier_columns()
-        self.invoice_header = self.get_invoice_columns()
-
     def get_match_summary_data(self):
-        """Returns match summary data"""
-        self.match_summary_data = self.process_data(
+        return self.process_data(
             self.data.get("match_summary"),
             self.match_summary_header,
         )
 
     def get_supplier_data(self):
-        """Returns supplier data"""
-        self.supplier_data = self.process_data(
+        return self.process_data(
             self.data.get("supplier_summary"), self.supplier_header
         )
 
     def get_invoice_data(self):
-        """Returns invoice data"""
-        self.invoice_data = self.process_data(
-            self.data.get("invoice_summary"), self.invoice_header
-        )
+        return self.process_data(self.data.get("invoice_summary"), self.invoice_header)
 
     def process_data(self, data, column_list):
         """return required list of dict for the excel file"""
         if not data:
             return
 
-        mapped_data = []
-
+        out = []
+        fields = [d.get("fieldname") for d in column_list]
         purchase_fields = [field.get("fieldname") for field in self.pr_columns]
-
         for row in data:
-            data_dict = {}
-            for column in column_list:
-                fieldname = column.get("fieldname")
+            new_row = {}
+            for field in fields:
+                if field not in row:
+                    row[field] = None
 
-                if fieldname not in row:
-                    row[fieldname] = None
+                # pur data in row (for invoice_summary) is polluted for Missing in PR
+                if field in purchase_fields and not row.get("name"):
+                    row[field] = None
 
-                if (
-                    row.get("isup_name")
-                    and not row.get("name")
-                    and fieldname in purchase_fields
-                ):
-                    row[fieldname] = None
+                self.assign_value(field, row, new_row)
 
-                self.assign_value(fieldname, row, data_dict)
+            out.append(new_row)
 
-                if fieldname in (
-                    self.reverse_charge_field,
-                    f"{self.prefix}{self.reverse_charge_field}",
-                ):
-                    self.assign_value(fieldname, row, data_dict, bool=True)
+        return out
 
-            mapped_data.append(data_dict)
-        return mapped_data
+    def assign_value(self, field, source_data, target_data):
+        if source_data.get(field) is None:
+            target_data[field] = None
+            return
 
-    def assign_value(self, field, source_data, target_data, bool=False):
-        # assign values to given field and set reverse charge yes no
+        if "is_reverse_charge" in field:
+            target_data[field] = "Yes" if source_data.get(field) else "No"
+            return
 
-        if source_data.get(field) is not None:
-            if bool:
-                target_data[field] = "Yes" if source_data[field] else "No"
-            else:
-                target_data[field] = source_data[field]
-
-        else:
-            target_data[field] = ""
+        target_data[field] = source_data.get(field)
 
     def get_file_name(self):
         """Returns file name for the excel file"""
-        invoice_summary = self.data.get("invoice_summary")[0]
-        supplier_name = invoice_summary.get("supplier_name")
-        supplier_gstin = invoice_summary.get("supplier_gstin")
+        if not self.is_supplier_specific:
+            return f"{self.doc.company_gstin}_{self.period}_report"
 
-        file_name = f"{supplier_name}_{supplier_gstin}"
-
-        if not self.is_download:
-            file_name = f"{self.doc.company_gstin}_{self.period}_report"
-        file_name.replace(" ", "_")
-
-        return file_name
+        invoice = self.data.get("invoice_summary")[0]
+        file_name = f"{invoice.get('supplier_name')}_{invoice.get('supplier_gstin')}"
+        return file_name.replace(" ", "_")
 
     def get_match_summary_columns(self):
         """
