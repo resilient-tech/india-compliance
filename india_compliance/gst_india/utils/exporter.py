@@ -59,7 +59,7 @@ class Worksheet:
         {
             "font_family": "Calibri",
             "font_size": 9,
-            "bold": True,
+            "bold": False,
             "horizontal": "general",
             "number_format": "General",
             "width": 20,
@@ -69,18 +69,27 @@ class Worksheet:
             "bg_color": "f2f2f2",
         }
     )
-
+    filter_format = data_format.copy().update({"bg_color": None, "bold": True})
     header_format = frappe._dict(
         {
             "font_family": "Calibri",
             "font_size": 9,
             "bold": True,
             "horizontal": "center",
+            "number_format": "General",
             "width": 20,
             "height": 30,
             "vertical": "center",
             "wrap_text": True,
             "bg_color": "d9d9d9",
+        }
+    )
+    default_styles = frappe._dict(
+        {
+            "is_header": "header_format",
+            "is_total": "header_format",
+            "is_data": "data_format",
+            "is_filter": "filter_format",
         }
     )
 
@@ -102,15 +111,30 @@ class Worksheet:
         self.headers = headers
 
         self.ws = workbook.create_sheet(sheet_name)
-        self.add_data(filters)
+        self.add_data(filters, is_filter=True)
         self.add_merged_header(merged_headers)
         self.add_data(headers, is_header=True)
         self.add_data(data, is_data=True)
 
         if add_totals:
-            self.add_total_row()
+            self.add_data(self.get_totals(), is_total=True)
 
         self.apply_conditional_formatting()
+
+    def add_data(self, data, **kwargs):
+        if not data:
+            return
+
+        if kwargs.get("is_data"):
+            self.data_row = self.row_dimension
+
+        for row in self.parse_data(data):
+            for idx, val in enumerate(row, 1):
+                cell = self.ws.cell(row=self.row_dimension, column=idx)
+                self.apply_format(row=self.row_dimension, column=idx, **kwargs)
+                cell.value = val
+
+            self.row_dimension += 1
 
     def add_merged_header(self, merged_headers):
         if not merged_headers:
@@ -134,64 +158,10 @@ class Worksheet:
             self.apply_format(
                 row=self.row_dimension,
                 column=merge_from_idx,
-                index=merge_from_idx,
                 is_header=True,
             )
 
         self.row_dimension += 1
-
-    def add_data(self, data, is_header=False, is_data=False, is_total=False):
-        if not data:
-            return
-
-        if is_data:
-            self.data_row = self.row_dimension
-
-        parsed_data = self.parse_data(data, is_header)
-
-        for row in parsed_data:
-            for j, val in enumerate(row, 1):
-                cell = self.ws.cell(row=self.row_dimension, column=j)
-                self.apply_format(
-                    row=self.row_dimension,
-                    column=j,
-                    index=j - 1,
-                    is_header=is_header,
-                    is_data=is_data,
-                    is_total=is_total,
-                )
-                cell.value = val
-
-            self.row_dimension += 1
-
-    def add_total_row(self):
-        """Add total row to the sheet"""
-
-        total_row = self.get_totals()
-
-        self.add_data(total_row, is_header=True, is_total=True)
-
-    def apply_format(
-        self, row, column, index, is_header=False, is_data=False, is_total=False
-    ):
-        """Get style if defined or apply default format to the cell"""
-
-        style = self.data_format
-
-        if is_header:
-            style = self.get_header_style(index)
-            if is_total:
-                style.update({"horizontal": "general", "height": 20})
-        elif is_data:
-            style = self.get_data_style(index)
-            style.update({"bold": False})
-        else:
-            style.update(
-                {
-                    "bg_color": None,
-                }
-            )
-        self.apply_style(row, column, style)
 
     def get_totals(self):
         """build total row array of fields to be calculated"""
@@ -208,55 +178,59 @@ class Worksheet:
 
         return total_row
 
-    def get_header_style(self, index):
-        properties = self.headers[index]
+    def apply_format(self, row, column, **kwargs):
+        """Get style if defined or apply default format to the cell"""
 
-        header_style = self.header_format.copy()
+        key = None
+        for k, v in kwargs.items():
+            if v:
+                key = k
+                break
 
-        if header_format := properties.get("header_format"):
-            header_style.update(header_format)
+        if not key:
+            return
 
-        return header_style
+        # get default style
+        style_name = self.default_styles.get(key)
+        style = getattr(self, style_name).copy()
 
-    def get_data_style(self, index):
-        properties = self.headers[index]
+        # update custom style
+        custom_styles = self.headers[column - 1].get(style_name)
+        if custom_styles:
+            style.update(custom_styles)
 
-        data_style = self.data_format.copy()
+        if key == "is_total":
+            style.update(
+                {
+                    "horizontal": self.data_format.horizontal,
+                    "height": self.data_format.height,
+                }
+            )
 
-        if data_format := properties.get("data_format"):
-            data_style.update(data_format)
-
-        return data_style
+        self.apply_style(row, column, style)
 
     def apply_style(self, row, column, style):
         """Apply style to cell"""
 
         cell = self.ws.cell(row=row, column=column)
-        cell.font = Font(
-            name=style.get("font_family"),
-            size=style.get("font_size"),
-            bold=style.get("bold"),
-        )
+        cell.font = Font(name=style.font_family, size=style.font_size, bold=style.bold)
         cell.alignment = Alignment(
-            horizontal=style.get("horizontal"),
-            vertical=style.get("vertical"),
-            wrap_text=style.get("wrap_text"),
+            horizontal=style.horizontal,
+            vertical=style.vertical,
+            wrap_text=style.wrap_text,
         )
-        cell.number_format = style.get("number_format") or "General"
+        cell.number_format = style.number_format
 
-        if style.get("bg_color"):
-            cell.fill = PatternFill(
-                fill_type="solid",
-                fgColor=style.get("bg_color"),
-            )
+        if style.bg_color:
+            cell.fill = PatternFill(fill_type="solid", fgColor=style.bg_color)
 
-        self.ws.column_dimensions[get_column_letter(column)].width = style.get("width")
-        self.ws.row_dimensions[row].height = style.get("height")
+        self.ws.column_dimensions[get_column_letter(column)].width = style.width
+        self.ws.row_dimensions[row].height = style.height
 
     def apply_conditional_formatting(self):
         """Apply conditional formatting to cell"""
 
-        for i, row in enumerate(self.headers, 1):
+        for row in self.headers:
             if "formula" not in row.get("data_format"):
                 continue
 
@@ -287,49 +261,32 @@ class Worksheet:
                 ),
             )
 
-    def parse_data(self, data, is_header=False):
+    def parse_data(self, data):
         """Convert data to List of Lists"""
-        csv_list = []
+        out = []
 
         if isinstance(data, dict):
             for key, value in data.items():
-                if isinstance(value, list):
-                    # To get keys from Merged headers having keys and list of columns to merge
-                    csv_list.append(list(data.keys()))
-                    return csv_list
+                # eg: {"fieldname": "value"} => ["fieldname", "value"]. for filters.
+                out.append([key, value])
+
+        elif isinstance(data, list):
+            # eg: ["value1", "value2"] => ["value1", "value2"]. for totals.
+            if isinstance(data[0], str):
+                return [data]
+
+            for row in data:
+                # eg: [{"label": "value1"}] => "value1". for headers.
+                if row.get("label"):
+                    out.append(row.get("label"))
                 else:
-                    # To get filters value key as Label and it's value
-                    csv_list.append([key, value])
+                    # eg: [{"fieldname1": "value1", "fieldname2": "value2"}] => ["value1", "value2"]. for data.
+                    out.append(list(row.values()))
 
-        if isinstance(data, list):
-            # For Headers and Data
-            csv_list = self.build_csv_array(data, is_header)
+            if row.get("label"):
+                return [out]
 
-        return csv_list
-
-    def build_csv_array(self, data, is_header=False):
-        """Builds a csv data array"""
-        csv_array = []
-        csv_row = []
-
-        for row in data:
-            if isinstance(row, dict):
-                if is_header:
-                    # Fetch label from list of dict from headers
-                    csv_row.append(row.get("label"))
-                else:
-                    # Fetch only values from list of dictionary
-                    csv_array.append(list(row.values()))
-            else:
-                # If it's a single list with element only
-                csv_array.append(data)
-                break
-
-        # Only append to csv_array if csv_row has multiple values
-        if len(csv_row) >= 1:
-            csv_array.append(csv_row)
-
-        return csv_array
+        return out
 
     def get_range(self, start_row, start_column, end_row, end_column, freeze=False):
         start_column_letter = get_column_letter(start_column)
