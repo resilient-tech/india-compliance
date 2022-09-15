@@ -167,6 +167,7 @@ class BaseAPI:
 
         finally:
             log.output = response_json
+            log.now = frappe.flags.in_test
             enqueue_integration_request(**log)
 
     def handle_failed_response(self, response_json):

@@ -10,6 +10,7 @@ dependencies = [
     "python-barcode~=0.13.1",
     "titlecase~=2.3",
     "rapidfuzz~=2.1.4",
+    "responses~=0.21.0",
 
     # Not used directly - required by PyQRCode for PNG generation
     "pypng~=0.20220715.0",
@@ -28,4 +29,3 @@ sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FRAPPE", "ERPNEXT", "FIRSTPARTY",
 
 [tool.bench.dev-dependencies]
 parameterized = "~=0.8.1"
-responses = "~=0.21.0"
