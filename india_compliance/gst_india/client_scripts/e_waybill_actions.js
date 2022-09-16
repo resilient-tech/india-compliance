@@ -120,8 +120,7 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.is_debit_note ||
                 !ic.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
-                (gst_settings.enable_e_invoice &&
-                    gst_settings.auto_generate_e_invoice) ||
+                gst_settings.enable_e_invoice ||
                 !is_e_waybill_applicable(frm)
             )
                 return;
@@ -358,6 +357,26 @@ function show_generate_e_waybill_dialog(frm) {
     });
 
     d.show();
+
+    // Alert if e-Invoice hasn't been generated
+    if (
+        frm.doctype === "Sales Invoice" &&
+        gst_settings.enable_e_invoice &&
+        !frm.doc.irn
+    ) {
+        $(`
+            <div class="alert alert-warning" role="alert">
+                e-Invoice hasn't been generated for this Sales Invoice.
+                <a
+                    href="https://docs.erpnext.com/docs/v14/user/manual/en/regional/india/generating_e_invoice#what-if-we-generate-e-waybill-before-the-e-invoice"
+                    class="alert-link"
+                    target="_blank"
+                >
+                    Learn more
+                </a>
+            </div>
+        `).prependTo(d.wrapper);
+    }
 }
 
 function show_cancel_e_waybill_dialog(frm, callback) {
