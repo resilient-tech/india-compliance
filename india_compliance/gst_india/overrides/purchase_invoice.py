@@ -7,7 +7,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def validate(doc, method=None):
-    if doc.is_opening == "Yes" or validate_transaction(doc) is False:
+    if validate_transaction(doc) is False:
         return
 
     update_itc_totals(doc)

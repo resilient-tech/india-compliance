@@ -46,7 +46,7 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
-    if doc.is_opening == "Yes" or validate_transaction(doc) is False:
+    if validate_transaction(doc) is False:
         return
 
     validate_invoice_number(doc)
