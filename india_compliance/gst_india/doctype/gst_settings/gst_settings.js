@@ -27,16 +27,8 @@ frappe.ui.form.on("GST Settings", {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
         frm.set_value("fetch_e_waybill_data", 1);
     },
-    auto_generate_e_invoice(frm) {
-        if (!frm.doc.enable_e_invoice) return;
-        if (frm.doc.auto_generate_e_invoice)
-            frm.set_value("auto_generate_e_waybill", 1);
-        else frm.set_value("auto_generate_e_waybill", 0);
-    },
-    enable_e_invoice(frm) {
-        if (!frm.doc.enable_e_invoice || !frm.doc.auto_generate_e_invoice) return;
-        frm.set_value("auto_generate_e_waybill", 1);
-    },
+    enable_e_invoice: set_auto_generate_e_waybill,
+    auto_generate_e_invoice: set_auto_generate_e_waybill,
     after_save(frm) {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
@@ -97,4 +89,10 @@ function show_ic_api_promo(frm) {
             "india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo"
         );
     });
+}
+
+function set_auto_generate_e_waybill(frm) {
+    if (!frm.doc.enable_e_invoice) return;
+
+    frm.set_value("auto_generate_e_waybill", frm.doc.auto_generate_e_invoice);
 }
