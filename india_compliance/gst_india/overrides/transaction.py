@@ -567,10 +567,9 @@ def get_gst_details(party_details, doctype, company):
         master_doctype,
         company,
         is_inter_state_supply(
-            frappe._dict(
+            party_details.copy().update(
                 doctype=doctype,
                 place_of_supply=gst_details.place_of_supply,
-                **party_details,
             )
         ),
         party_details.company_gstin[:2],
