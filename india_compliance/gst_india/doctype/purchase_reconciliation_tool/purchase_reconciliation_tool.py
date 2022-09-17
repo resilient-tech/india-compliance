@@ -21,6 +21,7 @@ from india_compliance.gst_india.utils import (
     get_json_from_file,
     get_party_for_gstin,
 )
+from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
     GSTRCategory,
     ReturnType,
@@ -928,7 +929,7 @@ class PurchaseReconciliationTool(Document):
         for doc in data:
             isup_docs.append(doc.get("isup_name"))
 
-            if is_ignore_action and not doc.isup_name:
+            if is_ignore_action and not doc.get("isup_name"):
                 pur_docs.append(doc.get("name"))
 
         if isup_docs:
@@ -1075,3 +1076,658 @@ def get_import_history(
         fields=fields,
         pluck=pluck,
     )
+
+
+@frappe.whitelist()
+def generate_excel_attachment(data, doc):
+    build_data = BuildExcel(doc, data, is_supplier_specific=True, email=True)
+
+    xlsx_file, filename = build_data.export_data()
+    xlsx_data = xlsx_file.getvalue()
+
+    # Upload attachment for email xlsx data using communication make() method
+    folder = frappe.form_dict.folder or "Home"
+    file_url = frappe.form_dict.file_url or ""
+
+    file = frappe.get_doc(
+        {
+            "doctype": "File",
+            "attached_to_doctype": "Purchase Reconciliation Tool",
+            "folder": folder,
+            "file_name": f"{filename}.xlsx",
+            "file_url": file_url,
+            "is_private": 0,
+            "content": xlsx_data,
+        }
+    )
+    file.save(ignore_permissions=True)
+    return [file]
+
+
+@frappe.whitelist()
+def download_excel_report(data, doc, is_supplier_specific=False):
+    build_data = BuildExcel(doc, data, is_supplier_specific)
+    build_data.export_data()
+
+
+def parse_params(fun):
+    def wrapper(*args, **kwargs):
+        args = [frappe.parse_json(arg) for arg in args]
+        kwargs = {k: frappe.parse_json(v) for k, v in kwargs.items()}
+        return fun(*args, **kwargs)
+
+    return wrapper
+
+
+class BuildExcel:
+    COLOR_PALLATE = frappe._dict(
+        {
+            "dark_gray": "d9d9d9",
+            "light_gray": "f2f2f2",
+            "dark_pink": "e6b9b8",
+            "light_pink": "f2dcdb",
+            "sky_blue": "c6d9f1",
+            "light_blue": "dce6f2",
+            "green": "d7e4bd",
+            "light_green": "ebf1de",
+        }
+    )
+
+    @parse_params
+    def __init__(self, doc, data, is_supplier_specific=False, email=False):
+        """
+        :param doc: purchase reconciliation tool doc
+        :param data: data to be exported
+        :param is_supplier_specific: if true, data will be downloded for specific supplier
+        :param email: send the file as email
+        """
+        self.doc = doc
+        self.data = data
+        self.is_supplier_specific = is_supplier_specific
+        self.email = email
+        self.set_headers()
+        self.set_filters()
+
+    def export_data(self):
+        """Exports data to an excel file"""
+        excel = ExcelExporter()
+        excel.create_sheet(
+            sheet_name="Match Summary Data",
+            filters=self.filters,
+            headers=self.match_summary_header,
+            data=self.get_match_summary_data(),
+        )
+
+        if not self.is_supplier_specific:
+            excel.create_sheet(
+                sheet_name="Supplier Data",
+                filters=self.filters,
+                headers=self.supplier_header,
+                data=self.get_supplier_data(),
+            )
+
+        excel.create_sheet(
+            sheet_name="Invoice Data",
+            filters=self.filters,
+            merged_headers=self.get_merge_headers(),
+            headers=self.invoice_header,
+            data=self.get_invoice_data(),
+        )
+
+        excel.remove_sheet("Sheet")
+
+        file_name = self.get_file_name()
+        if self.email:
+            xlsx_data = excel.save_workbook()
+            return [xlsx_data, file_name]
+
+        excel.export(file_name)
+
+    def set_headers(self):
+        """Sets headers for the excel file"""
+
+        self.match_summary_header = self.get_match_summary_columns()
+        self.supplier_header = self.get_supplier_columns()
+        self.invoice_header = self.get_invoice_columns()
+
+    def set_filters(self):
+        """Add filters to the sheet"""
+
+        label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
+        self.period = (
+            f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
+        )
+
+        self.filters = frappe._dict(
+            {
+                "Company Name": self.doc.company,
+                "GSTIN": self.doc.company_gstin,
+                f"Return Period ({label})": self.period,
+            }
+        )
+
+    def get_merge_headers(self):
+        """Returns merged_headers for the excel file"""
+        return frappe._dict(
+            {
+                "2A / 2B": ["isup_bill_no", "isup_cess"],
+                "Purchase Data": ["bill_no", "cess"],
+            }
+        )
+
+    def get_match_summary_data(self):
+        return self.process_data(
+            self.data.get("match_summary"),
+            self.match_summary_header,
+        )
+
+    def get_supplier_data(self):
+        return self.process_data(
+            self.data.get("supplier_summary"), self.supplier_header
+        )
+
+    def get_invoice_data(self):
+        return self.process_data(self.data.get("invoice_summary"), self.invoice_header)
+
+    def process_data(self, data, column_list):
+        """return required list of dict for the excel file"""
+        if not data:
+            return
+
+        out = []
+        fields = [d.get("fieldname") for d in column_list]
+        purchase_fields = [field.get("fieldname") for field in self.pr_columns]
+        for row in data:
+            new_row = {}
+            for field in fields:
+                if field not in row:
+                    row[field] = None
+
+                # pur data in row (for invoice_summary) is polluted for Missing in PR
+                if field in purchase_fields and not row.get("name"):
+                    row[field] = None
+
+                self.assign_value(field, row, new_row)
+
+            out.append(new_row)
+
+        return out
+
+    def assign_value(self, field, source_data, target_data):
+        if source_data.get(field) is None:
+            target_data[field] = None
+            return
+
+        if "is_reverse_charge" in field:
+            target_data[field] = "Yes" if source_data.get(field) else "No"
+            return
+
+        target_data[field] = source_data.get(field)
+
+    def get_file_name(self):
+        """Returns file name for the excel file"""
+        if not self.is_supplier_specific:
+            return f"{self.doc.company_gstin}_{self.period}_report"
+
+        invoice = self.data.get("invoice_summary")[0]
+        file_name = f"{invoice.get('supplier_name')}_{invoice.get('supplier_gstin')}"
+        return file_name.replace(" ", "_")
+
+    def get_match_summary_columns(self):
+        """
+        Defaults:
+            - bg_color: self.COLOR_PALLATE.dark_gray
+            - bg_color_data": self.COLOR_PALLATE.light_gray
+            - bold: 1
+            - align_header: "center"
+            - align_data: "general"
+            - width: 20
+        """
+        return [
+            {
+                "label": "Match Status",
+                "fieldname": "isup_match_status",
+                "data_format": {"horizontal": "left"},
+                "header_format": {"horizontal": "center"},
+            },
+            {
+                "label": "Count \n 2A/2B Docs",
+                "fieldname": "count_isup_docs",
+                "fieldtype": "Int",
+                "data_format": {"number_format": "#,##0"},
+            },
+            {
+                "label": "Count \n Purchase Docs",
+                "fieldname": "count_pur_docs",
+                "fieldtype": "Int",
+                "data_format": {"number_format": "#,##0"},
+            },
+            {
+                "label": "Taxable Amount Diff \n 2A/2B - Purchase",
+                "fieldname": "taxable_value_diff",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "label": "Tax Difference \n 2A/2B - Purchase",
+                "fieldname": "tax_diff",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "label": "%Action Taken",
+                "fieldname": "count_action_taken",
+                "data_format": {"number_format": "0.00%"},
+                "width": 12,
+            },
+        ]
+
+    def get_supplier_columns(self):
+        return [
+            {
+                "label": "Supplier Name",
+                "fieldname": "supplier_name",
+                "data_format": {"horizontal": "left"},
+            },
+            {
+                "label": "Supplier GSTIN",
+                "fieldname": "supplier_gstin",
+                "data_format": {"horizontal": "left"},
+            },
+            {
+                "label": "Count \n 2A/2B Docs",
+                "fieldname": "count_isup_docs",
+                "fieldtype": "Int",
+                "data_format": {"number_format": "#,##0"},
+            },
+            {
+                "label": "Count \n Purchase Docs",
+                "fieldname": "count_pur_docs",
+                "fieldtype": "Int",
+                "data_format": {
+                    "number_format": "#,##0",
+                },
+            },
+            {
+                "label": "Taxable Amount Diff \n 2A/2B - Purchase",
+                "fieldname": "taxable_value_diff",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "label": "Tax Difference \n 2A/2B - Purchase",
+                "fieldname": "tax_diff",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "label": "%Action Taken",
+                "fieldname": "count_action_taken",
+                "data_format": {"number_format": "0.00%"},
+                "header_format": {
+                    "width": 12,
+                },
+            },
+        ]
+
+    def get_invoice_columns(self):
+        self.pr_columns = [
+            {
+                "label": "Bill No",
+                "fieldname": "bill_no",
+                "compare_with": "isup_bill_no",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "Bill Date",
+                "fieldname": "bill_date",
+                "compare_with": "isup_bill_date",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "GSTIN",
+                "fieldname": "supplier_gstin",
+                "compare_with": "isup_supplier_gstin",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 15,
+                },
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": "place_of_supply",
+                "compare_with": "isup_place_of_supply",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "Reverse Charge",
+                "fieldname": "is_reverse_charge",
+                "compare_with": "isup_is_reverse_charge",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": "taxable_value",
+                "compare_with": "isup_taxable_value",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "CGST",
+                "fieldname": "cgst",
+                "compare_with": "isup_cgst",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "SGST",
+                "fieldname": "sgst",
+                "compare_with": "isup_sgst",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "IGST",
+                "fieldname": "igst",
+                "compare_with": "isup_igst",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "CESS",
+                "fieldname": "cess",
+                "compare_with": "isup_cess",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_green,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.green,
+                    "width": 12,
+                },
+            },
+        ]
+        self.isup_columns = [
+            {
+                "label": "Bill No",
+                "fieldname": "isup_bill_no",
+                "compare_with": "bill_no",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "Bill Date",
+                "fieldname": "isup_bill_date",
+                "compare_with": "bill_date",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "GSTIN",
+                "fieldname": "isup_supplier_gstin",
+                "compare_with": "supplier_gstin",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 15,
+                },
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": "isup_place_of_supply",
+                "compare_with": "place_of_supply",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "Reverse Charge",
+                "fieldname": "isup_is_reverse_charge",
+                "compare_with": "is_reverse_charge",
+                "data_format": {
+                    "horizontal": "left",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": "isup_taxable_value",
+                "compare_with": "taxable_value",
+                "fieldtype": "Float",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "CGST",
+                "fieldname": "isup_cgst",
+                "compare_with": "cgst",
+                "fieldtype": "Float",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "SGST",
+                "fieldname": "isup_sgst",
+                "compare_with": "sgst",
+                "fieldtype": "Float",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "IGST",
+                "fieldname": "isup_igst",
+                "compare_with": "igst",
+                "fieldtype": "Float",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "CESS",
+                "fieldname": "isup_cess",
+                "compare_with": "cess",
+                "fieldtype": "Float",
+                "data_format": {
+                    "number_format": "0.00",
+                    "bg_color": self.COLOR_PALLATE.light_blue,
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.sky_blue,
+                    "width": 12,
+                },
+            },
+        ]
+        inv_columns = [
+            {
+                "label": "Action Status",
+                "fieldname": "isup_action",
+                "data_format": {"horizontal": "left"},
+            },
+            {
+                "label": "Match Status",
+                "fieldname": "isup_match_status",
+                "data_format": {"horizontal": "left"},
+            },
+            {
+                "label": "Supplier Name",
+                "fieldname": "supplier_name",
+                "data_format": {"horizontal": "left"},
+            },
+            {
+                "label": "PAN",
+                "fieldname": "pan",
+                "data_format": {"horizontal": "center"},
+                "header_format": {
+                    "width": 15,
+                },
+            },
+            {
+                "label": "Classification",
+                "fieldname": "isup_classification",
+                "data_format": {"horizontal": "left"},
+                "header_format": {
+                    "width": 11,
+                },
+            },
+            {
+                "label": "Taxable Value Difference",
+                "fieldname": "taxable_value_diff",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                    "width": 12,
+                },
+            },
+            {
+                "label": "Tax Difference",
+                "fieldname": "tax_diff",
+                "fieldtype": "Float",
+                "data_format": {
+                    "bg_color": self.COLOR_PALLATE.light_pink,
+                    "number_format": "0.00",
+                },
+                "header_format": {
+                    "bg_color": self.COLOR_PALLATE.dark_pink,
+                    "width": 12,
+                },
+            },
+        ]
+        inv_columns.extend(self.isup_columns)
+        inv_columns.extend(self.pr_columns)
+        return inv_columns

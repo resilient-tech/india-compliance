@@ -4,9 +4,11 @@ from titlecase import titlecase as _titlecase
 
 import frappe
 from frappe import _
+from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import get_datetime, get_time_zone
 from frappe.utils.file_manager import get_file_path
+from erpnext.accounts.party import get_default_contact
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -119,6 +121,12 @@ def get_party_for_gstin(gstin, party_type="Supplier"):
     )
     if party:
         return party[0][0]
+
+
+@frappe.whitelist()
+def get_party_contact_details(party, party_type="Supplier"):
+    if party and (contact := get_default_contact(party_type, party)):
+        return get_contact_details(contact)
 
 
 def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):

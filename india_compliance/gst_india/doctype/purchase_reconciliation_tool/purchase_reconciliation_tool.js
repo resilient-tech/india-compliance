@@ -67,6 +67,11 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.$wrapper
             .find("[data-label='dropdown-divider']")
             .addClass("dropdown-divider");
+
+        // Export button
+        frm.add_custom_button(__("Export"), () =>
+            frm.purchase_reconciliation_tool.export_data()
+        );
     },
 
     before_save(frm) {
@@ -330,15 +335,16 @@ class PurchaseReconciliationTool {
         return options;
     }
 
-    apply_filters(force) {
-        const has_filters = this.filter_group.filters.length > 0;
+    apply_filters(force, supplier_filter) {
+        const has_filters = this.filter_group.filters.length > 0 || supplier_filter;
         if (!has_filters) {
             this.filters = null;
             this.filtered_data = this.data;
             return;
         }
 
-        const filters = this.filter_group.get_filters();
+        let filters = this.filter_group.get_filters();
+        if (supplier_filter) filters.push(supplier_filter);
         if (!force && this.filters === filters) return;
 
         this.filters = filters;
@@ -369,6 +375,19 @@ class PurchaseReconciliationTool {
             const data = me.mapped_invoice_data[$(this).attr("data-name")];
             me.dm = new DetailViewDialog(me.frm, data);
         });
+        this.tabs.supplier_tab.$datatable.on("click", ".btn.download", function (e) {
+            const selected_row = me.tabs.supplier_tab.data.find(
+                r => r.supplier_gstin === $(this).attr("data-name")
+            );
+            me.export_data(selected_row);
+        });
+
+        this.tabs.supplier_tab.$datatable.on("click", ".btn.envelope", function (e) {
+            const data = me.tabs.supplier_tab.data.find(
+                r => r.supplier_gstin === $(this).attr("data-name")
+            );
+            me.dm = new EmailDialog(me.frm, data);
+        });
 
         // TODO: add filters on click
         this.tabs.summary_tab.$datatable.on(
@@ -379,6 +398,41 @@ class PurchaseReconciliationTool {
                 console.log(match_status);
             }
         );
+    }
+
+    export_data(selected_row) {
+        this.data_to_export = this.get_filtered_data(selected_row);
+        if (selected_row) delete this.data_to_export.supplier_summary;
+
+        // removed onload data to avoid RequestURI too long error
+        delete this.frm.doc["__onload"];
+        const url =
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
+
+        open_url_post(`/api/method/${url}`, {
+            data: JSON.stringify(this.data_to_export),
+            doc: JSON.stringify(this.frm.doc),
+            is_supplier_specific: !!selected_row,
+        });
+    }
+
+    get_filtered_data(selected_row = null) {
+        if (selected_row) {
+            const supplier_filter = [
+                this.frm.doctype,
+                "supplier_gstin",
+                "=",
+                selected_row.supplier_gstin,
+                false,
+            ];
+            this.apply_filters(true, supplier_filter);
+        }
+
+        return {
+            match_summary: this.get_summary_data(),
+            supplier_summary: this.get_supplier_data(),
+            invoice_summary: this.filtered_data,
+        };
     }
 
     get_summary_data() {
@@ -1174,6 +1228,79 @@ class ImportDialog {
     }
 }
 
+class EmailDialog {
+    constructor(frm, data) {
+        this.frm = frm;
+        this.data = data;
+        this.get_attachment();
+    }
+
+    get_attachment() {
+        const export_data = this.frm.purchase_reconciliation_tool.get_filtered_data(
+            this.data
+        );
+
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.generate_excel_attachment",
+            args: {
+                data: JSON.stringify(export_data),
+                doc: JSON.stringify(this.frm.doc),
+            },
+            callback: r => {
+                this.prepare_email_args(r.message);
+            },
+        });
+    }
+
+    prepare_email_args(attachment) {
+        this.subject = `Reconciliation for ${this.data.supplier_name}-${this.data.supplier_gstin}`;
+        this.message = this.get_email_message();
+        this.attachment = attachment;
+
+        this.get_recipients()
+            .then(recipients => {
+                this.recipients = recipients;
+            })
+            .then(() => {
+                this.show_email_dialog();
+            });
+    }
+
+    show_email_dialog() {
+        const args = {
+            subject: this.subject,
+            recipients: this.recipients || [],
+            attach_document_print: false,
+            message: this.message,
+            attachments: this.attachment,
+        };
+        new frappe.views.CommunicationComposer(args);
+    }
+
+    get_email_message() {
+        const from_date = frappe.datetime.str_to_user(
+            this.frm.doc.inward_supply_from_date
+        );
+        const to_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_to_date);
+
+        let message = "Hello,<br><br>";
+        message += `We have made purchase reconciliation for the period ${from_date} to ${to_date} for purchases made by ${this.frm.doc.company} from you.<br><br>`;
+        message += `You are reqested to kindly make necessary corrections to GST Portal your end if required. Attached is the sheet for your reference.<br><br>`;
+        return message;
+    }
+
+    async get_recipients() {
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.utils.get_party_contact_details",
+            args: {
+                party: this.data.supplier_name,
+            },
+        });
+
+        return message.contact_email;
+    }
+}
+
 async function set_default_financial_year(frm) {
     const { message: date_range } = await frm.call("get_date_range", {
         period:
@@ -1205,14 +1332,16 @@ function get_icon(value, column, data, icon) {
      * @param {object} data         All values in its core form for current row
      * @param {string} icon         Return icon (font-awesome) as the content
      */
+
     const hash = get_hash(data);
-    return `<button class="btn ${icon}" title="hello" data-name="${hash}">
+    return `<button class="btn ${icon}" data-name="${hash}">
                 <i class="fa fa-${icon}"></i>
             </button>`;
 }
 
 function get_hash(data) {
     if (data.name || data.isup_name) return data.name + "~" + data.isup_name;
+    if (data.supplier_gstin) return data.supplier_gstin;
 }
 
 function patch_set_active_tab(frm) {
