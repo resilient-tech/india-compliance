@@ -1386,9 +1386,9 @@ class BuildExcel:
             {
                 "label": "Bill No",
                 "fieldname": "bill_no",
+                "compare_with": "isup_bill_no",
                 "data_format": {
                     "horizontal": "left",
-                    "formula": "IF(ISBLANK(H6), FALSE, H6<>R6)",
                     "bg_color": self.COLOR_PALLATE.light_green,
                 },
                 "header_format": {
@@ -1399,6 +1399,7 @@ class BuildExcel:
             {
                 "label": "Bill Date",
                 "fieldname": "bill_date",
+                "compare_with": "isup_bill_date",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1411,6 +1412,7 @@ class BuildExcel:
             {
                 "label": "GSTIN",
                 "fieldname": "supplier_gstin",
+                "compare_with": "isup_supplier_gstin",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1423,6 +1425,7 @@ class BuildExcel:
             {
                 "label": "Place of Supply",
                 "fieldname": "place_of_supply",
+                "compare_with": "isup_place_of_supply",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1435,6 +1438,7 @@ class BuildExcel:
             {
                 "label": "Reverse Charge",
                 "fieldname": "is_reverse_charge",
+                "compare_with": "isup_is_reverse_charge",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1447,6 +1451,7 @@ class BuildExcel:
             {
                 "label": "Taxable Value",
                 "fieldname": "taxable_value",
+                "compare_with": "isup_taxable_value",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1460,6 +1465,7 @@ class BuildExcel:
             {
                 "label": "CGST",
                 "fieldname": "cgst",
+                "compare_with": "isup_cgst",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1473,6 +1479,7 @@ class BuildExcel:
             {
                 "label": "SGST",
                 "fieldname": "sgst",
+                "compare_with": "isup_sgst",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1486,6 +1493,7 @@ class BuildExcel:
             {
                 "label": "IGST",
                 "fieldname": "igst",
+                "compare_with": "isup_igst",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1499,6 +1507,7 @@ class BuildExcel:
             {
                 "label": "CESS",
                 "fieldname": "cess",
+                "compare_with": "isup_cess",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -1514,11 +1523,10 @@ class BuildExcel:
             {
                 "label": "Bill No",
                 "fieldname": "isup_bill_no",
+                "compare_with": "bill_no",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_blue,
-                    "compare_field": "bill_no",
-                    "formula": "IF(ISBLANK(R6), FALSE, H6<>R6)",
                 },
                 "header_format": {
                     "bg_color": self.COLOR_PALLATE.sky_blue,
@@ -1528,6 +1536,7 @@ class BuildExcel:
             {
                 "label": "Bill Date",
                 "fieldname": "isup_bill_date",
+                "compare_with": "bill_date",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_blue,
@@ -1540,6 +1549,7 @@ class BuildExcel:
             {
                 "label": "GSTIN",
                 "fieldname": "isup_supplier_gstin",
+                "compare_with": "supplier_gstin",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_blue,
@@ -1552,6 +1562,7 @@ class BuildExcel:
             {
                 "label": "Place of Supply",
                 "fieldname": "isup_place_of_supply",
+                "compare_with": "place_of_supply",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_blue,
@@ -1564,6 +1575,7 @@ class BuildExcel:
             {
                 "label": "Reverse Charge",
                 "fieldname": "isup_is_reverse_charge",
+                "compare_with": "is_reverse_charge",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_blue,
@@ -1576,6 +1588,7 @@ class BuildExcel:
             {
                 "label": "Taxable Value",
                 "fieldname": "isup_taxable_value",
+                "compare_with": "taxable_value",
                 "fieldtype": "Float",
                 "data_format": {
                     "number_format": "0.00",
@@ -1589,6 +1602,7 @@ class BuildExcel:
             {
                 "label": "CGST",
                 "fieldname": "isup_cgst",
+                "compare_with": "cgst",
                 "fieldtype": "Float",
                 "data_format": {
                     "number_format": "0.00",
@@ -1602,6 +1616,7 @@ class BuildExcel:
             {
                 "label": "SGST",
                 "fieldname": "isup_sgst",
+                "compare_with": "sgst",
                 "fieldtype": "Float",
                 "data_format": {
                     "number_format": "0.00",
@@ -1615,6 +1630,7 @@ class BuildExcel:
             {
                 "label": "IGST",
                 "fieldname": "isup_igst",
+                "compare_with": "igst",
                 "fieldtype": "Float",
                 "data_format": {
                     "number_format": "0.00",
@@ -1628,6 +1644,7 @@ class BuildExcel:
             {
                 "label": "CESS",
                 "fieldname": "isup_cess",
+                "compare_with": "cess",
                 "fieldtype": "Float",
                 "data_format": {
                     "number_format": "0.00",

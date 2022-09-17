@@ -119,7 +119,7 @@ class Worksheet:
         if add_totals:
             self.add_data(self.get_totals(), is_total=True)
 
-        self.apply_conditional_formatting()
+        self.apply_conditional_formatting(add_totals)
 
     def add_data(self, data, **kwargs):
         if not data:
@@ -181,13 +181,8 @@ class Worksheet:
     def apply_format(self, row, column, **kwargs):
         """Get style if defined or apply default format to the cell"""
 
-        key = None
-        for k, v in kwargs.items():
-            if v:
-                key = k
-                break
-
-        if not key:
+        key, value = kwargs.popitem()
+        if not value:
             return
 
         # get default style
@@ -227,24 +222,24 @@ class Worksheet:
         self.ws.column_dimensions[get_column_letter(column)].width = style.width
         self.ws.row_dimensions[row].height = style.height
 
-    def apply_conditional_formatting(self):
-        """Apply conditional formatting to cell"""
+    def apply_conditional_formatting(self, has_totals):
+        """Apply conditional formatting to data based on comparable fields as defined in headers"""
 
         for row in self.headers:
-            if "formula" not in row.get("data_format"):
+            if not (compare_field := row.get("compare_with")):
                 continue
 
-            formula = row.get("data_format").get("formula")
-            compare_field = row.get("data_format").get("compare_field")
+            column = get_column_letter(self.get_column_index(row["fieldname"]))
+            compare_column = get_column_letter(self.get_column_index(compare_field))
 
-            start_column = self.get_column_index(row["fieldname"])
-            end_column = self.get_column_index(compare_field) or self.ws.max_column
+            # eg formula used: IF(ISBLANK(H6), FALSE, H6<>R6)
+            formula = f"IF(ISBLANK({column}{self.data_row}), FALSE, {column}{self.data_row}<>{compare_column}{self.data_row})"
 
             range = self.get_range(
                 start_row=self.data_row,
-                start_column=start_column,
-                end_row=self.ws.max_row,
-                end_column=end_column - 1,
+                start_column=column,
+                end_row=self.ws.max_row - has_totals,
+                end_column=column,
             )
 
             self.ws.conditional_formatting.add(
@@ -289,16 +284,33 @@ class Worksheet:
         return out
 
     def get_range(self, start_row, start_column, end_row, end_column, freeze=False):
-        start_column_letter = get_column_letter(start_column)
-        end_column_letter = get_column_letter(end_column)
+        """
+        Get range of cells
+        parameters:
+            start_row (int): row number of the first cell
+            start_column (int | string): column number / letter of the first cell
+            end_row (int): row number of the last cell
+            end_column (int | string): column number / letter of the last cell
+            freeze (bool): freeze the range
+
+        returns:
+            string: range of cells eg: A1:B2
+        """
+
+        if isinstance(start_column, int):
+            start_column = get_column_letter(start_column)
+
+        if isinstance(end_column, int):
+            end_column = get_column_letter(end_column)
 
         if freeze:
-            return f"${start_column_letter}${start_row}:${end_column_letter}${end_row}"
+            return f"${start_column}${start_row}:${end_column}${end_row}"
 
-        return f"{start_column_letter}{start_row}:{end_column_letter}{end_row}"
+        return f"{start_column}{start_row}:{end_column}{end_row}"
 
     def get_column_index(self, column_name):
-        """Get column index from column name"""
+        """Get column index / position from column name"""
+
         for (idx, field) in enumerate(self.headers, 1):
             if field["fieldname"] == column_name:
                 return idx
