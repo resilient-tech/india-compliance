@@ -12,8 +12,12 @@ function setup_e_waybill_actions(doctype) {
         setup(frm) {
             if (!ic.is_api_enabled()) return;
 
-            frappe.realtime.on("e_waybill_pdf_attached", () => {
-                frm.reload_doc();
+            frappe.realtime.on("e_waybill_pdf_update", message => {
+                frappe.model.sync_docinfo(message);
+                frm.attachments && frm.attachments.refresh();
+
+                if (message.pdf_deleted) return;
+
                 frappe.show_alert({
                     indicator: "green",
                     message: __("e-Waybill PDF attached successfully"),
@@ -38,7 +42,11 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (has_e_waybill_threshold_met(frm) && !frm.doc.is_return) {
+                if (
+                    has_e_waybill_threshold_met(frm) &&
+                    !frm.doc.is_return &&
+                    !frm.doc.is_debit_note
+                ) {
                     frm.dashboard.add_comment(
                         __(
                             "e-Waybill is applicable for this invoice, but not yet generated or updated."
@@ -109,10 +117,10 @@ function setup_e_waybill_actions(doctype) {
                 !has_e_waybill_threshold_met(frm) ||
                 frm.doc.ewaybill ||
                 frm.doc.is_return ||
+                frm.doc.is_debit_note ||
                 !ic.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
-                (gst_settings.enable_e_invoice &&
-                    gst_settings.auto_generate_e_invoice) ||
+                gst_settings.enable_e_invoice ||
                 !is_e_waybill_applicable(frm)
             )
                 return;
@@ -349,6 +357,26 @@ function show_generate_e_waybill_dialog(frm) {
     });
 
     d.show();
+
+    // Alert if e-Invoice hasn't been generated
+    if (
+        frm.doctype === "Sales Invoice" &&
+        gst_settings.enable_e_invoice &&
+        !frm.doc.irn
+    ) {
+        $(`
+            <div class="alert alert-warning" role="alert">
+                e-Invoice hasn't been generated for this Sales Invoice.
+                <a
+                    href="https://docs.erpnext.com/docs/v14/user/manual/en/regional/india/generating_e_invoice#what-if-we-generate-e-waybill-before-the-e-invoice"
+                    class="alert-link"
+                    target="_blank"
+                >
+                    Learn more
+                </a>
+            </div>
+        `).prependTo(d.wrapper);
+    }
 }
 
 function show_cancel_e_waybill_dialog(frm, callback) {
@@ -593,8 +621,9 @@ function is_e_waybill_applicable(frm) {
     if (!frm.doc.company_gstin) return;
 
     // at least one item is not a service
-    for (let item of frm.doc.items) {
-        if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99")) return true;
+    for (const item of frm.doc.items) {
+        if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0)
+            return true;
     }
 }
 

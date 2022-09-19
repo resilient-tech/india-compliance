@@ -567,10 +567,9 @@ def get_gst_details(party_details, doctype, company):
         master_doctype,
         company,
         is_inter_state_supply(
-            frappe._dict(
+            party_details.copy().update(
                 doctype=doctype,
                 place_of_supply=gst_details.place_of_supply,
-                **party_details,
             )
         ),
         party_details.company_gstin[:2],
@@ -698,7 +697,7 @@ def is_export_without_payment_of_gst(doc):
 
 
 def validate_transaction(doc, method=None):
-    if not is_indian_registered_company(doc):
+    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
         return False
 
     if validate_items(doc) is False:
