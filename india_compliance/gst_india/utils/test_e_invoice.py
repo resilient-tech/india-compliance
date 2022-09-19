@@ -49,6 +49,7 @@ class TestEInvoice(FrappeTestCase):
             "GST Settings",
             "GST Settings",
             {
+                "enable_api": 0,
                 "enable_e_invoice": 0,
                 "auto_generate_e_invoice": 1,
                 "enable_e_waybill": 0,
