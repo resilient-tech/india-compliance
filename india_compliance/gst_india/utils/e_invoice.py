@@ -191,9 +191,6 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
 
 
 def validate_if_e_invoice_can_be_cancelled(doc):
-    if frappe.flags.in_test:
-        return
-
     if not doc.irn:
         frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
 

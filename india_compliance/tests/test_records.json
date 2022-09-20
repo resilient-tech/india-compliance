@@ -34,14 +34,6 @@
             "enable_perpetual_inventory": 0
         }
     ],
-    "GST HSN Code": [
-        {
-            "hsn_code": 999999,
-            "g_or_s": "S",
-            "short_desc": "Test Service Item",
-            "itc_claim_type": "Input Service"
-        }
-    ],
     "Item": [
         {
             "description": "_Test Trading Goods 1",
@@ -105,7 +97,7 @@
             "item_name": "_Test Service Item",
             "valuation_rate": 100,
             "item_group": "Services",
-            "gst_hsn_code": "999999",
+            "gst_hsn_code": "999900",
             "uoms": [
                 {
                     "conversion_factor": 1,

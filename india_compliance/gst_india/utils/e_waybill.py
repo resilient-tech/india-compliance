@@ -161,9 +161,6 @@ def _cancel_e_waybill(doc, values):
 
     result = api(doc).cancel_e_waybill(data)
 
-    if frappe.flags.in_test:
-        return
-
     log_and_process_e_waybill(
         doc,
         {
