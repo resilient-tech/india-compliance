@@ -23,6 +23,7 @@ class TestEInvoice(FrappeTestCase):
 
     @classmethod
     def setUpClass(cls):
+        print(frappe._dict(frappe.get_site_config()))
         frappe.db.set_value(
             "GST Settings",
             "GST Settings",
