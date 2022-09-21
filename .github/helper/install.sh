@@ -60,4 +60,4 @@ bench start &
 bench reinstall --yes
 
 bench --verbose install-app india_compliance
-bench set-config ic_api_secret "$IC_API_SECRET"
+bench --site test_site set-config ic_api_secret "${IC_API_SECRET}"
