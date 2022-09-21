@@ -17,6 +17,8 @@ from india_compliance.gst_india.utils.e_invoice import (
 )
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
+# from india_compliance.gst_india.utils.e_invoice import EInvoiceData
+
 
 class TestEInvoice(FrappeTestCase):
     BASE_URL = "https://asp.resilient.tech"
@@ -56,6 +58,34 @@ class TestEInvoice(FrappeTestCase):
     @classmethod
     def tearDown(cls):
         frappe.db.rollback()
+
+    # def test_get_data(self):
+    #     """Validation test for more than 1000 items in sales invoice"""
+    #     frappe.db.set_single_value("Selling Settings", "allow_multiple_items", 1)
+    #     si = create_sales_invoice(do_not_submit=True)
+    #     item_row = si.get("items")[0]
+
+    #     for index in range(0, 1000):
+    #         si.append(
+    #             "items",
+    #             {
+    #                 "item_code": item_row.item_code,
+    #                 "qty": item_row.qty,
+    #                 "rate": item_row.rate,
+    #             },
+    #         )
+    #     si.save()
+
+    #     self.assertRaisesRegex(
+    #         frappe.exceptions.ValidationError,
+    #         re.compile(r"^(e-Invoice can only be .*items.*)"),
+    #         EInvoiceData(si).validate_transaction(),
+    #         si,
+    #     )
+
+    #     si.items.remove(item_row)
+    #     si.save()
+    #     frappe.db.set_single_value("Selling Settings", "allow_multiple_items", 1)
 
     @responses.activate
     def test_generate_e_invoice_with_goods_item(self):
@@ -97,6 +127,8 @@ class TestEInvoice(FrappeTestCase):
 
     @responses.activate
     def test_return_e_invoice_with_goods_item(self):
+        """Generate test e-Invoice for returned Sales Invoices"""
+
         data = self.e_invoice_test_data.get("return_invoice")
 
         si = create_sales_invoice(
@@ -125,6 +157,8 @@ class TestEInvoice(FrappeTestCase):
 
     @responses.activate
     def test_debit_note_e_invoice_with_goods_item(self):
+        """Generate test e-Invoice for debit note with zero quantity"""
+
         data = self.e_invoice_test_data.get("debit_invoice")
         self.update_doc_details(data)
 
@@ -143,6 +177,8 @@ class TestEInvoice(FrappeTestCase):
 
     @responses.activate
     def test_cancel_e_invoice(self):
+        """Test for generate and cancel e-Invoice"""
+
         data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
         self.update_doc_details(data)
 
@@ -156,6 +192,8 @@ class TestEInvoice(FrappeTestCase):
         self.assertDocumentEqual({"ewaybill": None}, si)
 
     def test_validate_e_invoice_applicability(self):
+        """Test if e_invoicing is applicable"""
+
         si = create_sales_invoice(
             customer="_Test Unregistered Customer",
             gst_category="Unregistered",
@@ -191,6 +229,8 @@ class TestEInvoice(FrappeTestCase):
         )
 
     def test_validate_if_e_invoice_can_be_cancelled(self):
+        """Test if e_invoice can be cancelled"""
+
         data = self.e_invoice_test_data.get("validate_cancel_e_invoice")
         self.update_doc_details(data)
 
