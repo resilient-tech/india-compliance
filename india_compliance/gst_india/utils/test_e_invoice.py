@@ -5,19 +5,18 @@ import responses
 from responses import matchers
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import get_datetime, now_datetime
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.utils.e_invoice import (
+    EInvoiceData,
     cancel_e_invoice,
     generate_e_invoice,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.tests import create_sales_invoice
-
-# from india_compliance.gst_india.utils.e_invoice import EInvoiceData
 
 
 class TestEInvoice(FrappeTestCase):
@@ -59,33 +58,28 @@ class TestEInvoice(FrappeTestCase):
     def tearDown(cls):
         frappe.db.rollback()
 
-    # def test_get_data(self):
-    #     """Validation test for more than 1000 items in sales invoice"""
-    #     frappe.db.set_single_value("Selling Settings", "allow_multiple_items", 1)
-    #     si = create_sales_invoice(do_not_submit=True)
-    #     item_row = si.get("items")[0]
+    @change_settings("Selling Settings", {"allow_multiple_items": 1})
+    def test_get_data(self):
+        """Validation test for more than 1000 items in sales invoice"""
+        si = create_sales_invoice(do_not_submit=True)
+        item_row = si.get("items")[0]
 
-    #     for index in range(0, 1000):
-    #         si.append(
-    #             "items",
-    #             {
-    #                 "item_code": item_row.item_code,
-    #                 "qty": item_row.qty,
-    #                 "rate": item_row.rate,
-    #             },
-    #         )
-    #     si.save()
+        for index in range(0, 1000):
+            si.append(
+                "items",
+                {
+                    "item_code": item_row.item_code,
+                    "qty": item_row.qty,
+                    "rate": item_row.rate,
+                },
+            )
+        si.save()
 
-    #     self.assertRaisesRegex(
-    #         frappe.exceptions.ValidationError,
-    #         re.compile(r"^(e-Invoice can only be .*items.*)"),
-    #         EInvoiceData(si).validate_transaction(),
-    #         si,
-    #     )
-
-    #     si.items.remove(item_row)
-    #     si.save()
-    #     frappe.db.set_single_value("Selling Settings", "allow_multiple_items", 1)
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice can only be generated.*)$"),
+            EInvoiceData(si).get_data,
+        )
 
     @responses.activate
     def test_generate_e_invoice_with_goods_item(self):
@@ -231,7 +225,7 @@ class TestEInvoice(FrappeTestCase):
     def test_validate_if_e_invoice_can_be_cancelled(self):
         """Test if e_invoice can be cancelled"""
 
-        data = self.e_invoice_test_data.get("validate_cancel_e_invoice")
+        data = self.e_invoice_test_data.get("service_item")
         self.update_doc_details(data)
 
         si = create_sales_invoice(**data.get("kwargs"))
@@ -244,7 +238,6 @@ class TestEInvoice(FrappeTestCase):
         )
         # ToDo: case to validate "e-Invoice can only be cancelled upto 24 hours after it is generated"
 
-        # e_invoice_test_data.get("request_data").get("DocDtls").update({})
         # self._generate_e_invoice(data, si.name)
 
         # print(si.get_onload().get("e_invoice_info", {}).get("acknowledged_on"))
