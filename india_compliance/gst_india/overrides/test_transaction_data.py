@@ -3,6 +3,7 @@ import re
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_to_date, getdate
+from frappe.utils.data import format_date
 
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 from india_compliance.gst_india.utils.transaction_data import (
@@ -119,14 +120,78 @@ class TestTransactionData(FrappeTestCase):
         )
 
     def test_set_transaction_details(self):
-        # ToDo: assert for dict equal
-        # doc = create_sales_invoice(do_not_submit=True)
-        # GSTTransactionData(doc).set_transaction_details
-        pass
+        """Check transaction data"""
+        doc = create_sales_invoice(do_not_submit=True)
+
+        gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.set_transaction_details()
+
+        self.assertDictEqual(
+            gst_transaction_data.transaction_details,
+            {
+                "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
+                "base_total": 100.0,
+                "rounding_adjustment": 0.0,
+                "base_grand_total": 100.0,
+                "discount_amount": 0,
+                "company_gstin": "24AAQCA8719H1ZC",
+                "name": doc.name,
+                "total_cgst_amount": 0,
+                "total_sgst_amount": 0,
+                "total_igst_amount": 0,
+                "total_cess_amount": 0,
+                "total_cess_non_advol_amount": 0,
+                "other_charges": 0.0,
+            },
+        )
 
     def test_set_transporter_details(self):
-        # ToDo: assert for dict equal
-        pass
+        """Dict Assertion for transporter details"""
+        doc = create_sales_invoice(vehicle_no="GJ07DL9009", do_not_submit=True)
+
+        gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.set_transporter_details()
+
+        self.assertDictEqual(
+            gst_transaction_data.transaction_details,
+            {
+                "distance": 0,
+                "mode_of_transport": 1,
+                "vehicle_type": "R",
+                "vehicle_no": "GJ07DL9009",
+                "lr_no": None,
+                "lr_date": "",
+                "gst_transporter_id": "",
+                "transporter_name": "",
+            },
+        )
 
     def test_get_all_item_details(self):
-        pass
+        """Assertion for all Item Details fetched from transaction docs"""
+        doc = create_sales_invoice(do_not_submit=True)
+
+        self.assertListEqual(
+            GSTTransactionData(doc).get_all_item_details(),
+            [
+                {
+                    "item_no": 1,
+                    "qty": 1.0,
+                    "taxable_value": 100.0,
+                    "hsn_code": "61149090",
+                    "item_name": "Test Trading Goods 1",
+                    "uom": "NOS",
+                    "cgst_amount": 0,
+                    "cgst_rate": 0,
+                    "sgst_amount": 0,
+                    "sgst_rate": 0,
+                    "igst_amount": 0,
+                    "igst_rate": 0,
+                    "cess_amount": 0,
+                    "cess_rate": 0,
+                    "cess_non_advol_amount": 0,
+                    "cess_non_advol_rate": 0,
+                    "tax_rate": 0.0,
+                    "total_value": 100.0,
+                }
+            ],
+        )
