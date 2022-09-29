@@ -9,6 +9,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import get_datetime, now_datetime
 from frappe.utils.data import format_date
 
+from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
     cancel_e_invoice,
@@ -171,16 +172,36 @@ class TestEInvoice(FrappeTestCase):
 
     @responses.activate
     def test_cancel_e_invoice(self):
-        """Test for generate and cancel e-Invoice"""
+        """Test for generate and cancel e-Invoice
+        - Test function `validate_if_e_invoice_can_be_cancelled`
+        """
 
         data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
         self.update_doc_details(data)
 
         si = create_sales_invoice(**data.get("kwargs"))
 
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(IRN not found)$"),
+            validate_if_e_invoice_can_be_cancelled,
+            si,
+        )
+
         self._generate_e_invoice(data, si.name)
 
-        self._cancel_e_invoice(si.name)
+        si_doc = load_doc("Sales Invoice", si.name)
+
+        si_doc.get_onload().get("e_invoice_info").update({"acknowledged_on": None})
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice can only be cancelled.*)$"),
+            validate_if_e_invoice_can_be_cancelled,
+            si_doc,
+        )
+
+        self._cancel_e_invoice(si_doc)
 
         self.assertDocumentEqual({"irn": None}, si)
         self.assertDocumentEqual({"ewaybill": None}, si)
@@ -222,33 +243,6 @@ class TestEInvoice(FrappeTestCase):
             "GST Settings", "e_invoice_applicable_from", get_datetime()
         )
 
-    def test_validate_if_e_invoice_can_be_cancelled(self):
-        """Test if e_invoice can be cancelled"""
-
-        data = self.e_invoice_test_data.get("service_item")
-        self.update_doc_details(data)
-
-        si = create_sales_invoice(**data.get("kwargs"))
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(IRN not found)$"),
-            validate_if_e_invoice_can_be_cancelled,
-            si,
-        )
-        # ToDo: case to validate "e-Invoice can only be cancelled upto 24 hours after it is generated"
-
-        # self._generate_e_invoice(data, si.name)
-
-        # print(si.get_onload().get("e_invoice_info", {}).get("acknowledged_on"))
-
-        # self.assertRaisesRegex(
-        #     frappe.exceptions.ValidationError,
-        #     re.compile(r"^(e-Invoice can only be cancelled.*)$"),
-        #     validate_if_e_invoice_can_be_cancelled,
-        #     si,
-        # )
-
     def _generate_e_invoice(self, data, inv_name):
         responses.add(
             responses.POST,
@@ -260,18 +254,16 @@ class TestEInvoice(FrappeTestCase):
 
         generate_e_invoice(inv_name)
 
-    def _cancel_e_invoice(self, invoice_no):
-        si_doc = frappe.get_doc("Sales Invoice", invoice_no)
-
+    def _cancel_e_invoice(self, sales_invoice):
         cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")
-        cancel_e_waybill.get("request_data").update({"ewbNo": si_doc.ewaybill}),
+        cancel_e_waybill.get("request_data").update({"ewbNo": sales_invoice.ewaybill}),
         cancel_e_waybill.get("response_data").get("result").update(
-            {"ewayBillNo": si_doc.ewaybill}
+            {"ewayBillNo": sales_invoice.ewaybill}
         )
 
         cancel_irn = self.e_invoice_test_data.get("cancel_e_invoice")
-        cancel_irn.get("request_data").update({"Irn": si_doc.irn})
-        cancel_irn.get("response_data").get("result").update({"Irn": si_doc.irn})
+        cancel_irn.get("request_data").update({"Irn": sales_invoice.irn})
+        cancel_irn.get("response_data").get("result").update({"Irn": sales_invoice.irn})
 
         responses.add(
             responses.POST,
@@ -294,7 +286,7 @@ class TestEInvoice(FrappeTestCase):
             "remark": "Data Entry Mistake",
         }
 
-        cancel_e_invoice(si_doc.name, values)
+        cancel_e_invoice(sales_invoice.name, values)
 
     def update_doc_details(self, e_invoice_test_data, inv_no=None, is_return=False):
         today = format_date(frappe.utils.today(), "dd/mm/yyyy")
