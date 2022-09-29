@@ -16,5 +16,9 @@ frappe.ui.form.on(DOCTYPE, {
                 },
             };
         });
+    },
+
+    before_submit(frm) {
+        frm.doc._submitted_from_ui = 1;
     }
 });
