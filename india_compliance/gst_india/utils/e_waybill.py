@@ -386,6 +386,7 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         log_data=log_data,
         fetch=fetch,
         comment=comment,
+        now=frappe.flags.in_test,
     )
 
     update_onload(doc, "e_waybill_info", log_data)
