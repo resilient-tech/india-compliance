@@ -100,6 +100,57 @@ def validate_billing_address_gstin(doc):
         )
 
 
+def on_submit(doc, method=None):
+    if getattr(doc, "_submitted_from_ui", None) or not doc.company_gstin:
+        return
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not is_api_enabled(gst_settings):
+        return
+
+    if gst_settings.enable_e_invoice:
+        if (
+            not gst_settings.auto_generate_e_invoice
+            or not validate_e_invoice_applicability(doc, gst_settings, throw=False)
+        ):
+            return
+
+        frappe.enqueue(
+            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+            enqueue_after_commit=True,
+            queue="short",
+            docname=doc.name,
+            throw=False,
+        )
+
+        return
+
+    if (
+        not gst_settings.enable_e_waybill
+        or not gst_settings.auto_generate_e_waybill
+        or doc.ewaybill
+        or doc.is_return
+        or doc.is_debit_note
+        or abs(doc.base_grand_total) < gst_settings.e_waybill_threshold
+        or not any(
+            item
+            for item in doc.items
+            if item.gst_hsn_code
+            and not item.gst_hsn_code.startswith("99")
+            and item.qty != 0
+        )
+    ):
+        return
+
+    frappe.enqueue(
+        "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+        enqueue_after_commit=True,
+        queue="short",
+        doctype=doc.doctype,
+        docname=doc.name,
+    )
+
+
 def ignore_logs_on_trash(doc, method=None):
     # TODO: design better way to achieve this
     if "e-Waybill Log" not in delete_doc.doctypes_to_skip:

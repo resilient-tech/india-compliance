@@ -92,6 +92,9 @@ def _generate_e_waybill(doc, throw=True):
     result = api(doc).generate_e_waybill(data)
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
+    if not frappe.request:
+        return
+
     frappe.msgprint(
         _("e-Waybill generated successfully")
         if result.validUpto or result.EwbValidTill
