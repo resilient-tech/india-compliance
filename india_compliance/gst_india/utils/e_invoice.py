@@ -91,6 +91,9 @@ def generate_e_invoice(docname, throw=True):
     if result.EwbNo:
         log_and_process_e_waybill_generation(doc, result, with_irn=True)
 
+    if not frappe.request:
+        return
+
     frappe.msgprint(
         _("e-Invoice generated successfully"),
         indicator="green",
@@ -161,6 +164,13 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     def _throw(error):
         if throw:
             frappe.throw(error)
+
+    if doc.irn:
+        return _throw(
+            _("e-Invoice has already been generated for Sales Invoice {0}").format(
+                frappe.bold(doc.name)
+            )
+        )
 
     if not validate_non_gst_items(doc, throw=throw):
         return
