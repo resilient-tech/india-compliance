@@ -21,10 +21,6 @@ class TestTransactionData(FrappeTestCase):
     def tearDownClass(cls):
         frappe.db.rollback(save_point="before_test_transaction_data")
 
-    @classmethod
-    def setUp(cls):
-        pass
-
     def test_validate_mode_of_transport(self):
         doc = create_sales_invoice(do_not_save=True)
 
@@ -90,6 +86,22 @@ class TestTransactionData(FrappeTestCase):
             re.compile(r"^(PIN Code.* a 6-digit number.*)$"),
             GSTTransactionData(doc).check_missing_address_fields,
             address,
+        )
+
+    def test_get_address_details(self):
+        doc = create_sales_invoice()
+
+        self.assertDictEqual(
+            GSTTransactionData(doc).get_address_details(doc.customer_address),
+            {
+                "gstin": "24AANFA2641L1ZF",
+                "state_number": "24",
+                "address_title": "Test Registered Customer",
+                "address_line1": "Test Address - 3",
+                "address_line2": None,
+                "city": "Test City",
+                "pincode": 380015,
+            },
         )
 
     def test_validate_transaction(self):
