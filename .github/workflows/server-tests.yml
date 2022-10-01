@@ -22,7 +22,9 @@ jobs:
     tests:
         runs-on: ubuntu-20.04
         timeout-minutes: 20
-        environment: develop
+        
+        env:
+            all_secrets: ${{ secrets }}
 
         strategy:
             fail-fast: false
@@ -91,7 +93,7 @@ jobs:
 
             - name: Trial
               run: |
-                  echo '${{ toJSON(secrets) }}' && echo '${{ toJSON(env) }}'
+                  echo '${{ toJSON(secrets) }}' && echo '${{ all_secrets }}'
 
             - name: Install
               run: |
