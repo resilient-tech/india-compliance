@@ -91,7 +91,7 @@ jobs:
 
             - name: Trial
               run: |
-                  echo '${{ toJSON(secrets) }}'
+                  echo '${{ toJSON(secrets) }}' && echo '${{ toJSON(env) }}'
 
             - name: Install
               run: |
