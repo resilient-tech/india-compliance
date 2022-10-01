@@ -93,6 +93,7 @@ doc_events = {
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
+        "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
     },
     "Sales Order": {
         "validate": (
