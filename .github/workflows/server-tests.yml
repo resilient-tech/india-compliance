@@ -90,7 +90,7 @@ jobs:
 
             - name: Trial
               run: |
-                  echo '${{ toJSON(secrets) }}' && echo '${{ secrets.IC_API_SECRET }}'
+                  echo '${{ toJSON(secrets) }}' && echo '${{ toJSON(github) }}'
 
             - name: Install
               run: |
