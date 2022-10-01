@@ -88,22 +88,12 @@ jobs:
                   restore-keys: |
                       ${{ runner.os }}-yarn-
 
-            - name: Trial
-              run: |
-                  echo '${{ toJSON(secrets) }}' && echo '${{ toJSON(github) }}'
-
             - name: Install
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
                   BRANCH: develop
             
-            - name: Set Config
-              run: |
-                  cd ~/frappe-bench/ && bench --site test_site set-config ic_api_secret "$IC_API_SECRET"
-              env:
-                  IC_API_SECRET: ${{ secrets.IC_API_SECRET }}
-
             - name: Run Tests
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
               env:
