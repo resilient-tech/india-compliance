@@ -15,6 +15,5 @@
 		"erpnext"
 	],
 	"ic_api_sandbox_mode": 1,
-	"ic_api_secret": "********",
 	"throttle_user_limit": 100
 }
