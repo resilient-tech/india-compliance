@@ -71,8 +71,7 @@ class TestEWaybill(FrappeTestCase):
         )
         si = create_sales_invoice(**test_data.get("kwargs"))
 
-        result = self._mock_e_waybill_response(si, test_data)
-        si.ewaybill = result.ewayBillNo
+        si.ewaybill = test_data.get("response_data").get("result").get("ewayBillNo")
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
