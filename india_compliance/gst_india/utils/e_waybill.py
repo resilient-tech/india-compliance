@@ -2,6 +2,7 @@ import os
 
 import frappe
 from frappe import _
+from frappe.desk.form.load import get_docinfo
 from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
 from frappe.utils.file_manager import save_file
 
@@ -66,7 +67,11 @@ def generate_e_waybill(*, doctype, docname, values=None):
 
 def _generate_e_waybill(doc, throw=True):
     try:
-        data = EWaybillData(doc).get_data()
+        # Via e-Invoice API if not Return or Debit Note
+        # Handles following error when generating e-Waybill using IRN:
+        # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
+        with_irn = doc.irn and not (doc.is_return or doc.is_debit_note)
+        data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
         if throw:
@@ -83,9 +88,12 @@ def _generate_e_waybill(doc, throw=True):
         )
         return
 
-    api = EWaybillAPI if not doc.get("irn") else EInvoiceAPI
-    result = api(doc.company_gstin).generate_e_waybill(data)
-    log_and_process_e_waybill_generation(doc, result)
+    api = EWaybillAPI if not with_irn else EInvoiceAPI
+    result = api(doc).generate_e_waybill(data)
+    log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
+
+    if not frappe.request:
+        return
 
     frappe.msgprint(
         _("e-Waybill generated successfully")
@@ -98,11 +106,10 @@ def _generate_e_waybill(doc, throw=True):
     return send_updated_doc(doc)
 
 
-def log_and_process_e_waybill_generation(doc, result):
+def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     """Separate function, since called in backend from e-invoice utils"""
 
-    irn = doc.get("irn")
-    e_waybill_number = str(result["ewayBillNo" if not irn else "EwbNo"])
+    e_waybill_number = str(result["ewayBillNo" if not with_irn else "EwbNo"])
 
     data = {"ewaybill": e_waybill_number}
     if distance := result.get("distance"):
@@ -115,12 +122,12 @@ def log_and_process_e_waybill_generation(doc, result):
         {
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
-                result.get("ewayBillDate" if not irn else "EwbDt"),
-                day_first=not irn,
+                result.get("ewayBillDate" if not with_irn else "EwbDt"),
+                day_first=not with_irn,
             ),
             "valid_upto": parse_datetime(
-                result.get("validUpto" if not irn else "EwbValidTill"),
-                day_first=not irn,
+                result.get("validUpto" if not with_irn else "EwbValidTill"),
+                day_first=not with_irn,
             ),
             "reference_doctype": doc.doctype,
             "reference_name": doc.name,
@@ -146,12 +153,17 @@ def _cancel_e_waybill(doc, values):
     data = EWaybillData(doc).get_e_waybill_cancel_data(values)
     api = (
         EInvoiceAPI
-        # Use e-invoice endpoint only for sandbox environment
-        if doc.get("irn") and frappe.conf.ic_api_sandbox_mode
+        # Use EInvoiceAPI only for sandbox environment
+        # if e-Waybill has been created using IRN
+        if (
+            frappe.conf.ic_api_sandbox_mode
+            and doc.irn
+            and not (doc.is_return or doc.is_debit_note)
+        )
         else EWaybillAPI
     )
 
-    result = api(doc.company_gstin).cancel_e_waybill(data)
+    result = api(doc).cancel_e_waybill(data)
 
     log_and_process_e_waybill(
         doc,
@@ -188,7 +200,7 @@ def update_vehicle_info(*, doctype, docname, values):
     )
 
     data = EWaybillData(doc).get_update_vehicle_data(values)
-    result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
+    result = EWaybillAPI(doc).update_vehicle_info(data)
 
     frappe.msgprint(
         _("Vehicle Info updated successfully"),
@@ -231,7 +243,7 @@ def update_transporter(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
-    EWaybillAPI(doc.company_gstin).update_transporter(data)
+    EWaybillAPI(doc).update_transporter(data)
 
     frappe.msgprint(
         _("Transporter Info updated successfully"),
@@ -298,11 +310,9 @@ def fetch_e_waybill_data(*, doctype, docname, attach=False):
         alert=True,
     )
 
-    return send_updated_doc(doc, set_docinfo=True)
-
 
 def _fetch_e_waybill_data(doc, log):
-    result = EWaybillAPI(doc.company_gstin).get_e_waybill(log.e_waybill_number)
+    result = EWaybillAPI(doc).get_e_waybill(log.e_waybill_number)
     log.db_set(
         {
             "data": frappe.as_json(result, indent=4),
@@ -321,17 +331,10 @@ def attach_e_waybill_pdf(doc, log=None):
         as_pdf=True,
     )
 
-    pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
+    pdf_filename = get_pdf_filename(doc.ewaybill)
     delete_file(doc, pdf_filename)
     save_file(pdf_filename, pdf_content, doc.doctype, doc.name, is_private=1)
-
-    if not frappe.request:
-        # trigger reload_doc if called in background
-        frappe.publish_realtime(
-            "e_waybill_pdf_attached",
-            doctype=doc.doctype,
-            docname=doc.name,
-        )
+    publish_pdf_update(doc)
 
 
 def delete_file(doc, filename):
@@ -348,6 +351,28 @@ def delete_file(doc, filename):
         pluck="name",
     ):
         frappe.delete_doc("File", file, force=True, ignore_permissions=True)
+
+
+def publish_pdf_update(doc, pdf_deleted=False):
+    get_docinfo(doc)
+
+    # if it's a request, frappe.response["docinfo"] will get synced automatically
+    if frappe.request:
+        return
+
+    frappe.publish_realtime(
+        "e_waybill_pdf_update",
+        {
+            "docinfo": frappe.response["docinfo"],
+            "pdf_deleted": pdf_deleted,
+        },
+        doctype=doc.doctype,
+        docname=doc.name,
+    )
+
+
+def get_pdf_filename(e_waybill_number):
+    return f"e-Waybill_{e_waybill_number}.pdf"
 
 
 #######################################################################################
@@ -387,6 +412,10 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         log.add_comment(text=comment)
 
     frappe.db.commit()
+
+    if log.is_cancelled:
+        delete_file(doc, get_pdf_filename(log.name))
+        publish_pdf_update(doc, pdf_deleted=True)
 
     ### Fetch Data
 
@@ -446,15 +475,14 @@ class EWaybillData(GSTTransactionData):
         self.validate_settings()
         self.validate_doctype_for_e_waybill()
 
-    def get_data(self):
+    def get_data(self, *, with_irn=False):
         self.validate_transaction()
         self.set_transporter_details()
 
-        if irn := self.doc.get("irn"):
-            # Via e-Invoice
+        if with_irn:
             return self.sanitize_data(
                 {
-                    "Irn": irn,
+                    "Irn": self.doc.irn,
                     "Distance": self.transaction_details.distance,
                     "TransMode": str(self.transaction_details.mode_of_transport),
                     "TransId": self.transaction_details.gst_transporter_id,
@@ -701,13 +729,13 @@ class EWaybillData(GSTTransactionData):
             and self.doc.company_address != self.doc.dispatch_address_name
         )
 
-        self.billing_address = self.get_address_details(self.doc.customer_address)
-        self.company_address = self.get_address_details(self.doc.company_address)
+        self.to_address = self.get_address_details(self.doc.customer_address)
+        self.from_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
         # billing state is changed for SEZ, hence copy()
-        self.shipping_address = self.billing_address.copy()
-        self.dispatch_address = self.company_address
+        self.shipping_address = self.to_address.copy()
+        self.dispatch_address = self.from_address
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
@@ -733,7 +761,7 @@ class EWaybillData(GSTTransactionData):
         self.transaction_details.transaction_type = transaction_type
 
         if self.doc.gst_category == "SEZ":
-            self.billing_address.state_number = 96
+            self.to_address.state_number = 96
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -749,11 +777,19 @@ class EWaybillData(GSTTransactionData):
                     "name": random_string(6).lstrip("0"),
                 }
             )
-            self.company_address.gstin = "05AAACG2115R1ZN"
-            self.billing_address.gstin = (
+
+            self.from_address.gstin = "05AAACG2115R1ZN"
+            self.to_address.gstin = (
                 "05AAACG2140A1ZL"
                 if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
                 else "05AAACG2115R1ZN"
+            )
+
+        if self.doc.is_return:
+            self.from_address, self.to_address = self.to_address, self.from_address
+            self.dispatch_address, self.shipping_address = (
+                self.shipping_address,
+                self.dispatch_address,
             )
 
         data = {
@@ -765,21 +801,21 @@ class EWaybillData(GSTTransactionData):
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.company_address.address_title,
-            "fromGstin": self.company_address.gstin,
+            "fromTrdName": self.from_address.address_title,
+            "fromGstin": self.from_address.gstin,
             "fromAddr1": self.dispatch_address.address_line1,
             "fromAddr2": self.dispatch_address.address_line2,
             "fromPlace": self.dispatch_address.city,
             "fromPincode": self.dispatch_address.pincode,
-            "fromStateCode": self.company_address.state_number,
+            "fromStateCode": self.from_address.state_number,
             "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.billing_address.address_title,
-            "toGstin": self.billing_address.gstin,
+            "toTrdName": self.to_address.address_title,
+            "toGstin": self.to_address.gstin,
             "toAddr1": self.shipping_address.address_line1,
             "toAddr2": self.shipping_address.address_line2,
             "toPlace": self.shipping_address.city,
             "toPincode": self.shipping_address.pincode,
-            "toStateCode": self.billing_address.state_number,
+            "toStateCode": self.to_address.state_number,
             "actToStateCode": self.shipping_address.state_number,
             "totalValue": self.transaction_details.base_total,
             "cgstValue": self.transaction_details.total_cgst_amount,
@@ -813,10 +849,9 @@ class EWaybillData(GSTTransactionData):
             ).items():
                 data[value] = data.pop(key)
 
-        else:
-            self.sanitize_data(data)
+            return data
 
-        return data
+        return self.sanitize_data(data)
 
     def get_item_data(self, item_details):
         return {
