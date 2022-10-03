@@ -44,17 +44,14 @@ def validate_tax_rates(doc):
 
     valid_accounts = get_valid_accounts(doc.company, for_sales=True, for_purchase=True)
     invalid_tax_rates = {}
-    for tax in doc.taxes:
+    for row in doc.taxes:
         # check intra state
-        if tax.tax_type in valid_accounts[1]:
-            if doc.tax_rate == tax.tax_rate * 2:
-                continue
-
-            invalid_tax_rates[tax.idx] = doc.tax_rate / 2
+        if row.tax_type in valid_accounts[1] and doc.tax_rate != row.tax_rate * 2:
+            invalid_tax_rates[row.idx] = doc.tax_rate / 2
 
         # check inter state
-        if tax.tax_type in valid_accounts[2] and doc.tax_rate != tax.tax_rate:
-            invalid_tax_rates[tax.idx] = doc.tax_rate
+        elif row.tax_type in valid_accounts[2] and doc.tax_rate != row.tax_rate:
+            invalid_tax_rates[row.idx] = doc.tax_rate
 
     if not invalid_tax_rates:
         return

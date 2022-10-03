@@ -196,7 +196,7 @@ def update_items(templates):
         .run(as_dict=True)
     )
 
-    # Make sure this is runs only once
+    # Make sure this is run only once
     frappe.qb.update(table).set(table.is_nil_exempt, 0).set(table.is_non_gst, 0).run()
 
     fields = (
