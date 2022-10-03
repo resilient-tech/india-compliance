@@ -32,7 +32,6 @@ class TestEInvoice(FrappeTestCase):
 
     @classmethod
     def setUpClass(cls):
-        print(frappe._dict(frappe.get_site_config()))
         frappe.db.set_value(
             "GST Settings",
             "GST Settings",
@@ -223,8 +222,8 @@ class TestEInvoice(FrappeTestCase):
         log_and_process_e_waybill_generation(si, result, with_irn=True)
 
         si_doc = load_doc("Sales Invoice", si.name, "cancel")
-
-        si_doc.get_onload().get("e_invoice_info").update({"acknowledged_on": None})
+        print(si_doc.get_onload().get("e_invoice_info"))
+        si_doc.get_onload().get("e_invoice_info", {}).update({"acknowledged_on": None})
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
