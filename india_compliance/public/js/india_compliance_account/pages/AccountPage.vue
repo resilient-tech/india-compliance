@@ -29,11 +29,11 @@
         <div class="card">
           <h3 class="title">Actions</h3>
           <ul class="links">
-            <a @click.prevent="showUsage"><li>Show Usage</li></a>
+            <a @click.prevent="showUsage"><li>Review API Usage</li></a>
             <!-- <a href="#"><li>Check API Status</li></a> -->
             <a href="https://discuss.erpnext.com/c/erpnext/india-compliance/65"><li>Community Forum</li></a>
             <a href="https://github.com/resilient-tech/india-compliance/issues/new"><li>Report a Bug</li></a>
-            <a href="mailto:api-support@indiacompliance.app"><li>Get API Support</li></a>
+            <a href="mailto:api-support@indiacompliance.app"><li>Email Support</li></a>
             <a @click.prevent="logout"><li>Logout</li></a>
           </ul>
         </div>

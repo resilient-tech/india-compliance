@@ -17,7 +17,10 @@ from india_compliance.gst_india.constants import (
     GST_CATEGORIES,
     OVERSEAS_GST_CATEGORIES,
 )
-from india_compliance.gst_india.constants.e_invoice import CANCEL_REASON_CODES
+from india_compliance.gst_india.constants.e_invoice import (
+    CANCEL_REASON_CODES,
+    ITEM_LIMIT,
+)
 from india_compliance.gst_india.utils import (
     load_doc,
     parse_datetime,
@@ -39,7 +42,7 @@ def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
     try:
         data = EInvoiceData(doc).get_data()
-        api = EInvoiceAPI(doc.company_gstin)
+        api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
 
         # Handle Duplicate IRN
@@ -86,7 +89,10 @@ def generate_e_invoice(docname, throw=True):
     )
 
     if result.EwbNo:
-        log_and_process_e_waybill_generation(doc, result)
+        log_and_process_e_waybill_generation(doc, result, with_irn=True)
+
+    if not frappe.request:
+        return
 
     frappe.msgprint(
         _("e-Invoice generated successfully"),
@@ -112,7 +118,7 @@ def cancel_e_invoice(docname, values):
         "Cnlrem": values.remark if values.remark else values.reason,
     }
 
-    result = EInvoiceAPI(doc.company_gstin).cancel_irn(data)
+    result = EInvoiceAPI(doc).cancel_irn(data)
     doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
 
     log_e_invoice(
@@ -159,6 +165,13 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         if throw:
             frappe.throw(error)
 
+    if doc.irn:
+        return _throw(
+            _("e-Invoice has already been generated for Sales Invoice {0}").format(
+                frappe.bold(doc.name)
+            )
+        )
+
     if not validate_non_gst_items(doc, throw=throw):
         return
 
@@ -201,15 +214,23 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 class EInvoiceData(GSTTransactionData):
     def get_data(self):
         self.validate_transaction()
-        self.get_transaction_details()
-        self.get_item_list()
-        self.get_transporter_details()
-        self.get_party_address_details()
+        self.set_transaction_details()
+        self.set_item_list()
+        self.set_transporter_details()
+        self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
     def validate_transaction(self):
         super().validate_transaction()
         validate_e_invoice_applicability(self.doc, self.settings)
+
+        if len(self.doc.items) > ITEM_LIMIT:
+            frappe.throw(
+                _("e-Invoice can only be generated for upto {0} items").format(
+                    ITEM_LIMIT
+                ),
+                title=_("Item Limit Exceeded"),
+            )
 
     def update_item_details(self, item_details, item):
         item_details.update(
@@ -236,7 +257,7 @@ class EInvoiceData(GSTTransactionData):
             )
             item_details.update(
                 {
-                    "batch_number": batch_no,
+                    "batch_no": batch_no,
                     "batch_expiry_date": format_date(
                         batch_expiry_date, self.DATE_FORMAT
                     ),
@@ -246,11 +267,24 @@ class EInvoiceData(GSTTransactionData):
     def update_transaction_details(self):
         invoice_type = "INV"
 
-        if self.doc.is_return:
+        if self.doc.is_debit_note:
+            invoice_type = "DBN"
+
+        elif self.doc.is_return:
             invoice_type = "CRN"
 
-        elif self.doc.is_debit_note:
-            invoice_type = "DBN"
+            if return_against := self.doc.return_against:
+                self.transaction_details.update(
+                    {
+                        "original_name": return_against,
+                        "original_date": format_date(
+                            frappe.db.get_value(
+                                "Sales Invoice", return_against, "posting_date"
+                            ),
+                            self.DATE_FORMAT,
+                        ),
+                    }
+                )
 
         self.transaction_details.update(
             {
@@ -264,20 +298,6 @@ class EInvoiceData(GSTTransactionData):
                 "place_of_supply": self.doc.place_of_supply.split("-")[0],
             }
         )
-
-        # Credit Note Details
-        if self.doc.is_return and (return_against := self.doc.return_against):
-            self.transaction_details.update(
-                {
-                    "original_name": return_against,
-                    "original_date": format_date(
-                        frappe.db.get_value(
-                            "Sales Invoice", return_against, "posting_date"
-                        ),
-                        self.DATE_FORMAT,
-                    ),
-                }
-            )
 
         self.update_payment_details()
 
@@ -330,7 +350,7 @@ class EInvoiceData(GSTTransactionData):
 
         return supply_type
 
-    def get_party_address_details(self):
+    def set_party_address_details(self):
         self.billing_address = self.get_address_details(
             self.doc.customer_address,
             validate_gstin=self.doc.gst_category != "Overseas",
@@ -389,6 +409,12 @@ class EInvoiceData(GSTTransactionData):
                     self.transaction_details.place_of_supply = "36"
                 else:
                     self.transaction_details.place_of_supply = "01"
+
+        if self.doc.is_return:
+            self.dispatch_address, self.shipping_address = (
+                self.shipping_address,
+                self.dispatch_address,
+            )
 
         return {
             "Version": "1.1",

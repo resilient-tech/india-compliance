@@ -10,15 +10,19 @@
     </h2>
     <p class="message">
       Almost there! We've sent a verification email to
-      <strong>{{ email }}</strong>
+      <strong>{{ email }}</strong>.
+      <br />
+      Please click the button in that email to confirm your email address.
     </p>
 
     <div class="actions">
       <button @click.stop="changeEmail" class="btn btn-secondary btn-sm">
+        <span v-html="change_icon"></span>
         Change Email
       </button>
 
       <button @click.stop="refresh" class="btn btn-primary btn-sm">
+        <span v-html="refresh_icon"></span>
         Refresh
       </button>
     </div>
@@ -31,6 +35,14 @@ export default {
     email() {
       const { session } = this.$store.state.auth;
       return session && session.email;
+    },
+
+    change_icon() {
+      return frappe.utils.icon("change", "sm");
+    },
+
+    refresh_icon() {
+      return frappe.utils.icon("refresh", "sm");
     },
   },
   methods: {

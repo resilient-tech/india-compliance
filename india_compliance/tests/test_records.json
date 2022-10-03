@@ -22,6 +22,16 @@
             "chart_of_accounts": "Standard",
             "enable_perpetual_inventory": 0,
             "gst_category": "Unregistered"
+        },
+        {
+            "abbr": "_TFC",
+            "company_name": "_Test Foreign Company",
+            "country": "United States",
+            "default_currency": "USD",
+            "doctype": "Company",
+            "domain": "Manufacturing",
+            "chart_of_accounts": "Standard",
+            "enable_perpetual_inventory": 0
         }
     ],
     "Item": [
@@ -33,8 +43,44 @@
             "item_name": "_Test Trading Goods 1",
             "valuation_rate": 100,
             "gst_hsn_code": "61149090",
+            "uoms": [
+                {
+                    "conversion_factor": 1,
+                    "uom": "Nos",
+                    "name": "_Test Trading Goods 1"
+                }
+            ],
             "item_defaults": [
                 {
+                    "name": "_Test Trading Goods 1",
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "expense_account": "Cost of Goods Sold - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Sales - _TIRC"
+                }
+            ]
+        },
+        {
+            "description": "_Test Non GST Item",
+            "doctype": "Item",
+            "is_stock_item": 1,
+            "item_code": "_Test Non GST Item",
+            "item_name": "_Test Non GST Item",
+            "is_non_gst": 1,
+            "valuation_rate": 100,
+            "gst_hsn_code": "27131100",
+            "uoms": [
+                {
+                    "conversion_factor": 1,
+                    "uom": "Nos",
+                    "name": "_Test Non GST Item"
+                }
+            ],
+            "item_defaults": [
+                {
+                    "name": "_Test Non GST Item",
                     "company": "_Test Indian Registered Company",
                     "default_warehouse": "Stores - _TIRC",
                     "expense_account": "Cost of Goods Sold - _TIRC",
@@ -109,6 +155,13 @@
             "supplier_type": "Individual",
             "gstin": "33AAAAR6720M1ZG",
             "gst_category": "Registered Composition"
+        },
+        {
+            "name":"_Test Registered InterState Supplier",
+            "supplier_name": "_Test Registered InterState Supplier",
+            "supplier_type": "Individual",
+            "gstin": "33AAAAR6720M1ZG",
+            "gst_category": "Registered Regular"
         },
         {
             "name":"_Test Unregistered Supplier",
@@ -225,6 +278,20 @@
             ]
         },
         {
+            "name": "_Test Registered Supplier-Billing-1",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 7",
+            "city": "Test City",
+            "state": "Texas",
+            "pincode": "75001",
+            "country": "United States",
+            "gstin": "",
+            "gst_category": "Overseas",
+            "links": [
+                { "link_doctype": "Supplier", "link_name": "_Test Registered Supplier" }
+            ]
+        },
+        {
             "name": "_Test Registered Composition Supplier-Billing",
             "address_type": "Billing",
             "address_line1": "Test Address - 8",
@@ -243,5 +310,51 @@
                 }
             ]
         }
+    ],
+    "POS Profile": [
+        {
+            "name": "_Test POS Profile",
+            "company": "_Test Indian Registered Company",
+            "warehouse": "Stores - _TIRC",
+            "write_off_account": "Write Off - _TIRC",
+            "write_off_cost_center": "Main - _TIRC",
+            "payments": [
+                {
+                    "name": "tirc",
+                    "mode_of_payment": "Cash",
+                    "default": 1
+                }
+            ]
+        },
+        {
+            "name": "_Test POS Profile 2",
+            "company": "_Test Indian Unregistered Company",
+            "warehouse": "Stores - _TIUC",
+            "write_off_account": "Write Off - _TIUC",
+            "write_off_cost_center": "Main - _TIUC",
+            "payments": [
+                {
+                    "name": "tiuc",
+                    "mode_of_payment": "Cash",
+                    "default": 1
+                }
+            ]
+        },
+        {
+            "name": "_Test POS Profile 3",
+            "company": "_Test Foreign Company",
+            "warehouse": "Stores - _TFC",
+            "write_off_account": "Write Off - _TFC",
+            "write_off_cost_center": "Main - _TFC",
+            "payments": [
+                {
+                    "name": "tfc",
+                    "mode_of_payment": "Cash",
+                    "default": 1
+                }
+            ]
+        }
+
     ]
+
 }

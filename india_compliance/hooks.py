@@ -96,6 +96,7 @@ doc_events = {
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
+        "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
     },
     "Sales Order": {
         "validate": (
@@ -148,6 +149,7 @@ jinja = {
     "methods": [
         "india_compliance.gst_india.utils.get_state",
         "india_compliance.gst_india.utils.jinja.add_spacing",
+        "india_compliance.gst_india.utils.jinja.get_supply_type",
         "india_compliance.gst_india.utils.jinja.get_sub_supply_type",
         "india_compliance.gst_india.utils.jinja.get_e_waybill_qr_code",
         "india_compliance.gst_india.utils.jinja.get_qr_code",
@@ -156,6 +158,15 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
         "india_compliance.gst_india.utils.jinja.get_non_zero_fields",
     ],
+}
+
+override_doctype_dashboards = {
+    "Sales Invoice": (
+        "india_compliance.gst_india.overrides.sales_invoice.get_dashboard_data"
+    ),
+    "Delivery Note": (
+        "india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"
+    ),
 }
 
 # Includes in <head>
