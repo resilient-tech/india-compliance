@@ -19,7 +19,7 @@ class BaseAPI:
 
     def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")
-        if not is_api_enabled(self.settings):
+        if not is_api_enabled(self.settings) and not frappe.flags.in_test:
             frappe.throw(
                 _("Please enable API in GST Settings to use the {0} API").format(
                     self.API_NAME
