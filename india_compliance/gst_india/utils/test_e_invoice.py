@@ -222,7 +222,7 @@ class TestEInvoice(FrappeTestCase):
         log_and_process_e_waybill_generation(si, result, with_irn=True)
 
         si_doc = load_doc("Sales Invoice", si.name, "cancel")
-        print(si_doc.get_onload().get("e_invoice_info"))
+
         si_doc.get_onload().get("e_invoice_info", {}).update({"acknowledged_on": None})
 
         self.assertRaisesRegex(
