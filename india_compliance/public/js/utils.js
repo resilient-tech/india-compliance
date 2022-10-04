@@ -1,8 +1,14 @@
+import {
+    GSTIN_REGEX,
+    REGISTERED_REGEX,
+    OVERSEAS_REGEX,
+    UNBODY_REGEX,
+    TDS_REGEX,
+} from "./regex_constants";
+
 frappe.provide("ic");
 
 window.gst_settings = frappe.boot.gst_settings;
-const GSTIN_REGEX =
-    /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
 
 Object.assign(ic, {
     get_gstin_query(party, party_type = "Company") {
@@ -65,6 +71,16 @@ Object.assign(ic, {
         if (GSTIN_REGEX.test(gstin) && is_gstin_check_digit_valid(gstin)) {
             return gstin;
         }
+    },
+    guess_gst_category(gstin, country) {
+        if (!gstin) {
+            return (!country || (country === "India")) ? "Unregistered" : "Overseas";
+        }
+
+        if (TDS_REGEX.test(gstin)) return "Tax Deductor";
+        if (REGISTERED_REGEX.test(gstin)) return "Registered Regular";
+        if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
+        if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
     },
 });
 
