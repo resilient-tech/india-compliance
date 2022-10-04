@@ -91,8 +91,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     const d = this.dialog;
                     if (this.api_enabled) return autofill_fields(d);
 
-                    const category = ic.guess_gst_category(d.doc._gstin, d.doc.country);
-                    d.set_value("gst_category", category);
+                    d.set_value(
+                        "gst_category",
+                        ic.guess_gst_category(d.doc._gstin, d.doc.country)
+                    );
                 },
             },
         ];
@@ -209,9 +211,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 fieldname: "link_name",
                 fieldtype: "Dynamic Link",
                 label: "Link Name",
-                get_options: df => {
-                    return df.doc.link_doctype;
-                },
+                get_options: df => df.doc.link_doctype,
                 onchange: async () => {
                     const { link_doctype, link_name } = this.dialog.doc;
 

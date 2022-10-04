@@ -4,7 +4,7 @@ import {
     OVERSEAS_REGEX,
     UNBODY_REGEX,
     TDS_REGEX,
-} from "./constants";
+} from "./regex_constants";
 
 frappe.provide("ic");
 
@@ -66,8 +66,7 @@ Object.assign(ic, {
 
     guess_gst_category(gstin, country) {
         if (!gstin) {
-            if (!country | (country === "India")) return "Unregistered";
-            return "Overseas";
+            return (!country || (country === "India")) ? "Unregistered" : "Overseas";
         }
 
         if (TDS_REGEX.test(gstin)) return "Tax Deductor";
