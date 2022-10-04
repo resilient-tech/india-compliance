@@ -1,29 +1,22 @@
 import json
 import re
 
-import jwt
-import requests
 import responses
 from responses import matchers
 
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import get_datetime
+from frappe.utils import get_datetime, now_datetime
 
-from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.constants.e_invoice import CANCEL_REASON_CODES
-from india_compliance.gst_india.utils import load_doc, parse_datetime
+from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
-    log_and_process_e_waybill_generation,
-    log_e_invoice,
+    cancel_e_invoice,
+    generate_e_invoice,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
-from india_compliance.gst_india.utils.e_waybill import (
-    EWaybillData,
-    log_and_process_e_waybill,
-)
+from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
@@ -95,18 +88,16 @@ class TestEInvoice(FrappeTestCase):
         si = create_sales_invoice(**test_data.get("kwargs"))
 
         # Mock response for generating irn
-        result = self._mock_e_invoice_response(si, test_data)
+        self._mock_e_invoice_response(si, test_data)
 
-        self._generate_e_invoice(si, result)
-
-        log_and_process_e_waybill_generation(si, result, with_irn=True)
+        generate_e_invoice(si.name)
 
         self.assertDocumentEqual(
-            {"name": result.Irn},
+            {"name": test_data.get("response_data").get("result").get("Irn")},
             frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
         )
         self.assertDocumentEqual(
-            {"name": result.EwbNo},
+            {"name": test_data.get("response_data").get("result").get("EwbNo")},
             frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
 
@@ -117,16 +108,14 @@ class TestEInvoice(FrappeTestCase):
         si = create_sales_invoice(**test_data.get("kwargs"))
 
         # Mock response for generating irn
-        result = self._mock_e_invoice_response(si, test_data)
+        self._mock_e_invoice_response(si, test_data)
 
-        self._generate_e_invoice(si, result)
+        generate_e_invoice(si.name)
 
         self.assertDocumentEqual(
-            {"name": result.Irn},
+            {"name": test_data.get("response_data").get("result").get("Irn")},
             frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
         )
-
-        self.assertFalse(result.EwbNo)
 
         self.assertFalse(
             frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name")
@@ -147,18 +136,16 @@ class TestEInvoice(FrappeTestCase):
         return_si = create_sales_invoice(**test_data.get("kwargs"))
 
         # Mock response for generating irn
-        result = self._mock_e_invoice_response(
+        self._mock_e_invoice_response(
             frappe.get_doc("Sales Invoice", return_si.name), test_data
         )
 
-        self._generate_e_invoice(return_si, result)
+        generate_e_invoice(return_si.name)
 
         self.assertDocumentEqual(
-            {"name": result.Irn},
+            {"name": test_data.get("response_data").get("result").get("Irn")},
             frappe.get_doc("e-Invoice Log", {"sales_invoice": return_si.name}),
         )
-
-        self.assertFalse(result.EwbNo)
 
         self.assertFalse(
             frappe.db.get_value(
@@ -183,15 +170,14 @@ class TestEInvoice(FrappeTestCase):
         debit_note.submit()
 
         # Mock response for generating irn
-        result = self._mock_e_invoice_response(debit_note, test_data)
+        self._mock_e_invoice_response(debit_note, test_data)
 
-        self._generate_e_invoice(debit_note, result)
+        generate_e_invoice(debit_note.name)
 
         self.assertDocumentEqual(
-            {"name": result.Irn},
+            {"name": test_data.get("response_data").get("result").get("Irn")},
             frappe.get_doc("e-Invoice Log", {"sales_invoice": debit_note.name}),
         )
-        self.assertFalse(result.EwbNo)
 
         self.assertFalse(
             frappe.db.get_value(
@@ -215,14 +201,15 @@ class TestEInvoice(FrappeTestCase):
             si,
         )
 
+        test_data.get("response_data").get("result").update(
+            {"AckDt": str(now_datetime())}
+        )
         # Mock response for generating irn
-        result = self._mock_e_invoice_response(si, test_data)
+        self._mock_e_invoice_response(si, test_data)
 
-        self._generate_e_invoice(si, result)
-        log_and_process_e_waybill_generation(si, result, with_irn=True)
+        generate_e_invoice(si.name)
 
         si_doc = load_doc("Sales Invoice", si.name, "cancel")
-
         si_doc.get_onload().get("e_invoice_info", {}).update({"acknowledged_on": None})
 
         self.assertRaisesRegex(
@@ -232,15 +219,13 @@ class TestEInvoice(FrappeTestCase):
             si_doc,
         )
 
-        values = frappe._dict(
-            {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
+        cancelled_doc = self._cancel_e_invoice(si_doc)
+
+        self.assertDocumentEqual(
+            {"einvoice_status": "Cancelled", "irn": ""},
+            cancelled_doc,
         )
-
-        self._cancel_e_waybill(si_doc, values)
-        self._cancel_e_invoice(si_doc, values)
-
-        self.assertDocumentEqual({"einvoice_status": "Cancelled", "irn": ""}, si_doc)
-        self.assertDocumentEqual({"ewaybill": ""}, si_doc)
+        self.assertDocumentEqual({"ewaybill": ""}, cancelled_doc)
 
     def test_validate_e_invoice_applicability(self):
         """Test if e_invoicing is applicable"""
@@ -279,84 +264,38 @@ class TestEInvoice(FrappeTestCase):
             "GST Settings", "e_invoice_applicable_from", get_datetime()
         )
 
-    def _generate_e_invoice(self, doc, result):
-        doc.db_set(
-            {
-                "irn": result.Irn,
-                "einvoice_status": "Generated",
-            }
+    def _cancel_e_invoice(self, doc):
+        values = frappe._dict(
+            {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
         )
 
-        decoded_invoice = frappe.parse_json(
-            jwt.decode(result.SignedInvoice, options={"verify_signature": False})[
-                "data"
-            ]
+        # Prepared e_waybill cancel data
+        cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")
+        cancel_e_waybill.get("response_data").get("result").update(
+            {"ewayBillNo": doc.ewaybill}
         )
+        eway_request_data = EWaybillData(doc).get_e_waybill_cancel_data(values)
 
-        log_e_invoice(
-            doc,
-            {
-                "irn": doc.irn,
-                "sales_invoice": doc.name,
-                "acknowledgement_number": result.AckNo,
-                "acknowledged_on": parse_datetime(result.AckDt),
-                "signed_invoice": result.SignedInvoice,
-                "signed_qr_code": result.SignedQRCode,
-                "invoice_data": frappe.as_json(decoded_invoice, indent=4),
-            },
-        )
-
-    def _cancel_e_invoice(self, doc, values):
+        # Prepared e_invoice cancel data
         cancel_irn_test_data = self.e_invoice_test_data.get("cancel_e_invoice")
         cancel_irn_test_data.get("response_data").get("result").update({"Irn": doc.irn})
 
-        request_data = {
+        e_invoice_request_data = {
             "Irn": doc.irn,
-            "Cnlrsn": CANCEL_REASON_CODES[values.reason],
+            "Cnlrsn": "2",
             "Cnlrem": values.remark if values.remark else values.reason,
         }
 
-        result = self._mock_e_invoice_response(
-            doc, cancel_irn_test_data, "ei/api/invoice/cancel", request_data
+        self._mock_e_invoice_response(
+            doc, cancel_e_waybill, "ei/api/ewayapi", eway_request_data
         )
 
-        doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
-
-        log_e_invoice(
-            doc,
-            {
-                "name": result.Irn,
-                "is_cancelled": 1,
-                "cancel_reason_code": values.reason,
-                "cancel_remark": values.remark,
-                "cancelled_on": parse_datetime(result.CancelDate),
-            },
+        self._mock_e_invoice_response(
+            doc, cancel_irn_test_data, "ei/api/invoice/cancel", e_invoice_request_data
         )
 
-    def _cancel_e_waybill(self, doc, values):
-        test_data = self.e_invoice_test_data.get("cancel_e_waybill")
-        test_data.get("response_data").get("result").update(
-            {"ewayBillNo": doc.ewaybill}
-        )
-
-        request_data = EWaybillData(doc).get_e_waybill_cancel_data(values)
-
-        result = self._mock_e_invoice_response(
-            doc, test_data, "/ei/api/ewayapi", request_data
-        )
-
-        log_and_process_e_waybill(
-            doc,
-            {
-                "name": doc.ewaybill,
-                "is_cancelled": 1,
-                "cancel_reason_code": CANCEL_REASON_CODES[values.reason],
-                "cancel_remark": values.remark if values.remark else values.reason,
-                "cancelled_on": parse_datetime(result.cancelDate, day_first=True),
-            },
-        )
-
-        doc.db_set("ewaybill", "")
+        cancel_e_invoice(doc.name, values=values)
+        return frappe.get_doc("Sales Invoice", doc.name)
 
     def _mock_e_invoice_response(
         self, doc, data, api="ei/api/invoice", request_data=None
@@ -373,15 +312,3 @@ class TestEInvoice(FrappeTestCase):
             match=[matchers.json_params_matcher(request_data)],
             status=200,
         )
-
-        api = EInvoiceAPI(doc)
-        api.default_headers.update({"requestid": frappe.generate_hash(length=12)})
-
-        response = requests.post(
-            url,
-            headers=api.default_headers,
-            json=request_data,
-        )
-
-        response_json = response.json(object_hook=frappe._dict)
-        return response_json.get("result", response_json)
