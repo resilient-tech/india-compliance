@@ -9,11 +9,6 @@ import {
 frappe.provide("ic");
 
 window.gst_settings = frappe.boot.gst_settings;
-<<<<<<< HEAD
-=======
-const GSTIN_REGEX =
-    /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
->>>>>>> 0db11ab7 (fix: `set_data` for gstin autocomplete)
 
 Object.assign(ic, {
     get_gstin_query(party, party_type = "Company") {
@@ -77,11 +72,11 @@ Object.assign(ic, {
             return gstin;
         }
     },
-<<<<<<< HEAD
 
     guess_gst_category(gstin, country) {
         if (!gstin) {
-            return (!country || (country === "India")) ? "Unregistered" : "Overseas";
+            if (country && country !== "India") return "Overseas";
+            return "Unregistered";
         }
 
         if (TDS_REGEX.test(gstin)) return "Tax Deductor";
@@ -91,10 +86,6 @@ Object.assign(ic, {
     },
 });
 
-=======
-});
-
->>>>>>> 0db11ab7 (fix: `set_data` for gstin autocomplete)
 function is_gstin_check_digit_valid(gstin) {
     /*
     adapted from
