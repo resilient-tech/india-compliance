@@ -206,7 +206,7 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
     # this works because we do run_onload in load_doc above
     acknowledged_on = doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
-
+    print(acknowledged_on)
     if (
         not acknowledged_on
         or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
