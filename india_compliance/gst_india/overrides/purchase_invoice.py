@@ -47,28 +47,16 @@ def validate_supplier_gstin(doc):
 
 
 def validate_supplier_invoice_number(doc):
-    # TODO: needs redeign, JS implementation and tests
-    return
-
     if (
         doc.bill_no
-        or not doc.supplier_gstin
+        or doc.gst_category == "Unregistered"
         or not frappe.get_cached_value(
             "GST Settings", "GST Settings", "require_supplier_invoice_no"
         )
     ):
         return
 
-    gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
-
-    if any(
-        tax.base_tax_amount_after_discount_amount and tax.account_head in gst_accounts
-        for tax in doc.taxes
-    ):
-        frappe.throw(
-            _(
-                "Bill No is mandatory for a GST Purchase Invoice from a Registered"
-                " Supplier."
-            ),
-            title=_("Missing Mandatory Field"),
-        )
+    frappe.throw(
+        _("As per your GST Settings, Bill No is mandatory for Purchase Invoice."),
+        title=_("Missing Mandatory Field"),
+    )

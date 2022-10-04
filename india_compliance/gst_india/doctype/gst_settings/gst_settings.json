@@ -229,7 +229,7 @@
   },
   {
    "default": "1",
-   "description": "If checked, Supplier Invoice Number will be mandatory for purchases where Input GST is availed (except from unregistered suppliers). This will help ensure smooth purchase reconciliation.",
+   "description": "If checked, Supplier Invoice Number will be mandatory for all purchases (except from unregistered suppliers). This will help ensure smooth purchase reconciliation.",
    "fieldname": "require_supplier_invoice_no",
    "fieldtype": "Check",
    "label": "Require Supplier Invoice Number for GST Purchases"
@@ -238,7 +238,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-08-12 11:32:51.821431",
+ "modified": "2022-10-04 16:17:30.710213",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
