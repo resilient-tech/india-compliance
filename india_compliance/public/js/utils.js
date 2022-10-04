@@ -72,9 +72,11 @@ Object.assign(ic, {
             return gstin;
         }
     },
+
     guess_gst_category(gstin, country) {
         if (!gstin) {
-            return (!country || (country === "India")) ? "Unregistered" : "Overseas";
+            if (country && country !== "India") return "Overseas";
+            return "Unregistered";
         }
 
         if (TDS_REGEX.test(gstin)) return "Tax Deductor";
