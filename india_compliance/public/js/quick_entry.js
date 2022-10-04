@@ -1,4 +1,6 @@
-const GSTIN_FIELD_DESCRIPTION = __("Autofill party information by entering their GSTIN");
+const GSTIN_FIELD_DESCRIPTION = __(
+    "Autofill party information by entering their GSTIN"
+);
 
 class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
@@ -20,10 +22,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         auto-filled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                    )
+                      )
                     : "",
                 collapsible: 0,
             },
@@ -86,8 +88,13 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 description: this.api_enabled ? GSTIN_FIELD_DESCRIPTION : "",
                 ignore_validation: true,
                 onchange: () => {
-                    if (!this.api_enabled) return;
-                    autofill_fields(this.dialog);
+                    const d = this.dialog;
+                    if (this.api_enabled) return autofill_fields(d);
+
+                    d.set_value(
+                        "gst_category",
+                        ic.guess_gst_category(d.doc._gstin, d.doc.country)
+                    );
                 },
             },
         ];
@@ -204,12 +211,9 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 fieldname: "link_name",
                 fieldtype: "Dynamic Link",
                 label: "Link Name",
-                get_options: (df) => {
-                    return df.doc.link_doctype
-                },
+                get_options: df => df.doc.link_doctype,
                 onchange: async () => {
-                    const { link_doctype, link_name } =
-                        this.dialog.doc;
+                    const { link_doctype, link_name } = this.dialog.doc;
 
                     if (
                         !link_name ||
@@ -288,7 +292,7 @@ async function autofill_fields(dialog) {
 }
 
 function set_gstin_description(gstin_field, status) {
-    const STATUS_COLORS = {"Active": "green", "Cancelled": "red"};
+    const STATUS_COLORS = { Active: "green", Cancelled: "red" };
 
     gstin_field.set_description(
         `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">

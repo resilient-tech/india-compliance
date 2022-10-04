@@ -7,3 +7,4 @@ validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
 show_overseas_disabled_warning(DOCTYPE);
 set_gstin_query(DOCTYPE);
+set_gst_category(DOCTYPE);
