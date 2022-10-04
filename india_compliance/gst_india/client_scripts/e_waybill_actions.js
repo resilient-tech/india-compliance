@@ -361,7 +361,7 @@ function show_generate_e_waybill_dialog(frm) {
     // Alert if e-Invoice hasn't been generated
     if (
         frm.doctype === "Sales Invoice" &&
-        gst_settings.enable_e_invoice &&
+        is_e_invoice_applicable(frm) &&
         !frm.doc.irn
     ) {
         $(`
