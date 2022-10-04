@@ -108,13 +108,10 @@ def on_submit(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    if gst_settings.enable_e_invoice:
-        if (
-            not gst_settings.auto_generate_e_invoice
-            or not validate_e_invoice_applicability(doc, gst_settings, throw=False)
-        ):
-            return
-
+    if (
+        validate_e_invoice_applicability(doc, gst_settings, throw=False)
+        and gst_settings.auto_generate_e_invoice
+    ):
         frappe.enqueue(
             "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
             enqueue_after_commit=True,
@@ -125,7 +122,7 @@ def on_submit(doc, method=None):
 
         return
 
-    if (
+    elif (
         not gst_settings.enable_e_waybill
         or not gst_settings.auto_generate_e_waybill
         or doc.ewaybill
