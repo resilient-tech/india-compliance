@@ -219,7 +219,7 @@ class TestEInvoice(FrappeTestCase):
             si_doc,
         )
 
-        cancelled_doc = self._cancel_e_invoice(si_doc)
+        cancelled_doc = self._cancel_e_invoice(si.name)
 
         self.assertDocumentEqual(
             {"einvoice_status": "Cancelled", "irn": ""},
@@ -264,10 +264,11 @@ class TestEInvoice(FrappeTestCase):
             "GST Settings", "e_invoice_applicable_from", get_datetime()
         )
 
-    def _cancel_e_invoice(self, doc):
+    def _cancel_e_invoice(self, invoice_no):
         values = frappe._dict(
             {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
         )
+        doc = frappe.get_doc("Sales Invoice", invoice_no)
 
         # Prepared e_waybill cancel data
         cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")
