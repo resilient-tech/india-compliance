@@ -44,6 +44,10 @@ Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/
   bench --site [site name] install-app india_compliance
   ```
 
+## In-app Purchases
+
+Some of the automation features available in India Compliance require access to [GST APIs](https://discuss.erpnext.com/t/introducing-india-compliance/86335#a-note-on-gst-apis-3). Since there are some costs associated with these APIs, they can be accessed by signing up for an India Compliance Account after installing this app.
+
 ## Planned Features
 
 - Advanced purchase reconciliation based on GSTR-2B and GSTR-2A

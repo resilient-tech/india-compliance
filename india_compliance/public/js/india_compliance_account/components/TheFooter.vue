@@ -7,7 +7,9 @@
     </ul>
     <div class="footer-logo">
       <p>ASP Services by</p>
-      <img src="" alt="footer-logo" />
+      <a href="https://www.resilient.tech" target="_blank">
+        <img src="" alt="footer-logo" />
+      </a>
     </div>
   </footer>
 </template>
@@ -49,13 +51,12 @@ footer {
   max-width: 13em;
 }
 
-/* TODO: change the image url for light mode */
-html[data-theme="light"] .footer-logo img {
-  content: url("https://s3.ap-south-1.amazonaws.com/resilient.tech-public/logo.png");
+.footer-logo img {
+  content: url("https://india-compliance.s3.ap-south-1.amazonaws.com/logo.png");
 }
 
-html[data-theme="dark"] .footer-logo img {
-  content: url("https://s3.ap-south-1.amazonaws.com/resilient.tech-public/logo_white.png");
+[data-theme="dark"] .footer-logo img {
+  content: url("https://india-compliance.s3.ap-south-1.amazonaws.com/logo_dark.png");
 }
 
 @media screen and (max-width: 768px) {

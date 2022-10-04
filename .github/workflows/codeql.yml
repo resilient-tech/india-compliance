@@ -20,11 +20,6 @@ on:
       - "**.csv"
 
   push:
-    paths-ignore:
-      - "**.css"
-      - "**.md"
-      - "**.html"
-      - "**.csv"
 
   schedule:
     - cron: '0 0 * * 1'

@@ -29,6 +29,7 @@ POST_INSTALL_PATCHES = (
     "set_default_gst_settings",
     "remove_deprecated_docs",
     "remove_old_fields",
+    "update_custom_role_for_e_invoice_summary",
 )
 
 
@@ -39,6 +40,7 @@ def after_install():
 
         print("Setting up GST...")
         setup_gst()
+        disable_ic_account_page()
 
         print("Patching Existing Data...")
         run_post_install_patches()
@@ -67,3 +69,16 @@ def run_post_install_patches():
 
     finally:
         frappe.flags.in_patch = False
+
+
+def disable_ic_account_page():
+    """
+    Disable the India Compliance Account Page if API secret is set in frappe.conf
+    """
+
+    if not frappe.conf.ic_api_secret or frappe.db.exists(
+        "Custom Role", {"page": "india-compliance-account"}
+    ):
+        return
+
+    frappe.get_doc(doctype="Custom Role", page="india-compliance-account").insert()

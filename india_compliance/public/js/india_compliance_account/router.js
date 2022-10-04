@@ -5,7 +5,6 @@ import AccountPage from "./pages/AccountPage.vue";
 import MailSentPage from "./pages/MailSentPage.vue";
 import PurchaseCreditsPage from "./pages/PurchaseCreditsPage.vue";
 import PaymentPage from "./pages/PaymentPage.vue";
-import PageNotFound from "./pages/PageNotFound.vue";
 
 const routes = [
     {
@@ -33,11 +32,7 @@ const routes = [
         path: "/",
         component: AccountPage,
         alias: "/account",
-    },
-    // {
-    //     path: "*",
-    //     component: PageNotFound,
-    // },
+    }
 ];
 
 export default new VueRouter({

@@ -10,12 +10,22 @@
     </h2>
     <p class="message">
       Almost there! We've sent a verification email to
-      <strong>{{ email }}</strong>
+      <strong>{{ email }}</strong>.
+      <br />
+      Please click the button in that email to confirm your email address.
     </p>
 
-    <button @click.stop="changeEmail" class="btn btn-primary btn-sm">
-      Change Email
-    </button>
+    <div class="actions">
+      <button @click.stop="changeEmail" class="btn btn-secondary btn-sm">
+        <span v-html="change_icon"></span>
+        Change Email
+      </button>
+
+      <button @click.stop="refresh" class="btn btn-primary btn-sm">
+        <span v-html="refresh_icon"></span>
+        Refresh
+      </button>
+    </div>
   </div>
 </template>
 
@@ -26,12 +36,25 @@ export default {
       const { session } = this.$store.state.auth;
       return session && session.email;
     },
+
+    change_icon() {
+      return frappe.utils.icon("change", "sm");
+    },
+
+    refresh_icon() {
+      return frappe.utils.icon("refresh", "sm");
+    },
   },
   methods: {
     async changeEmail() {
       await this.$store.dispatch("setSession", null);
       this.$router.replace({ name: "auth" });
     },
+
+    async refresh() {
+      await this.$store.dispatch("initAuth");
+      this.$router.replace({ name: "auth" });
+    }
   },
 
   beforeRouteEnter(to, from, next) {
@@ -46,7 +69,7 @@ export default {
 
 <style scoped>
 .mail-sent-page {
-  margin: 100px 0;
+  margin: 70px 0;
 }
 
 .mail-box-img {
@@ -68,5 +91,13 @@ export default {
   .message {
     font-size: 1.1em;
   }
+}
+
+.actions button {
+  margin-left: 5px;
+}
+
+.actions button:first-child {
+  margin-left: 0;
 }
 </style>
