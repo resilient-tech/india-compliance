@@ -778,6 +778,8 @@ class EWaybillData(GSTTransactionData):
                     "name": random_string(6).lstrip("0"),
                 }
             )
+            if frappe.flags.in_test:
+                self.transaction_details["name"] = "53amoi"
 
             self.from_address.gstin = "05AAACG2115R1ZN"
             self.to_address.gstin = (
