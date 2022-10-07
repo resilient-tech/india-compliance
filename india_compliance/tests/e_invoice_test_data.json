@@ -5,27 +5,120 @@
 			"customer_address": "_Test Registered Customer-Billing",
 			"shipping_address_name": "_Test Registered Customer-Billing"
 		},
-		"response_data": {
-			"success": true,
-			"message": "IRN generated successfully",
-			"result": {
-				"AckNo": 232210036743849,
-				"AckDt": "2022-09-16 19:29:00",
-				"Irn": "706daeccda0ef6f818da78f3a2a05a1288731057373002289b46c3229289a2e7",
-				"SignedInvoice": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkVEQzU3REUxMzU4QjMwMEJBOUY3OTM0MEE2Njk2ODMxRjNDODUwNDciLCJ0eXAiOiJKV1QiLCJ4NXQiOiI3Y1Y5NFRXTE1BdXA5NU5BcG1sb01mUElVRWMifQ.eyJkYXRhIjoie1wiQWNrTm9cIjoyMzIyMTAwMzY3NDM4NDksXCJBY2tEdFwiOlwiMjAyMi0wOS0xNiAxOToyOTowMFwiLFwiSXJuXCI6XCI3MDZkYWVjY2RhMGVmNmY4MThkYTc4ZjNhMmEwNWExMjg4NzMxMDU3MzczMDAyMjg5YjQ2YzMyMjkyODlhMmU3XCIsXCJWZXJzaW9uXCI6XCIxLjFcIixcIlRyYW5EdGxzXCI6e1wiVGF4U2NoXCI6XCJHU1RcIixcIlN1cFR5cFwiOlwiQjJCXCIsXCJSZWdSZXZcIjpcIk5cIn0sXCJEb2NEdGxzXCI6e1wiVHlwXCI6XCJJTlZcIixcIk5vXCI6XCJTSU5WLUNGWS0wMDA2N1wiLFwiRHRcIjpcIjE2LzA5LzIwMjJcIn0sXCJTZWxsZXJEdGxzXCI6e1wiR3N0aW5cIjpcIjAxQU1CUEc3NzczTTAwMlwiLFwiTGdsTm1cIjpcIl9UZXN0IEluZGlhbiBSZWdpc3RlcmVkIENvbXBhbnlcIixcIlRyZE5tXCI6XCJUZXN0IEluZGlhbiBSZWdpc3RlcmVkIENvbXBhbnlcIixcIkFkZHIxXCI6XCJUZXN0IEFkZHJlc3MgLSAxXCIsXCJMb2NcIjpcIlRlc3QgQ2l0eVwiLFwiUGluXCI6MTkzNTAxLFwiU3RjZFwiOlwiMDFcIn0sXCJCdXllckR0bHNcIjp7XCJHc3RpblwiOlwiMzZBTUJQRzc3NzNNMDAyXCIsXCJMZ2xObVwiOlwiX1Rlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiVHJkTm1cIjpcIlRlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiUG9zXCI6XCIwMVwiLFwiQWRkcjFcIjpcIlRlc3QgQWRkcmVzcyAtIDNcIixcIkxvY1wiOlwiVGVzdCBDaXR5XCIsXCJQaW5cIjo1MDAwNTUsXCJTdGNkXCI6XCIzNlwifSxcIkRpc3BEdGxzXCI6e1wiTm1cIjpcIlRlc3QgSW5kaWFuIFJlZ2lzdGVyZWQgQ29tcGFueVwiLFwiQWRkcjFcIjpcIlRlc3QgQWRkcmVzcyAtIDFcIixcIkxvY1wiOlwiVGVzdCBDaXR5XCIsXCJQaW5cIjoxOTM1MDEsXCJTdGNkXCI6XCIwMVwifSxcIlNoaXBEdGxzXCI6e1wiR3N0aW5cIjpcIjM2QU1CUEc3NzczTTAwMlwiLFwiTGdsTm1cIjpcIlRlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiVHJkTm1cIjpcIlRlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiQWRkcjFcIjpcIlRlc3QgQWRkcmVzcyAtIDNcIixcIkxvY1wiOlwiVGVzdCBDaXR5XCIsXCJQaW5cIjo1MDAwNTUsXCJTdGNkXCI6XCIzNlwifSxcIkl0ZW1MaXN0XCI6W3tcIkl0ZW1Ob1wiOjAsXCJTbE5vXCI6XCIxXCIsXCJJc1NlcnZjXCI6XCJOXCIsXCJQcmREZXNjXCI6XCJUZXN0IFRyYWRpbmcgR29vZHMgMVwiLFwiSHNuQ2RcIjpcIjYxMTQ5MDkwXCIsXCJRdHlcIjoxLjAsXCJVbml0XCI6XCJOT1NcIixcIlVuaXRQcmljZVwiOjEwMC4wLFwiVG90QW10XCI6MTAwLjAsXCJEaXNjb3VudFwiOjAsXCJBc3NBbXRcIjoxMDAuMCxcIkdzdFJ0XCI6MC4wLFwiSWdzdEFtdFwiOjAsXCJDZ3N0QW10XCI6MCxcIlNnc3RBbXRcIjowLFwiQ2VzUnRcIjowLFwiQ2VzQW10XCI6MCxcIkNlc05vbkFkdmxBbXRcIjowLFwiVG90SXRlbVZhbFwiOjEwMC4wfV0sXCJWYWxEdGxzXCI6e1wiQXNzVmFsXCI6MTAwLjAsXCJDZ3N0VmFsXCI6MCxcIlNnc3RWYWxcIjowLFwiSWdzdFZhbFwiOjAsXCJDZXNWYWxcIjowLFwiRGlzY291bnRcIjowLFwiT3RoQ2hyZ1wiOjAuMCxcIlJuZE9mZkFtdFwiOjAuMCxcIlRvdEludlZhbFwiOjEwMC4wfSxcIlBheUR0bHNcIjp7XCJDckRheVwiOjAsXCJQYWlkQW10XCI6MCxcIlBheW10RHVlXCI6MTAwLjB9LFwiRXdiRHRsc1wiOntcIlRyYW5zTW9kZVwiOlwiMVwiLFwiRGlzdGFuY2VcIjowLFwiVmVoTm9cIjpcIkdKMDdETDkwMDlcIixcIlZlaFR5cGVcIjpcIlJcIn19IiwiaXNzIjoiTklDIn0.ZOqrLJLsoXHf1QMRPBJoBesVluRB0a0ISsBGn6gqLuiJLfsAG1Oxmimqi9c7dboRnsW1eEj78Yps5D2A05WPMXwdkOy9Ahb_t4jXSGH-ijq_ed8z-xAtyiWH16YfIc9Zg020VkrlZiHdbfkx53hOwEA3aUhHIdPwQE5Kk-O9KWES3cttl9r5lrtzueTlTKB0GqXqiNlmuuQnCAJpWe34Coko1__kyPLLMdKgpOSB0EX2j7NjaZ5KPhu-GZHBtTvKczuSXvli6lwSQLaKpBm1IGvwMo2IzGW62pXp4XdMlcncLuc8wLTExSlKwHhsSspOxhMNBRx3NqcU0PQZOq050Q",
-				"SignedQRCode": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkVEQzU3REUxMzU4QjMwMEJBOUY3OTM0MEE2Njk2ODMxRjNDODUwNDciLCJ0eXAiOiJKV1QiLCJ4NXQiOiI3Y1Y5NFRXTE1BdXA5NU5BcG1sb01mUElVRWMifQ.eyJkYXRhIjoie1wiU2VsbGVyR3N0aW5cIjpcIjAxQU1CUEc3NzczTTAwMlwiLFwiQnV5ZXJHc3RpblwiOlwiMzZBTUJQRzc3NzNNMDAyXCIsXCJEb2NOb1wiOlwiU0lOVi1DRlktMDAwNjdcIixcIkRvY1R5cFwiOlwiSU5WXCIsXCJEb2NEdFwiOlwiMTYvMDkvMjAyMlwiLFwiVG90SW52VmFsXCI6MTAwLjAsXCJJdGVtQ250XCI6MSxcIk1haW5Ic25Db2RlXCI6XCI2MTE0OTA5MFwiLFwiSXJuXCI6XCI3MDZkYWVjY2RhMGVmNmY4MThkYTc4ZjNhMmEwNWExMjg4NzMxMDU3MzczMDAyMjg5YjQ2YzMyMjkyODlhMmU3XCIsXCJJcm5EdFwiOlwiMjAyMi0wOS0xNiAxOToyOTowMFwifSIsImlzcyI6Ik5JQyJ9.j7Fpl3ol0G6akp1-ukVzOK-8Dqoey3iKLf9SCaXGfb3crIcpniezqevH1qBTgCtUDYnOa0tRk5Nhyi-ER-W8Hu2a4Ug28AJFp3S8Xv2RwdMe9HvJN1b8KBKz6N4_WcO7wD2VcXyoEKDuTP2KFlXRjuZx7tBh5ttjQ4vRNtVwpR2qy-lRtMquEbZsJ-JOPBLUTXimdpVwt9EW8xKUxRKT_7-8kwK-DGHePADVBUjD6kv-GSpbxgfM4UAPg1TRlRz_BHMbbi9adZVZn5l9GA-WRuSP_7C-Qd_ucYg1cmP2zswh1XClMEjwjmxpuFkhqdDsRfl8unnEi--FxA0lvn4nmw",
-				"Status": "ACT",
-				"EwbNo": 391009149369,
-				"EwbDt": "2022-09-16 19:29:00",
-				"EwbValidTill": "2022-09-29 23:59:00",
-				"Remarks": null
+		"request_data": {
+			"BuyerDtls": {
+				"Addr1": "Test Address - 3",
+				"Gstin": "36AMBPG7773M002",
+				"LglNm": "_Test Registered Customer",
+				"Loc": "Test City",
+				"Pin": 500055,
+				"Pos": "01",
+				"Stcd": "36",
+				"TrdNm": "Test Registered Customer"
 			},
+			"DispDtls": {
+				"Addr1": "Test Address - 1",
+				"Loc": "Test City",
+				"Nm": "Test Indian Registered Company",
+				"Pin": 193501,
+				"Stcd": "01"
+			},
+			"DocDtls": {
+				"Dt": "16/09/2022",
+				"No": "g2qxhY",
+				"Typ": "INV"
+			},
+			"EwbDtls": {
+				"Distance": 0,
+				"TransMode": "1",
+				"VehNo": "GJ07DL9009",
+				"VehType": "R"
+			},
+			"ItemList": [
+				{
+					"AssAmt": 100,
+					"CesAmt": 0,
+					"CesNonAdvlAmt": 0,
+					"CesRt": 0,
+					"CgstAmt": 0,
+					"Discount": 0,
+					"GstRt": 0,
+					"HsnCd": "61149090",
+					"IgstAmt": 0,
+					"IsServc": "N",
+					"PrdDesc": "Test Trading Goods 1",
+					"Qty": 1,
+					"SgstAmt": 0,
+					"SlNo": "1",
+					"TotAmt": 100,
+					"TotItemVal": 100,
+					"Unit": "NOS",
+					"UnitPrice": 100
+				}
+			],
+			"PayDtls": {
+				"CrDay": 0,
+				"PaidAmt": 0,
+				"PaymtDue": 100
+			},
+			"SellerDtls": {
+				"Addr1": "Test Address - 1",
+				"Gstin": "01AMBPG7773M002",
+				"LglNm": "_Test Indian Registered Company",
+				"Loc": "Test City",
+				"Pin": 193501,
+				"Stcd": "01",
+				"TrdNm": "Test Indian Registered Company"
+			},
+			"ShipDtls": {
+				"Addr1": "Test Address - 3",
+				"Gstin": "36AMBPG7773M002",
+				"LglNm": "Test Registered Customer",
+				"Loc": "Test City",
+				"Pin": 500055,
+				"Stcd": "36",
+				"TrdNm": "Test Registered Customer"
+			},
+			"TranDtls": {
+				"RegRev": "N",
+				"SupTyp": "B2B",
+				"TaxSch": "GST"
+			},
+			"ValDtls": {
+				"AssVal": 100,
+				"CesVal": 0,
+				"CgstVal": 0,
+				"Discount": 0,
+				"IgstVal": 0,
+				"OthChrg": 0,
+				"RndOffAmt": 0,
+				"SgstVal": 0,
+				"TotInvVal": 100
+			},
+			"Version": "1.1"
+		},
+		"response_data": {
 			"info": [
 				{
 					"InfCd": "EWBPPD",
 					"Desc": "Pin-Pin calc distance: 2467KM"
 				}
-			]
+			],
+			"message": "IRN generated successfully",
+			"result": {
+				"AckDt": "2022-09-16 19:29:00",
+				"AckNo": 232210036743849,
+				"EwbDt": "2022-09-16 19:29:00",
+				"EwbNo": 391009149369,
+				"EwbValidTill": "2022-09-29 23:59:00",
+				"Irn": "706daeccda0ef6f818da78f3a2a05a1288731057373002289b46c3229289a2e7",
+				"Remarks": null,
+				"SignedInvoice": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkVEQzU3REUxMzU4QjMwMEJBOUY3OTM0MEE2Njk2ODMxRjNDODUwNDciLCJ0eXAiOiJKV1QiLCJ4NXQiOiI3Y1Y5NFRXTE1BdXA5NU5BcG1sb01mUElVRWMifQ.eyJkYXRhIjoie1wiQWNrTm9cIjoyMzIyMTAwMzY3NDM4NDksXCJBY2tEdFwiOlwiMjAyMi0wOS0xNiAxOToyOTowMFwiLFwiSXJuXCI6XCI3MDZkYWVjY2RhMGVmNmY4MThkYTc4ZjNhMmEwNWExMjg4NzMxMDU3MzczMDAyMjg5YjQ2YzMyMjkyODlhMmU3XCIsXCJWZXJzaW9uXCI6XCIxLjFcIixcIlRyYW5EdGxzXCI6e1wiVGF4U2NoXCI6XCJHU1RcIixcIlN1cFR5cFwiOlwiQjJCXCIsXCJSZWdSZXZcIjpcIk5cIn0sXCJEb2NEdGxzXCI6e1wiVHlwXCI6XCJJTlZcIixcIk5vXCI6XCJTSU5WLUNGWS0wMDA2N1wiLFwiRHRcIjpcIjE2LzA5LzIwMjJcIn0sXCJTZWxsZXJEdGxzXCI6e1wiR3N0aW5cIjpcIjAxQU1CUEc3NzczTTAwMlwiLFwiTGdsTm1cIjpcIl9UZXN0IEluZGlhbiBSZWdpc3RlcmVkIENvbXBhbnlcIixcIlRyZE5tXCI6XCJUZXN0IEluZGlhbiBSZWdpc3RlcmVkIENvbXBhbnlcIixcIkFkZHIxXCI6XCJUZXN0IEFkZHJlc3MgLSAxXCIsXCJMb2NcIjpcIlRlc3QgQ2l0eVwiLFwiUGluXCI6MTkzNTAxLFwiU3RjZFwiOlwiMDFcIn0sXCJCdXllckR0bHNcIjp7XCJHc3RpblwiOlwiMzZBTUJQRzc3NzNNMDAyXCIsXCJMZ2xObVwiOlwiX1Rlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiVHJkTm1cIjpcIlRlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiUG9zXCI6XCIwMVwiLFwiQWRkcjFcIjpcIlRlc3QgQWRkcmVzcyAtIDNcIixcIkxvY1wiOlwiVGVzdCBDaXR5XCIsXCJQaW5cIjo1MDAwNTUsXCJTdGNkXCI6XCIzNlwifSxcIkRpc3BEdGxzXCI6e1wiTm1cIjpcIlRlc3QgSW5kaWFuIFJlZ2lzdGVyZWQgQ29tcGFueVwiLFwiQWRkcjFcIjpcIlRlc3QgQWRkcmVzcyAtIDFcIixcIkxvY1wiOlwiVGVzdCBDaXR5XCIsXCJQaW5cIjoxOTM1MDEsXCJTdGNkXCI6XCIwMVwifSxcIlNoaXBEdGxzXCI6e1wiR3N0aW5cIjpcIjM2QU1CUEc3NzczTTAwMlwiLFwiTGdsTm1cIjpcIlRlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiVHJkTm1cIjpcIlRlc3QgUmVnaXN0ZXJlZCBDdXN0b21lclwiLFwiQWRkcjFcIjpcIlRlc3QgQWRkcmVzcyAtIDNcIixcIkxvY1wiOlwiVGVzdCBDaXR5XCIsXCJQaW5cIjo1MDAwNTUsXCJTdGNkXCI6XCIzNlwifSxcIkl0ZW1MaXN0XCI6W3tcIkl0ZW1Ob1wiOjAsXCJTbE5vXCI6XCIxXCIsXCJJc1NlcnZjXCI6XCJOXCIsXCJQcmREZXNjXCI6XCJUZXN0IFRyYWRpbmcgR29vZHMgMVwiLFwiSHNuQ2RcIjpcIjYxMTQ5MDkwXCIsXCJRdHlcIjoxLjAsXCJVbml0XCI6XCJOT1NcIixcIlVuaXRQcmljZVwiOjEwMC4wLFwiVG90QW10XCI6MTAwLjAsXCJEaXNjb3VudFwiOjAsXCJBc3NBbXRcIjoxMDAuMCxcIkdzdFJ0XCI6MC4wLFwiSWdzdEFtdFwiOjAsXCJDZ3N0QW10XCI6MCxcIlNnc3RBbXRcIjowLFwiQ2VzUnRcIjowLFwiQ2VzQW10XCI6MCxcIkNlc05vbkFkdmxBbXRcIjowLFwiVG90SXRlbVZhbFwiOjEwMC4wfV0sXCJWYWxEdGxzXCI6e1wiQXNzVmFsXCI6MTAwLjAsXCJDZ3N0VmFsXCI6MCxcIlNnc3RWYWxcIjowLFwiSWdzdFZhbFwiOjAsXCJDZXNWYWxcIjowLFwiRGlzY291bnRcIjowLFwiT3RoQ2hyZ1wiOjAuMCxcIlJuZE9mZkFtdFwiOjAuMCxcIlRvdEludlZhbFwiOjEwMC4wfSxcIlBheUR0bHNcIjp7XCJDckRheVwiOjAsXCJQYWlkQW10XCI6MCxcIlBheW10RHVlXCI6MTAwLjB9LFwiRXdiRHRsc1wiOntcIlRyYW5zTW9kZVwiOlwiMVwiLFwiRGlzdGFuY2VcIjowLFwiVmVoTm9cIjpcIkdKMDdETDkwMDlcIixcIlZlaFR5cGVcIjpcIlJcIn19IiwiaXNzIjoiTklDIn0.ZOqrLJLsoXHf1QMRPBJoBesVluRB0a0ISsBGn6gqLuiJLfsAG1Oxmimqi9c7dboRnsW1eEj78Yps5D2A05WPMXwdkOy9Ahb_t4jXSGH-ijq_ed8z-xAtyiWH16YfIc9Zg020VkrlZiHdbfkx53hOwEA3aUhHIdPwQE5Kk-O9KWES3cttl9r5lrtzueTlTKB0GqXqiNlmuuQnCAJpWe34Coko1__kyPLLMdKgpOSB0EX2j7NjaZ5KPhu-GZHBtTvKczuSXvli6lwSQLaKpBm1IGvwMo2IzGW62pXp4XdMlcncLuc8wLTExSlKwHhsSspOxhMNBRx3NqcU0PQZOq050Q",
+				"SignedQRCode": "eyJhbGciOiJSUzI1NiIsImtpZCI6IkVEQzU3REUxMzU4QjMwMEJBOUY3OTM0MEE2Njk2ODMxRjNDODUwNDciLCJ0eXAiOiJKV1QiLCJ4NXQiOiI3Y1Y5NFRXTE1BdXA5NU5BcG1sb01mUElVRWMifQ.eyJkYXRhIjoie1wiU2VsbGVyR3N0aW5cIjpcIjAxQU1CUEc3NzczTTAwMlwiLFwiQnV5ZXJHc3RpblwiOlwiMzZBTUJQRzc3NzNNMDAyXCIsXCJEb2NOb1wiOlwiU0lOVi1DRlktMDAwNjdcIixcIkRvY1R5cFwiOlwiSU5WXCIsXCJEb2NEdFwiOlwiMTYvMDkvMjAyMlwiLFwiVG90SW52VmFsXCI6MTAwLjAsXCJJdGVtQ250XCI6MSxcIk1haW5Ic25Db2RlXCI6XCI2MTE0OTA5MFwiLFwiSXJuXCI6XCI3MDZkYWVjY2RhMGVmNmY4MThkYTc4ZjNhMmEwNWExMjg4NzMxMDU3MzczMDAyMjg5YjQ2YzMyMjkyODlhMmU3XCIsXCJJcm5EdFwiOlwiMjAyMi0wOS0xNiAxOToyOTowMFwifSIsImlzcyI6Ik5JQyJ9.j7Fpl3ol0G6akp1-ukVzOK-8Dqoey3iKLf9SCaXGfb3crIcpniezqevH1qBTgCtUDYnOa0tRk5Nhyi-ER-W8Hu2a4Ug28AJFp3S8Xv2RwdMe9HvJN1b8KBKz6N4_WcO7wD2VcXyoEKDuTP2KFlXRjuZx7tBh5ttjQ4vRNtVwpR2qy-lRtMquEbZsJ-JOPBLUTXimdpVwt9EW8xKUxRKT_7-8kwK-DGHePADVBUjD6kv-GSpbxgfM4UAPg1TRlRz_BHMbbi9adZVZn5l9GA-WRuSP_7C-Qd_ucYg1cmP2zswh1XClMEjwjmxpuFkhqdDsRfl8unnEi--FxA0lvn4nmw",
+				"Status": "ACT",
+				"distance": 2467
+			},
+			"success": true
 		}
 	},
 	"service_item": {
@@ -33,6 +126,95 @@
 			"item_code": "_Test Service Item",
 			"customer_address": "_Test Registered Customer-Billing",
 			"shipping_address_name": "_Test Registered Customer-Billing"
+		},
+		"request_data": {
+			"BuyerDtls": {
+				"Addr1": "Test Address - 3",
+				"Gstin": "36AMBPG7773M002",
+				"LglNm": "_Test Registered Customer",
+				"Loc": "Test City",
+				"Pin": 500055,
+				"Pos": "01",
+				"Stcd": "36",
+				"TrdNm": "Test Registered Customer"
+			},
+			"DispDtls": {
+				"Addr1": "Test Address - 1",
+				"Loc": "Test City",
+				"Nm": "Test Indian Registered Company",
+				"Pin": 193501,
+				"Stcd": "01"
+			},
+			"DocDtls": {
+				"Dt": "17/09/2022",
+				"No": "g2qxhY",
+				"Typ": "INV"
+			},
+			"EwbDtls": {
+				"Distance": 0
+			},
+			"ItemList": [
+				{
+					"AssAmt": 100.0,
+					"CesAmt": 0,
+					"CesNonAdvlAmt": 0,
+					"CesRt": 0,
+					"CgstAmt": 0,
+					"Discount": 0,
+					"GstRt": 0.0,
+					"HsnCd": "999900",
+					"IgstAmt": 0,
+					"IsServc": "Y",
+					"PrdDesc": "Test Service Item",
+					"Qty": 1.0,
+					"SgstAmt": 0,
+					"SlNo": "1",
+					"TotAmt": 100.0,
+					"TotItemVal": 100.0,
+					"Unit": "NOS",
+					"UnitPrice": 100.0
+				}
+			],
+			"PayDtls": {
+				"CrDay": 0,
+				"PaidAmt": 0,
+				"PaymtDue": 100.0
+			},
+			"SellerDtls": {
+				"Addr1": "Test Address - 1",
+				"Gstin": "01AMBPG7773M002",
+				"LglNm": "_Test Indian Registered Company",
+				"Loc": "Test City",
+				"Pin": 193501,
+				"Stcd": "01",
+				"TrdNm": "Test Indian Registered Company"
+			},
+			"ShipDtls": {
+				"Addr1": "Test Address - 3",
+				"Gstin": "36AMBPG7773M002",
+				"LglNm": "Test Registered Customer",
+				"Loc": "Test City",
+				"Pin": 500055,
+				"Stcd": "36",
+				"TrdNm": "Test Registered Customer"
+			},
+			"TranDtls": {
+				"RegRev": "N",
+				"SupTyp": "B2B",
+				"TaxSch": "GST"
+			},
+			"ValDtls": {
+				"AssVal": 100.0,
+				"CesVal": 0,
+				"CgstVal": 0,
+				"Discount": 0,
+				"IgstVal": 0,
+				"OthChrg": 0.0,
+				"RndOffAmt": 0.0,
+				"SgstVal": 0,
+				"TotInvVal": 100.0
+			},
+			"Version": "1.1"
 		},
 		"response_data": {
 			"success": true,
@@ -69,6 +251,103 @@
 			"customer_address": "_Test Registered Customer-Billing",
 			"shipping_address_name": "_Test Registered Customer-Billing"
 		},
+		"request_data": {
+			"BuyerDtls": {
+				"Addr1": "Test Address - 3",
+				"Gstin": "36AMBPG7773M002",
+				"LglNm": "_Test Registered Customer",
+				"Loc": "Test City",
+				"Pin": 500055,
+				"Pos": "01",
+				"Stcd": "36",
+				"TrdNm": "Test Registered Customer"
+			},
+			"DispDtls": {
+				"Addr1": "Test Address - 3",
+				"Loc": "Test City",
+				"Nm": "Test Registered Customer",
+				"Pin": 500055,
+				"Stcd": "36"
+			},
+			"DocDtls": {
+				"Dt": "17/09/2022",
+				"No": "g2qxhY",
+				"Typ": "CRN"
+			},
+			"EwbDtls": {
+				"Distance": 0
+			},
+			"ItemList": [
+				{
+					"AssAmt": 100.0,
+					"CesAmt": 0,
+					"CesNonAdvlAmt": 0,
+					"CesRt": 0,
+					"CgstAmt": 0,
+					"Discount": 0,
+					"GstRt": 0.0,
+					"HsnCd": "61149090",
+					"IgstAmt": 0,
+					"IsServc": "N",
+					"PrdDesc": "Test Trading Goods 1",
+					"Qty": 1.0,
+					"SgstAmt": 0,
+					"SlNo": "1",
+					"TotAmt": 100.0,
+					"TotItemVal": 100.0,
+					"Unit": "NOS",
+					"UnitPrice": 100.0
+				}
+			],
+			"PayDtls": {
+				"CrDay": 0,
+				"PaidAmt": 0,
+				"PaymtDue": 0.0
+			},
+			"RefDtls": {
+				"PrecDocDtls": [
+					{
+						"InvDt": "17/09/2022",
+						"InvNo": "SINV-CFY-00092"
+					}
+				]
+			},
+			"SellerDtls": {
+				"Addr1": "Test Address - 1",
+				"Gstin": "01AMBPG7773M002",
+				"LglNm": "_Test Indian Registered Company",
+				"Loc": "Test City",
+				"Pin": 193501,
+				"Stcd": "01",
+				"TrdNm": "Test Indian Registered Company"
+			},
+			"ShipDtls": {
+				"Addr1": "Test Address - 1",
+				"Gstin": "01AMBPG7773M002",
+				"LglNm": "Test Indian Registered Company",
+				"Loc": "Test City",
+				"Pin": 193501,
+				"Stcd": "01",
+				"TrdNm": "Test Indian Registered Company"
+			},
+			"TranDtls": {
+				"RegRev": "N",
+				"SupTyp": "B2B",
+				"TaxSch": "GST"
+			},
+			"ValDtls": {
+				"AssVal": 100.0,
+				"CesVal": 0,
+				"CgstVal": 0,
+				"Discount": 0,
+				"IgstVal": 0,
+				"OthChrg": 0.0,
+				"RndOffAmt": -0.0,
+				"SgstVal": 0,
+				"TotInvVal": 100.0
+			},
+			"Version": "1.1"
+		},
 		"response_data": {
 			"success": true,
 			"message": "IRN generated successfully",
@@ -104,6 +383,95 @@
 			"customer_address": "_Test Registered Customer-Billing",
 			"shipping_address_name": "_Test Registered Customer-Billing"
 		},
+		"request_data": {
+			"BuyerDtls": {
+				"Addr1": "Test Address - 3",
+				"Gstin": "36AMBPG7773M002",
+				"LglNm": "_Test Registered Customer",
+				"Loc": "Test City",
+				"Pin": 500055,
+				"Pos": "01",
+				"Stcd": "36",
+				"TrdNm": "Test Registered Customer"
+			},
+			"DispDtls": {
+				"Addr1": "Test Address - 1",
+				"Loc": "Test City",
+				"Nm": "Test Indian Registered Company",
+				"Pin": 193501,
+				"Stcd": "01"
+			},
+			"DocDtls": {
+				"Dt": "17/09/2022",
+				"No": "g2qxhY",
+				"Typ": "DBN"
+			},
+			"EwbDtls": {
+				"Distance": 0
+			},
+			"ItemList": [
+				{
+					"AssAmt": 100.0,
+					"CesAmt": 0,
+					"CesNonAdvlAmt": 0,
+					"CesRt": 0,
+					"CgstAmt": 0,
+					"Discount": 0,
+					"GstRt": 0.0,
+					"HsnCd": "61149090",
+					"IgstAmt": 0,
+					"IsServc": "N",
+					"PrdDesc": "Test Trading Goods 1",
+					"Qty": 0.0,
+					"SgstAmt": 0,
+					"SlNo": "1",
+					"TotAmt": 100.0,
+					"TotItemVal": 100.0,
+					"Unit": "NOS",
+					"UnitPrice": 100.0
+				}
+			],
+			"PayDtls": {
+				"CrDay": 0,
+				"PaidAmt": 0,
+				"PaymtDue": 100.0
+			},
+			"SellerDtls": {
+				"Addr1": "Test Address - 1",
+				"Gstin": "01AMBPG7773M002",
+				"LglNm": "_Test Indian Registered Company",
+				"Loc": "Test City",
+				"Pin": 193501,
+				"Stcd": "01",
+				"TrdNm": "Test Indian Registered Company"
+			},
+			"ShipDtls": {
+				"Addr1": "Test Address - 3",
+				"Gstin": "36AMBPG7773M002",
+				"LglNm": "Test Registered Customer",
+				"Loc": "Test City",
+				"Pin": 500055,
+				"Stcd": "36",
+				"TrdNm": "Test Registered Customer"
+			},
+			"TranDtls": {
+				"RegRev": "N",
+				"SupTyp": "B2B",
+				"TaxSch": "GST"
+			},
+			"ValDtls": {
+				"AssVal": 100.0,
+				"CesVal": 0,
+				"CgstVal": 0,
+				"Discount": 0,
+				"IgstVal": 0,
+				"OthChrg": 0.0,
+				"RndOffAmt": 0.0,
+				"SgstVal": 0,
+				"TotInvVal": 100.0
+			},
+			"Version": "1.1"
+		},
 		"response_data": {
 			"success": true,
 			"message": "IRN generated successfully",
@@ -133,6 +501,11 @@
 		}
 	},
 	"cancel_e_invoice": {
+		"request_data": {
+			"Cnlrem": "Data Entry Mistake",
+			"Cnlrsn": "2",
+			"Irn": "706daeccda0ef6f818da78f3a2a05a1288731057373002289b46c3229289a2e7"
+		},
 		"response_data": {
 			"message": "E-Invoice is cancelled successfully",
 			"result": {
@@ -143,6 +516,11 @@
 		}
 	},
 	"cancel_e_waybill": {
+		"request_data": {
+			"cancelRmrk": "Data Entry Mistake",
+			"cancelRsnCode": "3",
+			"ewbNo": "391009149369"
+		},
 		"response_data": {
 			"message": "E-Way bill cancelled successfully",
 			"result": {

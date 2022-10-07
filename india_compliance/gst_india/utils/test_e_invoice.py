@@ -6,8 +6,10 @@ from responses import matchers
 
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import get_datetime, now_datetime
+from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
+from frappe.utils.data import format_date
 
+from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
@@ -21,8 +23,6 @@ from india_compliance.gst_india.utils.tests import create_sales_invoice
 
 
 class TestEInvoice(FrappeTestCase):
-    BASE_URL = "https://asp.resilient.tech"
-
     @classmethod
     def setUpClass(cls):
         frappe.db.set_value(
@@ -39,24 +39,7 @@ class TestEInvoice(FrappeTestCase):
         cls.e_invoice_test_data = frappe.get_file_json(
             frappe.get_app_path("india_compliance", "tests", "e_invoice_test_data.json")
         )
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.set_value(
-            "GST Settings",
-            "GST Settings",
-            {
-                "enable_api": 0,
-                "enable_e_invoice": 0,
-                "auto_generate_e_invoice": 1,
-                "enable_e_waybill": 0,
-                "fetch_e_waybill_data": 1,
-            },
-        )
-
-    @classmethod
-    def tearDown(cls):
-        frappe.db.rollback()
+        update_test_data(cls.e_invoice_test_data)
 
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
     def test_get_data(self):
@@ -87,10 +70,34 @@ class TestEInvoice(FrappeTestCase):
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
         si = create_sales_invoice(**test_data.get("kwargs"))
 
+        # Assert if request data given in Json
+        self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
+
         # Mock response for generating irn
-        self._mock_e_invoice_response(si, test_data)
+        self._mock_e_invoice_response(data=test_data)
 
         generate_e_invoice(si.name)
+
+        # Assert if Integration Request Log generated
+        self.assertDocumentEqual(
+            {
+                "output": frappe.as_json(test_data.get("response_data"), indent=4),
+            },
+            frappe.get_doc(
+                "Integration Request",
+                {"reference_doctype": "Sales Invoice", "reference_docname": si.name},
+            ),
+        )
+
+        # Assert if Sales Doc updated
+        self.assertDocumentEqual(
+            {
+                "irn": test_data.get("response_data").get("result").get("Irn"),
+                "ewaybill": test_data.get("response_data").get("result").get("EwbNo"),
+                "einvoice_status": "Generated",
+            },
+            frappe.get_doc("Sales Invoice", si.name),
+        )
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
@@ -107,10 +114,33 @@ class TestEInvoice(FrappeTestCase):
         test_data = self.e_invoice_test_data.get("service_item")
         si = create_sales_invoice(**test_data.get("kwargs"))
 
+        # Assert if request data given in Json
+        self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
+
         # Mock response for generating irn
-        self._mock_e_invoice_response(si, test_data)
+        self._mock_e_invoice_response(data=test_data)
 
         generate_e_invoice(si.name)
+
+        # Assert if Integration Request Log generated
+        self.assertDocumentEqual(
+            {
+                "output": frappe.as_json(test_data.get("response_data"), indent=4),
+            },
+            frappe.get_doc(
+                "Integration Request",
+                {"reference_doctype": "Sales Invoice", "reference_docname": si.name},
+            ),
+        )
+
+        # Assert if Sales Doc updated
+        self.assertDocumentEqual(
+            {
+                "irn": test_data.get("response_data").get("result").get("Irn"),
+                "einvoice_status": "Generated",
+            },
+            frappe.get_doc("Sales Invoice", si.name),
+        )
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
@@ -133,14 +163,51 @@ class TestEInvoice(FrappeTestCase):
 
         test_data.get("kwargs").update({"return_against": si.name})
 
-        return_si = create_sales_invoice(**test_data.get("kwargs"))
+        for data in test_data.get("request_data").get("RefDtls").get("PrecDocDtls"):
+            data.update(
+                {
+                    "InvDt": format_date(si.posting_date, "dd/mm/yyyy"),
+                    "InvNo": si.name,
+                }
+            )
 
-        # Mock response for generating irn
-        self._mock_e_invoice_response(
-            frappe.get_doc("Sales Invoice", return_si.name), test_data
+        return_si = create_sales_invoice(
+            **test_data.get("kwargs"),
         )
 
+        # Assert if request data given in Json
+        self.assertDictEqual(
+            test_data.get("request_data"),
+            EInvoiceData(frappe.get_doc("Sales Invoice", return_si.name)).get_data(),
+        )
+
+        # Mock response for generating irn
+        self._mock_e_invoice_response(data=test_data)
+
         generate_e_invoice(return_si.name)
+
+        # Assert if Integration Request Log generated
+        self.assertDocumentEqual(
+            {
+                "output": frappe.as_json(test_data.get("response_data"), indent=4),
+            },
+            frappe.get_doc(
+                "Integration Request",
+                {
+                    "reference_doctype": "Sales Invoice",
+                    "reference_docname": return_si.name,
+                },
+            ),
+        )
+
+        # Assert if Sales Doc updated
+        self.assertDocumentEqual(
+            {
+                "irn": test_data.get("response_data").get("result").get("Irn"),
+                "einvoice_status": "Generated",
+            },
+            frappe.get_doc("Sales Invoice", return_si.name),
+        )
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
@@ -169,10 +236,38 @@ class TestEInvoice(FrappeTestCase):
         debit_note.save()
         debit_note.submit()
 
+        # Assert if request data given in Json
+        self.assertDictEqual(
+            test_data.get("request_data"), EInvoiceData(debit_note).get_data()
+        )
+
         # Mock response for generating irn
-        self._mock_e_invoice_response(debit_note, test_data)
+        self._mock_e_invoice_response(data=test_data)
 
         generate_e_invoice(debit_note.name)
+
+        # Assert if Integration Request Log generated
+        self.assertDocumentEqual(
+            {
+                "output": frappe.as_json(test_data.get("response_data"), indent=4),
+            },
+            frappe.get_doc(
+                "Integration Request",
+                {
+                    "reference_doctype": "Sales Invoice",
+                    "reference_docname": debit_note.name,
+                },
+            ),
+        )
+
+        # Assert if Sales Doc updated
+        self.assertDocumentEqual(
+            {
+                "irn": test_data.get("response_data").get("result").get("Irn"),
+                "einvoice_status": "Generated",
+            },
+            frappe.get_doc("Sales Invoice", debit_note.name),
+        )
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
@@ -204,8 +299,12 @@ class TestEInvoice(FrappeTestCase):
         test_data.get("response_data").get("result").update(
             {"AckDt": str(now_datetime())}
         )
+
+        # Assert if request data given in Json
+        self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
+
         # Mock response for generating irn
-        self._mock_e_invoice_response(si, test_data)
+        self._mock_e_invoice_response(data=test_data)
 
         generate_e_invoice(si.name)
 
@@ -275,41 +374,103 @@ class TestEInvoice(FrappeTestCase):
         cancel_e_waybill.get("response_data").get("result").update(
             {"ewayBillNo": doc.ewaybill}
         )
-        eway_request_data = EWaybillData(doc).get_e_waybill_cancel_data(values)
+
+        # Assert for Mock request data
+        self.assertDictEqual(
+            cancel_e_waybill.get("request_data"),
+            EWaybillData(doc).get_e_waybill_cancel_data(values),
+        )
 
         # Prepared e_invoice cancel data
         cancel_irn_test_data = self.e_invoice_test_data.get("cancel_e_invoice")
         cancel_irn_test_data.get("response_data").get("result").update({"Irn": doc.irn})
 
-        e_invoice_request_data = {
-            "Irn": doc.irn,
-            "Cnlrsn": "2",
-            "Cnlrem": values.remark if values.remark else values.reason,
-        }
-
-        self._mock_e_invoice_response(
-            doc, cancel_e_waybill, "ei/api/ewayapi", eway_request_data
+        # Assert for Mock request data
+        self.assertTrue(
+            cancel_e_waybill.get("request_data"),
         )
 
+        # Mock response for cancel e_waybill
         self._mock_e_invoice_response(
-            doc, cancel_irn_test_data, "ei/api/invoice/cancel", e_invoice_request_data
+            data=cancel_e_waybill,
+            api="ei/api/ewayapi",
+        )
+
+        # Mock response for cancel e_invoice
+        self._mock_e_invoice_response(
+            data=cancel_irn_test_data,
+            api="ei/api/invoice/cancel",
         )
 
         cancel_e_invoice(doc.name, values=values)
         return frappe.get_doc("Sales Invoice", doc.name)
 
-    def _mock_e_invoice_response(
-        self, doc, data, api="ei/api/invoice", request_data=None
-    ):
-        if not request_data:
-            request_data = EInvoiceData(doc).get_data()
-
-        url = self.BASE_URL + "/test/" + api
+    def _mock_e_invoice_response(self, data, api="ei/api/invoice"):
+        """Mock response for e-Invoice API"""
+        url = BASE_URL + "/test/" + api
 
         responses.add(
             responses.POST,
             url,
             body=json.dumps(data.get("response_data")),
-            match=[matchers.json_params_matcher(request_data)],
+            match=[matchers.json_params_matcher(data.get("request_data"))],
             status=200,
         )
+
+        # ToDo: No need to add passthrough for all the requests
+        # response = responses.Response(
+        #     responses.POST, url=url, body=json.dumps(data.get("response_data"))
+        # )
+        # response.passthrough = True
+        # responses.add(response)
+
+
+def update_test_data(e_invoice_test_data):
+    """Update test data for e-invoice and e-waybill"""
+    today = format_date(frappe.utils.today(), "dd/mm/yyyy")
+    current_datetime = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+    validity = add_to_date(getdate(), days=12).strftime("%Y-%m-%d %I:%M:%S %p")
+
+    # Update test data for goods_item_with_ewaybill
+    goods_item = e_invoice_test_data.get("goods_item_with_ewaybill")
+    goods_item.get("response_data").get("result").update(
+        {
+            "AckDt": current_datetime,
+            "EwbDt": current_datetime,
+            "EwbValidTill": validity,
+        }
+    )
+
+    # Update test data for service_item_without_ewaybill
+    e_invoice_test_data.get("service_item").get("response_data").get("result").update(
+        {
+            "AckDt": current_datetime,
+        }
+    )
+
+    # Update Document Date in given test data
+    for key in (
+        "goods_item_with_ewaybill",
+        "service_item",
+        "return_invoice",
+        "debit_invoice",
+    ):
+        e_invoice_test_data.get(key).get("request_data").get("DocDtls").update(
+            {
+                "Dt": today,
+            }
+        )
+
+        e_invoice_test_data.get(key).get("response_data").get("result").update(
+            {
+                "AckDt": current_datetime,
+            }
+        )
+
+    e_invoice_test_data.get("cancel_e_waybill").get("response_data").get(
+        "result"
+    ).update({"cancelDate": now_datetime().strftime("%d/%m/%Y %I:%M:%S %p")})
+
+    e_invoice_test_data.get("cancel_e_invoice").get("response_data").get(
+        "result"
+    ).update({"CancelDate": current_datetime})
