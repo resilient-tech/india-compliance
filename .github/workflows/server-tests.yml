@@ -93,6 +93,7 @@ jobs:
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
                   BRANCH: develop
+                  FRAPPE_BRANCH: version-14
                   IC_API_SECRET: ${{ secrets.IC_API_SECRET }}
 
             - name: Run Tests
