@@ -19,7 +19,11 @@ function update_gstin_in_other_documents(doctype) {
                 message += `<br><strong>${__(doctype)}</strong>:<br>`;
 
                 docnames.forEach(docname => {
-                    message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
+                    message += `${frappe.utils.get_form_link(
+                        doctype,
+                        docname,
+                        true
+                    )}<br>`;
                 });
             }
             message += `<br>Do you want to update these with the following new values?
@@ -30,7 +34,11 @@ function update_gstin_in_other_documents(doctype) {
             frappe.confirm(message, function () {
                 frappe.call({
                     method: "india_compliance.gst_india.overrides.party.update_docs_with_previous_gstin",
-                    args: { gstin: gstin || "", gst_category, docs_with_previous_gstin },
+                    args: {
+                        gstin: gstin || "",
+                        gst_category,
+                        docs_with_previous_gstin,
+                    },
                 });
             });
         },
@@ -113,6 +121,17 @@ function set_gstin_query(doctype) {
 
             frm.get_field("gstin").df.ignore_validation = true;
             frm.set_query("gstin", ic.get_gstin_query(frm.doc.name, doctype));
+        },
+    });
+}
+
+function set_gst_category(doctype) {
+    frappe.ui.form.on(doctype, {
+        gstin(frm) {
+            frm.set_value(
+                "gst_category",
+                ic.guess_gst_category(frm.doc.gstin, frm.doc.country)
+            );
         },
     });
 }
