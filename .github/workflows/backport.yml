@@ -22,6 +22,6 @@ jobs:
       - name: Run backport
         uses: ./actions/backport
         with:
-          token: ${{secrets.GITHUB_TOKEN}}
+          token: ${{secrets.BOT_TOKEN}}
           labelsToAdd: "backport"
           title: "{{originalTitle}}"
