@@ -17,6 +17,8 @@ on:
             - "**.md"
             - "**.html"
             - "**.csv"
+env:
+    IC_BRANCH: ${{ github.base_ref || github.ref_name }}
 
 jobs:
     tests:
@@ -92,7 +94,7 @@ jobs:
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
-                  BRANCH: ${{ github.base_ref == 'next' && 'develop' || github.base_ref }}
+                  BRANCH_TO_CLONE: ${{ env.IC_BRANCH == 'next' && 'develop' || env.IC_BRANCH }}
 
             - name: Run Tests
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
