@@ -89,14 +89,14 @@ jobs:
                       ${{ runner.os }}-yarn-
 
             - name: Install Version 14
-              if: ${{ github.ref == "version-14" }}
+              if: ${{ github.ref == 'version-14' }}
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
                   BRANCH: version-14
 
             - name: Install Develop
-              if: ${{ github.ref == "next" }}
+              if: ${{ github.ref == 'next' }}
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
