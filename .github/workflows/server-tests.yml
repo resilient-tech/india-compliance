@@ -19,7 +19,7 @@ on:
             - "**.csv"
 env:
     IC_BRANCH: ${{ github.base_ref || github.ref_name }}
-    BRANCH_TO_CLONE: ${{ env.IC_BRANCH == "next" && "develop" || env.IC_BRANCH }}
+
 jobs:
     tests:
         runs-on: ubuntu-20.04
@@ -41,6 +41,9 @@ jobs:
 
         steps:
             - name: Test
+              env:
+                BRANCH_TO_CLONE: ${{ env.IC_BRANCH == "next" && "develop" || env.IC_BRANCH }}
+
               run: echo $IC_BRANCH && echo $BRANCH_TO_CLONE && exit 1
 
             - name: Clone
@@ -97,7 +100,6 @@ jobs:
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
-                  IC_BRANCH: ${{ github.base_ref || github.ref_name }}
                   BRANCH_TO_CLONE: ${{ env.IC_BRANCH == "next" && "develop" || env.IC_BRANCH }}
 
             - name: Run Tests
