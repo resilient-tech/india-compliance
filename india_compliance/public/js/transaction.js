@@ -73,6 +73,7 @@ async function update_gst_details(frm) {
         },
         callback(r) {
             if (!r.message) return;
+            delete r.message.taxes;
             frm.set_value(r.message);
         },
     });

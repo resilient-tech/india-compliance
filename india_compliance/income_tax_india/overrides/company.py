@@ -45,8 +45,8 @@ def set_tds_account(docs, company):
 def set_tax_withholding_category(company):
     accounts = []
     fiscal_year_details = None
-    abbr = frappe.get_value("Company", company, "abbr")
-    tds_account = frappe.get_value("Account", "TDS Payable - {0}".format(abbr), "name")
+
+    tds_account = frappe.get_value("Account", "TDS Payable", "name")
 
     if company and tds_account:
         accounts.append({"company": company, "account": tds_account})
@@ -57,7 +57,6 @@ def set_tax_withholding_category(company):
         pass
 
     docs = get_tds_details(accounts, fiscal_year_details)
-
     for d in docs:
         if not frappe.db.exists("Tax Withholding Category", d.get("name")):
             doc = frappe.get_doc(d)
