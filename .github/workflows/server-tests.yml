@@ -10,7 +10,7 @@ on:
             - "**.csv"
 
     push:
-        branches: [next, version-14]
+        branches: [next, version-14, version-14-hotfix]
         paths-ignore:
             - "**.css"
             - "**.js"
@@ -90,17 +90,17 @@ jobs:
 
             - name: Install Version 14
               run: |
-                  echo ${{ github.ref }}
+                  echo ${{ github.base_ref }}
 
             - name: Install Version 14
-              if: ${{ github.ref == 'version-14' }}
+              if: ${{ github.base_ref == 'version-14' }}
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
                   BRANCH: version-14
 
             - name: Install Develop
-              if: ${{ github.ref == 'next' }}
+              if: ${{ github.base_ref == 'next' }}
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
