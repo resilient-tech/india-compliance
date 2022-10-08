@@ -36,7 +36,7 @@ from india_compliance.gst_india.utils.transaction_data import (
     validate_non_gst_items,
 )
 
-print("demo")
+
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
