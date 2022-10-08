@@ -2,12 +2,10 @@ pull_request_rules:
   - name: Auto-close PRs on stable branch
     conditions:
       - and:
-        - and:
           - author!=sagarvora
           - author!=vorasmit
           - author!=mergify[bot]
           - author!=dependabot[bot]
-        - or:
           - base=version-14
     actions:
       close:
