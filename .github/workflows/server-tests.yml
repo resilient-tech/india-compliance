@@ -43,7 +43,6 @@ jobs:
             - name: Test
               env:
                 BRANCH_TO_CLONE: ${{ env.IC_BRANCH == 'next' && 'develop' || env.IC_BRANCH }}
-
               run: echo $IC_BRANCH && echo $BRANCH_TO_CLONE && exit 1
 
             - name: Clone
