@@ -10,7 +10,7 @@ on:
             - "**.csv"
 
     push:
-        branches: [next, version-14, version-14-hotfix]
+        branches: [next, version-14-hotfix, version-14]
         paths-ignore:
             - "**.css"
             - "**.js"
@@ -88,19 +88,12 @@ jobs:
                   restore-keys: |
                       ${{ runner.os }}-yarn-
 
-            - name: Install Version 14
-              if: ${{ github.base_ref == 'version-14' }}
-              run: |
-                  bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
-              env:
-                  BRANCH: version-14
-
-            - name: Install Develop
+            - name: Install
               if: ${{ github.base_ref == 'next' }}
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
-                  BRANCH: develop
+                  BRANCH: ${{ github.base_ref == 'next' && 'develop' || 'version-14' }}
 
             - name: Run Tests
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
