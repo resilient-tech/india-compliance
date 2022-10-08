@@ -1,4 +1,20 @@
 pull_request_rules:
+  - name: Auto-close PRs on stable branch
+    conditions:
+      - and:
+        - and:
+          - author!=sagarvora
+          - author!=vorasmit
+          - author!=mergify[bot]
+          - author!=dependabot[bot]
+        - or:
+          - base=version-14
+    actions:
+      close:
+      comment:
+          message: |
+            @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on the `next` branch.
+
   - name: Automatic merge on CI success and review
     conditions:
       - label!=dont-merge
@@ -39,3 +55,11 @@ pull_request_rules:
           - version-14-hotfix
         assignees:
           - "{{ author }}"
+
+  - name: Automatically add backport label
+    conditions:
+      - base=next
+    actions:
+      label:
+        add:
+          - "backport version-14-hotfix"
