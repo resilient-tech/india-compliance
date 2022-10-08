@@ -89,10 +89,6 @@ jobs:
                       ${{ runner.os }}-yarn-
 
             - name: Install Version 14
-              run: |
-                  echo ${{ github.base_ref }}
-
-            - name: Install Version 14
               if: ${{ github.base_ref == 'version-14' }}
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
