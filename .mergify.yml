@@ -38,11 +38,11 @@ pull_request_rules:
   
   - name: backport to develop
     conditions:
-      - label="backport develop"
+      - label="backport next"
     actions:
       backport:
         branches:
-          - develop
+          - next
         assignees:
           - "{{ author }}"
           
