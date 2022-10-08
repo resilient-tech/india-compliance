@@ -89,7 +89,6 @@ jobs:
                       ${{ runner.os }}-yarn-
 
             - name: Install
-              if: ${{ github.base_ref == 'next' }}
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
