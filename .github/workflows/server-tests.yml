@@ -92,7 +92,7 @@ jobs:
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
-                  BRANCH: ${{ github.base_ref == 'next' && 'develop' || 'version-14' }}
+                  BRANCH: ${{ github.base_ref == 'next' && 'develop' || github.base_ref }}
 
             - name: Run Tests
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
