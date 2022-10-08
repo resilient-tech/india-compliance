@@ -10,7 +10,7 @@ on:
             - "**.csv"
 
     push:
-        branches: [develop]
+        branches: [next, version-14-hotfix, version-14]
         paths-ignore:
             - "**.css"
             - "**.js"
@@ -92,8 +92,7 @@ jobs:
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
-                  BRANCH: develop
-                  IC_API_SECRET: ${{ secrets.IC_API_SECRET }}
+                  BRANCH: ${{ github.base_ref == 'next' && 'develop' || github.base_ref }}
 
             - name: Run Tests
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance
