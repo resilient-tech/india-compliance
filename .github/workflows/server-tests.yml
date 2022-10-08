@@ -90,7 +90,7 @@ jobs:
 
             - name: Install Version 14
               run: |
-                  echo ${github.ref}
+                  echo ${{ github.ref }}
 
             - name: Install Version 14
               if: ${{ github.ref == 'version-14' }}
