@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
 
-print("demo")
+
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
