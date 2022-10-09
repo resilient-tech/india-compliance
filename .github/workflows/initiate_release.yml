@@ -1,0 +1,30 @@
+
+# This workflow is agnostic to branches. Only maintain on develop branch.
+# To add/remove versions just modify the matrix.
+
+name: Initiate Release
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ["13", "14"]
+
+    steps:
+      - uses: octokit/request-action@v2.x
+        with:
+          route: POST /repos/{owner}/{repo}/pulls
+          owner: resilient-tech
+          repo: india-compliance
+          title: |-
+            "chore: release v${{ matrix.version }}"
+          body: "Automated Release."
+          base: version-${{ matrix.version }}
+          head: version-${{ matrix.version }}-hotfix
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
