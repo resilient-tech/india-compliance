@@ -9,6 +9,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, getdate, now_datetime, today
 from frappe.utils.data import format_date
 
+from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     cancel_e_waybill,
@@ -19,15 +20,11 @@ from india_compliance.gst_india.utils.e_waybill import (
 )
 from india_compliance.gst_india.utils.tests import create_sales_invoice
 
+DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
+DATE_FORMAT = "dd/mm/yyyy"
+
 
 class TestEWaybill(FrappeTestCase):
-    BASE_URL = "https://asp.resilient.tech"
-
-    today_date = format_date(today(), "dd/mm/yyyy")
-    current_datetime = now_datetime().strftime("%d/%m/%Y %I:%M:%S %p")
-    next_day_datetime = add_to_date(getdate(), days=1).strftime("%d/%m/%Y %I:%M:%S %p")
-    before_day = add_to_date(getdate(), days=-2).strftime("%d/%m/%Y %I:%M:%S %p")
-
     @classmethod
     def setUpClass(cls):
         frappe.db.set_value(
@@ -47,10 +44,8 @@ class TestEWaybill(FrappeTestCase):
             frappe.get_app_path("india_compliance", "tests", "e_waybill_test_data.json")
         )
 
-        cls.si, cls._test_data = _create_sales_invoice(
-            cls.e_waybill_test_data.get("goods_item_with_ewaybill"),
-            cls.current_datetime,
-            cls.next_day_datetime,
+        cls.si, cls._goods_item_test_data = _create_sales_invoice(
+            cls.e_waybill_test_data
         )
 
     @classmethod
@@ -69,6 +64,10 @@ class TestEWaybill(FrappeTestCase):
         )
         frappe.db.rollback()
 
+    @classmethod
+    def setUp(cls):
+        update_test_data(cls.e_waybill_test_data)
+
     @responses.activate
     def test_generate_e_waybill(self):
         """Tetst generate_e_waybill whitelisted method"""
@@ -77,7 +76,7 @@ class TestEWaybill(FrappeTestCase):
 
         self.assertDocumentEqual(
             {
-                "name": self._test_data.get("response_data")
+                "name": self._goods_item_test_data.get("response_data")
                 .get("result")
                 .get("ewayBillNo")
             },
@@ -91,9 +90,6 @@ class TestEWaybill(FrappeTestCase):
 
         # get test data from test json and update date accordingly
         test_data = self.e_waybill_test_data.get("update_vehicle_info")
-        test_data.get("response_data").get("result").update(
-            {"vehUpdDate": self.current_datetime, "validUpto": self.next_day_datetime}
-        )
 
         # values required to update vehicle info
         vehicle_info = frappe._dict(
@@ -117,8 +113,19 @@ class TestEWaybill(FrappeTestCase):
             ],
         )
 
-        # Mock get_e_waybill response
-        self._mock_fetch_e_waybill_response()
+        # Mock GET response for get_e_waybill
+        get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
+
+        self._mock_e_waybill_response(
+            data=get_e_waybill_test_data,
+            match_list=[
+                matchers.query_param_matcher(
+                    get_e_waybill_test_data.get("request_data")
+                ),
+            ],
+            method="GET",
+            api="getewaybill",
+        )
 
         update_vehicle_info(
             doctype="Sales Invoice", docname=self.si.name, values=vehicle_info
@@ -148,9 +155,6 @@ class TestEWaybill(FrappeTestCase):
 
         # get test data from test json and update date accordingly
         test_data = self.e_waybill_test_data.get("update_transporter")
-        test_data.get("response_data").get("result").update(
-            {"transUpdateDate": self.current_datetime}
-        )
 
         # transporter values to update transporter
         transporter_values = frappe._dict(
@@ -199,7 +203,20 @@ class TestEWaybill(FrappeTestCase):
     def test_fetch_e_waybill_data(self):
         """Test e-Waybill Print and Attach Functions"""
         self._generate_e_waybill()
-        self._mock_fetch_e_waybill_response()
+
+        # Mock GET response for get_e_waybill
+        get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
+
+        self._mock_e_waybill_response(
+            data=get_e_waybill_test_data,
+            match_list=[
+                matchers.query_param_matcher(
+                    get_e_waybill_test_data.get("request_data")
+                ),
+            ],
+            method="GET",
+            api="getewaybill",
+        )
 
         fetch_e_waybill_data(doctype="Sales Invoice", docname=self.si.name, attach=True)
 
@@ -281,55 +298,63 @@ class TestEWaybill(FrappeTestCase):
 
     # helper functions
     def _generate_e_waybill(self):
-        # Update docNo and docDate in request data as per sales invoice
-        self._test_data.get("request_data").update(
-            {"docNo": "53amoi", "docDate": self.today_date}
-        )
-
         # Mock POST response for generate_e_waybill
         self._mock_e_waybill_response(
-            data=self._test_data,
+            data=self._goods_item_test_data,
             match_list=[
-                matchers.query_param_matcher(self._test_data.get("params")),
-                matchers.json_params_matcher(self._test_data.get("request_data")),
+                matchers.query_param_matcher(self._goods_item_test_data.get("params")),
+                matchers.json_params_matcher(
+                    self._goods_item_test_data.get("request_data")
+                ),
             ],
         )
 
         # Mock GET response for get_e_waybill
-        self._mock_fetch_e_waybill_response()
+        get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
+
+        self._mock_e_waybill_response(
+            data=get_e_waybill_test_data,
+            match_list=[
+                matchers.query_param_matcher(
+                    get_e_waybill_test_data.get("request_data")
+                ),
+            ],
+            method="GET",
+            api="getewaybill",
+        )
 
         generate_e_waybill(
             doctype="Sales Invoice",
             docname=self.si.name,
         )
 
-    def _mock_fetch_e_waybill_response(self):
-        get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
-        request_data = get_e_waybill_test_data.get("request_data")
+    # def _mock_fetch_e_waybill_response(self):
+    #     get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
+    #     request_data = get_e_waybill_test_data.get("request_data")
 
-        for data in (
-            get_e_waybill_test_data.get("response_data")
-            .get("result")
-            .get("VehiclListDetails")
-        ):
-            data["enteredDate"] = self.current_datetime
+    #     for data in (
+    #         get_e_waybill_test_data.get("response_data")
+    #         .get("result")
+    #         .get("VehiclListDetails")
+    #     ):
+    #         data["enteredDate"] = self.current_datetime
 
-        get_e_waybill_test_data.get("response_data").update(
-            {
-                "docDate": self.today_date,
-                "ewayBillDate": self.current_datetime,
-                "validUpto": self.next_day_datetime,
-            }
-        )
+    #     get_e_waybill_test_data.get("response_data").update(
+    #         {
+    #             "docDate": self.today_date,
+    #             "ewayBillDate": self.current_datetime,
+    #             "validUpto": self.next_day_datetime,
+    #         }
+    #     )
 
-        self._mock_e_waybill_response(
-            data=get_e_waybill_test_data,
-            match_list=[
-                matchers.query_param_matcher(request_data),
-            ],
-            method="GET",
-            api="getewaybill",
-        )
+    #     self._mock_e_waybill_response(
+    #         data=get_e_waybill_test_data,
+    #         match_list=[
+    #             matchers.query_param_matcher(request_data),
+    #         ],
+    #         method="GET",
+    #         api="getewaybill",
+    #     )
 
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None):
         api_path = "/test/ewb/ewayapi/"
@@ -338,42 +363,56 @@ class TestEWaybill(FrappeTestCase):
             api_path = f"{api_path}{api}"
 
         if method == "GET":
-            responses.add(
-                responses.GET,
-                self.BASE_URL + api_path,
-                body=json.dumps(data.get("response_data")),
-                match=match_list,
-                status=200,
-            )
+            response_method = responses.GET
         elif method == "POST":
-            responses.add(
-                responses.POST,
-                self.BASE_URL + api_path,
-                body=json.dumps(data.get("response_data")),
-                match=match_list,
-                status=200,
-            )
+            response_method = responses.POST
 
-    def update_test_data(self, test_data, update_vehicle_info=False):
-        response_data = test_data.get("response_data")
-
-        current_datetime = now_datetime().strftime("%d/%m/%Y %I:%M:%S %p")
-        next_day_datetime = add_to_date(getdate(), days=1).strftime(
-            "%d/%m/%Y %I:%M:%S %p"
+        responses.add(
+            response_method,
+            BASE_URL + api_path,
+            body=json.dumps(data.get("response_data")),
+            match=match_list,
+            status=200,
         )
 
-        response_data.get("result").update({"ewayBillDate": current_datetime})
 
-        if update_vehicle_info:
-            response_data.get("result").update(
-                {"ewayBillDate": current_datetime, "validUpto": next_day_datetime}
-            )
+def update_test_data(test_data):
+    today_date = format_date(today(), DATE_FORMAT)
+    current_datetime = now_datetime().strftime(DATETIME_FORMAT)
+    next_day_datetime = add_to_date(getdate(), days=1).strftime(DATETIME_FORMAT)
+    # before_day = add_to_date(getdate(), days=-2).strftime(DATETIME_FORMAT)
+
+    for key, value in test_data.items():
+        response_request = value.get("request_data")
+        response_result = value.get("response_data").get("result")
+
+        for k, v in response_result.items():
+            if k == "ewayBillDate":
+                response_result.update({k: current_datetime})
+            elif k == "validUpto":
+                response_result.update({k: next_day_datetime})
+            elif k == "transUpdateDate":
+                response_result.update({k: current_datetime})
+            elif k == "vehUpdateDate":
+                response_result.update({k: current_datetime})
+            elif k == "cancelDate":
+                response_result.update({k: current_datetime})
+            elif k == "docDate":
+                response_result.update({k: today_date})
+
+        if "docDate" in response_request:
+            response_request.update({"docDate": today_date})
+
+        if key == "get_e_waybill":
+            for v in response_result.get("VehiclListDetails"):
+                v.update({"enteredDate": current_datetime})
 
 
-def _create_sales_invoice(invoice_data, current_datetime, next_day_datetime):
+def _create_sales_invoice(invoice_data):
     """Generate Sales Invoice to test e-Waybill functionalities"""
     # update kwargs to process invoice
-    invoice_data.get("kwargs").update(
+    kwargs = invoice_data.get("goods_item_with_ewaybill").get("kwargs")
+    kwargs.update(
         {
             "transporter": "_Test Common Supplier",
             "distance": 10,
@@ -382,11 +421,10 @@ def _create_sales_invoice(invoice_data, current_datetime, next_day_datetime):
     )
 
     # set date and time in mocked response data according to the api response
-    invoice_data.get("response_data").get("result").update(
-        {"ewayBillDate": current_datetime, "validUpto": next_day_datetime}
-    )
+    update_test_data(invoice_data)
 
-    si = create_sales_invoice(**invoice_data.get("kwargs"), do_not_submit=True)
+    si = create_sales_invoice(**kwargs, do_not_submit=True)
     si.gst_transporter_id = ""
     si.submit()
-    return si, invoice_data
+
+    return si, invoice_data.get("goods_item_with_ewaybill")
