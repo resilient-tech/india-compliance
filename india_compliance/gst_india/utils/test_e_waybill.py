@@ -1,15 +1,17 @@
 import json
 import re
+import random
 
 import responses
 from responses import matchers
 
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_to_date, getdate, now_datetime, today
+from frappe.utils import add_to_date, getdate, now_datetime, today, get_datetime
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.utils import load_doc
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     cancel_e_waybill,
@@ -18,7 +20,10 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_transporter,
     update_vehicle_info,
 )
-from india_compliance.gst_india.utils.tests import create_sales_invoice
+from india_compliance.gst_india.utils.tests import (
+    create_sales_invoice,
+    create_purchase_invoice,
+)
 
 DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
 DATE_FORMAT = "dd/mm/yyyy"
@@ -35,9 +40,9 @@ class TestEWaybill(FrappeTestCase):
                 "enable_e_invoice": 0,
                 "auto_generate_e_invoice": 0,
                 "enable_e_waybill": 1,
-                "fetch_e_waybill_data": 1,
+                "fetch_e_waybill_data": 0,
                 "auto_generate_e_waybill": 0,
-                "attach_e_waybill_print": 1,
+                "attach_e_waybill_print": 0,
             },
         )
         cls.e_waybill_test_data = frappe.get_file_json(
@@ -68,6 +73,9 @@ class TestEWaybill(FrappeTestCase):
     def setUp(cls):
         update_test_data(cls.e_waybill_test_data)
 
+    @change_settings(
+        "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}
+    )
     @responses.activate
     def test_generate_e_waybill(self):
         """Tetst generate_e_waybill whitelisted method"""
@@ -92,16 +100,7 @@ class TestEWaybill(FrappeTestCase):
         test_data = self.e_waybill_test_data.get("update_vehicle_info")
 
         # values required to update vehicle info
-        vehicle_info = frappe._dict(
-            {
-                "vehicle_no": "GJ07DL9001",
-                "mode_of_transport": "Road",
-                "gst_vehicle_type": "Regular",
-                "reason": "Others",
-                "remark": "Vehicle Info added",
-                "update_e_waybill_data": 1,
-            }
-        )
+        vehicle_info = frappe._dict(self.e_waybill_test_data.get("vehicle_info"))
         request_data = test_data.get("request_data")
 
         # Mock API response of VEHEWB to update vehicle info
@@ -158,10 +157,7 @@ class TestEWaybill(FrappeTestCase):
 
         # transporter values to update transporter
         transporter_values = frappe._dict(
-            {
-                "transporter": "_Test Common Supplier",
-                "gst_transporter_id": "05AAACG2140A1ZL",
-            }
+            self.e_waybill_test_data.get("transporter_values")
         )
 
         request_data = test_data.get("request_data")
@@ -196,9 +192,6 @@ class TestEWaybill(FrappeTestCase):
             frappe.get_doc("Comment", {"reference_name": request_data.get("ewbNo")}),
         )
 
-    @change_settings(
-        "GST Settings", {"fetch_e_waybill_data": 0, "attach_e_waybill_print": 0}
-    )
     @responses.activate
     def test_fetch_e_waybill_data(self):
         """Test e-Waybill Print and Attach Functions"""
@@ -238,9 +231,6 @@ class TestEWaybill(FrappeTestCase):
 
         # test data to mock cancel e_waybill response
         test_data = self.e_waybill_test_data.get("cancel_e_waybill")
-        test_data.get("response_data").get("result").update(
-            {"cancelDate": self.current_datetime}
-        )
 
         # values required to cancel e_waybill
         values = frappe._dict({"reason": "Data Entry Mistake", "remark": "For Test"})
@@ -296,6 +286,190 @@ class TestEWaybill(FrappeTestCase):
             EWaybillData(self.si).validate_applicability,
         )
 
+    @responses.activate
+    def test_validate_if_e_waybill_is_set(self):
+        self._generate_e_waybill()
+
+        # validate if ewaybill is set
+        self.si.ewaybill = ""
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(No e-Waybill found for this document)$"),
+            EWaybillData(self.si).validate_if_e_waybill_is_set,
+        )
+
+    @responses.activate
+    def test_validate_if_ewaybill_can_be_cancelled(self):
+        self._generate_e_waybill()
+
+        doc = load_doc("Sales Invoice", self.si.name, "cancel")
+        doc.get_onload().get("e_waybill_info", {}).update(
+            {
+                "created_on": add_to_date(
+                    get_datetime(),
+                    days=-3,
+                    as_datetime=True,
+                )
+            }
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill can be cancelled only within 24.*)$"),
+            EWaybillData(doc).validate_if_ewaybill_can_be_cancelled,
+        )
+
+    @responses.activate
+    def test_get_e_waybill_cancel_data(self):
+        values = frappe._dict(
+            {
+                "reason": "Data Entry Mistake",
+                "remark": "For Test",
+            }
+        )
+
+        self._generate_e_waybill()
+
+        doc = load_doc("Sales Invoice", self.si.name, "cancel")
+
+        # assert if get_cancel_data dict equals to request data given in test records
+        doc.get_onload().get("e_waybill_info", {}).update(
+            {
+                "created_on": get_datetime(),
+            }
+        )
+
+        self.assertDictEqual(
+            self.e_waybill_test_data.get("cancel_e_waybill").get("request_data"),
+            EWaybillData(doc).get_e_waybill_cancel_data(values),
+        )
+
+    @responses.activate
+    def test_check_e_waybill_validity(self):
+        self._generate_e_waybill()
+
+        doc = load_doc("Sales Invoice", self.si.name, "submit")
+        doc.get_onload().get("e_waybill_info", {}).update(
+            {
+                "valid_upto": add_to_date(
+                    get_datetime(),
+                    days=-2,
+                    as_datetime=True,
+                )
+            }
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill cannot be modified after its.*)$"),
+            EWaybillData(doc).check_e_waybill_validity,
+        )
+
+    @responses.activate
+    def test_get_update_vehicle_data(self):
+        self._generate_e_waybill()
+
+        doc = load_doc("Sales Invoice", self.si.name, "submit")
+        vehicle_info = frappe._dict(self.e_waybill_test_data.get("vehicle_info"))
+        doc.vehicle_no = vehicle_info.get("vehicle_no")
+
+        self.assertDictEqual(
+            self.e_waybill_test_data.get("update_vehicle_info").get("request_data"),
+            EWaybillData(doc).get_update_vehicle_data(vehicle_info),
+        )
+
+    @responses.activate
+    def test_get_update_transporter_data(self):
+        self._generate_e_waybill()
+
+        doc = load_doc("Sales Invoice", self.si.name, "submit")
+        transporter_values = frappe._dict(
+            self.e_waybill_test_data.get("transporter_values")
+        )
+
+        self.assertDictEqual(
+            self.e_waybill_test_data.get("update_transporter").get("request_data"),
+            EWaybillData(doc).get_update_transporter_data(transporter_values),
+        )
+
+    def test_validate_doctype_for_e_waybill(self):
+        purchase_invoice = create_purchase_invoice()
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Only Sales Invoice and Delivery Note are supported.*)$"),
+            EWaybillData,
+            purchase_invoice,
+        )
+
+    def test_get_all_item_details(self):
+        """Validation test for more than 1000 items in sales invoice"""
+        si = create_sales_invoice(do_not_submit=True)
+
+        hsn_codes = frappe.get_file_json(
+            frappe.get_app_path(
+                "india_compliance", "gst_india", "data", "hsn_codes.json"
+            )
+        )
+        _bulk_insert_hsn_wise_items(hsn_codes)
+
+        for i in range(0, 1000):
+            hsn_code = random.choice(hsn_codes).get("hsn_code")
+            si.append(
+                "items",
+                {
+                    "item_code": hsn_code,
+                    "item_name": "Test Item {}".format(i),
+                    "qty": 1,
+                    "rate": 100,
+                    "gst_hsn_code": hsn_code,
+                },
+            )
+        si.save()
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill can only be generated for upto.*)$"),
+            EWaybillData(si).get_all_item_details,
+        )
+
+        # Assert get_all_item_details
+        to_remove = [
+            d
+            for d in si.items
+            if d.gst_hsn_code not in ("61149090", "62031910", "52051230")
+        ]
+        for item in to_remove:
+            si.remove(item)
+        si.save()
+
+        self.assertListEqual(
+            [
+                {
+                    "item_no": 1,
+                    "qty": 1.0,
+                    "taxable_value": 100.0,
+                    "hsn_code": "61149090",
+                    "item_name": "Test Trading Goods 1",
+                    "uom": "NOS",
+                    "cgst_amount": 0,
+                    "cgst_rate": 0,
+                    "sgst_amount": 0,
+                    "sgst_rate": 0,
+                    "igst_amount": 0,
+                    "igst_rate": 0,
+                    "cess_amount": 0,
+                    "cess_rate": 0,
+                    "cess_non_advol_amount": 0,
+                    "cess_non_advol_rate": 0,
+                    "tax_rate": 0.0,
+                    "total_value": 100.0,
+                }
+            ],
+            EWaybillData(si).get_all_item_details(),
+        )
+
     # helper functions
     def _generate_e_waybill(self):
         # Mock POST response for generate_e_waybill
@@ -328,34 +502,6 @@ class TestEWaybill(FrappeTestCase):
             docname=self.si.name,
         )
 
-    # def _mock_fetch_e_waybill_response(self):
-    #     get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
-    #     request_data = get_e_waybill_test_data.get("request_data")
-
-    #     for data in (
-    #         get_e_waybill_test_data.get("response_data")
-    #         .get("result")
-    #         .get("VehiclListDetails")
-    #     ):
-    #         data["enteredDate"] = self.current_datetime
-
-    #     get_e_waybill_test_data.get("response_data").update(
-    #         {
-    #             "docDate": self.today_date,
-    #             "ewayBillDate": self.current_datetime,
-    #             "validUpto": self.next_day_datetime,
-    #         }
-    #     )
-
-    #     self._mock_e_waybill_response(
-    #         data=get_e_waybill_test_data,
-    #         match_list=[
-    #             matchers.query_param_matcher(request_data),
-    #         ],
-    #         method="GET",
-    #         api="getewaybill",
-    #     )
-
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None):
         api_path = "/test/ewb/ewayapi/"
 
@@ -380,9 +526,11 @@ def update_test_data(test_data):
     today_date = format_date(today(), DATE_FORMAT)
     current_datetime = now_datetime().strftime(DATETIME_FORMAT)
     next_day_datetime = add_to_date(getdate(), days=1).strftime(DATETIME_FORMAT)
-    # before_day = add_to_date(getdate(), days=-2).strftime(DATETIME_FORMAT)
 
     for key, value in test_data.items():
+        if not value.get("response_data") and not value.get("request_data"):
+            continue
+
         response_request = value.get("request_data")
         response_result = value.get("response_data").get("result")
 
@@ -428,3 +576,36 @@ def _create_sales_invoice(invoice_data):
     si.submit()
 
     return si, invoice_data.get("goods_item_with_ewaybill")
+
+
+def _bulk_insert_hsn_wise_items(hsn_codes):
+    frappe.db.bulk_insert(
+        "Item",
+        [
+            "name",
+            "creation",
+            "modified",
+            "owner",
+            "modified_by",
+            "gst_hsn_code",
+            "description",
+            "item_group",
+            "stock_uom",
+        ],
+        [
+            [
+                code["hsn_code"],
+                get_datetime(),
+                get_datetime(),
+                frappe.session.user,
+                frappe.session.user,
+                code["hsn_code"],
+                code["description"],
+                "Products",
+                "Nos",
+            ]
+            for code in hsn_codes
+        ],
+        ignore_duplicates=True,
+        chunk_size=251,
+    )
