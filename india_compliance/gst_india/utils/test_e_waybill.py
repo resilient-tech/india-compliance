@@ -1,13 +1,13 @@
 import json
-import re
 import random
+import re
 
 import responses
 from responses import matchers
 
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_to_date, getdate, now_datetime, today, get_datetime
+from frappe.utils import add_to_date, get_datetime, getdate, now_datetime, today
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -21,8 +21,8 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_vehicle_info,
 )
 from india_compliance.gst_india.utils.tests import (
-    create_sales_invoice,
     create_purchase_invoice,
+    create_sales_invoice,
 )
 
 DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
@@ -45,6 +45,7 @@ class TestEWaybill(FrappeTestCase):
                 "attach_e_waybill_print": 0,
             },
         )
+
         cls.e_waybill_test_data = frappe.get_file_json(
             frappe.get_app_path("india_compliance", "tests", "e_waybill_test_data.json")
         )
