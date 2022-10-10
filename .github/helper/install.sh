@@ -37,10 +37,12 @@ FLUSH PRIVILEGES;
 
 
 install_wkhtmltopdf() {
-    wget -O /tmp/wkhtmltox.tar.xz wkhtmltox-0.12.6-3.archlinux-x86_64.pkg.tar.xz
-    tar -xf /tmp/wkhtmltox.tar.xz -C /tmp
-    sudo mv /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
-    sudo chmod o+x /usr/local/bin/wkhtmltopdf
+    sudo apt-get install xvfb libfontconfig wkhtmltopdf
+
+    # wget -O /tmp/wkhtmltox.tar.xz wkhtmltox-0.12.6-3.archlinux-x86_64.pkg.tar.xz
+    # tar -xf /tmp/wkhtmltox.tar.xz -C /tmp
+    # sudo mv /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
+    # sudo chmod o+x /usr/local/bin/wkhtmltopdf
 }
 install_wkhtmltopdf &
 
