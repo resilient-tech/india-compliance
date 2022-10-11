@@ -21,6 +21,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_vehicle_info,
 )
 from india_compliance.gst_india.utils.tests import (
+    append_item,
     create_purchase_invoice,
     create_sales_invoice,
 )
@@ -79,7 +80,7 @@ class TestEWaybill(FrappeTestCase):
     )
     @responses.activate
     def test_generate_e_waybill(self):
-        """Tetst generate_e_waybill whitelisted method"""
+        """Test whitelisted method `generate_e_waybill`"""
         # Use of common function to generate e_waybill
         self._generate_e_waybill()
 
@@ -226,7 +227,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_cancel_e_waybill(self):
-        """Test cancel_e_waybill"""
+        """Test whitelisted method `cancel_e_waybill`"""
 
         self._generate_e_waybill()
 
@@ -256,6 +257,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_validate_transaction(self):
+        """Test validation if ewaybill is already generated for the transaction"""
         test_data = self.e_waybill_test_data.get("goods_item_with_ewaybill")
         test_data.get("kwargs").update(
             {
@@ -277,8 +279,18 @@ class TestEWaybill(FrappeTestCase):
         )
 
     def test_validate_applicability(self):
+        """
+        Validates:
+        - Required fields
+        - Atleast one item with HSN for goods is required
+        - Basic transporter details must be present
+        - Transaction with Non GST Item is not allowed
+        """
+
         test_data = self.e_waybill_test_data.get("goods_item_with_ewaybill")
-        test_data.get("kwargs").update({"customer_address": ""})
+        test_data.get("kwargs").update(
+            {"customer_address": "", "item_code": "999900", "item_name": "Test Item"}
+        )
         self.si = create_sales_invoice(**test_data.get("kwargs"))
 
         self.assertRaisesRegex(
@@ -287,8 +299,43 @@ class TestEWaybill(FrappeTestCase):
             EWaybillData(self.si).validate_applicability,
         )
 
+        self.si.customer_address = "_Test Registered Customer-Billing"
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill cannot be generated because all items have.*)$"),
+            EWaybillData(self.si).validate_applicability,
+        )
+
+        append_item(
+            self.si,
+            frappe._dict(
+                {"item_code": "_Test Trading Goods 1", "gst_hsn_code": "61149090"}
+            ),
+        )
+        self.si.gst_transporter_id = ""
+        self.si.mode_of_transport = ""
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Either GST Transporter ID or Mode.*)$"),
+            EWaybillData(self.si).validate_applicability,
+        )
+
+        self.si.gst_transporter_id = "05AAACG2140A1ZL"
+        self.si.mode_of_transport = "Road"
+
+        for item in self.si.items:
+            item.is_non_gst = 1
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*transactions with non-GST items)$"),
+            EWaybillData(self.si).validate_applicability,
+        )
+
     @responses.activate
     def test_validate_if_e_waybill_is_set(self):
+        """Test validdation if e-waybill not found"""
         self._generate_e_waybill()
 
         # validate if ewaybill is set
@@ -302,6 +349,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_validate_if_ewaybill_can_be_cancelled(self):
+        """Test validation if e-waybill can be cancelled. Applicable only for cancelling e-waybill"""
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "cancel")
@@ -319,6 +367,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_get_e_waybill_cancel_data(self):
+        """Check if e-waybill cancel data is generated correctly"""
         values = frappe._dict(
             {
                 "reason": "Data Entry Mistake",
@@ -344,6 +393,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_check_e_waybill_validity(self):
+        """Test validity before cancelling or updating the e-waybill"""
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "submit")
@@ -361,6 +411,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_get_update_vehicle_data(self):
+        """Test if vehicle data is generated correctly"""
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "submit")
@@ -374,6 +425,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_get_update_transporter_data(self):
+        """Test if transporter data is generated correctly"""
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "submit")
@@ -387,6 +439,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
     def test_validate_doctype_for_e_waybill(self):
+        """Validate if doctype is supported for e-waybill"""
         purchase_invoice = create_purchase_invoice()
 
         self.assertRaisesRegex(
@@ -397,7 +450,10 @@ class TestEWaybill(FrappeTestCase):
         )
 
     def test_get_all_item_details(self):
-        """Validation test for more than 1000 items in sales invoice"""
+        """Tests:
+        - validate length of GST/HSN Code in items
+        - check if item details are generated correctly
+        """
         si = create_sales_invoice(do_not_submit=True)
 
         hsn_codes = frappe.get_file_json(
@@ -431,7 +487,7 @@ class TestEWaybill(FrappeTestCase):
         to_remove = [
             d
             for d in si.items
-            if d.gst_hsn_code not in ("61149090", "62031910", "52051230")
+            if d.gst_hsn_code != "61149090" and d.item_code != "61149090"
         ]
         for item in to_remove:
             si.remove(item)
@@ -465,6 +521,8 @@ class TestEWaybill(FrappeTestCase):
 
     # helper functions
     def _generate_e_waybill(self):
+        """Generate e-waybill"""
+
         # Mock POST response for generate_e_waybill
         self._mock_e_waybill_response(
             data=self._goods_item_test_data,
@@ -496,10 +554,11 @@ class TestEWaybill(FrappeTestCase):
         )
 
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None):
-        api_path = "/test/ewb/ewayapi/"
+        """Mock e-waybill response for given data and match_list"""
+        if not api:
+            api = "/test/ewb/ewayapi/"
 
-        if api:
-            api_path = f"{api_path}{api}"
+        api = "/test/ewb/ewayapi/{api}".format(api=api)
 
         if method == "GET":
             response_method = responses.GET
@@ -508,7 +567,7 @@ class TestEWaybill(FrappeTestCase):
 
         responses.add(
             response_method,
-            BASE_URL + api_path,
+            BASE_URL + api,
             body=json.dumps(data.get("response_data")),
             match=match_list,
             status=200,
@@ -516,6 +575,8 @@ class TestEWaybill(FrappeTestCase):
 
 
 def update_dates_for_test_data(test_data):
+    """Update dates in test data"""
+
     today_date = format_date(today(), DATE_FORMAT)
     current_datetime = now_datetime().strftime(DATETIME_FORMAT)
     next_day_datetime = add_to_date(getdate(), days=1).strftime(DATETIME_FORMAT)
@@ -576,6 +637,7 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
         "Item",
         [
             "name",
+            "item_code",
             "creation",
             "modified",
             "owner",
@@ -588,16 +650,17 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
         [
             [
                 code["hsn_code"],
+                code["hsn_code"],
                 get_datetime(),
                 get_datetime(),
                 frappe.session.user,
                 frappe.session.user,
                 code["hsn_code"],
                 code["description"],
-                "Products",
+                "Services" if code["hsn_code"][:2] == "99" else "Products",
                 "Nos",
             ]
-            for code in hsn_codes
+            for idx, code in enumerate(hsn_codes, 13000)
         ],
         ignore_duplicates=True,
         chunk_size=251,
