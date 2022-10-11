@@ -6,6 +6,7 @@ pull_request_rules:
           - author!=vorasmit
           - author!=mergify[bot]
           - author!=dependabot[bot]
+          - author!=india-compliance-bot
           - base=version-14
     actions:
       close:
@@ -53,11 +54,3 @@ pull_request_rules:
           - version-14-hotfix
         assignees:
           - "{{ author }}"
-
-  - name: Automatically add backport label
-    conditions:
-      - base=next
-    actions:
-      label:
-        add:
-          - "backport version-14-hotfix"
