@@ -6,6 +6,7 @@ pull_request_rules:
           - author!=vorasmit
           - author!=mergify[bot]
           - author!=dependabot[bot]
+          - author!=india-compliance-bot
           - base=version-14
     actions:
       close:
