@@ -10,7 +10,7 @@
 	"admin_password": "admin",
 	"root_login": "root",
 	"root_password": "travis",
-	"host_name": "http://127.0.0.1:8000",
+	"host_name": "http://test_site:8000",
 	"install_apps": [
 		"erpnext"
 	],

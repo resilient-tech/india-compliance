@@ -445,7 +445,7 @@ class TestEWaybill(FrappeTestCase):
             si.remove(item)
         si.save()
 
-        self.assertAlmostEqual(
+        self.assertListEqual(
             [
                 {
                     "item_no": 1,
