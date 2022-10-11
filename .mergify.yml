@@ -53,11 +53,3 @@ pull_request_rules:
           - version-14-hotfix
         assignees:
           - "{{ author }}"
-
-  - name: Automatically add backport label
-    conditions:
-      - base=next
-    actions:
-      label:
-        add:
-          - "backport version-14-hotfix"
