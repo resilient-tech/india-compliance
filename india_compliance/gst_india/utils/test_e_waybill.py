@@ -72,7 +72,7 @@ class TestEWaybill(FrappeTestCase):
 
     @classmethod
     def setUp(cls):
-        update_test_data(cls.e_waybill_test_data)
+        update_dates_for_test_data(cls.e_waybill_test_data)
 
     @change_settings(
         "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}
@@ -305,14 +305,10 @@ class TestEWaybill(FrappeTestCase):
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "cancel")
-        doc.get_onload().get("e_waybill_info", {}).update(
-            {
-                "created_on": add_to_date(
-                    get_datetime(),
-                    days=-3,
-                    as_datetime=True,
-                )
-            }
+        doc.get_onload().get("e_waybill_info", {})["created_on"] = add_to_date(
+            get_datetime(),
+            days=-3,
+            as_datetime=True,
         )
 
         self.assertRaisesRegex(
@@ -351,14 +347,10 @@ class TestEWaybill(FrappeTestCase):
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "submit")
-        doc.get_onload().get("e_waybill_info", {}).update(
-            {
-                "valid_upto": add_to_date(
-                    get_datetime(),
-                    days=-2,
-                    as_datetime=True,
-                )
-            }
+        doc.get_onload().get("e_waybill_info", {})["valid_upto"] = add_to_date(
+            get_datetime(),
+            days=-2,
+            as_datetime=True,
         )
 
         self.assertRaisesRegex(
@@ -523,7 +515,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
 
-def update_test_data(test_data):
+def update_dates_for_test_data(test_data):
     today_date = format_date(today(), DATE_FORMAT)
     current_datetime = now_datetime().strftime(DATETIME_FORMAT)
     next_day_datetime = add_to_date(getdate(), days=1).strftime(DATETIME_FORMAT)
@@ -570,7 +562,7 @@ def _create_sales_invoice(invoice_data):
     )
 
     # set date and time in mocked response data according to the api response
-    update_test_data(invoice_data)
+    update_dates_for_test_data(invoice_data)
 
     si = create_sales_invoice(**kwargs, do_not_submit=True)
     si.gst_transporter_id = ""
