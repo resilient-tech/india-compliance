@@ -402,7 +402,7 @@ class EInvoiceData(GSTTransactionData):
             self.transaction_details.name = random_string(6).lstrip("0")
 
             if frappe.flags.in_test:
-                self.transaction_details.name = "g2qxhY"
+                self.transaction_details.name = "test_invoice_no"
 
             # For overseas transactions, dummy GSTIN is not needed
             if self.doc.gst_category != "Overseas":

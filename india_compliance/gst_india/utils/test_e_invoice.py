@@ -36,10 +36,14 @@ class TestEInvoice(FrappeTestCase):
                 "fetch_e_waybill_data": 0,
             },
         )
-        cls.e_invoice_test_data = frappe.get_file_json(
-            frappe.get_app_path("india_compliance", "tests", "e_invoice_test_data.json")
+        cls.e_invoice_test_data = frappe._dict(
+            frappe.get_file_json(
+                frappe.get_app_path(
+                    "india_compliance", "gst_india", "data", "test_e_invoice.json"
+                )
+            )
         )
-        update_test_data(cls.e_invoice_test_data)
+        update_dates_for_test_data(cls.e_invoice_test_data)
 
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
     def test_get_data(self):
@@ -417,34 +421,19 @@ class TestEInvoice(FrappeTestCase):
             status=200,
         )
 
-        # ToDo: No need to add passthrough for all the requests
-        # response = responses.Response(
-        #     responses.POST, url=url, body=json.dumps(data.get("response_data"))
-        # )
-        # response.passthrough = True
-        # responses.add(response)
 
-
-def update_test_data(e_invoice_test_data):
+def update_dates_for_test_data(test_data):
     """Update test data for e-invoice and e-waybill"""
     today = format_date(frappe.utils.today(), "dd/mm/yyyy")
-    current_datetime = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
-    validity = add_to_date(getdate(), days=12).strftime("%Y-%m-%d %I:%M:%S %p")
+    now = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+    validity = add_to_date(getdate(), days=1).strftime("%Y-%m-%d %I:%M:%S %p")
 
     # Update test data for goods_item_with_ewaybill
-    goods_item = e_invoice_test_data.get("goods_item_with_ewaybill")
+    goods_item = test_data.get("goods_item_with_ewaybill")
     goods_item.get("response_data").get("result").update(
         {
-            "AckDt": current_datetime,
-            "EwbDt": current_datetime,
+            "EwbDt": now,
             "EwbValidTill": validity,
-        }
-    )
-
-    # Update test data for service_item_without_ewaybill
-    e_invoice_test_data.get("service_item").get("response_data").get("result").update(
-        {
-            "AckDt": current_datetime,
         }
     )
 
@@ -455,22 +444,13 @@ def update_test_data(e_invoice_test_data):
         "return_invoice",
         "debit_invoice",
     ):
-        e_invoice_test_data.get(key).get("request_data").get("DocDtls").update(
-            {
-                "Dt": today,
-            }
-        )
+        test_data.get(key).get("request_data").get("DocDtls")["Dt"] = today
+        test_data.get(key).get("response_data").get("result")["AckDt"] = now
 
-        e_invoice_test_data.get(key).get("response_data").get("result").update(
-            {
-                "AckDt": current_datetime,
-            }
-        )
+    response = test_data.cancel_e_waybill.get("response_data")
+    response.get("result")["cancelDate"] = now_datetime().strftime(
+        "%d/%m/%Y %I:%M:%S %p"
+    )
 
-    e_invoice_test_data.get("cancel_e_waybill").get("response_data").get(
-        "result"
-    ).update({"cancelDate": now_datetime().strftime("%d/%m/%Y %I:%M:%S %p")})
-
-    e_invoice_test_data.get("cancel_e_invoice").get("response_data").get(
-        "result"
-    ).update({"CancelDate": current_datetime})
+    response = test_data.cancel_e_invoice.get("response_data")
+    response.get("result")["CancelDate"] = now
