@@ -348,24 +348,6 @@ class TestEWaybill(FrappeTestCase):
         )
 
     @responses.activate
-    def test_validate_if_ewaybill_can_be_cancelled(self):
-        """Test validation if e-waybill can be cancelled. Applicable only for cancelling e-waybill"""
-        self._generate_e_waybill()
-
-        doc = load_doc("Sales Invoice", self.si.name, "cancel")
-        doc.get_onload().get("e_waybill_info", {})["created_on"] = add_to_date(
-            get_datetime(),
-            days=-3,
-            as_datetime=True,
-        )
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Waybill can be cancelled only within 24.*)$"),
-            EWaybillData(doc).validate_if_ewaybill_can_be_cancelled,
-        )
-
-    @responses.activate
     def test_get_e_waybill_cancel_data(self):
         """Check if e-waybill cancel data is generated correctly"""
         values = frappe._dict(
@@ -378,6 +360,19 @@ class TestEWaybill(FrappeTestCase):
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "cancel")
+
+        # Validate if e-waybill can be cancelled
+        doc.get_onload().get("e_waybill_info", {})["created_on"] = add_to_date(
+            get_datetime(),
+            days=-3,
+            as_datetime=True,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill can be cancelled only within 24.*)$"),
+            EWaybillData(doc).validate_if_ewaybill_can_be_cancelled,
+        )
 
         # assert if get_cancel_data dict equals to request data given in test records
         doc.get_onload().get("e_waybill_info", {}).update(
@@ -555,10 +550,10 @@ class TestEWaybill(FrappeTestCase):
 
     def _mock_e_waybill_response(self, data, match_list, method="POST", api=None):
         """Mock e-waybill response for given data and match_list"""
-        if not api:
-            api = "/test/ewb/ewayapi/"
+        base_api = "/test/ewb/ewayapi/"
 
-        api = "/test/ewb/ewayapi/{api}".format(api=api)
+        if api:
+            base_api = f"{base_api}{api}"
 
         if method == "GET":
             response_method = responses.GET
@@ -567,7 +562,7 @@ class TestEWaybill(FrappeTestCase):
 
         responses.add(
             response_method,
-            BASE_URL + api,
+            BASE_URL + base_api,
             body=json.dumps(data.get("response_data")),
             match=match_list,
             status=200,
