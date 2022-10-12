@@ -256,6 +256,115 @@ class TestEWaybill(FrappeTestCase):
         )
 
     @responses.activate
+    def test_get_e_waybill_cancel_data(self):
+        """Check if e-waybill cancel data is generated correctly"""
+        values = frappe._dict(
+            {
+                "reason": "Data Entry Mistake",
+                "remark": "For Test",
+            }
+        )
+
+        self._generate_e_waybill()
+
+        doc = load_doc("Sales Invoice", self.si.name, "cancel")
+
+        # Validate if e-waybill can be cancelled
+        doc.get_onload().get("e_waybill_info", {})["created_on"] = add_to_date(
+            get_datetime(),
+            days=-3,
+            as_datetime=True,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill can be cancelled only within 24.*)$"),
+            EWaybillData(doc).validate_if_ewaybill_can_be_cancelled,
+        )
+
+        # assert if get_cancel_data dict equals to request data given in test records
+        doc.get_onload().get("e_waybill_info", {}).update(
+            {
+                "created_on": get_datetime(),
+            }
+        )
+
+        self.assertDictEqual(
+            self.e_waybill_test_data.get("cancel_e_waybill").get("request_data"),
+            EWaybillData(doc).get_e_waybill_cancel_data(values),
+        )
+
+    def test_get_all_item_details(self):
+        """Tests:
+        - validate length of GST/HSN Code in items
+        - check if item details are generated correctly
+        """
+        si = create_sales_invoice(do_not_submit=True)
+
+        hsn_codes = frappe.get_file_json(
+            frappe.get_app_path(
+                "india_compliance", "gst_india", "data", "hsn_codes.json"
+            )
+        )
+        _bulk_insert_hsn_wise_items(hsn_codes)
+
+        for i in range(0, 1000):
+            hsn_code = random.choice(hsn_codes).get("hsn_code")
+            si.append(
+                "items",
+                {
+                    "item_code": hsn_code,
+                    "item_name": "Test Item {}".format(i),
+                    "qty": 1,
+                    "rate": 100,
+                    "gst_hsn_code": hsn_code,
+                },
+            )
+        si.save()
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill can only be generated for upto.*)$"),
+            EWaybillData(si).get_all_item_details,
+        )
+
+        # Assert get_all_item_details
+        to_remove = [
+            d
+            for d in si.items
+            if d.gst_hsn_code != "61149090" and d.item_code != "61149090"
+        ]
+        for item in to_remove:
+            si.remove(item)
+        si.save()
+        print(EWaybillData(si).get_all_item_details())
+        self.assertListEqual(
+            [
+                {
+                    "item_no": 1,
+                    "qty": 1.0,
+                    "taxable_value": 100.0,
+                    "hsn_code": "61149090",
+                    "item_name": "Test Trading Goods 1",
+                    "uom": "NOS",
+                    "cgst_amount": 0,
+                    "cgst_rate": 0,
+                    "sgst_amount": 0,
+                    "sgst_rate": 0,
+                    "igst_amount": 0,
+                    "igst_rate": 0,
+                    "cess_amount": 0,
+                    "cess_rate": 0,
+                    "cess_non_advol_amount": 0,
+                    "cess_non_advol_rate": 0,
+                    "tax_rate": 0.0,
+                    "total_value": 100.0,
+                }
+            ],
+            EWaybillData(si).get_all_item_details(),
+        )
+
+    @responses.activate
     def test_validate_transaction(self):
         """Test validation if ewaybill is already generated for the transaction"""
         test_data = self.e_waybill_test_data.get("goods_item_with_ewaybill")
@@ -288,9 +397,7 @@ class TestEWaybill(FrappeTestCase):
         """
 
         test_data = self.e_waybill_test_data.get("goods_item_with_ewaybill")
-        test_data.get("kwargs").update(
-            {"customer_address": "", "item_code": "999900", "item_name": "Test Item"}
-        )
+        test_data.get("kwargs").update({"customer_address": "", "item_code": "999900"})
         self.si = create_sales_invoice(**test_data.get("kwargs"))
 
         self.assertRaisesRegex(
@@ -345,45 +452,6 @@ class TestEWaybill(FrappeTestCase):
             frappe.exceptions.ValidationError,
             re.compile(r"^(No e-Waybill found for this document)$"),
             EWaybillData(self.si).validate_if_e_waybill_is_set,
-        )
-
-    @responses.activate
-    def test_get_e_waybill_cancel_data(self):
-        """Check if e-waybill cancel data is generated correctly"""
-        values = frappe._dict(
-            {
-                "reason": "Data Entry Mistake",
-                "remark": "For Test",
-            }
-        )
-
-        self._generate_e_waybill()
-
-        doc = load_doc("Sales Invoice", self.si.name, "cancel")
-
-        # Validate if e-waybill can be cancelled
-        doc.get_onload().get("e_waybill_info", {})["created_on"] = add_to_date(
-            get_datetime(),
-            days=-3,
-            as_datetime=True,
-        )
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Waybill can be cancelled only within 24.*)$"),
-            EWaybillData(doc).validate_if_ewaybill_can_be_cancelled,
-        )
-
-        # assert if get_cancel_data dict equals to request data given in test records
-        doc.get_onload().get("e_waybill_info", {}).update(
-            {
-                "created_on": get_datetime(),
-            }
-        )
-
-        self.assertDictEqual(
-            self.e_waybill_test_data.get("cancel_e_waybill").get("request_data"),
-            EWaybillData(doc).get_e_waybill_cancel_data(values),
         )
 
     @responses.activate
@@ -442,76 +510,6 @@ class TestEWaybill(FrappeTestCase):
             re.compile(r"^(Only Sales Invoice and Delivery Note are supported.*)$"),
             EWaybillData,
             purchase_invoice,
-        )
-
-    def test_get_all_item_details(self):
-        """Tests:
-        - validate length of GST/HSN Code in items
-        - check if item details are generated correctly
-        """
-        si = create_sales_invoice(do_not_submit=True)
-
-        hsn_codes = frappe.get_file_json(
-            frappe.get_app_path(
-                "india_compliance", "gst_india", "data", "hsn_codes.json"
-            )
-        )
-        _bulk_insert_hsn_wise_items(hsn_codes)
-
-        for i in range(0, 1000):
-            hsn_code = random.choice(hsn_codes).get("hsn_code")
-            si.append(
-                "items",
-                {
-                    "item_code": hsn_code,
-                    "item_name": "Test Item {}".format(i),
-                    "qty": 1,
-                    "rate": 100,
-                    "gst_hsn_code": hsn_code,
-                },
-            )
-        si.save()
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Waybill can only be generated for upto.*)$"),
-            EWaybillData(si).get_all_item_details,
-        )
-
-        # Assert get_all_item_details
-        to_remove = [
-            d
-            for d in si.items
-            if d.gst_hsn_code != "61149090" and d.item_code != "61149090"
-        ]
-        for item in to_remove:
-            si.remove(item)
-        si.save()
-
-        self.assertListEqual(
-            [
-                {
-                    "item_no": 1,
-                    "qty": 1.0,
-                    "taxable_value": 100.0,
-                    "hsn_code": "61149090",
-                    "item_name": "Test Trading Goods 1",
-                    "uom": "NOS",
-                    "cgst_amount": 0,
-                    "cgst_rate": 0,
-                    "sgst_amount": 0,
-                    "sgst_rate": 0,
-                    "igst_amount": 0,
-                    "igst_rate": 0,
-                    "cess_amount": 0,
-                    "cess_rate": 0,
-                    "cess_non_advol_amount": 0,
-                    "cess_non_advol_rate": 0,
-                    "tax_rate": 0.0,
-                    "total_value": 100.0,
-                }
-            ],
-            EWaybillData(si).get_all_item_details(),
         )
 
     # helper functions
@@ -633,6 +631,7 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
         [
             "name",
             "item_code",
+            "item_name",
             "creation",
             "modified",
             "owner",
@@ -646,6 +645,7 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
             [
                 code["hsn_code"],
                 code["hsn_code"],
+                "Test Item " + str(idx),
                 get_datetime(),
                 get_datetime(),
                 frappe.session.user,
@@ -656,6 +656,7 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
                 "Nos",
             ]
             for idx, code in enumerate(hsn_codes, 13000)
+            if code["hsn_code"] != "61149090"
         ],
         ignore_duplicates=True,
         chunk_size=251,
