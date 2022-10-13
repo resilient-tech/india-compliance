@@ -49,11 +49,7 @@ export default {
   methods: {
     toggleAuthView() {
       this.isAccountRegistered = !this.isAccountRegistered;
-    },
-
-    async checkAccountRegisted(value) {
-      this.isAccountRegistered = await _isEmailRegistered(value);
-    },
+    }
   },
 };
 </script>
