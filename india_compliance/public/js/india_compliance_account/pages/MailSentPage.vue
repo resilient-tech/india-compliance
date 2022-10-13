@@ -1,5 +1,5 @@
 <template>
-  <div class="mail-sent-page contaier text-center">
+  <div class="mail-sent-page container text-center">
     <img
       class="mail-box-img"
       src="/assets/india_compliance/images/mail-box.png"

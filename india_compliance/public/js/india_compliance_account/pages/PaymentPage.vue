@@ -331,7 +331,7 @@ export default {
   },
 
   beforeRouteEnter(to) {
-    if (!to.params.order) return ({ name: "home", replace: true });
+    if (!to.params.order) return { name: "home", replace: true };
   },
 
   created() {
