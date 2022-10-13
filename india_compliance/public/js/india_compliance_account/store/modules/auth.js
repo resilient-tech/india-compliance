@@ -70,5 +70,11 @@ export default {
         hasSession(state) {
             return !!state.session;
         },
+
+        guessRouteName(state) {
+            if (state.api_secret) return "home";
+            if (state.session) return "mailSent";
+            return "auth";
+        }
     },
 };

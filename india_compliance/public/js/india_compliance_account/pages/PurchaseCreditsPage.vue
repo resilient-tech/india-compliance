@@ -238,10 +238,6 @@ export default {
   },
 
   async created() {
-    if (!this.$store.getters.isLoggedIn) {
-      return this.$router.replace({ name: "auth" });
-    };
-
     await this.$store.dispatch("fetchDetails", "calculator");
     this.isLoading = false;
     this.credits = this.creditsInputValue = this.defaultCalculatorValue;
