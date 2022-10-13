@@ -56,12 +56,6 @@ export default {
       this.$router.replace({ name: "auth" });
     }
   },
-
-  created() {
-    if (!this.$store.getters.hasSession) {
-      return this.$router.replace({ name: "home" });
-    }
-  }
 };
 </script>
 
