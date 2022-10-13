@@ -35,7 +35,9 @@ const routes = [
     }
 ];
 
-export default createRouter({
+export const router = createRouter({
     history: createWebHistory("/app/india-compliance-account"),
     routes: routes,
 });
+
+export const AUTH_ROUTES = ["auth", "mailSent"];
