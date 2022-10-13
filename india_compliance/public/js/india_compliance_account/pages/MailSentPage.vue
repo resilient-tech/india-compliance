@@ -57,13 +57,11 @@ export default {
     }
   },
 
-  beforeRouteEnter(to, from, next) {
-    next((vm) => {
-      if (!vm.$store.getters.hasSession)
-        return next({ name: "home", replace: true });
-      return next();
-    });
-  },
+  created() {
+    if (!this.$store.getters.hasSession) {
+      return this.$router.replace({ name: "home" });
+    }
+  }
 };
 </script>
 

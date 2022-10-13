@@ -56,17 +56,15 @@ export default {
     },
   },
 
-  beforeRouteEnter(to, from, next) {
-    next((vm) => {
-      if (vm.$store.getters.isLoggedIn)
-        return next({ name: "home", replace: true });
+  created() {
+    if (this.$store.getters.isLoggedIn) {
+      return this.$router.replace({ name: "home" });
+    };
 
-      if (vm.$store.getters.hasSession)
-        return next({ name: "mailSent", replace: true });
-
-      next();
-    });
-  },
+    if (this.$store.getters.hasSession) {
+      return this.$router.replace({ name: "mailSent" });
+    }
+  }
 };
 </script>
 
