@@ -310,6 +310,9 @@ class TestEWaybill(FrappeTestCase):
 
         for i in range(0, 1000):
             hsn_code = random.choice(hsn_codes).get("hsn_code")
+            if hsn_code == "61149090":
+                continue
+
             si.append(
                 "items",
                 {
@@ -332,12 +335,12 @@ class TestEWaybill(FrappeTestCase):
         to_remove = [
             d
             for d in si.items
-            if d.gst_hsn_code != "61149090" and d.item_code != "61149090"
+            if d.gst_hsn_code != "61149090" and d.item_code != "_Test Trading Goods 1"
         ]
         for item in to_remove:
             si.remove(item)
         si.save()
-        print(EWaybillData(si).get_all_item_details())
+
         self.assertListEqual(
             [
                 {
@@ -456,7 +459,7 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_check_e_waybill_validity(self):
-        """Test validity before cancelling or updating the e-waybill"""
+        """Test validity before updating the e-waybill"""
         self._generate_e_waybill()
 
         doc = load_doc("Sales Invoice", self.si.name, "submit")
@@ -656,7 +659,6 @@ def _bulk_insert_hsn_wise_items(hsn_codes):
                 "Nos",
             ]
             for idx, code in enumerate(hsn_codes, 13000)
-            if code["hsn_code"] != "61149090"
         ],
         ignore_duplicates=True,
         chunk_size=251,
