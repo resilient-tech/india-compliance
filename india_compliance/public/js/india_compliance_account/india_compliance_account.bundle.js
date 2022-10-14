@@ -1,8 +1,6 @@
-import Vue from "vue";
-import VueRouter from "vue-router";
-import Vuex from "vuex";
+import { createApp } from "vue";
 
-import router from "./router";
+import { router, AUTH_ROUTES } from "./router";
 import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 import { get_api_secret } from "./services/AuthService";
@@ -10,29 +8,28 @@ import { get_api_secret } from "./services/AuthService";
 class IndiaComplianceAccountPage {
     constructor(wrapper) {
         this.pageName = "india-compliance-account";
-        this.containerId = "india-compliance-account-app-container";
-
-        // Why need container? Because Vue replaces the element with the component.
-        // So, if we don't have a container, the component will be rendered on the #body
-        // and removes the element #page-india-compliance-account,
-        // which is required by frappe route in order to work it properly.
-        $(wrapper).html(`<div id="${this.containerId}"></div>`);
+        this.wrapperId = `#${wrapper.id}`;
         this.show();
     }
 
     show() {
-        Vue.use(VueRouter);
-        Vue.use(Vuex);
+        const app = createApp(IndiaComplianceAccountApp).use(router).use(store);
+        SetVueGlobals(app);
+        router.isReady().then(() => app.mount(this.wrapperId));
+        router.beforeEach(to => {
+            const routeToCompare = in_list(AUTH_ROUTES, to.name) ? to.name : "home";
+            const guessedRoute = store.getters.guessRouteName;
 
-        new Vue({
-            el: `#${this.containerId}`,
-            router,
-            store,
-            render: (h) => h(IndiaComplianceAccountApp),
+            if (routeToCompare !== guessedRoute) {
+                return {
+                    name: guessedRoute,
+                    replace: true,
+                }
+            }
         });
 
         $(frappe.pages[this.pageName]).on("show", () => {
-            router.replace({name: store.getters.isLoggedIn ? "home": "auth"});
+            router.replace({name: store.getters.guessRouteName});
         });
     }
 }

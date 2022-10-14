@@ -1,13 +1,16 @@
 <template>
   <div class="india-compliance-account">
-    <transition name="fade">
-      <div class="content">
-          <PreLoader v-if="isLoading" />
-          <transition name="fade" mode="out-in" v-else>
-            <router-view />
+    <div class="content">
+          <transition name="fade" v-if="isLoading">
+            <PreLoader />
           </transition>
+
+          <router-view v-slot="{ Component }" v-else>
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
       </div>
-    </transition>
     <TheFooter />
   </div>
 </template>
