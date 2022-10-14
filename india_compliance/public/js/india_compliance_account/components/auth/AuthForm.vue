@@ -20,6 +20,7 @@
         :required="true"
         :error="gstin.error"
         :state="gstin.state"
+        @blur="validateGstin"
       />
     </transition>
     <button
@@ -103,21 +104,6 @@ export default {
     },
   },
 
-  watch: {
-    "gstin.value"(value) {
-      this.error = null;
-      this.validateGstin(value);
-    },
-
-    "email.value"(_) {
-      this.error = null;
-    },
-
-    isAccountRegistered() {
-      this.error = null;
-    },
-  },
-
   methods: {
     async submitAuthForm() {
       this.isLoading = true;
@@ -158,6 +144,7 @@ export default {
       else if (!validate_email(value)) field.error = "Invalid Email Address";
 
       field.state = field.error ? UiState.error : UiState.success;
+      field.value = value;
     },
 
     async validateGstin(value) {
@@ -182,6 +169,7 @@ export default {
 
       this.submitLabel = message ? "Start Free Trial" : "Signup";
       field.state = UiState.success;
+      field.value = value;
     },
   },
 };
