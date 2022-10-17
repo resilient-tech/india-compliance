@@ -33,18 +33,11 @@ def execute(filters=None):
                 fieldname="gst_category",
                 width=120,
             ),
-            dict(
-                fieldtype="Data",
-                label="E-Commerce GSTIN",
-                fieldname="ecommerce_gstin",
-                width=130,
-            ),
         ],
         additional_query_columns=[
             "supplier_gstin",
             "company_gstin",
             "is_reverse_charge",
             "gst_category",
-            "ecommerce_gstin",
         ],
     )
