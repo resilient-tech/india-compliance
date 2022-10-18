@@ -52,7 +52,7 @@ export default {
     },
 
     async refresh() {
-      await this.$store.dispatch("initAuth");
+      await this.$store.dispatch("authenticate");
       this.$router.replace({ name: "auth" });
     }
   },
