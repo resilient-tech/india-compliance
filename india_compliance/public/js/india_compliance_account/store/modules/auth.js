@@ -24,10 +24,6 @@ export default {
     },
 
     actions: {
-        async initAuth({ dispatch }) {
-            await dispatch("authenticate");
-        },
-
         async authenticate({ state, dispatch, commit }) {
             const api_secret = await get_api_secret();
             if (api_secret) return commit("SET_API_SECRET", api_secret);

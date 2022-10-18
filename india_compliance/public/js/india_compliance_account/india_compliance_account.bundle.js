@@ -1,6 +1,5 @@
 import { createApp } from "vue";
-
-import { router, AUTH_ROUTES } from "./router";
+import { router } from "./router";
 import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 import { get_api_secret } from "./services/AuthService";
@@ -16,17 +15,6 @@ class IndiaComplianceAccountPage {
         const app = createApp(IndiaComplianceAccountApp).use(router).use(store);
         SetVueGlobals(app);
         router.isReady().then(() => app.mount(this.wrapperId));
-        router.beforeEach(to => {
-            const routeToCompare = in_list(AUTH_ROUTES, to.name) ? to.name : "home";
-            const guessedRoute = store.getters.guessRouteName;
-
-            if (routeToCompare !== guessedRoute) {
-                return {
-                    name: guessedRoute,
-                    replace: true,
-                }
-            }
-        });
 
         $(frappe.pages[this.pageName]).on("show", () => {
             router.replace({name: store.getters.guessRouteName});
