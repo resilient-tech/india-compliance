@@ -8,7 +8,12 @@ class IndiaComplianceAccountPage {
     constructor(wrapper) {
         this.pageName = "india-compliance-account";
         this.wrapperId = `#${wrapper.id}`;
+        this.setTitle();
         this.show();
+    }
+
+    setTitle() {
+        frappe.utils.set_title(__("India Compliance Account"));
     }
 
     show() {
@@ -17,6 +22,7 @@ class IndiaComplianceAccountPage {
         router.isReady().then(() => app.mount(this.wrapperId));
 
         $(frappe.pages[this.pageName]).on("show", () => {
+            this.setTitle();
             router.replace({name: store.getters.guessRouteName});
         });
     }
