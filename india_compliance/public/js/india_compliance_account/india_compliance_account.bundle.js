@@ -10,7 +10,6 @@ import { get_api_secret } from "./services/AuthService";
 class IndiaComplianceAccountPage {
     constructor(wrapper) {
         this.pageName = "india-compliance-account";
-<<<<<<< HEAD
         this.containerId = "india-compliance-account-app-container";
 
         // Why need container? Because Vue replaces the element with the component.
@@ -18,10 +17,7 @@ class IndiaComplianceAccountPage {
         // and removes the element #page-india-compliance-account,
         // which is required by frappe route in order to work it properly.
         $(wrapper).html(`<div id="${this.containerId}"></div>`);
-=======
-        this.wrapperId = `#${wrapper.id}`;
         this.setTitle();
->>>>>>> fed154d2 (fix: set page title when routing to page (#310))
         this.show();
     }
 
@@ -41,12 +37,8 @@ class IndiaComplianceAccountPage {
         });
 
         $(frappe.pages[this.pageName]).on("show", () => {
-<<<<<<< HEAD
-            router.replace({name: store.getters.isLoggedIn ? "home": "auth"});
-=======
             this.setTitle();
-            router.replace({name: store.getters.guessRouteName});
->>>>>>> fed154d2 (fix: set page title when routing to page (#310))
+            router.replace({name: store.getters.isLoggedIn ? "home": "auth"});
         });
     }
 }
