@@ -1,6 +1,5 @@
 import { createApp } from "vue";
-
-import { router, AUTH_ROUTES } from "./router";
+import { router } from "./router";
 import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 import { get_api_secret } from "./services/AuthService";
@@ -9,26 +8,21 @@ class IndiaComplianceAccountPage {
     constructor(wrapper) {
         this.pageName = "india-compliance-account";
         this.wrapperId = `#${wrapper.id}`;
+        this.setTitle();
         this.show();
+    }
+
+    setTitle() {
+        frappe.utils.set_title(__("India Compliance Account"));
     }
 
     show() {
         const app = createApp(IndiaComplianceAccountApp).use(router).use(store);
         SetVueGlobals(app);
         router.isReady().then(() => app.mount(this.wrapperId));
-        router.beforeEach(to => {
-            const routeToCompare = in_list(AUTH_ROUTES, to.name) ? to.name : "home";
-            const guessedRoute = store.getters.guessRouteName;
-
-            if (routeToCompare !== guessedRoute) {
-                return {
-                    name: guessedRoute,
-                    replace: true,
-                }
-            }
-        });
 
         $(frappe.pages[this.pageName]).on("show", () => {
+            this.setTitle();
             router.replace({name: store.getters.guessRouteName});
         });
     }
