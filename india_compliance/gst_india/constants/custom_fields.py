@@ -93,7 +93,7 @@ CUSTOM_FIELDS = {
             "fieldname": "is_reverse_charge",
             "label": "Is Reverse Charge",
             "fieldtype": "Check",
-            "insert_after": "apply_tds",
+            "insert_after": "column_break_19",
             "print_hide": 1,
             "default": 0,
         },
