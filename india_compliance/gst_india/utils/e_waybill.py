@@ -497,6 +497,7 @@ class EWaybillData(GSTTransactionData):
         self.set_transaction_details()
         self.set_item_list()
         self.set_party_address_details()
+        self.validate_distance()
 
         return self.get_transaction_data()
 
@@ -868,3 +869,15 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
+
+    def validate_distance(self):
+        if (
+            self.transaction_details.distance == 0
+            and self.dispatch_address.pincode == self.shipping_address.pincode
+        ):
+            frappe.throw(
+                _(
+                    "Distance cannot be zero if Dispatch and Shipping address Pincodes are same"
+                ),
+                title=_("Invalid Distance"),
+            )
