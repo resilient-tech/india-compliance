@@ -308,7 +308,9 @@ class GSTTransactionData:
                 "gstin": address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
                 "address_title": self.sanitize_value(address.address_title, 2),
-                "address_line1": self.sanitize_value(address.address_line1, 3),
+                "address_line1": self.sanitize_value(
+                    address.address_line1, 3, min_length=1
+                ),
                 "address_line2": self.sanitize_value(address.address_line2, 3),
                 "city": self.sanitize_value(address.city, 3, max_length=50),
                 "pincode": int(address.pincode),
