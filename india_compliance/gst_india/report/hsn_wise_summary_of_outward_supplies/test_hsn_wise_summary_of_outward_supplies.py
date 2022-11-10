@@ -22,18 +22,24 @@ class TestHSNWiseSummaryReport(TestCase):
         frappe.db.rollback()
 
     def test_hsn_summary_for_invoice_with_duplicate_items(self):
-        si = create_sales_invoice(do_not_save=1, is_in_state=True)
-        append_item(si)
+        si_one = create_sales_invoice(do_not_save=1, is_in_state=True)
+        append_item(si_one, frappe._dict(gst_hsn_code="61149090", uom="Box"))
+        append_item(si_one, frappe._dict(gst_hsn_code="61149090", uom="Litre"))
+        si_one.submit()
 
-        si.submit()
+        si_two = create_sales_invoice(do_not_save=1, is_in_state=True)
+        append_item(si_two, frappe._dict(gst_hsn_code="61149090", uom="Box"))
+        append_item(si_two, frappe._dict(gst_hsn_code="61149090", uom="Litre"))
+
+        si_two.submit()
 
         columns, data = run_report(
             filters=frappe._dict(
                 {
                     "company": "_Test Indian Registered Company",
-                    "company_gstin": si.company_gstin,
-                    "from_date": si.posting_date,
-                    "to_date": si.posting_date,
+                    "company_gstin": si_one.company_gstin,
+                    "from_date": si_one.posting_date,
+                    "to_date": si_one.posting_date,
                 }
             )
         )
@@ -44,5 +50,6 @@ class TestHSNWiseSummaryReport(TestCase):
         self.assertTrue(filtered_rows)
 
         hsn_row = filtered_rows[0]
-        self.assertEquals(hsn_row["stock_qty"], 2.0)
-        self.assertEquals(hsn_row["total_amount"], 236)  # 2 * 100 * 1.18
+        self.assertEquals(hsn_row["stock_qty"], 6.0)
+        self.assertEquals(hsn_row["taxable_amount"], 600)
+        self.assertEquals(hsn_row["total_amount"], 708)  # 6 * 100 * 1.18
