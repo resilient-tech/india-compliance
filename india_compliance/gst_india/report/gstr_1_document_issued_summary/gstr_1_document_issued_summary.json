@@ -1,0 +1,33 @@
+{
+ "add_total_row": 0,
+ "columns": [],
+ "creation": "2022-11-12 17:56:11.363534",
+ "disable_prepared_report": 0,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": "Gadgets International",
+ "modified": "2022-11-12 17:56:11.363534",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR-1 Document Issued Summary",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "GST Settings",
+ "report_name": "GSTR-1 Document Issued Summary",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "System Manager"
+  }
+ ]
+}
