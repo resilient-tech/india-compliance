@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}}]",
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1 Document Issued Summary\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}}]",
  "creation": "2022-02-28 19:04:58.655348",
  "docstatus": 0,
  "doctype": "Workspace",
@@ -125,7 +125,7 @@
    "type": "Link"
   }
  ],
- "modified": "2022-06-24 21:27:45.929329",
+ "modified": "2022-11-14 12:48:49.688263",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
@@ -141,6 +141,13 @@
  ],
  "sequence_id": 3.0,
  "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "GSTR-1 Document Issued Summary",
+   "link_to": "GSTR-1 Document Issued Summary",
+   "type": "Report"
+  },
   {
    "color": "Grey",
    "doc_view": "List",
