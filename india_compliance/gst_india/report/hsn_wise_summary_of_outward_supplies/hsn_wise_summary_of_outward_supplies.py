@@ -10,7 +10,6 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import cstr, flt, getdate
 import erpnext
 
-from india_compliance.gst_india.constants.e_waybill import UOMS
 from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -308,16 +307,21 @@ def download_json_file():
 
 
 def get_hsn_wise_json_data(filters, report_data):
-
     filters = frappe._dict(filters)
+    gst_settings = frappe.get_single("GST Settings")
     gst_accounts = get_gst_accounts_by_type(filters.company, "Output")
     data = []
     count = 1
 
     for hsn in report_data:
-        uom = hsn.get("stock_uom", "").upper()
-        if uom not in UOMS:
-            uom = "OTH"
+        uom = next(
+            (
+                row.gst_uom[:3]
+                for row in gst_settings.get("gst_uom_mapping")
+                if row.uom == hsn.get("stock_uom")
+            ),
+            "OTH",
+        )
 
         row = {
             "num": count,

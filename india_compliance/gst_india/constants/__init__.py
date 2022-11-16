@@ -76,6 +76,54 @@ STATE_NUMBERS = {
     "West Bengal": "19",
 }
 
+GST_UOMS = {
+    "BAG(BAGS)",
+    "BAL(BALE)",
+    "BDL(BUNDLES)",
+    "BKL(BUCKLES)",
+    "BOU(BILLION OF UNITS)",
+    "BOX(BOX)",
+    "BTL(BOTTLES)",
+    "BUN(BUNCHES)",
+    "CAN(CANS)",
+    "CBM(CUBIC METERS)",
+    "CCM(CUBIC CENTIMETERS)",
+    "CMS(CENTIMETERS)",
+    "CTN(CARTONS)",
+    "DOZ(DOZENS)",
+    "DRM(DRUMS)",
+    "GGK(GREAT GROSS)",
+    "GMS(GRAMMES)",
+    "GRS(GROSS)",
+    "GYD(GROSS YARDS)",
+    "KGS(KILOGRAMS)",
+    "KLR(KILOLITRE)",
+    "KME(KILOMETRE)",
+    "LTR(LITRES)",
+    "MLT(MILILITRE)",
+    "MTR(METERS)",
+    "MTS(METRIC TON)",
+    "NOS(NUMBERS)",
+    "OTH(OTHERS)",
+    "PAC(PACKS)",
+    "PCS(PIECES)",
+    "PRS(PAIRS)",
+    "QTL(QUINTAL)",
+    "ROL(ROLLS)",
+    "SET(SETS)",
+    "SQF(SQUARE FEET)",
+    "SQM(SQUARE METERS)",
+    "SQY(SQUARE YARDS)",
+    "TBS(TABLETS)",
+    "TGM(TEN GROSS)",
+    "THD(THOUSANDS)",
+    "TON(TONNES)",
+    "TUB(TUBES)",
+    "UGS(US GALLONS)",
+    "UNT(UNITS)",
+    "YDS(YARDS)",
+}
+
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
 
 NORMAL = (  # Normal but not TCS
@@ -112,6 +160,9 @@ GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
 
 # used to extract Distance (whole number) from string
 DISTANCE_REGEX = re.compile(r"\d+")
+
+# used to extract UOM Description from string
+UOM_REGEX = re.compile(r"\(([A-Za-z].*)\)")
 
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)

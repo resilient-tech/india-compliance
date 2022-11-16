@@ -6,6 +6,7 @@ from frappe.custom.doctype.custom_field.custom_field import (
 )
 from frappe.utils import now_datetime, nowdate
 
+from india_compliance.gst_india.constants import GST_UOMS, UOM_REGEX
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
@@ -123,6 +124,9 @@ def set_default_gst_settings():
     for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
         toggle_custom_fields(fields, False)
 
+    # Mapp GST UOMs with ERPNext UOMs
+    mapp_default_uoms()
+
 
 def set_default_accounts_settings():
     """
@@ -195,3 +199,47 @@ def _get_custom_fields_to_create(*custom_fields_list):
             result.setdefault(doctypes, []).extend(fields)
 
     return result
+
+
+def mapp_default_uoms():
+    # Mapping of GST UOMs with ERPNext UOMs
+    settings = frappe.get_doc("GST Settings")
+
+    if not frappe.db.table_exists("GST UOM Mapping"):
+        return
+
+    for _gst_uom in GST_UOMS:
+        # get uom from GST UOM String to match in UOM table
+        gst_uom = get_uoms_to_match(_gst_uom)[:-1]
+
+        # validate if gst uom exists in UOMs
+        default_uoms = frappe.db.get_all(
+            "UOM", filters={"name": ["like", f"{gst_uom}"]}, fields=["name"]
+        )
+
+        if not default_uoms:
+            continue
+
+        for uom in default_uoms:
+            # validate if uom is already mapped
+            if validate_if_uom_is_mapped(settings, uom.name):
+                continue
+            settings.append("gst_uom_mapping", get_mapped_uom(_gst_uom, uom.name))
+
+    settings.save()
+
+
+def validate_if_uom_is_mapped(settings, uom):
+    return next(
+        (True for mapping in settings.gst_uom_mapping if mapping.uom == uom), False
+    )
+
+
+def get_uoms_to_match(uom):
+    return UOM_REGEX.search(uom).group(1)
+
+
+def get_mapped_uom(gst_uom, default_uom):
+    # returns dict of mapped uom
+
+    return frappe._dict({"uom": default_uom, "gst_uom": gst_uom})

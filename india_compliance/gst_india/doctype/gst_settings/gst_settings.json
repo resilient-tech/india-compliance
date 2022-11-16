@@ -14,10 +14,12 @@
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
+  "gst_uom_mapping_section",
+  "gst_uom_mapping",
+  "fetch_e_waybill_data",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
-  "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "column_break_10",
   "auto_generate_e_waybill",
@@ -225,12 +227,23 @@
    "fieldname": "autofill_party_info",
    "fieldtype": "Check",
    "label": "Autofill Party Information based on GSTIN"
+  },
+  {
+   "fieldname": "gst_uom_mapping",
+   "fieldtype": "Table",
+   "options": "GST UOM Mapping"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "gst_uom_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "GST UOM Mapping"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-09-07 09:49:38.261631",
+ "modified": "2022-11-15 19:15:27.493587",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

@@ -7,7 +7,6 @@ from frappe.utils import format_date, getdate, rounded
 from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
-    UOMS,
     VEHICLE_TYPES,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -197,7 +196,14 @@ class GSTTransactionData:
         all_item_details = []
 
         for row in self.doc.items:
-            uom = row.uom.upper()
+            uom = next(
+                (
+                    row.gst_uom[:3]
+                    for row in self.settings.get("gst_uom_mapping")
+                    if row.uom == row.uom
+                ),
+                "OTH",
+            )
 
             item_details = frappe._dict(
                 {
@@ -206,7 +212,7 @@ class GSTTransactionData:
                     "taxable_value": abs(self.rounded(row.taxable_value)),
                     "hsn_code": row.gst_hsn_code,
                     "item_name": self.sanitize_value(row.item_name, 3, max_length=300),
-                    "uom": uom if uom in UOMS else "OTH",
+                    "uom": uom,
                 }
             )
             self.update_item_details(item_details, row)
