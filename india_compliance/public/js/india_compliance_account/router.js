@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createMemoryHistory } from 'vue-router';
 
 import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
@@ -36,7 +36,7 @@ const routes = [
 ];
 
 export const router = createRouter({
-    history: createWebHistory("/app/india-compliance-account"),
+    history: createMemoryHistory("/app/india-compliance-account"),
     routes: routes,
 });
 
