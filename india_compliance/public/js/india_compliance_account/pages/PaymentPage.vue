@@ -128,12 +128,8 @@ export default {
     },
   },
 
-  props: ['order'],
 
   methods: {
-    mounted() {
-      console.log(this.props)
-    },
     getReadableNumber,
     editAddress() {
       const states = [
