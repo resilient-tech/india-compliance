@@ -7,6 +7,7 @@ export default {
         calculatorDetails: null,
         billingDetails: null,
         orderDetails: null,
+        message: null,
     },
 
     mutations: {
@@ -24,6 +25,10 @@ export default {
 
         SET_ORDER_DETAILS(state, orderDetails) {
             state.orderDetails = orderDetails;
+        },
+
+        SET_MESSAGE(state, message) {
+            state.message = message;
         },
     },
 
@@ -68,6 +73,15 @@ export default {
             commit("SET_ORDER_DETAILS", orderDetails);
             return true;
         },
+
+        resetMessage({ commit }) {
+            commit("SET_MESSAGE", null);
+        },
+
+        setMessage({ commit }, { message, color }) {
+            commit("SET_MESSAGE",{ message, color});
+        }
+
     },
 
     getters: {},

@@ -265,12 +265,10 @@ export default {
     },
 
     redirectToHome(message, color) {
-      this.$router.push({
-        name: "home",
-        replace: true,
-        params: { message: { message, color } },
-      });
+      this.$store.dispatch("setMessage", { message, color });
+      this.$router.replace({name: "home"});
     },
+
     initCashFree(orderToken) {
       const style = getComputedStyle(document.body);
       const primaryColor = style.getPropertyValue("--primary");
@@ -327,7 +325,7 @@ export default {
     this.$store.dispatch("resetOrder");
 
     if (!this.orderDetails || !this.orderDetails.token) {
-      return this.$router.replace({ name: "home" });
+      return this.redirectToHome("Invalid order details", "red");
     }
 
     const script = document.createElement("script");
