@@ -243,51 +243,6 @@ export default {
   },
 };
 
-// taken from: https://stackoverflow.com/a/58812425
-function bisect_left(sortedList, value) {
-  if (!sortedList.length) return 0;
-
-  if (sortedList.length == 1) {
-    return value > sortedList[0] ? 1 : 0;
-  }
-
-  let lbound = 0;
-  let rbound = sortedList.length - 1;
-  return bisect_left(lbound, rbound);
-
-  // note that this function depends on closure over lbound and rbound
-  // to work correctly
-  function bisect_left(lb, rb) {
-    if (rb - lb == 1) {
-      if (sortedList[lb] < value && sortedList[rb] >= value) {
-        return lb + 1;
-      }
-
-      if (sortedList[lb] == value) {
-        return lb;
-      }
-    }
-
-    if (sortedList[lb] > value) {
-      return 0;
-    }
-
-    if (sortedList[rb] < value) {
-      return sortedList.length;
-    }
-
-    let midPoint = lb + Math.floor((rb - lb) / 2);
-    let midValue = sortedList[midPoint];
-
-    if (value <= midValue) {
-      rbound = midPoint;
-    } else if (value > midValue) {
-      lbound = midPoint;
-    }
-
-    return bisect_left(lbound, rbound);
-  }
-}
 </script>
 
 <style scoped>
