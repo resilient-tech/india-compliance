@@ -194,30 +194,29 @@ export default {
 
     async proceedToPayment() {
       this.isRedirecting = true;
-      const response = await create_order(this.credits, this.grandTotal);
+
+      const orderDetails = {
+        credits: this.credits,
+        netTotal: this.netTotal,
+        tax: this.tax,
+        taxRate: this.taxRate,
+        grandTotal: this.grandTotal,
+        validity: frappe.datetime.add_months(
+          frappe.datetime.now_date(),
+          this.creditsValidity
+        ),
+      };
+
+      const orderCreated = await this.$store.dispatch("createOrder", orderDetails);
       this.isRedirecting = false;
 
-      if (response.invalid_token) return this.$store.dispatch("setApiSecret", null);
+      if (!orderCreated) {
+        frappe.throw(
+          "Something went wrong while creating order, please contact support!"
+        );
+      }
 
-      if (!response.success || !response.message?.order_token) return;
-
-      this.$router.push({
-        name: "paymentPage",
-        params: {
-          order: {
-            token: response.message.order_token,
-            credits: this.credits,
-            netTotal: this.netTotal,
-            tax: this.tax,
-            taxRate: this.taxRate,
-            grandTotal: this.grandTotal,
-            validity: frappe.datetime.add_months(
-              frappe.datetime.now_date(),
-              this.creditsValidity
-            ),
-          },
-        },
-      });
+      this.$router.push({ name: "paymentPage" });
     },
 
     updateCredits() {
