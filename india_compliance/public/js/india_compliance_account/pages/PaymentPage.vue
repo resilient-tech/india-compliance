@@ -28,7 +28,7 @@
           <div class="order-summary">
             <div class="sub-heading">
               <p class="title">Order Summary</p>
-              <a @click="$router.go(-1)" class="text-highlight text-right"> Edit </a>
+              <a @click="$router.back()" class="text-highlight text-right"> Edit </a>
             </div>
             <div class="order-summary-body">
               <div class="row">
