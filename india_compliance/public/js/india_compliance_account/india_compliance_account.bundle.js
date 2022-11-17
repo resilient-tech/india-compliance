@@ -6,8 +6,8 @@ import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 import { get_api_secret } from "./services/AuthService";
 
 class IndiaComplianceAccountPage {
-    constructor(wrapper) {
-        this.pageName = "india-compliance-account";
+    constructor(wrapper, pageName) {
+        this.pageName = pageName;
         this.wrapperId = `#${wrapper.id}`;
         this.setTitle();
         this.show();
