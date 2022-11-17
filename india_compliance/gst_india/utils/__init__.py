@@ -439,8 +439,8 @@ def can_enable_api(settings):
     return settings.api_secret or frappe.conf.ic_api_secret
 
 
-def get_gst_uom_from_mapping(uom, settings=None):
-    """Returns the GST UOM mapped to the ERPNext UOM in GST Settings"""
+def get_gst_uom(uom, settings=None):
+    """Returns the GST UOM from ERPNext UOM"""
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 

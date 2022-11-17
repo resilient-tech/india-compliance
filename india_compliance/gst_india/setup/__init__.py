@@ -124,8 +124,7 @@ def set_default_gst_settings():
     for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
         toggle_custom_fields(fields, False)
 
-    # Mapp GST UOMs with ERPNext UOMs
-    map_default_uoms()
+    map_default_uoms(settings)
 
 
 def set_default_accounts_settings():
@@ -201,25 +200,20 @@ def _get_custom_fields_to_create(*custom_fields_list):
     return result
 
 
-def map_default_uoms():
-    settings = frappe.get_doc("GST Settings")
+def map_default_uoms(settings=None):
+    def _is_uom_mapped():
+        return next(
+            (True for mapping in settings.gst_uom_mapping if mapping.uom == uom), False
+        )
 
-    for key, _gst_uom in GST_UOMS.items():
-        # validate if gst uom exists in UOMs
-        if not (uom := frappe.db.exists("UOM", key)):
+    if not settings:
+        settings = frappe.get_doc("GST Settings")
+
+    for uom, gst_uom in GST_UOMS.items():
+        if not frappe.db.exists("UOM", uom) or _is_uom_mapped():
             continue
 
-        # validate if uom is already mapped
-        if validate_if_uom_is_mapped(settings, uom):
-            continue
-
-        settings.append("gst_uom_mapping", {"uom": uom, "gst_uom": _gst_uom})
+        settings.append("gst_uom_mapping", {"uom": uom, "gst_uom": gst_uom})
 
     for row in settings.gst_uom_mapping:
         row.db_update()
-
-
-def validate_if_uom_is_mapped(settings, uom):
-    return next(
-        (True for mapping in settings.gst_uom_mapping if mapping.uom == uom), False
-    )

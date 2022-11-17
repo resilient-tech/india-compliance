@@ -9,10 +9,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import (
-    get_gst_accounts_by_type,
-    get_gst_uom_from_mapping,
-)
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
@@ -206,7 +203,7 @@ class GSTTransactionData:
                     "taxable_value": abs(self.rounded(row.taxable_value)),
                     "hsn_code": row.gst_hsn_code,
                     "item_name": self.sanitize_value(row.item_name, 3, max_length=300),
-                    "uom": get_gst_uom_from_mapping(row.uom),
+                    "uom": get_gst_uom(row.uom, self.settings),
                 }
             )
             self.update_item_details(item_details, row)
