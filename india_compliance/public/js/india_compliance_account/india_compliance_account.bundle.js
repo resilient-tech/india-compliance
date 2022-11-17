@@ -1,5 +1,6 @@
 import { createApp } from "vue";
-import { router } from "./router";
+import { routes } from "./router";
+import { createRouter, createWebHistory } from "vue-router";
 import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 import { get_api_secret } from "./services/AuthService";
@@ -16,14 +17,44 @@ class IndiaComplianceAccountPage {
         frappe.utils.set_title(__("India Compliance Account"));
     }
 
+    createRouter() {
+        const history = createWebHistory("/app/india-compliance-account");
+
+        history.listen(to => {
+            if (frappe.router.is_app_route(to)) {
+                frappe.route_flags.replace_route = true;
+                frappe.router.set_route(to);
+                history.destroy();
+
+                // force to remount the app on next show
+                this.router = null;
+            }
+        });
+
+        return createRouter({
+            history: history,
+            routes: routes,
+        });
+    }
+
+    mountVueApp() {
+        // app is already mounted
+        if (this.router) return;
+
+        if (this.app) this.app.unmount();
+        this.router = this.createRouter();
+
+        this.app = createApp(IndiaComplianceAccountApp).use(this.router).use(store);
+        SetVueGlobals(this.app);
+        this.router.isReady().then(() => this.app.mount(this.wrapperId));
+    }
+
     show() {
-        const app = createApp(IndiaComplianceAccountApp).use(router).use(store);
-        SetVueGlobals(app);
-        router.isReady().then(() => app.mount(this.wrapperId));
+        this.mountVueApp();
 
         $(frappe.pages[this.pageName]).on("show", () => {
             this.setTitle();
-            router.replace({name: store.getters.guessRouteName});
+            this.router.replace({ name: store.getters.guessRouteName });
         });
     }
 }
@@ -59,8 +90,7 @@ ic.gst_api.call = async function (endpoint, options) {
 
         throw new UnsuccessfulResponseError(data);
     } catch (e) {
-        const error =
-            e.message || "Something went wrong, Please try again later!";
+        const error = e.message || "Something went wrong, Please try again later!";
 
         if (!options.fail_silently) {
             frappe.msgprint({
@@ -74,9 +104,7 @@ ic.gst_api.call = async function (endpoint, options) {
             ...e.response,
             success: false,
             error,
-            invalid_token: e.response.exc_type?.includes(
-                "InvalidAuthorizationToken"
-            ),
+            invalid_token: e.response.exc_type?.includes("InvalidAuthorizationToken"),
         };
     }
 };
@@ -87,14 +115,12 @@ function extract_error_message(responseBody) {
         if (_server_messages) {
             const server_messages = JSON.parse(_server_messages);
             return server_messages
-                .map((message) => JSON.parse(message).message || "")
+                .map(message => JSON.parse(message).message || "")
                 .join("\n");
         }
         return "Something went wrong, Please try again later!";
     }
-    return exception
-        .replace(new RegExp(".*" + exc_type + ":", "gi"), "")
-        .trim();
+    return exception.replace(new RegExp(".*" + exc_type + ":", "gi"), "").trim();
 }
 
 class UnsuccessfulResponseError extends Error {
