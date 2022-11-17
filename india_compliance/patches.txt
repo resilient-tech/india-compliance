@@ -7,4 +7,4 @@ execute:from india_compliance.gst_india.setup import create_custom_fields; creat
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters()
 india_compliance.patches.post_install.update_custom_role_for_e_invoice_summary
 india_compliance.patches.v14.remove_ecommerce_gstin_from_purchase_invoice
-india_compliance.patches.v14.mapp_default_gst_uoms
+india_compliance.patches.v14.map_default_gst_uoms

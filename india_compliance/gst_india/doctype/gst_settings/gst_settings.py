@@ -33,7 +33,6 @@ class GSTSettings(Document):
         self.validate_e_invoice_applicability_date()
         self.validate_credentials()
         self.clear_api_auth_session()
-        self.validate_uoms()
 
     def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
@@ -162,23 +161,6 @@ class GSTSettings(Document):
                     "enable API features"
                 )
             )
-
-    def validate_uoms(self):
-        # Don't allow duplicate UOMs
-        uom_list = []
-
-        for row in self.gst_uom_mapping:
-            if row.uom in uom_list:
-                frappe.throw(
-                    _(
-                        "Row #{0}: UOM {1} already exists in the UOM Mapping table"
-                    ).format(
-                        row.idx,
-                        frappe.bold(row.uom),
-                    )
-                )
-
-            uom_list.append(row.uom)
 
 
 @frappe.whitelist()
