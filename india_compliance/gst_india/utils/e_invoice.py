@@ -183,6 +183,9 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
 
+    if not gst_settings.enable_e_invoice:
+        return _throw(_("e-Invoice is not enabled in GST Settings"))
+
     if getdate(gst_settings.e_invoice_applicable_from) > getdate(doc.posting_date):
         return _throw(
             _(
