@@ -44,7 +44,7 @@ frappe.listview_settings["Sales Invoice"].onload = function (list_view) {
                 'doc_view': "List",
                 'name': "Integration Request",
             })
-            frappe.msgprint(__(`Bulk Generation is queued. Check the progress in <a href="${route}">Integration Request</a> Log.`));
+            frappe.msgprint(__('Bulk Generation is queued. Check the progress in <a href="{0}">Integration Request</a> Log.', [route]));
         });
     }
 };
