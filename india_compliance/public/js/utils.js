@@ -26,6 +26,15 @@ Object.assign(ic, {
         };
     },
 
+    async get_gstin_options(party, party_type = "Company") {
+        const { query, params } = ic.get_gstin_query(party, party_type);
+        const { message } = await frappe.call({
+            method: query,
+            args: params,
+        });
+        return message;
+    },
+
     get_party_type(doctype) {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
@@ -66,7 +75,8 @@ Object.assign(ic, {
 
     guess_gst_category(gstin, country) {
         if (!gstin) {
-            return (!country || (country === "India")) ? "Unregistered" : "Overseas";
+            if (country && country !== "India") return "Overseas";
+            return "Unregistered";
         }
 
         if (TDS_REGEX.test(gstin)) return "Tax Deductor";
