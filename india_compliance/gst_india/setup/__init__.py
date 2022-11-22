@@ -206,7 +206,7 @@ def map_default_uoms(settings=None):
             (True for mapping in settings.gst_uom_mapping if mapping.uom == uom), False
         )
 
-    if not settings:
+    if not settings or settings.name != "GST Settings":
         settings = frappe.get_doc("GST Settings")
 
     for uom, gst_uom in GST_UOMS.items():
