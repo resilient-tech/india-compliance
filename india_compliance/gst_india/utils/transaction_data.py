@@ -45,6 +45,14 @@ class GSTTransactionData:
             else "base_rounded_total"
         )
 
+        company_gstin = self.doc.company_gstin
+        if (
+            self.doc.doctype == "Purchase Invoice"
+            and self.doc.gst_category == "Unregistered"
+            and not self.doc.is_return
+        ):
+            company_gstin = "URP"
+
         self.transaction_details.update(
             {
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
@@ -56,7 +64,7 @@ class GSTTransactionData:
                     self.rounded(self.doc.get(grand_total_fieldname))
                 ),
                 "discount_amount": 0,
-                "company_gstin": self.doc.company_gstin,
+                "company_gstin": company_gstin,
                 "name": self.doc.name,
             }
         )
@@ -179,6 +187,10 @@ class GSTTransactionData:
                 msg=_("Posting Date cannot be greater than Today's Date"),
                 title=_("Invalid Data"),
             )
+
+        if self.doc.doctype == "Purchase Invoice":
+            self.validate_purchase_transaction()
+
         # compare posting date and lr date, only if lr no is set
         if (
             self.doc.lr_no
@@ -189,6 +201,9 @@ class GSTTransactionData:
                 msg=_("Posting Date cannot be greater than LR Date"),
                 title=_("Invalid Data"),
             )
+
+    def has_e_waybill_threshold_met(self):
+        return abs(self.doc.base_grand_total) >= self.settings.e_waybill_threshold
 
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
@@ -354,6 +369,15 @@ class GSTTransactionData:
 
     def get_item_data(self, item_details):
         pass
+
+    def validate_purchase_transaction(self):
+        if not (self.doc.is_return or self.doc.gst_category == "Unregistered"):
+            frappe.throw(
+                msg=_(
+                    "GST Category must be Unregistered or transaction should be Is Return(Debit Note)"
+                ),
+                title=_("Invalid Transaction"),
+            )
 
     @staticmethod
     def sanitize_data(d):

@@ -22,7 +22,11 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
-PERMITTED_DOCTYPES = {"Sales Invoice", "Delivery Note"}
+PERMITTED_DOCTYPES = {
+    "Sales Invoice": ("company_address", "customer_address"),
+    "Delivery Note": ("company_address", "customer_address"),
+    "Purchase Invoice": ("supplier_address", "shipping_address", "billing_address"),
+}
 
 
 #######################################################################################
@@ -70,7 +74,10 @@ def _generate_e_waybill(doc, throw=True):
         # Via e-Invoice API if not Return or Debit Note
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
-        with_irn = doc.irn and not (doc.is_return or doc.is_debit_note)
+        with_irn = False
+        if doc.doctype == "Sales Invoice":
+            with_irn = doc.irn and not (doc.is_return or doc.is_debit_note)
+
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
@@ -461,6 +468,12 @@ def update_transaction(doc, values):
     if doc.doctype == "Delivery Note":
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
 
+    if doc.doctype == "Purchase Invoice":
+        if doc.gst_category == "Unregistered":
+            doc._sub_supply_type = 1
+        if doc.is_return:
+            doc._sub_supply_type = 8
+
 
 #######################################################################################
 ### e-Waybill Data Generation #########################################################
@@ -565,11 +578,12 @@ class EWaybillData(GSTTransactionData):
         - Required fields
         - Atleast one item with HSN for goods is required
         - Overseas Returns are not allowed
+        - Validate threshold limit
         - Basic transporter details must be present
         - Grand Total Amount must be greater than Criteria
         """
 
-        for fieldname in ("company_address", "customer_address"):
+        for fieldname in PERMITTED_DOCTYPES.get(self.doc.doctype, []):
             if not self.doc.get(fieldname):
                 frappe.throw(
                     _("{0} is required to generate e-Waybill").format(
@@ -599,6 +613,15 @@ class EWaybillData(GSTTransactionData):
         #         title=_("Incorrect Usage"),
         #     )
 
+        if self.doc.doctype in PERMITTED_DOCTYPES:
+            if not self.has_e_waybill_threshold_met():
+                frappe.throw(
+                    _(
+                        "e-Waybill cannot be generated because the total amount is less than the threshold limit"
+                    ),
+                    title=_("Invalid Amount"),
+                )
+
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
@@ -608,8 +631,8 @@ class EWaybillData(GSTTransactionData):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
                 _(
-                    "Only Sales Invoice and Delivery Note are supported for e-Waybill"
-                    " actions"
+                    "Only {0} are supported for e-Waybill"
+                    " actions".format(", ".join(PERMITTED_DOCTYPES))
                 ),
                 title=_("Unsupported DocType"),
             )
