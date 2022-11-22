@@ -9,6 +9,11 @@ import {
 frappe.provide("ic");
 
 window.gst_settings = frappe.boot.gst_settings;
+<<<<<<< HEAD
+=======
+const GSTIN_REGEX =
+    /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
+>>>>>>> 0db11ab7 (fix: `set_data` for gstin autocomplete)
 
 Object.assign(ic, {
     get_gstin_query(party, party_type = "Company") {
@@ -24,6 +29,15 @@ Object.assign(ic, {
             query: "india_compliance.gst_india.utils.get_gstin_list",
             params: { party, party_type },
         };
+    },
+
+    async get_gstin_options(party, party_type = "Company") {
+        const { query, params } = ic.get_gstin_query(party, party_type);
+        const { message } = await frappe.call({
+            method: query,
+            args: params,
+        });
+        return message;
     },
 
     get_party_type(doctype) {
@@ -63,6 +77,7 @@ Object.assign(ic, {
             return gstin;
         }
     },
+<<<<<<< HEAD
 
     guess_gst_category(gstin, country) {
         if (!gstin) {
@@ -76,6 +91,10 @@ Object.assign(ic, {
     },
 });
 
+=======
+});
+
+>>>>>>> 0db11ab7 (fix: `set_data` for gstin autocomplete)
 function is_gstin_check_digit_valid(gstin) {
     /*
     adapted from

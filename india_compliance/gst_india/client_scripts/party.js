@@ -116,11 +116,11 @@ function show_overseas_disabled_warning(doctype) {
 
 function set_gstin_query(doctype) {
     frappe.ui.form.on(doctype, {
-        onload(frm) {
+        async refresh(frm) {
             if (frm.is_new()) return;
-
-            frm.get_field("gstin").df.ignore_validation = true;
-            frm.set_query("gstin", ic.get_gstin_query(frm.doc.name, doctype));
+            const field = frm.get_field("gstin");
+            field.df.ignore_validation = true;
+            field.set_data(await ic.get_gstin_options(frm.doc.name, doctype));
         },
     });
 }
