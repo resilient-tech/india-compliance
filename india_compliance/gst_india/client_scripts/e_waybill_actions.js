@@ -1,4 +1,4 @@
-const E_WAYBILL_TRANSACTION_DOCTYPES = ["Sales Invoice", "Purchase Invoice"];
+const PERMITTED_DOCTYPES = ["Sales Invoice", "Purchase Invoice"];
 const DOWNLOAD_RESTRICTED_DOCTYPES = ["Purchase Invoice"];
 
 function setup_e_waybill_actions(doctype) {
@@ -607,7 +607,7 @@ function is_e_waybill_valid(frm) {
 
 function has_e_waybill_threshold_met(frm) {
     if (
-        E_WAYBILL_TRANSACTION_DOCTYPES.includes(frm.doctype) &&
+        PERMITTED_DOCTYPES.includes(frm.doctype) &&
         Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold
     )
         return true;
