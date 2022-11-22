@@ -758,4 +758,5 @@ E_WAYBILL_SI_FIELDS = [
 E_WAYBILL_FIELDS = {
     "Sales Invoice": E_WAYBILL_SI_FIELDS,
     "Delivery Note": E_WAYBILL_DN_FIELDS,
+    "Purchase Invoice": E_WAYBILL_SI_FIELDS,
 }

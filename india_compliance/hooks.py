@@ -33,6 +33,10 @@ doctype_js = {
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Supplier": "gst_india/client_scripts/supplier.js",
+    "Purchase Invoice": [
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/purchase_invoice.js",
+    ],
 }
 
 doctype_list_js = {

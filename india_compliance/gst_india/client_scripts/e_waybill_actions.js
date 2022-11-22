@@ -1,7 +1,8 @@
 function setup_e_waybill_actions(doctype) {
     if (
         !gst_settings.enable_e_waybill ||
-        (doctype == "Delivery Note" && !gst_settings.enable_e_waybill_from_dn)
+        (doctype == "Delivery Note" && !gst_settings.enable_e_waybill_from_dn) ||
+        (doctype == "Purchase Invoice" && !gst_settings.enable_e_waybill_from_pi)
     )
         return;
 
@@ -28,8 +29,7 @@ function setup_e_waybill_actions(doctype) {
             if (
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
-                !is_e_waybill_applicable(frm) ||
-                (frm.doctype === "Delivery Note" && !frm.doc.customer_address)
+                !is_e_waybill_applicable(frm)
             )
                 return;
 
@@ -42,11 +42,7 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (
-                    has_e_waybill_threshold_met(frm) &&
-                    !frm.doc.is_return &&
-                    !frm.doc.is_debit_note
-                ) {
+                if (has_e_waybill_threshold_met(frm)) {
                     frm.dashboard.add_comment(
                         __(
                             "e-Waybill is applicable for this invoice, but not yet generated or updated."
@@ -113,11 +109,9 @@ function setup_e_waybill_actions(doctype) {
         },
         async on_submit(frm) {
             if (
-                // threshold is only met for Sales Invoice
+                // threshold is met for Sales Invoice and Purchase Invoice
                 !has_e_waybill_threshold_met(frm) ||
                 frm.doc.ewaybill ||
-                frm.doc.is_return ||
-                frm.doc.is_debit_note ||
                 !ic.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
                 is_e_invoice_applicable(frm) ||
@@ -350,9 +344,9 @@ function show_generate_e_waybill_dialog(frm) {
         secondary_action_label: api_enabled ? __("Download JSON") : null,
         secondary_action: api_enabled
             ? () => {
-                  d.hide();
-                  json_action(d.get_values());
-              }
+                d.hide();
+                json_action(d.get_values());
+            }
             : null,
     });
 
@@ -568,7 +562,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                    frm.doc.gst_transporter_id.length == 15
+                        frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
             },
@@ -610,7 +604,7 @@ function is_e_waybill_valid(frm) {
 
 function has_e_waybill_threshold_met(frm) {
     if (
-        frm.doc.doctype == "Sales Invoice" &&
+        ["Sales Invoice", "Purchase Invoice"].includes(frm.doctype) &&
         Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold
     )
         return true;
@@ -619,6 +613,20 @@ function has_e_waybill_threshold_met(frm) {
 function is_e_waybill_applicable(frm) {
     // means company is Indian and not Unregistered
     if (!frm.doc.company_gstin) return;
+
+    // validations  for delivery note
+    if (frm.doctype === "Delivery Note" && !frm.doc.customer_address) return;
+
+    // validations for purchase invoice
+    if (frm.doctype === "Purchase Invoice") {
+        if (!frm.doc.supplier_address) return;
+
+        // ToDo: Check for other gst categories except unregistered
+        if (!frm.doc.is_return && frm.doc.gst_category != "Unregistered") return;
+    }
+
+    // validations for sales invoice
+    if (frm.doctype === "Sales Invoice" && (frm.doc.is_return || frm.doc.is_debit_note)) return;
 
     // at least one item is not a service
     for (const item of frm.doc.items) {
