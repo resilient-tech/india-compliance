@@ -1,3 +1,6 @@
+const E_WAYBILL_TRANSACTION_DOCTYPES = ["Sales Invoice", "Purchase Invoice"];
+const DOWNLOAD_RESTRICTED_DOCTYPES = ["Purchase Invoice"];
+
 function setup_e_waybill_actions(doctype) {
     if (
         !gst_settings.enable_e_waybill ||
@@ -341,8 +344,8 @@ function show_generate_e_waybill_dialog(frm) {
                 json_action(values);
             }
         },
-        secondary_action_label: get_secondary_action_label_for_download(frm),
-        secondary_action: api_enabled && frm.doctype !== "Purchase Invoice"
+        secondary_action_label: is_secondary_action_applicable(frm) ? __("Download JSON") : null,
+        secondary_action: is_secondary_action_applicable(frm)
             ? () => {
                 d.hide();
                 json_action(d.get_values());
@@ -604,7 +607,7 @@ function is_e_waybill_valid(frm) {
 
 function has_e_waybill_threshold_met(frm) {
     if (
-        ["Sales Invoice", "Purchase Invoice"].includes(frm.doctype) &&
+        E_WAYBILL_TRANSACTION_DOCTYPES.includes(frm.doctype) &&
         Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold
     )
         return true;
@@ -685,9 +688,9 @@ function get_primary_action_label_for_generation(doc) {
     return label + " (Part A)";
 }
 
-function get_secondary_action_label_for_download(frm) {
+function is_secondary_action_applicable(frm) {
     // skipping Download option for Purchase Invoice, may be added later
-    return ic.is_api_enabled() && frm.doctype !== "Purchase Invoice" ? __("Download JSON") : null
+    return ic.is_api_enabled() && !DOWNLOAD_RESTRICTED_DOCTYPES.includes(frm.doctype) ? true : false;
 }
 
 function are_transport_details_available(doc) {
