@@ -341,8 +341,8 @@ function show_generate_e_waybill_dialog(frm) {
                 json_action(values);
             }
         },
-        secondary_action_label: api_enabled ? __("Download JSON") : null,
-        secondary_action: api_enabled
+        secondary_action_label: get_secondary_action_label_for_download(frm),
+        secondary_action: api_enabled && frm.doctype !== "Purchase Invoice"
             ? () => {
                 d.hide();
                 json_action(d.get_values());
@@ -683,6 +683,11 @@ function get_primary_action_label_for_generation(doc) {
     }
 
     return label + " (Part A)";
+}
+
+function get_secondary_action_label_for_download(frm) {
+    // skipping Download option for Purchase Invoice, may be added later
+    return ic.is_api_enabled() && frm.doctype !== "Purchase Invoice" ? __("Download JSON") : null
 }
 
 function are_transport_details_available(doc) {
