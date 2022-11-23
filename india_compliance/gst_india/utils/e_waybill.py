@@ -25,7 +25,7 @@ from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 PERMITTED_DOCTYPES = {
     "Sales Invoice": ("company_address", "customer_address"),
     "Delivery Note": ("company_address", "customer_address"),
-    "Purchase Invoice": ("supplier_address", "shipping_address", "billing_address"),
+    "Purchase Invoice": ("shipping_address", "billing_address", "supplier_address"),
 }
 
 
@@ -467,12 +467,14 @@ def update_transaction(doc, values):
 
     if doc.doctype == "Delivery Note":
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+        doc._document_type = "CHL"
 
     if doc.doctype == "Purchase Invoice":
-        if doc.gst_category == "Unregistered":
-            doc._sub_supply_type = 1
+        doc._sub_supply_type = 1
+        doc._document_type = "INV"
         if doc.is_return:
             doc._sub_supply_type = 8
+            doc._document_type = "OTH"
 
 
 #######################################################################################
@@ -707,10 +709,16 @@ class EWaybillData(GSTTransactionData):
             for row in self.doc.items
             if not row.gst_hsn_code.startswith("99")
         )
+        _supply_type = "O"
+        _return_supply_type = "I"
+
+        if self.doc.doctype == "Purchase Invoice":
+            _supply_type = _return_supply_type
+            _return_supply_type = _supply_type
 
         self.transaction_details.update(
             {
-                "supply_type": "O",
+                "supply_type": _supply_type,
                 "sub_supply_type": 1,
                 "document_type": "INV",
                 "main_hsn_code": main_hsn_code,
@@ -720,7 +728,7 @@ class EWaybillData(GSTTransactionData):
         if self.doc.is_return:
             self.transaction_details.update(
                 {
-                    "supply_type": "I",
+                    "supply_type": _return_supply_type,
                     "sub_supply_type": 7,
                     "document_type": "CHL",
                 }
@@ -732,28 +740,43 @@ class EWaybillData(GSTTransactionData):
             if not self.doc.is_export_with_gst:
                 self.transaction_details.document_type = "BIL"
 
-        if self.doc.doctype == "Delivery Note":
+        if self.doc.doctype in ("Purchase Invoice", "Delivery Note"):
             self.transaction_details.update(
                 {
                     "sub_supply_type": self.doc._sub_supply_type,
-                    "document_type": "CHL",
+                    "document_type": self.doc._document_type,
                 }
             )
 
     def set_party_address_details(self):
         transaction_type = 1
-        has_different_shipping_address = (
-            self.doc.shipping_address_name
-            and self.doc.customer_address != self.doc.shipping_address_name
+
+        shipping_address = (
+            self.doc.shipping_address
+            if self.doc.doctype == "Purchase Invoice"
+            else self.doc.shipping_address_name
         )
 
-        has_different_dispatch_address = (
-            self.doc.dispatch_address_name
-            and self.doc.company_address != self.doc.dispatch_address_name
-        )
+        if self.doc.doctype != "Purchase Invoice":
+            has_different_dispatch_address = False
+            has_different_shipping_address = (
+                shipping_address and self.doc.billing_address != shipping_address
+            )
 
-        self.to_address = self.get_address_details(self.doc.customer_address)
-        self.from_address = self.get_address_details(self.doc.company_address)
+            self.to_address = self.get_address_details(self.doc.billing_address)
+            self.from_address = self.get_address_details(self.doc.supplier_address)
+        else:
+            has_different_shipping_address = (
+                shipping_address and self.doc.customer_address != shipping_address
+            )
+
+            has_different_dispatch_address = (
+                self.doc.dispatch_address_name
+                and self.doc.company_address != self.doc.dispatch_address_name
+            )
+
+            self.to_address = self.get_address_details(self.doc.customer_address)
+            self.from_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
         # billing state is changed for SEZ, hence copy()
@@ -762,9 +785,7 @@ class EWaybillData(GSTTransactionData):
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+            self.shipping_address = self.get_address_details(shipping_address)
             self.dispatch_address = self.get_address_details(
                 self.doc.dispatch_address_name
             )
@@ -777,9 +798,7 @@ class EWaybillData(GSTTransactionData):
 
         elif has_different_shipping_address:
             transaction_type = 2
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+            self.shipping_address = self.get_address_details(shipping_address)
 
         self.transaction_details.transaction_type = transaction_type
 
@@ -814,6 +833,9 @@ class EWaybillData(GSTTransactionData):
                 self.shipping_address,
                 self.dispatch_address,
             )
+
+        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
+            self.transaction_details.name = self.doc.bill_no
 
         data = {
             "userGstin": self.transaction_details.company_gstin,

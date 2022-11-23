@@ -45,14 +45,6 @@ class GSTTransactionData:
             else "base_rounded_total"
         )
 
-        company_gstin = self.doc.company_gstin
-        if (
-            self.doc.doctype == "Purchase Invoice"
-            and self.doc.gst_category == "Unregistered"
-            and not self.doc.is_return
-        ):
-            company_gstin = "URP"
-
         self.transaction_details.update(
             {
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
@@ -64,7 +56,7 @@ class GSTTransactionData:
                     self.rounded(self.doc.get(grand_total_fieldname))
                 ),
                 "discount_amount": 0,
-                "company_gstin": company_gstin,
+                "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
             }
         )
