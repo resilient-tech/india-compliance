@@ -10,7 +10,22 @@
 # }
 #
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
+si_field = {
+    "Company Address": "company_address",
+    "Customer Address": "customer_address",
+    "Dispatch Address": "dispatch_address_name",
+    "Shipping Address": "shipping_address_name",
+}
 
+PERMITTED_DOCTYPES = {
+    "Sales Invoice": si_field,
+    "Delivery Note": si_field,
+    "Purchase Invoice": {
+        "Company Shipping Address": "shipping_address",
+        "Company Billing Address": "billing_address",
+        "Supplier Address": "supplier_address",
+    },
+}
 
 CANCEL_REASON_CODES = {
     "Duplicate": "1",

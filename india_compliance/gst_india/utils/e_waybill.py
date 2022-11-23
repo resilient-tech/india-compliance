@@ -11,6 +11,7 @@ from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
+    PERMITTED_DOCTYPES,
     SUB_SUPPLY_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
 )
@@ -21,13 +22,6 @@ from india_compliance.gst_india.utils import (
     update_onload,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
-
-PERMITTED_DOCTYPES = {
-    "Sales Invoice": ("company_address", "customer_address"),
-    "Delivery Note": ("company_address", "customer_address"),
-    "Purchase Invoice": ("shipping_address", "billing_address", "supplier_address"),
-}
-
 
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
@@ -585,12 +579,17 @@ class EWaybillData(GSTTransactionData):
         - Grand Total Amount must be greater than Criteria
         """
 
-        for fieldname in PERMITTED_DOCTYPES.get(self.doc.doctype, []):
+        for label, fieldname in PERMITTED_DOCTYPES.get(self.doc.doctype).items():
+            if fieldname in (
+                "dispatch_address_name",
+                "shipping_address_name",
+                "shipping_address",
+            ):
+                continue
+
             if not self.doc.get(fieldname):
                 frappe.throw(
-                    _("{0} is required to generate e-Waybill").format(
-                        _(self.doc.meta.get_label(fieldname))
-                    ),
+                    _("{0} is required to generate e-Waybill").format(_(label)),
                     exc=frappe.MandatoryError,
                 )
 
@@ -615,14 +614,16 @@ class EWaybillData(GSTTransactionData):
         #         title=_("Incorrect Usage"),
         #     )
 
-        if self.doc.doctype in PERMITTED_DOCTYPES:
-            if not self.has_e_waybill_threshold_met():
-                frappe.throw(
-                    _(
-                        "e-Waybill cannot be generated because the total amount is less than the threshold limit"
-                    ),
-                    title=_("Invalid Amount"),
-                )
+        if (
+            self.doc.doctype in PERMITTED_DOCTYPES
+            and not self.has_e_waybill_threshold_met()
+        ):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be generated because the total amount is less than the threshold limit"
+                ),
+                title=_("Invalid Amount"),
+            )
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
@@ -749,33 +750,33 @@ class EWaybillData(GSTTransactionData):
 
     def set_party_address_details(self):
         transaction_type = 1
+        address = self.get_address_map()
 
-        shipping_address = (
-            self.doc.shipping_address
-            if self.doc.doctype == "Purchase Invoice"
-            else self.doc.shipping_address_name
+        party_shipping_address = address.party_shipping_address
+        company_shipping_address = address.company_shipping_address
+
+        # Ideally, we considering company address as the dispatch address
+        has_different_shipping_address = (
+            party_shipping_address
+            and address.party_billing_address != party_shipping_address
         )
 
-        if self.doc.doctype != "Purchase Invoice":
+        has_different_dispatch_address = (
+            company_shipping_address
+            and address.company_billing_address != company_shipping_address
+        )
+
+        self.to_address = self.get_address_details(address.party_billing_address)
+        self.from_address = self.get_address_details(address.company_billing_address)
+
+        if self.doc.doctype == "Purchase Invoice":
+            has_different_shipping_address = has_different_dispatch_address
             has_different_dispatch_address = False
-            has_different_shipping_address = (
-                shipping_address and self.doc.billing_address != shipping_address
-            )
+            party_shipping_address = company_shipping_address
+            company_shipping_address = address.party_billing_address
 
-            self.to_address = self.get_address_details(self.doc.billing_address)
-            self.from_address = self.get_address_details(self.doc.supplier_address)
-        else:
-            has_different_shipping_address = (
-                shipping_address and self.doc.customer_address != shipping_address
-            )
-
-            has_different_dispatch_address = (
-                self.doc.dispatch_address_name
-                and self.doc.company_address != self.doc.dispatch_address_name
-            )
-
-            self.to_address = self.get_address_details(self.doc.customer_address)
-            self.from_address = self.get_address_details(self.doc.company_address)
+            self.to_address = self.from_address
+            self.from_address = self.to_address
 
         # Defaults
         # billing state is changed for SEZ, hence copy()
@@ -784,25 +785,41 @@ class EWaybillData(GSTTransactionData):
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
-            self.shipping_address = self.get_address_details(shipping_address)
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
+            self.shipping_address = self.get_address_details(party_shipping_address)
+            self.dispatch_address = self.get_address_details(company_shipping_address)
 
         elif has_different_dispatch_address:
             transaction_type = 3
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
+            self.dispatch_address = self.get_address_details(company_shipping_address)
 
         elif has_different_shipping_address:
             transaction_type = 2
-            self.shipping_address = self.get_address_details(shipping_address)
+            self.shipping_address = self.get_address_details(party_shipping_address)
 
         self.transaction_details.transaction_type = transaction_type
 
         if self.doc.gst_category == "SEZ":
             self.to_address.state_number = 96
+
+    def get_address_map(self, address_fields):
+        """Return addresses for the transaction using required fields"""
+        address_fields = PERMITTED_DOCTYPES.get(self.doc.doctype, {})
+
+        address_map = frappe._dict()
+        for label, field in address_fields.items():
+            if label in ("Dispatch Address", "Company Shipping Address"):
+                address_map.company_shipping_address = self.doc.get(field)
+
+            elif label in ("Company Address", "Company Billing Address"):
+                address_map.company_billing_address = self.doc.get(field)
+
+            elif label in ("Shipping Address", "Supplier Address"):
+                address_map.party_shipping_address = self.doc.get(field)
+
+            elif label in ("Customer Address", "Supplier Address"):
+                address_map.party_billing_address = self.doc.get(field)
+
+        return address_map
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
