@@ -775,8 +775,8 @@ class EWaybillData(GSTTransactionData):
             party_shipping_address = company_shipping_address
             company_shipping_address = address.party_billing_address
 
-            self.to_address = self.from_address
-            self.from_address = self.to_address
+            self.to_address = self.get_address_details(address.company_billing_address)
+            self.from_address = self.get_address_details(address.party_billing_address)
 
         # Defaults
         # billing state is changed for SEZ, hence copy()
@@ -801,7 +801,7 @@ class EWaybillData(GSTTransactionData):
         if self.doc.gst_category == "SEZ":
             self.to_address.state_number = 96
 
-    def get_address_map(self, address_fields):
+    def get_address_map(self):
         """Return addresses for the transaction using required fields"""
         address_fields = PERMITTED_DOCTYPES.get(self.doc.doctype, {})
 
@@ -815,6 +815,7 @@ class EWaybillData(GSTTransactionData):
 
             elif label in ("Shipping Address", "Supplier Address"):
                 address_map.party_shipping_address = self.doc.get(field)
+                address_map.party_billing_address = self.doc.get(field)
 
             elif label in ("Customer Address", "Supplier Address"):
                 address_map.party_billing_address = self.doc.get(field)
@@ -840,6 +841,7 @@ class EWaybillData(GSTTransactionData):
             self.to_address.gstin = (
                 "05AAACG2140A1ZL"
                 if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
+                and self.doc.doctype != "Purchase Invoice"
                 else "05AAACG2115R1ZN"
             )
 
