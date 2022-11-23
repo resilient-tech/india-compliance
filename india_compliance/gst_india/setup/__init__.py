@@ -200,13 +200,18 @@ def _get_custom_fields_to_create(*custom_fields_list):
     return result
 
 
+def setup_wizard_complete(user_input):
+    # UOMs are created in setup wizard
+    map_default_uoms()
+
+
 def map_default_uoms(settings=None):
     def _is_uom_mapped():
         return next(
             (True for mapping in settings.gst_uom_mapping if mapping.uom == uom), False
         )
 
-    if not settings or settings.name != "GST Settings":
+    if not settings:
         settings = frappe.get_doc("GST Settings")
 
     for uom, gst_uom in GST_UOMS.items():

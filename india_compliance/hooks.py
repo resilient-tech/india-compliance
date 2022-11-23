@@ -13,9 +13,7 @@ required_apps = ["erpnext"]
 after_install = "india_compliance.install.after_install"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
-
-# UOMs are created in setup wizard
-setup_wizard_complete = "india_compliance.gst_india.setup.map_default_uoms"
+setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
 
 app_include_js = "gst_india.bundle.js"
 
