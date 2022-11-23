@@ -709,16 +709,13 @@ class EWaybillData(GSTTransactionData):
             for row in self.doc.items
             if not row.gst_hsn_code.startswith("99")
         )
-        _supply_type = "O"
-        _return_supply_type = "I"
 
-        if self.doc.doctype == "Purchase Invoice":
-            _supply_type = _return_supply_type
-            _return_supply_type = _supply_type
+        supply_type = "I" if self.is_purchase_invoice() else "O"
+        return_supply_type = "O" if self.is_purchase_return() else "I"
 
         self.transaction_details.update(
             {
-                "supply_type": _supply_type,
+                "supply_type": supply_type,
                 "sub_supply_type": 1,
                 "document_type": "INV",
                 "main_hsn_code": main_hsn_code,
@@ -728,7 +725,7 @@ class EWaybillData(GSTTransactionData):
         if self.doc.is_return:
             self.transaction_details.update(
                 {
-                    "supply_type": _return_supply_type,
+                    "supply_type": return_supply_type,
                     "sub_supply_type": 7,
                     "document_type": "CHL",
                 }
@@ -769,7 +766,7 @@ class EWaybillData(GSTTransactionData):
         self.to_address = self.get_address_details(address.party_billing_address)
         self.from_address = self.get_address_details(address.company_billing_address)
 
-        if self.doc.doctype == "Purchase Invoice":
+        if self.is_purchase_invoice():
             has_different_shipping_address = has_different_dispatch_address
             has_different_dispatch_address = False
             party_shipping_address = company_shipping_address
@@ -845,15 +842,16 @@ class EWaybillData(GSTTransactionData):
                 else "05AAACG2115R1ZN"
             )
 
-        if self.doc.is_return:
+        if self.doc.is_return and not self.is_purchase_return():
             self.from_address, self.to_address = self.to_address, self.from_address
             self.dispatch_address, self.shipping_address = (
                 self.shipping_address,
                 self.dispatch_address,
             )
 
-        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
+        if self.is_purchase_invoice():
             self.transaction_details.name = self.doc.bill_no
+            self.from_address.gstin = "URP"
 
         data = {
             "userGstin": self.transaction_details.company_gstin,
@@ -931,3 +929,12 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
+
+    def is_purchase_invoice(self):
+        return (
+            self.doc.doctype == "Purchase Invoice"
+            and self.doc.gst_category == "Unregistered"
+        )
+
+    def is_purchase_return(self):
+        return self.doc.doctype == "Purchase Invoice" and self.doc.is_return
