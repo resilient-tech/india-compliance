@@ -478,6 +478,8 @@ class EWaybillData(GSTTransactionData):
     def get_data(self, *, with_irn=False):
         self.validate_transaction()
         self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance()
 
         if with_irn:
             return self.sanitize_data(
@@ -496,8 +498,6 @@ class EWaybillData(GSTTransactionData):
 
         self.set_transaction_details()
         self.set_item_list()
-        self.set_party_address_details()
-        self.validate_distance()
 
         return self.get_transaction_data()
 
