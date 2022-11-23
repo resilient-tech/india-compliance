@@ -632,9 +632,8 @@ class EWaybillData(GSTTransactionData):
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
-                _(
-                    "Only {0} are supported for e-Waybill"
-                    " actions".format(", ".join(PERMITTED_DOCTYPES))
+                _("Only {0} are supported for e-Waybill actions").format(
+                    ", ".join(PERMITTED_DOCTYPES)
                 ),
                 title=_("Unsupported DocType"),
             )
