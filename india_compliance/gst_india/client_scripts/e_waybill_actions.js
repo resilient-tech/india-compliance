@@ -64,9 +64,10 @@ function setup_e_waybill_actions(doctype) {
 
             frm.set_df_property("ewaybill", "allow_on_submit", 0);
 
+            // ToDO: Update vehicle info and Transporter info may be applicable later for PI
             if (
                 frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
-                is_e_waybill_valid(frm)
+                is_e_waybill_valid(frm) && !is_purchase_transaction(frm)
             ) {
                 frm.add_custom_button(
                     __("Update Vehicle Info"),
@@ -617,18 +618,10 @@ function is_e_waybill_applicable(frm) {
     // means company is Indian and not Unregistered
     if (!frm.doc.company_gstin) return;
 
-    // validations  for delivery note
     if (frm.doctype === "Delivery Note" && !frm.doc.customer_address) return;
 
-    // validations for purchase invoice
-    if (frm.doctype === "Purchase Invoice") {
-        if (!frm.doc.supplier_address) return;
+    if (is_purchase_transaction(frm) && !frm.doc.supplier_address) return;
 
-        // ToDo: Check for other gst categories except unregistered
-        if (!frm.doc.is_return && frm.doc.gst_category != "Unregistered") return;
-    }
-
-    // validations for sales invoice
     if (frm.doctype === "Sales Invoice" && (frm.doc.is_return || frm.doc.is_debit_note)) return;
 
     // at least one item is not a service
@@ -647,6 +640,12 @@ function is_e_waybill_cancellable(frm) {
             .add("days", 1)
             .diff() > 0
     );
+}
+
+function is_purchase_transaction(frm) {
+    if (frm.doctype !== "Purchase Invoice") return false;
+
+    return frm.doc.is_return || frm.doc.gst_category === "Unregistered";
 }
 
 function is_e_waybill_generated_using_api(frm) {
