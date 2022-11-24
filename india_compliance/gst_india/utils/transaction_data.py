@@ -87,9 +87,16 @@ class GSTTransactionData:
         for total in ["base_total", "rounding_adjustment", *tax_totals]:
             current_total += self.transaction_details.get(total)
 
-        self.transaction_details.other_charges = self.rounded(
+        other_charges = self.rounded(
             (self.transaction_details.base_grand_total - current_total)
         )
+
+        if 0 < other_charges < -0.1:
+            # other charges cannot be negative
+            # handle cases where user has higher precision than 2
+            self.transaction_details.rounding_adjustment += other_charges
+        else:
+            self.transaction_details.other_charges = other_charges
 
     def validate_mode_of_transport(self, throw=True):
         def _throw(error):
@@ -308,7 +315,9 @@ class GSTTransactionData:
                 "gstin": address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
                 "address_title": self.sanitize_value(address.address_title, 2),
-                "address_line1": self.sanitize_value(address.address_line1, 3),
+                "address_line1": self.sanitize_value(
+                    address.address_line1, 3, min_length=1
+                ),
                 "address_line2": self.sanitize_value(address.address_line2, 3),
                 "city": self.sanitize_value(address.city, 3, max_length=50),
                 "pincode": int(address.pincode),

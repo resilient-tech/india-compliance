@@ -13,7 +13,7 @@ party_fields = [
         "fieldname": "tax_details_section",
         "label": "Tax Details",
         "fieldtype": "Section Break",
-        "insert_after": "companies",
+        "insert_after": "tax_withholding_category",
     },
     {
         "fieldname": "gstin",
