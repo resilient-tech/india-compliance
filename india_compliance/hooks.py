@@ -79,6 +79,10 @@ doc_events = {
         )
     },
     "Purchase Invoice": {
+        "on_trash": (
+            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
+        ),
+        "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
     },
     "Purchase Order": {
@@ -93,7 +97,7 @@ doc_events = {
     },
     "Sales Invoice": {
         "on_trash": (
-            "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
+            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
@@ -162,6 +166,9 @@ jinja = {
 }
 
 override_doctype_dashboards = {
+    "Purchase Invoice": (
+        "india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"
+    ),
     "Sales Invoice": (
         "india_compliance.gst_india.overrides.sales_invoice.get_dashboard_data"
     ),
