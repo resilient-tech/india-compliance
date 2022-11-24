@@ -755,14 +755,14 @@ E_WAYBILL_SI_FIELDS = [
     *E_WAYBILL_DN_FIELDS,
 ]
 
+E_WAYBILL_NO_FIELD = {
+    "Sales Invoice": e_waybill_no_field.copy().update(insert_after="customer_name"),
+    "Delivery Note": e_waybill_no_field.copy().update(insert_after="customer_name"),
+    "Purchase Invoice": e_waybill_no_field.copy().update(insert_after="supplier_name"),
+}
+
 E_WAYBILL_FIELDS = {
     "Sales Invoice": E_WAYBILL_SI_FIELDS,
     "Delivery Note": E_WAYBILL_DN_FIELDS,
     "Purchase Invoice": E_WAYBILL_SI_FIELDS,
-}
-
-E_WAYBILL_NO_FIELDS = {
-    "Sales Invoice": e_waybill_no_field.copy().update(insert_after="customer_name"),
-    "Delivery Note": e_waybill_no_field.copy().update(insert_after="customer_name"),
-    "Purchase Invoice": e_waybill_no_field.copy().update(insert_after="supplier_name"),
 }

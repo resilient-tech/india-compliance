@@ -10,6 +10,7 @@ from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+    E_WAYBILL_NO_FIELD,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.page.india_compliance_account import (
@@ -91,6 +92,7 @@ class GSTSettings(Document):
     def update_custom_fields(self):
         if self.has_value_changed("enable_e_waybill"):
             toggle_custom_fields(E_WAYBILL_FIELDS, self.enable_e_waybill)
+            toggle_custom_fields(E_WAYBILL_NO_FIELD, self.enable_e_waybill)
 
         if self.has_value_changed("enable_e_invoice"):
             toggle_custom_fields(E_INVOICE_FIELDS, self.enable_e_invoice)
