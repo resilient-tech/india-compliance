@@ -120,7 +120,7 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.is_debit_note ||
                 !ic.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
-                is_e_invoice_applicable(frm) ||
+                gst_settings.enable_e_invoice ||
                 !is_e_waybill_applicable(frm)
             )
                 return;
@@ -361,7 +361,7 @@ function show_generate_e_waybill_dialog(frm) {
     // Alert if e-Invoice hasn't been generated
     if (
         frm.doctype === "Sales Invoice" &&
-        is_e_invoice_applicable(frm) &&
+        gst_settings.enable_e_invoice &&
         !frm.doc.irn
     ) {
         $(`

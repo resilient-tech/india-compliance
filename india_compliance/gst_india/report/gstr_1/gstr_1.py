@@ -199,7 +199,7 @@ class Gstr1Report(object):
                     row["rate"] = rate
                     row["taxable_value"] += sum(
                         [
-                            net_amount
+                            abs(net_amount)
                             for item_code, net_amount in self.invoice_items.get(
                                 inv
                             ).items()
@@ -342,7 +342,7 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "B2C Small":
             conditions += """ AND (
 				SUBSTR(place_of_supply, 1, 2) = SUBSTR(company_gstin, 1, 2)
-					OR grand_total <= {0} OR is_return != 1) AND gst_category ='Unregistered' """.format(
+					OR grand_total <= {0}) and is_return != 1 AND gst_category ='Unregistered' """.format(
                 B2C_LIMIT
             )
 
