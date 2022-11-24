@@ -469,6 +469,7 @@ def update_transaction(doc, values):
         if doc.is_return:
             doc._sub_supply_type = 8
             doc._document_type = "OTH"
+            doc.sub_supply_desc = "Purchase Return"
 
 
 #######################################################################################
@@ -742,6 +743,7 @@ class EWaybillData(GSTTransactionData):
                 {
                     "sub_supply_type": self.doc._sub_supply_type,
                     "document_type": self.doc._document_type,
+                    "sub_supply_desc": self.doc.sub_supply_desc,
                 }
             )
 
@@ -857,7 +859,7 @@ class EWaybillData(GSTTransactionData):
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
             "subSupplyType": self.transaction_details.sub_supply_type,
-            "subSupplyDesc": "",
+            "subSupplyDesc": self.transaction_details.sub_supply_desc or "",
             "docType": self.transaction_details.document_type,
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
