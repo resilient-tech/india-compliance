@@ -91,7 +91,7 @@ class GSTTransactionData:
             (self.transaction_details.base_grand_total - current_total)
         )
 
-        if 0 < other_charges < -0.1:
+        if -0.1 < other_charges < 0:
             # other charges cannot be negative
             # handle cases where user has higher precision than 2
             self.transaction_details.rounding_adjustment += other_charges
