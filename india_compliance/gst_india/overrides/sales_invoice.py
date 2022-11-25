@@ -1,6 +1,5 @@
 import frappe
 from frappe import _, bold
-from frappe.model import delete_doc
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.transaction import validate_transaction
@@ -146,15 +145,6 @@ def on_submit(doc, method=None):
         doctype=doc.doctype,
         docname=doc.name,
     )
-
-
-def ignore_logs_on_trash(doc, method=None):
-    # TODO: design better way to achieve this
-    if "e-Waybill Log" not in delete_doc.doctypes_to_skip:
-        delete_doc.doctypes_to_skip += (
-            "e-Waybill Log",
-            "e-Invoice Log",
-        )
 
 
 def get_dashboard_data(data):
