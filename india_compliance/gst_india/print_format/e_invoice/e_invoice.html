@@ -17,7 +17,7 @@
 	"CgstVal": "CGST",
 	"SgstVal": "SGST",
 	"IgstVal": "IGST",
-	"CessVal": "CESS",
+	"CesVal": "CESS",
 	"Discount": "Discount",
 	"OthChrg": "Other Charges",
 	"RndOffAmt": "Round Off",
@@ -40,7 +40,7 @@
 {% else %}
 
 {% set e_invoice_log = frappe.db.get_value(
-	"e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
+	"e-Invoice Log", doc.irn, ("sales_invoice", "invoice_data", "signed_qr_code"), as_dict=True
 ) %}
 
 {% if not e_invoice_log %}
@@ -51,6 +51,7 @@
 
 {% else %}
 
+{%- set invoice_no = e_invoice_log.sales_invoice -%}
 {%- set invoice_data = _dict(json.loads(e_invoice_log.invoice_data)) -%}
 
 {% macro get_address_html(address) %}
@@ -205,7 +206,7 @@
 </div>
 
 {%- set amounts = invoice_data.ValDtls -%}
-{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP) %}
+{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP, invoice_no) %}
 <h5 class="section-heading">4. Value Details</h5>
 <div class="row section-break">
 <div class="col-xs-12 column-break">
