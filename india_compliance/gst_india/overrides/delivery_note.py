@@ -7,12 +7,12 @@ from india_compliance.gst_india.utils import is_api_enabled
 
 
 def onload(doc, method=None):
+    if not doc.get("ewaybill"):
+        return
+
     gst_settings = frappe.get_cached_doc("GST Settings")
 
     if not (is_api_enabled(gst_settings) or gst_settings.enable_e_waybill_from_dn):
-        return
-
-    if not doc.get("ewaybill"):
         return
 
     doc.set_onload(
