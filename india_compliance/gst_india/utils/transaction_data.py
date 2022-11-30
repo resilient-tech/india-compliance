@@ -87,16 +87,16 @@ class GSTTransactionData:
         for total in ["base_total", "rounding_adjustment", *tax_totals]:
             current_total += self.transaction_details.get(total)
 
-        other_charges = self.rounded(
-            (self.transaction_details.base_grand_total - current_total)
-        )
+        other_charges = self.transaction_details.base_grand_total - current_total
 
-        if -0.1 < other_charges < 0:
+        if 0 > other_charges > -0.1:
             # other charges cannot be negative
             # handle cases where user has higher precision than 2
-            self.transaction_details.rounding_adjustment += other_charges
+            self.transaction_details.rounding_adjustment = self.rounded(
+                self.transaction_details.rounding_adjustment + other_charges
+            )
         else:
-            self.transaction_details.other_charges = other_charges
+            self.transaction_details.other_charges = self.rounded(other_charges)
 
     def validate_mode_of_transport(self, throw=True):
         def _throw(error):
