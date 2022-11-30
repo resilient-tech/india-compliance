@@ -27,7 +27,7 @@ Object.assign(ic, {
     },
 
     get_party_type(doctype) {
-        return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
+        return doctype == 'Quotation'?'party_name':in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
     set_state_options(frm) {
