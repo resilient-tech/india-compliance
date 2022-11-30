@@ -95,6 +95,9 @@ class GSTTransactionData:
             # other charges cannot be negative
             # handle cases where user has higher precision than 2
             self.transaction_details.rounding_adjustment += other_charges
+            self.transaction_details.rounding_adjustment = self.rounded(
+                self.transaction_details.rounding_adjustment
+            )
         else:
             self.transaction_details.other_charges = other_charges
 
