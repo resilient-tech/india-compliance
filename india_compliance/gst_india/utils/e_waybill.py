@@ -478,6 +478,8 @@ class EWaybillData(GSTTransactionData):
     def get_data(self, *, with_irn=False):
         self.validate_transaction()
         self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance()
 
         if with_irn:
             return self.sanitize_data(
@@ -496,7 +498,6 @@ class EWaybillData(GSTTransactionData):
 
         self.set_transaction_details()
         self.set_item_list()
-        self.set_party_address_details()
 
         return self.get_transaction_data()
 
@@ -768,6 +769,18 @@ class EWaybillData(GSTTransactionData):
         address_details.state_number = int(address_details.state_number)
 
         return address_details
+
+    def validate_distance(self):
+        """
+        e-Waybill portal doesn't return distance where from and to pincode is same.
+        Hardcode distance to 1 km to simplify and automate this.
+        Accuracy of distance is immaterial and used only for e-Waybill validity determination.
+        """
+        if (
+            self.transaction_details.distance == 0
+            and self.dispatch_address.pincode == self.shipping_address.pincode
+        ):
+            self.transaction_details.distance = 1
 
     def get_transaction_data(self):
         if self.sandbox_mode:
