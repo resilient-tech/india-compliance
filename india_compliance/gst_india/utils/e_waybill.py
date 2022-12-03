@@ -770,6 +770,18 @@ class EWaybillData(GSTTransactionData):
 
         return address_details
 
+    def validate_distance(self):
+        """
+        e-Waybill portal doesn't return distance where from and to pincode is same.
+        Hardcode distance to 1 km to simplify and automate this.
+        Accuracy of distance is immaterial and used only for e-Waybill validity determination.
+        """
+        if (
+            self.transaction_details.distance == 0
+            and self.dispatch_address.pincode == self.shipping_address.pincode
+        ):
+            self.transaction_details.distance = 1
+
     def get_transaction_data(self):
         if self.sandbox_mode:
             self.transaction_details.update(
@@ -869,15 +881,3 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
-
-    def validate_distance(self):
-        if (
-            self.transaction_details.distance == 0
-            and self.dispatch_address.pincode == self.shipping_address.pincode
-        ):
-            frappe.throw(
-                _(
-                    "Distance cannot be zero if Dispatch and Shipping address Pincodes are same"
-                ),
-                title=_("Invalid Distance"),
-            )
