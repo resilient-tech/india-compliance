@@ -185,7 +185,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
-        if doc.is_reverse_charge and (
+        if doc.get("is_reverse_charge") and (
             idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
         ):
             _throw(
