@@ -17,7 +17,7 @@
 	"CgstVal": "CGST",
 	"SgstVal": "SGST",
 	"IgstVal": "IGST",
-	"CessVal": "CESS",
+	"CesVal": "CESS",
 	"Discount": "Discount",
 	"OthChrg": "Other Charges",
 	"RndOffAmt": "Round Off",
@@ -205,7 +205,7 @@
 </div>
 
 {%- set amounts = invoice_data.ValDtls -%}
-{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP) %}
+{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP, doc) %}
 <h5 class="section-heading">4. Value Details</h5>
 <div class="row section-break">
 <div class="col-xs-12 column-break">
