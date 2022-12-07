@@ -66,12 +66,15 @@ def execute(filters=None):
         ("enable_overseas_transactions", "enable_reverse_charge_in_sales"),
     )
 
+    additional_table_columns = ADDITIONAL_TABLE_COLUMNS.copy()
+    additional_query_columns = ADDITIONAL_QUERY_COLUMNS.copy()
+
     if reverse_charge_enabled:
-        ADDITIONAL_TABLE_COLUMNS.insert(3, REVERSE_CHARGE_COLUMNS)
-        ADDITIONAL_QUERY_COLUMNS.insert(3, "is_reverse_charge")
+        additional_table_columns.insert(3, REVERSE_CHARGE_COLUMNS)
+        additional_query_columns.insert(3, "is_reverse_charge")
 
     if overseas_enabled:
-        ADDITIONAL_TABLE_COLUMNS.insert(-2, EXPORT_TYPE_COLUMNS)
-        ADDITIONAL_QUERY_COLUMNS.insert(-2, "is_export_with_gst")
+        additional_table_columns.insert(-2, EXPORT_TYPE_COLUMNS)
+        additional_query_columns.insert(-2, "is_export_with_gst")
 
-    return _execute(filters, ADDITIONAL_TABLE_COLUMNS, ADDITIONAL_QUERY_COLUMNS)
+    return _execute(filters, additional_table_columns, additional_query_columns)
