@@ -12,7 +12,11 @@ def onload(doc, method=None):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not (is_api_enabled(gst_settings) or gst_settings.enable_e_waybill_from_dn):
+    if not (
+        is_api_enabled(gst_settings)
+        and gst_settings.enable_e_waybill
+        and gst_settings.enable_e_waybill_from_dn
+    ):
         return
 
     doc.set_onload(
