@@ -14,7 +14,6 @@ frappe.listview_settings["Sales Invoice"].onload = function (list_view) {
         bulk_generate(list_view, "e-Invoice", generate_e_invoice);
 };
 
-// utility functions
 function bulk_generate(list_view, label, callback) {
     list_view.page.add_actions_menu_item(
         __("Generate {0}", [__(label)]),
