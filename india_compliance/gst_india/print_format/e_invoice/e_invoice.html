@@ -51,7 +51,7 @@
 
 {% else %}
 
-{%- set invoice_data = _dict(json.loads(e_invoice_log.invoice_data)) -%}
+{%- set invoice_data = frappe.as_dict(json.loads(e_invoice_log.invoice_data)) -%}
 
 {% macro get_address_html(address) %}
 {% for field in ("Gstin", "LglNm", "Nm", "Addr1", "Addr2", "Loc") %}
