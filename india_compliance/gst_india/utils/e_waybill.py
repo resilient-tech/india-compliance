@@ -70,7 +70,7 @@ def _generate_e_waybill(doc, throw=True):
         # Via e-Invoice API if not Return or Debit Note
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
-        with_irn = doc.irn and not (doc.is_return or doc.is_debit_note)
+        with_irn = doc.get("irn") and not (doc.is_return or doc.is_debit_note)
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
@@ -157,7 +157,7 @@ def _cancel_e_waybill(doc, values):
         # if e-Waybill has been created using IRN
         if (
             frappe.conf.ic_api_sandbox_mode
-            and doc.irn
+            and doc.get("irn")
             and not (doc.is_return or doc.is_debit_note)
         )
         else EWaybillAPI
