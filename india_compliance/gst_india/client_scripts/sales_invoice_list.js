@@ -1,10 +1,11 @@
-const erpnext_onload = frappe.listview_settings["Sales Invoice"].onload;
-frappe.listview_settings["Sales Invoice"].onload = function (list_view) {
+const DOCTYPE = "Sales Invoice";
+const erpnext_onload = frappe.listview_settings[DOCTYPE].onload;
+frappe.listview_settings[DOCTYPE].onload = function (list_view) {
     if (erpnext_onload) {
         erpnext_onload(list_view);
     }
 
-    if (!frappe.perm.has_perm("Sales Invoice", 0, "submit") || !ic.is_api_enabled())
+    if (!frappe.perm.has_perm(DOCTYPE, 0, "submit") || !ic.is_api_enabled())
         return;
     
     if (gst_settings.enable_e_waybill)
@@ -30,7 +31,7 @@ function bulk_generate(list_view, label, callback) {
 async function generate_e_waybill_json(docnames) {
     const ewb_data = await frappe.xcall(
         "india_compliance.gst_india.utils.e_waybill.generate_e_waybill_json",
-        { doctype: list_view.doctype, docnames }
+        { doctype: DOCTYPE, docnames }
     );
 
     trigger_file_download(ewb_data, get_e_waybill_file_name());
