@@ -4,9 +4,14 @@ frappe.listview_settings["Sales Invoice"].onload = function (list_view) {
         erpnext_onload(list_view);
     }
 
-    if (!frappe.perm.has_perm("Sales Invoice", 0, "submit")) return;
-    bulk_generate(list_view, "e-Waybill JSON", generate_e_waybill_json);
-    bulk_generate(list_view, "e-Invoice", generate_e_invoice);
+    if (!frappe.perm.has_perm("Sales Invoice", 0, "submit") || !ic.is_api_enabled())
+        return;
+    
+    if (gst_settings.enable_e_waybill)
+        bulk_generate(list_view, "e-Waybill JSON", generate_e_waybill_json);
+    
+    if (gst_settings.enable_e_invoice)
+        bulk_generate(list_view, "e-Invoice", generate_e_invoice);
 };
 
 // utility functions
