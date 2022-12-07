@@ -6,8 +6,6 @@ import pyqrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
 
-import frappe
-
 from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
     SUPPLY_TYPES,
@@ -85,27 +83,31 @@ def get_ewaybill_barcode(ewaybill):
 
 
 def get_non_zero_fields(data, fields, doc=None):
-    """Returns a list of fields with non-zero values in order of fields specified"""
+    """
+    Returns a list of fields with non-zero values in order of fields specified
+    Always return mandatory fields even if they have zero value
+    """
 
     if isinstance(data, dict):
         data = [data]
 
     non_zero_fields = []
+    mandatory_fields = ["GstRt"]
 
-    # used doc to check wether it is inter state or not
     if doc:
-        doc = frappe.get_doc("Sales Invoice", doc)
-        fields_to_skip = (
-            ["CgstVal", "SgstVal"] if is_inter_state_supply(doc) else ["IgstVal"]
-        )
+        if is_inter_state_supply(doc):
+            mandatory_fields.extend(["IgstVal"])
+
+        else:
+            mandatory_fields.extend(["CgstVal", "SgstVal"])
 
     for row in data:
         for field in fields:
-            if field in non_zero_fields:
-                continue
-            if doc and field in fields_to_skip:
-                continue
-            if field.endswith("Rt") or field.endswith("Val") or row.get(field, 0) != 0:
+            is_mandatory = field in mandatory_fields and field in row
+
+            if (
+                row.get(field, 0) != 0 or is_mandatory
+            ) and field not in non_zero_fields:
                 non_zero_fields.append(field)
 
     return non_zero_fields
