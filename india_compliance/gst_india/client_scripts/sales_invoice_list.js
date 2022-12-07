@@ -4,6 +4,7 @@ frappe.listview_settings["Sales Invoice"].onload = function (list_view) {
         erpnext_onload(list_view);
     }
 
+    if (!frappe.perm.has_perm("Sales Invoice", 0, "submit")) return;
     bulk_generate(list_view, "e-Waybill JSON", generate_e_waybill_json);
     bulk_generate(list_view, "e-Invoice", generate_e_invoice);
 };
@@ -36,10 +37,15 @@ function generate_e_invoice(docnames) {
         "india_compliance.gst_india.overrides.sales_invoice.generate_e_invoice",
         { docnames }
     );
-
+    
+    const today = frappe.datetime.get_today();
     const route = frappe.utils.generate_route({
         type: "doctype",
         name: "Integration Request",
+        route_options: {
+            integration_request_service: "India Compliance API",
+            creation: `["Between",["${today}", "${today}"]]`,
+        },
     });
     frappe.msgprint(
         __(

@@ -190,7 +190,10 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
 
 @frappe.whitelist()
 def generate_e_invoice(docnames):
-    """Bulk generate e-Invoices for the given Sales Invoices."""
+    """
+    Bulk generate e-Invoices for the given Sales Invoices.
+    Permission checks are done in the `generate_e_invoice` function.
+    """
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings):
         return
