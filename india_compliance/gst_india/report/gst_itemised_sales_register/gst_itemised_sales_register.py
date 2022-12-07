@@ -5,7 +5,9 @@ from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register i
     _execute,
 )
 
-from india_compliance.gst_india.constants import (
+from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
+    ADDITIONAL_QUERY_COLUMNS,
+    ADDITIONAL_TABLE_COLUMNS,
     EXPORT_TYPE_COLUMNS,
     REVERSE_CHARGE_COLUMNS,
 )
@@ -19,45 +21,12 @@ def execute(filters=None):
     )
 
     additional_table_columns = [
-        dict(
-            fieldtype="Data",
-            label="Billing Address GSTIN",
-            fieldname="billing_address_gstin",
-            width=140,
-        ),
-        dict(
-            fieldtype="Data",
-            label="Company GSTIN",
-            fieldname="company_gstin",
-            width=120,
-        ),
-        dict(
-            fieldtype="Data",
-            label="Place of Supply",
-            fieldname="place_of_supply",
-            width=120,
-        ),
-        dict(
-            fieldtype="Data",
-            label="GST Category",
-            fieldname="gst_category",
-            width=120,
-        ),
-        dict(
-            fieldtype="Data",
-            label="E-Commerce GSTIN",
-            fieldname="ecommerce_gstin",
-            width=130,
-        ),
+        *ADDITIONAL_TABLE_COLUMNS,
         dict(fieldtype="Data", label="HSN Code", fieldname="gst_hsn_code", width=120),
     ]
 
     additional_query_columns = [
-        "billing_address_gstin",
-        "company_gstin",
-        "place_of_supply",
-        "gst_category",
-        "ecommerce_gstin",
+        *ADDITIONAL_QUERY_COLUMNS,
         "gst_hsn_code",
     ]
 

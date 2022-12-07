@@ -117,17 +117,3 @@ INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
 
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
-
-EXPORT_TYPE_COLUMNS = dict(
-    fieldtype="Check",
-    label="Is Export With GST",
-    fieldname="is_export_with_gst",
-    width=120,
-)
-
-REVERSE_CHARGE_COLUMNS = dict(
-    fieldtype="Check",
-    label="Is Reverse Charge",
-    fieldname="is_reverse_charge",
-    width=120,
-)
