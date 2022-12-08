@@ -98,7 +98,7 @@ class TestTransactionData(FrappeTestCase):
                 "state_number": "24",
                 "address_title": "Test Registered Customer",
                 "address_line1": "Test Address - 3",
-                "address_line2": None,
+                "address_line2": "India",
                 "city": "Test City",
                 "pincode": 380015,
             },
