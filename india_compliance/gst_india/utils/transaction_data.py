@@ -317,9 +317,12 @@ class GSTTransactionData:
                 "address_title": self.sanitize_value(address.address_title, 2),
                 "address_line1": self.sanitize_value(
                     address.address_line1, 3, min_length=1
-                ),
-                "address_line2": self.sanitize_value(address.address_line2, 3),
-                "city": self.sanitize_value(address.city, 3, max_length=50),
+                )
+                or address.country,
+                "address_line2": self.sanitize_value(address.address_line2, 3)
+                or address.country,
+                "city": self.sanitize_value(address.city, 3, max_length=50)
+                or address.country,
                 "pincode": int(address.pincode),
             }
         )
