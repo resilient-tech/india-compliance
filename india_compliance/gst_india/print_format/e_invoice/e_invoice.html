@@ -96,6 +96,7 @@
 				"Category": invoice_data.TranDtls.SupTyp,
 				"Document Type": invoice_data.DocDtls.Typ,
 				"Document No": invoice_data.DocDtls.No,
+				"e-Waybill": doc.ewaybill or "N/A",
 			}
 		%}
 		{% for key, value in transaction_details.items() %}
