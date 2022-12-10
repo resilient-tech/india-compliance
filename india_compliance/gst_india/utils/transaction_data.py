@@ -310,22 +310,35 @@ class GSTTransactionData:
 
         self.check_missing_address_fields(address, validate_gstin)
 
+        error_context = {
+            "doctype": "Address",
+            "docname": address.name,
+        }
+
         return frappe._dict(
             {
                 "gstin": address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
                 "address_title": self.sanitize_value(
-                    {"address_title": address.address_title}, 2, throw=True
+                    address.address_title,
+                    regex=2,
+                    throw=True,
+                    error_context={**error_context, "fieldname": "Address Title"},
                 ),
                 "address_line1": self.sanitize_value(
-                    {"address_line1": address.address_line1},
-                    3,
+                    address.address_line1,
+                    regex=3,
                     min_length=1,
                     throw=True,
+                    error_context={**error_context, "fieldname": "Address Line 1"},
                 ),
-                "address_line2": self.sanitize_value(address.address_line2, 3),
+                "address_line2": self.sanitize_value(address.address_line2, regex=3),
                 "city": self.sanitize_value(
-                    {"city": address.city}, 3, max_length=50, throw=True
+                    address.city,
+                    regex=3,
+                    max_length=50,
+                    throw=True,
+                    error_context={**error_context, "fieldname": "City"},
                 ),
                 "pincode": int(address.pincode),
             }
@@ -398,55 +411,62 @@ class GSTTransactionData:
 
     @staticmethod
     def sanitize_value(
-        value,
+        value: str,
         regex=None,
         min_length=3,
         max_length=100,
         truncate=True,
         throw=False,
+        error_context=None,
     ):
         """
-        Sanitize a value for use in a GST document.
-        @param value: The value to be sanitized. Can be one of the following:
-            - A string
-            - A dict with a key matching the fieldname and a value
-            e.g. {"address_title": "Test Address"}, {"address_title": <dict> like object}
+        Sanitize value to make it suitable for GST JSON sent for e-Waybill and e-Invoice.
+
+        Parameters:
+        ----------
+        @param value: Value to be sanitized
+        @param regex: Regex Key (from REGEX_MAP) to substitute unacceptable characters
+        @param min_length (default: 3): Minimum length of the value that is acceptable
+        @param max_length (default: 100): Maximum length of the value that is acceptable
+        @param truncate (default: True): Truncate the value if it exceeds max_length
+        @param throw (default: False): Throw an exception if the value is not acceptable. Used for mandatory fields.
+        @param error_context: Context to be used in the error message to help the user identify the field
+            example: error_context = {"fieldname": "Address Line 1", "doctype": "Address" , "docname": "Office Address"}
+
+        Returns:
+        ----------
+        @return: Sanitized value
+
         """
-
-        def _throw(error):
-            if throw:
-                frappe.throw(error, title=_("Missing Data"))
-
-        key = value
-        if isinstance(value, dict):
-            key = list(value.keys())[0]
-            value = value[key]
-
-            if isinstance(value, dict):
-                value = value.get(key)
+        throw = throw and error_context
 
         if not value or len(value) < min_length:
-            return _throw(
-                _("{0} must be at least {1} characters long").format(key, min_length),
+            if not throw:
+                return
+
+            frappe.throw(
+                _(
+                    "{fieldname} must be at least {min_length} characters long for {doctype} - {docname}"
+                ).format(**error_context, min_length=min_length),
+                title=_("Invalid Data"),
             )
 
-        if isinstance(value, str) and not value.isascii():
-            return _throw(
+        if not value.isascii():
+            if not throw:
+                return
+
+            frappe.throw(
                 _(
-                    "Unicode characters are not allowed. Please edit details in English only."
-                )
+                    "{fieldname} must be ASCII characters only for {doctype} - {docname}. (Non-ASCII characters are not allowed in GST JSON)"
+                ).format(**error_context),
+                title=_("Invalid Data"),
             )
 
         if regex:
             value = re.sub(REGEX_MAP[regex], "", value)
 
-        if not value:
-            return _throw(_("{0} is mandatory.").format(key))
-
         if not truncate and len(value) > max_length:
-            return _throw(
-                _("Value must be at most {0} characters long.").format(max_length),
-            )
+            return
 
         return value[:max_length]
 
