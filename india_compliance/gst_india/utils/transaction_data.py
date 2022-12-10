@@ -314,12 +314,19 @@ class GSTTransactionData:
             {
                 "gstin": address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
-                "address_title": self.sanitize_value(address.address_title, 2),
+                "address_title": self.sanitize_value(
+                    {"address_title": address.address_title}, 2, throw=True
+                ),
                 "address_line1": self.sanitize_value(
-                    address.address_line1, 3, min_length=1
+                    {"address_line1": address.address_line1},
+                    3,
+                    min_length=1,
+                    throw=True,
                 ),
                 "address_line2": self.sanitize_value(address.address_line2, 3),
-                "city": self.sanitize_value(address.city, 3, max_length=50),
+                "city": self.sanitize_value(
+                    {"city": address.city}, 3, max_length=50, throw=True
+                ),
                 "pincode": int(address.pincode),
             }
         )
@@ -396,15 +403,50 @@ class GSTTransactionData:
         min_length=3,
         max_length=100,
         truncate=True,
+        throw=False,
     ):
+        """
+        Sanitize a value for use in a GST document.
+        @param value: The value to be sanitized. Can be one of the following:
+            - A string
+            - A dict with a key matching the fieldname and a value
+            e.g. {"address_title": "Test Address"}, {"address_title": <dict> like object}
+        """
+
+        def _throw(error):
+            if throw:
+                frappe.throw(error, title=_("Missing Data"))
+
+        key = value
+        if isinstance(value, dict):
+            key = list(value.keys())[0]
+            value = value[key]
+
+            if isinstance(value, dict):
+                value = value.get(key)
+
         if not value or len(value) < min_length:
-            return
+            return _throw(
+                _("{0} must be at least {1} characters long").format(key, min_length),
+            )
+
+        if isinstance(value, str) and not value.isascii():
+            return _throw(
+                _(
+                    "Unicode characters are not allowed. Please edit details in English only."
+                )
+            )
 
         if regex:
             value = re.sub(REGEX_MAP[regex], "", value)
 
+        if not value:
+            return _throw(_("{0} is mandatory.").format(key))
+
         if not truncate and len(value) > max_length:
-            return
+            return _throw(
+                _("Value must be at most {0} characters long.").format(max_length),
+            )
 
         return value[:max_length]
 
