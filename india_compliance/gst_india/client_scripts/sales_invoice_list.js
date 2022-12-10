@@ -7,10 +7,10 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
 
     if (!frappe.perm.has_perm(DOCTYPE, 0, "submit") || !ic.is_api_enabled())
         return;
-    
+
     if (gst_settings.enable_e_waybill)
         bulk_generate(list_view, "e-Waybill JSON", generate_e_waybill_json);
-    
+
     if (gst_settings.enable_e_invoice)
         bulk_generate(list_view, "e-Invoice", generate_e_invoice);
 };
@@ -42,7 +42,7 @@ function generate_e_invoice(docnames) {
         "india_compliance.gst_india.overrides.sales_invoice.generate_e_invoice",
         { docnames }
     );
-    
+
     const today = frappe.datetime.get_today();
     const route = frappe.utils.generate_route({
         type: "doctype",
