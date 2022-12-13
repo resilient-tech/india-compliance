@@ -26,7 +26,7 @@ from india_compliance.gst_india.constants import (
 def get_state(state_number):
     """Get state from State Number"""
 
-    state_number = str(state_number)
+    state_number = str(state_number).zfill(2)
 
     for state, code in STATE_NUMBERS.items():
         if code == state_number:
