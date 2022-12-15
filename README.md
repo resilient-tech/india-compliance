@@ -32,17 +32,26 @@ For a detailed overview of these features, please [refer to the documentation](h
 Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/installation/), installing India Compliance is simple:
 
 
-1. Download the app using the Bench CLI. The `--branch` option defaults to `next`. Use appropriate version as per your setup.
+1. Download the app using the Bench CLI.
 
-  ```bash
-  bench get-app --branch version-14 https://github.com/resilient-tech/india-compliance.git
-  ```
+    ```bash
+    bench get-app --branch [branch name] https://github.com/resilient-tech/india-compliance.git
+    ```
 
-2. Install the app on your site
+    Replace `[branch name]` with the appropriate branch as per your setup:
 
-  ```bash
-  bench --site [site name] install-app india_compliance
-  ```
+    | Frappe Branch | India Compliance Branch |
+    |---------------|-------------------------|
+    | version-14    | version-14              |
+    | develop       | next                    |
+
+    If it isn't specified, the `--branch` option will default to `next`.
+
+2. Install the app on your site.
+
+    ```bash
+    bench --site [site name] install-app india_compliance
+    ```
 
 ## In-app Purchases
 
