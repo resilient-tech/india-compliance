@@ -5,17 +5,17 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
         erpnext_onload(list_view);
     }
 
-    if (!frappe.perm.has_perm(DOCTYPE, 0, "submit") || !ic.is_api_enabled())
+    if (!frappe.perm.has_perm(DOCTYPE, 0, "submit"))
         return;
 
     if (gst_settings.enable_e_waybill)
-        bulk_generate(list_view, "e-Waybill JSON", generate_e_waybill_json);
+        add_bulk_action(list_view, "e-Waybill JSON", generate_e_waybill_json);
 
-    if (gst_settings.enable_e_invoice)
-        bulk_generate(list_view, "e-Invoice", generate_e_invoice);
+    if (ic.is_e_invoice_enabled())
+        add_bulk_action(list_view, "e-Invoice", generate_e_invoice);
 };
 
-function bulk_generate(list_view, label, callback) {
+function add_bulk_action(list_view, label, callback) {
     list_view.page.add_actions_menu_item(
         __("Generate {0}", [__(label)]),
         () => {
