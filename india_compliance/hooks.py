@@ -170,6 +170,10 @@ override_doctype_dashboards = {
     ),
 }
 
+
+# DocTypes to be ignored while clearing transactions
+company_data_to_be_ignored = ["GST Account", "GST Credential"]
+
 # Includes in <head>
 # ------------------
 
