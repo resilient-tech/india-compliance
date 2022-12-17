@@ -12,7 +12,7 @@
  "root_password": "travis",
  "host_name": "http://test_site:8000",
  "install_apps": ["erpnext"],
- "ic_api_key": "test",
+ "ic_api_secret": "*****",
  "ic_api_sandbox_mode": 1,
  "throttle_user_limit": 100
 }
