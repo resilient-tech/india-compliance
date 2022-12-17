@@ -19,7 +19,7 @@ class BaseAPI:
 
     def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")
-        if not is_api_enabled(self.settings) and not frappe.flags.in_test:
+        if not is_api_enabled(self.settings):
             frappe.throw(
                 _("Please enable API in GST Settings to use the {0} API").format(
                     self.API_NAME
@@ -33,7 +33,9 @@ class BaseAPI:
                 or frappe.conf.ic_api_secret
             )
         }
-        self.default_log_values = {}
+        self.default_log_values = {
+            "now": frappe.flags.in_test,
+        }
 
         self.setup(*args, **kwargs)
 
@@ -169,7 +171,6 @@ class BaseAPI:
 
         finally:
             log.output = response_json
-            log.now = frappe.flags.in_test
             enqueue_integration_request(**log)
 
     def handle_failed_response(self, response_json):

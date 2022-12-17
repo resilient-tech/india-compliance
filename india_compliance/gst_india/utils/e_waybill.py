@@ -503,8 +503,7 @@ class EWaybillData(GSTTransactionData):
 
     def get_e_waybill_cancel_data(self, values):
         self.validate_if_e_waybill_is_set()
-        if not frappe.flags.in_test:
-            self.validate_if_ewaybill_can_be_cancelled()
+        self.validate_if_ewaybill_can_be_cancelled()
 
         return {
             "ewbNo": self.doc.ewaybill,
@@ -628,6 +627,9 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
 
     def validate_if_ewaybill_can_be_cancelled(self):
+        if not self.doc.get_onload():
+            self.doc.run_method("onload")
+
         cancel_upto = add_to_date(
             # this works because we do run_onload in load_doc above
             get_datetime(
