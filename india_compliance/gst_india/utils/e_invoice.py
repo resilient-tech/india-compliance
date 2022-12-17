@@ -142,7 +142,13 @@ def cancel_e_invoice(docname, values):
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(_log_e_invoice, queue="short", at_front=True, log_data=log_data)
+    frappe.enqueue(
+        _log_e_invoice,
+        queue="short",
+        at_front=True,
+        log_data=log_data,
+        now=frappe.flags.in_test,
+    )
 
     update_onload(doc, "e_invoice_info", log_data)
 
@@ -397,6 +403,9 @@ class EInvoiceData(GSTTransactionData):
             self.company_address.update(seller)
             self.dispatch_address.update(seller)
             self.transaction_details.name = random_string(6).lstrip("0")
+
+            if frappe.flags.in_test:
+                self.transaction_details.name = "test_invoice_no"
 
             # For overseas transactions, dummy GSTIN is not needed
             if self.doc.gst_category != "Overseas":
