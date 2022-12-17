@@ -28,8 +28,8 @@ doctype_js = {
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
     "Sales Invoice": [
-        "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/e_invoice_actions.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Supplier": "gst_india/client_scripts/supplier.js",
@@ -64,6 +64,10 @@ doc_events = {
         ),
     },
     "Delivery Note": {
+        "on_trash": (
+            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
+        ),
+        "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
@@ -89,7 +93,7 @@ doc_events = {
     },
     "Sales Invoice": {
         "on_trash": (
-            "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
+            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",

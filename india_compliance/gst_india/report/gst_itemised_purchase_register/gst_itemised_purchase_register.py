@@ -36,12 +36,6 @@ def execute(filters=None):
                 width=120,
             ),
             dict(
-                fieldtype="Data",
-                label="E-Commerce GSTIN",
-                fieldname="ecommerce_gstin",
-                width=130,
-            ),
-            dict(
                 fieldtype="Data", label="HSN Code", fieldname="gst_hsn_code", width=120
             ),
             dict(
@@ -62,7 +56,6 @@ def execute(filters=None):
             "company_gstin",
             "is_reverse_charge",
             "gst_category",
-            "ecommerce_gstin",
             "gst_hsn_code",
             "bill_no",
             "bill_date",

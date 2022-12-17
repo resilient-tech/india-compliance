@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe import _, bold
+from frappe.model import delete_doc
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
@@ -185,7 +186,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
-        if doc.is_reverse_charge and (
+        if doc.get("is_reverse_charge") and (
             idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
         ):
             _throw(
@@ -723,3 +724,12 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+
+
+def ignore_logs_on_trash(doc, method=None):
+    # TODO: design better way to achieve this
+    if "e-Waybill Log" not in delete_doc.doctypes_to_skip:
+        delete_doc.doctypes_to_skip += (
+            "e-Waybill Log",
+            "e-Invoice Log",
+        )

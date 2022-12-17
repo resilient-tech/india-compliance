@@ -1,8 +1,5 @@
-import Vue from "vue";
-import VueRouter from "vue-router";
-import Vuex from "vuex";
-
-import router from "./router";
+import { createApp } from "vue";
+import { router } from "./router";
 import store from "./store/index";
 import IndiaComplianceAccountApp from "./IndiaComplianceAccountApp.vue";
 import { get_api_secret } from "./services/AuthService";
@@ -10,29 +7,23 @@ import { get_api_secret } from "./services/AuthService";
 class IndiaComplianceAccountPage {
     constructor(wrapper) {
         this.pageName = "india-compliance-account";
-        this.containerId = "india-compliance-account-app-container";
-
-        // Why need container? Because Vue replaces the element with the component.
-        // So, if we don't have a container, the component will be rendered on the #body
-        // and removes the element #page-india-compliance-account,
-        // which is required by frappe route in order to work it properly.
-        $(wrapper).html(`<div id="${this.containerId}"></div>`);
+        this.wrapperId = `#${wrapper.id}`;
+        this.setTitle();
         this.show();
     }
 
-    show() {
-        Vue.use(VueRouter);
-        Vue.use(Vuex);
+    setTitle() {
+        frappe.utils.set_title(__("India Compliance Account"));
+    }
 
-        new Vue({
-            el: `#${this.containerId}`,
-            router,
-            store,
-            render: (h) => h(IndiaComplianceAccountApp),
-        });
+    show() {
+        const app = createApp(IndiaComplianceAccountApp).use(router).use(store);
+        SetVueGlobals(app);
+        router.isReady().then(() => app.mount(this.wrapperId));
 
         $(frappe.pages[this.pageName]).on("show", () => {
-            router.replace({name: store.getters.isLoggedIn ? "home": "auth"});
+            this.setTitle();
+            router.replace({name: store.getters.guessRouteName});
         });
     }
 }
