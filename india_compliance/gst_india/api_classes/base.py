@@ -33,7 +33,9 @@ class BaseAPI:
                 or frappe.conf.ic_api_secret
             )
         }
-        self.default_log_values = {}
+        self.default_log_values = {
+            "now": frappe.flags.in_test,
+        }
 
         self.setup(*args, **kwargs)
 
