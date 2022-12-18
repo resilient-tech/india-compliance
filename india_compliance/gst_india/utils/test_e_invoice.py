@@ -371,7 +371,7 @@ class TestEInvoice(FrappeTestCase):
         values = frappe._dict(
             {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
         )
-        doc = frappe.get_doc("Sales Invoice", invoice_no)
+        doc = load_doc("Sales Invoice", invoice_no, "cancel")
 
         # Prepared e_waybill cancel data
         cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")

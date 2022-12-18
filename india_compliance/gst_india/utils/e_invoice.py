@@ -147,7 +147,6 @@ def log_e_invoice(doc, log_data):
         queue="short",
         at_front=True,
         log_data=log_data,
-        now=frappe.flags.in_test,
     )
 
     update_onload(doc, "e_invoice_info", log_data)
