@@ -68,7 +68,7 @@ def _generate_e_waybill(doc, throw=True):
         # Via e-Invoice API if not Return or Debit Note
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
-        with_irn = doc.get("irn") and not (doc.is_return or doc.is_debit_note)
+        with_irn = doc.get("irn") and not (doc.is_return or doc.get("is_debit_note"))
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
@@ -155,7 +155,7 @@ def _cancel_e_waybill(doc, values):
         if (
             frappe.conf.ic_api_sandbox_mode
             and doc.get("irn")
-            and not (doc.is_return or doc.is_debit_note)
+            and not (doc.is_return or doc.get("is_debit_note"))
         )
         else EWaybillAPI
     )
@@ -458,15 +458,6 @@ def update_transaction(doc, values):
 
     if doc.doctype == "Delivery Note":
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
-        doc._document_type = "CHL"
-
-    if doc.doctype == "Purchase Invoice":
-        doc._sub_supply_type = 1
-        doc._document_type = "INV"
-        if doc.is_return:
-            doc._sub_supply_type = 8
-            doc._document_type = "OTH"
-            doc.sub_supply_desc = "Purchase Return"
 
 
 #######################################################################################
@@ -561,11 +552,26 @@ class EWaybillData(GSTTransactionData):
         if self.doc.ewaybill:
             frappe.throw(_("e-Waybill already generated for this document"))
 
+        if self.doc.doctype == "Purchase Invoice":
+            self.validate_purchase_applicability()
+
         self.validate_applicability()
 
     def validate_settings(self):
         if not self.settings.enable_e_waybill:
             frappe.throw(_("Please enable e-Waybill in GST Settings"))
+
+    def validate_purchase_applicability(self):
+        if self.doc.is_return or self.doc.gst_category == "Unregistered":
+            return
+
+        # Threshold Limit is checked in validate_applicability
+        frappe.throw(
+            msg=_(
+                "e-Waybill generation is only required for:<br><br>Purchase Returns(Debit Note)<br>Unregistered Purchases"
+            ),
+            title=_("Invalid Request"),
+        )
 
     def validate_applicability(self):
         """
@@ -613,21 +619,26 @@ class EWaybillData(GSTTransactionData):
         #         title=_("Incorrect Usage"),
         #     )
 
+        # No need to check threshold limit for Delivery Note.
+        # eg: e-Waybill for Job Work is required irrespective of the amount.
         if (
-            self.doc.doctype in PERMITTED_DOCTYPES
+            self.doc.doctype in ("Sales Invoice", "Purchase Invoice")
             and not self.has_e_waybill_threshold_met()
         ):
             frappe.throw(
                 _(
                     "e-Waybill cannot be generated because the total amount is less than the threshold limit"
                 ),
-                title=_("Invalid Amount"),
+                title=_("Amount Threshold Not Met"),
             )
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
         self.validate_non_gst_items()
+
+    def has_e_waybill_threshold_met(self):
+        return abs(self.doc.base_grand_total) >= self.settings.e_waybill_threshold
 
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
@@ -706,47 +717,61 @@ class EWaybillData(GSTTransactionData):
 
     def update_transaction_details(self):
         # first HSN Code for goods
+        doc = self.doc
         main_hsn_code = next(
             row.gst_hsn_code
-            for row in self.doc.items
+            for row in doc.items
             if not row.gst_hsn_code.startswith("99")
         )
 
-        supply_type = "I" if self.is_purchase_invoice() else "O"
-        return_supply_type = "O" if self.is_purchase_return() else "I"
-
         self.transaction_details.update(
-            {
-                "supply_type": supply_type,
-                "sub_supply_type": 1,
-                "document_type": "INV",
-                "main_hsn_code": main_hsn_code,
-            }
+            sub_supply_desc="",
+            main_hsn_code=main_hsn_code,
         )
 
-        if self.doc.is_return:
-            self.transaction_details.update(
-                {
-                    "supply_type": return_supply_type,
-                    "sub_supply_type": 7,
-                    "document_type": "CHL",
-                }
-            )
+        default_supply_types = {
+            # Key: (doctype, is_return)
+            ("Sales Invoice", 0): {
+                "supply_type": "O",
+                "sub_supply_type": 1,  # Supply
+                "document_type": "INV",
+            },
+            ("Sales Invoice", 1): {
+                "supply_type": "I",
+                "sub_supply_type": 7,  # Sales Return
+                "document_type": "CHL",
+            },
+            ("Delivery Note", 0): {
+                "supply_type": "O",
+                "sub_supply_type": doc._sub_supply_type,
+                "document_type": "CHL",
+            },
+            ("Delivery Note", 1): {
+                "supply_type": "I",
+                "sub_supply_type": doc._sub_supply_type,
+                "document_type": "CHL",
+            },
+            ("Purchase Invoice", 0): {
+                "supply_type": "I",
+                "sub_supply_type": 1,  # Supply
+                "document_type": "INV",
+            },
+            ("Purchase Invoice", 1): {
+                "supply_type": "O",
+                "sub_supply_type": 8,  # Others
+                "document_type": "OTH",
+                "sub_supply_desc": "Purchase Return",
+            },
+        }
 
-        elif self.doc.gst_category == "Overseas":
-            self.transaction_details.sub_supply_type = 3
+        self.transaction_details.update(
+            default_supply_types.get((doc.doctype, doc.is_return), {})
+        )
 
-            if not self.doc.is_export_with_gst:
-                self.transaction_details.document_type = "BIL"
-
-        if self.doc.doctype in ("Purchase Invoice", "Delivery Note"):
-            self.transaction_details.update(
-                {
-                    "sub_supply_type": self.doc._sub_supply_type,
-                    "document_type": self.doc._document_type,
-                    "sub_supply_desc": self.doc.sub_supply_desc,
-                }
-            )
+        if doc.doctype == "Sales Invoice" and doc.gst_category == "Overseas":
+            self.transaction_details.update(sub_supply_type=3)  # Export
+            if not doc.is_export_with_gst:
+                self.transaction_details.update(document_type="BIL")
 
     def set_party_address_details(self):
         transaction_type = 1
@@ -857,7 +882,7 @@ class EWaybillData(GSTTransactionData):
                 else "05AAACG2115R1ZN"
             )
 
-        if self.doc.is_return and not self.is_purchase_return():
+        if self.doc.is_return and not self.doc.doctype == "Purchase Invoice":
             self.from_address, self.to_address = self.to_address, self.from_address
             self.dispatch_address, self.shipping_address = (
                 self.shipping_address,
@@ -872,7 +897,7 @@ class EWaybillData(GSTTransactionData):
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
             "subSupplyType": self.transaction_details.sub_supply_type,
-            "subSupplyDesc": self.transaction_details.sub_supply_desc or "",
+            "subSupplyDesc": self.transaction_details.sub_supply_desc,
             "docType": self.transaction_details.document_type,
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,

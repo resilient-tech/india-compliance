@@ -622,16 +622,6 @@ E_INVOICE_FIELDS = {
     ]
 }
 
-e_waybill_no_field = frappe._dict(
-    fieldname="ewaybill",
-    label="e-Waybill No.",
-    fieldtype="Data",
-    depends_on="eval: doc.docstatus === 1 || doc.ewaybill",
-    allow_on_submit=1,
-    translatable=0,
-    no_copy=1,
-)
-
 E_WAYBILL_DN_FIELDS = [
     {
         "fieldname": "distance",
@@ -676,7 +666,7 @@ E_WAYBILL_DN_FIELDS = [
     },
 ]
 
-E_WAYBILL_SI_FIELDS = [
+E_WAYBILL_INV_FIELDS = [
     {
         "fieldname": "transporter_info",
         "label": "Transporter Info",
@@ -755,14 +745,23 @@ E_WAYBILL_SI_FIELDS = [
     *E_WAYBILL_DN_FIELDS,
 ]
 
-E_WAYBILL_NO_FIELD = {
-    "Sales Invoice": e_waybill_no_field.copy().update(insert_after="customer_name"),
-    "Delivery Note": e_waybill_no_field.copy().update(insert_after="customer_name"),
-    "Purchase Invoice": e_waybill_no_field.copy().update(insert_after="supplier_name"),
+sales_e_waybill_field = {
+    "fieldname": "ewaybill",
+    "label": "e-Waybill No.",
+    "fieldtype": "Data",
+    "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
+    "allow_on_submit": 1,
+    "translatable": 0,
+    "no_copy": 1,
+    "insert_after": "customer_name",
 }
 
+purchase_e_waybill_field = sales_e_waybill_field.copy().update(
+    insert_after="supplier_name"
+)
+
 E_WAYBILL_FIELDS = {
-    "Sales Invoice": E_WAYBILL_SI_FIELDS,
-    "Delivery Note": E_WAYBILL_DN_FIELDS,
-    "Purchase Invoice": E_WAYBILL_SI_FIELDS,
+    "Sales Invoice": E_WAYBILL_INV_FIELDS + [sales_e_waybill_field],
+    "Delivery Note": E_WAYBILL_DN_FIELDS + [sales_e_waybill_field],
+    "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
 }

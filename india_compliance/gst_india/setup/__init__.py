@@ -10,7 +10,6 @@ from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
-    E_WAYBILL_NO_FIELD,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
@@ -36,7 +35,6 @@ def create_custom_fields():
             SALES_REVERSE_CHARGE_FIELDS,
             E_INVOICE_FIELDS,
             E_WAYBILL_FIELDS,
-            E_WAYBILL_NO_FIELD,
         ),
         ignore_validate=True,
     )
