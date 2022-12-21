@@ -30,7 +30,7 @@ def create_custom_fields():
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
     _create_custom_fields(
-        _get_custom_fields_to_create(
+        _get_custom_fields_map(
             CUSTOM_FIELDS,
             SALES_REVERSE_CHARGE_FIELDS,
             E_INVOICE_FIELDS,
@@ -184,7 +184,7 @@ def show_accounts_settings_override_warning():
     )
 
 
-def _get_custom_fields_to_create(*custom_fields_list):
+def _get_custom_fields_map(*custom_fields_list):
     result = {}
 
     for custom_fields in custom_fields_list:
