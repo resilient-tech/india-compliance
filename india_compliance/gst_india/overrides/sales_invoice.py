@@ -171,3 +171,29 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
     transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
 
     return data
+
+
+@frappe.whitelist()
+def generate_e_invoice(docnames):
+    """
+    Bulk generate e-Invoices for the given Sales Invoices.
+    Permission checks are done in the `generate_e_invoice` function.
+    """
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not is_api_enabled(gst_settings):
+        return
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    for doc in docnames:
+        doc = frappe.get_doc("Sales Invoice", doc)
+        if doc.docstatus != 1 or not validate_e_invoice_applicability(
+            doc, gst_settings, throw=False
+        ):
+            continue
+
+        frappe.enqueue(
+            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
+            queue="short",
+            docname=doc.name,
+            throw=False,
+        )

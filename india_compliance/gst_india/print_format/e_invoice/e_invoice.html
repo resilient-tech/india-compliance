@@ -17,7 +17,7 @@
 	"CgstVal": "CGST",
 	"SgstVal": "SGST",
 	"IgstVal": "IGST",
-	"CessVal": "CESS",
+	"CesVal": "CESS",
 	"Discount": "Discount",
 	"OthChrg": "Other Charges",
 	"RndOffAmt": "Round Off",
@@ -96,13 +96,16 @@
 				"Category": invoice_data.TranDtls.SupTyp,
 				"Document Type": invoice_data.DocDtls.Typ,
 				"Document No": invoice_data.DocDtls.No,
+				"e-Waybill": doc.ewaybill,
 			}
 		%}
 		{% for key, value in transaction_details.items() %}
-			<div class="row data-field">
-				<div class="col-xs-4"><label>{{ key }}</label></div>
-				<div class="col-xs-8 value">{{ value }}</div>
-			</div>
+			{% if value %}
+				<div class="row data-field">
+					<div class="col-xs-4"><label>{{ key }}</label></div>
+					<div class="col-xs-8 value">{{ value }}</div>
+				</div>
+			{% endif %}
 		{% endfor %}
 	</div>
 	<div class="col-xs-4 column-break text-right">
@@ -205,7 +208,7 @@
 </div>
 
 {%- set amounts = invoice_data.ValDtls -%}
-{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP) %}
+{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP, doc) %}
 <h5 class="section-heading">4. Value Details</h5>
 <div class="row section-break">
 <div class="col-xs-12 column-break">

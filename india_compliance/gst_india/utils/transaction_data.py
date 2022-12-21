@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, getdate, rounded
+from frappe.utils import format_date, get_url_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
 from india_compliance.gst_india.constants.e_waybill import (
@@ -87,9 +87,16 @@ class GSTTransactionData:
         for total in ["base_total", "rounding_adjustment", *tax_totals]:
             current_total += self.transaction_details.get(total)
 
-        self.transaction_details.other_charges = self.rounded(
-            (self.transaction_details.base_grand_total - current_total)
-        )
+        other_charges = self.transaction_details.base_grand_total - current_total
+
+        if 0 > other_charges > -0.1:
+            # other charges cannot be negative
+            # handle cases where user has higher precision than 2
+            self.transaction_details.rounding_adjustment = self.rounded(
+                self.transaction_details.rounding_adjustment + other_charges
+            )
+        else:
+            self.transaction_details.other_charges = self.rounded(other_charges)
 
     def validate_mode_of_transport(self, throw=True):
         def _throw(error):
@@ -310,16 +317,36 @@ class GSTTransactionData:
 
         self.check_missing_address_fields(address, validate_gstin)
 
+        error_context = {
+            "doctype": "Address",
+            "docname": address.name,
+        }
+
         return frappe._dict(
             {
                 "gstin": address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
-                "address_title": self.sanitize_value(address.address_title, 2),
-                "address_line1": self.sanitize_value(
-                    address.address_line1, 3, min_length=1
+                "address_title": self.sanitize_value(
+                    address.address_title,
+                    regex=2,
+                    throw=True,
+                    error_context={**error_context, "fieldname": "Address Title"},
                 ),
-                "address_line2": self.sanitize_value(address.address_line2, 3),
-                "city": self.sanitize_value(address.city, 3, max_length=50),
+                "address_line1": self.sanitize_value(
+                    address.address_line1,
+                    regex=3,
+                    min_length=1,
+                    throw=True,
+                    error_context={**error_context, "fieldname": "Address Line 1"},
+                ),
+                "address_line2": self.sanitize_value(address.address_line2, regex=3),
+                "city": self.sanitize_value(
+                    address.city,
+                    regex=3,
+                    max_length=50,
+                    throw=True,
+                    error_context={**error_context, "fieldname": "City"},
+                ),
                 "pincode": int(address.pincode),
             }
         )
@@ -400,14 +427,52 @@ class GSTTransactionData:
 
     @staticmethod
     def sanitize_value(
-        value,
+        value: str,
         regex=None,
         min_length=3,
         max_length=100,
         truncate=True,
+        throw=False,
+        error_context=None,
     ):
+        """
+        Sanitize value to make it suitable for GST JSON sent for e-Waybill and e-Invoice.
+
+        Parameters:
+        ----------
+        @param value: Value to be sanitized
+        @param regex: Regex Key (from REGEX_MAP) to substitute unacceptable characters
+        @param min_length (default: 3): Minimum length of the value that is acceptable
+        @param max_length (default: 100): Maximum length of the value that is acceptable
+        @param truncate (default: True): Truncate the value if it exceeds max_length
+        @param throw (default: False): Throw an exception if the value is not acceptable. Used for mandatory fields.
+        @param error_context: Context to be used in the error message to help the user identify the field
+            example: error_context = {"fieldname": "Address Line 1", "doctype": "Address" , "docname": "Office Address"}
+
+        Returns:
+        ----------
+        @return: Sanitized value
+
+        """
+        throw = throw and error_context
+
+        def _throw(message):
+            if not throw:
+                return
+
+            url = get_url_to_form(error_context["doctype"], error_context["docname"])
+            frappe.throw(
+                _(
+                    "{fieldname} {message} for {doctype} - <a href='{url}'>{docname}</a>"
+                ).format(**error_context, message=message, url=url),
+                title=_("Invalid Data"),
+            )
+
         if not value or len(value) < min_length:
-            return
+            return _throw(f"must be at least {min_length} characters long")
+
+        if not value.isascii():
+            return _throw("must be ASCII characters only")
 
         if regex:
             value = re.sub(REGEX_MAP[regex], "", value)

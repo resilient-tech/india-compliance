@@ -68,6 +68,10 @@ doc_events = {
         ),
     },
     "Delivery Note": {
+        "on_trash": (
+            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
+        ),
+        "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
@@ -176,6 +180,10 @@ override_doctype_dashboards = {
         "india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"
     ),
 }
+
+
+# DocTypes to be ignored while clearing transactions
+company_data_to_be_ignored = ["GST Account", "GST Credential"]
 
 # Includes in <head>
 # ------------------
