@@ -51,6 +51,14 @@
 
 {% else %}
 
+{% if not e_invoice_log.invoice_data %}
+
+<div class="text-center no-preview-available">
+	Invoice Data is unavailable in the {{ frappe.utils.get_link_to_form("e-Invoice Log", doc.irn, "e-Invoice Log") }} to generate print preview.
+</div>
+
+{% else %}
+
 {%- set invoice_data = _dict(json.loads(e_invoice_log.invoice_data)) -%}
 
 {% macro get_address_html(address) %}
@@ -233,5 +241,6 @@
 </div>
 </div>
 
+{% endif %}
 {% endif %}
 {% endif %}
