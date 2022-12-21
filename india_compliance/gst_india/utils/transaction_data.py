@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, getdate, rounded
+from frappe.utils import format_date, get_url_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
 from india_compliance.gst_india.constants.e_waybill import (
@@ -440,27 +440,23 @@ class GSTTransactionData:
         """
         throw = throw and error_context
 
-        if not value or len(value) < min_length:
+        def _throw(message):
             if not throw:
                 return
 
+            url = get_url_to_form(error_context["doctype"], error_context["docname"])
             frappe.throw(
                 _(
-                    "{fieldname} must be at least {min_length} characters long for {doctype} - {docname}"
-                ).format(**error_context, min_length=min_length),
+                    "{fieldname} {message} for {doctype} - <a href='{url}'>{docname}</a>"
+                ).format(**error_context, message=message, url=url),
                 title=_("Invalid Data"),
             )
+
+        if not value or len(value) < min_length:
+            return _throw(f"must be at least {min_length} characters long")
 
         if not value.isascii():
-            if not throw:
-                return
-
-            frappe.throw(
-                _(
-                    "{fieldname} must be ASCII characters only for {doctype} - {docname}. (Non-ASCII characters are not allowed in GST JSON)"
-                ).format(**error_context),
-                title=_("Invalid Data"),
-            )
+            return _throw("must be ASCII characters only")
 
         if regex:
             value = re.sub(REGEX_MAP[regex], "", value)
