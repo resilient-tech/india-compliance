@@ -1,37 +1,27 @@
-import frappe
+import click
 
-from india_compliance.gst_india.constants.custom_fields import (
-    CUSTOM_FIELDS,
-    E_INVOICE_FIELDS,
-    E_WAYBILL_FIELDS,
-    SALES_REVERSE_CHARGE_FIELDS,
-)
-from india_compliance.gst_india.setup import _get_custom_fields_map
-from india_compliance.gst_india.setup.property_setters import get_property_setters
-from india_compliance.patches.post_install.update_e_invoice_fields_and_logs import (
-    delete_custom_fields as _delete_custom_fields,
+from india_compliance.gst_india.constants import BUG_REPORT_URL
+from india_compliance.gst_india.setup import after_uninstall as remove_gst_custom_fields
+from india_compliance.income_tax_india.setup import (
+    after_uninstall as remove_income_tax_fields,
 )
 
 
 def after_uninstall():
-    delete_custom_fields()
-    delete_property_setters()
+    try:
+        print("Removing Income Tax customizations...")
+        remove_income_tax_fields()
 
+        print("Removing GST customizations...")
+        remove_gst_custom_fields()
 
-def delete_custom_fields():
-    _delete_custom_fields(
-        _get_custom_fields_map(
-            CUSTOM_FIELDS,
-            SALES_REVERSE_CHARGE_FIELDS,
-            E_INVOICE_FIELDS,
-            E_WAYBILL_FIELDS,
-        ),
-        ignore_validate=True,
-    )
+    except Exception as e:
+        click.secho(
+            "Removing Customizations for India Compliance failed due to an error."
+            " Please try again or"
+            f" report the issue on {BUG_REPORT_URL} if not resolved.",
+            fg="bright_red",
+        )
+        raise e
 
-
-def delete_property_setters():
-    for property_setter in get_property_setters():
-        keys_to_update = ["doc_type", "field_name", "property", "value"]
-        filters = dict(zip(keys_to_update, list(property_setter.values())))
-        frappe.db.delete("Property Setter", filters)
+    click.secho("Customizations has been removed Successfully...", fg="green")
