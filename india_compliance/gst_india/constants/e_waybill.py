@@ -10,22 +10,26 @@
 # }
 #
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
-si_field = {
-    "Company Address": "company_address",
-    "Customer Address": "customer_address",
-    "Dispatch Address": "dispatch_address_name",
-    "Shipping Address": "shipping_address_name",
+selling_address = {
+    "bill_from": "company_address",
+    "bill_to": "customer_address",
+    "ship_from": "dispatch_address_name",
+    "ship_to": "shipping_address_name",
 }
 
-PERMITTED_DOCTYPES = {
-    "Sales Invoice": si_field,
-    "Delivery Note": si_field,
-    "Purchase Invoice": {
-        "Company Shipping Address": "shipping_address",
-        "Company Billing Address": "billing_address",
-        "Supplier Address": "supplier_address",
-    },
+buying_address = {
+    "bill_from": "supplier_address",
+    "bill_to": "billing_address",
+    "ship_from": "supplier_address",
+    "ship_to": "shipping_address",
 }
+
+ADDRESS_FIELDS = {
+    "Sales Invoice": selling_address,
+    "Purchase Invoice": buying_address,
+    "Delivery Note": selling_address,
+}
+PERMITTED_DOCTYPES = list(ADDRESS_FIELDS.keys())
 
 CANCEL_REASON_CODES = {
     "Duplicate": "1",

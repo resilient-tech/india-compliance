@@ -13,12 +13,7 @@ def onload(doc, method=None):
     if not doc.get("ewaybill"):
         return
 
-    gst_settings = frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        ("enable_api", "enable_e_waybill", "enable_e_waybill_from_pi", "api_secret"),
-        as_dict=1,
-    )
+    gst_settings = frappe.get_cached_doc("GST Settings")
 
     if not is_api_enabled(gst_settings):
         return

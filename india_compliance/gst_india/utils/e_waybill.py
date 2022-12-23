@@ -9,6 +9,7 @@ from frappe.utils.file_manager import save_file
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants.e_waybill import (
+    ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
     PERMITTED_DOCTYPES,
@@ -584,17 +585,11 @@ class EWaybillData(GSTTransactionData):
         - Grand Total Amount must be greater than Criteria
         """
 
-        for label, fieldname in PERMITTED_DOCTYPES.get(self.doc.doctype).items():
-            if fieldname in (
-                "dispatch_address_name",
-                "shipping_address_name",
-                "shipping_address",
-            ):
-                continue
-
-            if not self.doc.get(fieldname):
+        address = ADDRESS_FIELDS.get(self.doc.doctype)
+        for key in ("bill_from", "bill_to"):
+            if not self.doc.get(address[key]):
                 frappe.throw(
-                    _("{0} is required to generate e-Waybill").format(_(label)),
+                    _("{0} is required to generate e-Waybill").format(_(address[key])),
                     exc=frappe.MandatoryError,
                 )
 
@@ -743,12 +738,12 @@ class EWaybillData(GSTTransactionData):
             },
             ("Delivery Note", 0): {
                 "supply_type": "O",
-                "sub_supply_type": doc._sub_supply_type,
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
             ("Delivery Note", 1): {
                 "supply_type": "I",
-                "sub_supply_type": doc._sub_supply_type,
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
                 "document_type": "CHL",
             },
             ("Purchase Invoice", 0): {
@@ -777,75 +772,55 @@ class EWaybillData(GSTTransactionData):
         transaction_type = 1
         address = self.get_address_map()
 
-        party_shipping_address = address.party_shipping_address
-        company_shipping_address = address.company_shipping_address
+        if self.doc.is_return:
+            address.bill_from, address.bill_to = address.bill_to, address.bill_from
+            address.ship_from, address.ship_to = address.ship_to, address.ship_from
 
-        # Ideally, we considering company address as the dispatch address
-        has_different_shipping_address = (
-            party_shipping_address
-            and address.party_billing_address != party_shipping_address
+        has_different_to_address = (
+            address.bill_to and address.ship_to != address.bill_to
         )
 
-        has_different_dispatch_address = (
-            company_shipping_address
-            and address.company_billing_address != company_shipping_address
+        has_different_from_address = (
+            address.bill_from and address.ship_from != address.bill_from
         )
 
-        self.to_address = self.get_address_details(address.party_billing_address)
-        self.from_address = self.get_address_details(address.company_billing_address)
-
-        if self.is_purchase_invoice():
-            has_different_shipping_address = has_different_dispatch_address
-            has_different_dispatch_address = False
-            party_shipping_address = company_shipping_address
-            company_shipping_address = address.party_billing_address
-
-            self.to_address = self.get_address_details(address.company_billing_address)
-            self.from_address = self.get_address_details(address.party_billing_address)
+        self.bill_to = self.get_address_details(address.bill_to)
+        self.bill_from = self.get_address_details(address.bill_from)
 
         # Defaults
         # billing state is changed for SEZ, hence copy()
-        self.shipping_address = self.to_address.copy()
-        self.dispatch_address = self.from_address
+        self.ship_to = self.bill_to.copy()
+        self.ship_from = self.bill_from
 
-        if has_different_shipping_address and has_different_dispatch_address:
+        if has_different_to_address and has_different_from_address:
             transaction_type = 4
-            self.shipping_address = self.get_address_details(party_shipping_address)
-            self.dispatch_address = self.get_address_details(company_shipping_address)
+            self.ship_to = self.get_address_details(address.ship_to)
+            self.ship_from = self.get_address_details(address.ship_from)
 
-        elif has_different_dispatch_address:
+        elif has_different_from_address:
             transaction_type = 3
-            self.dispatch_address = self.get_address_details(company_shipping_address)
+            self.ship_from = self.get_address_details(address.ship_from)
 
-        elif has_different_shipping_address:
+        elif has_different_to_address:
             transaction_type = 2
-            self.shipping_address = self.get_address_details(party_shipping_address)
+            self.ship_to = self.get_address_details(address.ship_to)
 
         self.transaction_details.transaction_type = transaction_type
 
         if self.doc.gst_category == "SEZ":
-            self.to_address.state_number = 96
+            self.bill_to.state_number = 96
 
     def get_address_map(self):
-        """Return addresses for the transaction using required fields"""
-        address_fields = PERMITTED_DOCTYPES.get(self.doc.doctype, {})
+        """
+        Return address names for bill_to, bill_from, ship_to, ship_from
+        """
+        address_fields = ADDRESS_FIELDS.get(self.doc.doctype, {})
+        out = frappe._dict()
 
-        address_map = frappe._dict()
-        for label, field in address_fields.items():
-            if label in ("Dispatch Address", "Company Shipping Address"):
-                address_map.company_shipping_address = self.doc.get(field)
+        for key, field in address_fields.items():
+            out[key] = self.doc.get(field)
 
-            elif label in ("Company Address", "Company Billing Address"):
-                address_map.company_billing_address = self.doc.get(field)
-
-            elif label in ("Shipping Address", "Supplier Address"):
-                address_map.party_shipping_address = self.doc.get(field)
-                address_map.party_billing_address = self.doc.get(field)
-
-            elif label in ("Customer Address", "Supplier Address"):
-                address_map.party_billing_address = self.doc.get(field)
-
-        return address_map
+        return out
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -861,7 +836,7 @@ class EWaybillData(GSTTransactionData):
         """
         if (
             self.transaction_details.distance == 0
-            and self.dispatch_address.pincode == self.shipping_address.pincode
+            and self.ship_from.pincode == self.ship_to.pincode
         ):
             self.transaction_details.distance = 1
 
@@ -874,24 +849,25 @@ class EWaybillData(GSTTransactionData):
                 }
             )
 
-            self.from_address.gstin = "05AAACG2115R1ZN"
-            self.to_address.gstin = (
-                "05AAACG2140A1ZL"
-                if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
-                and self.doc.doctype != "Purchase Invoice"
-                else "05AAACG2115R1ZN"
-            )
+            # to ensure company_gstin is inline with company address gstin
+            sandbox_gstin = {
+                # (doctype, is_return): (bill_from, bill_to)
+                ("Sales Invoice", 0): ("05AAACG2115R1ZN", "05AAACG2140A1ZL"),
+                ("Sales Invoice", 1): ("05AAACG2140A1ZL", "05AAACG2115R1ZN"),
+                ("Purchase Invoice", 0): ("05AAACG2140A1ZL", "05AAACG2115R1ZN"),
+                ("Purchase Invoice", 1): ("05AAACG2115R1ZN", "05AAACG2140A1ZL"),
+                ("Delivery Note", 0): ("05AAACG2115R1ZN", "05AAACG2140A1ZL"),
+                ("Delivery Note", 1): ("05AAACG2140A1ZL", "05AAACG2115R1ZN"),
+            }
 
-        if self.doc.is_return and not self.doc.doctype == "Purchase Invoice":
-            self.from_address, self.to_address = self.to_address, self.from_address
-            self.dispatch_address, self.shipping_address = (
-                self.shipping_address,
-                self.dispatch_address,
-            )
+            def _get_sandbox_gstin(address, key):
+                if address.gst_category == "Unregistered":
+                    return "URP"
 
-        if self.is_purchase_invoice():
-            self.transaction_details.name = self.doc.bill_no
-            self.from_address.gstin = "URP"
+                return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
+
+            self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
+            self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
 
         data = {
             "userGstin": self.transaction_details.company_gstin,
@@ -902,22 +878,22 @@ class EWaybillData(GSTTransactionData):
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.from_address.address_title,
-            "fromGstin": self.from_address.gstin,
-            "fromAddr1": self.dispatch_address.address_line1,
-            "fromAddr2": self.dispatch_address.address_line2,
-            "fromPlace": self.dispatch_address.city,
-            "fromPincode": self.dispatch_address.pincode,
-            "fromStateCode": self.from_address.state_number,
-            "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.to_address.address_title,
-            "toGstin": self.to_address.gstin,
-            "toAddr1": self.shipping_address.address_line1,
-            "toAddr2": self.shipping_address.address_line2,
-            "toPlace": self.shipping_address.city,
-            "toPincode": self.shipping_address.pincode,
-            "toStateCode": self.to_address.state_number,
-            "actToStateCode": self.shipping_address.state_number,
+            "fromTrdName": self.bill_from.address_title,
+            "fromGstin": self.bill_from.gstin,
+            "fromAddr1": self.ship_from.address_line1,
+            "fromAddr2": self.ship_from.address_line2,
+            "fromPlace": self.ship_from.city,
+            "fromPincode": self.ship_from.pincode,
+            "fromStateCode": self.bill_from.state_number,
+            "actFromStateCode": self.ship_from.state_number,
+            "toTrdName": self.bill_to.address_title,
+            "toGstin": self.bill_to.gstin,
+            "toAddr1": self.ship_to.address_line1,
+            "toAddr2": self.ship_to.address_line2,
+            "toPlace": self.ship_to.city,
+            "toPincode": self.ship_to.pincode,
+            "toStateCode": self.bill_to.state_number,
+            "actToStateCode": self.ship_to.state_number,
             "totalValue": self.transaction_details.base_total,
             "cgstValue": self.transaction_details.total_cgst_amount,
             "sgstValue": self.transaction_details.total_sgst_amount,
