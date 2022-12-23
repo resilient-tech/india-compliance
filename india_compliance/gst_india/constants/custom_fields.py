@@ -678,7 +678,7 @@ E_WAYBILL_SI_FIELDS = [
         "fieldname": "transporter_info",
         "label": "Transporter Info",
         "fieldtype": "Section Break",
-        "insert_after": "terms",
+        "insert_after": "po_date",
         "collapsible": 1,
         "collapsible_depends_on": "transporter",
         "print_hide": 1,
