@@ -516,18 +516,20 @@ class EWaybillData(GSTTransactionData):
         self.validate_mode_of_transport()
         self.set_transporter_details()
 
-        dispatch_address_name = (
-            self.doc.dispatch_address_name
-            if self.doc.dispatch_address_name
-            else self.doc.company_address
+        addresses = ADDRESS_FIELDS.get(self.doc.doctype, {})
+
+        ship_from_address_name = (
+            addresses.get("ship_from")
+            if self.doc.get(addresses.get("ship_from"))
+            else addresses.get("bill_from")
         )
-        dispatch_address = self.get_address_details(dispatch_address_name)
+        ship_from = self.get_address_details(self.doc.get(ship_from_address_name))
 
         return {
             "ewbNo": self.doc.ewaybill,
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": dispatch_address.city,
-            "fromState": dispatch_address.state_number,
+            "fromPlace": ship_from.city,
+            "fromState": ship_from.state_number,
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
             "reasonRem": self.sanitize_value(values.remark, 3),
             "transDocNo": self.transaction_details.lr_no,

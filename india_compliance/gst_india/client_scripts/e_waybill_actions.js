@@ -1,6 +1,3 @@
-const PERMITTED_DOCTYPES = ["Sales Invoice", "Purchase Invoice"];
-const DOWNLOAD_RESTRICTED_DOCTYPES = ["Purchase Invoice"];
-
 function setup_e_waybill_actions(doctype) {
     if (
         !gst_settings.enable_e_waybill ||
@@ -45,7 +42,10 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (has_e_waybill_threshold_met(frm)) {
+                if (
+                    has_e_waybill_threshold_met(frm) &&
+                    is_e_waybill_applicable_on_sales_invoice(frm)
+                ) {
                     frm.dashboard.add_comment(
                         __(
                             "e-Waybill is applicable for this invoice, but not yet generated or updated."
@@ -64,10 +64,9 @@ function setup_e_waybill_actions(doctype) {
 
             frm.set_df_property("ewaybill", "allow_on_submit", 0);
 
-            // ToDO: Update vehicle info and Transporter info may be applicable later for PI
             if (
                 frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
-                is_e_waybill_valid(frm) && !is_purchase_transaction(frm)
+                is_e_waybill_valid(frm)
             ) {
                 frm.add_custom_button(
                     __("Update Vehicle Info"),
@@ -113,7 +112,7 @@ function setup_e_waybill_actions(doctype) {
         },
         async on_submit(frm) {
             if (
-                // threshold is met for Sales Invoice and Purchase Invoice
+                frm.doctype != "Sales Invoice" ||
                 !has_e_waybill_threshold_met(frm) ||
                 frm.doc.ewaybill ||
                 !ic.is_api_enabled() ||
@@ -345,12 +344,12 @@ function show_generate_e_waybill_dialog(frm) {
                 json_action(values);
             }
         },
-        secondary_action_label: is_secondary_action_applicable(frm) ? __("Download JSON") : null,
-        secondary_action: is_secondary_action_applicable(frm)
+        secondary_action_label: api_enabled ? __("Download JSON") : null,
+        secondary_action: api_enabled
             ? () => {
-                d.hide();
-                json_action(d.get_values());
-            }
+                  d.hide();
+                  json_action(d.get_values());
+              }
             : null,
     });
 
@@ -566,7 +565,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                        frm.doc.gst_transporter_id.length == 15
+                    frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
             },
@@ -607,23 +606,20 @@ function is_e_waybill_valid(frm) {
 }
 
 function has_e_waybill_threshold_met(frm) {
-    if (
-        PERMITTED_DOCTYPES.includes(frm.doctype) &&
-        Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold
-    )
+    if (Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold)
         return true;
 }
 
 function is_e_waybill_applicable(frm) {
-    // means company is Indian and not Unregistered
-    if (!frm.doc.company_gstin) return;
-
-    if (frm.doctype === "Delivery Note" && !frm.doc.customer_address) return;
-
-    if (is_purchase_transaction(frm) && !frm.doc.supplier_address) return;
-
-    if (frm.doctype === "Sales Invoice" && (frm.doc.is_return || frm.doc.is_debit_note)) return;
-
+    if (
+        // means company is Indian and not Unregistered
+        !frm.doc.company_gstin ||
+        !(is_e_waybill_applicable_on_sales_invoice(frm) ||
+            is_e_waybill_applicable_on_purchase_invoice(frm) ||
+            is_e_waybill_applicable_on_delivery_note(frm))
+    )
+        return;
+    
     // at least one item is not a service
     for (const item of frm.doc.items) {
         if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0)
@@ -642,10 +638,25 @@ function is_e_waybill_cancellable(frm) {
     );
 }
 
-function is_purchase_transaction(frm) {
-    if (frm.doctype !== "Purchase Invoice") return false;
+function is_e_waybill_applicable_on_sales_invoice(frm) {
+    return (
+        frm.doctype == "Sales Invoice" &&
+        frm.doc.customer_address &&
+        !frm.doc.is_return &&
+        !frm.doc.is_debit_note
+    );
+}
 
-    return frm.doc.is_return || frm.doc.gst_category === "Unregistered";
+function is_e_waybill_applicable_on_delivery_note(frm) {
+    return frm.doctype == "Delivery Note" && frm.doc.customer_address;
+}
+
+function is_e_waybill_applicable_on_purchase_invoice(frm) {
+    return (
+        frm.doctype == "Purchase Invoice" &&
+        frm.doc.supplier_address &&
+        (frm.doc.is_return || frm.doc.gst_category === "Unregistered")
+    );
 }
 
 function is_e_waybill_generated_using_api(frm) {
@@ -685,11 +696,6 @@ function get_primary_action_label_for_generation(doc) {
     }
 
     return label + " (Part A)";
-}
-
-function is_secondary_action_applicable(frm) {
-    // skipping Download option for Purchase Invoice, may be added later
-    return ic.is_api_enabled() && !DOWNLOAD_RESTRICTED_DOCTYPES.includes(frm.doctype) ? true : false;
 }
 
 function are_transport_details_available(doc) {
