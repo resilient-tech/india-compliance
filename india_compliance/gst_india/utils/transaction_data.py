@@ -28,10 +28,17 @@ class GSTTransactionData:
         self.settings = frappe.get_cached_doc("GST Settings")
         self.transaction_details = frappe._dict()
 
+        gst_type = "Output"
+        if (
+            self.doc.doctype == "Purchase Invoice"
+            and self.doc.gst_category != "Unregistered"
+        ):
+            gst_type = "Input"
+
         # "CGST Account - TC": "cgst_account"
         self.gst_accounts = {
             v: k
-            for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
+            for k, v in get_gst_accounts_by_type(self.doc.company, gst_type).items()
         }
 
     def set_transaction_details(self):
