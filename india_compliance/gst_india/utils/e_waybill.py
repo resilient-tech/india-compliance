@@ -945,12 +945,3 @@ class EWaybillData(GSTTransactionData):
             "cessRate": item_details.cess_rate,
             "cessNonAdvol": item_details.cess_non_advol_rate,
         }
-
-    def is_purchase_invoice(self):
-        return (
-            self.doc.doctype == "Purchase Invoice"
-            and self.doc.gst_category == "Unregistered"
-        )
-
-    def is_purchase_return(self):
-        return self.doc.doctype == "Purchase Invoice" and self.doc.is_return
