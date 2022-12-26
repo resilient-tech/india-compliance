@@ -10,5 +10,5 @@ def after_install():
     create_custom_fields(CUSTOM_FIELDS, update=True)
 
 
-def after_uninstall():
+def before_uninstall():
     delete_custom_fields(CUSTOM_FIELDS)

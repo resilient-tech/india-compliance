@@ -28,7 +28,7 @@ def after_install():
     create_hsn_codes()
 
 
-def after_uninstall():
+def before_uninstall():
     delete_custom_fields()
     delete_property_setters()
 
