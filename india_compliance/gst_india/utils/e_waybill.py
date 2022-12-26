@@ -387,7 +387,6 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         log_data=log_data,
         fetch=fetch,
         comment=comment,
-        now=frappe.flags.in_test,
     )
 
     update_onload(doc, "e_waybill_info", log_data)
@@ -658,9 +657,6 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
 
     def validate_if_ewaybill_can_be_cancelled(self):
-        if not self.doc.get_onload():
-            self.doc.run_method("onload")
-
         cancel_upto = add_to_date(
             # this works because we do run_onload in load_doc above
             get_datetime(

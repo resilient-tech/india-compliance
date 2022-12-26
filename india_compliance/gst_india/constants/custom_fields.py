@@ -116,7 +116,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_section",
             "label": "GST Details",
             "fieldtype": "Section Break",
-            "insert_after": "language",
+            "insert_after": "gst_vehicle_type",
             "print_hide": 1,
             "collapsible": 1,
         },
@@ -600,10 +600,7 @@ E_INVOICE_FIELDS = {
             "insert_after": "customer",
             "no_copy": 1,
             "print_hide": 1,
-            "depends_on": (
-                'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed'
-                ' Export"], doc.gst_category)'
-            ),
+            "depends_on": 'eval:doc.gst_category != "Unregistered"',
             "translatable": 0,
         },
         {
