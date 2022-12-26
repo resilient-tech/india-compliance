@@ -58,6 +58,7 @@ class GSTTransactionData:
                 "discount_amount": 0,
                 "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
+                "other_charges": 0,
             }
         )
         self.update_transaction_details()
