@@ -1,19 +1,19 @@
 import click
 
 from india_compliance.gst_india.constants import BUG_REPORT_URL
-from india_compliance.gst_india.setup import after_uninstall as remove_gst_custom_fields
+from india_compliance.gst_india.setup import before_uninstall as remove_gst
 from india_compliance.income_tax_india.setup import (
-    after_uninstall as remove_income_tax_fields,
+    before_uninstall as remove_income_tax,
 )
 
 
-def after_uninstall():
+def before_uninstall():
     try:
         print("Removing Income Tax customizations...")
-        remove_income_tax_fields()
+        remove_income_tax()
 
         print("Removing GST customizations...")
-        remove_gst_custom_fields()
+        remove_gst()
 
     except Exception as e:
         click.secho(
