@@ -170,6 +170,17 @@ override_doctype_dashboards = {
     ),
 }
 
+<<<<<<< HEAD
+=======
+
+# DocTypes to be ignored while clearing transactions of a Company
+company_data_to_be_ignored = ["GST Account", "GST Credential"]
+
+# Links to these doctypes will be ignored when deleting a document
+ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
+
+
+>>>>>>> 67ec643a (fix: use new hooks to ignore links on delete (#425))
 # Includes in <head>
 # ------------------
 
