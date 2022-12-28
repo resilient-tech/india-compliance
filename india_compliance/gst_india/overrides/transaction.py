@@ -726,10 +726,15 @@ def validate_transaction(doc, method=None):
     update_taxable_values(doc, valid_accounts)
 
 
+# Note: This is kept for backwards compatibility with Frappe versions < 14.21.0
 def ignore_logs_on_trash(doc, method=None):
-    # TODO: design better way to achieve this
-    if "e-Waybill Log" not in delete_doc.doctypes_to_skip:
-        delete_doc.doctypes_to_skip += (
-            "e-Waybill Log",
-            "e-Invoice Log",
-        )
+    if (
+        not hasattr(delete_doc, "doctypes_to_skip")
+        or "e-Waybill Log" in delete_doc.doctypes_to_skip
+    ):
+        return
+
+    delete_doc.doctypes_to_skip += (
+        "e-Waybill Log",
+        "e-Invoice Log",
+    )
