@@ -66,9 +66,6 @@ doc_events = {
         ),
     },
     "Delivery Note": {
-        "on_trash": (
-            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
-        ),
         "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
@@ -94,9 +91,6 @@ doc_events = {
         ),
     },
     "Sales Invoice": {
-        "on_trash": (
-            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
-        ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
