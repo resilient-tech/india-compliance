@@ -201,8 +201,25 @@ class GSTTransactionData:
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
+    def group_same_items(self, unique_items, item_details, item_row):
+        unique_item_details = unique_items.setdefault(
+            (item_row.item_code, item_row.gst_hsn_code, item_details.uom),
+            item_details.update(
+                {
+                    "qty": 0,
+                    "taxable_value": 0,
+                }
+            ),
+        )
+
+        unique_item_details.qty += abs(self.rounded(item_row.qty, 3))
+        unique_item_details.taxable_value += abs(self.rounded(item_row.taxable_value))
+        return unique_item_details
+
     def get_all_item_details(self):
         all_item_details = []
+        unique_items = {}
+        group_by_item = self.doc.group_same_items
 
         for row in self.doc.items:
             uom = row.uom.upper()
@@ -217,9 +234,26 @@ class GSTTransactionData:
                     "uom": uom if uom in UOMS else "OTH",
                 }
             )
-            self.update_item_details(item_details, row)
-            self.update_item_tax_details(item_details, row)
+
+            item_row = row
+            if group_by_item:
+                item_details = self.group_same_items(
+                    unique_items, item_details, item_row
+                )
+                item_row = item_details.copy().update(
+                    {
+                        "item_code": row.item_code,
+                        "batch_no": None,
+                        "gst_hsn_code": row.gst_hsn_code,
+                    }
+                )
+
+            self.update_item_details(item_details, item_row)
+            self.update_item_tax_details(item_details, item_row)
             all_item_details.append(item_details)
+
+        if group_by_item:
+            all_item_details = list(unique_items.values())
 
         return all_item_details
 
@@ -245,7 +279,7 @@ class GSTTransactionData:
             tax = self.gst_accounts[row.account_head][:-8]
             tax_rate = self.rounded(
                 frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.item_code or item.item_name
+                    item.get("item_code") or item.get("item_name")
                 )[0],
                 3,
             )
