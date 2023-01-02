@@ -29,10 +29,9 @@ class GSTTransactionData:
         self.transaction_details = frappe._dict()
 
         gst_type = "Output"
-        if (
-            self.doc.doctype == "Purchase Invoice"
-            and self.doc.gst_category != "Unregistered"
-        ):
+        if self.doc.doctype == "Purchase Invoice" and self.doc.is_reverse_charge != 1:
+            # for with reverse charge, gst_type is Output
+            # this will ensure zero taxes in transaction details
             gst_type = "Input"
 
         # "CGST Account - TC": "cgst_account"
