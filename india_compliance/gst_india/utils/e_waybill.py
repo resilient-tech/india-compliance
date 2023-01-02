@@ -24,6 +24,10 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
+# SANDBOX_GSTINS
+REGISTERED_GSTIN = "05AAACG2115R1ZN"
+OTHER_GSTIN = "05AAACG2140A1ZL"
+
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
 #######################################################################################
@@ -842,7 +846,7 @@ class EWaybillData(GSTTransactionData):
         if self.sandbox_mode:
             self.transaction_details.update(
                 {
-                    "company_gstin": "05AAACG2115R1ZN",
+                    "company_gstin": REGISTERED_GSTIN,
                     "name": random_string(6).lstrip("0"),
                 }
             )
@@ -850,12 +854,12 @@ class EWaybillData(GSTTransactionData):
             # to ensure company_gstin is inline with company address gstin
             sandbox_gstin = {
                 # (doctype, is_return): (bill_from, bill_to)
-                ("Sales Invoice", 0): ("05AAACG2115R1ZN", "05AAACG2140A1ZL"),
-                ("Sales Invoice", 1): ("05AAACG2140A1ZL", "05AAACG2115R1ZN"),
-                ("Purchase Invoice", 0): ("05AAACG2140A1ZL", "05AAACG2115R1ZN"),
-                ("Purchase Invoice", 1): ("05AAACG2115R1ZN", "05AAACG2140A1ZL"),
-                ("Delivery Note", 0): ("05AAACG2115R1ZN", "05AAACG2140A1ZL"),
-                ("Delivery Note", 1): ("05AAACG2140A1ZL", "05AAACG2115R1ZN"),
+                ("Sales Invoice", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Sales Invoice", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Purchase Invoice", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Purchase Invoice", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
             }
 
             def _get_sandbox_gstin(address, key):
