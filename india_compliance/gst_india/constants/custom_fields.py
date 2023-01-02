@@ -753,9 +753,7 @@ sales_e_waybill_field = {
     "insert_after": "customer_name",
 }
 
-purchase_e_waybill_field = sales_e_waybill_field.copy().update(
-    insert_after="supplier_name"
-)
+purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
 
 E_WAYBILL_FIELDS = {
     "Sales Invoice": E_WAYBILL_INV_FIELDS + [sales_e_waybill_field],
