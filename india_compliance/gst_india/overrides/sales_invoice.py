@@ -2,7 +2,10 @@ import frappe
 from frappe import _, bold
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.overrides.transaction import (
+    validate_if_group_similar_items_applicable,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -97,6 +100,14 @@ def validate_billing_address_gstin(doc):
             _("Billing Address GSTIN and Company GSTIN cannot be the same"),
             title=_("Invalid Billing Address GSTIN"),
         )
+
+
+def before_submit(doc, method=None):
+    if not doc.group_same_items:
+        return
+
+    doc._submitted_from_ui = True
+    validate_if_group_similar_items_applicable(doc)
 
 
 def on_submit(doc, method=None):

@@ -201,59 +201,74 @@ class GSTTransactionData:
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
-    def group_same_items(self, unique_items, item_details, item_row):
-        unique_item_details = unique_items.setdefault(
-            (item_row.item_code, item_row.gst_hsn_code, item_details.uom),
-            item_details.update(
-                {
-                    "qty": 0,
-                    "taxable_value": 0,
-                }
-            ),
-        )
-
-        unique_item_details.qty += abs(self.rounded(item_row.qty, 3))
-        unique_item_details.taxable_value += abs(self.rounded(item_row.taxable_value))
-        return unique_item_details
-
-    def get_all_item_details(self):
-        all_item_details = []
+    def group_same_items(self):
         unique_items = {}
-        group_by_item = self.doc.group_same_items
+
+        item_wise_uom = {}
+        item_wise_hsn = {}
+        validate_if_different_hsn_code_and_uom(
+            self.doc.items, item_wise_uom, item_wise_hsn
+        )
 
         for row in self.doc.items:
             uom = row.uom.upper()
 
-            item_details = frappe._dict(
-                {
-                    "item_no": row.idx,
-                    "qty": abs(self.rounded(row.qty, 3)),
-                    "taxable_value": abs(self.rounded(row.taxable_value)),
-                    "hsn_code": row.gst_hsn_code,
-                    "item_name": self.sanitize_value(row.item_name, 3, max_length=300),
-                    "uom": uom if uom in UOMS else "OTH",
-                }
+            unique_item_details = unique_items.setdefault(
+                row.item_code,
+                frappe._dict(
+                    {
+                        "item_no": row.idx,
+                        "qty": 0.00,
+                        "taxable_value": 0.00,
+                        "hsn_code": row.gst_hsn_code,
+                        "item_name": self.sanitize_value(
+                            row.item_name, 3, max_length=300
+                        ),
+                        "uom": uom if uom in UOMS else "OTH",
+                    }
+                ),
             )
 
-            item_row = row
-            if group_by_item:
-                item_details = self.group_same_items(
-                    unique_items, item_details, item_row
-                )
+            unique_item_details.qty += abs(self.rounded(row.qty, 3))
+            unique_item_details.taxable_value += abs(self.rounded(row.taxable_value))
+        return unique_items
+
+    def get_all_item_details(self):
+        all_item_details = []
+
+        if self.doc.group_same_items:
+            unique_items = self.group_same_items()
+            for key, item_details in unique_items.items():
                 item_row = item_details.copy().update(
                     {
-                        "item_code": row.item_code,
+                        "item_code": key,
                         "batch_no": None,
-                        "gst_hsn_code": row.gst_hsn_code,
+                        "gst_hsn_code": item_details.hsn_code,
+                    }
+                )
+                self.update_item_details(item_details, item_row)
+                self.update_item_tax_details(item_details, item_row)
+                all_item_details.append(item_details)
+        else:
+            for row in self.doc.items:
+                uom = row.uom.upper()
+
+                item_details = frappe._dict(
+                    {
+                        "item_no": row.idx,
+                        "qty": abs(self.rounded(row.qty, 3)),
+                        "taxable_value": abs(self.rounded(row.taxable_value)),
+                        "hsn_code": row.gst_hsn_code,
+                        "item_name": self.sanitize_value(
+                            row.item_name, 3, max_length=300
+                        ),
+                        "uom": uom if uom in UOMS else "OTH",
                     }
                 )
 
-            self.update_item_details(item_details, item_row)
-            self.update_item_tax_details(item_details, item_row)
-            all_item_details.append(item_details)
-
-        if group_by_item:
-            all_item_details = list(unique_items.values())
+                self.update_item_details(item_details, row)
+                self.update_item_tax_details(item_details, row)
+                all_item_details.append(item_details)
 
         return all_item_details
 
@@ -279,7 +294,7 @@ class GSTTransactionData:
             tax = self.gst_accounts[row.account_head][:-8]
             tax_rate = self.rounded(
                 frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.get("item_code") or item.get("item_name")
+                    item.item_code or item.item_name
                 )[0],
                 3,
             )
@@ -513,3 +528,28 @@ def validate_non_gst_items(doc, throw=True):
         )
 
     return True
+
+
+def validate_if_different_hsn_code_and_uom(items, item_wise_uom, item_wise_hsn):
+    # ToDO: Needs refactor
+    def _throw(row_idx, label, value, item):
+        frappe.throw(
+            _(
+                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping"
+                " of items is not possible."
+            ).format(row_idx, label, value, frappe.bold(item)),
+        )
+
+    for item in items:
+        unique_uom = item_wise_uom.setdefault(item.item_code, [])
+        unique_hsn = item_wise_hsn.setdefault(item.item_code, [])
+
+        if item.uom not in unique_uom:
+            unique_uom.append(item.uom)
+        if item.gst_hsn_code not in unique_hsn:
+            unique_hsn.append(item.gst_hsn_code)
+
+        if len(unique_uom) > 1:
+            _throw(item.idx, "UOM", item.uom, item.item_code)
+        if len(unique_hsn) > 1:
+            _throw(item.idx, "HSN Code", item.gst_hsn_code, item.item_code)
