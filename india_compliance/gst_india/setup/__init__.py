@@ -101,23 +101,26 @@ def create_hsn_codes():
 
 def set_default_gst_settings():
     settings = frappe.get_doc("GST Settings")
-    settings.db_set(
-        {
-            "hsn_wise_tax_breakup": 1,
-            "enable_reverse_charge_in_sales": 0,
-            "validate_hsn_code": 1,
-            "min_hsn_digits": 6,
-            "enable_e_waybill": 1,
-            "e_waybill_threshold": 50000,
-            # Default API Settings
-            "fetch_e_waybill_data": 1,
-            "attach_e_waybill_print": 1,
-            "auto_generate_e_waybill": 1,
-            "auto_generate_e_invoice": 1,
-            "e_invoice_applicable_from": nowdate(),
-            "auto_fill_party_info": 1,
-        }
-    )
+    default_settings = {
+        "hsn_wise_tax_breakup": 1,
+        "enable_reverse_charge_in_sales": 0,
+        "validate_hsn_code": 1,
+        "min_hsn_digits": 6,
+        "enable_e_waybill": 1,
+        "e_waybill_threshold": 50000,
+        # Default API Settings
+        "fetch_e_waybill_data": 1,
+        "attach_e_waybill_print": 1,
+        "auto_generate_e_waybill": 1,
+        "auto_generate_e_invoice": 1,
+        "e_invoice_applicable_from": nowdate(),
+        "auto_fill_party_info": 1,
+    }
+
+    if frappe.conf.developer_mode:
+        default_settings["sandbox_mode"] = 1
+
+    settings.db_set(default_settings)
 
     # Hide the fields as not enabled by default
     for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
