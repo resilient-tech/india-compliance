@@ -7,7 +7,7 @@ frappe.pages[pageName].on_page_load = async function (wrapper) {
         "india_compliance_account.bundle.css",
     ]);
 
-    icAccountPage = new ic.pages.IndiaComplianceAccountPage(wrapper);
+    icAccountPage = new ic.pages.IndiaComplianceAccountPage(wrapper, pageName);
 };
 
 frappe.pages[pageName].refresh = function (wrapper) {
