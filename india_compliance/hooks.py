@@ -8,11 +8,13 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
-required_apps = ["erpnext"]
+required_apps = ["frappe/erpnext"]
 
 after_install = "india_compliance.install.after_install"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
+
+before_uninstall = "india_compliance.uninstall.before_uninstall"
 
 app_include_js = "gst_india.bundle.js"
 
@@ -64,6 +66,7 @@ doc_events = {
         ),
     },
     "Delivery Note": {
+        "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
@@ -88,9 +91,6 @@ doc_events = {
         ),
     },
     "Sales Invoice": {
-        "on_trash": (
-            "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
-        ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
@@ -165,6 +165,14 @@ override_doctype_dashboards = {
         "india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"
     ),
 }
+
+
+# DocTypes to be ignored while clearing transactions of a Company
+company_data_to_be_ignored = ["GST Account", "GST Credential"]
+
+# Links to these doctypes will be ignored when deleting a document
+ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
+
 
 # Includes in <head>
 # ------------------

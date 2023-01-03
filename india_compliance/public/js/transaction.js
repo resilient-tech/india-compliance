@@ -40,29 +40,35 @@ function fetch_gst_details(doctype) {
 async function update_gst_details(frm) {
     if (frm.__gst_update_triggered || frm.updating_party_details || !frm.doc.company) return;
 
-    const party_type = ic.get_party_type(frm.doc.doctype).toLowerCase();
-    if (!frm.doc[party_type]) return;
+    const party = frm.doc[ic.get_party_fieldname(frm.doc.doctype)];
+    if (!party) return;
 
     frm.__gst_update_triggered = true;
+
     // wait for GSTINs to get fetched
     await frappe.after_ajax().then(() => frm.__gst_update_triggered = false);
 
-    const party_fields = ["tax_category", "gst_category", "company_gstin", party_type];
+    const party_details = {};
+
+    // fieldname may be "party_name" for Quotation, but "customer" is expected by get_gst_details
+    party_details[ic.get_party_type(frm.doc.doctype).toLowerCase()] = party;
+
+    const fieldnames_to_set = ["tax_category", "gst_category", "company_gstin"];
 
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
-        party_fields.push(
+        fieldnames_to_set.push(
             "customer_address",
             "billing_address_gstin",
             "is_export_with_gst",
             "is_reverse_charge"
         );
     } else {
-        party_fields.push("supplier_address", "supplier_gstin");
+        fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
 
-    const party_details = Object.fromEntries(
-        party_fields.map(field => [field, frm.doc[field]])
-    );
+    for (const fieldname of fieldnames_to_set) {
+        party_details[fieldname] = frm.doc[fieldname];
+    }
 
     frappe.call({
         method: "india_compliance.gst_india.overrides.transaction.get_gst_details",

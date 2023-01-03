@@ -263,7 +263,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
             return { party_type: doctype, party: name };
 
         const party_type = ic.get_party_type(doctype);
-        const party = doc[party_type.toLowerCase()];
+        const party = doc[ic.get_party_fieldname(doctype)];
         return { party_type, party };
     }
 }

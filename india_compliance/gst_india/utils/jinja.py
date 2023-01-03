@@ -12,6 +12,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     TRANSPORT_TYPES,
 )
+from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import as_ist
 
 
@@ -81,17 +82,32 @@ def get_ewaybill_barcode(ewaybill):
     return barcode_base64
 
 
-def get_non_zero_fields(data, fields):
-    """Returns a list of fields with non-zero values in order of fields specified"""
+def get_non_zero_fields(data, fields, doc=None):
+    """
+    Returns a list of fields with non-zero values in order of fields specified
+    Always return mandatory fields even if they have zero value
+    """
 
     if isinstance(data, dict):
         data = [data]
 
     non_zero_fields = []
+    mandatory_fields = ["GstRt"]
+
+    if doc:
+        if is_inter_state_supply(doc):
+            mandatory_fields.extend(["IgstVal"])
+
+        else:
+            mandatory_fields.extend(["CgstVal", "SgstVal"])
+
     for row in data:
         for field in fields:
-            if row.get(field, 0) != 0 and field not in non_zero_fields:
+            is_mandatory = field in mandatory_fields and field in row
+
+            if (
+                row.get(field, 0) != 0 or is_mandatory
+            ) and field not in non_zero_fields:
                 non_zero_fields.append(field)
-                continue
 
     return non_zero_fields

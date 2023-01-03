@@ -70,7 +70,7 @@ def _generate_e_waybill(doc, throw=True):
         # Via e-Invoice API if not Return or Debit Note
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
-        with_irn = doc.irn and not (doc.is_return or doc.is_debit_note)
+        with_irn = doc.get("irn") and not (doc.is_return or doc.is_debit_note)
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
@@ -102,7 +102,6 @@ def _generate_e_waybill(doc, throw=True):
         indicator="green",
         alert=True,
     )
-
     return send_updated_doc(doc)
 
 
@@ -157,7 +156,7 @@ def _cancel_e_waybill(doc, values):
         # if e-Waybill has been created using IRN
         if (
             frappe.conf.ic_api_sandbox_mode
-            and doc.irn
+            and doc.get("irn")
             and not (doc.is_return or doc.is_debit_note)
         )
         else EWaybillAPI
@@ -478,6 +477,8 @@ class EWaybillData(GSTTransactionData):
     def get_data(self, *, with_irn=False):
         self.validate_transaction()
         self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance()
 
         if with_irn:
             return self.sanitize_data(
@@ -496,7 +497,6 @@ class EWaybillData(GSTTransactionData):
 
         self.set_transaction_details()
         self.set_item_list()
-        self.set_party_address_details()
 
         return self.get_transaction_data()
 
@@ -768,6 +768,18 @@ class EWaybillData(GSTTransactionData):
         address_details.state_number = int(address_details.state_number)
 
         return address_details
+
+    def validate_distance(self):
+        """
+        e-Waybill portal doesn't return distance where from and to pincode is same.
+        Hardcode distance to 1 km to simplify and automate this.
+        Accuracy of distance is immaterial and used only for e-Waybill validity determination.
+        """
+        if (
+            self.transaction_details.distance == 0
+            and self.dispatch_address.pincode == self.shipping_address.pincode
+        ):
+            self.transaction_details.distance = 1
 
     def get_transaction_data(self):
         if self.sandbox_mode:

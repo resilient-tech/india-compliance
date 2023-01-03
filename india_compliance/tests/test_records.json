@@ -89,6 +89,32 @@
                     "income_account": "Sales - _TIRC"
                 }
             ]
+        },
+        {
+            "description": "_Test Service Item",
+            "doctype": "Item",
+            "item_code": "_Test Service Item",
+            "item_name": "_Test Service Item",
+            "valuation_rate": 100,
+            "item_group": "Services",
+            "gst_hsn_code": "999900",
+            "uoms": [
+                {
+                    "conversion_factor": 1,
+                    "uom": "Nos",
+                    "name": "_Test Service Item"
+                }
+            ],
+            "item_defaults": [
+                {
+                    "name": "_Test Service Item",
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Service - _TIRC"
+                }
+            ]
         }
     ],
     "Customer": [
@@ -123,21 +149,21 @@
             "gst_category": "Registered Regular"
         },
         {
-            "name":"_Test Registered Composition Supplier",
+            "name": "_Test Registered Composition Supplier",
             "supplier_name": "_Test Registered Composition Supplier",
             "supplier_type": "Individual",
             "gstin": "33AAAAR6720M1ZG",
             "gst_category": "Registered Composition"
         },
         {
-            "name":"_Test Registered InterState Supplier",
+            "name": "_Test Registered InterState Supplier",
             "supplier_name": "_Test Registered InterState Supplier",
             "supplier_type": "Individual",
             "gstin": "33AAAAR6720M1ZG",
             "gst_category": "Registered Regular"
         },
         {
-            "name":"_Test Unregistered Supplier",
+            "name": "_Test Unregistered Supplier",
             "supplier_name": "_Test Unregistered Supplier",
             "supplier_type": "Individual",
             "gstin": "",
@@ -198,7 +224,10 @@
             "is_primary_address": 1,
             "is_shipping_address": 1,
             "links": [
-                { "link_doctype": "Customer", "link_name": "_Test Registered Customer" }
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
             ]
         },
         {
@@ -212,7 +241,10 @@
             "gstin": "24AANCA4892J1Z8",
             "gst_category": "SEZ",
             "links": [
-                { "link_doctype": "Customer", "link_name": "_Test Registered Customer" }
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
             ]
         },
         {
@@ -247,7 +279,10 @@
             "is_primary_address": 1,
             "is_shipping_address": 1,
             "links": [
-                { "link_doctype": "Supplier", "link_name": "_Test Registered Supplier" }
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Supplier"
+                }
             ]
         },
         {
@@ -261,7 +296,10 @@
             "gstin": "",
             "gst_category": "Overseas",
             "links": [
-                { "link_doctype": "Supplier", "link_name": "_Test Registered Supplier" }
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Supplier"
+                }
             ]
         },
         {
@@ -327,7 +365,5 @@
                 }
             ]
         }
-
     ]
-
 }
