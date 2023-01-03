@@ -12,6 +12,10 @@
  "root_password": "travis",
  "host_name": "http://test_site:8000",
  "install_apps": ["erpnext"],
+<<<<<<< HEAD
  "ic_api_sandbox_mode": 1,
+=======
+ "ic_api_secret": "*****",
+>>>>>>> 62ed1c4b (feat: allow configuring Sandbox Mode in GST Settings)
  "throttle_user_limit": 100
 }
