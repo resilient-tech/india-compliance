@@ -24,8 +24,8 @@ class GSTTransactionData:
 
     def __init__(self, doc):
         self.doc = doc
-        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.settings = frappe.get_cached_doc("GST Settings")
+        self.sandbox_mode = self.settings.sandbox_mode
         self.transaction_details = frappe._dict()
 
         # "CGST Account - TC": "cgst_account"

@@ -382,7 +382,7 @@ class TestEInvoice(FrappeTestCase):
         # Assert for Mock request data
         self.assertDictEqual(
             cancel_e_waybill.get("request_data"),
-            EWaybillData(doc).get_e_waybill_cancel_data(values),
+            EWaybillData(doc).get_data_for_cancellation(values),
         )
 
         # Prepared e_invoice cancel data

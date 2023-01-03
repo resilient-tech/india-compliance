@@ -149,20 +149,20 @@ def cancel_e_waybill(*, doctype, docname, values):
 def _cancel_e_waybill(doc, values):
     """Separate function, since called in backend from e-invoice utils"""
 
-    data = EWaybillData(doc).get_e_waybill_cancel_data(values)
+    e_waybill_data = EWaybillData(doc)
     api = (
         EInvoiceAPI
         # Use EInvoiceAPI only for sandbox environment
         # if e-Waybill has been created using IRN
         if (
-            frappe.conf.ic_api_sandbox_mode
+            e_waybill_data.sandbox_mode
             and doc.get("irn")
             and not (doc.is_return or doc.is_debit_note)
         )
         else EWaybillAPI
     )
 
-    result = api(doc).cancel_e_waybill(data)
+    result = api(doc).cancel_e_waybill(e_waybill_data.get_data_for_cancellation(values))
 
     log_and_process_e_waybill(
         doc,
@@ -500,7 +500,7 @@ class EWaybillData(GSTTransactionData):
 
         return self.get_transaction_data()
 
-    def get_e_waybill_cancel_data(self, values):
+    def get_data_for_cancellation(self, values):
         self.validate_if_e_waybill_is_set()
         self.validate_if_ewaybill_can_be_cancelled()
 
