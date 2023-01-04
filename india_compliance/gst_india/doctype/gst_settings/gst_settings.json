@@ -6,7 +6,6 @@
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
-  "enable_api",
   "hsn_wise_tax_breakup",
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
@@ -14,6 +13,10 @@
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
+  "api_section",
+  "enable_api",
+  "column_break_rk3h",
+  "sandbox_mode",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
@@ -225,12 +228,29 @@
    "fieldname": "autofill_party_info",
    "fieldtype": "Check",
    "label": "Autofill Party Information based on GSTIN"
+  },
+  {
+   "fieldname": "api_section",
+   "fieldtype": "Section Break",
+   "label": "API"
+  },
+  {
+   "fieldname": "column_break_rk3h",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: ic.is_api_enabled(doc)",
+   "description": "Enable this to explore GST API features in a test environment. API actions executed in sandbox mode won't affect your actual business data on the GST portal.",
+   "fieldname": "sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Use API in Sandbox Mode?"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-09-07 09:49:38.261631",
+ "modified": "2023-01-03 02:39:59.034386",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
