@@ -26,7 +26,7 @@ class BaseAPI:
                 )
             )
 
-        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
+        self.sandbox_mode = self.settings.sandbox_mode
         self.default_headers = {
             "x-api-key": (
                 (self.settings.api_secret and self.settings.get_password("api_secret"))
