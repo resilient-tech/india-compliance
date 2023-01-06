@@ -1,3 +1,4 @@
+---
 name: Feature Request
 description: Suggest an idea to improve India Compliance
 labels: ["feature-request"]
@@ -41,4 +42,4 @@ body:
     attributes:
       label: Additional context
       description: Add any other context or screenshots about the feature request here.
-        
+...
