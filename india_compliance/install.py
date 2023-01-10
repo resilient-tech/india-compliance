@@ -10,6 +10,7 @@ from india_compliance.income_tax_india.setup import after_install as setup_incom
 POST_INSTALL_PATCHES = (
     ## ERPNext
     "setup_custom_fields_for_gst",
+    "add_hsn_to_item_variant_copy_fields",
     "set_gst_category",
     "update_gst_category",
     "add_einvoice_status_field",
