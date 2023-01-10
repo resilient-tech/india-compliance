@@ -259,8 +259,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
         if (
             doc &&
             frappe.dynamic_link &&
-            frappe.dynamic_link.doc &&
-            frappe.dynamic_link.doc.name == doc.name
+            frappe.dynamic_link.doc === doc
         ) {
             return {
                 party_type: frappe.dynamic_link.doctype,
