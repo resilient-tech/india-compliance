@@ -2,12 +2,12 @@ import frappe
 from frappe import _, bold
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import (
-    validate_if_group_similar_items_applicable,
-    validate_transaction,
-)
+from india_compliance.gst_india.overrides.transaction import validate_transaction
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
+from india_compliance.gst_india.utils.transaction_data import (
+    validate_if_different_hsn_code_and_uom,
+)
 
 
 def onload(doc, method=None):
@@ -107,7 +107,7 @@ def before_submit(doc, method=None):
         return
 
     doc._submitted_from_ui = True
-    validate_if_group_similar_items_applicable(doc)
+    validate_if_different_hsn_code_and_uom(doc.items)
 
 
 def on_submit(doc, method=None):

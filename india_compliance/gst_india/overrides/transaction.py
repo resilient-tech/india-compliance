@@ -16,9 +16,6 @@ from india_compliance.gst_india.utils import (
     get_place_of_supply,
     validate_gst_category,
 )
-from india_compliance.gst_india.utils.transaction_data import (
-    validate_if_different_hsn_code_and_uom,
-)
 
 DOCTYPES_WITH_TAXABLE_VALUE = {
     "Purchase Invoice",
@@ -726,12 +723,3 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
-
-
-def validate_if_group_similar_items_applicable(doc):
-    """Validate if Group similar items is applicable if UOM and HSN Codes are same."""
-    if not doc.items:
-        return
-
-    item_wise_uom, item_wise_hsn = {}, {}
-    validate_if_different_hsn_code_and_uom(doc.items, item_wise_uom, item_wise_hsn)

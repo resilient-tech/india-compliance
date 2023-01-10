@@ -204,11 +204,7 @@ class GSTTransactionData:
     def group_same_items(self):
         unique_items = {}
 
-        item_wise_uom = {}
-        item_wise_hsn = {}
-        validate_if_different_hsn_code_and_uom(
-            self.doc.items, item_wise_uom, item_wise_hsn
-        )
+        validate_if_different_hsn_code_and_uom(self.doc.items)
 
         for row in self.doc.items:
             uom = row.uom.upper()
@@ -530,8 +526,9 @@ def validate_non_gst_items(doc, throw=True):
     return True
 
 
-def validate_if_different_hsn_code_and_uom(items, item_wise_uom, item_wise_hsn):
-    # ToDO: Needs refactor
+def validate_if_different_hsn_code_and_uom(items):
+    """Raise an exception if the same items have different HSN Code or UOM"""
+
     def _throw(row_idx, label, value, item):
         frappe.throw(
             _(
@@ -539,6 +536,9 @@ def validate_if_different_hsn_code_and_uom(items, item_wise_uom, item_wise_hsn):
                 " of items is not possible."
             ).format(row_idx, label, value, frappe.bold(item)),
         )
+
+    item_wise_uom = {}
+    item_wise_hsn = {}
 
     for item in items:
         unique_uom = item_wise_uom.setdefault(item.item_code, [])
