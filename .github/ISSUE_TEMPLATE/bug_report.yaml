@@ -32,7 +32,7 @@ body:
     id: exact-version
     attributes:
       label: Version
-      description: Share exact version number of Frappe and ERPNext and India Compliance you are using.
+      description: Share exact version number of Frappe, ERPNext and India Compliance you are using.
       placeholder: |
         Frappe Version -
         ERPNext Verion -
