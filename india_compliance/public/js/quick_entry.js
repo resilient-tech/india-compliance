@@ -256,20 +256,11 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
     get_default_party() {
         const doc = cur_frm && cur_frm.doc;
-        if (!doc) return;
-
-        const { doctype, name } = doc;
-        if (in_list(frappe.boot.gst_party_types, doctype))
-            return { party_type: doctype, party: name };
-
-        const party_type = ic.get_party_type(doctype);
-        const party = doc[ic.get_party_fieldname(doctype)];
-        if (party_type && party) return { party_type, party };
-
         if (
+            doc &&
             frappe.dynamic_link &&
             frappe.dynamic_link.doc &&
-            frappe.dynamic_link.doc.name == name
+            frappe.dynamic_link.doc.name == doc.name
         ) {
             return {
                 party_type: frappe.dynamic_link.doctype,
