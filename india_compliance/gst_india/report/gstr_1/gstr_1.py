@@ -909,7 +909,7 @@ def get_json(filters, report_name, data):
 
     filters = json.loads(filters)
     report_data = json.loads(data)
-    gstin = get_company_gstin_number(
+    gstin = filters.get("company_gstin") or get_company_gstin_number(
         filters.get("company"), filters.get("company_address")
     )
 
