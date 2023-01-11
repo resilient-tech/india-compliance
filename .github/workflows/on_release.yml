@@ -1,6 +1,7 @@
 
 name: Generate Semantic Release
 on:
+  workflow_dispatch:
   push:
     branches:
       - version-14
