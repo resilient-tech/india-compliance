@@ -518,6 +518,11 @@ def get_gst_details(party_details, doctype, company):
         source_gstin = party_details.supplier_gstin
         destination_gstin = party_details.company_gstin
 
+    if party_details.get("tax_category"):
+        party_details.is_reverse_charge = get_reverse_charge_by_tax_category(
+            party_details.tax_category
+        )
+
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
         or (
@@ -664,15 +669,17 @@ def validate_reverse_charge_transaction(doc, method=None):
 
     for tax in doc.get("taxes"):
         if tax.account_head in input_gst_accounts:
+            # Adding in input tax accounts should increase the base_gst_tax as its an Tax Asset Account
             if tax.add_deduct_tax == "Add":
                 base_gst_tax += tax.base_tax_amount_after_discount_amount
             else:
-                base_gst_tax += tax.base_tax_amount_after_discount_amount
+                base_gst_tax -= tax.base_tax_amount_after_discount_amount
         elif tax.account_head in reverse_charge_accounts:
-            if tax.add_deduct_tax == "Add":
+            # Deducting in reverse charge accounts should increase the base_reverse_charge_booked as its an Tax Liability Account
+            if tax.add_deduct_tax == "Deduct":
                 base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
             else:
-                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
+                base_reverse_charge_booked -= tax.base_tax_amount_after_discount_amount
 
     if base_gst_tax != base_reverse_charge_booked:
         msg = _("Booked reverse charge is not equal to applied tax amount")
@@ -694,6 +701,10 @@ def validate_reverse_charge_transaction(doc, method=None):
 
 def is_export_without_payment_of_gst(doc):
     return doc.gst_category in OVERSEAS_GST_CATEGORIES and not doc.is_export_with_gst
+
+
+def get_reverse_charge_by_tax_category(tax_category):
+    return frappe.db.get_value("Tax Category", tax_category, "is_reverse_charge")
 
 
 def validate_transaction(doc, method=None):
