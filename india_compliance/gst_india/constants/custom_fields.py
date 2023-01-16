@@ -554,6 +554,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "insert_after": "item_group",
+            "allow_in_quick_entry": 1,
         },
         {
             "fieldname": "is_nil_exempt",
