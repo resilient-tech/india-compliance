@@ -315,7 +315,9 @@ class EInvoiceData(GSTTransactionData):
         credit_days = 0
         paid_amount = 0
 
-        if self.doc.due_date:
+        if self.doc.due_date and getdate(self.doc.due_date) > getdate(
+            self.doc.posting_date
+        ):
             credit_days = (
                 getdate(self.doc.due_date) - getdate(self.doc.posting_date)
             ).days
