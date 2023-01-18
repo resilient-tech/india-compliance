@@ -155,7 +155,7 @@ def on_submit(doc, method=None):
 
 
 def on_update_after_submit(doc, method=None):
-    if ignore_gst_validations(doc) or not doc.has_value_changed("group_same_items"):
+    if not doc.has_value_changed("group_same_items") or ignore_gst_validations(doc):
         return
 
     if doc.ewaybill or doc.irn:
