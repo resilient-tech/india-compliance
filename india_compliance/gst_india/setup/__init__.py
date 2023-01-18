@@ -31,7 +31,7 @@ def after_install():
 def before_uninstall():
     delete_custom_fields()
     delete_property_setters()
-    remove_variant_hsn_map()
+    remove_item_variant_gst_map()
 
 
 def create_custom_fields():
@@ -228,12 +228,8 @@ def _get_custom_fields_map(*custom_fields_list):
     return result
 
 
-def remove_variant_hsn_map():
-    row = frappe.db.exists("Variant Field", {"field_name": "gst_hsn_code"})
-    if row:
-        ivs = frappe.get_doc("Item Variant Settings")
-        to_remove = [d for d in ivs.fields if d.field_name == "gst_hsn_code"]
-        ivs.fields.remove(to_remove[0])
-        for index, item in enumerate(ivs.fields):
-            item.idx = index
-        ivs.save()
+def remove_item_variant_gst_map():
+    fields_to_remove = ["gst_hsn_code", "is_nil_exempt", "is_non_gst"]
+    rows = frappe.db.get_all("Variant Field", {"field_name": ["in", fields_to_remove]}, pluck="name")
+    for d in rows:
+        frappe.delete_doc("Variant Field", d)
