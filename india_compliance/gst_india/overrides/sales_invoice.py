@@ -160,8 +160,10 @@ def on_update_after_submit(doc, method=None):
 
     if doc.group_same_items and (doc.ewaybill or doc.irn):
         frappe.msgprint(
-            "You have already generated e-Waybill or e-Invoice for this document without grouping items. This will result in mismatch of item details in e-Waybill/e-Invoice.",
-            title="Inconsistent Item Details",
+            _(
+                "You have already generated e-Waybill or e-Invoice for this document without grouping items. This will result in mismatch of item details in e-Waybill/e-Invoice.",
+                title="Inconsistent Item Details",
+            ),
         )
 
     validate_unique_hsn_and_uom(doc)
