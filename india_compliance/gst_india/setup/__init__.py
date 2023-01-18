@@ -230,6 +230,8 @@ def _get_custom_fields_map(*custom_fields_list):
 
 def remove_item_variant_gst_map():
     fields_to_remove = ["gst_hsn_code", "is_nil_exempt", "is_non_gst"]
-    rows = frappe.db.get_all("Variant Field", {"field_name": ["in", fields_to_remove]}, pluck="name")
+    rows = frappe.db.get_all(
+        "Variant Field", {"field_name": ["in", fields_to_remove]}, pluck="name"
+    )
     for d in rows:
         frappe.delete_doc("Variant Field", d)
