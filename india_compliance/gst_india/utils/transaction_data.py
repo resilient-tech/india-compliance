@@ -204,10 +204,11 @@ class GSTTransactionData:
     def get_all_item_details(self):
         all_item_details = []
 
+        items = self.doc.items
         if self.doc.group_same_items:
-            self.doc.items = self.group_same_items()
+            items = self.group_same_items()
 
-        for row in self.doc.items:
+        for row in items:
             uom = row.uom.upper()
 
             item_details = frappe._dict(
