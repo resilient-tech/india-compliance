@@ -246,7 +246,7 @@ class GSTTransactionData:
             item.qty += row.qty
             item.taxable_value += row.taxable_value
 
-        return grouped_items
+        return list(grouped_items.values())
 
     def set_item_list(self):
         self.item_list = []

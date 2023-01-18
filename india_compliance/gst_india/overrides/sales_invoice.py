@@ -158,7 +158,7 @@ def on_update_after_submit(doc, method=None):
     if not doc.has_value_changed("group_same_items") or ignore_gst_validations(doc):
         return
 
-    if doc.ewaybill or doc.irn:
+    if doc.group_same_items and (doc.ewaybill or doc.irn):
         frappe.msgprint(
             "You have already generated e-Waybill or e-Invoice for this document without grouping items. This will result in mismatch of item details in e-Waybill/e-Invoice.",
             title="Inconsistent Item Details",
