@@ -2,11 +2,14 @@ import frappe
 from frappe import _, bold
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.overrides.transaction import (
+    ignore_gst_validations,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 from india_compliance.gst_india.utils.transaction_data import (
-    validate_if_different_hsn_code_and_uom,
+    validate_unique_hsn_and_uom,
 )
 
 
@@ -54,6 +57,7 @@ def validate(doc, method=None):
     validate_invoice_number(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
+    validate_unique_hsn_and_uom(doc)
 
 
 def validate_invoice_number(doc):
@@ -102,14 +106,6 @@ def validate_billing_address_gstin(doc):
         )
 
 
-def before_submit(doc, method=None):
-    if not doc.group_same_items:
-        return
-
-    doc._submitted_from_ui = True
-    validate_if_different_hsn_code_and_uom(doc.items)
-
-
 def on_submit(doc, method=None):
     if getattr(doc, "_submitted_from_ui", None) or not doc.company_gstin:
         return
@@ -156,6 +152,19 @@ def on_submit(doc, method=None):
         doctype=doc.doctype,
         docname=doc.name,
     )
+
+
+def on_update_after_submit(doc, method=None):
+    if ignore_gst_validations(doc) or not doc.has_value_changed("group_same_items"):
+        return
+
+    if doc.ewaybill or doc.irn:
+        frappe.msgprint(
+            "You have already generated e-Waybill or e-Invoice for this document without grouping items. This will result in mismatch of item details in e-Waybill/e-Invoice.",
+            title="Inconsistent Item Details",
+        )
+
+    validate_unique_hsn_and_uom(doc)
 
 
 def get_dashboard_data(data):
