@@ -14,6 +14,7 @@ class EInvoiceAPI(BaseAPI):
     IGNORED_ERROR_CODES = {
         "2150": "Duplicate IRN",
         "2283": "IRN details cannot be provided as it is generated more than 2 days ago",
+        "9999": "Invoice is not active",
     }
 
     def setup(self, doc=None, *, company_gstin=None):
