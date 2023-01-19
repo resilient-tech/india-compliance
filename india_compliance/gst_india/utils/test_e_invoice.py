@@ -317,7 +317,7 @@ class TestEInvoice(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Invoice can only be cancelled.*)$"),
-            EInvoiceData(si).validate_if_e_invoice_can_be_cancelled,
+            EInvoiceData(si_doc).validate_if_e_invoice_can_be_cancelled,
         )
 
         cancelled_doc = self._cancel_e_invoice(si.name)
