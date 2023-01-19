@@ -16,7 +16,6 @@ from india_compliance.gst_india.utils.e_invoice import (
     cancel_e_invoice,
     generate_e_invoice,
     validate_e_invoice_applicability,
-    validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import EWaybillData
 from india_compliance.gst_india.utils.tests import create_sales_invoice
@@ -288,6 +287,7 @@ class TestEInvoice(FrappeTestCase):
     def test_cancel_e_invoice(self):
         """Test for generate and cancel e-Invoice
         - Test function `validate_if_e_invoice_can_be_cancelled`
+        - Test function `validate_if_irn_is_set`
         """
 
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
@@ -296,8 +296,7 @@ class TestEInvoice(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(IRN not found)$"),
-            validate_if_e_invoice_can_be_cancelled,
-            si,
+            EInvoiceData(si).validate_if_irn_is_set,
         )
 
         test_data.get("response_data").get("result").update(
@@ -318,8 +317,7 @@ class TestEInvoice(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Invoice can only be cancelled.*)$"),
-            validate_if_e_invoice_can_be_cancelled,
-            si_doc,
+            EInvoiceData(si).validate_if_e_invoice_can_be_cancelled,
         )
 
         cancelled_doc = self._cancel_e_invoice(si.name)
