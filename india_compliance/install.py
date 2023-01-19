@@ -30,7 +30,6 @@ POST_INSTALL_PATCHES = (
     "remove_deprecated_docs",
     "remove_old_fields",
     "update_custom_role_for_e_invoice_summary",
-    "add_item_variant_fields_to_copy",
 )
 
 
