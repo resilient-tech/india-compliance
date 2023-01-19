@@ -20,7 +20,6 @@ from india_compliance.gst_india.utils import (
     send_updated_doc,
     update_onload,
 )
-from india_compliance.gst_india.utils.e_invoice import _cancel_e_invoice
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 PERMITTED_DOCTYPES = {"Sales Invoice", "Delivery Note"}
@@ -143,9 +142,6 @@ def cancel_e_waybill(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "cancel")
     values = frappe.parse_json(values)
     _cancel_e_waybill(doc, values)
-
-    if doc.get("irn"):
-        _cancel_e_invoice(doc, values)
 
     return send_updated_doc(doc)
 

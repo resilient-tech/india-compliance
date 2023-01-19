@@ -119,12 +119,6 @@ def cancel_e_invoice(docname, values):
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
-    _cancel_e_invoice(doc, values)
-
-
-def _cancel_e_invoice(doc, values):
-    """Separate function, since called in backend from e-waybill utils"""
-
     e_invoice_data = EInvoiceData(doc)
     result = EInvoiceAPI(doc).cancel_irn(
         e_invoice_data.get_data_for_cancellation(values)
