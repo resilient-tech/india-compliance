@@ -15,6 +15,8 @@ from india_compliance.gst_india.constants.custom_fields import (
 from india_compliance.gst_india.setup.property_setters import get_property_setters
 from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_fields
 
+ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gst"))
+
 
 def after_install():
     create_custom_fields()
@@ -23,8 +25,18 @@ def after_install():
     set_default_gst_settings()
     set_default_accounts_settings()
     create_hsn_codes()
+    add_fields_to_item_variant_settings()
 
 
+<<<<<<< HEAD
+=======
+def before_uninstall():
+    delete_custom_fields()
+    delete_property_setters()
+    remove_fields_from_item_variant_settings()
+
+
+>>>>>>> bd9ec6da (fix: copy GST Item fields to its variants (#458))
 def create_custom_fields():
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
@@ -97,6 +109,18 @@ def create_hsn_codes():
         ignore_duplicates=True,
         chunk_size=20_000,
     )
+
+
+def add_fields_to_item_variant_settings():
+    settings = frappe.get_doc("Item Variant Settings")
+    fields_to_add = ITEM_VARIANT_FIELDNAMES - {
+        row.field_name for row in settings.fields
+    }
+
+    for fieldname in fields_to_add:
+        settings.append("fields", {"field_name": fieldname})
+
+    settings.save()
 
 
 def set_default_gst_settings():
@@ -198,3 +222,11 @@ def _get_custom_fields_to_create(*custom_fields_list):
             result.setdefault(doctypes, []).extend(fields)
 
     return result
+
+
+def remove_fields_from_item_variant_settings():
+    settings = frappe.get_doc("Item Variant Settings")
+    settings.fields = [
+        row for row in settings.fields if row.field_name not in ITEM_VARIANT_FIELDNAMES
+    ]
+    settings.save()
