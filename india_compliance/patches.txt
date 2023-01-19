@@ -8,4 +8,4 @@ execute:from india_compliance.gst_india.setup import create_property_setters; cr
 india_compliance.patches.post_install.update_custom_role_for_e_invoice_summary
 india_compliance.patches.v14.remove_ecommerce_gstin_from_purchase_invoice
 india_compliance.patches.v14.set_sandbox_mode_in_gst_settings
-india_compliance.patches.post_install.add_hsn_to_item_variant_copy_fields
+execute:from india_compliance.gst_india.setup import add_fields_to_item_variant_settings; add_fields_to_item_variant_settings()
