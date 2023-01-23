@@ -18,6 +18,8 @@ from india_compliance.patches.post_install.update_e_invoice_fields_and_logs impo
     delete_custom_fields as _delete_custom_fields,
 )
 
+ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gst"))
+
 
 def after_install():
     create_custom_fields()
@@ -26,11 +28,13 @@ def after_install():
     set_default_gst_settings()
     set_default_accounts_settings()
     create_hsn_codes()
+    add_fields_to_item_variant_settings()
 
 
 def before_uninstall():
     delete_custom_fields()
     delete_property_setters()
+    remove_fields_from_item_variant_settings()
 
 
 def create_custom_fields():
@@ -124,6 +128,18 @@ def create_hsn_codes():
         ignore_duplicates=True,
         chunk_size=20_000,
     )
+
+
+def add_fields_to_item_variant_settings():
+    settings = frappe.get_doc("Item Variant Settings")
+    fields_to_add = ITEM_VARIANT_FIELDNAMES - {
+        row.field_name for row in settings.fields
+    }
+
+    for fieldname in fields_to_add:
+        settings.append("fields", {"field_name": fieldname})
+
+    settings.save()
 
 
 def set_default_gst_settings():
@@ -225,3 +241,11 @@ def _get_custom_fields_map(*custom_fields_list):
             result.setdefault(doctypes, []).extend(fields)
 
     return result
+
+
+def remove_fields_from_item_variant_settings():
+    settings = frappe.get_doc("Item Variant Settings")
+    settings.fields = [
+        row for row in settings.fields if row.field_name not in ITEM_VARIANT_FIELDNAMES
+    ]
+    settings.save()
