@@ -127,13 +127,14 @@ def cancel_e_invoice(docname, values):
     log_e_invoice(
         doc,
         {
-            "name": result.get("Irn") or doc.irn,
+            "name": result.get("Irn")
+            or doc.irn,  # fallback to handle already cancelled IRN
             "is_cancelled": 1,
             "cancel_reason_code": values.reason,
             "cancel_remark": values.remark,
             "cancelled_on": parse_datetime(
                 result.get("CancelDate") or str(get_datetime())
-            ),
+            ),  # fallback to handle already cancelled IRN
         },
     )
 

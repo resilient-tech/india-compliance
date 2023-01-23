@@ -173,7 +173,7 @@ def _cancel_e_waybill(doc, values):
             "cancel_remark": values.remark if values.remark else values.reason,
             "cancelled_on": parse_datetime(
                 result.get("cancelDate") or str(get_datetime()), day_first=True
-            ),
+            ),  # Fallback to handle already cancelled e-Waybill
         },
     )
 
