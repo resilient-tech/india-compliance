@@ -127,8 +127,7 @@ def cancel_e_invoice(docname, values):
     log_e_invoice(
         doc,
         {
-            "name": result.get("Irn")
-            or doc.irn,  # fallback to handle already cancelled IRN
+            "name": doc.irn,
             "is_cancelled": 1,
             "cancel_reason_code": values.reason,
             "cancel_remark": values.remark,
