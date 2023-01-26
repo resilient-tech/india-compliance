@@ -15,6 +15,7 @@ def delete_gst_settings_for_company(doc, method=None):
         row for row in gst_settings.get("gst_accounts", []) if row.company != doc.name
     ]
 
+    gst_settings.flags.ignore_mandatory = True
     gst_settings.save()
 
 
@@ -93,6 +94,10 @@ def update_gst_settings(company):
         gst_settings,
         "Reverse Charge",
     )
+
+    # Ignore mandatory during install, some values may not be set by post install patch
+    if frappe.flags.in_install:
+        gst_settings.flags.ignore_mandatory = True
 
     gst_settings.save()
 
