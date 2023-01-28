@@ -14,6 +14,9 @@ from india_compliance.gst_india.constants.custom_fields import (
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
 from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_fields
+from india_compliance.patches.post_install.update_e_invoice_fields_and_logs import (
+    delete_custom_fields as _delete_custom_fields,
+)
 
 ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gst"))
 
@@ -28,21 +31,18 @@ def after_install():
     add_fields_to_item_variant_settings()
 
 
-<<<<<<< HEAD
-=======
 def before_uninstall():
     delete_custom_fields()
     delete_property_setters()
     remove_fields_from_item_variant_settings()
 
 
->>>>>>> bd9ec6da (fix: copy GST Item fields to its variants (#458))
 def create_custom_fields():
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
     _create_custom_fields(
-        _get_custom_fields_to_create(
+        _get_custom_fields_map(
             CUSTOM_FIELDS,
             SALES_REVERSE_CHARGE_FIELDS,
             E_INVOICE_FIELDS,
@@ -55,6 +55,25 @@ def create_custom_fields():
 def create_property_setters():
     for property_setter in get_property_setters():
         frappe.make_property_setter(property_setter)
+
+
+def delete_custom_fields():
+    _delete_custom_fields(
+        _get_custom_fields_map(
+            CUSTOM_FIELDS,
+            SALES_REVERSE_CHARGE_FIELDS,
+            E_INVOICE_FIELDS,
+            E_WAYBILL_FIELDS,
+        )
+    )
+
+
+def delete_property_setters():
+    for property_setter in get_property_setters():
+        keys_to_update = ["doc_type", "field_name", "property", "value"]
+        # Update the keys to match with the property setter fields
+        filters = dict(zip(keys_to_update, list(property_setter.values())))
+        frappe.db.delete("Property Setter", filters)
 
 
 def create_address_template():
@@ -211,7 +230,7 @@ def show_accounts_settings_override_warning():
     )
 
 
-def _get_custom_fields_to_create(*custom_fields_list):
+def _get_custom_fields_map(*custom_fields_list):
     result = {}
 
     for custom_fields in custom_fields_list:
