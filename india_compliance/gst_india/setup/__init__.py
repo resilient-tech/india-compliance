@@ -6,6 +6,10 @@ from frappe.custom.doctype.custom_field.custom_field import (
 )
 from frappe.utils import now_datetime, nowdate
 
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    make_dimension_in_accounting_doctypes,
+)
+
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
@@ -23,6 +27,7 @@ ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gs
 
 def after_install():
     create_custom_fields()
+    create_accounting_dimension_fields()
     create_property_setters()
     create_address_template()
     set_default_gst_settings()
@@ -33,6 +38,7 @@ def after_install():
 
 def before_uninstall():
     delete_custom_fields()
+    delete_accounting_dimension_fields()
     delete_property_setters()
     remove_fields_from_item_variant_settings()
 
@@ -52,6 +58,18 @@ def create_custom_fields():
     )
 
 
+def create_accounting_dimension_fields():
+    doctypes = frappe.get_hooks(
+        "accounting_dimension_doctypes",
+        app_name="india_compliance",
+    )
+
+    dimensions = frappe.get_all("Accounting Dimension", pluck="name")
+    for dimension in dimensions:
+        doc = frappe.get_doc("Accounting Dimension", dimension)
+        make_dimension_in_accounting_doctypes(doc, doctypes)
+
+
 def create_property_setters():
     for property_setter in get_property_setters():
         frappe.make_property_setter(property_setter)
@@ -66,6 +84,16 @@ def delete_custom_fields():
             E_WAYBILL_FIELDS,
         )
     )
+
+
+def delete_accounting_dimension_fields():
+    doctypes = frappe.get_hooks(
+        "accounting_dimension_doctypes",
+        app_name="india_compliance",
+    )
+
+    fieldnames = frappe.get_all("Accounting Dimension", fields=["fieldname"])
+    _delete_custom_fields({doctype: fieldnames for doctype in doctypes})
 
 
 def delete_property_setters():

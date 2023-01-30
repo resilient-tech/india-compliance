@@ -29,6 +29,7 @@ doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
+    "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
     "Sales Invoice": [
         "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/e_waybill_actions.js",
@@ -172,6 +173,8 @@ company_data_to_be_ignored = ["GST Account", "GST Credential"]
 
 # Links to these doctypes will be ignored when deleting a document
 ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
+
+accounting_dimension_doctypes = ["Bill of Entry Item"]
 
 
 # Includes in <head>
