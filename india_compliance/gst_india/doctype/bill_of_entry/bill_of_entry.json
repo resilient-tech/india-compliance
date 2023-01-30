@@ -24,11 +24,15 @@
   "bill_of_entry_date",
   "column_break_srom",
   "port_code",
+  "posting_date",
   "accounting_details_section",
   "paid_through_account",
   "column_break_xjvk",
   "customs_account",
   "column_break_zsed",
+  "accounting_dimensions_section",
+  "cost_center",
+  "dimension_col_break",
   "section_break_nlqh",
   "items",
   "section_break_ujtl",
@@ -234,12 +238,34 @@
    "fieldtype": "Currency",
    "label": "Total Taxes",
    "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "accounting_dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "dimension_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-01-30 16:08:53.906450",
+ "modified": "2023-01-30 20:14:30.671063",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

@@ -15,10 +15,7 @@
   "rate",
   "column_break_pipk",
   "tax_amount",
-  "total",
-  "accounting_dimensions_section",
-  "cost_center",
-  "dimension_col_break"
+  "total"
  ],
  "fields": [
   {
@@ -85,29 +82,11 @@
    "oldfieldtype": "Currency",
    "options": "Company:company:default_currency",
    "read_only": 1
-  },
-  {
-   "fieldname": "accounting_dimensions_section",
-   "fieldtype": "Section Break",
-   "label": "Accounting Dimensions"
-  },
-  {
-   "default": ":Company",
-   "fieldname": "cost_center",
-   "fieldtype": "Link",
-   "label": "Cost Center",
-   "oldfieldname": "cost_center",
-   "oldfieldtype": "Link",
-   "options": "Cost Center"
-  },
-  {
-   "fieldname": "dimension_col_break",
-   "fieldtype": "Column Break"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2023-01-30 16:11:14.265117",
+ "modified": "2023-01-30 19:15:50.947960",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry Taxes",

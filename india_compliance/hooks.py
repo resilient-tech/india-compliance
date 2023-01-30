@@ -174,7 +174,7 @@ company_data_to_be_ignored = ["GST Account", "GST Credential"]
 # Links to these doctypes will be ignored when deleting a document
 ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
 
-accounting_dimension_doctypes = ["Bill of Entry Item"]
+accounting_dimension_doctypes = ["Bill of Entry", "Bill of Entry Item"]
 
 
 # Includes in <head>

@@ -6,6 +6,10 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
+import erpnext
+from erpnext.accounts.general_ledger import make_gl_entries
+from erpnext.controllers.accounts_controller import AccountsController
+
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -18,12 +22,11 @@ class BillofEntry(Document):
 
     def on_submit(self):
         # self.update_purchase_invoice()
-        # self.create_gl_entries()
-        pass
+        self.create_gl_entries()
 
     def on_cancel(self):
-        # self.update_purchase_invoice()
-        # self.cancel_gl_entries()
+        self.ignore_linked_doctypes = ("GL Entry",)
+        self.cancel_gl_entries()
         pass
 
     def update_totals(self):
@@ -62,6 +65,69 @@ class BillofEntry(Document):
                         )
                     )
                 )
+
+    def create_gl_entries(self):
+        gl_entries = self.get_gl_entries()
+        if gl_entries:
+            make_gl_entries(gl_entries, cancel=0, adv_adj=0)
+
+    def cancel_gl_entries(self):
+        gl_entries = self.get_gl_entries()
+        if gl_entries:
+            make_gl_entries(gl_entries, cancel=1, adv_adj=0)
+
+    def get_gl_entries(self):
+        gl_entries = []
+        remarks = "No Remarks"
+        self.company_currency = erpnext.get_company_currency(self.company)
+        controller = AccountsController
+
+        for item in self.items:
+            gl_entries.append(
+                controller.get_gl_dict(
+                    self,
+                    {
+                        "account": self.customs_account,
+                        "debit": item.customs_duty,
+                        "credit": 0,
+                        "cost_center": item.cost_center,
+                        "remarks": remarks,
+                    },
+                )
+            )
+
+        for tax in self.taxes:
+            gl_entries.append(
+                controller.get_gl_dict(
+                    self,
+                    {
+                        "account": tax.account_head,
+                        "debit": tax.tax_amount,
+                        "credit": 0,
+                        "cost_center": self.cost_center,
+                        "remarks": remarks,
+                    },
+                )
+            )
+
+        gl_entries.append(
+            controller.get_gl_dict(
+                self,
+                {
+                    "account": self.paid_through_account,
+                    "debit": 0,
+                    "credit": self.total_amount_paid,
+                    "cost_center": self.cost_center,
+                    "remarks": remarks,
+                },
+            )
+        )
+
+        return gl_entries
+
+    def validate_account_currency(self, *args):
+        # Overriding AccountsController method
+        pass
 
 
 @frappe.whitelist()
