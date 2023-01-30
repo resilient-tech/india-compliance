@@ -34,13 +34,16 @@
   "section_break_ujtl",
   "column_break_cnrv",
   "column_break_wmum",
-  "total_customs_duty",
   "column_break_wxlx",
   "total_taxable_value",
   "section_break_biay",
   "taxes",
   "section_break_zcnz",
-  "html_susc"
+  "total_customs_duty",
+  "column_break_nsns",
+  "total_taxes",
+  "column_break_kgnb",
+  "total_amount_paid"
  ],
  "fields": [
   {
@@ -160,12 +163,12 @@
   {
    "fieldname": "section_break_biay",
    "fieldtype": "Section Break",
-   "label": "Taxes and Charges"
+   "label": "Taxes"
   },
   {
    "fieldname": "taxes",
    "fieldtype": "Table",
-   "options": "Purchase Taxes and Charges"
+   "options": "Bill of Entry Taxes"
   },
   {
    "fieldname": "section_break_ujtl",
@@ -184,10 +187,6 @@
   {
    "fieldname": "section_break_zcnz",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "html_susc",
-   "fieldtype": "HTML"
   },
   {
    "fieldname": "column_break_cnrv",
@@ -215,12 +214,32 @@
    "fieldtype": "Currency",
    "label": "Total Customs Duty",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nsns",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_kgnb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_amount_paid",
+   "fieldtype": "Currency",
+   "label": "Total Amount Paid",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_taxes",
+   "fieldtype": "Currency",
+   "label": "Total Taxes",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-01-27 19:48:21.172829",
+ "modified": "2023-01-30 16:08:53.906450",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

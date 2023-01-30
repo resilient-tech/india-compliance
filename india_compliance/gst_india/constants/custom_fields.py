@@ -43,7 +43,16 @@ company_fields = deepcopy(party_fields)
 company_fields[0]["insert_after"] = "parent_company"
 
 CUSTOM_FIELDS = {
-    "Company": company_fields,
+    "Company": [
+        *company_fields,
+        {
+            "fieldname": "default_customs_duty_account",
+            "label": "Default Customs Duty Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "unrealized_profit_loss_account",
+        },
+    ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
     ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [

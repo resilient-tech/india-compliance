@@ -3,64 +3,186 @@
 
 frappe.ui.form.on("Bill of Entry", {
     onload(frm) {
-        hide_unrequired_fields(frm);
+        frm.bill_of_entry_controller = new BillOfEntryController(frm);
     },
-    refresh: function (frm) {
+
+    refresh(frm) {
+        // disable add row button in items table
         frm.fields_dict.items.grid.wrapper.find(".grid-add-row").hide();
     },
-    update_taxable_value: function (frm, cdt, cdn) {
-        const row = locals[cdt][cdn];
-        frappe.model.set_value(
-            cdt,
-            cdn,
-            "taxable_value",
-            row.assessable_value + row.customs_duty
-        );
-        frm.events.update_total_taxable_value(frm);
+
+    total_taxable_value(frm) {
+        frm.taxes_controller.on_tax_amount_change();
     },
-    update_total_taxable_value: function (frm) {
-        frm.set_value(
-            "total_taxable_value",
-            frm.doc.items.reduce((total, row) => {
-                return total + row.taxable_value;
-            }, 0)
-        );
+
+    total_customs_duty(frm) {
+        frm.bill_of_entry_controller.update_total_amount_paid();
     },
-    update_total_customes_duty: function (frm) {
-        frm.set_value(
-            "total_customs_duty",
-            frm.doc.items.reduce((total, row) => {
-                return total + row.customs_duty;
-            }, 0)
-        );
+
+    total_taxes(frm) {
+        frm.bill_of_entry_controller.update_total_amount_paid();
     },
 });
 
 frappe.ui.form.on("Bill of Entry Item", {
     assessable_value: function (frm, cdt, cdn) {
-        frm.events.update_taxable_value(frm, cdt, cdn);
+        frm.bill_of_entry_controller.update_item_taxable_value(cdt, cdn);
     },
     customs_duty: function (frm, cdt, cdn) {
-        frm.events.update_taxable_value(frm, cdt, cdn);
-        frm.events.update_total_customes_duty(frm, cdt, cdn);
+        frm.bill_of_entry_controller.update_item_taxable_value(cdt, cdn);
+        frm.bill_of_entry_controller.update_total_customes_duty();
     },
 });
 
-function setup_taxes(frm) {
-    if (!frm.doc.taxes) return;
-    frm.doc.taxes.forEach(row => {
-        frm.set_df_property("taxes", "read_only", 1, row.name, "category");
-    });
+frappe.ui.form.on("Bill of Entry Taxes", {
+    rate: function (frm, cdt, cdn) {
+        frm.taxes_controller.on_rate_change(cdt, cdn);
+    },
+    tax_amount: function (frm, cdt, cdn) {
+        frm.taxes_controller.on_tax_amount_change(cdt, cdn);
+        frm.bill_of_entry_controller.update_total_taxes();
+    },
+});
+
+class BillOfEntryController {
+    constructor(frm) {
+        this.frm = frm;
+        this.frm.taxes_controller = new TaxesController(frm);
+        this.setup();
+    }
+
+    setup() {
+        this.set_account_query();
+    }
+
+    set_account_query() {
+        ["paid_through_account", "customs_account"].forEach(field => {
+            this.frm.set_query(field, () => {
+                return {
+                    filters: {
+                        company: this.frm.doc.company,
+                        is_group: 0,
+                    },
+                };
+            });
+        });
+    }
+
+    async update_item_taxable_value(cdt, cdn) {
+        const row = locals[cdt][cdn];
+        await frappe.model.set_value(
+            cdt,
+            cdn,
+            "taxable_value",
+            row.assessable_value + row.customs_duty
+        );
+        this.update_total_taxable_value();
+    }
+
+    update_total_taxable_value() {
+        this.frm.set_value(
+            "total_taxable_value",
+            this.frm.doc.items.reduce((total, row) => {
+                return total + row.taxable_value;
+            }, 0)
+        );
+    }
+
+    update_total_customes_duty() {
+        this.frm.set_value(
+            "total_customs_duty",
+            this.frm.doc.items.reduce((total, row) => {
+                return total + row.customs_duty;
+            }, 0)
+        );
+    }
+
+    update_total_taxes() {
+        const total_taxes = this.frm.doc.taxes.reduce(
+            (total, row) => total + row.tax_amount,
+            0
+        );
+        this.frm.set_value("total_taxes", total_taxes);
+    }
+
+    update_total_amount_paid() {
+        this.frm.set_value(
+            "total_amount_paid",
+            this.frm.doc.total_customs_duty + this.frm.doc.total_taxes
+        );
+    }
 }
 
-function hide_unrequired_fields(frm) {
-    const unreuired_fields = ["category", "add_deduct_tax", "included_in_print_rate"];
+class TaxesController {
+    constructor(frm, net_total_field) {
+        this.frm = frm;
+        this.net_total_field = net_total_field || "total_taxable_value";
+        this.setup();
+    }
 
-    unreuired_fields.forEach(field => {
-        frappe.meta.get_docfield(
-            "Purchase Taxes and Charges",
-            field,
-            frm.doc.name
-        ).hidden = 1;
-    });
+    setup() {
+        this.set_account_head_query();
+    }
+
+    set_account_head_query() {
+        this.frm.set_query("account_head", "taxes", () => {
+            return {
+                filters: {
+                    company: this.frm.doc.company,
+                    is_group: 0,
+                },
+            };
+        });
+    }
+
+    async on_rate_change(cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (row.charge_type === "Actual") row.rate = 0;
+        else if (row.charge_type === "On Net Total")
+            await frappe.model.set_value(
+                cdt,
+                cdn,
+                "tax_amount",
+                this.get_tax_on_net_total(row)
+            );
+    }
+
+    on_tax_amount_change(cdt, cdn) {
+        let rows;
+        if (cdt) rows = [locals[cdt][cdn]];
+        else rows = this.frm.doc.taxes;
+
+        rows.forEach(async row => {
+            if (row.charge_type === "On Net Total") {
+                const tax_amount = this.get_tax_on_net_total(row);
+
+                // update if tax amount is changed manually
+                if (tax_amount !== row.tax_amount) {
+                    await frappe.model.set_value(
+                        row.doctype,
+                        row.name,
+                        "tax_amount",
+                        tax_amount
+                    );
+                }
+            }
+        });
+
+        this.update_total_amount();
+    }
+
+    update_total_amount() {
+        this.frm.doc.taxes.reduce((total, row) => {
+            const total_amount = total + row.tax_amount;
+            row.total = total_amount;
+
+            return total_amount;
+        }, this.frm.doc[this.net_total_field]);
+
+        this.frm.refresh_field("taxes");
+    }
+
+    get_tax_on_net_total(row) {
+        return (row.rate * this.frm.doc[this.net_total_field]) / 100;
+    }
 }

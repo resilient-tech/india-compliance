@@ -10,6 +10,10 @@ set_gstin_query(DOCTYPE);
 
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
+    setup(frm) { 
+        erpnext.company.set_custom_query(frm, ["default_customs_duty_account", {}]);
+    },
+    
     make_default_tax_template: function (frm) {
         frappe.call({
             method: "india_compliance.gst_india.overrides.company.make_default_tax_templates",

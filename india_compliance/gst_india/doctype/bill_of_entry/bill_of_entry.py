@@ -92,7 +92,12 @@ def make_bill_of_entry(source_name, target_doc=None):
                 "description": description,
             }
         )
-        target.append("taxes", taxes)
+        target.taxes = [taxes]
+
+        # Default accounts
+        company = frappe.get_cached_doc("Company", source.company)
+        target.customs_account = company.default_customs_duty_account
+        target.paid_through_account = company.default_bank_account
 
     doc = get_mapped_doc(
         "Purchase Invoice",
