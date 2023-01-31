@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
+from frappe.utils import today
 
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
@@ -14,6 +15,20 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 class BillofEntry(Document):
+    def onload(self):
+        existing_journal_entry = frappe.db.get_value(
+            "Journal Entry Account",
+            {
+                "reference_type": "Bill of Entry",
+                "reference_name": self.name,
+                "docstatus": 1,
+            },
+            "name",
+        )
+
+        if existing_journal_entry:
+            self.set_onload("existing_journal_entry", existing_journal_entry)
+
     def before_validate(self):
         self.calculate_totals()
 
@@ -185,16 +200,17 @@ def make_bill_of_entry(source_name, target_doc=None):
             ["rate", "description"],
         ) or [0, input_igst_account]
 
-        taxes = frappe.new_doc("Purchase Taxes and Charges")
-        taxes.update(
+        # Remove existing taxes and add default tax
+        target.taxes = []
+        target.append(
+            "taxes",
             {
                 "charge_type": "On Net Total",
                 "account_head": input_igst_account,
                 "rate": rate,
                 "description": description,
-            }
+            },
         )
-        target.taxes = [taxes]
 
         # Default accounts
         company = frappe.get_cached_doc("Company", source.company)
@@ -221,6 +237,51 @@ def make_bill_of_entry(source_name, target_doc=None):
         },
         target_doc,
         postprocess=add_default_taxes,
+    )
+
+    return doc
+
+
+@frappe.whitelist()
+def make_payment_entry(source_name, target_doc=None):
+    def set_missing_values(source, target):
+        target.voucher_type = "Bank Entry"
+        target.posting_date = today()
+        target.cheque_date = today()
+        target.user_remark = "Payment against Bill of Entry {0}".format(source.name)
+
+        target.append(
+            "accounts",
+            {
+                "account": source.payable_account,
+                "debit_in_account_currency": source.total_amount_payable,
+                "reference_type": "Bill of Entry",
+                "reference_name": source.name,
+            },
+        )
+
+        company = frappe.get_cached_doc("Company", source.company)
+        target.append(
+            "accounts",
+            {
+                "account": company.default_bank_account,
+                "credit_in_account_currency": source.total_amount_payable,
+            },
+        )
+
+    doc = get_mapped_doc(
+        "Bill of Entry",
+        source_name,
+        {
+            "Bill of Entry": {
+                "doctype": "Journal Entry",
+                "validation": {
+                    "docstatus": ["=", 1],
+                },
+            },
+        },
+        target_doc,
+        postprocess=set_missing_values,
     )
 
     return doc

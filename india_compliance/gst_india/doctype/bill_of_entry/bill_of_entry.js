@@ -10,6 +10,37 @@ frappe.ui.form.on("Bill of Entry", {
     refresh(frm) {
         // disable add row button in items table
         frm.fields_dict.items.grid.wrapper.find(".grid-add-row").hide();
+        if (frm.doc.docstatus === 0) return;
+
+        // check if Journal Entry exists;
+        if (frm.doc.docstatus === 1 && !frm.doc.__onload?.existing_journal_entry) {
+            frm.add_custom_button(
+                __("Payment Entry"),
+                () => {
+                    frappe.model.open_mapped_doc({
+                        method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_payment_entry",
+                        frm: frm,
+                    });
+                },
+                __("Create")
+            );
+        }
+
+        frm.add_custom_button(
+            __("Accounting Ledger"),
+            () => {
+                frappe.route_options = {
+                    voucher_no: frm.doc.name,
+                    from_date: frm.doc.posting_date,
+                    to_date: frm.doc.posting_date,
+                    company: frm.doc.company,
+                    group_by: "Group by Voucher (Consolidated)",
+                    show_cancelled_entries: frm.doc.docstatus === 2,
+                };
+                frappe.set_route("query-report", "General Ledger");
+            },
+            __("View")
+        );
     },
 
     total_taxable_value(frm) {
