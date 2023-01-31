@@ -47,7 +47,7 @@
    "fieldname": "customs_duty",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Customs Duty"
+   "label": "Customs + Additional Charges"
   },
   {
    "fieldname": "taxable_value",
@@ -107,7 +107,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2023-01-30 11:50:33.940742",
+ "modified": "2023-01-31 11:09:54.079076",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry Item",

@@ -15,10 +15,11 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 class BillofEntry(Document):
     def before_validate(self):
-        self.update_totals()
+        self.calculate_totals()
 
     def before_submit(self):
         self.validate_purchase_invoice()
+        self.validate_taxes()
 
     def on_submit(self):
         # self.update_purchase_invoice()
@@ -28,7 +29,16 @@ class BillofEntry(Document):
         self.ignore_linked_doctypes = ("GL Entry",)
         self.cancel_gl_entries()
 
-    def update_totals(self):
+    def on_trash(self):
+        controller = AccountsController
+        controller.on_trash(self)
+
+    def calculate_totals(self):
+        self.set_total_customs_and_taxable_values()
+        self.set_total_taxes()
+        self.total_amount_payable = self.total_customs_duty + self.total_taxes
+
+    def set_total_customs_and_taxable_values(self):
         total_customs_duty = 0
         total_taxable_value = 0
 
@@ -39,6 +49,18 @@ class BillofEntry(Document):
 
         self.total_customs_duty = total_customs_duty
         self.total_taxable_value = total_taxable_value
+
+    def set_total_taxes(self):
+        total_taxes = 0
+
+        for tax in self.taxes:
+            if tax.charge_type == "On Net Total":
+                tax.tax_amount = self.total_taxable_value * tax.rate / 100
+
+            total_taxes += tax.tax_amount
+            tax.total = self.total_taxable_value + total_taxes
+
+        self.total_taxes = total_taxes
 
     def validate_purchase_invoice(self):
         purchase = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
@@ -61,6 +83,21 @@ class BillofEntry(Document):
                     _(
                         "Purchase Invoice Item {0} not found in Purchase Invoice {1}".format(
                             item.pi_detail, self.purchase_invoice
+                        )
+                    )
+                )
+
+    def validate_taxes(self):
+        input = get_gst_accounts_by_type(self.company, "Input", throw=True)
+        for tax in self.taxes:
+            if tax.account_head in [input.igst_account, input.cess_account]:
+                continue
+
+            if tax.tax_amount != 0:
+                frappe.throw(
+                    _(
+                        "Row#: {0}. Only Input IGST and CESS accounts are allowed in Bill of Entry".format(
+                            frappe.bold(tax.idx)
                         )
                     )
                 )
