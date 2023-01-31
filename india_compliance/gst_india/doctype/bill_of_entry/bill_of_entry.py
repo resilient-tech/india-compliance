@@ -27,7 +27,6 @@ class BillofEntry(Document):
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
         self.cancel_gl_entries()
-        pass
 
     def update_totals(self):
         total_customs_duty = 0

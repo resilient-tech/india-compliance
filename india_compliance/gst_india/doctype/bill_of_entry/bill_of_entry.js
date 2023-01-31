@@ -4,6 +4,7 @@
 frappe.ui.form.on("Bill of Entry", {
     onload(frm) {
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
+        if (frm.doc.items) frm.bill_of_entry_controller.update_total_taxable_value();
     },
 
     refresh(frm) {
@@ -12,7 +13,7 @@ frappe.ui.form.on("Bill of Entry", {
     },
 
     total_taxable_value(frm) {
-        frm.taxes_controller.on_tax_amount_change();
+        frm.taxes_controller.update_tax_amount();
     },
 
     total_customs_duty(frm) {
@@ -36,11 +37,10 @@ frappe.ui.form.on("Bill of Entry Item", {
 
 frappe.ui.form.on("Bill of Entry Taxes", {
     rate: function (frm, cdt, cdn) {
-        frm.taxes_controller.on_rate_change(cdt, cdn);
+        frm.taxes_controller.update_tax_rate(cdt, cdn);
     },
     tax_amount: function (frm, cdt, cdn) {
-        frm.taxes_controller.on_tax_amount_change(cdt, cdn);
-        frm.bill_of_entry_controller.update_total_taxes();
+        frm.taxes_controller.update_tax_amount(cdt, cdn);
     },
 });
 
@@ -102,6 +102,7 @@ class BillOfEntryController {
             (total, row) => total + row.tax_amount,
             0
         );
+        console.log(total_taxes);
         this.frm.set_value("total_taxes", total_taxes);
     }
 
@@ -135,7 +136,7 @@ class TaxesController {
         });
     }
 
-    async on_rate_change(cdt, cdn) {
+    async update_tax_rate(cdt, cdn) {
         const row = locals[cdt][cdn];
         if (row.charge_type === "Actual") row.rate = 0;
         else if (row.charge_type === "On Net Total")
@@ -147,7 +148,7 @@ class TaxesController {
             );
     }
 
-    on_tax_amount_change(cdt, cdn) {
+    update_tax_amount(cdt, cdn) {
         let rows;
         if (cdt) rows = [locals[cdt][cdn]];
         else rows = this.frm.doc.taxes;
@@ -169,6 +170,7 @@ class TaxesController {
         });
 
         this.update_total_amount();
+        this.frm.bill_of_entry_controller.update_total_taxes();
     }
 
     update_total_amount() {
