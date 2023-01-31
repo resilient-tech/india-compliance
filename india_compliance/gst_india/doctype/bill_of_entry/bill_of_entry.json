@@ -26,9 +26,9 @@
   "port_code",
   "posting_date",
   "accounting_details_section",
-  "paid_through_account",
+  "payable_account",
   "column_break_xjvk",
-  "customs_account",
+  "customs_duty_account",
   "column_break_zsed",
   "accounting_dimensions_section",
   "cost_center",
@@ -47,7 +47,7 @@
   "column_break_nsns",
   "total_taxes",
   "column_break_kgnb",
-  "total_amount_paid"
+  "total_amount_payable"
  ],
  "fields": [
   {
@@ -99,20 +99,6 @@
    "fieldname": "port_code",
    "fieldtype": "Data",
    "label": "Port Code"
-  },
-  {
-   "fieldname": "paid_through_account",
-   "fieldtype": "Link",
-   "label": "Paid Through Account",
-   "options": "Account",
-   "reqd": 1
-  },
-  {
-   "fieldname": "customs_account",
-   "fieldtype": "Link",
-   "label": "Customs Account",
-   "options": "Account",
-   "reqd": 1
   },
   {
    "fieldname": "column_break_v3jw",
@@ -228,12 +214,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "total_amount_paid",
-   "fieldtype": "Currency",
-   "label": "Total Amount Paid",
-   "read_only": 1
-  },
-  {
    "fieldname": "total_taxes",
    "fieldtype": "Currency",
    "label": "Total Taxes",
@@ -260,12 +240,32 @@
    "fieldtype": "Date",
    "label": "Posting Date",
    "reqd": 1
+  },
+  {
+   "fieldname": "payable_account",
+   "fieldtype": "Link",
+   "label": "Payable Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_amount_payable",
+   "fieldtype": "Currency",
+   "label": "Total Amount Payable",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customs_duty_account",
+   "fieldtype": "Link",
+   "label": "Customs Duty Account",
+   "options": "Account",
+   "reqd": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-01-30 20:14:30.671063",
+ "modified": "2023-01-31 10:56:52.972084",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

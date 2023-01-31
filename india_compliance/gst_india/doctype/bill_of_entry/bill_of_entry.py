@@ -86,7 +86,7 @@ class BillofEntry(Document):
                 controller.get_gl_dict(
                     self,
                     {
-                        "account": self.customs_account,
+                        "account": self.customs_duty_account,
                         "debit": item.customs_duty,
                         "credit": 0,
                         "cost_center": item.cost_center,
@@ -113,9 +113,9 @@ class BillofEntry(Document):
             controller.get_gl_dict(
                 self,
                 {
-                    "account": self.paid_through_account,
+                    "account": self.payable_account,
                     "debit": 0,
-                    "credit": self.total_amount_paid,
+                    "credit": self.total_amount_payable,
                     "cost_center": self.cost_center,
                     "remarks": remarks,
                 },
@@ -161,8 +161,7 @@ def make_bill_of_entry(source_name, target_doc=None):
 
         # Default accounts
         company = frappe.get_cached_doc("Company", source.company)
-        target.customs_account = company.default_customs_duty_account
-        target.paid_through_account = company.default_bank_account
+        target.customs_duty_account = company.default_customs_duty_account
 
     doc = get_mapped_doc(
         "Purchase Invoice",

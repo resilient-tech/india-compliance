@@ -17,11 +17,11 @@ frappe.ui.form.on("Bill of Entry", {
     },
 
     total_customs_duty(frm) {
-        frm.bill_of_entry_controller.update_total_amount_paid();
+        frm.bill_of_entry_controller.update_total_amount_payable();
     },
 
     total_taxes(frm) {
-        frm.bill_of_entry_controller.update_total_amount_paid();
+        frm.bill_of_entry_controller.update_total_amount_payable();
     },
 });
 
@@ -56,10 +56,18 @@ class BillOfEntryController {
     }
 
     set_account_query() {
-        ["paid_through_account", "customs_account"].forEach(field => {
-            this.frm.set_query(field, () => {
+        [
+            {
+                name: "payable_account",
+                filters: { root_type: "Liability", account_type: ["!=", "Payable"] },
+            },
+            { name: "customs_duty_account", filters: { root_type: "Expense" } },
+            { name: "cost_center" },
+        ].forEach(row => {
+            this.frm.set_query(row.name, () => {
                 return {
                     filters: {
+                        ...row.filters,
                         company: this.frm.doc.company,
                         is_group: 0,
                     },
@@ -106,9 +114,9 @@ class BillOfEntryController {
         this.frm.set_value("total_taxes", total_taxes);
     }
 
-    update_total_amount_paid() {
+    update_total_amount_payable() {
         this.frm.set_value(
-            "total_amount_paid",
+            "total_amount_payable",
             this.frm.doc.total_customs_duty + this.frm.doc.total_taxes
         );
     }
