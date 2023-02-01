@@ -79,7 +79,7 @@ class GSTTransactionData:
                 continue
 
             tax = self.gst_accounts[row.account_head][:-8]
-            self.transaction_details[f"total_{tax}_amount"] = abs(
+            self.transaction_details[f"total_{tax}_amount"] += abs(
                 self.rounded(row.base_tax_amount_after_discount_amount)
             )
 
@@ -243,21 +243,24 @@ class GSTTransactionData:
 
             # Remove '_account' from 'cgst_account'
             tax = self.gst_accounts[row.account_head][:-8]
-            tax_rate = self.rounded(
-                frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.item_code or item.item_name
-                )[0],
-                3,
+            tax_rate = frappe.parse_json(row.item_wise_tax_detail).get(
+                item.item_code or item.item_name
             )
+            if not tax_rate:
+                continue
+
+            tax_rate = self.rounded(tax_rate[0], 3)
+            tax_amount = abs(self.rounded(tax_rate[1]))
 
             # considers senarios where same item is there multiple times
-            tax_amount = abs(
-                self.rounded(
-                    tax_rate * item.qty
-                    if row.charge_type == "On Item Quantity"
-                    else tax_rate * item.taxable_value / 100
-                ),
-            )
+            if row.charge_type != "Actual":
+                tax_amount = abs(
+                    self.rounded(
+                        tax_rate * item.qty
+                        if row.charge_type == "On Item Quantity"
+                        else tax_rate * item.taxable_value / 100
+                    ),
+                )
 
             item_details.update(
                 {
