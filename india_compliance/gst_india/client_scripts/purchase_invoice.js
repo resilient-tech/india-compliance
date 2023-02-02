@@ -1,6 +1,11 @@
 frappe.ui.form.on("Purchase Invoice", {
     refresh(frm) {
-        if (frm.doc.docstatus != 1 || frm.doc.gst_category != "Overseas") return;
+        if (
+            frm.doc.docstatus != 1 ||
+            frm.doc.gst_category != "Overseas" ||
+            frm.doc.__onload?.existing_bill_of_entry
+        )
+            return;
 
         frm.add_custom_button(
             __("Create Bill of Entry"),

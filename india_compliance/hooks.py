@@ -79,6 +79,7 @@ doc_events = {
         )
     },
     "Purchase Invoice": {
+        "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
     },
     "Purchase Order": {
