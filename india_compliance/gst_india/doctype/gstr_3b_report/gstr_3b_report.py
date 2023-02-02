@@ -177,7 +177,6 @@ class GSTR3BReport(Document):
 
         igst, cess = _get_tax_amount("igst_account"), _get_tax_amount("cess_account")
         itc_details.setdefault("Import Of Capital Goods", {"iamt": igst, "csamt": cess})
-        print(igst, cess)
 
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(

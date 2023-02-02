@@ -117,10 +117,8 @@ class BillofEntry(Document):
             if item.pi_detail not in pi_items:
                 frappe.throw(
                     _(
-                        "Purchase Invoice Item {0} not found in Purchase Invoice {1}".format(
-                            item.pi_detail, self.purchase_invoice
-                        )
-                    )
+                        "Purchase Invoice Item {0} not found in Purchase Invoice {1}"
+                    ).format(item.pi_detail, self.purchase_invoice)
                 )
 
     def validate_taxes(self):
@@ -132,10 +130,8 @@ class BillofEntry(Document):
             if tax.tax_amount != 0:
                 frappe.throw(
                     _(
-                        "Row#: {0}. Only Input IGST and CESS accounts are allowed in Bill of Entry".format(
-                            frappe.bold(tax.idx)
-                        )
-                    )
+                        "Row#: {0}. Only Input IGST and CESS accounts are allowed in Bill of Entry"
+                    ).format(frappe.bold(tax.idx))
                 )
 
     def create_gl_entries(self):
