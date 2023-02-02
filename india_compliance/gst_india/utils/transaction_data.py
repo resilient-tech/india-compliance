@@ -243,14 +243,14 @@ class GSTTransactionData:
 
             # Remove '_account' from 'cgst_account'
             tax = self.gst_accounts[row.account_head][:-8]
-            tax_rate = frappe.parse_json(row.item_wise_tax_detail).get(
+            item_tax = frappe.parse_json(row.item_wise_tax_detail).get(
                 item.item_code or item.item_name
             )
-            if not tax_rate:
+            if not item_tax:
                 continue
 
-            tax_rate = self.rounded(tax_rate[0], 3)
-            tax_amount = abs(self.rounded(tax_rate[1]))
+            tax_rate = self.rounded(item_tax[0], 3)
+            tax_amount = abs(self.rounded(item_tax[1]))
 
             # considers senarios where same item is there multiple times
             if row.charge_type != "Actual":
