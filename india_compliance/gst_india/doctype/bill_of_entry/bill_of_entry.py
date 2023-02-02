@@ -1,17 +1,18 @@
 # Copyright (c) 2023, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import today
-
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, send_updated_doc
 
 
 class BillofEntry(Document):
@@ -30,6 +31,7 @@ class BillofEntry(Document):
             self.set_onload("existing_journal_entry", existing_journal_entry)
 
     def before_validate(self):
+        self.set_item_wise_tax_rates()
         self.calculate_totals()
 
     def before_submit(self):
@@ -47,6 +49,13 @@ class BillofEntry(Document):
     def on_trash(self):
         controller = AccountsController
         controller.on_trash(self)
+
+    @frappe.whitelist()
+    def set_taxes_and_totals(self):
+        self.set_item_wise_tax_rates()
+        self.calculate_totals()
+
+        send_updated_doc(self)
 
     def calculate_totals(self):
         self.set_total_customs_and_taxable_values()
@@ -70,12 +79,24 @@ class BillofEntry(Document):
 
         for tax in self.taxes:
             if tax.charge_type == "On Net Total":
-                tax.tax_amount = self.total_taxable_value * tax.rate / 100
+                tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates)
 
             total_taxes += tax.tax_amount
             tax.total = self.total_taxable_value + total_taxes
 
         self.total_taxes = total_taxes
+
+    def get_tax_amount(self, item_wise_tax_rates):
+        if type(item_wise_tax_rates) == str:
+            item_wise_tax_rates = json.loads(item_wise_tax_rates)
+
+        tax_amount = 0
+        for item in self.items:
+            tax_amount += (
+                item_wise_tax_rates.get(item.name, 0) * item.taxable_value / 100
+            )
+
+        return tax_amount
 
     def validate_purchase_invoice(self):
         purchase = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
@@ -180,10 +201,84 @@ class BillofEntry(Document):
         # Overriding AccountsController method
         pass
 
+    @frappe.whitelist()
+    def set_item_wise_tax_rates(self, item_name=None, tax_name=None):
+        items, taxes = self.get_rows_to_update(item_name, tax_name)
+
+        tax_templates = list({item.item_tax_template for item in items})
+        tax_accounts = list({tax.account_head for tax in taxes})
+
+        if not tax_accounts:
+            return
+
+        item_tax_map = self.get_item_tax_map(tax_templates, tax_accounts)
+
+        for tax in taxes:
+            if tax.charge_type != "On Net Total":
+                tax.item_wise_tax_rates = "{}"
+                continue
+
+            item_wise_tax_rates = json.loads(tax.item_wise_tax_rates or "{}")
+
+            for item in items:
+                key = (item.item_tax_template, tax.account_head)
+                if key in item_tax_map:
+                    tax_rate = item_tax_map[key]
+                    item_wise_tax_rates[item.name] = tax_rate
+
+                else:
+                    item_wise_tax_rates[item.name] = tax.rate
+
+            tax.item_wise_tax_rates = json.dumps(item_wise_tax_rates)
+
+        return send_updated_doc(self)
+
+    def get_item_tax_map(self, tax_templates, tax_accounts):
+        """
+        Parameters:
+            tax_templates (list): List of item tax templates used in the items
+            tax_accounts (list): List of tax accounts used in the taxes
+
+        Returns:
+            dict: A map of item_tax_template, tax_account and tax_rate
+
+        Sample Output:
+            {
+                ('GST 18%', 'IGST - TC'): 18.0
+                ('GST 28%', 'IGST - TC'): 28.0
+            }
+        """
+        item_tax_map = {}
+
+        if tax_templates:
+            template_detail = frappe.get_all(
+                "Item Tax Template Detail",
+                fields=["parent", "tax_type", "tax_rate"],
+                filters={
+                    "parent": ["in", tax_templates],
+                    "tax_type": ["in", tax_accounts],
+                },
+            )
+            item_tax_map = {(d.parent, d.tax_type): d.tax_rate for d in template_detail}
+
+        return item_tax_map
+
+    def get_rows_to_update(self, item_name, tax_name):
+        """
+        Returns items and taxes to update based on item_name and tax_name passed.
+        If item_name and tax_name are not passed, all items and taxes are returned.
+        """
+
+        items = [item for item in self.items if item.name == item_name] or self.items
+        taxes = [tax for tax in self.taxes if tax.name == tax_name] or self.taxes
+
+        return items, taxes
+
 
 @frappe.whitelist()
 def make_bill_of_entry(source_name, target_doc=None):
     def add_default_taxes(source, target):
+        target.posting_date = today()
         input_igst_account = get_gst_accounts_by_type(
             source.company, "Input"
         ).igst_account

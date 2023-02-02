@@ -4,7 +4,7 @@
 frappe.ui.form.on("Bill of Entry", {
     onload(frm) {
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
-        if (frm.doc.items) frm.bill_of_entry_controller.update_total_taxable_value();
+        frm.call("set_taxes_and_totals");
     },
 
     refresh(frm) {
@@ -57,21 +57,56 @@ frappe.ui.form.on("Bill of Entry", {
 });
 
 frappe.ui.form.on("Bill of Entry Item", {
-    assessable_value: function (frm, cdt, cdn) {
+    assessable_value(frm, cdt, cdn) {
         frm.bill_of_entry_controller.update_item_taxable_value(cdt, cdn);
     },
-    customs_duty: function (frm, cdt, cdn) {
+
+    customs_duty(frm, cdt, cdn) {
         frm.bill_of_entry_controller.update_item_taxable_value(cdt, cdn);
         frm.bill_of_entry_controller.update_total_customes_duty();
+    },
+
+    async item_tax_template(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (!row.item_tax_template) frm.taxes_controller.update_item_wise_tax_rates();
+        else await frm.taxes_controller.get_item_wise_tax_rates(cdn);
+
+        frm.taxes_controller.update_tax_amount();
+    },
+
+    items_remove(frm) {
+        frm.bill_of_entry_controller.update_total_taxable_value();
     },
 });
 
 frappe.ui.form.on("Bill of Entry Taxes", {
-    rate: function (frm, cdt, cdn) {
+    rate(frm, cdt, cdn) {
         frm.taxes_controller.update_tax_rate(cdt, cdn);
     },
-    tax_amount: function (frm, cdt, cdn) {
+
+    tax_amount(frm, cdt, cdn) {
         frm.taxes_controller.update_tax_amount(cdt, cdn);
+    },
+
+    async account_head(frm, cdt, cdn) {
+        await frm.taxes_controller.get_item_wise_tax_rates(null, cdn);
+        frm.taxes_controller.update_tax_amount(cdt, cdn);
+    },
+
+    async charge_type(frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (row.charge_type === "On Net Total") {
+            await frm.taxes_controller.get_item_wise_tax_rates(null, cdn);
+            frm.taxes_controller.update_tax_amount(cdt, cdn);
+        } else {
+            row.rate = 0;
+            row.item_wise_tax_rates = "{}";
+            frm.refresh_field("taxes");
+        }
+    },
+
+    taxes_remove(frm) {
+        frm.bill_of_entry_controller.update_total_taxes();
     },
 });
 
@@ -141,7 +176,6 @@ class BillOfEntryController {
             (total, row) => total + row.tax_amount,
             0
         );
-        console.log(total_taxes);
         this.frm.set_value("total_taxes", total_taxes);
     }
 
@@ -154,14 +188,24 @@ class BillOfEntryController {
 }
 
 class TaxesController {
-    constructor(frm, net_total_field) {
+    constructor(frm) {
         this.frm = frm;
-        this.net_total_field = net_total_field || "total_taxable_value";
         this.setup();
     }
 
     setup() {
+        this.set_item_tax_template_query();
         this.set_account_head_query();
+    }
+
+    set_item_tax_template_query() {
+        this.frm.set_query("item_tax_template", "items", () => {
+            return {
+                filters: {
+                    company: this.frm.doc.company,
+                },
+            };
+        });
     }
 
     set_account_head_query() {
@@ -175,24 +219,70 @@ class TaxesController {
         });
     }
 
+    async get_item_wise_tax_rates(item_name, tax_name) {
+        /**
+         * This method is used to get item wise tax rates from the server
+         * and update the item_wise_tax_rates field in the taxes table.
+         *
+         * @param {string} item_name - Item row name for which the tax rates are to be fetched.
+         * @param {string} tax_name - Tax row name for which the tax rates are to be fetched.
+         */
+
+        await this.frm.call("set_item_wise_tax_rates", {
+            item_name: item_name,
+            tax_name: tax_name,
+        });
+    }
+
+    update_item_wise_tax_rates(tax_row) {
+        /**
+         * This method is used to update the item_wise_tax_rates field in the taxes table when
+         * - Item tax template is removed from the item row.
+         * - Tax rate is changed in the tax row.
+         *
+         * It will update item rate with default tax rate.
+         *
+         * @param {object} tax_row - Tax row object.
+         */
+
+        let taxes;
+        if (tax_row) taxes = [tax_row];
+        else taxes = this.frm.doc.taxes;
+
+        taxes.forEach(tax => {
+            const item_wise_tax_rates = JSON.parse(tax.item_wise_tax_rates || "{}");
+            this.frm.doc.items.forEach(item => {
+                if (item.item_tax_template) return;
+                item_wise_tax_rates[item.name] = tax.rate;
+            });
+            tax.item_wise_tax_rates = JSON.stringify(item_wise_tax_rates);
+        });
+    }
+
     async update_tax_rate(cdt, cdn) {
         const row = locals[cdt][cdn];
         if (row.charge_type === "Actual") row.rate = 0;
-        else if (row.charge_type === "On Net Total")
-            await frappe.model.set_value(
-                cdt,
-                cdn,
-                "tax_amount",
-                this.get_tax_on_net_total(row)
-            );
+        else if (row.charge_type === "On Net Total") {
+            this.update_item_wise_tax_rates(row);
+            await this.update_tax_amount(cdt, cdn);
+        }
     }
 
-    update_tax_amount(cdt, cdn) {
-        let rows;
-        if (cdt) rows = [locals[cdt][cdn]];
-        else rows = this.frm.doc.taxes;
+    async update_tax_amount(cdt, cdn) {
+        /**
+         * This method is used to update the tax amount in the tax row
+         * - Update for all tax rows when cdt is null.
+         * - Update for a single tax row when cdt and cdn are passed.
+         *
+         * @param {string} cdt - Doctype of the tax row.
+         * @param {string} cdn - Name of the tax row.
+         */
 
-        rows.forEach(async row => {
+        let taxes;
+        if (cdt) taxes = [locals[cdt][cdn]];
+        else taxes = this.frm.doc.taxes;
+
+        taxes.forEach(async row => {
             if (row.charge_type === "On Net Total") {
                 const tax_amount = this.get_tax_on_net_total(row);
 
@@ -218,12 +308,22 @@ class TaxesController {
             row.total = total_amount;
 
             return total_amount;
-        }, this.frm.doc[this.net_total_field]);
+        }, this.frm.doc.total_taxable_value);
 
         this.frm.refresh_field("taxes");
     }
 
-    get_tax_on_net_total(row) {
-        return (row.rate * this.frm.doc[this.net_total_field]) / 100;
+    get_tax_on_net_total(tax_row) {
+        /**
+         * This method is used to calculate the tax amount on net total
+         * based on the item wise tax rates.
+         *
+         * @param {object} tax_row - Tax row object.
+         */
+
+        const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
+        return this.frm.doc.items.reduce((total, item) => {
+            return total + (item.taxable_value * item_wise_tax_rates[item.name]) / 100;
+        }, 0);
     }
 }
