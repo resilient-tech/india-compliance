@@ -227,6 +227,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             )
 
     is_inter_state = is_inter_state_supply(doc)
+    input_gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
     previous_row_references = set()
 
     for row in rows_to_validate:
@@ -267,6 +268,15 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
+
+        if account_head in input_gst_accounts and row.add_deduct_tax == "Deduct":
+            _throw(
+                _(
+                    "Row #{0}: Cannot Deduct Input GST Accounts. Add or Deduct for {1}"
+                    " should be Add"
+                ).format(row.idx, bold(account_head)),
+                title=_("Invalid Charge Type"),
+            )
 
     if len(previous_row_references) > 1:
         _throw(
@@ -655,8 +665,12 @@ def set_item_tax_from_hsn_code(item):
 
 
 def validate_reverse_charge_transaction(doc, method=None):
-    base_gst_tax = 0
-    base_reverse_charge_booked = 0
+    """
+    This function aims to validate reverse charge transactions and its application
+    - Input Amount should be equal to Reverse Charge Amount
+    """
+    input_tax = 0
+    reverse_charge_tax = 0
 
     if not doc.is_reverse_charge:
         return
@@ -668,20 +682,17 @@ def validate_reverse_charge_transaction(doc, method=None):
     input_gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
 
     for tax in doc.get("taxes"):
-        if tax.account_head in input_gst_accounts:
-            # Adding in input tax accounts should increase the base_gst_tax as its an Tax Asset Account
-            if tax.add_deduct_tax == "Add":
-                base_gst_tax += tax.base_tax_amount_after_discount_amount
-            else:
-                base_gst_tax -= tax.base_tax_amount_after_discount_amount
-        elif tax.account_head in reverse_charge_accounts:
-            # Deducting in reverse charge accounts should increase the base_reverse_charge_booked as its an Tax Liability Account
-            if tax.add_deduct_tax == "Deduct":
-                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
-            else:
-                base_reverse_charge_booked -= tax.base_tax_amount_after_discount_amount
+        if tax.account_head in input_gst_accounts and tax.tax_amount:
+            input_tax += tax.base_tax_amount_after_discount_amount
 
-    if base_gst_tax != base_reverse_charge_booked:
+        elif tax.account_head in reverse_charge_accounts and tax.tax_amount:
+            if tax.add_deduct_tax == "Deduct":
+                reverse_charge_tax += tax.base_tax_amount_after_discount_amount
+
+            else:
+                reverse_charge_tax -= tax.base_tax_amount_after_discount_amount
+
+    if input_tax != reverse_charge_tax:
         msg = _("Booked reverse charge is not equal to applied tax amount")
         msg += "<br>"
         msg += _(
