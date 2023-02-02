@@ -9,10 +9,11 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import DatePart
-from frappe.query_builder.functions import Extract
-from frappe.utils import cstr, flt
+from frappe.query_builder.functions import Extract, Sum
+from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 class GSTR3BReport(Document):
@@ -147,7 +148,36 @@ class GSTR3BReport(Document):
                 },
             )
 
+        self.update_imports_from_bill_of_entry(itc_details)
+
         return itc_details
+
+    def update_imports_from_bill_of_entry(self, itc_details):
+        boe = frappe.qb.DocType("Bill of Entry")
+        boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
+        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
+
+        def _get_tax_amount(account_type):
+            return (
+                frappe.qb.from_(boe)
+                .select(Sum(boe_taxes.tax_amount))
+                .join(boe_taxes)
+                .on(boe_taxes.parent == boe.name)
+                .where(
+                    boe.posting_date.between(
+                        get_date_str(get_first_day(f"{self.year}-{self.month_no}-01")),
+                        get_date_str(get_last_day(f"{self.year}-{self.month_no}-01")),
+                    )
+                    & boe.company_gstin.eq(self.gst_details.get("gstin"))
+                    & boe.docstatus.eq(1)
+                    & boe_taxes.account_head.eq(gst_accounts[account_type])
+                )
+                .run()
+            )[0][0] or 0
+
+        igst, cess = _get_tax_amount("igst_account"), _get_tax_amount("cess_account")
+        itc_details.setdefault("Import Of Capital Goods", {"iamt": igst, "csamt": cess})
+        print(igst, cess)
 
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(
