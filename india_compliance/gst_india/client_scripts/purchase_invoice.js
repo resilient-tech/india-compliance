@@ -8,7 +8,7 @@ frappe.ui.form.on("Purchase Invoice", {
             return;
 
         frm.add_custom_button(
-            __("Create Bill of Entry"),
+            __("Bill of Entry"),
             () => {
                 frappe.model.open_mapped_doc({
                     method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_bill_of_entry",
