@@ -250,17 +250,15 @@ class GSTTransactionData:
                 continue
 
             tax_rate = self.rounded(item_tax[0], 3)
-            tax_amount = abs(self.rounded(item_tax[1]))
 
             # considers senarios where same item is there multiple times
-            if row.charge_type != "Actual":
-                tax_amount = abs(
-                    self.rounded(
-                        tax_rate * item.qty
-                        if row.charge_type == "On Item Quantity"
-                        else tax_rate * item.taxable_value / 100
-                    ),
-                )
+            tax_amount = abs(
+                self.rounded(
+                    tax_rate * item.qty
+                    if row.charge_type == "On Item Quantity"
+                    else tax_rate * item.taxable_value / 100
+                ),
+            )
 
             item_details.update(
                 {
