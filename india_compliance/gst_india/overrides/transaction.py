@@ -529,7 +529,7 @@ def get_gst_details(party_details, doctype, company):
         destination_gstin = party_details.company_gstin
 
     if party_details.get("tax_category"):
-        party_details.is_reverse_charge = get_reverse_charge_by_tax_category(
+        gst_details.is_reverse_charge = get_reverse_charge_by_tax_category(
             party_details.tax_category
         )
 
