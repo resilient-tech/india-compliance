@@ -54,7 +54,7 @@
 {% if not e_invoice_log.invoice_data %}
 
 <div class="text-center no-preview-available">
-	Invoice Data is unavailable in the {{ frappe.utils.get_link_to_form("e-Invoice Log", doc.irn, "e-Invoice Log") }} to generate print preview.
+	Invoice Data is not available in the e-Invoice Log linked to this invoice.
 </div>
 
 {% else %}
@@ -97,14 +97,14 @@
 		{%
 			set transaction_details = {
 				"IRN": invoice_data.Irn,
-				"Ack. No": invoice_data.AckNo,
+				"Ack. No.": invoice_data.AckNo,
 				"Ack. Date": frappe.utils.format_datetime(
 					invoice_data.AckDt, "dd/MM/yyyy hh:mm:ss"
 				),
 				"Category": invoice_data.TranDtls.SupTyp,
 				"Document Type": invoice_data.DocDtls.Typ,
-				"Document No": invoice_data.DocDtls.No,
-				"e-Waybill": doc.ewaybill,
+				"Document No.": invoice_data.DocDtls.No,
+				"e-Waybill No.": doc.ewaybill,
 			}
 		%}
 		{% for key, value in transaction_details.items() %}
