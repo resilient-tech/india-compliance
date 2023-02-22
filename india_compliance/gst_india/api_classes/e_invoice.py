@@ -13,7 +13,9 @@ class EInvoiceAPI(BaseAPI):
     SENSITIVE_HEADERS = BaseAPI.SENSITIVE_HEADERS + ("password",)
     IGNORED_ERROR_CODES = {
         "2150": "Duplicate IRN",
-        "2283": "IRN details cannot be provided as it is generated more than 2 days ago",
+        "2283": (
+            "IRN details cannot be provided as it is generated more than 2 days ago"
+        ),
     }
 
     def setup(self, doc=None, *, company_gstin=None):
@@ -47,9 +49,11 @@ class EInvoiceAPI(BaseAPI):
         )
 
     def handle_failed_response(self, response_json):
-        # Don't fail if the error is ignored
+        message = response_json.get("message", "").strip()
+
         for error_code in self.IGNORED_ERROR_CODES:
-            if error_code in response_json.get("message"):
+            if message.startswith(error_code):
+                response_json.error_code = error_code
                 return True
 
     def get_e_invoice_by_irn(self, irn):

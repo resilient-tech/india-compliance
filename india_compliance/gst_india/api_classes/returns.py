@@ -28,11 +28,14 @@ class ReturnsAPI(BaseAPI):
         )
 
     def handle_failed_response(self, response_json):
-        if response_json.get("errorCode") in self.IGNORED_ERROR_CODES:
+        error_code = response_json.get("errorCode")
+
+        if error_code in self.IGNORED_ERROR_CODES:
+            response_json.error_type = self.IGNORED_ERROR_CODES[error_code]
             return True
 
     def get(self, action, return_period, otp=None, params=None):
-        response = super().get(
+        return super().get(
             params={"action": action, "gstin": self.company_gstin, **(params or {})},
             headers={
                 "requestid": self.generate_request_id(),
@@ -40,11 +43,6 @@ class ReturnsAPI(BaseAPI):
                 "otp": otp,
             },
         )
-
-        if error_type := self.IGNORED_ERROR_CODES.get(response.errorCode):
-            response.error_type = error_type
-
-        return response
 
 
 class GSTR2bAPI(ReturnsAPI):
