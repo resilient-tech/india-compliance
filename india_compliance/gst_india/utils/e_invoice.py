@@ -1,3 +1,5 @@
+import json
+
 import jwt
 
 import frappe
@@ -47,10 +49,11 @@ def generate_e_invoice(docname, throw=True):
 
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
-            response = api.get_e_invoice_by_irn(result.Desc.get("Irn"))
+            response = api.get_e_invoice_by_irn(result.Desc.Irn)
 
-            # Handle: IRN details cannot be provided as it is generated more than 2 days ago
-            result = result.Desc if "2283" in response.get("message", "") else response
+            # Handle error 2283:
+            # IRN details cannot be provided as it is generated more than 2 days ago
+            result = result.Desc if response.error_code == "2283" else response
 
     except frappe.ValidationError as e:
         if throw:
@@ -75,8 +78,8 @@ def generate_e_invoice(docname, throw=True):
     )
 
     invoice_data = None
-    if result.get("SignedInvoice"):
-        decoded_invoice = frappe.parse_json(
+    if result.SignedInvoice:
+        decoded_invoice = json.loads(
             jwt.decode(result.SignedInvoice, options={"verify_signature": False})[
                 "data"
             ]
@@ -90,8 +93,8 @@ def generate_e_invoice(docname, throw=True):
             "sales_invoice": docname,
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
-            "signed_invoice": result.get("SignedInvoice"),
-            "signed_qr_code": result.get("SignedQRCode"),
+            "signed_invoice": result.SignedInvoice,
+            "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
         },
     )
