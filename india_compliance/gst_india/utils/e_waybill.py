@@ -551,7 +551,11 @@ class EWaybillData(GSTTransactionData):
         super().validate_transaction()
 
         if self.doc.ewaybill:
-            frappe.throw(_("e-Waybill already generated for this document"))
+            frappe.throw(
+                _("e-Waybill already generated for {0} {1}").format(
+                    _(self.doc.doctype), frappe.bold(self.doc.name)
+                )
+            )
 
         self.validate_applicability()
 
