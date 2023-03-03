@@ -24,6 +24,7 @@ from india_compliance.gst_india.constants.e_invoice import (
     ITEM_LIMIT,
 )
 from india_compliance.gst_india.utils import (
+    is_api_enabled,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -37,6 +38,53 @@ from india_compliance.gst_india.utils.transaction_data import (
     GSTTransactionData,
     validate_non_gst_items,
 )
+
+
+@frappe.whitelist()
+def enqueue_bulk_e_invoice_generation(docnames):
+    """
+    Enqueue bulk generation of e-Invoices for the given Sales Invoices.
+    """
+
+    frappe.has_permission("Sales Invoice", "submit", throw=True)
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not is_api_enabled(gst_settings) or not gst_settings.enable_e_invoice:
+        frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    rq_job = frappe.enqueue(
+        "india_compliance.gst_india.utils.e_invoice.generate_e_invoices",
+        queue="long",
+        timeout=len(docnames) * 240,  # 4 mins per e-Invoice
+        docnames=docnames,
+    )
+
+    return rq_job.id
+
+
+def generate_e_invoices(docnames):
+    """
+    Bulk generate e-Invoices for the given Sales Invoices.
+    Permission checks are done in the `generate_e_invoice` function.
+    """
+
+    for docname in docnames:
+        try:
+            generate_e_invoice(docname)
+
+        except Exception:
+            frappe.log_error(
+                title=_("e-Invoice generation failed for Sales Invoice {0}").format(
+                    docname
+                ),
+                message=frappe.get_traceback(),
+            )
+
+        finally:
+            # each e-Invoice needs to be committed individually
+            # nosemgrep
+            frappe.db.commit()
 
 
 @frappe.whitelist()
