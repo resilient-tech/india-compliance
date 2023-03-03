@@ -47,19 +47,34 @@ async function enqueue_bulk_e_invoice_generation(docnames) {
         { docnames }
     );
 
+    const creation_filter = `[">", "${now}"]`;
     const api_requests_link = frappe.utils.generate_route({
         type: "doctype",
         name: "Integration Request",
         route_options: {
             integration_request_service: "India Compliance API",
-            creation: `[">", "${now}"]`,
+            creation: creation_filter,
+        },
+    });
+    const error_logs_link = frappe.utils.generate_route({
+        type: "doctype",
+        name: "Error Log",
+        route_options: {
+            creation: creation_filter,
         },
     });
 
     frappe.msgprint(
         __(
-            "Bulk e-Invoice Generation has been queued. You can track the <a href='{0}'>Background Job</a> and <a href='{1}'>API Requests</a>.",
-            [frappe.utils.get_form_link("RQ Job", job_id), api_requests_link]
+            `Bulk e-Invoice Generation has been queued. You can track the
+            <a href='{0}'>Background Job</a>,
+            <a href='{1}'>API Request(s)</a>,
+            and <a href='{2}'>Error Log(s)</a>.`,
+            [
+                frappe.utils.get_form_link("RQ Job", job_id),
+                api_requests_link,
+                error_logs_link,
+            ]
         )
     );
 }
