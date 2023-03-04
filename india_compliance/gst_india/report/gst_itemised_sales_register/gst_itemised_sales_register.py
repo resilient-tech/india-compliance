@@ -11,17 +11,17 @@ from india_compliance.gst_india.report.gst_sales_register.gst_sales_register imp
     get_column_names,
 )
 
-HSN_CODE_COLUMN = {
-    "fieldtype": "Data",
-    "label": _("HSN Code"),
-    "fieldname": "gst_hsn_code",
-    "width": 120,
-}
-
 
 def execute(filters=None):
     additional_table_columns = get_additional_table_columns()
-    additional_table_columns.append(HSN_CODE_COLUMN)
+    additional_table_columns.append(
+        {
+            "fieldtype": "Data",
+            "label": _("HSN Code"),
+            "fieldname": "gst_hsn_code",
+            "width": 120,
+        }
+    )
 
     return _execute(
         filters,
