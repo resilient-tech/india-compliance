@@ -1090,20 +1090,20 @@ def get_advances_json(data, gstin):
         for item in items:
             itms = {
                 "rt": item["rate"],
-                "ad_amount": flt(item.get("taxable_value")),
-                "csamt": flt(item.get("cess_amount")),
+                "ad_amount": flt(item.get("taxable_value"), 2),
+                "csamt": flt(item.get("cess_amount"), 2),
             }
 
             if supply_type == "INTRA":
                 itms.update(
                     {
-                        "samt": flt((itms["ad_amount"] * itms["rt"]) / 100),
-                        "camt": flt((itms["ad_amount"] * itms["rt"]) / 100),
+                        "samt": flt((itms["ad_amount"] * itms["rt"]) / 100, 2),
+                        "camt": flt((itms["ad_amount"] * itms["rt"]) / 100, 2),
                         "rt": itms["rt"] * 2,
                     }
                 )
             else:
-                itms.update({"iamt": flt((itms["ad_amount"] * itms["rt"]) / 100)})
+                itms["iamt"] = flt((itms["ad_amount"] * itms["rt"]) / 100, 2)
 
             row["itms"].append(itms)
         out.append(row)
@@ -1193,7 +1193,7 @@ def get_cdnr_reg_json(res, gstin):
             inv_item = {
                 "nt_num": invoice[0]["invoice_number"],
                 "nt_dt": getdate(invoice[0]["posting_date"]).strftime("%d-%m-%Y"),
-                "val": abs(flt(invoice[0]["invoice_value"])),
+                "val": abs(flt(invoice[0]["invoice_value"], 2)),
                 "ntty": invoice[0]["document_type"],
                 "pos": "%02d" % int(invoice[0]["place_of_supply"].split("-")[0]),
                 "rchrg": invoice[0]["is_reverse_charge"],
@@ -1221,7 +1221,7 @@ def get_cdnr_unreg_json(res, gstin):
         inv_item = {
             "nt_num": items[0]["invoice_number"],
             "nt_dt": getdate(items[0]["posting_date"]).strftime("%d-%m-%Y"),
-            "val": abs(flt(items[0]["invoice_value"])),
+            "val": abs(flt(items[0]["invoice_value"], 2)),
             "ntty": items[0]["document_type"],
             "pos": "%02d" % int(items[0]["place_of_supply"].split("-")[0]),
             "typ": get_invoice_type(items[0]),
