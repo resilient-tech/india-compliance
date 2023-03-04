@@ -478,7 +478,7 @@ class EWaybillData(GSTTransactionData):
         self.validate_transaction()
         self.set_transporter_details()
         self.set_party_address_details()
-        self.validate_distance()
+        self.update_distance_if_zero()
 
         if with_irn:
             return self.sanitize_data(
@@ -773,12 +773,13 @@ class EWaybillData(GSTTransactionData):
 
         return address_details
 
-    def validate_distance(self):
+    def update_distance_if_zero(self):
         """
         e-Waybill portal doesn't return distance where from and to pincode is same.
         Hardcode distance to 1 km to simplify and automate this.
         Accuracy of distance is immaterial and used only for e-Waybill validity determination.
         """
+
         if (
             self.transaction_details.distance == 0
             and self.dispatch_address.pincode == self.shipping_address.pincode
