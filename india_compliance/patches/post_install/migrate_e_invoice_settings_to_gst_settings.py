@@ -5,7 +5,7 @@ from frappe.utils import sbool
 from frappe.utils.password import decrypt
 
 from india_compliance.gst_india.constants.custom_fields import E_INVOICE_FIELDS
-from india_compliance.gst_india.utils import toggle_custom_fields
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
 
 def execute():
@@ -39,8 +39,10 @@ def execute():
     if sbool(old_settings.enable):
         toggle_custom_fields(E_INVOICE_FIELDS, True)
         click.secho(
-            "Your e-Invoice Settings have been migrated to GST Settings."
-            " Please enable the e-Invoice API in GST Settings manually.\n",
+            (
+                "Your e-Invoice Settings have been migrated to GST Settings."
+                " Please enable the e-Invoice API in GST Settings manually.\n"
+            ),
             fg="yellow",
         )
 
