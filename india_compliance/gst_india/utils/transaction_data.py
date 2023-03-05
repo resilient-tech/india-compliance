@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, get_url_to_form, getdate, rounded
+from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
 from india_compliance.gst_india.constants.e_waybill import (
@@ -148,8 +148,10 @@ class GSTTransactionData:
                         self.doc.mode_of_transport
                     ),
                     "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
-                    "vehicle_no": self.sanitize_value(self.doc.vehicle_no, 1),
-                    "lr_no": self.sanitize_value(self.doc.lr_no, 2, max_length=15),
+                    "vehicle_no": self.sanitize_value(self.doc.vehicle_no, regex=1),
+                    "lr_no": self.sanitize_value(
+                        self.doc.lr_no, regex=2, max_length=15
+                    ),
                     "lr_date": (
                         format_date(self.doc.lr_date, self.DATE_FORMAT)
                         if self.doc.lr_no
@@ -157,7 +159,9 @@ class GSTTransactionData:
                     ),
                     "gst_transporter_id": self.doc.gst_transporter_id or "",
                     "transporter_name": (
-                        self.sanitize_value(self.doc.transporter_name, 3, max_length=25)
+                        self.sanitize_value(
+                            self.doc.transporter_name, regex=3, max_length=25
+                        )
                         if self.doc.transporter_name
                         else ""
                     ),
@@ -213,7 +217,9 @@ class GSTTransactionData:
                     "qty": abs(self.rounded(row.qty, 3)),
                     "taxable_value": abs(self.rounded(row.taxable_value)),
                     "hsn_code": row.gst_hsn_code,
-                    "item_name": self.sanitize_value(row.item_name, 3, max_length=300),
+                    "item_name": self.sanitize_value(
+                        row.item_name, regex=3, max_length=300
+                    ),
                     "uom": uom if uom in UOMS else "OTH",
                 }
             )
@@ -312,8 +318,8 @@ class GSTTransactionData:
         self.check_missing_address_fields(address, validate_gstin)
 
         error_context = {
-            "doctype": "Address",
-            "docname": address.name,
+            "reference_doctype": "Address",
+            "reference_name": address.name,
         }
 
         return frappe._dict(
@@ -323,23 +329,23 @@ class GSTTransactionData:
                 "address_title": self.sanitize_value(
                     address.address_title,
                     regex=2,
-                    throw=True,
-                    error_context={**error_context, "fieldname": "Address Title"},
+                    fieldname="address_title",
+                    **error_context,
                 ),
                 "address_line1": self.sanitize_value(
                     address.address_line1,
                     regex=3,
                     min_length=1,
-                    throw=True,
-                    error_context={**error_context, "fieldname": "Address Line 1"},
+                    fieldname="address_line1",
+                    **error_context,
                 ),
                 "address_line2": self.sanitize_value(address.address_line2, regex=3),
                 "city": self.sanitize_value(
                     address.city,
                     regex=3,
                     max_length=50,
-                    throw=True,
-                    error_context={**error_context, "fieldname": "City"},
+                    fieldname="city",
+                    **error_context,
                 ),
                 "pincode": int(address.pincode),
             }
@@ -417,11 +423,16 @@ class GSTTransactionData:
         min_length=3,
         max_length=100,
         truncate=True,
-        throw=False,
-        error_context=None,
+        *,
+        fieldname=None,
+        reference_doctype=None,
+        reference_name=None,
     ):
         """
         Sanitize value to make it suitable for GST JSON sent for e-Waybill and e-Invoice.
+
+        If fieldname, reference doctype and reference name are present,
+        error will be thrown for invalid values instead of sanitizing them.
 
         Parameters:
         ----------
@@ -430,37 +441,57 @@ class GSTTransactionData:
         @param min_length (default: 3): Minimum length of the value that is acceptable
         @param max_length (default: 100): Maximum length of the value that is acceptable
         @param truncate (default: True): Truncate the value if it exceeds max_length
-        @param throw (default: False): Throw an exception if the value is not acceptable. Used for mandatory fields.
-        @param error_context: Context to be used in the error message to help the user identify the field
-            example: error_context = {"fieldname": "Address Line 1", "doctype": "Address" , "docname": "Office Address"}
+        @param fieldname: Fieldname for which the value is being sanitized
+        @param reference_doctype: Doctype of the document that contains the field
+        @param reference_name: Name of the document that contains the field
 
         Returns:
         ----------
         @return: Sanitized value
 
         """
-        throw = throw and error_context
 
-        def _throw(message):
-            if not throw:
+        def _throw(message, **format_args):
+            if not (fieldname and reference_doctype and reference_name):
                 return
 
-            url = get_url_to_form(error_context["doctype"], error_context["docname"])
+            message = message.format(
+                field=_(frappe.get_meta(reference_doctype).get_label(fieldname)),
+                **format_args,
+            )
+
             frappe.throw(
-                _(
-                    "{fieldname} {message} for {doctype} - <a href='{url}'>{docname}</a>"
-                ).format(**error_context, message=message, url=url),
-                title=_("Invalid Data"),
+                _("{reference_doctype} {reference_link}: {message}").format(
+                    reference_doctype=_(reference_doctype),
+                    reference_link=frappe.bold(
+                        get_link_to_form(reference_doctype, reference_name)
+                    ),
+                    message=message,
+                ),
+                title=_("Invalid Data for GST Upload"),
             )
 
         if not value or len(value) < min_length:
-            return _throw(f"must be at least {min_length} characters long")
+            return _throw(
+                _("{field} must be at least {min_length} characters long"),
+                min_length=min_length,
+            )
 
-        if not value.isascii():
-            return _throw("must be ASCII characters only")
+        original_value = value
 
         if regex:
             value = re.sub(REGEX_MAP[regex], "", value)
+
+        if len(value) < min_length:
+            if not original_value.isascii():
+                return _throw(_("{field} must only consist of ASCII characters"))
+
+            return _throw(
+                _("{field} consists of invalid characters: {invalid_chars}"),
+                invalid_chars=frappe.bold(
+                    "".join(set(original_value).difference(value))
+                ),
+            )
 
         if not truncate and len(value) > max_length:
             return
