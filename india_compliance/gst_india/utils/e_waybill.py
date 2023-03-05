@@ -102,7 +102,6 @@ def _generate_e_waybill(doc, throw=True):
         indicator="green",
         alert=True,
     )
-
     return send_updated_doc(doc)
 
 
@@ -478,6 +477,8 @@ class EWaybillData(GSTTransactionData):
     def get_data(self, *, with_irn=False):
         self.validate_transaction()
         self.set_transporter_details()
+        self.set_party_address_details()
+        self.update_distance_if_zero()
 
         if with_irn:
             return self.sanitize_data(
@@ -496,7 +497,6 @@ class EWaybillData(GSTTransactionData):
 
         self.set_transaction_details()
         self.set_item_list()
-        self.set_party_address_details()
 
         return self.get_transaction_data()
 
@@ -529,7 +529,7 @@ class EWaybillData(GSTTransactionData):
             "fromPlace": dispatch_address.city,
             "fromState": dispatch_address.state_number,
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
-            "reasonRem": self.sanitize_value(values.remark, 3),
+            "reasonRem": self.sanitize_value(values.remark, regex=3),
             "transDocNo": self.transaction_details.lr_no,
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
@@ -551,7 +551,11 @@ class EWaybillData(GSTTransactionData):
         super().validate_transaction()
 
         if self.doc.ewaybill:
-            frappe.throw(_("e-Waybill already generated for this document"))
+            frappe.throw(
+                _("e-Waybill already generated for {0} {1}").format(
+                    _(self.doc.doctype), frappe.bold(self.doc.name)
+                )
+            )
 
         self.validate_applicability()
 
@@ -768,6 +772,19 @@ class EWaybillData(GSTTransactionData):
         address_details.state_number = int(address_details.state_number)
 
         return address_details
+
+    def update_distance_if_zero(self):
+        """
+        e-Waybill portal doesn't return distance where from and to pincode is same.
+        Hardcode distance to 1 km to simplify and automate this.
+        Accuracy of distance is immaterial and used only for e-Waybill validity determination.
+        """
+
+        if (
+            self.transaction_details.distance == 0
+            and self.dispatch_address.pincode == self.shipping_address.pincode
+        ):
+            self.transaction_details.distance = 1
 
     def get_transaction_data(self):
         if self.sandbox_mode:

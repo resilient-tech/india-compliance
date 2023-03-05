@@ -8,11 +8,13 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
-required_apps = ["erpnext"]
+required_apps = ["frappe/erpnext"]
 
 after_install = "india_compliance.install.after_install"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
+
+before_uninstall = "india_compliance.uninstall.before_uninstall"
 
 app_include_js = "gst_india.bundle.js"
 
@@ -157,7 +159,8 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_transport_type",
         "india_compliance.gst_india.utils.jinja.get_transport_mode",
         "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
-        "india_compliance.gst_india.utils.jinja.get_non_zero_fields",
+        "india_compliance.gst_india.utils.jinja.get_e_invoice_item_fields",
+        "india_compliance.gst_india.utils.jinja.get_e_invoice_amount_fields",
     ],
 }
 

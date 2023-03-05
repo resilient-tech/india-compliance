@@ -1,3 +1,5 @@
+from functools import partial
+
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from frappe.test_runner import make_test_objects
@@ -38,6 +40,7 @@ def before_tests():
 
     frappe.flags.country = "India"
     frappe.flags.skip_test_records = True
+    frappe.enqueue = partial(frappe.enqueue, now=True)
 
 
 def set_default_settings_for_tests():

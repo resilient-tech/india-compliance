@@ -1,3 +1,5 @@
+import json
+
 import jwt
 
 import frappe
@@ -22,6 +24,7 @@ from india_compliance.gst_india.constants.e_invoice import (
     ITEM_LIMIT,
 )
 from india_compliance.gst_india.utils import (
+    is_api_enabled,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -38,6 +41,53 @@ from india_compliance.gst_india.utils.transaction_data import (
 
 
 @frappe.whitelist()
+def enqueue_bulk_e_invoice_generation(docnames):
+    """
+    Enqueue bulk generation of e-Invoices for the given Sales Invoices.
+    """
+
+    frappe.has_permission("Sales Invoice", "submit", throw=True)
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not is_api_enabled(gst_settings) or not gst_settings.enable_e_invoice:
+        frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    rq_job = frappe.enqueue(
+        "india_compliance.gst_india.utils.e_invoice.generate_e_invoices",
+        queue="long",
+        timeout=len(docnames) * 240,  # 4 mins per e-Invoice
+        docnames=docnames,
+    )
+
+    return rq_job.id
+
+
+def generate_e_invoices(docnames):
+    """
+    Bulk generate e-Invoices for the given Sales Invoices.
+    Permission checks are done in the `generate_e_invoice` function.
+    """
+
+    for docname in docnames:
+        try:
+            generate_e_invoice(docname)
+
+        except Exception:
+            frappe.log_error(
+                title=_("e-Invoice generation failed for Sales Invoice {0}").format(
+                    docname
+                ),
+                message=frappe.get_traceback(),
+            )
+
+        finally:
+            # each e-Invoice needs to be committed individually
+            # nosemgrep
+            frappe.db.commit()
+
+
+@frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
     try:
@@ -47,7 +97,11 @@ def generate_e_invoice(docname, throw=True):
 
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
-            result = api.get_e_invoice_by_irn(result.Desc.get("Irn"))
+            response = api.get_e_invoice_by_irn(result.Desc.Irn)
+
+            # Handle error 2283:
+            # IRN details cannot be provided as it is generated more than 2 days ago
+            result = result.Desc if response.error_code == "2283" else response
 
     except frappe.ValidationError as e:
         if throw:
@@ -71,9 +125,14 @@ def generate_e_invoice(docname, throw=True):
         }
     )
 
-    decoded_invoice = frappe.parse_json(
-        jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"]
-    )
+    invoice_data = None
+    if result.SignedInvoice:
+        decoded_invoice = json.loads(
+            jwt.decode(result.SignedInvoice, options={"verify_signature": False})[
+                "data"
+            ]
+        )
+        invoice_data = frappe.as_json(decoded_invoice, indent=4)
 
     log_e_invoice(
         doc,
@@ -84,7 +143,7 @@ def generate_e_invoice(docname, throw=True):
             "acknowledged_on": parse_datetime(result.AckDt),
             "signed_invoice": result.SignedInvoice,
             "signed_qr_code": result.SignedQRCode,
-            "invoice_data": frappe.as_json(decoded_invoice, indent=4),
+            "invoice_data": invoice_data,
         },
     )
 
@@ -142,7 +201,12 @@ def cancel_e_invoice(docname, values):
 
 
 def log_e_invoice(doc, log_data):
-    frappe.enqueue(_log_e_invoice, queue="short", at_front=True, log_data=log_data)
+    frappe.enqueue(
+        _log_e_invoice,
+        queue="short",
+        at_front=True,
+        log_data=log_data,
+    )
 
     update_onload(doc, "e_invoice_info", log_data)
 
@@ -310,7 +374,9 @@ class EInvoiceData(GSTTransactionData):
         credit_days = 0
         paid_amount = 0
 
-        if self.doc.due_date:
+        if self.doc.due_date and getdate(self.doc.due_date) > getdate(
+            self.doc.posting_date
+        ):
             credit_days = (
                 getdate(self.doc.due_date) - getdate(self.doc.posting_date)
             ).days
@@ -397,6 +463,9 @@ class EInvoiceData(GSTTransactionData):
             self.company_address.update(seller)
             self.dispatch_address.update(seller)
             self.transaction_details.name = random_string(6).lstrip("0")
+
+            if frappe.flags.in_test:
+                self.transaction_details.name = "test_invoice_no"
 
             # For overseas transactions, dummy GSTIN is not needed
             if self.doc.gst_category != "Overseas":
