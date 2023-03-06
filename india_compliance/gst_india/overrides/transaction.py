@@ -504,7 +504,7 @@ def get_gst_details(party_details, doctype, company):
         "customer_address" if is_sales_transaction else "supplier_address"
     )
     if not party_details.get(party_address_field):
-        party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
+        party_gst_details = get_party_gst_details(party_details, is_sales_transaction) or {}
         # updating party details to get correct place of supply
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
@@ -587,6 +587,9 @@ def get_party_gst_details(party_details, is_sales_transaction):
     gstin_fieldname = (
         "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
     )
+
+    if not party_details.get(party_type.lower()):
+        return {}
 
     return frappe.db.get_value(
         party_type,
