@@ -1,4 +1,5 @@
 [pre_model_sync]
+india_compliance.patches.switch_to_develop
 
 
 [post_model_sync]
