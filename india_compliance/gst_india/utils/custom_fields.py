@@ -34,7 +34,7 @@ def toggle_custom_fields(custom_fields, show):
 
 def delete_old_fields(fieldnames, doctypes):
     if isinstance(fieldnames, str):
-        fields = (fieldnames,)
+        fieldnames = (fieldnames,)
 
     if isinstance(doctypes, str):
         doctypes = (doctypes,)
@@ -42,7 +42,7 @@ def delete_old_fields(fieldnames, doctypes):
     frappe.db.delete(
         "Custom Field",
         {
-            "fieldname": ("in", fields),
+            "fieldname": ("in", fieldnames),
             "dt": ("in", doctypes),
         },
     )
