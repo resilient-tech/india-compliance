@@ -12,7 +12,7 @@ pull_request_rules:
       close:
       comment:
           message: |
-            @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on the `next` branch.
+            @{{author}}, thanks for the contribution, but we do not accept pull requests on a stable branch. Please raise PR on the `develop` branch.
 
   - name: Automatic merge on CI success and review
     conditions:
@@ -22,7 +22,7 @@ pull_request_rules:
     actions:
       merge:
         method: merge
-  
+
   - name: Automatic squash on CI success and review
     conditions:
       - label!=dont-merge
@@ -34,17 +34,17 @@ pull_request_rules:
         commit_message_template: |
             {{ title }} (#{{ number }})
             {{ body }}
-  
+
   - name: backport to develop
     conditions:
-      - label="backport next"
+      - label="backport develop"
     actions:
       backport:
         branches:
-          - next
+          - develop
         assignees:
           - "{{ author }}"
-          
+
   - name: backport to version-14-hotfix
     conditions:
       - label="backport version-14-hotfix"
