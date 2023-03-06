@@ -504,7 +504,9 @@ def get_gst_details(party_details, doctype, company):
         "customer_address" if is_sales_transaction else "supplier_address"
     )
     if not party_details.get(party_address_field):
-        party_gst_details = get_party_gst_details(party_details, is_sales_transaction) or {}
+        party_gst_details = (
+            get_party_gst_details(party_details, is_sales_transaction) or {}
+        )
         # updating party details to get correct place of supply
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
