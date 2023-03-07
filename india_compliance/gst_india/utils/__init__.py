@@ -5,7 +5,7 @@ from titlecase import titlecase as _titlecase
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import cstr, get_datetime, get_time_zone
+from frappe.utils import cstr, get_datetime, get_system_timezone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -325,7 +325,7 @@ def parse_datetime(value, day_first=False):
         return
 
     parsed = parser.parse(value, dayfirst=day_first)
-    system_tz = get_time_zone()
+    system_tz = get_system_timezone()
 
     if system_tz == TIMEZONE:
         return parsed.replace(tzinfo=None)
@@ -343,7 +343,7 @@ def as_ist(value=None):
     """Convert system time to offset-naive IST time"""
 
     parsed = get_datetime(value)
-    system_tz = get_time_zone()
+    system_tz = get_system_timezone()
 
     if system_tz == TIMEZONE:
         return parsed
