@@ -346,7 +346,8 @@ def validate_items(doc):
 
 
 def set_place_of_supply(doc, method=None):
-    doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+    if not doc.place_of_supply:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
 
 def is_inter_state_supply(doc):
@@ -478,11 +479,13 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    party_details.update(get_gst_details(party_details, doctype, company))
+    party_details.update(
+        get_gst_details(party_details, doctype, company, update_place_of_supply=True)
+    )
 
 
 @frappe.whitelist()
-def get_gst_details(party_details, doctype, company):
+def get_gst_details(party_details, doctype, company, *, update_place_of_supply=False):
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)
@@ -511,7 +514,11 @@ def get_gst_details(party_details, doctype, company):
             party_details.update(party_gst_details)
             gst_details.update(party_gst_details)
 
-    gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
+    gst_details.place_of_supply = (
+        party_details.place_of_supply
+        if (not update_place_of_supply and party_details.place_of_supply)
+        else get_place_of_supply(party_details, doctype)
+    )
 
     if is_sales_transaction:
         source_gstin = party_details.company_gstin
