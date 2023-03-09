@@ -39,11 +39,6 @@ Object.assign(ic, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    get_party_fieldname(doctype) {
-        if (doctype == "Quotation") return "party_name";
-        return ic.get_party_type(doctype).toLowerCase();
-    },
-
     set_state_options(frm) {
         const state_field = frm.get_field("state");
         const country = frm.get_field("country").value;

@@ -40,7 +40,9 @@ function fetch_gst_details(doctype) {
 async function update_gst_details(frm) {
     if (frm.__gst_update_triggered || frm.updating_party_details || !frm.doc.company) return;
 
-    const party = frm.doc[ic.get_party_fieldname(frm.doc.doctype)];
+    const party_type = ic.get_party_type(frm.doc.doctype).toLowerCase();
+    const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
+    const party = frm.doc[party_fieldname];
     if (!party) return;
 
     frm.__gst_update_triggered = true;
@@ -50,8 +52,11 @@ async function update_gst_details(frm) {
 
     const party_details = {};
 
-    // fieldname may be "party_name" for Quotation, but "customer" is expected by get_gst_details
-    party_details[ic.get_party_type(frm.doc.doctype).toLowerCase()] = party;
+    // set "customer" or "supplier" (not applicable for Quotations with Lead)
+    if (frm.doc.doctype !== "Quotation" || frm.doc.party_type === "Customer") {
+        party_details[party_type] = party;
+    }
+
 
     const fieldnames_to_set = ["tax_category", "gst_category", "company_gstin"];
 
