@@ -122,7 +122,7 @@ function set_gstin_query(doctype) {
             frm._gstin_options_set_for = frm.doc.name;
             const field = frm.get_field("gstin");
             field.df.ignore_validation = true;
-            field.set_data(await ic.get_gstin_options(frm.doc.name, doctype));
+            field.set_data(await india_compliance.get_gstin_options(frm.doc.name, doctype));
         },
     });
 }
@@ -132,7 +132,7 @@ function set_gst_category(doctype) {
         gstin(frm) {
             frm.set_value(
                 "gst_category",
-                ic.guess_gst_category(frm.doc.gstin, frm.doc.country)
+                india_compliance.guess_gst_category(frm.doc.gstin, frm.doc.country)
             );
         },
     });
