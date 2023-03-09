@@ -40,7 +40,7 @@ function fetch_gst_details(doctype) {
 async function update_gst_details(frm) {
     if (frm.__gst_update_triggered || frm.updating_party_details || !frm.doc.company) return;
 
-    const party_type = ic.get_party_type(frm.doc.doctype).toLowerCase();
+    const party_type = india_compliance.get_party_type(frm.doc.doctype).toLowerCase();
     const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
     const party = frm.doc[party_fieldname];
     if (!party) return;
