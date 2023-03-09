@@ -14,7 +14,7 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
             generate_e_waybill_json
         );
 
-    if (ic.is_e_invoice_enabled())
+    if (india_compliance.is_e_invoice_enabled())
         add_bulk_action_for_submitted_invoices(
             list_view,
             __("Enqueue Bulk e-Invoice Generation"),

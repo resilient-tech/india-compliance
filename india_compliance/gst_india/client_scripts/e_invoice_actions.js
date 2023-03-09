@@ -59,7 +59,7 @@ frappe.ui.form.on("Sales Invoice", {
                 resolve();
             };
 
-            if (!is_irn_cancellable(frm) || !ic.is_e_invoice_enabled()) {
+            if (!is_irn_cancellable(frm) || !india_compliance.is_e_invoice_enabled()) {
                 const d = frappe.warn(
                     __("Cannot Cancel IRN"),
                     __(
@@ -159,7 +159,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
 
 function is_e_invoice_applicable(frm) {
     return (
-        ic.is_e_invoice_enabled() &&
+        india_compliance.is_e_invoice_enabled() &&
         frm.doc.docstatus == 1 &&
         frm.doc.company_gstin &&
         frm.doc.gst_category != "Unregistered" &&
