@@ -12,21 +12,21 @@ export async function set_api_secret(api_secret) {
 }
 
 export function login(email) {
-    return ic.gst_api.call("auth/login", {
+    return india_compliance.gst_api.call("auth/login", {
         body: { email },
         fail_silently: true,
     });
 }
 
 export function signup(email, gstin) {
-    return ic.gst_api.call("auth/signup", {
+    return india_compliance.gst_api.call("auth/signup", {
         body: { email, gstin },
         fail_silently: true,
     });
 }
 
 export function check_free_trial_eligibility(gstin) {
-    return ic.gst_api.call("auth/is_eligible_for_free_trial", {
+    return india_compliance.gst_api.call("auth/is_eligible_for_free_trial", {
         body: { gstin },
         fail_silently: true,
     });
@@ -43,7 +43,7 @@ export function set_session(session) {
 }
 
 export function validate_session(session_id) {
-    return ic.gst_api.call("auth/validate_session", {
+    return india_compliance.gst_api.call("auth/validate_session", {
         body: { session_id },
     });
 }

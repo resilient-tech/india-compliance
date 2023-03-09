@@ -6,12 +6,12 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
         this.skip_redirect_on_error = true;
-        this.api_enabled = ic.is_api_enabled() && gst_settings.autofill_party_info;
+        this.api_enabled = india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
     }
 
     render_dialog() {
         super.render_dialog();
-        ic.set_state_options(this.dialog);
+        india_compliance.set_state_options(this.dialog);
     }
 
     get_address_fields() {
@@ -67,7 +67,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 options: "Country",
                 default: frappe.defaults.get_user_default("country"),
                 onchange: () => {
-                    ic.set_state_options(this.dialog);
+                    india_compliance.set_state_options(this.dialog);
                 },
             },
             {
@@ -93,7 +93,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
                     d.set_value(
                         "gst_category",
-                        ic.guess_gst_category(d.doc._gstin, d.doc.country)
+                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country)
                     );
                 },
             },
