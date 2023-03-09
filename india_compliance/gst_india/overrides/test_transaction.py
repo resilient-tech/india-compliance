@@ -431,13 +431,34 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+    def test_purchase_with_different_place_of_supply(self):
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_out_state=True,
+            do_not_save=True,
+        )
+
+        doc.place_of_supply = "96-Other Countries"
+        doc.save()
+
+        # place of supply shouldn't get overwritten
+        self.assertEqual(doc.place_of_supply, "96-Other Countries")
+
+        # IGST should get applied
+        self.assertIn("IGST", doc.taxes[-1].description)
+
     def test_invalid_gst_account_type(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         doc.append(
             "taxes",
             {
                 "charge_type": "On Net Total",
-                "account_head": f"{'Input' if self.is_sales_doctype else 'Output'} Tax IGST - _TIRC",
+                "account_head": (
+                    f"{'Input' if self.is_sales_doctype else 'Output'} Tax IGST - _TIRC"
+                ),
                 "description": "IGST",
                 "rate": 18,
                 "cost_center": "Main - _TIRC",
