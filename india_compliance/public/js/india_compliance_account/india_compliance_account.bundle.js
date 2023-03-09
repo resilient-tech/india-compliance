@@ -28,11 +28,11 @@ class IndiaComplianceAccountPage {
     }
 }
 
-frappe.provide("ic.pages");
-ic.pages.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
+frappe.provide("india_compliance.pages");
+india_compliance.pages.IndiaComplianceAccountPage = IndiaComplianceAccountPage;
 
-frappe.provide("ic.gst_api");
-ic.gst_api.call = async function (endpoint, options) {
+frappe.provide("india_compliance.gst_api");
+india_compliance.gst_api.call = async function (endpoint, options) {
     try {
         const base_url = "https://asp.resilient.tech/v1/";
         const url = base_url + endpoint;
