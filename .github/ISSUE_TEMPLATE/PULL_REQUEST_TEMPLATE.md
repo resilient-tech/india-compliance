@@ -3,7 +3,7 @@
 Some key notes before you open a PR:
 
  1. Select which branch should this PR be merged in?
- 2. PR name follows [convention](https://github.com/resilient-tech/india-compliance/blob/next/commitlint.config.js)
+ 2. PR name follows [convention](https://github.com/resilient-tech/india-compliance/blob/develop/commitlint.config.js)
  3. All tests pass locally, UI and Unit tests
  4. All business logic and validations must be on the server-side
  5. Update necessary Documentation
@@ -16,7 +16,7 @@ Also, if you're new here
 
 - Contribution Guide => https://github.com/frappe/erpnext/blob/develop/.github/CONTRIBUTING.md
 
-- Pull Request Checklist => https://github.com/frappe/erpnext/wiki/Pull-Request-Checklist 
+- Pull Request Checklist => https://github.com/frappe/erpnext/wiki/Pull-Request-Checklist
 
 -->
 
