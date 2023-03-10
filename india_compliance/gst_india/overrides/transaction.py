@@ -347,7 +347,8 @@ def validate_items(doc):
 
 
 def set_place_of_supply(doc, method=None):
-    doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+    if not doc.place_of_supply:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
 
 def is_inter_state_supply(doc):
@@ -479,11 +480,13 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    party_details.update(get_gst_details(party_details, doctype, company))
+    party_details.update(
+        get_gst_details(party_details, doctype, company, update_place_of_supply=True)
+    )
 
 
 @frappe.whitelist()
-def get_gst_details(party_details, doctype, company):
+def get_gst_details(party_details, doctype, company, *, update_place_of_supply=False):
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)
@@ -506,11 +509,17 @@ def get_gst_details(party_details, doctype, company):
     )
     if not party_details.get(party_address_field):
         party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
-        # updating party details to get correct place of supply
-        party_details.update(party_gst_details)
-        gst_details.update(party_gst_details)
 
-    gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
+        # updating party details to get correct place of supply
+        if party_gst_details:
+            party_details.update(party_gst_details)
+            gst_details.update(party_gst_details)
+
+    gst_details.place_of_supply = (
+        party_details.place_of_supply
+        if (not update_place_of_supply and party_details.place_of_supply)
+        else get_place_of_supply(party_details, doctype)
+    )
 
     if is_sales_transaction:
         source_gstin = party_details.company_gstin
@@ -589,9 +598,12 @@ def get_party_gst_details(party_details, is_sales_transaction):
         "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
     )
 
+    if not (party := party_details.get(party_type.lower())):
+        return
+
     return frappe.db.get_value(
         party_type,
-        party_details[party_type.lower()],
+        party,
         ("gst_category", f"gstin as {gstin_fieldname}"),
         as_dict=True,
     )
