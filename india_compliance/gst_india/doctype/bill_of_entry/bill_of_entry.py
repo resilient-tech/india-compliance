@@ -60,8 +60,6 @@ class BillofEntry(Document):
         self.set_item_wise_tax_rates()
         self.calculate_totals()
 
-        send_updated_doc(self)
-
     def calculate_totals(self):
         self.set_total_customs_and_taxable_values()
         self.set_total_taxes()
@@ -337,7 +335,7 @@ def make_bill_of_entry(source_name, target_doc=None):
 
 
 @frappe.whitelist()
-def make_payment_entry(source_name, target_doc=None):
+def make_journal_entry_for_payment(source_name, target_doc=None):
     def set_missing_values(source, target):
         target.voucher_type = "Bank Entry"
         target.posting_date = today()

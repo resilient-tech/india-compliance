@@ -18,7 +18,7 @@ frappe.ui.form.on("Bill of Entry", {
                 __("Payment Entry"),
                 () => {
                     frappe.model.open_mapped_doc({
-                        method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_payment_entry",
+                        method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_journal_entry_for_payment",
                         frm: frm,
                     });
                 },
@@ -63,7 +63,7 @@ frappe.ui.form.on("Bill of Entry Item", {
 
     customs_duty(frm, cdt, cdn) {
         frm.bill_of_entry_controller.update_item_taxable_value(cdt, cdn);
-        frm.bill_of_entry_controller.update_total_customes_duty();
+        frm.bill_of_entry_controller.update_total_customs_duty();
     },
 
     async item_tax_template(frm, cdt, cdn) {
@@ -162,7 +162,7 @@ class BillOfEntryController {
         );
     }
 
-    update_total_customes_duty() {
+    update_total_customs_duty() {
         this.frm.set_value(
             "total_customs_duty",
             this.frm.doc.items.reduce((total, row) => {
@@ -219,9 +219,9 @@ class TaxesController {
         });
     }
 
-    async get_item_wise_tax_rates(item_name, tax_name) {
+    async set_item_wise_tax_rates(item_name, tax_name) {
         /**
-         * This method is used to get item wise tax rates from the server
+         * This method is used to set item wise tax rates from the server
          * and update the item_wise_tax_rates field in the taxes table.
          *
          * @param {string} item_name - Item row name for which the tax rates are to be fetched.
