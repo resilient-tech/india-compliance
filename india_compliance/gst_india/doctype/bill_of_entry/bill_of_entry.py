@@ -50,6 +50,11 @@ class BillofEntry(Document):
         controller = AccountsController
         controller.on_trash(self)
 
+    def set_defaults(self):
+        company = frappe.get_cached_doc("Company", self.company)
+        self.customs_duty_account = company.default_customs_duty_account
+        self.payable_account = company.default_customs_payable_account
+
     @frappe.whitelist()
     def set_taxes_and_totals(self):
         self.set_item_wise_tax_rates()
@@ -303,9 +308,7 @@ def make_bill_of_entry(source_name, target_doc=None):
             },
         )
 
-        # Default accounts
-        company = frappe.get_cached_doc("Company", source.company)
-        target.customs_duty_account = company.default_customs_duty_account
+        target.set_defaults()
 
     doc = get_mapped_doc(
         "Purchase Invoice",

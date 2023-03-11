@@ -71,7 +71,7 @@
    "label": "Amount",
    "oldfieldname": "tax_amount",
    "oldfieldtype": "Currency",
-   "options": "Company:company:default_currency"
+   "options": "INR"
   },
   {
    "columns": 2,
@@ -81,18 +81,19 @@
    "label": "Total",
    "oldfieldname": "total",
    "oldfieldtype": "Currency",
-   "options": "Company:company:default_currency",
+   "options": "INR",
    "read_only": 1
   },
   {
    "fieldname": "item_wise_tax_rates",
    "fieldtype": "Code",
+   "hidden": 1,
    "label": "Item Wise Tax Rates"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2023-02-02 10:43:38.651123",
+ "modified": "2023-03-11 17:31:11.315202",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry Taxes",

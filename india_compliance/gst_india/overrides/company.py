@@ -19,11 +19,32 @@ def delete_gst_settings_for_company(doc, method=None):
     gst_settings.save()
 
 
-def create_default_tax_templates(doc, method=None):
-    if not frappe.flags.country_change:
+def make_company_fixtures(doc, method=None):
+    if not frappe.flags.country_change or doc.country != "India":
         return
 
-    make_default_tax_templates(doc.name, doc.country)
+    create_company_fixtures(doc.name, doc.country)
+
+
+def create_company_fixtures(company, country):
+    make_default_customs_account(company)
+    make_default_tax_templates(company, country)
+
+
+def make_default_customs_account(company):
+    create_default_company_account(
+        company,
+        account_name="Customs Duty Payable",
+        parent="Duties and Taxes",
+        default_field="default_customs_payable_account",
+    )
+
+    create_default_company_account(
+        company,
+        account_name="Customs Duty Expense",
+        parent="Stock Expenses",
+        default_field="default_customs_duty_account",
+    )
 
 
 @frappe.whitelist()
@@ -130,4 +151,31 @@ def add_accounts_in_gst_settings(
                 "igst_account": gst_accounts.get(account_names[2]),
                 "account_type": account_type,
             },
+        )
+
+
+def create_default_company_account(company, account_name, parent, default_field=None):
+    parent_account = frappe.db.get_value(
+        "Account", filters={"account_name": parent, "company": company}
+    )
+
+    if not parent_account:
+        return
+
+    account = frappe.get_doc(
+        {
+            "doctype": "Account",
+            "account_name": account_name,
+            "parent_account": parent_account,
+            "company": company,
+            "is_group": 0,
+            "account_type": "Tax",
+        }
+    )
+    account.flags.ignore_permissions = True
+    account.insert(ignore_if_duplicate=True)
+
+    if default_field:
+        frappe.db.set_value(
+            "Company", company, default_field, account.name, update_modified=False
         )

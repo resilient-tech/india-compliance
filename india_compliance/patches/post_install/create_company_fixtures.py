@@ -1,6 +1,8 @@
 import frappe
 
-from india_compliance.gst_india.overrides.company import make_default_tax_templates
+from india_compliance.gst_india.overrides.company import (
+    create_company_fixtures as create_gst_company_fixtures,
+)
 from india_compliance.income_tax_india.overrides.company import create_company_fixtures
 
 """
@@ -19,4 +21,4 @@ def execute():
 
         # GST fixtures
         if not frappe.db.exists("GST Account", {"company": company}):
-            make_default_tax_templates(company, "India")
+            create_gst_company_fixtures(company, "India")

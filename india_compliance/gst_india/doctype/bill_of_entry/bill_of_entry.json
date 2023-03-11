@@ -55,7 +55,7 @@
    "fieldtype": "Select",
    "label": "Naming Series",
    "no_copy": 1,
-   "options": "GST-BOE-.YYYY.-",
+   "options": "BOE-.YYYY.-",
    "print_hide": 1,
    "reqd": 1,
    "set_only_once": 1
@@ -266,7 +266,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-01-31 15:39:23.255751",
+ "modified": "2023-03-11 16:44:45.082498",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
