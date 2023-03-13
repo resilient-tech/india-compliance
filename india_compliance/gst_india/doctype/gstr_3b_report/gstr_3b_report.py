@@ -61,7 +61,7 @@ class GSTR3BReport(Document):
 
     def set_itc_details(self, itc_details):
         itc_eligible_type_map = {
-            "IMPG": "Import Of Capital Goods",
+            "IMPG": "Import Of Goods",
             "IMPS": "Import Of Service",
             "ISRC": "ITC on Reverse Charge",
             "ISD": "Input Service Distributor",
