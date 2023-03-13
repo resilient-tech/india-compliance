@@ -15,7 +15,7 @@ sudo apt update && sudo apt install redis-server
 
 pip install frappe-bench
 
-git clone "https://github.com/frappe/frappe" --branch "$BRANCH" --depth 1
+git clone "https://github.com/frappe/frappe" --branch "$BRANCH_TO_CLONE" --depth 1
 bench init --skip-assets --frappe-path ~/frappe --python "$(which python)" frappe-bench
 
 mkdir ~/frappe-bench/sites/test_site
@@ -35,14 +35,8 @@ UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root';
 FLUSH PRIVILEGES;
 "
 
-
-install_wkhtmltopdf() {
-    wget -O /tmp/wkhtmltox.tar.xz https://github.com/frappe/wkhtmltopdf/raw/master/wkhtmltox-0.12.3_linux-generic-amd64.tar.xz
-    tar -xf /tmp/wkhtmltox.tar.xz -C /tmp
-    sudo mv /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf
-    sudo chmod o+x /usr/local/bin/wkhtmltopdf
-}
-install_wkhtmltopdf &
+wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
+sudo apt install ./wkhtmltox_0.12.6-1.focal_amd64.deb
 
 cd ~/frappe-bench || exit
 
@@ -51,13 +45,12 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
-bench get-app payments
-bench get-app erpnext --branch "$BRANCH"
+bench get-app erpnext --branch "$BRANCH_TO_CLONE" --resolve-deps
+bench get-app india_compliance "${GITHUB_WORKSPACE}"
+bench setup requirements --dev
 
 bench use test_site
 bench start &
 bench reinstall --yes
 
-bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench --verbose install-app india_compliance
-bench set-config ic_api_secret "$IC_API_SECRET"

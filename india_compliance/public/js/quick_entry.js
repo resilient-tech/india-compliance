@@ -1,15 +1,17 @@
-const GSTIN_FIELD_DESCRIPTION = __("Autofill party information by entering their GSTIN");
+const GSTIN_FIELD_DESCRIPTION = __(
+    "Autofill party information by entering their GSTIN"
+);
 
 class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
         this.skip_redirect_on_error = true;
-        this.api_enabled = ic.is_api_enabled() && gst_settings.autofill_party_info;
+        this.api_enabled = india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
     }
 
     render_dialog() {
         super.render_dialog();
-        ic.set_state_options(this.dialog);
+        india_compliance.set_state_options(this.dialog);
     }
 
     get_address_fields() {
@@ -20,10 +22,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                        `When you enter a GSTIN, the permanent address linked to it is
+                          `When you enter a GSTIN, the permanent address linked to it is
                         auto-filled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                    )
+                      )
                     : "",
                 collapsible: 0,
             },
@@ -65,7 +67,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 options: "Country",
                 default: frappe.defaults.get_user_default("country"),
                 onchange: () => {
-                    ic.set_state_options(this.dialog);
+                    india_compliance.set_state_options(this.dialog);
                 },
             },
             {
@@ -86,8 +88,13 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 description: this.api_enabled ? GSTIN_FIELD_DESCRIPTION : "",
                 ignore_validation: true,
                 onchange: () => {
-                    if (!this.api_enabled) return;
-                    autofill_fields(this.dialog);
+                    const d = this.dialog;
+                    if (this.api_enabled) return autofill_fields(d);
+
+                    d.set_value(
+                        "gst_category",
+                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country)
+                    );
                 },
             },
         ];
@@ -204,12 +211,9 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
                 fieldname: "link_name",
                 fieldtype: "Dynamic Link",
                 label: "Link Name",
-                get_options: (df) => {
-                    return df.doc.link_doctype
-                },
+                get_options: df => df.doc.link_doctype,
                 onchange: async () => {
-                    const { link_doctype, link_name } =
-                        this.dialog.doc;
+                    const { link_doctype, link_name } = this.dialog.doc;
 
                     if (
                         !link_name ||
@@ -252,15 +256,16 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
     get_default_party() {
         const doc = cur_frm && cur_frm.doc;
-        if (!doc) return;
-
-        const { doctype, name } = doc;
-        if (in_list(frappe.boot.gst_party_types, doctype))
-            return { party_type: doctype, party: name };
-
-        const party_type = ic.get_party_type(doctype);
-        const party = doc[party_type.toLowerCase()];
-        return { party_type, party };
+        if (
+            doc &&
+            frappe.dynamic_link &&
+            frappe.dynamic_link.doc === doc
+        ) {
+            return {
+                party_type: frappe.dynamic_link.doctype,
+                party: frappe.dynamic_link.doc[frappe.dynamic_link.fieldname]
+            };
+        }
     }
 }
 
@@ -288,7 +293,7 @@ async function autofill_fields(dialog) {
 }
 
 function set_gstin_description(gstin_field, status) {
-    const STATUS_COLORS = {"Active": "green", "Cancelled": "red"};
+    const STATUS_COLORS = { Active: "green", Cancelled: "red" };
 
     gstin_field.set_description(
         `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">

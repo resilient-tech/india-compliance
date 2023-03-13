@@ -5,7 +5,7 @@ from titlecase import titlecase as _titlecase
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import cstr, get_datetime, get_time_zone
+from frappe.utils import cstr, get_datetime, get_system_timezone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -26,7 +26,7 @@ from india_compliance.gst_india.constants import (
 def get_state(state_number):
     """Get state from State Number"""
 
-    state_number = str(state_number)
+    state_number = str(state_number).zfill(2)
 
     for state, code in STATE_NUMBERS.items():
         if code == state_number:
@@ -318,37 +318,6 @@ def get_all_gst_accounts(company):
     return accounts_list
 
 
-def toggle_custom_fields(custom_fields, show):
-    """
-    Show / hide custom fields
-
-    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
-    :param show: True to show fields, False to hide
-    """
-
-    for doctypes, fields in custom_fields.items():
-        if isinstance(fields, dict):
-            # only one field
-            fields = [fields]
-
-        if isinstance(doctypes, str):
-            # only one doctype
-            doctypes = (doctypes,)
-
-        for doctype in doctypes:
-            frappe.db.set_value(
-                "Custom Field",
-                {
-                    "dt": doctype,
-                    "fieldname": ["in", [field["fieldname"] for field in fields]],
-                },
-                "hidden",
-                int(not show),
-            )
-
-            frappe.clear_cache(doctype=doctype)
-
-
 def parse_datetime(value, day_first=False):
     """Convert IST string to offset-naive system time"""
 
@@ -356,7 +325,7 @@ def parse_datetime(value, day_first=False):
         return
 
     parsed = parser.parse(value, dayfirst=day_first)
-    system_tz = get_time_zone()
+    system_tz = get_system_timezone()
 
     if system_tz == TIMEZONE:
         return parsed.replace(tzinfo=None)
@@ -374,7 +343,7 @@ def as_ist(value=None):
     """Convert system time to offset-naive IST time"""
 
     parsed = get_datetime(value)
-    system_tz = get_time_zone()
+    system_tz = get_system_timezone()
 
     if system_tz == TIMEZONE:
         return parsed
@@ -405,22 +374,6 @@ def get_titlecase_version(word, all_caps=False, **kwargs):
 
     if word in ABBREVIATIONS:
         return word
-
-
-def delete_old_fields(fields, doctypes):
-    if isinstance(fields, str):
-        fields = (fields,)
-
-    if isinstance(doctypes, str):
-        doctypes = (doctypes,)
-
-    frappe.db.delete(
-        "Custom Field",
-        {
-            "fieldname": ("in", fields),
-            "dt": ("in", doctypes),
-        },
-    )
 
 
 def is_api_enabled(settings=None):

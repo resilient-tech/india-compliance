@@ -181,7 +181,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 ).format(idx)
             )
 
-        if doc.is_reverse_charge and (
+        if doc.get("is_reverse_charge") and (
             idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
         ):
             _throw(
@@ -342,7 +342,8 @@ def validate_items(doc):
 
 
 def set_place_of_supply(doc, method=None):
-    doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+    if not doc.place_of_supply:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
 
 def is_inter_state_supply(doc):
@@ -474,11 +475,26 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    party_details.update(get_gst_details(party_details, doctype, company, True))
+    party_details.update(
+        get_gst_details(
+            party_details,
+            doctype,
+            company,
+            update_place_of_supply=True,
+            has_party_changed=True,
+        )
+    )
 
 
 @frappe.whitelist()
-def get_gst_details(party_details, doctype, company, has_party_changed=False):
+def get_gst_details(
+    party_details,
+    doctype,
+    company,
+    *,
+    update_place_of_supply=False,
+    has_party_changed=False,
+):
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)
@@ -512,8 +528,7 @@ def get_gst_details(party_details, doctype, company, has_party_changed=False):
     gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
     gst_details.update(
         get_tax_template(
-            frappe._dict(
-                **party_details,
+            party_details.copy().update(
                 doctype=doctype,
                 company=company,
                 place_of_supply=gst_details.place_of_supply,
@@ -581,8 +596,14 @@ def get_party_gst_details(party_details, is_sales_transaction):
     if party_details.get("get_reverse_charge_details"):
         fields.append("is_reverse_charge")
 
+    if not (party := party_details.get(party_type.lower())):
+        return
+
     return frappe.db.get_value(
-        party_type, party_details[party_type.lower()], fields, as_dict=True
+        party_type,
+        party,
+        ("gst_category", f"gstin as {gstin_fieldname}"),
+        as_dict=True,
     )
 
 
@@ -598,7 +619,6 @@ def get_tax_template_by_category(doc, master_doctype):
 
 
 def _get_tax_template(doc, master_doctype):
-
     filters = {"company": doc.company, "is_inter_state": is_inter_state_supply(doc)}
     if doc.doctype not in SALES_DOCTYPES:
         filters["is_reverse_charge"] = doc.is_reverse_charge or 0
@@ -669,7 +689,7 @@ def is_export_without_payment_of_gst(doc):
 
 
 def validate_transaction(doc, method=None):
-    if not is_indian_registered_company(doc):
+    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
         return False
 
     if validate_items(doc) is False:

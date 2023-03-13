@@ -2,7 +2,7 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, getdate, rounded
+from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
 from india_compliance.gst_india.constants.e_waybill import (
@@ -24,8 +24,8 @@ class GSTTransactionData:
 
     def __init__(self, doc):
         self.doc = doc
-        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.settings = frappe.get_cached_doc("GST Settings")
+        self.sandbox_mode = self.settings.sandbox_mode
         self.transaction_details = frappe._dict()
 
         # "CGST Account - TC": "cgst_account"
@@ -34,7 +34,7 @@ class GSTTransactionData:
             for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
         }
 
-    def get_transaction_details(self):
+    def set_transaction_details(self):
         rounding_adjustment = self.rounded(self.doc.rounding_adjustment)
         if self.doc.is_return:
             rounding_adjustment = -rounding_adjustment
@@ -58,16 +58,17 @@ class GSTTransactionData:
                 "discount_amount": 0,
                 "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
+                "other_charges": 0,
             }
         )
         self.update_transaction_details()
-        self.get_transaction_tax_details()
+        self.update_transaction_tax_details()
 
     def update_transaction_details(self):
         # to be overrridden
         pass
 
-    def get_transaction_tax_details(self):
+    def update_transaction_tax_details(self):
         tax_totals = [f"total_{tax}_amount" for tax in GST_TAX_TYPES]
 
         for key in tax_totals:
@@ -87,9 +88,16 @@ class GSTTransactionData:
         for total in ["base_total", "rounding_adjustment", *tax_totals]:
             current_total += self.transaction_details.get(total)
 
-        self.transaction_details.other_charges = self.rounded(
-            (self.transaction_details.base_grand_total - current_total)
-        )
+        other_charges = self.transaction_details.base_grand_total - current_total
+
+        if 0 > other_charges > -0.1:
+            # other charges cannot be negative
+            # handle cases where user has higher precision than 2
+            self.transaction_details.rounding_adjustment = self.rounded(
+                self.transaction_details.rounding_adjustment + other_charges
+            )
+        else:
+            self.transaction_details.other_charges = self.rounded(other_charges)
 
     def validate_mode_of_transport(self, throw=True):
         def _throw(error):
@@ -128,7 +136,7 @@ class GSTTransactionData:
 
         return True
 
-    def get_transporter_details(self):
+    def set_transporter_details(self):
         self.transaction_details.distance = (
             self.doc.distance if self.doc.distance and self.doc.distance < 4000 else 0
         )
@@ -140,17 +148,23 @@ class GSTTransactionData:
                         self.doc.mode_of_transport
                     ),
                     "vehicle_type": VEHICLE_TYPES.get(self.doc.gst_vehicle_type) or "R",
-                    "vehicle_no": self.sanitize_value(self.doc.vehicle_no, 1),
-                    "lr_no": self.sanitize_value(self.doc.lr_no, 2, max_length=15),
-                    "lr_date": format_date(self.doc.lr_date, self.DATE_FORMAT)
-                    if self.doc.lr_no
-                    else "",
+                    "vehicle_no": self.sanitize_value(self.doc.vehicle_no, regex=1),
+                    "lr_no": self.sanitize_value(
+                        self.doc.lr_no, regex=2, max_length=15
+                    ),
+                    "lr_date": (
+                        format_date(self.doc.lr_date, self.DATE_FORMAT)
+                        if self.doc.lr_no
+                        else ""
+                    ),
                     "gst_transporter_id": self.doc.gst_transporter_id or "",
-                    "transporter_name": self.sanitize_value(
-                        self.doc.transporter_name, 3, max_length=25
-                    )
-                    if self.doc.transporter_name
-                    else "",
+                    "transporter_name": (
+                        self.sanitize_value(
+                            self.doc.transporter_name, regex=3, max_length=25
+                        )
+                        if self.doc.transporter_name
+                        else ""
+                    ),
                 }
             )
 
@@ -191,8 +205,8 @@ class GSTTransactionData:
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
-    def get_item_list(self):
-        self.item_list = []
+    def get_all_item_details(self):
+        all_item_details = []
 
         for row in self.doc.items:
             uom = row.uom.upper()
@@ -203,19 +217,29 @@ class GSTTransactionData:
                     "qty": abs(self.rounded(row.qty, 3)),
                     "taxable_value": abs(self.rounded(row.taxable_value)),
                     "hsn_code": row.gst_hsn_code,
-                    "item_name": self.sanitize_value(row.item_name, 3, max_length=300),
+                    "item_name": self.sanitize_value(
+                        row.item_name, regex=3, max_length=300
+                    ),
                     "uom": uom if uom in UOMS else "OTH",
                 }
             )
             self.update_item_details(item_details, row)
-            self.get_item_tax_details(item_details, row)
+            self.update_item_tax_details(item_details, row)
+            all_item_details.append(item_details)
+
+        return all_item_details
+
+    def set_item_list(self):
+        self.item_list = []
+
+        for item_details in self.get_all_item_details():
             self.item_list.append(self.get_item_data(item_details))
 
     def update_item_details(self, item_details, item):
         # to be overridden
         pass
 
-    def get_item_tax_details(self, item_details, item):
+    def update_item_tax_details(self, item_details, item):
         for tax in GST_TAX_TYPES:
             item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
 
@@ -293,14 +317,36 @@ class GSTTransactionData:
 
         self.check_missing_address_fields(address, validate_gstin)
 
+        error_context = {
+            "reference_doctype": "Address",
+            "reference_name": address.name,
+        }
+
         return frappe._dict(
             {
                 "gstin": address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
-                "address_title": self.sanitize_value(address.address_title, 2),
-                "address_line1": self.sanitize_value(address.address_line1, 3),
-                "address_line2": self.sanitize_value(address.address_line2, 3),
-                "city": self.sanitize_value(address.city, 3, max_length=50),
+                "address_title": self.sanitize_value(
+                    address.address_title,
+                    regex=2,
+                    fieldname="address_title",
+                    **error_context,
+                ),
+                "address_line1": self.sanitize_value(
+                    address.address_line1,
+                    regex=3,
+                    min_length=1,
+                    fieldname="address_line1",
+                    **error_context,
+                ),
+                "address_line2": self.sanitize_value(address.address_line2, regex=3),
+                "city": self.sanitize_value(
+                    address.city,
+                    regex=3,
+                    max_length=50,
+                    fieldname="city",
+                    **error_context,
+                ),
                 "pincode": int(address.pincode),
             }
         )
@@ -372,17 +418,80 @@ class GSTTransactionData:
 
     @staticmethod
     def sanitize_value(
-        value,
+        value: str,
         regex=None,
         min_length=3,
         max_length=100,
         truncate=True,
+        *,
+        fieldname=None,
+        reference_doctype=None,
+        reference_name=None,
     ):
+        """
+        Sanitize value to make it suitable for GST JSON sent for e-Waybill and e-Invoice.
+
+        If fieldname, reference doctype and reference name are present,
+        error will be thrown for invalid values instead of sanitizing them.
+
+        Parameters:
+        ----------
+        @param value: Value to be sanitized
+        @param regex: Regex Key (from REGEX_MAP) to substitute unacceptable characters
+        @param min_length (default: 3): Minimum length of the value that is acceptable
+        @param max_length (default: 100): Maximum length of the value that is acceptable
+        @param truncate (default: True): Truncate the value if it exceeds max_length
+        @param fieldname: Fieldname for which the value is being sanitized
+        @param reference_doctype: Doctype of the document that contains the field
+        @param reference_name: Name of the document that contains the field
+
+        Returns:
+        ----------
+        @return: Sanitized value
+
+        """
+
+        def _throw(message, **format_args):
+            if not (fieldname and reference_doctype and reference_name):
+                return
+
+            message = message.format(
+                field=_(frappe.get_meta(reference_doctype).get_label(fieldname)),
+                **format_args,
+            )
+
+            frappe.throw(
+                _("{reference_doctype} {reference_link}: {message}").format(
+                    reference_doctype=_(reference_doctype),
+                    reference_link=frappe.bold(
+                        get_link_to_form(reference_doctype, reference_name)
+                    ),
+                    message=message,
+                ),
+                title=_("Invalid Data for GST Upload"),
+            )
+
         if not value or len(value) < min_length:
-            return
+            return _throw(
+                _("{field} must be at least {min_length} characters long"),
+                min_length=min_length,
+            )
+
+        original_value = value
 
         if regex:
             value = re.sub(REGEX_MAP[regex], "", value)
+
+        if len(value) < min_length:
+            if not original_value.isascii():
+                return _throw(_("{field} must only consist of ASCII characters"))
+
+            return _throw(
+                _("{field} consists of invalid characters: {invalid_chars}"),
+                invalid_chars=frappe.bold(
+                    "".join(set(original_value).difference(value))
+                ),
+            )
 
         if not truncate and len(value) > max_length:
             return

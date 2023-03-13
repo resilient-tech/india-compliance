@@ -6,7 +6,6 @@
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
-  "enable_api",
   "hsn_wise_tax_breakup",
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
@@ -16,6 +15,10 @@
   "min_hsn_digits",
   "reverse_charge_for_unregistered_purchase",
   "reverse_charge_threshold",
+  "api_section",
+  "enable_api",
+  "column_break_rk3h",
+  "sandbox_mode",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
@@ -90,7 +93,7 @@
    "label": "Accounts"
   },
   {
-   "depends_on": "eval: ic.is_api_enabled(doc)",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "fieldname": "credentials_tab",
    "fieldtype": "Tab Break",
    "label": "Credentials"
@@ -123,7 +126,7 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_waybill",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_e_waybill",
    "description": "If checked, a PDF of the e-Waybill will be automatically attached to the transaction after it's generation",
    "fieldname": "attach_e_waybill_print",
    "fieldtype": "Check",
@@ -131,14 +134,14 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: ic.can_enable_api(doc)",
+   "depends_on": "eval: india_compliance.can_enable_api(doc)",
    "description": "Enable this to use API features like e-Waybill / e-Invoice generation from your ERP",
    "fieldname": "enable_api",
    "fieldtype": "Check",
    "label": "Enable API Features"
   },
   {
-   "depends_on": "eval: ic.is_api_enabled(doc)",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "fieldname": "e_invoice_section",
    "fieldtype": "Section Break",
    "label": "e-Invoice"
@@ -165,16 +168,16 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_waybill",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_e_waybill",
    "description": "e-Waybill will be automatically generated after Sales Invoice submission if the invoice value threshold is met, and data is available and valid",
    "fieldname": "auto_generate_e_waybill",
    "fieldtype": "Check",
    "label": "Automatically Generate e-Waybill on Invoice Submission",
-   "read_only_depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_invoice && doc.auto_generate_e_invoice"
+   "read_only_depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_e_invoice"
   },
   {
    "default": "1",
-   "depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_waybill",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_e_waybill",
    "description": "Automatically fetch e-Waybill data after it's generation for printing or logging purposes. This will lead to one additional API request.",
    "fieldname": "fetch_e_waybill_data",
    "fieldtype": "Check",
@@ -216,7 +219,7 @@
    "label": "Enable SEZ / Overseas Transactions"
   },
   {
-   "depends_on": "eval: ic.is_api_enabled(doc)",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "fieldname": "other_apis_section",
    "fieldtype": "Section Break",
    "label": "Other APIs"
@@ -241,12 +244,29 @@
    "fieldname": "reverse_charge_for_unregistered_purchase",
    "fieldtype": "Check",
    "label": "Default Reverse Charge for Purchase from Unregistered Suppliers"
+  },
+  {
+   "fieldname": "api_section",
+   "fieldtype": "Section Break",
+   "label": "API"
+  },
+  {
+   "fieldname": "column_break_rk3h",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "Enable this to explore GST API features in a test environment. API actions executed in sandbox mode won't affect your actual business data on the GST portal.",
+   "fieldname": "sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Use API in Sandbox Mode?"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-08-17 16:25:30.987232",
+ "modified": "2023-03-10 04:10:39.690511",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

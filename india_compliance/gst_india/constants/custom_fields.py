@@ -8,12 +8,23 @@ state_options = "\n" + "\n".join(STATE_NUMBERS)
 gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
 
+
+def get_place_of_supply_options():
+    options = []
+
+    for state_name, state_number in STATE_NUMBERS.items():
+        options.append(f"{state_number}-{state_name}")
+
+    options.append("96-Other Countries")
+    return "\n".join(sorted(options))
+
+
 party_fields = [
     {
         "fieldname": "tax_details_section",
         "label": "Tax Details",
         "fieldtype": "Section Break",
-        "insert_after": "companies",
+        "insert_after": "tax_withholding_category",
     },
     {
         "fieldname": "gstin",
@@ -64,7 +75,9 @@ CUSTOM_FIELDS = {
             "insert_after": "supplier_gstin",
             "read_only": 1,
             "print_hide": 1,
-            "options": "",
+            # values set to None to remove them from earlier installations
+            "options": None,
+            "default": None,
             "fetch_from": "supplier_address.gst_category",
             "translatable": 0,
         },
@@ -81,10 +94,11 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "company_gstin",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "translatable": 0,
         },
         {
@@ -114,7 +128,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_section",
             "label": "GST Details",
             "fieldtype": "Section Break",
-            "insert_after": "language",
+            "insert_after": "gst_vehicle_type",
             "print_hide": 1,
             "collapsible": 1,
         },
@@ -153,17 +167,20 @@ CUSTOM_FIELDS = {
             "insert_after": "billing_address_gstin",
             "read_only": 1,
             "print_hide": 1,
-            "options": "",
+            # values set to None to remove them from earlier installations
+            "options": None,
+            "default": None,
             "fetch_from": "customer_address.gst_category",
             "translatable": 0,
         },
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "gst_category",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "length": 50,
             "translatable": 0,
         },
@@ -547,6 +564,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "insert_after": "item_group",
+            "allow_in_quick_entry": 1,
         },
         {
             "fieldname": "is_nil_exempt",
@@ -593,10 +611,7 @@ E_INVOICE_FIELDS = {
             "insert_after": "customer",
             "no_copy": 1,
             "print_hide": 1,
-            "depends_on": (
-                'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed'
-                ' Export"], doc.gst_category)'
-            ),
+            "depends_on": 'eval:doc.gst_category != "Unregistered"',
             "translatable": 0,
         },
         {
@@ -674,7 +689,7 @@ E_WAYBILL_SI_FIELDS = [
         "fieldname": "transporter_info",
         "label": "Transporter Info",
         "fieldtype": "Section Break",
-        "insert_after": "terms",
+        "insert_after": "language",
         "collapsible": 1,
         "collapsible_depends_on": "transporter",
         "print_hide": 1,

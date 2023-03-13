@@ -8,11 +8,13 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
-required_apps = ["erpnext"]
+required_apps = ["frappe/erpnext"]
 
 after_install = "india_compliance.install.after_install"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
+
+before_uninstall = "india_compliance.uninstall.before_uninstall"
 
 app_include_js = "gst_india.bundle.js"
 
@@ -28,8 +30,8 @@ doctype_js = {
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
     "Sales Invoice": [
-        "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/e_invoice_actions.js",
+        "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Supplier": "gst_india/client_scripts/supplier.js",
@@ -64,6 +66,7 @@ doc_events = {
         ),
     },
     "Delivery Note": {
+        "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
@@ -91,11 +94,9 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.taxes_and_charges_template.validate",
     },
     "Sales Invoice": {
-        "on_trash": (
-            "india_compliance.gst_india.overrides.sales_invoice.ignore_logs_on_trash"
-        ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
+        "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
     },
     "Sales Order": {
         "validate": (
@@ -151,15 +152,34 @@ jinja = {
     "methods": [
         "india_compliance.gst_india.utils.get_state",
         "india_compliance.gst_india.utils.jinja.add_spacing",
+        "india_compliance.gst_india.utils.jinja.get_supply_type",
         "india_compliance.gst_india.utils.jinja.get_sub_supply_type",
         "india_compliance.gst_india.utils.jinja.get_e_waybill_qr_code",
         "india_compliance.gst_india.utils.jinja.get_qr_code",
         "india_compliance.gst_india.utils.jinja.get_transport_type",
         "india_compliance.gst_india.utils.jinja.get_transport_mode",
         "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
-        "india_compliance.gst_india.utils.jinja.get_non_zero_fields",
+        "india_compliance.gst_india.utils.jinja.get_e_invoice_item_fields",
+        "india_compliance.gst_india.utils.jinja.get_e_invoice_amount_fields",
     ],
 }
+
+override_doctype_dashboards = {
+    "Sales Invoice": (
+        "india_compliance.gst_india.overrides.sales_invoice.get_dashboard_data"
+    ),
+    "Delivery Note": (
+        "india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"
+    ),
+}
+
+
+# DocTypes to be ignored while clearing transactions of a Company
+company_data_to_be_ignored = ["GST Account", "GST Credential"]
+
+# Links to these doctypes will be ignored when deleting a document
+ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
+
 
 # Includes in <head>
 # ------------------

@@ -100,6 +100,7 @@
   {
    "fieldname": "reference_name",
    "fieldtype": "Dynamic Link",
+   "in_standard_filter": 1,
    "label": "Reference Document Name",
    "options": "reference_doctype",
    "read_only": 1
@@ -125,7 +126,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2022-06-24 20:42:06.014981",
+ "modified": "2022-09-08 06:23:30.944114",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
