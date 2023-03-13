@@ -168,6 +168,13 @@
             "supplier_type": "Individual",
             "gstin": "",
             "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Foreign Supplier",
+            "supplier_name": "_Test Foreign Supplier",
+            "supplier_type": "Individual",
+            "gstin": "",
+            "gst_category": "Overseas"
         }
     ],
     "Address": [

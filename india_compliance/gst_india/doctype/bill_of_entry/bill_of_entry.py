@@ -342,6 +342,7 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
         target.cheque_date = today()
         target.user_remark = "Payment against Bill of Entry {0}".format(source.name)
 
+        company = frappe.get_cached_doc("Company", source.company)
         target.append(
             "accounts",
             {
@@ -349,15 +350,16 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
                 "debit_in_account_currency": source.total_amount_payable,
                 "reference_type": "Bill of Entry",
                 "reference_name": source.name,
+                "cost_center": company.cost_center,
             },
         )
 
-        company = frappe.get_cached_doc("Company", source.company)
         target.append(
             "accounts",
             {
-                "account": company.default_bank_account,
+                "account": company.default_bank_account or company.default_cash_account,
                 "credit_in_account_currency": source.total_amount_payable,
+                "cost_center": company.cost_center,
             },
         )
 
