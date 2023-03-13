@@ -26,6 +26,19 @@ frappe.ui.form.on("Bill of Entry", {
             );
         }
 
+        if (frm.doc.docstatus === 1) {
+            frm.add_custom_button(
+                __("Landed Cost Voucher"),
+                () => {
+                    frappe.model.open_mapped_doc({
+                        method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_landed_cost_voucher",
+                        frm: frm,
+                    });
+                },
+                __("Create")
+            );
+        }
+
         frm.add_custom_button(
             __("Accounting Ledger"),
             () => {

@@ -377,3 +377,123 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
     )
 
     return doc
+
+
+@frappe.whitelist()
+def make_landed_cost_voucher(source_name, target_doc=None):
+    def set_missing_values(source, target):
+        items = get_items_for_landed_cost_voucher(source)
+        if not items:
+            frappe.throw(_("No items found for Landed Cost Voucher"))
+
+        target.posting_date = today()
+        target.distribute_charges_based_on = "Distribute Manually"
+
+        # add references
+        reference_docs = {item.parent: item.parenttype for item in items.values()}
+        for parent, parenttype in reference_docs.items():
+            target.append(
+                "purchase_receipts",
+                {
+                    "receipt_document_type": parenttype,
+                    "receipt_document": parent,
+                },
+            )
+
+        # add items
+        target.get_items_from_purchase_receipts()
+
+        # update applicable charges
+        total_customs_duty = 0
+        for item in target.items:
+            item.applicable_charges = items[item.purchase_receipt_item].customs_duty
+            total_customs_duty += item.applicable_charges
+
+        # add taxes
+        target.append(
+            "taxes",
+            {
+                "expense_account": source.customs_duty_account,
+                "description": "Customs Duty",
+                "amount": total_customs_duty,
+            },
+        )
+
+        if total_customs_duty != source.total_customs_duty:
+            frappe.msgprint(
+                _(
+                    "Could not find purchase receipts for all items. Please check manually."
+                )
+            )
+
+    doc = get_mapped_doc(
+        "Bill of Entry",
+        source_name,
+        {
+            "Bill of Entry": {
+                "doctype": "Landed Cost Voucher",
+            },
+        },
+        target_doc,
+        postprocess=set_missing_values,
+    )
+
+    return doc
+
+
+def get_items_for_landed_cost_voucher(boe):
+    """
+    For creating landed cost voucher, it needs to be linked with transaction where stock was updated.
+    This function will return items based on following conditions:
+        1. Where stock was updated in Purchase Invoice
+        2. Where stock was updated in Purchase Receipt
+            a. Purchase Invoice was created from Purchase Receipt
+            b. Purchase Receipt was created from Purchase Invoice
+
+    Also, it will apportion customs duty for PI items.
+
+    NOTE: Assuming business has consistent practice of creating PR and PI
+    """
+    pi = frappe.get_doc("Purchase Invoice", boe.purchase_invoice)
+    item_customs_map = {item.pi_detail: item.customs_duty for item in boe.items}
+
+    def _item_dict(items):
+        return frappe._dict({item.name: item for item in items})
+
+    # No PR
+    if pi.update_stock:
+        pi_items = [pi_item.as_dict() for pi_item in pi.items]
+        for pi_item in pi_items:
+            pi_item.customs_duty = item_customs_map.get(pi_item.name)
+
+        return _item_dict(pi_items)
+
+    # Creating PI from PR
+    if pi.items[0].purchase_receipt:
+        pr_pi_map = {pi_item.pr_detail: pi_item.name for pi_item in pi.items}
+        pr_items = frappe.get_all(
+            "Purchase Receipt Item",
+            fields="*",
+            filters={"name": ["in", pr_pi_map.keys()], "docstatus": 1},
+        )
+
+        for pr_item in pr_items:
+            pr_item.customs_duty = item_customs_map.get(pr_pi_map.get(pr_item.name))
+
+        return _item_dict(pr_items)
+
+    # Creating PR from PI (Qty split possible in PR)
+    pr_items = frappe.get_all(
+        "Purchase Receipt Item",
+        fields="*",
+        filters={"purchase_invoice": pi.name, "docstatus": 1},
+    )
+
+    item_qty_map = {item.name: item.qty for item in pi.items}
+
+    for pr_item in pr_items:
+        customs_duty_for_item = item_customs_map.get(pr_item.purchase_invoice_item)
+        total_qty = item_qty_map.get(pr_item.purchase_invoice_item)
+        pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
+
+    return _item_dict(pr_items)
