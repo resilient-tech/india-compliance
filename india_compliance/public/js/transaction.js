@@ -78,17 +78,10 @@ async function update_gst_details(frm, event) {
     }
 
     const is_sales_transaction = in_list(frappe.boot.sales_doctypes, frm.doc.doctype);
-    const fieldnames_to_set = [
-        "gst_category",
-        "company_gstin",
-        "place_of_supply",
-    ];
+    const fieldnames_to_set = ["gst_category", "company_gstin", "place_of_supply"];
 
     if (is_sales_transaction) {
-        fieldnames_to_set.push(
-            "customer_address",
-            "billing_address_gstin"
-        );
+        fieldnames_to_set.push("customer_address", "billing_address_gstin");
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
     }
@@ -172,7 +165,7 @@ async function update_tax_template(frm) {
     frappe.call({
         method: "india_compliance.gst_india.overrides.transaction.get_tax_template",
         args: { doc: doc_details },
-        callback(r) {
+        async callback(r) {
             if (!r.message) return;
 
             frm.__updating_gst_details = true;
