@@ -2,22 +2,22 @@
 # See license.txt
 
 import frappe
-from frappe.utils import today
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import today
 
-from india_compliance.gst_india.utils.tests import create_transaction
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
     make_journal_entry_for_payment,
     make_landed_cost_voucher,
 )
+from india_compliance.gst_india.utils.tests import create_transaction
 
 
 class TestBillofEntry(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        frappe.db.set_value("GST Settings", None, "enable_overseas_transactions", 1)
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 
     def test_create_bill_of_entry(self):
         pi = create_transaction(
