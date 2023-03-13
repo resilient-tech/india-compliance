@@ -46,6 +46,9 @@ def validate_supplier_gstin(doc):
 
 
 def onload(doc, method):
+    if doc.docstatus != 1 or doc.gst_category != "Overseas":
+        return
+
     existing_bill_of_entry = frappe.db.get_value(
         "Bill of Entry", {"purchase_invoice": doc.name, "docstatus": 1}, "name"
     )

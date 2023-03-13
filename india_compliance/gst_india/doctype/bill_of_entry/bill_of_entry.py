@@ -17,6 +17,9 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type, send_upda
 
 class BillofEntry(Document):
     def onload(self):
+        if self.docstatus != 1:
+            return
+
         existing_journal_entry = frappe.db.get_value(
             "Journal Entry Account",
             {
