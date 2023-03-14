@@ -226,10 +226,7 @@ def get_tax_accounts(
 
         try:
             for item_code, tax_data in json.loads(item_wise_tax_detail).items():
-                if (
-                    not frappe.db.get_value("Item", item_code, "gst_hsn_code")
-                    or not tax_data
-                ):
+                if not tax_data:
                     continue
 
                 tax_rate, tax_amount = tax_data
