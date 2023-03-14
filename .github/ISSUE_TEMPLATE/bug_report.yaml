@@ -13,7 +13,7 @@ body:
             - For questions and general support, checkout the [documentation](https://docs.erpnext.com/docs/v14/user/manual/en/regional/india).
             - For documentation issues, propose edit on documentation site directly.
         2. Use the search function before creating a new issue. Duplicates will be closed and directed to
-           the original discussion.    
+           the original discussion.
         3. When making a bug report, make sure you provide all required information. The easier it is for
            maintainers to reproduce, the faster it'll be fixed.
         4. If you think you know what the reason for the bug is, share it with us. Maybe put in a PR 😉
@@ -23,7 +23,7 @@ body:
     attributes:
       label: Information about bug
       description: Also tell us, what did you expect to happen?
-                   If applicable, add screenshots to help explain your problem. 
+                   If applicable, add screenshots to help explain your problem.
       placeholder: Please provide as much information as possible.
     validations:
       required: true
@@ -36,7 +36,7 @@ body:
       placeholder: |
         Frappe Version -
         ERPNext Verion -
-        India Compliance Version - 
+        India Compliance Version -
     validations:
       required: true
 
@@ -51,7 +51,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/resilient-tech/india-compliance/blob/next/CODE_OF_CONDUCT.md)
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/resilient-tech/india-compliance/blob/develop/CODE_OF_CONDUCT.md)
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true

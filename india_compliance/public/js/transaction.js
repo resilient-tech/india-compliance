@@ -17,7 +17,7 @@ for (const doctype of TRANSACTION_DOCTYPES) {
 }
 
 function fetch_gst_details(doctype) {
-    const event_fields = ["tax_category", "company_gstin"];
+    const event_fields = ["tax_category", "company_gstin", "place_of_supply"];
 
     // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
@@ -31,29 +31,60 @@ function fetch_gst_details(doctype) {
     }
 
     const events = Object.fromEntries(
-        event_fields.map(field => [field, update_gst_details])
+        event_fields.map(field => [field, frm => update_gst_details(frm, field)])
     );
 
     frappe.ui.form.on(doctype, events);
 }
 
-async function update_gst_details(frm) {
-    if (frm.__gst_update_triggered || frm.updating_party_details || !frm.doc.company) return;
+async function update_gst_details(frm, event) {
+    if (
+        frm.updating_party_details ||
+        !frm.doc.company ||
+        (event === "place_of_supply" && frm.__updating_gst_details)
+    )
+        return;
 
-    const party = frm.doc[ic.get_party_fieldname(frm.doc.doctype)];
+    const party_type = india_compliance.get_party_type(frm.doc.doctype).toLowerCase();
+    const party_fieldname = frm.doc.doctype === "Quotation" ? "party_name" : party_type;
+    const party = frm.doc[party_fieldname];
     if (!party) return;
 
+    if (in_list(["company_gstin", "customer_address", "supplier_address"], event)) {
+        frm.__update_place_of_supply = true;
+    }
+
+    if (frm.__gst_update_triggered) return;
     frm.__gst_update_triggered = true;
 
+    const args = {
+        doctype: frm.doc.doctype,
+        company: frm.doc.company,
+    };
+
     // wait for GSTINs to get fetched
-    await frappe.after_ajax().then(() => frm.__gst_update_triggered = false);
+    await frappe.after_ajax().then(() => {
+        frm.__gst_update_triggered = false;
+
+        if (frm.__update_place_of_supply) {
+            args.update_place_of_supply = 1;
+            frm.__update_place_of_supply = false;
+        }
+    });
 
     const party_details = {};
 
-    // fieldname may be "party_name" for Quotation, but "customer" is expected by get_gst_details
-    party_details[ic.get_party_type(frm.doc.doctype).toLowerCase()] = party;
+    // set "customer" or "supplier" (not applicable for Quotations with Lead)
+    if (frm.doc.doctype !== "Quotation" || frm.doc.party_type === "Customer") {
+        party_details[party_type] = party;
+    }
 
-    const fieldnames_to_set = ["tax_category", "gst_category", "company_gstin"];
+    const fieldnames_to_set = [
+        "tax_category",
+        "gst_category",
+        "company_gstin",
+        "place_of_supply",
+    ];
 
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
         fieldnames_to_set.push(
@@ -70,16 +101,17 @@ async function update_gst_details(frm) {
         party_details[fieldname] = frm.doc[fieldname];
     }
 
+    args.party_details = JSON.stringify(party_details);
+
     frappe.call({
         method: "india_compliance.gst_india.overrides.transaction.get_gst_details",
-        args: {
-            party_details: JSON.stringify(party_details),
-            doctype: frm.doc.doctype,
-            company: frm.doc.company,
-        },
-        callback(r) {
+        args,
+        async callback(r) {
             if (!r.message) return;
-            frm.set_value(r.message);
+
+            frm.__updating_gst_details = true;
+            await frm.set_value(r.message);
+            frm.__updating_gst_details = false;
         },
     });
 }
