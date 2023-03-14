@@ -202,6 +202,13 @@ class GSTTransactionData:
                 title=_("Invalid Data"),
             )
 
+        # validate if doc is submitted
+        if self.doc.docstatus != 1:
+            frappe.throw(
+                msg=_("Document must be submitted to generate e-Way Bill or E-Invoice"),
+                title=_("Invalid Docstatus"),
+            )
+
     def validate_non_gst_items(self):
         validate_non_gst_items(self.doc)
 
