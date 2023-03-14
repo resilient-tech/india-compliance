@@ -19,10 +19,7 @@ def execute(filters=None):
     if not filters:
         filters = {}
 
-    columns = get_columns(filters)
-
-    if filters.show_description:
-        description_map = get_gst_hsn_description_map()
+    columns = get_columns()
 
     output_gst_accounts = [
         account
@@ -53,16 +50,7 @@ def execute(filters=None):
             if d.uqc not in UOMS:
                 d.uqc = "OTH"
 
-        if filters.show_description:
-            row = [
-                d.gst_hsn_code,
-                description_map.get(d.gst_hsn_code),
-                d.uqc,
-                d.stock_qty,
-            ]
-        else:
-            row = [d.gst_hsn_code, d.uqc, d.stock_qty]
-
+        row = [d.gst_hsn_code, d.description, d.uqc, d.stock_qty]
         total_tax = 0
         tax_rate = 0
         for tax in tax_columns:
@@ -80,12 +68,12 @@ def execute(filters=None):
         added_item.append((d.parent, d.gst_hsn_code, d.item_code))
 
     if data:
-        data = get_merged_data(columns, data, filters)  # merge same hsn code data
+        data = get_merged_data(columns, data)  # merge same hsn code data
 
     return columns, data
 
 
-def get_columns(filters):
+def get_columns():
     columns = [
         {
             "fieldname": "gst_hsn_code",
@@ -93,6 +81,12 @@ def get_columns(filters):
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "width": 100,
+        },
+        {
+            "fieldname": "description",
+            "label": _("Description"),
+            "fieldtype": "Data",
+            "width": 300,
         },
         {
             "fieldname": "uqc",
@@ -125,17 +119,6 @@ def get_columns(filters):
             "width": 170,
         },
     ]
-
-    if filters.get("show_description"):
-        columns.insert(
-            1,
-            {
-                "fieldname": "description",
-                "label": _("Description"),
-                "fieldtype": "Data",
-                "width": 300,
-            },
-        )
 
     return columns
 
@@ -171,10 +154,12 @@ def get_items(filters):
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
             sum(`tabSales Invoice Item`.base_price_list_rate) AS base_price_list_rate,
             `tabSales Invoice Item`.parent,
-            `tabSales Invoice Item`.item_code
+            `tabSales Invoice Item`.item_code,
+            `tabGST HSN Code`.description
         FROM
             `tabSales Invoice`
             INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
+            INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
         WHERE
             `tabSales Invoice`.docstatus = 1
             AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
@@ -186,6 +171,7 @@ def get_items(filters):
             `tabSales Invoice Item`.gst_hsn_code
         """,
         filters,
+        as_dict=1,
     )
 
     return items
@@ -240,10 +226,7 @@ def get_tax_accounts(
 
         try:
             for item_code, tax_data in json.loads(item_wise_tax_detail).items():
-                if (
-                    not frappe.db.get_value("Item", item_code, "gst_hsn_code")
-                    or not tax_data
-                ):
+                if not tax_data:
                     continue
 
                 tax_rate, tax_amount = tax_data
@@ -277,22 +260,12 @@ def get_tax_accounts(
     return itemised_tax, tax_columns
 
 
-def get_gst_hsn_description_map():
-    return frappe._dict(
-        frappe.db.get_all("GST HSN Code", fields=["hsn_code", "description"], as_list=1)
-    )
-
-
-def get_merged_data(columns, data, filters):
+def get_merged_data(columns, data):
     merged_hsn_dict = {}  # to group same hsn under one key and perform row addition
     result = []
 
     for row in data:
-        if filters.get("show_description"):
-            key = row[0] + "-" + row[2] + "-" + str(row[4])
-        else:
-            key = row[0] + "-" + row[1] + "-" + str(row[3])
-
+        key = row[0] + "-" + row[2] + "-" + str(row[4])
         merged_hsn_dict.setdefault(key, {})
         for i, d in enumerate(columns):
             if d["fieldtype"] not in ("Int", "Float", "Currency"):
