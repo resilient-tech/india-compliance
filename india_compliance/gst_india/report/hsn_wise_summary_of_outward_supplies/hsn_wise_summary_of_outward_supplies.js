@@ -42,6 +42,11 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 			"fieldtype": "Date",
 			"width": "80"
 		},
+		{
+			"fieldname":"show_description",
+			"label": __("Show HSN/SAC Description"),
+			"fieldtype": "Check"
+		},
 
 	],
 	onload: (report) => {
