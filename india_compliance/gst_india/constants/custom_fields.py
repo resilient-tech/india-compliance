@@ -6,6 +6,17 @@ state_options = "\n" + "\n".join(STATE_NUMBERS)
 gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
 
+
+def get_place_of_supply_options():
+    options = []
+
+    for state_name, state_number in STATE_NUMBERS.items():
+        options.append(f"{state_number}-{state_name}")
+
+    options.append("96-Other Countries")
+    return "\n".join(sorted(options))
+
+
 party_fields = [
     {
         "fieldname": "tax_details_section",
@@ -98,10 +109,11 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "company_gstin",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "translatable": 0,
         },
         {
@@ -179,10 +191,11 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "gst_category",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "length": 50,
             "translatable": 0,
         },
