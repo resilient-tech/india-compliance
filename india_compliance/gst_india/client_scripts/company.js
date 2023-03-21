@@ -12,7 +12,7 @@ frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
         erpnext.company.set_custom_query(frm, [
-            "default_customs_duty_account",
+            "default_customs_expense_account",
             { root_type: "Expense" },
         ]);
         erpnext.company.set_custom_query(frm, [

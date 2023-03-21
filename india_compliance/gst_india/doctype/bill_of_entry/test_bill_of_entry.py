@@ -52,11 +52,11 @@ class TestBillofEntry(FrappeTestCase):
         )
 
         for gle in gl_entries:
-            if gle.account == boe.customs_duty_account:
+            if gle.account == boe.customs_expense_account:
                 self.assertEqual(gle.debit, boe.total_customs_duty)
             elif "IGST" in gle.account:
                 self.assertEqual(gle.debit, boe.total_taxes)
-            elif gle.account == boe.payable_account:
+            elif gle.account == boe.customs_payable_account:
                 self.assertEqual(gle.credit, boe.total_amount_payable)
 
         # Create Journal Entry
@@ -67,7 +67,7 @@ class TestBillofEntry(FrappeTestCase):
 
         self.assertDocumentEqual(
             {
-                "account": boe.payable_account,
+                "account": boe.customs_payable_account,
                 "debit": boe.total_amount_payable,
             },
             je.accounts[0],
@@ -97,7 +97,7 @@ class TestBillofEntry(FrappeTestCase):
                 ],
                 "taxes": [
                     {
-                        "expense_account": boe.customs_duty_account,
+                        "expense_account": boe.customs_expense_account,
                         "amount": boe.total_customs_duty,
                     }
                 ],

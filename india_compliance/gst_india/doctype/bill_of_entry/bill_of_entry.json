@@ -26,9 +26,9 @@
   "column_break_srom",
   "posting_date",
   "accounting_details_section",
-  "payable_account",
+  "customs_payable_account",
   "column_break_xjvk",
-  "customs_duty_account",
+  "customs_expense_account",
   "column_break_zsed",
   "accounting_dimensions_section",
   "cost_center",
@@ -243,22 +243,22 @@
    "reqd": 1
   },
   {
-   "fieldname": "payable_account",
-   "fieldtype": "Link",
-   "label": "Payable Account",
-   "options": "Account",
-   "reqd": 1
-  },
-  {
    "fieldname": "total_amount_payable",
    "fieldtype": "Currency",
    "label": "Total Amount Payable",
    "read_only": 1
   },
   {
-   "fieldname": "customs_duty_account",
+   "fieldname": "customs_payable_account",
    "fieldtype": "Link",
-   "label": "Customs Duty Account",
+   "label": "Customs Duty Payable Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customs_expense_account",
+   "fieldtype": "Link",
+   "label": "Customs Duty Expense Account",
    "options": "Account",
    "reqd": 1
   }
@@ -266,7 +266,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-03-13 13:39:16.277367",
+ "modified": "2023-03-21 03:57:04.743399",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

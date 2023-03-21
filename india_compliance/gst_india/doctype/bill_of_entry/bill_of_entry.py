@@ -55,8 +55,8 @@ class BillofEntry(Document):
 
     def set_defaults(self):
         company = frappe.get_cached_doc("Company", self.company)
-        self.customs_duty_account = company.default_customs_duty_account
-        self.payable_account = company.default_customs_payable_account
+        self.customs_expense_account = company.default_customs_expense_account
+        self.customs_payable_account = company.default_customs_payable_account
 
     @frappe.whitelist()
     def set_taxes_and_totals(self):
@@ -114,7 +114,8 @@ class BillofEntry(Document):
         if purchase.gst_category != "Overseas":
             frappe.throw(
                 _(
-                    "Purchase Invoice must be of Overseas category to create Bill of Entry"
+                    "Purchase Invoice must be of Overseas category to create Bill of"
+                    " Entry"
                 )
             )
 
@@ -136,7 +137,8 @@ class BillofEntry(Document):
             if tax.tax_amount != 0:
                 frappe.throw(
                     _(
-                        "Row#: {0}. Only Input IGST and CESS accounts are allowed in Bill of Entry"
+                        "Row#: {0}. Only Input IGST and CESS accounts are allowed in"
+                        " Bill of Entry"
                     ).format(frappe.bold(tax.idx))
                 )
 
@@ -161,7 +163,7 @@ class BillofEntry(Document):
                 controller.get_gl_dict(
                     self,
                     {
-                        "account": self.customs_duty_account,
+                        "account": self.customs_expense_account,
                         "debit": item.customs_duty,
                         "credit": 0,
                         "cost_center": item.cost_center,
@@ -188,7 +190,7 @@ class BillofEntry(Document):
             controller.get_gl_dict(
                 self,
                 {
-                    "account": self.payable_account,
+                    "account": self.customs_payable_account,
                     "debit": 0,
                     "credit": self.total_amount_payable,
                     "cost_center": self.cost_center,
@@ -349,7 +351,7 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
         target.append(
             "accounts",
             {
-                "account": source.payable_account,
+                "account": source.customs_payable_account,
                 "debit_in_account_currency": source.total_amount_payable,
                 "reference_type": "Bill of Entry",
                 "reference_name": source.name,
@@ -418,7 +420,7 @@ def make_landed_cost_voucher(source_name, target_doc=None):
         target.append(
             "taxes",
             {
-                "expense_account": source.customs_duty_account,
+                "expense_account": source.customs_expense_account,
                 "description": "Customs Duty",
                 "amount": total_customs_duty,
             },
@@ -427,7 +429,8 @@ def make_landed_cost_voucher(source_name, target_doc=None):
         if total_customs_duty != source.total_customs_duty:
             frappe.msgprint(
                 _(
-                    "Could not find purchase receipts for all items. Please check manually."
+                    "Could not find purchase receipts for all items. Please check"
+                    " manually."
                 )
             )
 

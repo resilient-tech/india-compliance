@@ -43,7 +43,7 @@ def make_default_customs_account(company):
         company,
         account_name="Customs Duty Expense",
         parent="Stock Expenses",
-        default_field="default_customs_duty_account",
+        default_field="default_customs_expense_account",
     )
 
 

@@ -137,10 +137,10 @@ class BillOfEntryController {
     set_account_query() {
         [
             {
-                name: "payable_account",
+                name: "customs_payable_account",
                 filters: { root_type: "Liability", account_type: ["!=", "Payable"] },
             },
-            { name: "customs_duty_account", filters: { root_type: "Expense" } },
+            { name: "customs_expense_account", filters: { root_type: "Expense" } },
             { name: "cost_center" },
         ].forEach(row => {
             this.frm.set_query(row.name, () => {

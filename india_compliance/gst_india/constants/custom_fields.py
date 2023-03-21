@@ -56,15 +56,15 @@ CUSTOM_FIELDS = {
         },
         *party_fields[1:],
         {
-            "fieldname": "default_customs_duty_account",
-            "label": "Default Customs Duty Account",
+            "fieldname": "default_customs_expense_account",
+            "label": "Default Customs Duty Expense Account",
             "fieldtype": "Link",
             "options": "Account",
             "insert_after": "unrealized_profit_loss_account",
         },
         {
             "fieldname": "default_customs_payable_account",
-            "label": "Default Customs Payable Account",
+            "label": "Default Customs Duty Payable Account",
             "fieldtype": "Link",
             "options": "Account",
             "insert_after": "default_finance_book",
