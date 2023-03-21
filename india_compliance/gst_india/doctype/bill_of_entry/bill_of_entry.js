@@ -82,7 +82,7 @@ frappe.ui.form.on("Bill of Entry Item", {
     async item_tax_template(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
         if (!row.item_tax_template) frm.taxes_controller.update_item_wise_tax_rates();
-        else await frm.taxes_controller.get_item_wise_tax_rates(cdn);
+        else await frm.taxes_controller.set_item_wise_tax_rates(cdn);
 
         frm.taxes_controller.update_tax_amount();
     },
@@ -98,18 +98,19 @@ frappe.ui.form.on("Bill of Entry Taxes", {
     },
 
     tax_amount(frm, cdt, cdn) {
+        if (frappe.flags.updating_tax_amount) return;
         frm.taxes_controller.update_tax_amount(cdt, cdn);
     },
 
     async account_head(frm, cdt, cdn) {
-        await frm.taxes_controller.get_item_wise_tax_rates(null, cdn);
+        await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
         frm.taxes_controller.update_tax_amount(cdt, cdn);
     },
 
     async charge_type(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
         if (row.charge_type === "On Net Total") {
-            await frm.taxes_controller.get_item_wise_tax_rates(null, cdn);
+            await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
             frm.taxes_controller.update_tax_amount(cdt, cdn);
         } else {
             row.rate = 0;
@@ -295,6 +296,7 @@ class TaxesController {
         if (cdt) taxes = [locals[cdt][cdn]];
         else taxes = this.frm.doc.taxes;
 
+        frappe.flags.updating_tax_amount = true;
         taxes.forEach(async row => {
             if (row.charge_type === "On Net Total") {
                 const tax_amount = this.get_tax_on_net_total(row);
@@ -313,6 +315,7 @@ class TaxesController {
 
         this.update_total_amount();
         this.frm.bill_of_entry_controller.update_total_taxes();
+        frappe.flags.updating_tax_amount = false;
     }
 
     update_total_amount() {
