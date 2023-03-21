@@ -27,11 +27,11 @@ def make_company_fixtures(doc, method=None):
 
 
 def create_company_fixtures(company):
-    make_default_customs_account(company)
     make_default_tax_templates(company)
+    make_default_customs_accounts(company)
 
 
-def make_default_customs_account(company):
+def make_default_customs_accounts(company):
     create_default_company_account(
         company,
         account_name="Customs Duty Payable",
