@@ -98,7 +98,6 @@ frappe.ui.form.on("Bill of Entry Taxes", {
     },
 
     tax_amount(frm, cdt, cdn) {
-        if (frappe.flags.updating_tax_amount) return;
         frm.taxes_controller.update_tax_amount(cdt, cdn);
     },
 
@@ -296,26 +295,19 @@ class TaxesController {
         if (cdt) taxes = [locals[cdt][cdn]];
         else taxes = this.frm.doc.taxes;
 
-        frappe.flags.updating_tax_amount = true;
         taxes.forEach(async row => {
             if (row.charge_type === "On Net Total") {
                 const tax_amount = this.get_tax_on_net_total(row);
 
                 // update if tax amount is changed manually
                 if (tax_amount !== row.tax_amount) {
-                    await frappe.model.set_value(
-                        row.doctype,
-                        row.name,
-                        "tax_amount",
-                        tax_amount
-                    );
+                    row.tax_amount = tax_amount;
                 }
             }
         });
 
         this.update_total_amount();
         this.frm.bill_of_entry_controller.update_total_taxes();
-        frappe.flags.updating_tax_amount = false;
     }
 
     update_total_amount() {
