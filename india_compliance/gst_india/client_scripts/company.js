@@ -22,12 +22,11 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     make_default_tax_template: function (frm) {
+        if (frm.doc.country !== "India") return;
+
         frappe.call({
             method: "india_compliance.gst_india.overrides.company.make_default_tax_templates",
-            args: {
-                company: frm.doc.name,
-                country: frm.doc.country,
-            },
+            args: { company: frm.doc.name },
             callback: function () {
                 frappe.msgprint(__("Default Tax Templates created"));
             },

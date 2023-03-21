@@ -23,12 +23,12 @@ def make_company_fixtures(doc, method=None):
     if not frappe.flags.country_change or doc.country != "India":
         return
 
-    create_company_fixtures(doc.name, doc.country)
+    create_company_fixtures(doc.name)
 
 
-def create_company_fixtures(company, country):
+def create_company_fixtures(company):
     make_default_customs_account(company)
-    make_default_tax_templates(company, country)
+    make_default_tax_templates(company)
 
 
 def make_default_customs_account(company):
@@ -36,22 +36,19 @@ def make_default_customs_account(company):
         company,
         account_name="Customs Duty Payable",
         parent="Duties and Taxes",
-        default_field="default_customs_payable_account",
+        default_fieldname="default_customs_payable_account",
     )
 
     create_default_company_account(
         company,
         account_name="Customs Duty Expense",
         parent="Stock Expenses",
-        default_field="default_customs_expense_account",
+        default_fieldname="default_customs_expense_account",
     )
 
 
 @frappe.whitelist()
-def make_default_tax_templates(company: str, country: str):
-    if country != "India":
-        return
-
+def make_default_tax_templates(company: str):
     if not frappe.db.exists("Company", company):
         frappe.throw(
             _("Company {0} does not exist yet. Taxes setup aborted.").format(company)
@@ -154,7 +151,12 @@ def add_accounts_in_gst_settings(
         )
 
 
-def create_default_company_account(company, account_name, parent, default_field=None):
+def create_default_company_account(
+    company,
+    account_name,
+    parent,
+    default_fieldname=None,
+):
     parent_account = frappe.db.get_value(
         "Account", filters={"account_name": parent, "company": company}
     )
@@ -175,7 +177,7 @@ def create_default_company_account(company, account_name, parent, default_field=
     account.flags.ignore_permissions = True
     account.insert(ignore_if_duplicate=True)
 
-    if default_field:
+    if default_fieldname:
         frappe.db.set_value(
-            "Company", company, default_field, account.name, update_modified=False
+            "Company", company, default_fieldname, account.name, update_modified=False
         )
