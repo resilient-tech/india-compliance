@@ -184,6 +184,14 @@ class GSTTransactionData:
             )
 
     def validate_transaction(self):
+        if self.doc.docstatus > 1:
+            frappe.throw(
+                msg=_(
+                    "Cannot generate e-Waybill or e-Invoice for a cancelled transaction"
+                ),
+                title=_("Invalid Document State"),
+            )
+
         posting_date = getdate(self.doc.posting_date)
 
         if posting_date > getdate():
@@ -200,13 +208,6 @@ class GSTTransactionData:
             frappe.throw(
                 msg=_("Posting Date cannot be greater than LR Date"),
                 title=_("Invalid Data"),
-            )
-
-        # validate if doc is submitted
-        if self.doc.docstatus != 1:
-            frappe.throw(
-                msg=_("Document must be submitted to generate e-Waybill or e-Invoice"),
-                title=_("Invalid Document State"),
             )
 
     def validate_non_gst_items(self):
