@@ -61,6 +61,7 @@ class TestEInvoice(FrappeTestCase):
                 },
             )
         si.save()
+        si.submit()
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
