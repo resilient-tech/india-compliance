@@ -42,7 +42,6 @@ class BillofEntry(Document):
         self.validate_taxes()
 
     def on_submit(self):
-        # self.update_purchase_invoice()
         self.create_gl_entries()
 
     def on_cancel(self):
