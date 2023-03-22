@@ -12,7 +12,7 @@ import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, send_updated_doc
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 class BillofEntry(Document):
@@ -234,8 +234,6 @@ class BillofEntry(Document):
                     item_wise_tax_rates[item.name] = tax.rate
 
             tax.item_wise_tax_rates = json.dumps(item_wise_tax_rates)
-
-        return send_updated_doc(self)
 
     def get_item_tax_map(self, tax_templates, tax_accounts):
         """
