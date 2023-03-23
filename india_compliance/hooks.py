@@ -29,6 +29,7 @@ doctype_js = {
     "Item": "gst_india/client_scripts/item.js",
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
+    "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
     "Sales Invoice": [
         "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/e_waybill_actions.js",
@@ -55,7 +56,7 @@ doc_events = {
         "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
         "on_update": [
             "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
-            "india_compliance.gst_india.overrides.company.create_default_tax_templates",
+            "india_compliance.gst_india.overrides.company.make_company_fixtures",
         ],
         "validate": "india_compliance.gst_india.overrides.party.validate_party",
     },
@@ -78,6 +79,7 @@ doc_events = {
         )
     },
     "Purchase Invoice": {
+        "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
     },
     "Purchase Order": {
@@ -179,6 +181,8 @@ company_data_to_be_ignored = ["GST Account", "GST Credential"]
 
 # Links to these doctypes will be ignored when deleting a document
 ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
+
+accounting_dimension_doctypes = ["Bill of Entry", "Bill of Entry Item"]
 
 
 # Includes in <head>

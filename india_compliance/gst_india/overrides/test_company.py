@@ -38,7 +38,6 @@ class TestCompanyFixtures(FrappeTestCase):
             re.compile(r"^(.*does not exist yet.*)$"),
             make_default_tax_templates,
             "Random Company Name",
-            "India",
         )
 
     def test_tax_defaults_setup(self):

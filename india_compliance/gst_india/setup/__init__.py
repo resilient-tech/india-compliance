@@ -5,6 +5,9 @@ from frappe.custom.doctype.custom_field.custom_field import (
     create_custom_fields as _create_custom_fields,
 )
 from frappe.utils import now_datetime, nowdate
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    make_dimension_in_accounting_doctypes,
+)
 
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
@@ -21,6 +24,7 @@ ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gs
 
 def after_install():
     create_custom_fields()
+    create_accounting_dimension_fields()
     create_property_setters()
     create_address_template()
     set_default_gst_settings()
@@ -34,6 +38,18 @@ def create_custom_fields():
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
     _create_custom_fields(get_all_custom_fields(), ignore_validate=True)
+
+
+def create_accounting_dimension_fields():
+    doctypes = frappe.get_hooks(
+        "accounting_dimension_doctypes",
+        app_name="india_compliance",
+    )
+
+    dimensions = frappe.get_all("Accounting Dimension", pluck="name")
+    for dimension in dimensions:
+        doc = frappe.get_doc("Accounting Dimension", dimension)
+        make_dimension_in_accounting_doctypes(doc, doctypes)
 
 
 def create_property_setters():
