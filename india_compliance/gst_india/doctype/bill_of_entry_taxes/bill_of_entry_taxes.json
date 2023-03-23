@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2023-01-30 16:08:05.181561",
+ "default_view": "List",
+ "doctype": "DocType",
+ "document_type": "Setup",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "charge_type",
+  "col_break1",
+  "account_head",
+  "section_break_10",
+  "rate",
+  "column_break_pipk",
+  "tax_amount",
+  "total",
+  "item_wise_tax_rates"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "default": "On Net Total",
+   "fieldname": "charge_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "oldfieldname": "charge_type",
+   "oldfieldtype": "Select",
+   "options": "\nActual\nOn Net Total",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 2,
+   "fieldname": "account_head",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account Head",
+   "oldfieldname": "account_head",
+   "oldfieldtype": "Link",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_10",
+   "fieldtype": "Section Break"
+  },
+  {
+   "columns": 2,
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rate",
+   "oldfieldname": "rate",
+   "oldfieldtype": "Currency"
+  },
+  {
+   "fieldname": "column_break_pipk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 2,
+   "fieldname": "tax_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "oldfieldname": "tax_amount",
+   "oldfieldtype": "Currency",
+   "options": "INR"
+  },
+  {
+   "columns": 2,
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total",
+   "oldfieldname": "total",
+   "oldfieldtype": "Currency",
+   "options": "INR",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_wise_tax_rates",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "Item Wise Tax Rates"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2023-03-11 17:31:11.315202",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "Bill of Entry Taxes",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
