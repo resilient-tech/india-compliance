@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import frappe
 
 from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
@@ -50,11 +48,28 @@ party_fields = [
     },
 ]
 
-company_fields = deepcopy(party_fields)
-company_fields[0]["insert_after"] = "parent_company"
-
 CUSTOM_FIELDS = {
-    "Company": company_fields,
+    "Company": [
+        {
+            **party_fields[0],
+            "insert_after": "parent_company",
+        },
+        *party_fields[1:],
+        {
+            "fieldname": "default_customs_expense_account",
+            "label": "Default Customs Duty Expense Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "unrealized_profit_loss_account",
+        },
+        {
+            "fieldname": "default_customs_payable_account",
+            "label": "Default Customs Duty Payable Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "default_finance_book",
+        },
+    ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
     ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [

@@ -2,6 +2,8 @@ import frappe
 from frappe.utils import today
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 
+from india_compliance.gst_india.overrides.company import create_default_company_account
+
 
 def make_company_fixtures(doc, method=None):
     if not frappe.flags.country_change or doc.country != "India":
@@ -11,35 +13,17 @@ def make_company_fixtures(doc, method=None):
 
 
 def create_company_fixtures(company):
-    docs = []
     company = company or frappe.db.get_value("Global Defaults", None, "default_company")
-    set_tds_account(docs, company)
-
-    for d in docs:
-        doc = frappe.get_doc(d)
-        doc.flags.ignore_permissions = True
-        doc.insert(ignore_if_duplicate=True)
+    create_tds_account(company)
 
     # create records for Tax Withholding Category
     set_tax_withholding_category(company)
 
 
-def set_tds_account(docs, company):
-    parent_account = frappe.db.get_value(
-        "Account", filters={"account_name": "Duties and Taxes", "company": company}
+def create_tds_account(company):
+    create_default_company_account(
+        company, account_name="TDS Payable", parent="Duties and Taxes"
     )
-    if parent_account:
-        docs.extend(
-            [
-                {
-                    "doctype": "Account",
-                    "account_name": "TDS Payable",
-                    "account_type": "Tax",
-                    "parent_account": parent_account,
-                    "company": company,
-                }
-            ]
-        )
 
 
 def set_tax_withholding_category(company):
