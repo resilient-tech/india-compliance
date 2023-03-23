@@ -334,8 +334,7 @@ def make_bill_of_entry(source_name, target_doc=None):
 def make_journal_entry_for_payment(source_name, target_doc=None):
     def set_missing_values(source, target):
         target.voucher_type = "Bank Entry"
-        target.posting_date = today()
-        target.cheque_date = today()
+        target.posting_date = target.cheque_date = today()
         target.user_remark = "Payment against Bill of Entry {0}".format(source.name)
 
         company = frappe.get_cached_doc("Company", source.company)
