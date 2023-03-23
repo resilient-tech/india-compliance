@@ -263,10 +263,11 @@
    "reqd": 1
   }
  ],
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-03-22 03:55:41.315752",
+ "modified": "2023-03-23 02:22:13.533644",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
