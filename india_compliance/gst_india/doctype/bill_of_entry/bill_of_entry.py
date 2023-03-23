@@ -16,28 +16,30 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 class BillofEntry(Document):
+    get_gl_dict = AccountsController.get_gl_dict
+    on_trash = AccountsController.on_trash
+
     def onload(self):
         if self.docstatus != 1:
             return
 
-        existing_journal_entry = frappe.db.get_value(
-            "Journal Entry Account",
-            {
-                "reference_type": "Bill of Entry",
-                "reference_name": self.name,
-                "docstatus": 1,
-            },
-            "name",
+        self.set_onload(
+            "journal_entry_exists",
+            frappe.db.exists(
+                "Journal Entry Account",
+                {
+                    "reference_type": "Bill of Entry",
+                    "reference_name": self.name,
+                    "docstatus": 1,
+                },
+            ),
         )
-
-        if existing_journal_entry:
-            self.set_onload("existing_journal_entry", existing_journal_entry)
 
     def before_validate(self):
         self.set_item_wise_tax_rates()
         self.calculate_totals()
 
-    def before_submit(self):
+    def validate(self):
         self.validate_purchase_invoice()
         self.validate_taxes()
 
@@ -47,10 +49,6 @@ class BillofEntry(Document):
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
         self.cancel_gl_entries()
-
-    def on_trash(self):
-        controller = AccountsController
-        controller.on_trash(self)
 
     def set_defaults(self):
         company = frappe.get_cached_doc("Company", self.company)
@@ -155,12 +153,10 @@ class BillofEntry(Document):
         gl_entries = []
         remarks = "No Remarks"
         self.company_currency = erpnext.get_company_currency(self.company)
-        controller = AccountsController
 
         for item in self.items:
             gl_entries.append(
-                controller.get_gl_dict(
-                    self,
+                self.get_gl_dict(
                     {
                         "account": self.customs_expense_account,
                         "debit": item.customs_duty,
@@ -173,8 +169,7 @@ class BillofEntry(Document):
 
         for tax in self.taxes:
             gl_entries.append(
-                controller.get_gl_dict(
-                    self,
+                self.get_gl_dict(
                     {
                         "account": tax.account_head,
                         "debit": tax.tax_amount,
@@ -186,8 +181,7 @@ class BillofEntry(Document):
             )
 
         gl_entries.append(
-            controller.get_gl_dict(
-                self,
+            self.get_gl_dict(
                 {
                     "account": self.customs_payable_account,
                     "debit": 0,

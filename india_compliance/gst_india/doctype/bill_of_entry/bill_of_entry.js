@@ -13,7 +13,7 @@ frappe.ui.form.on("Bill of Entry", {
         if (frm.doc.docstatus === 0) return;
 
         // check if Journal Entry exists;
-        if (frm.doc.docstatus === 1 && !frm.doc.__onload?.existing_journal_entry) {
+        if (frm.doc.docstatus === 1 && !frm.doc.__onload?.journal_entry_exists) {
             frm.add_custom_button(
                 __("Payment Entry"),
                 () => {
