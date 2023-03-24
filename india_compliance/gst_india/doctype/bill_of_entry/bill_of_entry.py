@@ -36,8 +36,7 @@ class BillofEntry(Document):
         )
 
     def before_validate(self):
-        self.set_item_wise_tax_rates()
-        self.calculate_totals()
+        self.set_taxes_and_totals()
 
     def validate(self):
         self.validate_purchase_invoice()
@@ -51,11 +50,20 @@ class BillofEntry(Document):
         self.cancel_gl_entries()
 
     def set_defaults(self):
+        self.set_item_defaults()
+        self.set_default_accounts()
+
+    def set_item_defaults(self):
+        """These defaults are needed for taxes and totals to get calculated"""
+        for item in self.items:
+            item.name = frappe.generate_hash(length=10)
+            item.customs_duty = 0
+
+    def set_default_accounts(self):
         company = frappe.get_cached_doc("Company", self.company)
         self.customs_expense_account = company.default_customs_expense_account
         self.customs_payable_account = company.default_customs_payable_account
 
-    @frappe.whitelist()
     def set_taxes_and_totals(self):
         self.set_item_wise_tax_rates()
         self.calculate_totals()
@@ -90,7 +98,7 @@ class BillofEntry(Document):
         self.total_taxes = total_taxes
 
     def get_tax_amount(self, item_wise_tax_rates):
-        if type(item_wise_tax_rates) == str:
+        if isinstance(item_wise_tax_rates, str):
             item_wise_tax_rates = json.loads(item_wise_tax_rates)
 
         tax_amount = 0
@@ -116,7 +124,7 @@ class BillofEntry(Document):
                 )
             )
 
-        pi_items = [item.name for item in purchase.items]
+        pi_items = {item.name for item in purchase.items}
         for item in self.items:
             if item.pi_detail not in pi_items:
                 frappe.throw(
@@ -272,8 +280,10 @@ class BillofEntry(Document):
 
 @frappe.whitelist()
 def make_bill_of_entry(source_name, target_doc=None):
-    def add_default_taxes(source, target):
-        target.posting_date = today()
+    def set_missing_values(source, target):
+        target.set_defaults()
+
+        # Add default tax
         input_igst_account = get_gst_accounts_by_type(
             source.company, "Input"
         ).igst_account
@@ -287,11 +297,9 @@ def make_bill_of_entry(source_name, target_doc=None):
                 "parenttype": "Purchase Taxes and Charges Template",
                 "account_head": input_igst_account,
             },
-            ["rate", "description"],
-        ) or [0, input_igst_account]
+            ("rate", "description"),
+        ) or (0, input_igst_account)
 
-        # Remove existing taxes and add default tax
-        target.taxes = []
         target.append(
             "taxes",
             {
@@ -302,7 +310,7 @@ def make_bill_of_entry(source_name, target_doc=None):
             },
         )
 
-        target.set_defaults()
+        target.set_taxes_and_totals()
 
     doc = get_mapped_doc(
         "Purchase Invoice",
@@ -310,6 +318,7 @@ def make_bill_of_entry(source_name, target_doc=None):
         {
             "Purchase Invoice": {
                 "doctype": "Bill of Entry",
+                "field_no_map": ["posting_date"],
                 "validation": {
                     "docstatus": ["=", 1],
                     "gst_category": ["=", "Overseas"],
@@ -324,7 +333,7 @@ def make_bill_of_entry(source_name, target_doc=None):
             },
         },
         target_doc,
-        postprocess=add_default_taxes,
+        postprocess=set_missing_values,
     )
 
     return doc

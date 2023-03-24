@@ -5,7 +5,6 @@ frappe.ui.form.on("Bill of Entry", {
     onload(frm) {
         frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
-        frm.call("set_taxes_and_totals");
     },
 
     refresh(frm) {
