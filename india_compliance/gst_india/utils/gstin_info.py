@@ -28,10 +28,14 @@ def get_gstin_info(gstin):
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
     validate_gstin(gstin)
-    response = PublicAPI().get_gstin_info(gstin)
+    public_api = PublicAPI()
+    response = public_api.get_gstin_info(gstin)
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
     )
+
+    if public_api.sandbox_mode:
+        business_name = "Resilient Tech"
 
     gstin_info = frappe._dict(
         gstin=response.gstin,
