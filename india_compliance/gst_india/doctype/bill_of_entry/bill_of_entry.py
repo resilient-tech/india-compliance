@@ -171,7 +171,7 @@ class BillofEntry(Document):
             )
 
     def get_gl_entries(self):
-        # variables required by get_gl_dict
+        # company_currency is required by get_gl_dict
         self.company_currency = erpnext.get_company_currency(self.company)
 
         gl_entries = []
