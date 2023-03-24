@@ -1,0 +1,328 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2023-01-27 14:50:06.483818",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "column_break_2wjs",
+  "amended_from",
+  "column_break_hbfk",
+  "section_break_fqdh",
+  "purchase_invoice",
+  "column_break_epap",
+  "company",
+  "column_break_4zp5",
+  "company_gstin",
+  "section_break_ott8",
+  "bill_of_entry_no",
+  "bill_of_entry_date",
+  "column_break_v3jw",
+  "port_code",
+  "column_break_srom",
+  "posting_date",
+  "accounting_details_section",
+  "customs_payable_account",
+  "column_break_xjvk",
+  "customs_expense_account",
+  "column_break_zsed",
+  "accounting_dimensions_section",
+  "cost_center",
+  "dimension_col_break",
+  "section_break_nlqh",
+  "items",
+  "section_break_ujtl",
+  "column_break_cnrv",
+  "column_break_wmum",
+  "column_break_wxlx",
+  "total_taxable_value",
+  "section_break_biay",
+  "taxes",
+  "section_break_zcnz",
+  "total_customs_duty",
+  "column_break_nsns",
+  "total_taxes",
+  "column_break_kgnb",
+  "total_amount_payable"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "no_copy": 1,
+   "options": "BOE-.YYYY.-",
+   "print_hide": 1,
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "bill_of_entry_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Bill of Entry No",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_srom",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bill_of_entry_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Bill of Entry Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Bill of Entry",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_ott8",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_2wjs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "port_code",
+   "fieldtype": "Data",
+   "label": "Port Code"
+  },
+  {
+   "fieldname": "column_break_v3jw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_fqdh",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_4zp5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Data",
+   "label": "Company GSTIN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_hbfk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_epap",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_nlqh",
+   "fieldtype": "Section Break",
+   "label": "Items"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "options": "Bill of Entry Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_biay",
+   "fieldtype": "Section Break",
+   "label": "Taxes"
+  },
+  {
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "options": "Bill of Entry Taxes",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_ujtl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_wxlx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_taxable_value",
+   "fieldtype": "Currency",
+   "label": "Total Taxable Value (Net Total)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_zcnz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_cnrv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_wmum",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "accounting_details_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Details"
+  },
+  {
+   "fieldname": "column_break_xjvk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_zsed",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_customs_duty",
+   "fieldtype": "Currency",
+   "label": "Total Customs Duty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nsns",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_kgnb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_taxes",
+   "fieldtype": "Currency",
+   "label": "Total Taxes",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "accounting_dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Dimensions"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "dimension_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "total_amount_payable",
+   "fieldtype": "Currency",
+   "label": "Total Amount Payable",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customs_payable_account",
+   "fieldtype": "Link",
+   "label": "Customs Duty Payable Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customs_expense_account",
+   "fieldtype": "Link",
+   "label": "Customs Duty Expense Account",
+   "options": "Account",
+   "reqd": 1
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2023-03-24 09:46:13.847177",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "Bill of Entry",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Purchase User"
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Auditor"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
