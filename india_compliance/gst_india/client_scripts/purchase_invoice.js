@@ -3,7 +3,7 @@ frappe.ui.form.on("Purchase Invoice", {
         if (
             frm.doc.docstatus !== 1 ||
             frm.doc.gst_category !== "Overseas" ||
-            frm.doc.__onload?.existing_bill_of_entry
+            frm.doc.__onload?.bill_of_entry_exists
         )
             return;
 
