@@ -17,7 +17,6 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 class BillofEntry(Document):
     get_gl_dict = AccountsController.get_gl_dict
-    on_trash = AccountsController.on_trash
 
     def onload(self):
         if self.docstatus != 1:
@@ -43,11 +42,22 @@ class BillofEntry(Document):
         self.validate_taxes()
 
     def on_submit(self):
-        self.create_gl_entries()
+        make_gl_entries(self.get_gl_entries())
 
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
-        self.cancel_gl_entries()
+        make_gl_entries(self.get_gl_entries(), cancel=True)
+
+    # Code adapted from AccountsController.on_trash
+    def on_trash(self):
+        if not frappe.db.get_single_value(
+            "Accounts Settings", "delete_linked_ledger_entries"
+        ):
+            return
+
+        frappe.db.delete(
+            "GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name}
+        )
 
     def set_defaults(self):
         self.set_item_defaults()
@@ -113,54 +123,59 @@ class BillofEntry(Document):
         purchase = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
         if purchase.docstatus != 1:
             frappe.throw(
-                _("Purchase Invoice must be submitted before submitting Bill of Entry")
+                _("Purchase Invoice must be submitted when creating a Bill of Entry")
             )
 
         if purchase.gst_category != "Overseas":
             frappe.throw(
                 _(
-                    "Purchase Invoice must be of Overseas category to create Bill of"
-                    " Entry"
+                    "GST Category must be set to Overseas in Purchase Invoice to create"
+                    " a Bill of Entry"
                 )
             )
 
         pi_items = {item.name for item in purchase.items}
         for item in self.items:
+            if not item.pi_detail:
+                frappe.throw(
+                    _("Row #{0}: Purchase Invoice Item is required").format(item.idx)
+                )
+
             if item.pi_detail not in pi_items:
                 frappe.throw(
                     _(
-                        "Purchase Invoice Item {0} not found in Purchase Invoice {1}"
-                    ).format(item.pi_detail, self.purchase_invoice)
+                        "Row #{0}: Purchase Invoice Item {1} not found in Purchase"
+                        " Invoice {2}"
+                    ).format(
+                        item.idx,
+                        frappe.bold(item.pi_detail),
+                        frappe.bold(self.purchase_invoice),
+                    )
                 )
 
     def validate_taxes(self):
-        input = get_gst_accounts_by_type(self.company, "Input", throw=True)
+        input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
         for tax in self.taxes:
-            if tax.account_head in [input.igst_account, input.cess_account]:
+            if (
+                tax.account_head
+                in (input_accounts.igst_account, input_accounts.cess_account)
+                or not tax.tax_amount
+            ):
                 continue
 
-            if tax.tax_amount != 0:
-                frappe.throw(
-                    _(
-                        "Row#: {0}. Only Input IGST and CESS accounts are allowed in"
-                        " Bill of Entry"
-                    ).format(frappe.bold(tax.idx))
-                )
-
-    def create_gl_entries(self):
-        gl_entries = self.get_gl_entries()
-        if gl_entries:
-            make_gl_entries(gl_entries, cancel=0, adv_adj=0)
-
-    def cancel_gl_entries(self):
-        gl_entries = self.get_gl_entries()
-        if gl_entries:
-            make_gl_entries(gl_entries, cancel=1, adv_adj=0)
+            frappe.throw(
+                _(
+                    "Row #{0}: Only Input IGST and CESS accounts are allowed in"
+                    " Bill of Entry"
+                ).format(tax.idx)
+            )
 
     def get_gl_entries(self):
+        # variables required by get_gl_dict
+        self.company_currency = erpnext.get_company_currency(self.company)
+
         gl_entries = []
         remarks = "No Remarks"
-        self.company_currency = erpnext.get_company_currency(self.company)
 
         for item in self.items:
             gl_entries.append(
@@ -202,20 +217,26 @@ class BillofEntry(Document):
 
         return gl_entries
 
-    def validate_account_currency(self, *args):
-        # Overriding AccountsController method
-        pass
+    # Overriding AccountsController method
+    def validate_account_currency(self, account, account_currency=None):
+        if account_currency == "INR":
+            return
+
+        frappe.throw(
+            _("Row #{0}: Account {1} must be of INR currency").format(
+                self.idx, frappe.bold(account)
+            )
+        )
 
     @frappe.whitelist()
     def set_item_wise_tax_rates(self, item_name=None, tax_name=None):
         items, taxes = self.get_rows_to_update(item_name, tax_name)
-
-        tax_templates = list({item.item_tax_template for item in items})
-        tax_accounts = list({tax.account_head for tax in taxes})
+        tax_accounts = {tax.account_head for tax in taxes}
 
         if not tax_accounts:
             return
 
+        tax_templates = {item.item_tax_template for item in items}
         item_tax_map = self.get_item_tax_map(tax_templates, tax_accounts)
 
         for tax in taxes:
@@ -223,16 +244,13 @@ class BillofEntry(Document):
                 tax.item_wise_tax_rates = "{}"
                 continue
 
-            item_wise_tax_rates = json.loads(tax.item_wise_tax_rates or "{}")
+            item_wise_tax_rates = (
+                json.loads(tax.item_wise_tax_rates) if tax.item_wise_tax_rates else {}
+            )
 
             for item in items:
                 key = (item.item_tax_template, tax.account_head)
-                if key in item_tax_map:
-                    tax_rate = item_tax_map[key]
-                    item_wise_tax_rates[item.name] = tax_rate
-
-                else:
-                    item_wise_tax_rates[item.name] = tax.rate
+                item_wise_tax_rates[item.name] = item_tax_map.get(key, tax.rate)
 
             tax.item_wise_tax_rates = json.dumps(item_wise_tax_rates)
 
@@ -251,29 +269,29 @@ class BillofEntry(Document):
                 ('GST 28%', 'IGST - TC'): 28.0
             }
         """
-        item_tax_map = {}
 
-        if tax_templates:
-            template_detail = frappe.get_all(
-                "Item Tax Template Detail",
-                fields=["parent", "tax_type", "tax_rate"],
-                filters={
-                    "parent": ["in", tax_templates],
-                    "tax_type": ["in", tax_accounts],
-                },
-            )
-            item_tax_map = {(d.parent, d.tax_type): d.tax_rate for d in template_detail}
+        if not tax_templates:
+            return {}
 
-        return item_tax_map
+        tax_rates = frappe.get_all(
+            "Item Tax Template Detail",
+            fields=("parent", "tax_type", "tax_rate"),
+            filters={
+                "parent": ("in", tax_templates),
+                "tax_type": ("in", tax_accounts),
+            },
+        )
 
-    def get_rows_to_update(self, item_name, tax_name):
+        return {(d.parent, d.tax_type): d.tax_rate for d in tax_rates}
+
+    def get_rows_to_update(self, item_name=None, tax_name=None):
         """
         Returns items and taxes to update based on item_name and tax_name passed.
         If item_name and tax_name are not passed, all items and taxes are returned.
         """
 
-        items = [item for item in self.items if item.name == item_name] or self.items
-        taxes = [tax for tax in self.taxes if tax.name == tax_name] or self.taxes
+        items = self.get("items", {"name": item_name}) if item_name else self.items
+        taxes = self.get("taxes", {"name": tax_name}) if tax_name else self.taxes
 
         return items, taxes
 
