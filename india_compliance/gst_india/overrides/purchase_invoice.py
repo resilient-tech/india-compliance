@@ -49,9 +49,10 @@ def onload(doc, method):
     if doc.docstatus != 1 or doc.gst_category != "Overseas":
         return
 
-    existing_bill_of_entry = frappe.db.get_value(
-        "Bill of Entry", {"purchase_invoice": doc.name, "docstatus": 1}, "name"
+    doc.set_onload(
+        "bill_of_entry_exists",
+        frappe.db.exists(
+            "Bill of Entry",
+            {"purchase_invoice": doc.name, "docstatus": 1},
+        ),
     )
-
-    if existing_bill_of_entry:
-        doc.set_onload("existing_bill_of_entry", existing_bill_of_entry)

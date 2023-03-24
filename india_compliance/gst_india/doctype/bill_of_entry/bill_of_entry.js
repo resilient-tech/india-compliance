@@ -3,19 +3,17 @@
 
 frappe.ui.form.on("Bill of Entry", {
     onload(frm) {
+        frm.fields_dict.items.grid.cannot_add_rows = true;
         frm.bill_of_entry_controller = new BillOfEntryController(frm);
-        frm.call("set_taxes_and_totals");
     },
 
     refresh(frm) {
-        // disable add row button in items table
-        frm.fields_dict.items.grid.wrapper.find(".grid-add-row").hide();
         if (frm.doc.docstatus === 0) return;
 
         // check if Journal Entry exists;
-        if (frm.doc.docstatus === 1 && !frm.doc.__onload?.existing_journal_entry) {
+        if (frm.doc.docstatus === 1 && !frm.doc.__onload?.journal_entry_exists) {
             frm.add_custom_button(
-                __("Payment Entry"),
+                __("Journal Entry for Payment"),
                 () => {
                     frappe.model.open_mapped_doc({
                         method: "india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry.make_journal_entry_for_payment",
@@ -26,7 +24,7 @@ frappe.ui.form.on("Bill of Entry", {
             );
         }
 
-        if (frm.doc.docstatus === 1) {
+        if (frm.doc.docstatus === 1 && frm.doc.total_customs_duty > 0) {
             frm.add_custom_button(
                 __("Landed Cost Voucher"),
                 () => {
@@ -240,6 +238,8 @@ class TaxesController {
          * @param {string} item_name - Item row name for which the tax rates are to be fetched.
          * @param {string} tax_name - Tax row name for which the tax rates are to be fetched.
          */
+
+        if (!this.frm.taxes || !this.frm.taxes.length) return;
 
         await this.frm.call("set_item_wise_tax_rates", {
             item_name: item_name,
