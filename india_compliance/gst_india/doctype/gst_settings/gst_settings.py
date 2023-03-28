@@ -135,16 +135,22 @@ class GSTSettings(Document):
                 _("Missing Required Field"),
             )
 
-        if (self.enable_e_invoice or self.enable_e_waybill) and all(
-            credential.service != "e-Waybill / e-Invoice"
-            for credential in self.credentials
+        if self.enable_e_invoice and all(
+            credential.service != "e-Invoice" for credential in self.credentials
         ):
             frappe.msgprint(
                 # TODO: Add Link to Documentation.
-                _(
-                    "Please set credentials for e-Waybill / e-Invoice to use API"
-                    " features"
-                ),
+                _("Please set credentials for e-Invoice to use API" " features"),
+                indicator="yellow",
+                alert=True,
+            )
+
+        if self.enable_e_waybill and all(
+            credential.service != "e-Waybill" for credential in self.credentials
+        ):
+            frappe.msgprint(
+                # TODO: Add Link to Documentation.
+                _("Please set credentials for e-Waybill to use API" " features"),
                 indicator="yellow",
                 alert=True,
             )

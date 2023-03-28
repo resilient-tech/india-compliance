@@ -62,8 +62,11 @@ def get_credentials_from_e_invoice_user():
         .run(as_dict=True)
     )
 
+    einv_credential = []
+
     for credential in old_credentials:
         credential.password = credential.password and decrypt(credential.password)
-        credential.service = "e-Waybill / e-Invoice"
+        credential.service = "e-Waybill"
+        einv_credential.append(frappe._dict({**credential, "service": "e-Invoice"}))
 
-    return old_credentials
+    return old_credentials + einv_credential

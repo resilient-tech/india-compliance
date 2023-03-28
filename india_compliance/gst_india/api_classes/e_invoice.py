@@ -38,7 +38,7 @@ class EInvoiceAPI(BaseAPI):
             frappe.throw(_("Company GSTIN is required to use the e-Invoice API"))
 
         else:
-            self.fetch_credentials(company_gstin, "e-Waybill / e-Invoice")
+            self.fetch_credentials(company_gstin, "e-Invoice")
 
         self.default_headers.update(
             {
