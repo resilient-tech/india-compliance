@@ -31,7 +31,6 @@ def create_property_setters_for_versioning():
             }
         )
         property_setter.flags.ignore_permissions = True
-        property_setter.flags.for_audit_trail = True
         property_setter.insert()
 
 
