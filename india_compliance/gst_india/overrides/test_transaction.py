@@ -550,3 +550,36 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(.*Only one row can be selected as a Reference Row.*)$"),
             doc.insert,
         )
+
+
+class TestQuotationTransaction(FrappeTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.lead_name = get_lead("_Test Lead")
+
+    def test_quotation_to_lead(self):
+        doc = create_transaction(
+            doctype="Quotation",
+            quotation_to="Lead",
+            party_name=self.lead_name,
+            company_address="_Test Indian Registered Company-Billing",
+        )
+
+        self.assertEqual(doc.gst_category, "Unregistered")
+
+
+def get_lead(first_name):
+    if name := frappe.db.exists("Lead", {"first_name": first_name}):
+        return name
+
+    lead = frappe.get_doc(
+        {
+            "doctype": "Lead",
+            "first_name": first_name,
+        }
+    )
+    lead.insert(ignore_permissions=True)
+
+    return lead.name
