@@ -2,6 +2,7 @@ import click
 
 import frappe
 
+from india_compliance.audit_trail.setup import setup_fixtures as setup_audit_trail
 from india_compliance.gst_india.constants import BUG_REPORT_URL
 from india_compliance.gst_india.setup import after_install as setup_gst
 from india_compliance.income_tax_india.setup import after_install as setup_income_tax
@@ -35,6 +36,8 @@ POST_INSTALL_PATCHES = (
 
 def after_install():
     try:
+        setup_audit_trail()
+
         print("Setting up Income Tax...")
         setup_income_tax()
 
@@ -47,9 +50,11 @@ def after_install():
 
     except Exception as e:
         click.secho(
-            "Installation for India Compliance failed due to an error."
-            " Please try re-installing the app or"
-            f" report the issue on {BUG_REPORT_URL} if not resolved.",
+            (
+                "Installation for India Compliance failed due to an error."
+                " Please try re-installing the app or"
+                f" report the issue on {BUG_REPORT_URL} if not resolved."
+            ),
             fg="bright_red",
         )
         raise e
