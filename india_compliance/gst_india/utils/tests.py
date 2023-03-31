@@ -36,7 +36,7 @@ def create_transaction(**data):
         transaction.posting_date = getdate()
 
     if transaction.doctype in SALES_DOCTYPES:
-        if not transaction.customer:
+        if not transaction.get("customer") and transaction.doctype != "Quotation":
             transaction.customer = "_Test Registered Customer"
 
     else:

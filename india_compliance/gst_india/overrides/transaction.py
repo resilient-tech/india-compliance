@@ -719,9 +719,18 @@ def validate_transaction(doc, method=None):
 
     set_place_of_supply(doc)
     validate_mandatory_fields(doc, ("company_gstin", "place_of_supply"))
-    validate_mandatory_fields(
-        doc, "gst_category", _("Please ensure it is set in the Party and / or Address.")
-    )
+
+    # Ignore validation for Quotation not to Customer
+    if doc.doctype != "Quotation" or doc.quotation_to == "Customer":
+        validate_mandatory_fields(
+            doc,
+            "gst_category",
+            _("Please ensure it is set in the Party and / or Address."),
+        )
+
+    elif not doc.gst_category:
+        doc.gst_category = "Unregistered"
+
     validate_overseas_gst_category(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
