@@ -14,8 +14,10 @@ after_install = "india_compliance.install.after_install"
 after_migrate = "india_compliance.audit_trail.setup.after_migrate"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
-
 before_uninstall = "india_compliance.uninstall.before_uninstall"
+
+setup_wizard_requires = "assets/india_compliance/js/setup_wizard.js"
+setup_wizard_stages = "india_compliance.audit_trail.setup.get_setup_wizard_stages"
 
 app_include_js = "india_compliance.bundle.js"
 
