@@ -11,12 +11,13 @@ app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 
 after_install = "india_compliance.install.after_install"
+after_migrate = "india_compliance.audit_trail.setup.after_migrate"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
 
 before_uninstall = "india_compliance.uninstall.before_uninstall"
 
-app_include_js = "gst_india.bundle.js"
+app_include_js = "india_compliance.bundle.js"
 
 doctype_js = {
     "Address": "gst_india/client_scripts/address.js",
@@ -36,6 +37,8 @@ doctype_js = {
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Supplier": "gst_india/client_scripts/supplier.js",
+    "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
+    "Customize Form": "audit_trail/client_scripts/customize_form.js",
 }
 
 doctype_list_js = {
@@ -124,6 +127,17 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
+    "Accounts Settings": {
+        "validate": "india_compliance.audit_trail.overrides.accounts_settings.validate"
+    },
+    "Property Setter": {
+        "validate": "india_compliance.audit_trail.overrides.property_setter.validate",
+        "on_trash": "india_compliance.audit_trail.overrides.property_setter.on_trash",
+    },
+    "Version": {
+        "validate": "india_compliance.audit_trail.overrides.version.validate",
+        "on_trash": "india_compliance.audit_trail.overrides.version.on_trash",
+    },
 }
 
 
@@ -169,6 +183,12 @@ override_doctype_dashboards = {
     ),
 }
 
+override_doctype_class = {
+    "Customize Form": (
+        "india_compliance.audit_trail.overrides.customize_form.CustomizeForm"
+    ),
+}
+
 
 # DocTypes to be ignored while clearing transactions of a Company
 company_data_to_be_ignored = ["GST Account", "GST Credential"]
@@ -177,6 +197,40 @@ company_data_to_be_ignored = ["GST Account", "GST Credential"]
 ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
 
 accounting_dimension_doctypes = ["Bill of Entry", "Bill of Entry Item"]
+
+# DocTypes for which Audit Trail must be maintained
+audit_trail_doctypes = [
+    # To track the "Enable Audit Trail" setting
+    "Accounts Settings",
+    # ERPNext DocTypes that make GL Entries
+    "Dunning",
+    "Invoice Discounting",
+    "Journal Entry",
+    "Payment Entry",
+    "Period Closing Voucher",
+    "Process Deferred Accounting",
+    "Purchase Invoice",
+    "Sales Invoice",
+    "Asset",
+    "Asset Capitalization",
+    "Asset Repair",
+    "Loan Balance Adjustment",
+    "Loan Disbursement",
+    "Loan Interest Accrual",
+    "Loan Refund",
+    "Loan Repayment",
+    "Loan Write Off",
+    "Delivery Note",
+    "Landed Cost Voucher",
+    "Purchase Receipt",
+    "Stock Entry",
+    "Stock Reconciliation",
+    "Subcontracting Receipt",
+    # Additional ERPNext DocTypes that constitute "Books of Account"
+    "POS Invoice",
+    # India Compliance DocTypes that make GL Entries
+    "Bill of Entry",
+]
 
 
 # Includes in <head>
