@@ -2,7 +2,7 @@ $(document).on("app_ready", async function() {
     if (!frappe.boot.needs_audit_trail_notification) return;
 
     // let other processes finish
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 700));
     const d = frappe.msgprint({
         title: __("Configure Audit Trail"),
         indicator: "orange",
