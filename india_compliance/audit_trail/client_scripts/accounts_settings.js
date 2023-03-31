@@ -34,11 +34,6 @@ frappe.ui.form.on("Accounts Settings", {
             frm.set_value("delete_linked_ledger_entries", 0);
         }
     },
-    after_save(frm) {
-        if (frm.doc.enable_audit_trail) {
-            frappe.boot.audit_trail_enabled = true;
-        }
-    }
 });
 
 function toggle_linked_ledger_entry_deletion(frm) {
