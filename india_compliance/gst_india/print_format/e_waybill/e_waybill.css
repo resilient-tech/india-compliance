@@ -33,7 +33,7 @@
     line-height: 1.42857143;
     box-sizing: border-box;
     transform-origin: top center;
-    width: 550px;
+    width: 95%;
     margin: 0 auto;
 }
 
@@ -54,7 +54,6 @@
 }
 
 .print-format table.table {
-    width: 520px;
     margin: 15px;
 }
 
