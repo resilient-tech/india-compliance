@@ -12,3 +12,4 @@ execute:from india_compliance.gst_india.setup import add_fields_to_item_variant_
 execute:from india_compliance.gst_india.setup import create_accounting_dimension_fields; create_accounting_dimension_fields()
 execute:from india_compliance.audit_trail.setup import setup_fixtures; setup_fixtures()
 india_compliance.patches.v14.set_default_for_audit_trail_notification
+india_compliance.patches.post_install.update_state_name_to_puducherry
