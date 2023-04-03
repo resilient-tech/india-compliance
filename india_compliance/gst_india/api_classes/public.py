@@ -6,4 +6,13 @@ class PublicAPI(BaseAPI):
     BASE_PATH = "commonapi"
 
     def get_gstin_info(self, gstin):
-        return self.get("search", params={"action": "TP", "gstin": gstin})
+        response = self.get("search", params={"action": "TP", "gstin": gstin})
+        if self.sandbox_mode:
+            response.update(
+                {
+                    "tradeNam": "Resilient Tech",
+                    "lgnm": "Resilient Tech",
+                }
+            )
+
+        return response
