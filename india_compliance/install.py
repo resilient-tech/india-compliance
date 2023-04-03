@@ -20,6 +20,7 @@ POST_INSTALL_PATCHES = (
     "update_gst_accounts",  # this is an India Compliance patch, but needs priority
     "update_itc_amounts",
     ## India Compliance
+    "update_state_name_to_puducherry",
     "create_company_fixtures",
     "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",

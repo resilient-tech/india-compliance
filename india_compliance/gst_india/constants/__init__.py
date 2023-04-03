@@ -64,7 +64,7 @@ STATE_NUMBERS = {
     "Nagaland": "13",
     "Odisha": "21",
     "Other Territory": "97",
-    "Pondicherry": "34",
+    "Puducherry": "34",
     "Punjab": "03",
     "Rajasthan": "08",
     "Sikkim": "11",
