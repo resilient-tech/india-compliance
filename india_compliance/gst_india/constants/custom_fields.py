@@ -347,7 +347,7 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_section",
             "print_hide": 1,
             "options": (
-                "Input Service Distributor\nImport Of Service\nImport Of Capital"
+                "Input Service Distributor\nImport Of Service\nImport Of"
                 " Goods\nITC on Reverse Charge\nIneligible As Per Section"
                 " 17(5)\nIneligible Others\nAll Other ITC"
             ),
