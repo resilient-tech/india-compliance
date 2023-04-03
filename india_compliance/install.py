@@ -21,6 +21,7 @@ POST_INSTALL_PATCHES = (
     "update_itc_amounts",
     ## India Compliance
     "update_state_name_to_puducherry",
+    "rename_import_of_capital_goods",
     "create_company_fixtures",
     "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",

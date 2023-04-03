@@ -62,7 +62,7 @@ class GSTR3BReport(Document):
 
     def set_itc_details(self, itc_details):
         itc_eligible_type_map = {
-            "IMPG": "Import Of Capital Goods",
+            "IMPG": "Import Of Goods",
             "IMPS": "Import Of Service",
             "ISRC": "ITC on Reverse Charge",
             "ISD": "Input Service Distributor",
@@ -176,7 +176,7 @@ class GSTR3BReport(Document):
             )[0][0] or 0
 
         igst, cess = _get_tax_amount("igst_account"), _get_tax_amount("cess_account")
-        itc_details.setdefault("Import Of Capital Goods", {"iamt": igst, "csamt": cess})
+        itc_details.setdefault("Import Of Goods", {"iamt": igst, "csamt": cess})
 
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(
