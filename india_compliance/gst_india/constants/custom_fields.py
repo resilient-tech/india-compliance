@@ -115,6 +115,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "read_only": 0,
             "translatable": 0,
+            "fetch_from": "",
         },
         {
             "fieldname": "is_reverse_charge",
@@ -198,6 +199,7 @@ CUSTOM_FIELDS = {
             "read_only": 0,
             "length": 50,
             "translatable": 0,
+            "fetch_from": "",
         },
         {
             "fieldname": "company_gstin",
