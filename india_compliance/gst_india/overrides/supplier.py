@@ -29,7 +29,9 @@ def update_transporter_gstin(doc, method=None):
         return
 
     doc.gst_transporter_id = validate_gstin(
-        doc.gst_transporter_id, _("GST Transporter ID")
+        doc.gst_transporter_id,
+        _("GST Transporter ID"),
+        is_transporter_id=True,
     )
 
     if not REGISTERED.match(doc.gst_transporter_id):

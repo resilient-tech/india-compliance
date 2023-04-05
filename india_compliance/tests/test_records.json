@@ -175,6 +175,15 @@
             "supplier_type": "Individual",
             "gstin": "",
             "gst_category": "Overseas"
+        },
+        {
+            "name": "_Test Transporter with Enrolment No",
+            "supplier_name": "_Test Transporter with Enrolment No",
+            "supplier_type": "Individual",
+            "is_transporter": 1,
+            "gst_transporter_id": "88AAACD8017H1ZX",
+            "gstin": "",
+            "gst_category": "Unregistered"
         }
     ],
     "Address": [
