@@ -94,11 +94,17 @@ def get_gstin_list(party, party_type="Company"):
     return gstin_list
 
 
-def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
+def validate_gstin(
+    gstin,
+    label="GSTIN",
+    *,
+    is_tcs_gstin=False,
+    is_transporter_id=False,
+):
     """
     Validate GSTIN with following checks:
     - Length should be 15
-    - Validate GSTIN Check Digit
+    - Validate GSTIN Check Digit (except for Unique Common Enrolment Number for Transporters)
     - Validate GSTIN of e-Commerce Operator (TCS) (Based on is_tcs_gstin)
     """
 
@@ -113,7 +119,8 @@ def validate_gstin(gstin, label="GSTIN", is_tcs_gstin=False):
             title=_("Invalid {0}").format(label),
         )
 
-    validate_gstin_check_digit(gstin, label)
+    if not (is_transporter_id and gstin.startswith("88")):
+        validate_gstin_check_digit(gstin, label)
 
     if is_tcs_gstin and not TCS.match(gstin):
         frappe.throw(
