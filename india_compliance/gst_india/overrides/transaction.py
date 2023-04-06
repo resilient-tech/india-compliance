@@ -647,21 +647,6 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
     return default_tax
 
 
-def set_item_tax_from_hsn_code(item):
-    if not item.taxes and item.gst_hsn_code:
-        hsn_doc = frappe.get_doc("GST HSN Code", item.gst_hsn_code)
-
-        for tax in hsn_doc.taxes:
-            item.append(
-                "taxes",
-                {
-                    "item_tax_template": tax.item_tax_template,
-                    "tax_category": tax.tax_category,
-                    "valid_from": tax.valid_from,
-                },
-            )
-
-
 def validate_reverse_charge_transaction(doc, method=None):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
@@ -719,9 +704,18 @@ def validate_transaction(doc, method=None):
 
     set_place_of_supply(doc)
     validate_mandatory_fields(doc, ("company_gstin", "place_of_supply"))
-    validate_mandatory_fields(
-        doc, "gst_category", _("Please ensure it is set in the Party and / or Address.")
-    )
+
+    # Ignore validation for Quotation not to Customer
+    if doc.doctype != "Quotation" or doc.quotation_to == "Customer":
+        validate_mandatory_fields(
+            doc,
+            "gst_category",
+            _("Please ensure it is set in the Party and / or Address."),
+        )
+
+    elif not doc.gst_category:
+        doc.gst_category = "Unregistered"
+
     validate_overseas_gst_category(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
