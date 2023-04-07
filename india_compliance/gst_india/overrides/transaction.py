@@ -95,20 +95,26 @@ def is_indian_registered_company(doc):
     return True
 
 
-def validate_mandatory_fields(doc, fields, message=None):
+def validate_mandatory_fields(doc, fields, error_message=None):
+    ignore_mandatory = not doc.docstatus and doc.flags.ignore_mandatory
+
     if isinstance(fields, str):
         fields = (fields,)
 
+    if not error_message:
+        error_message = _("{0} is a mandatory field for GST Transactions")
+
     for field in fields:
-        if not doc.get(field):
-            error_message = _("{0} is a mandatory field for GST Transactions").format(
-                bold(_(doc.meta.get_label(field))),
-            )
+        if doc.get(field):
+            continue
 
-            if message:
-                error_message += f". {message}"
+        if ignore_mandatory:
+            return False
 
-            frappe.throw(error_message, title=_("Missing Required Field"))
+        frappe.throw(
+            error_message.format(bold(_(doc.meta.get_label(field)))),
+            title=_("Missing Required Field"),
+        )
 
 
 def get_valid_accounts(company, is_sales_transaction=False):
@@ -702,15 +708,24 @@ def validate_transaction(doc, method=None):
         return False
 
     set_place_of_supply(doc)
-    validate_mandatory_fields(doc, ("company_gstin", "place_of_supply"))
+
+    if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
+        return False
 
     # Ignore validation for Quotation not to Customer
     if doc.doctype != "Quotation" or doc.quotation_to == "Customer":
-        validate_mandatory_fields(
-            doc,
-            "gst_category",
-            _("Please ensure it is set in the Party and / or Address."),
-        )
+        if (
+            validate_mandatory_fields(
+                doc,
+                "gst_category",
+                _(
+                    "{0} is a mandatory field for GST Transactions. Please ensure that"
+                    " it is set in the Party and / or Address."
+                ),
+            )
+            is False
+        ):
+            return False
 
     elif not doc.gst_category:
         doc.gst_category = "Unregistered"
