@@ -5,6 +5,8 @@ CUSTOM_FIELDS = {
             "fieldtype": "Section Break",
             "label": "Audit Trail",
             "insert_after": "invoice_and_billing_tab",
+            "collapsible": 1,
+            "collapsible_depends_on": "eval: !doc.enable_audit_trail",
         },
         {
             "fieldname": "enable_audit_trail",
