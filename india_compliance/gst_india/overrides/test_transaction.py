@@ -107,20 +107,25 @@ class TestTransaction(FrappeTestCase):
         self.assertTrue(doc.place_of_supply)
 
     def test_validate_mandatory_company_gstin(self):
+        def unset_company_gstin():
+            doc.set(
+                "company_address" if self.is_sales_doctype else "billing_address", ""
+            )
+            doc.company_gstin = ""
+
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
-
-        if self.is_sales_doctype:
-            doc.company_address = ""
-        else:
-            doc.billing_address = ""
-
-        doc.company_gstin = ""
+        unset_company_gstin()
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*is a mandatory field for GST Transactions.*)$"),
             doc.save,
         )
+
+        doc.reload()
+        unset_company_gstin()
+        doc.flags.ignore_mandatory = True
+        doc.save()
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
