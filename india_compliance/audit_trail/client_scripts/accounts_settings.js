@@ -13,26 +13,33 @@ frappe.ui.form.on("Accounts Settings", {
     },
     enable_audit_trail(frm) {
         toggle_linked_ledger_entry_deletion(frm);
+        if (!frm.doc.enable_audit_trail) return;
 
-        if (frm.doc.enable_audit_trail && frm.doc.delete_linked_ledger_entries) {
-            frappe.msgprint({
-                title: __("Warning"),
-                indicator: "orange",
-                message: __(
-                    "<strong>{0}</strong> will be disabled to ensure Audit Trail integrity",
-                    [
-                        __(
-                            frappe.meta.get_label(
-                                "Accounts Settings",
-                                "delete_linked_ledger_entries",
-                                frm.doc.name
-                            )
-                        ),
-                    ]
-                ),
-            });
+        let message = __("Audit Trail cannot be disabled once enabled.");
+        if (frm.doc.delete_linked_ledger_entries) {
+            message += __(
+                `<br><br>
+                Additionally, the following setting will be disabled
+                to ensure Audit Trail integrity:<br>
+                <strong>{0}</strong>`,
+                [
+                    __(
+                        frappe.meta.get_label(
+                            "Accounts Settings",
+                            "delete_linked_ledger_entries",
+                            frm.doc.name
+                        )
+                    ),
+                ]
+            );
             frm.set_value("delete_linked_ledger_entries", 0);
         }
+
+        frappe.msgprint({
+            title: __("Warning"),
+            indicator: "orange",
+            message,
+        });
     },
 });
 
