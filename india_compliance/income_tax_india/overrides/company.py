@@ -34,12 +34,7 @@ def set_tax_withholding_category(company):
     if company and tds_account:
         accounts.append({"company": company, "account": tds_account})
 
-    try:
-        fiscal_year_details = get_fiscal_year(getdate(), verbose=0)
-        fiscal_year_details = fiscal_year_details[1:]
-    except FiscalYearError:
-        fiscal_year_details = get_indian_fiscal_year()
-
+    fiscal_year_details = get_current_fiscal_year()
     docs = get_tds_details(accounts, fiscal_year_details)
 
     for d in docs:
@@ -107,8 +102,15 @@ def get_tds_details(accounts, fiscal_year_details):
     return tds_details
 
 
-def get_indian_fiscal_year():
+def get_current_fiscal_year():
     today = getdate()
+    try:
+        fiscal_year = get_fiscal_year(today, verbose=0)
+        return fiscal_year[1:]
+
+    except FiscalYearError:
+        pass
+
     start_date_year = today.year if today.month >= 4 else today.year - 1
 
     return (
