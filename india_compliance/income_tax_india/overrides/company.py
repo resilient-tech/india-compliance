@@ -1,6 +1,5 @@
 import frappe
 from frappe.utils import getdate
-from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 
 from india_compliance.gst_india.overrides.company import create_default_company_account
 
@@ -104,13 +103,6 @@ def get_tds_details(accounts, fiscal_year_details):
 
 def get_current_fiscal_year():
     today = getdate()
-    try:
-        fiscal_year = get_fiscal_year(today, verbose=0)
-        return fiscal_year[1:]
-
-    except FiscalYearError:
-        pass
-
     start_date_year = today.year if today.month >= 4 else today.year - 1
 
     return (
