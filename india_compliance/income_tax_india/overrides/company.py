@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import today
+from frappe.utils import getdate
 from erpnext.accounts.utils import FiscalYearError, get_fiscal_year
 
 from india_compliance.gst_india.overrides.company import create_default_company_account
@@ -28,7 +28,6 @@ def create_tds_account(company):
 
 def set_tax_withholding_category(company):
     accounts = []
-    fiscal_year_details = None
     abbr = frappe.get_value("Company", company, "abbr")
     tds_account = frappe.get_value("Account", "TDS Payable - {0}".format(abbr), "name")
 
@@ -36,9 +35,10 @@ def set_tax_withholding_category(company):
         accounts.append({"company": company, "account": tds_account})
 
     try:
-        fiscal_year_details = get_fiscal_year(today(), verbose=0)
+        fiscal_year_details = get_fiscal_year(getdate(), verbose=0)
+        fiscal_year_details = fiscal_year_details[1:]
     except FiscalYearError:
-        pass
+        fiscal_year_details = get_indian_fiscal_year()
 
     docs = get_tds_details(accounts, fiscal_year_details)
 
@@ -57,16 +57,18 @@ def set_tax_withholding_category(company):
             if accounts:
                 doc.append("accounts", accounts[0])
 
-            if fiscal_year_details:
-                # if fiscal year don't match with any of the already entered data, append rate row
-                fy_exist = [
-                    k
-                    for k in doc.get("rates")
-                    if k.get("from_date") <= fiscal_year_details[1]
-                    and k.get("to_date") >= fiscal_year_details[2]
-                ]
-                if not fy_exist:
-                    doc.append("rates", d.get("rates")[0])
+            # if fiscal year doesn't match with any of the already entered data,
+            # append rate row
+            if not next(
+                (
+                    row
+                    for row in doc.get("rates")
+                    if row.get("from_date") <= fiscal_year_details[0]
+                    and row.get("to_date") >= fiscal_year_details[1]
+                ),
+                None,
+            ):
+                doc.append("rates", d.get("rates")[0])
 
             doc.flags.ignore_permissions = True
             doc.flags.ignore_validate = True
@@ -93,8 +95,8 @@ def get_tds_details(accounts, fiscal_year_details):
                     "accounts": accounts,
                     "rates": [
                         {
-                            "from_date": fiscal_year_details[1],
-                            "to_date": fiscal_year_details[2],
+                            "from_date": fiscal_year_details[0],
+                            "to_date": fiscal_year_details[1],
                             "tax_withholding_rate": rule[1],
                             "single_threshold": rule[2],
                             "cumulative_threshold": rule[3],
@@ -103,3 +105,13 @@ def get_tds_details(accounts, fiscal_year_details):
                 }
             )
     return tds_details
+
+
+def get_indian_fiscal_year():
+    today = getdate()
+    start_date_year = today.year if today.month >= 4 else today.year - 1
+
+    return (
+        getdate(f"{start_date_year}-04-01"),
+        getdate(f"{start_date_year + 1}-03-31"),
+    )
