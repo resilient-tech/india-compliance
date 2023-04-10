@@ -6,7 +6,6 @@ function update_erpnext_slides_settings() {
         fieldname: "enable_audit_trail",
         fieldtype: "Check",
         label: __("Enable Audit Trail"),
-        default: 1,
         description: __(
             `In accordance with <a
               href='https://www.mca.gov.in/Ministry/pdf/AccountsAmendmentRules_24032021.pdf'
