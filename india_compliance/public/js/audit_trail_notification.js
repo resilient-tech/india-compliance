@@ -22,16 +22,16 @@ $(document).on("app_ready", async function() {
             To comply with this requirement, we have introduced a new setting called
             <strong>Enable Audit Trail</strong> in Accounts Settings.
             <br><br>
-            Note:
+            <strong>Note:</strong>
             <ul>
+                <li>Once this setting is enabled, it cannot be disabled.</li>
                 <li>
-                Enabling this setting will cause the accounts setting to
+                Enabling this setting will cause the following accounts setting
+                to get disabled to ensure Audit Trail integrity:<br>
                 <strong>
                 Delete Accounting and Stock Ledger Entries on deletion of Transaction
                 </strong>
-                to get disabled to ensure Audit Trail integrity.
                 </li>
-                <li>Once this setting is enabled, it cannot be disabled.</li>
             </ul>
 
 
