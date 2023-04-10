@@ -35,7 +35,7 @@ class GSTTransactionData:
         }
 
     def set_transaction_details(self):
-        rounding_adjustment = self.rounded(self.doc.rounding_adjustment)
+        rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
         if self.doc.is_return:
             rounding_adjustment = -rounding_adjustment
 
