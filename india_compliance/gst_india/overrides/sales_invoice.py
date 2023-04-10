@@ -1,8 +1,11 @@
 import frappe
-from frappe import _, bold
+from frappe import _
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.overrides.transaction import (
+    validate_mandatory_fields,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -79,13 +82,11 @@ def validate_fields_and_set_status_for_e_invoice(doc):
     ):
         return
 
-    for field in ("customer_address",):
-        if not doc.get(field):
-            frappe.throw(
-                _("{0} is a mandatory field for generating e-Invoices").format(
-                    bold(_(doc.meta.get_label(field))),
-                )
-            )
+    validate_mandatory_fields(
+        doc,
+        "customer_address",
+        _("{0} is a mandatory field for generating e-Invoices"),
+    )
 
     if doc._action == "submit" and not doc.irn:
         doc.einvoice_status = "Pending"
