@@ -568,9 +568,8 @@ class EWaybillData(GSTTransactionData):
         Validates:
         - Required fields
         - Atleast one item with HSN for goods is required
-        - Overseas Returns are not allowed
         - Basic transporter details must be present
-        - Grand Total Amount must be greater than Criteria
+        - Transaction does not have any non-GST items
         """
 
         for fieldname in ("company_address", "customer_address"):
@@ -595,13 +594,6 @@ class EWaybillData(GSTTransactionData):
                 ),
                 title=_("Invalid Data"),
             )
-
-        # TODO: check if this validation is required
-        # if self.doc.is_return and self.doc.gst_category == "Overseas":
-        #     frappe.throw(
-        #         msg=_("Return/Credit Note is not supported for Overseas e-Waybill"),
-        #         title=_("Incorrect Usage"),
-        #     )
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
