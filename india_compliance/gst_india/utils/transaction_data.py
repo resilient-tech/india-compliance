@@ -48,12 +48,15 @@ class GSTTransactionData:
         self.transaction_details.update(
             {
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
-                "base_total": abs(
+                "total": abs(
                     self.rounded(sum(row.taxable_value for row in self.doc.items))
                 ),
                 "rounding_adjustment": rounding_adjustment,
-                "base_grand_total": abs(
-                    self.rounded(self.doc.get(grand_total_fieldname))
+                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
+                "grand_total_in_foreign_currency": (
+                    abs(self.rounded(self.doc.grand_total))
+                    if self.doc.currency != "INR"
+                    else ""
                 ),
                 "discount_amount": 0,
                 "company_gstin": self.doc.company_gstin,
@@ -69,9 +72,9 @@ class GSTTransactionData:
         pass
 
     def update_transaction_tax_details(self):
-        tax_totals = [f"total_{tax}_amount" for tax in GST_TAX_TYPES]
+        tax_total_keys = tuple(f"total_{tax}_amount" for tax in GST_TAX_TYPES)
 
-        for key in tax_totals:
+        for key in tax_total_keys:
             self.transaction_details[key] = 0
 
         for row in self.doc.taxes:
@@ -85,10 +88,10 @@ class GSTTransactionData:
 
         # Other Charges
         current_total = 0
-        for total in ["base_total", "rounding_adjustment", *tax_totals]:
-            current_total += self.transaction_details.get(total)
+        for key in ("total", "rounding_adjustment", *tax_total_keys):
+            current_total += self.transaction_details.get(key)
 
-        other_charges = self.transaction_details.base_grand_total - current_total
+        other_charges = self.transaction_details.grand_total - current_total
 
         if 0 > other_charges > -0.1:
             # other charges cannot be negative
