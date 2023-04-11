@@ -1,24 +1,22 @@
 import frappe
 from frappe import _
-from frappe.utils import date_diff, flt
+from frappe.utils import date_diff
+from erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule import (
+    get_straight_line_or_manual_depr_amount,
+    get_wdv_or_dd_depr_amount,
+)
 
 
-def get_depreciation_amount(asset, depreciable_value, row):
+def get_depreciation_amount(
+    asset,
+    depreciable_value,
+    row,
+    schedule_idx=0,
+    prev_depreciation_amount=0,
+    has_wdv_or_dd_non_yearly_pro_rata=False,
+):
     if row.depreciation_method in ("Straight Line", "Manual"):
-        # if the Depreciation Schedule is being prepared for the first time
-        if not asset.flags.increase_in_asset_life:
-            depreciation_amount = (
-                flt(asset.gross_purchase_amount)
-                - flt(row.expected_value_after_useful_life)
-            ) / flt(row.total_number_of_depreciations)
-
-        # if the Depreciation Schedule is being modified after Asset Repair
-        else:
-            depreciation_amount = (
-                flt(row.value_after_depreciation)
-                - flt(row.expected_value_after_useful_life)
-            ) / (date_diff(asset.to_date, asset.available_for_use_date) / 365)
-
+        return get_straight_line_or_manual_depr_amount(asset, row)
     else:
         rate_of_depreciation = row.rate_of_depreciation
         # if its the first depreciation
@@ -38,7 +36,11 @@ def get_depreciation_amount(asset, depreciable_value, row):
                             " depreciation entry is reduced by 50%."
                         )
                     )
-
-        depreciation_amount = flt(depreciable_value * (flt(rate_of_depreciation) / 100))
-
-    return depreciation_amount
+        return get_wdv_or_dd_depr_amount(
+            depreciable_value,
+            rate_of_depreciation,
+            row.frequency_of_depreciation,
+            schedule_idx,
+            prev_depreciation_amount,
+            has_wdv_or_dd_non_yearly_pro_rata,
+        )
