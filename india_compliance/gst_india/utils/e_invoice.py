@@ -444,7 +444,8 @@ class EInvoiceData(GSTTransactionData):
             )
 
         self.billing_address.legal_name = self.sanitize_value(
-            self.doc.customer_name or self.doc.customer
+            self.doc.customer_name
+            or frappe.db.get_value("Customer", self.doc.customer, "customer_name")
         )
         self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
