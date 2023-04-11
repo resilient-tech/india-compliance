@@ -142,9 +142,10 @@ class TestTransactionData(FrappeTestCase):
             gst_transaction_data.transaction_details,
             {
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
-                "base_total": 100.0,
+                "total": 100.0,
                 "rounding_adjustment": 0.0,
-                "base_grand_total": 100.0,
+                "grand_total": 100.0,
+                "grand_total_in_foreign_currency": "",
                 "discount_amount": 0,
                 "company_gstin": "24AAQCA8719H1ZC",
                 "name": doc.name,
