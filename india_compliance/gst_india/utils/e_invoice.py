@@ -394,11 +394,6 @@ class EInvoiceData(GSTTransactionData):
                 "credit_days": credit_days,
                 "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
                 "payment_terms": self.sanitize_value(self.doc.payment_terms_template),
-                "grand_total": (
-                    abs(self.rounded(self.doc.grand_total))
-                    if self.doc.currency != "INR"
-                    else ""
-                ),
             }
         )
 
@@ -449,7 +444,8 @@ class EInvoiceData(GSTTransactionData):
             )
 
         self.billing_address.legal_name = self.sanitize_value(
-            self.doc.customer_name or self.doc.customer
+            self.doc.customer_name
+            or frappe.db.get_value("Customer", self.doc.customer, "customer_name")
         )
         self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
@@ -542,7 +538,7 @@ class EInvoiceData(GSTTransactionData):
             },
             "ItemList": self.item_list,
             "ValDtls": {
-                "AssVal": self.transaction_details.base_total,
+                "AssVal": self.transaction_details.total,
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,
@@ -551,8 +547,8 @@ class EInvoiceData(GSTTransactionData):
                 "Discount": self.transaction_details.discount_amount,
                 "RndOffAmt": self.transaction_details.rounding_adjustment,
                 "OthChrg": self.transaction_details.other_charges,
-                "TotInvVal": self.transaction_details.base_grand_total,
-                "TotInvValFc": self.transaction_details.grand_total,
+                "TotInvVal": self.transaction_details.grand_total,
+                "TotInvValFc": self.transaction_details.grand_total_in_foreign_currency,
             },
             "PayDtls": {
                 "Nm": self.transaction_details.payee_name,
