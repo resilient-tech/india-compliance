@@ -58,7 +58,9 @@ class GSTTransactionData:
                     if self.doc.currency != "INR"
                     else ""
                 ),
-                "discount_amount": 0,
+                "discount_amount": self.doc.base_discount_amount
+                if self.doc.is_cash_or_non_trade_discount
+                else 0,
                 "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
                 "other_charges": 0,
@@ -91,6 +93,7 @@ class GSTTransactionData:
         for key in ("total", "rounding_adjustment", *tax_total_keys):
             current_total += self.transaction_details.get(key)
 
+        current_total -= self.transaction_details.discount_amount
         other_charges = self.transaction_details.grand_total - current_total
 
         if 0 > other_charges > -0.1:
