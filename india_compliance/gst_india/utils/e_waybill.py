@@ -841,7 +841,8 @@ class EWaybillData(GSTTransactionData):
             "cessValue": self.transaction_details.total_cess_amount,
             "TotNonAdvolVal": self.transaction_details.total_cess_non_advol_amount,
             "OthValue": self.transaction_details.rounding_adjustment
-            + self.transaction_details.other_charges,
+            + self.transaction_details.other_charges
+            - self.transaction_details.discount_amount,
             "totInvValue": self.transaction_details.grand_total,
             "transMode": self.transaction_details.mode_of_transport,
             "transDistance": self.transaction_details.distance,
