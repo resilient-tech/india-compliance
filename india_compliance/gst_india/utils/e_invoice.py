@@ -542,8 +542,10 @@ class EInvoiceData(GSTTransactionData):
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,
-                "CesVal": self.transaction_details.total_cess_amount
-                + self.transaction_details.total_cess_non_advol_amount,
+                "CesVal": (
+                    self.transaction_details.total_cess_amount
+                    + self.transaction_details.total_cess_non_advol_amount
+                ),
                 "Discount": self.transaction_details.discount_amount,
                 "RndOffAmt": self.transaction_details.rounding_adjustment,
                 "OthChrg": self.transaction_details.other_charges,
