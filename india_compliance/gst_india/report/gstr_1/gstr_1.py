@@ -368,7 +368,7 @@ class Gstr1Report(object):
 
         items = frappe.db.sql(
             """
-			select item_code, parent, taxable_value, base_net_amount, item_tax_rate, is_nil_exempt,
+			select item_code, item_name, parent, taxable_value, base_net_amount, item_tax_rate, is_nil_exempt,
 			is_non_gst from `tab%s Item`
 			where parent in (%s)
 		"""
@@ -378,6 +378,7 @@ class Gstr1Report(object):
         )
 
         for d in items:
+            d.item_code = d.item_code or d.item_name
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
             self.invoice_items[d.parent][d.item_code] += d.get(
                 "taxable_value", 0
