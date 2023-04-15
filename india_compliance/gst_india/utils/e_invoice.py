@@ -424,8 +424,8 @@ class EInvoiceData(GSTTransactionData):
         )
 
         # Defaults
-        self.shipping_address = self.billing_address
-        self.dispatch_address = self.company_address
+        self.shipping_address = frappe._dict()
+        self.dispatch_address = frappe._dict()
 
         if (
             self.doc.shipping_address_name
@@ -457,7 +457,6 @@ class EInvoiceData(GSTTransactionData):
                 "pincode": 193501,
             }
             self.company_address.update(seller)
-            self.dispatch_address.update(seller)
             self.transaction_details.name = random_string(6).lstrip("0")
 
             if frappe.flags.in_test:
@@ -471,7 +470,6 @@ class EInvoiceData(GSTTransactionData):
                     "pincode": 500055,
                 }
                 self.billing_address.update(buyer)
-                self.shipping_address.update(buyer)
 
                 if self.transaction_details.total_igst_amount > 0:
                     self.transaction_details.place_of_supply = "36"
