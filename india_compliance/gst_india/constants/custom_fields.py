@@ -7,13 +7,15 @@ gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
 
 
-def get_place_of_supply_options():
+def get_place_of_supply_options(with_other_countries=False):
     options = []
 
     for state_name, state_number in STATE_NUMBERS.items():
         options.append(f"{state_number}-{state_name}")
 
-    options.append("96-Other Countries")
+    if with_other_countries:
+        options.append("96-Other Countries")
+
     return "\n".join(sorted(options))
 
 
@@ -193,7 +195,7 @@ CUSTOM_FIELDS = {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
             "fieldtype": "Autocomplete",
-            "options": get_place_of_supply_options(),
+            "options": get_place_of_supply_options(True),
             "insert_after": "gst_category",
             "print_hide": 1,
             "read_only": 0,
