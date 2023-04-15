@@ -109,6 +109,7 @@ def create_hsn_codes():
         ignore_duplicates=True,
         chunk_size=20_000,
     )
+    frappe.db.set_global("updated_hsn_code", 1)
 
 
 def add_fields_to_item_variant_settings():
