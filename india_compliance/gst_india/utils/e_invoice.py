@@ -88,8 +88,10 @@ def generate_e_invoices(docnames):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, throw=True):
+def generate_e_invoice(docname, *, throw=True, submitted_from_ui=False):
     doc = load_doc("Sales Invoice", docname, "submit")
+    doc._submitted_from_ui = submitted_from_ui
+
     try:
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
@@ -413,6 +415,18 @@ class EInvoiceData(GSTTransactionData):
             supply_type = f"{supply_type}{EXPORT_TYPES[self.doc.is_export_with_gst]}"
 
         return supply_type
+
+    def set_transporter_details(self):
+        if (
+            self.transaction_details.grand_total < self.settings.e_waybill_threshold
+            or (
+                self.doc.get("_submitted_from_ui")
+                and not self.settings.auto_generate_e_waybill
+            )
+        ):
+            return
+
+        return super().set_transporter_details()
 
     def set_party_address_details(self):
         self.billing_address = self.get_address_details(

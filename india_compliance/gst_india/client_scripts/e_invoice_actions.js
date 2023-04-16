@@ -45,6 +45,7 @@ frappe.ui.form.on("Sales Invoice", {
             {
                 docname: frm.doc.name,
                 throw: false,
+                submitted_from_ui: true,
             }
         );
     },
