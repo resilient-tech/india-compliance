@@ -352,15 +352,12 @@ def validate_items(doc):
 
 
 def validate_place_of_supply(doc):
-    if not doc.place_of_supply:
-        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
-        return
-
     valid_options = doc.meta.get_field("place_of_supply").options.split("\n")
     if doc.place_of_supply not in valid_options:
         frappe.throw(
             _(
-                'Place of Supply "<strong>{0}</strong>" is invalid. Please choose from available options.'
+                '"<strong>{0}</strong>" is not a valid Place of Supply. Please choose'
+                " from available options."
             ).format(doc.place_of_supply),
             title=_("Invalid Place of Supply"),
         )
@@ -717,7 +714,10 @@ def validate_transaction(doc, method=None):
         # If there are no GST items, then no need to proceed further
         return False
 
-    validate_place_of_supply(doc)
+    if doc.place_of_supply:
+        validate_place_of_supply(doc)
+    else:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
     if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
         return False
