@@ -45,7 +45,14 @@ class Gstr1Report(object):
 			shipping_bill_number,
 			shipping_bill_date,
 			reason_for_issuing_document,
-			company_gstin
+			company_gstin,
+			(
+				CASE
+					WHEN gst_category = "Unregistered" AND NULLIF(return_against, '') is not null
+					THEN (select base_grand_total from `tabSales Invoice` where name = return_against)
+					ELSE NULL
+				END
+			) AS return_against_invoice_total
 		"""
 
     def run(self):
@@ -228,29 +235,21 @@ class Gstr1Report(object):
                 self.data.append(value)
 
     def is_b2cl_cdn(self, invoice):
-        """
-        Invoices with following propoerties are received:
-        - GST Category: Unregistered or Overseas
-        """
-        if not invoice.is_return and not invoice.is_debit_note:
-            return
-
-        if invoice.company_gstin[:2] == invoice.place_of_supply[:2] or (
-            not invoice.return_against
-            and abs(invoice.base_grand_total) <= B2C_LIMIT
-            and invoice.gst_category == "Unregistered"
-        ):
+        if not (invoice.is_return or invoice.is_debit_note):
+            # not CDN
             return False
 
-        if invoice.return_against and invoice.gst_category == "Unregistered":
-            original_base_grand_total = frappe.db.get_value(
-                "Sales Invoice", invoice.return_against, "base_grand_total"
-            )
+        if invoice.gst_category != "Unregistered":
+            return True
 
-            if original_base_grand_total <= B2C_LIMIT:
-                return False
+        if invoice.company_gstin[:2] == invoice.place_of_supply[:2]:
+            # not B2CL
+            return False
 
-        return True
+        grand_total = invoice.return_against_invoice_total or abs(
+            invoice.base_grand_total
+        )
+        return grand_total > B2C_LIMIT
 
     def get_row_data_for_invoice(self, invoice, invoice_details, tax_rate, items):
         row = []
