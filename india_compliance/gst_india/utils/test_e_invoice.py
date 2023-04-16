@@ -25,8 +25,7 @@ from india_compliance.gst_india.utils.tests import create_sales_invoice
 class TestEInvoice(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "enable_api": 1,
@@ -82,8 +81,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "auto_generate_e_waybill": 1,
@@ -93,8 +91,7 @@ class TestEInvoice(FrappeTestCase):
 
         generate_e_invoice(si.name, submitted_from_ui=True)
 
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "auto_generate_e_waybill": 0,
@@ -324,8 +321,7 @@ class TestEInvoice(FrappeTestCase):
             {"AckDt": str(now_datetime())}
         )
 
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "auto_generate_e_waybill": 1,
@@ -342,8 +338,7 @@ class TestEInvoice(FrappeTestCase):
 
         generate_e_invoice(si.name, submitted_from_ui=True)
 
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "auto_generate_e_waybill": 0,
