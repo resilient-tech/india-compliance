@@ -49,8 +49,7 @@ class Gstr1Report(object):
 			(
 				CASE
 					WHEN gst_category = "Unregistered" AND NULLIF(return_against, '') is not null
-					THEN (select base_grand_total from `tabSales Invoice` where name = return_against)
-					ELSE NULL
+					THEN (select base_grand_total from `tabSales Invoice` ra where ra.name = si.return_against)
 				END
 			) AS return_against_invoice_total
 		"""
@@ -321,7 +320,7 @@ class Gstr1Report(object):
             """
 			select
 				{select_columns}
-			from `tab{doctype}`
+			from `tab{doctype}` si
 			where docstatus = 1 {where_conditions}
 			and is_opening = 'No'
 			order by posting_date desc
