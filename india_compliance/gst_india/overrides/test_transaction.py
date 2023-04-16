@@ -446,11 +446,11 @@ class TestTransaction(FrappeTestCase):
             do_not_save=True,
         )
 
-        doc.place_of_supply = "96-Other Countries"
+        doc.place_of_supply = "27-Maharashtra"
         doc.save()
 
         # place of supply shouldn't get overwritten
-        self.assertEqual(doc.place_of_supply, "96-Other Countries")
+        self.assertEqual(doc.place_of_supply, "27-Maharashtra")
 
         # IGST should get applied
         self.assertIn("IGST", doc.taxes[-1].description)
