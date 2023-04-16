@@ -352,9 +352,16 @@ def validate_items(doc):
         )
 
 
-def set_place_of_supply(doc, method=None):
-    if not doc.place_of_supply:
-        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+def validate_place_of_supply(doc):
+    valid_options = doc.meta.get_field("place_of_supply").options.split("\n")
+    if doc.place_of_supply not in valid_options:
+        frappe.throw(
+            _(
+                '"<strong>{0}</strong>" is not a valid Place of Supply. Please choose'
+                " from available options."
+            ).format(doc.place_of_supply),
+            title=_("Invalid Place of Supply"),
+        )
 
 
 def is_inter_state_supply(doc):
@@ -708,7 +715,10 @@ def validate_transaction(doc, method=None):
         # If there are no GST items, then no need to proceed further
         return False
 
-    set_place_of_supply(doc)
+    if doc.place_of_supply:
+        validate_place_of_supply(doc)
+    else:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
     if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
         return False
