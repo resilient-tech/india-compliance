@@ -449,12 +449,6 @@ class EInvoiceData(GSTTransactionData):
         )
         self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
-        if self.doc.is_return:
-            self.dispatch_address, self.shipping_address = (
-                self.shipping_address,
-                self.dispatch_address,
-            )
-
     def get_invoice_data(self):
         if self.sandbox_mode:
             seller = {
@@ -487,6 +481,12 @@ class EInvoiceData(GSTTransactionData):
                     self.transaction_details.place_of_supply = "36"
                 else:
                     self.transaction_details.place_of_supply = "01"
+
+        if self.doc.is_return:
+            self.dispatch_address, self.shipping_address = (
+                self.shipping_address,
+                self.dispatch_address,
+            )
 
         invoice_data = {
             "Version": "1.1",
