@@ -45,7 +45,13 @@ class Gstr1Report(object):
 			shipping_bill_number,
 			shipping_bill_date,
 			reason_for_issuing_document,
-			company_gstin
+			company_gstin,
+			(
+				CASE
+					WHEN gst_category = "Unregistered" AND NULLIF(return_against, '') is not null
+					THEN (select base_grand_total from `tabSales Invoice` ra where ra.name = si.return_against)
+				END
+			) AS return_against_invoice_total
 		"""
 
     def run(self):
@@ -81,6 +87,12 @@ class Gstr1Report(object):
                         "CDNR-REG",
                         "CDNR-UNREG",
                     ):
+                        # for Unregistered invoice, skip if B2CS
+                        if self.filters.get(
+                            "type_of_business"
+                        ) == "CDNR-UNREG" and not self.is_b2cl_cdn(invoice_details):
+                            continue
+
                         row.append(
                             "Y"
                             if invoice_details.posting_date <= date(2017, 7, 1)
@@ -169,34 +181,46 @@ class Gstr1Report(object):
         self.data = nil_exempt_output
 
     def get_b2c_data(self):
-        b2cs_output = {}
+        b2c_output = {}
 
         if self.invoices:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
+
+                # for B2C Small, skip if B2CL CDN
+                if self.filters.get(
+                    "type_of_business"
+                ) == "B2C Small" and self.is_b2cl_cdn(invoice_details):
+                    continue
+
                 for rate, items in items_based_on_rate.items():
                     place_of_supply = invoice_details.get("place_of_supply")
                     ecommerce_gstin = invoice_details.get("ecommerce_gstin")
+                    invoice_number = invoice_details.get("invoice_number")
 
-                    b2cs_output.setdefault(
-                        (rate, place_of_supply, ecommerce_gstin),
+                    if self.filters.get("type_of_business") == "B2C Small":
+                        default_key = (rate, place_of_supply, ecommerce_gstin)
+
+                    else:
+                        # B2C Large
+                        default_key = (rate, place_of_supply, invoice_number)
+
+                    b2c_output.setdefault(
+                        default_key,
                         {
-                            "place_of_supply": "",
-                            "ecommerce_gstin": "",
-                            "rate": "",
+                            "place_of_supply": place_of_supply,
+                            "ecommerce_gstin": ecommerce_gstin,
+                            "rate": rate,
                             "taxable_value": 0,
                             "cess_amount": 0,
                             "type": "",
-                            "invoice_number": invoice_details.get("invoice_number"),
+                            "invoice_number": invoice_number,
                             "posting_date": invoice_details.get("posting_date"),
                             "invoice_value": invoice_details.get("base_grand_total"),
                         },
                     )
 
-                    row = b2cs_output.get((rate, place_of_supply, ecommerce_gstin))
-                    row["place_of_supply"] = place_of_supply
-                    row["ecommerce_gstin"] = ecommerce_gstin
-                    row["rate"] = rate
+                    row = b2c_output.get(default_key)
                     row["taxable_value"] += sum(
                         [
                             net_amount
@@ -209,8 +233,25 @@ class Gstr1Report(object):
                     row["cess_amount"] += flt(self.invoice_cess.get(inv), 2)
                     row["type"] = "E" if ecommerce_gstin else "OE"
 
-            for key, value in b2cs_output.items():
+            for key, value in b2c_output.items():
                 self.data.append(value)
+
+    def is_b2cl_cdn(self, invoice):
+        if not (invoice.is_return or invoice.is_debit_note):
+            # not CDN
+            return False
+
+        if invoice.gst_category != "Unregistered":
+            return True
+
+        if invoice.company_gstin[:2] == invoice.place_of_supply[:2]:
+            # not B2CL
+            return False
+
+        grand_total = invoice.return_against_invoice_total or abs(
+            invoice.base_grand_total
+        )
+        return grand_total > B2C_LIMIT
 
     def get_row_data_for_invoice(self, invoice, invoice_details, tax_rate, items):
         row = []
@@ -282,7 +323,7 @@ class Gstr1Report(object):
             """
 			select
 				{select_columns}
-			from `tab{doctype}`
+			from `tab{doctype}` si
 			where docstatus = 1 {where_conditions}
 			and is_opening = 'No'
 			order by posting_date desc
@@ -342,7 +383,7 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "B2C Small":
             conditions += """ AND (
 				SUBSTR(place_of_supply, 1, 2) = SUBSTR(company_gstin, 1, 2)
-					OR grand_total <= {0} OR is_return != 1) AND gst_category ='Unregistered' """.format(
+					OR grand_total <= {0}) AND gst_category ='Unregistered' """.format(
                 B2C_LIMIT
             )
 
