@@ -87,6 +87,7 @@ class Gstr1Report(object):
                         "CDNR-REG",
                         "CDNR-UNREG",
                     ):
+                        # for Unregistered invoice, skip if B2CS
                         if self.filters.get(
                             "type_of_business"
                         ) == "CDNR-UNREG" and not self.is_b2cl_cdn(invoice_details):
@@ -185,6 +186,8 @@ class Gstr1Report(object):
         if self.invoices:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
+
+                # for B2C Small, skip if B2CL CDN
                 if self.filters.get(
                     "type_of_business"
                 ) == "B2C Small" and self.is_b2cl_cdn(invoice_details):
