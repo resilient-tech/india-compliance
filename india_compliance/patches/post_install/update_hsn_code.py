@@ -4,10 +4,17 @@ from india_compliance.gst_india.setup import create_hsn_codes
 
 
 def execute():
-    #patch will run only if new hsn codes are not created
-    if frappe.db.get_global("updated_hsn_code") == "1":
+    x = frappe.db.get_value(
+        "DefaultValue",
+        {
+            "parent": "__global",
+            "defkey": "updated_hsn_code",
+        },
+        "defvalue",
+    )
+    if x == "1":
         return
-    
+
     # used hsn in items
     used_hsn_code = frappe.db.sql_list(
         """select distinct gst_hsn_code from `tabItem` where gst_hsn_code is not null and gst_hsn_code != ''"""
