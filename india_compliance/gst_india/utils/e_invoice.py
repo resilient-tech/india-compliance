@@ -88,12 +88,11 @@ def generate_e_invoices(docnames):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, *, throw=True, submitted_from_ui=False):
+def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
-    doc._submitted_from_ui = submitted_from_ui
 
     try:
-        data = EInvoiceData(doc).get_data()
+        data = EInvoiceData(doc).get_data(for_auto_generation=not throw)
         api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
 
@@ -281,11 +280,11 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
 
 class EInvoiceData(GSTTransactionData):
-    def get_data(self):
+    def get_data(self, *, for_auto_generation=False):
         self.validate_transaction()
         self.set_transaction_details()
         self.set_item_list()
-        self.set_transporter_details()
+        self.set_transporter_details(for_auto_generation)
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
@@ -416,13 +415,12 @@ class EInvoiceData(GSTTransactionData):
 
         return supply_type
 
-    def set_transporter_details(self):
+    def set_transporter_details(self, for_auto_generation=False):
         if (
+            # e-waybill threshold is not met
             self.transaction_details.grand_total < self.settings.e_waybill_threshold
-            or (
-                self.doc.get("_submitted_from_ui")
-                and not self.settings.auto_generate_e_waybill
-            )
+            # e-waybill auto-generation is disabled by user
+            or (for_auto_generation and not self.settings.auto_generate_e_waybill)
         ):
             return
 
