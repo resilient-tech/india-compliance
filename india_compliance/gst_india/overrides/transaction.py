@@ -538,7 +538,12 @@ def get_gst_details(
         party_details.update(party_gst_details)
         gst_details.update(party_gst_details)
 
-    gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
+    gst_details.place_of_supply = (
+        party_details.place_of_supply
+        if (not update_place_of_supply and party_details.place_of_supply)
+        else get_place_of_supply(party_details, doctype)
+    )
+
     gst_details.update(
         get_tax_template(
             party_details.copy().update(
@@ -598,26 +603,21 @@ def get_party_gst_details(party_details, is_sales_transaction):
     """fetch GSTIN and GST category from party"""
 
     party_type = "Customer" if is_sales_transaction else "Supplier"
-    gstin_fieldname = (
-        "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
-    )
 
     fields = []
     if party_details.get("get_gstin_details"):
+        gstin_fieldname = (
+            "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
+        )
         fields.extend(["gst_category", f"gstin as {gstin_fieldname}"])
 
     if party_details.get("get_reverse_charge_details"):
         fields.append("is_reverse_charge")
 
-    if not (party := party_details.get(party_type.lower())):
+    if not fields or not (party := party_details.get(party_type.lower())):
         return
 
-    return frappe.db.get_value(
-        party_type,
-        party,
-        ("gst_category", f"gstin as {gstin_fieldname}"),
-        as_dict=True,
-    )
+    return frappe.db.get_value(party_type, party, fields, as_dict=True)
 
 
 def get_tax_template_by_category(doc, master_doctype):
