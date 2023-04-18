@@ -23,6 +23,7 @@
   "bill_of_entry_date",
   "column_break_v3jw",
   "port_code",
+  "bill_of_lading",
   "column_break_srom",
   "posting_date",
   "accounting_details_section",
@@ -263,13 +264,17 @@
    "label": "Customs Duty Expense Account",
    "options": "Account",
    "reqd": 1
+  },
+  {
+   "fieldname": "bill_of_lading",
+   "fieldtype": "Data",
+   "label": "Bill Of Lading"
   }
  ],
- "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-03-24 09:46:13.847177",
+ "modified": "2023-04-17 10:53:23.405243",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

@@ -205,8 +205,28 @@ class TaxesController {
     }
 
     setup() {
+        this.fetch_round_off_accounts();
         this.set_item_tax_template_query();
         this.set_account_head_query();
+    }
+
+    fetch_round_off_accounts() {
+		frappe.flags.round_off_applicable_accounts = [];
+
+		if (this.frm.doc.company) {
+			return frappe.call({
+				"method": "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
+				"args": {
+					"company": this.frm.doc.company,
+					"account_list": frappe.flags.round_off_applicable_accounts
+				},
+				callback(r) {
+					if (r.message) {
+						frappe.flags.round_off_applicable_accounts.push(...r.message);
+					}
+				}
+			});
+		}
     }
 
     set_item_tax_template_query() {
@@ -303,6 +323,10 @@ class TaxesController {
                 if (tax_amount !== row.tax_amount) {
                     row.tax_amount = tax_amount;
                 }
+            }
+
+            if (frappe.flags.round_off_applicable_accounts.includes(row.account_head)) {
+                row.tax_amount = Math.round(row.tax_amount);
             }
         });
 

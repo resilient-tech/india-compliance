@@ -11,6 +11,7 @@ from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -35,6 +36,7 @@ class BillofEntry(Document):
         )
 
     def before_validate(self):
+        self.set_round_off_accounts()
         self.set_taxes_and_totals()
 
     def validate(self):
@@ -101,6 +103,9 @@ class BillofEntry(Document):
         for tax in self.taxes:
             if tax.charge_type == "On Net Total":
                 tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates)
+
+            if tax.account_head in frappe.flags.round_off_applicable_accounts:
+                tax.tax_amount = round(tax.tax_amount, 0)
 
             total_taxes += tax.tax_amount
             tax.total = self.total_taxable_value + total_taxes
@@ -294,6 +299,12 @@ class BillofEntry(Document):
         taxes = self.get("taxes", {"name": tax_name}) if tax_name else self.taxes
 
         return items, taxes
+
+    def set_round_off_accounts(self):
+        frappe.flags.round_off_applicable_accounts = []
+        get_round_off_applicable_accounts(
+            self.company, frappe.flags.round_off_applicable_accounts
+        )
 
 
 @frappe.whitelist()
