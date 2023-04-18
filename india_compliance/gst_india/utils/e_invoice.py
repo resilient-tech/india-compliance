@@ -394,11 +394,6 @@ class EInvoiceData(GSTTransactionData):
                 "credit_days": credit_days,
                 "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
                 "payment_terms": self.sanitize_value(self.doc.payment_terms_template),
-                "grand_total": (
-                    abs(self.rounded(self.doc.grand_total))
-                    if self.doc.currency != "INR"
-                    else ""
-                ),
             }
         )
 
@@ -429,8 +424,8 @@ class EInvoiceData(GSTTransactionData):
         )
 
         # Defaults
-        self.shipping_address = self.billing_address
-        self.dispatch_address = self.company_address
+        self.shipping_address = None
+        self.dispatch_address = None
 
         if (
             self.doc.shipping_address_name
@@ -449,7 +444,8 @@ class EInvoiceData(GSTTransactionData):
             )
 
         self.billing_address.legal_name = self.sanitize_value(
-            self.doc.customer_name or self.doc.customer
+            self.doc.customer_name
+            or frappe.db.get_value("Customer", self.doc.customer, "customer_name")
         )
         self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
@@ -461,11 +457,14 @@ class EInvoiceData(GSTTransactionData):
                 "pincode": 193501,
             }
             self.company_address.update(seller)
-            self.dispatch_address.update(seller)
-            self.transaction_details.name = random_string(6).lstrip("0")
+            if self.dispatch_address:
+                self.dispatch_address.update(seller)
 
-            if frappe.flags.in_test:
-                self.transaction_details.name = "test_invoice_no"
+            self.transaction_details.name = (
+                random_string(6).lstrip("0")
+                if not frappe.flags.in_test
+                else "test_invoice_no"
+            )
 
             # For overseas transactions, dummy GSTIN is not needed
             if self.doc.gst_category != "Overseas":
@@ -475,7 +474,8 @@ class EInvoiceData(GSTTransactionData):
                     "pincode": 500055,
                 }
                 self.billing_address.update(buyer)
-                self.shipping_address.update(buyer)
+                if self.shipping_address:
+                    self.shipping_address.update(buyer)
 
                 if self.transaction_details.total_igst_amount > 0:
                     self.transaction_details.place_of_supply = "36"
@@ -488,7 +488,7 @@ class EInvoiceData(GSTTransactionData):
                 self.dispatch_address,
             )
 
-        return {
+        invoice_data = {
             "Version": "1.1",
             "TranDtls": {
                 "TaxSch": self.transaction_details.tax_scheme,
@@ -522,37 +522,21 @@ class EInvoiceData(GSTTransactionData):
                 "Stcd": self.billing_address.state_number,
                 "Pos": self.transaction_details.place_of_supply,
             },
-            "DispDtls": {
-                "Nm": self.dispatch_address.address_title,
-                "Addr1": self.dispatch_address.address_line1,
-                "Addr2": self.dispatch_address.address_line2,
-                "Loc": self.dispatch_address.city,
-                "Pin": self.dispatch_address.pincode,
-                "Stcd": self.dispatch_address.state_number,
-            },
-            "ShipDtls": {
-                "Gstin": self.shipping_address.gstin,
-                "LglNm": self.shipping_address.address_title,
-                "TrdNm": self.shipping_address.address_title,
-                "Addr1": self.shipping_address.address_line1,
-                "Addr2": self.shipping_address.address_line2,
-                "Loc": self.shipping_address.city,
-                "Pin": self.shipping_address.pincode,
-                "Stcd": self.shipping_address.state_number,
-            },
             "ItemList": self.item_list,
             "ValDtls": {
-                "AssVal": self.transaction_details.base_total,
+                "AssVal": self.transaction_details.total,
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,
-                "CesVal": self.transaction_details.total_cess_amount
-                + self.transaction_details.total_cess_non_advol_amount,
+                "CesVal": (
+                    self.transaction_details.total_cess_amount
+                    + self.transaction_details.total_cess_non_advol_amount
+                ),
                 "Discount": self.transaction_details.discount_amount,
                 "RndOffAmt": self.transaction_details.rounding_adjustment,
                 "OthChrg": self.transaction_details.other_charges,
-                "TotInvVal": self.transaction_details.base_grand_total,
-                "TotInvValFc": self.transaction_details.grand_total,
+                "TotInvVal": self.transaction_details.grand_total,
+                "TotInvValFc": self.transaction_details.grand_total_in_foreign_currency,
             },
             "PayDtls": {
                 "Nm": self.transaction_details.payee_name,
@@ -581,6 +565,30 @@ class EInvoiceData(GSTTransactionData):
                 "VehType": self.transaction_details.vehicle_type,
             },
         }
+
+        if self.dispatch_address:
+            invoice_data["DispDtls"] = {
+                "Nm": self.dispatch_address.address_title,
+                "Addr1": self.dispatch_address.address_line1,
+                "Addr2": self.dispatch_address.address_line2,
+                "Loc": self.dispatch_address.city,
+                "Pin": self.dispatch_address.pincode,
+                "Stcd": self.dispatch_address.state_number,
+            }
+
+        if self.shipping_address:
+            invoice_data["ShipDtls"] = {
+                "Gstin": self.shipping_address.gstin,
+                "LglNm": self.shipping_address.address_title,
+                "TrdNm": self.shipping_address.address_title,
+                "Addr1": self.shipping_address.address_line1,
+                "Addr2": self.shipping_address.address_line2,
+                "Loc": self.shipping_address.city,
+                "Pin": self.shipping_address.pincode,
+                "Stcd": self.shipping_address.state_number,
+            }
+
+        return invoice_data
 
     def get_item_data(self, item_details):
         return {

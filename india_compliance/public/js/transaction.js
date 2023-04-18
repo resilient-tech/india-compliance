@@ -61,14 +61,15 @@ async function update_gst_details(frm, event) {
     };
 
     // wait for GSTINs to get fetched
-    await frappe.after_ajax().then(() => {
-        frm.__gst_update_triggered = false;
+    await frappe.after_ajax();
 
-        if (frm.__update_place_of_supply) {
-            args.update_place_of_supply = 1;
-            frm.__update_place_of_supply = false;
-        }
-    });
+    // reset flags
+    frm.__gst_update_triggered = false;
+
+    if (frm.__update_place_of_supply) {
+        args.update_place_of_supply = 1;
+        frm.__update_place_of_supply = false;
+    }
 
     const party_details = {};
 
