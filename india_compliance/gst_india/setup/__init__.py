@@ -29,7 +29,7 @@ def after_install():
     create_address_template()
     set_default_gst_settings()
     set_default_accounts_settings()
-    _create_hsn_codes()
+    create_hsn_codes()
     add_fields_to_item_variant_settings()
 
 
@@ -75,13 +75,14 @@ def create_address_template():
     ).insert(ignore_permissions=True)
 
 
-def _create_hsn_codes():
+def create_hsn_codes():
     if frappe.db.count("GST HSN Code") > 0:
         return
-    create_hsn_codes()
+
+    _create_hsn_codes()
 
 
-def create_hsn_codes():
+def _create_hsn_codes():
     user = frappe.session.user
     now = now_datetime()
 
@@ -115,6 +116,7 @@ def create_hsn_codes():
         ignore_duplicates=True,
         chunk_size=20_000,
     )
+
     frappe.db.set_global("updated_hsn_code", 1)
 
 

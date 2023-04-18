@@ -1,10 +1,11 @@
 import frappe
 
-from india_compliance.gst_india.setup import create_hsn_codes
+from india_compliance.gst_india.setup import _create_hsn_codes
 
 
 def execute():
-    x = frappe.db.get_value(
+    # using db.get_value instead of db.get_global because cache is not cleared.
+    is_hsn_code_updated = frappe.db.get_value(
         "DefaultValue",
         {
             "parent": "__global",
@@ -12,15 +13,18 @@ def execute():
         },
         "defvalue",
     )
-    if x == "1":
+
+    if is_hsn_code_updated == "1":
         return
 
-    # used hsn in items
-    used_hsn_code = frappe.db.sql_list(
-        """select distinct gst_hsn_code from `tabItem` where gst_hsn_code is not null and gst_hsn_code != ''"""
+    used_hsn_code = frappe.get_all(
+        "Item",
+        fields=["gst_hsn_code"],
+        filters={"gst_hsn_code": ("!=", "")},
+        distinct=True,
+        pluck="gst_hsn_code",
     )
 
-    # remove all hsn except used_hsn list
     frappe.db.delete("GST HSN Code", {"name": ("not in", used_hsn_code)})
 
     if used_hsn_code:
@@ -37,5 +41,4 @@ def execute():
                 else:
                     frappe.rename_doc("GST HSN Code", hsn_code, new_hsn, force=True)
 
-    # create new hsn code
-    create_hsn_codes()
+    _create_hsn_codes()
