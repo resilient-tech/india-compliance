@@ -104,38 +104,50 @@ class GSTSettings(Document):
         if not self.enable_api or not self.enable_e_invoice:
             return
 
+        def _throw(label, message, idx=None):
+            message = _("{0} {1}").format(frappe.bold(label), message)
+
+            if idx:
+                message = _("Row #{0}: {1} {2}").format(
+                    idx, frappe.bold(label), message
+                )
+
+            frappe.throw(message)
+
         if self.apply_e_invoice_only_for_selected_companies:
             if not self.e_invoice_applicable_for:
-                frappe.throw(
-                    _(
-                        "{0} is mandatory to enable e-Invoice for Selected Companies"
-                    ).format(
-                        frappe.bold(self.meta.get_label("e_invoice_applicable_for"))
-                    )
+                return _throw(
+                    self.meta.get_label("e_invoice_applicable_for"),
+                    "is mandatory to enable e-Invoice for Selected Companies",
                 )
 
             for row in self.e_invoice_applicable_for:
+                if not row.applicable_from:
+                    return _throw(
+                        row.meta.get_label("applicable_from"),
+                        "is mandatory for enabling e-Invoice",
+                        row.idx,
+                    )
+
                 if getdate(row.applicable_from) < getdate("2021-01-01"):
-                    frappe.throw(
-                        _("Row #{0}: {1} cannot be before 2021-01-01").format(
-                            row.idx, frappe.bold(row.meta.get_label("applicable_from"))
-                        )
+                    return _throw(
+                        row.meta.get_label("applicable_from"),
+                        "cannot be before 2021-01-01",
+                        row.idx,
                     )
 
         elif not self.e_invoice_applicable_from:
-            frappe.throw(
-                _("{0} is mandatory for enabling e-Invoice").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
-                )
+            return _throw(
+                self.meta.get_label("e_invoice_applicable_from"),
+                "is mandatory for enabling e-Invoice",
             )
 
         if self.e_invoice_applicable_from and (
             getdate(self.e_invoice_applicable_from) < getdate("2021-01-01")
         ):
-            frappe.throw(
-                _("{0} cannot be before 2021-01-01").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
-                )
+            return _throw(
+                self.meta.get_label("e_invoice_applicable_from"),
+                "cannot be before 2021-01-01",
             )
 
     def validate_credentials(self):
