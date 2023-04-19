@@ -105,14 +105,14 @@ class GSTSettings(Document):
             return
 
         def _throw(label, message, idx=None):
-            message = _("{0} {1}").format(frappe.bold(label), message)
+            _message = _("{0} {1}").format(frappe.bold(label), message)
 
             if idx:
-                message = _("Row #{0}: {1} {2}").format(
+                _message = _("Row #{0}: {1} {2}").format(
                     idx, frappe.bold(label), message
                 )
 
-            frappe.throw(message)
+            frappe.throw(_message)
 
         if self.apply_e_invoice_only_for_selected_companies:
             if not self.e_invoice_applicable_for:
@@ -121,6 +121,7 @@ class GSTSettings(Document):
                     "is mandatory to enable e-Invoice for Selected Companies",
                 )
 
+            company_list = []
             for row in self.e_invoice_applicable_for:
                 if not row.applicable_from:
                     return _throw(
@@ -135,6 +136,15 @@ class GSTSettings(Document):
                         "cannot be before 2021-01-01",
                         row.idx,
                     )
+
+                if row.company in company_list:
+                    return _throw(
+                        row.meta.get_label("company"),
+                        "{0} appears multiple times".format(row.company),
+                        row.idx,
+                    )
+
+                company_list.append(row.company)
 
         elif not self.e_invoice_applicable_from:
             return _throw(
