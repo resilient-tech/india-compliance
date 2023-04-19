@@ -104,14 +104,34 @@ class GSTSettings(Document):
         if not self.enable_api or not self.enable_e_invoice:
             return
 
-        if not self.e_invoice_applicable_from:
+        if self.apply_e_invoice_only_for_selected_companies:
+            if not self.e_invoice_applicable_for:
+                frappe.throw(
+                    _(
+                        "{0} is mandatory to enable e-Invoice for Selected Companies"
+                    ).format(
+                        frappe.bold(self.meta.get_label("e_invoice_applicable_for"))
+                    )
+                )
+
+            for row in self.e_invoice_applicable_for:
+                if getdate(row.applicable_from) < getdate("2021-01-01"):
+                    frappe.throw(
+                        _("Row #{0}: {1} cannot be before 2021-01-01").format(
+                            row.idx, frappe.bold(row.meta.get_label("applicable_from"))
+                        )
+                    )
+
+        elif not self.e_invoice_applicable_from:
             frappe.throw(
                 _("{0} is mandatory for enabling e-Invoice").format(
                     frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
                 )
             )
 
-        if getdate(self.e_invoice_applicable_from) < getdate("2021-01-01"):
+        if self.e_invoice_applicable_from and (
+            getdate(self.e_invoice_applicable_from) < getdate("2021-01-01")
+        ):
             frappe.throw(
                 _("{0} cannot be before 2021-01-01").format(
                     frappe.bold(self.meta.get_label("e_invoice_applicable_from"))

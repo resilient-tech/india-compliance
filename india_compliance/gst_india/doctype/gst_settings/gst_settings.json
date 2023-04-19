@@ -152,7 +152,7 @@
    "fieldname": "e_invoice_applicable_from",
    "fieldtype": "Date",
    "label": "e-Invoice Applicable From",
-   "mandatory_depends_on": "eval: doc.enable_e_invoice"
+   "mandatory_depends_on": "eval: doc.enable_e_invoice && !doc.apply_e_invoice_only_for_selected_companies"
   },
   {
    "fieldname": "column_break_17",
@@ -266,7 +266,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-04-19 13:37:51.961950",
+ "modified": "2023-04-19 15:10:39.389344",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
