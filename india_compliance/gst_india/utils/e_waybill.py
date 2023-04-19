@@ -715,9 +715,14 @@ class EWaybillData(GSTTransactionData):
 
     def set_party_address_details(self):
         transaction_type = 1
+        ship_to_address = (
+            self.doc.port_address
+            if (self.doc.gst_category == "Overseas" and self.doc.port_address)
+            else self.doc.shipping_address_name
+        )
+
         has_different_shipping_address = (
-            self.doc.shipping_address_name
-            and self.doc.customer_address != self.doc.shipping_address_name
+            ship_to_address and self.doc.customer_address != ship_to_address
         )
 
         has_different_dispatch_address = (
@@ -735,9 +740,7 @@ class EWaybillData(GSTTransactionData):
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+            self.shipping_address = self.get_address_details(ship_to_address)
             self.dispatch_address = self.get_address_details(
                 self.doc.dispatch_address_name
             )
@@ -750,9 +753,7 @@ class EWaybillData(GSTTransactionData):
 
         elif has_different_shipping_address:
             transaction_type = 2
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+            self.shipping_address = self.get_address_details(ship_to_address)
 
         self.transaction_details.transaction_type = transaction_type
 

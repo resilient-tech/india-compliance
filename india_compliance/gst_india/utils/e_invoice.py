@@ -423,17 +423,18 @@ class EInvoiceData(GSTTransactionData):
             self.doc.company_address, validate_gstin=True
         )
 
+        ship_to_address = (
+            self.doc.port_address
+            if (self.doc.gst_category == "Overseas" and self.doc.port_address)
+            else self.doc.shipping_address_name
+        )
+
         # Defaults
         self.shipping_address = None
         self.dispatch_address = None
 
-        if (
-            self.doc.shipping_address_name
-            and self.doc.customer_address != self.doc.shipping_address_name
-        ):
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+        if ship_to_address and self.doc.customer_address != ship_to_address:
+            self.shipping_address = self.get_address_details(ship_to_address)
 
         if (
             self.doc.dispatch_address_name

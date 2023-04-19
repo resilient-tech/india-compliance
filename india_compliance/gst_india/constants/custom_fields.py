@@ -313,7 +313,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "description": (
                 "Address of the place / port in India from where goods are being"
-                " exported <br>(required for generating e-Waybill for export of goods)"
+                " exported <br>(for generating e-Waybill against export of goods)"
             ),
             "insert_after": "shipping_address",
             "depends_on": (
