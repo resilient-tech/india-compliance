@@ -211,7 +211,7 @@ class TaxesController {
     }
 
     fetch_round_off_accounts() {
-        if (this.frm.doc.docstatus !== 0 || !this.frm.company) return;
+        if (this.frm.doc.docstatus !== 0 || !this.frm.doc.company) return;
 
         frappe.call({
             "method": "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
