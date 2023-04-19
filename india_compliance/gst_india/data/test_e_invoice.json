@@ -16,13 +16,6 @@
 				"Stcd": "36",
 				"TrdNm": "Test Registered Customer"
 			},
-			"DispDtls": {
-				"Addr1": "Test Address - 1",
-				"Loc": "Test City",
-				"Nm": "Test Indian Registered Company",
-				"Pin": 193501,
-				"Stcd": "01"
-			},
 			"DocDtls": {
 				"Dt": "16/09/2022",
 				"No": "test_invoice_no",
@@ -69,15 +62,6 @@
 				"Pin": 193501,
 				"Stcd": "01",
 				"TrdNm": "Test Indian Registered Company"
-			},
-			"ShipDtls": {
-				"Addr1": "Test Address - 3",
-				"Gstin": "36AMBPG7773M002",
-				"LglNm": "Test Registered Customer",
-				"Loc": "Test City",
-				"Pin": 500055,
-				"Stcd": "36",
-				"TrdNm": "Test Registered Customer"
 			},
 			"TranDtls": {
 				"RegRev": "N",
@@ -138,13 +122,6 @@
 				"Stcd": "36",
 				"TrdNm": "Test Registered Customer"
 			},
-			"DispDtls": {
-				"Addr1": "Test Address - 1",
-				"Loc": "Test City",
-				"Nm": "Test Indian Registered Company",
-				"Pin": 193501,
-				"Stcd": "01"
-			},
 			"DocDtls": {
 				"Dt": "17/09/2022",
 				"No": "test_invoice_no",
@@ -188,15 +165,6 @@
 				"Pin": 193501,
 				"Stcd": "01",
 				"TrdNm": "Test Indian Registered Company"
-			},
-			"ShipDtls": {
-				"Addr1": "Test Address - 3",
-				"Gstin": "36AMBPG7773M002",
-				"LglNm": "Test Registered Customer",
-				"Loc": "Test City",
-				"Pin": 500055,
-				"Stcd": "36",
-				"TrdNm": "Test Registered Customer"
 			},
 			"TranDtls": {
 				"RegRev": "N",
@@ -262,13 +230,6 @@
 				"Stcd": "36",
 				"TrdNm": "Test Registered Customer"
 			},
-			"DispDtls": {
-				"Addr1": "Test Address - 3",
-				"Loc": "Test City",
-				"Nm": "Test Registered Customer",
-				"Pin": 500055,
-				"Stcd": "36"
-			},
 			"DocDtls": {
 				"Dt": "17/09/2022",
 				"No": "test_invoice_no",
@@ -316,15 +277,6 @@
 				"Addr1": "Test Address - 1",
 				"Gstin": "01AMBPG7773M002",
 				"LglNm": "_Test Indian Registered Company",
-				"Loc": "Test City",
-				"Pin": 193501,
-				"Stcd": "01",
-				"TrdNm": "Test Indian Registered Company"
-			},
-			"ShipDtls": {
-				"Addr1": "Test Address - 1",
-				"Gstin": "01AMBPG7773M002",
-				"LglNm": "Test Indian Registered Company",
 				"Loc": "Test City",
 				"Pin": 193501,
 				"Stcd": "01",
@@ -394,13 +346,6 @@
 				"Stcd": "36",
 				"TrdNm": "Test Registered Customer"
 			},
-			"DispDtls": {
-				"Addr1": "Test Address - 1",
-				"Loc": "Test City",
-				"Nm": "Test Indian Registered Company",
-				"Pin": 193501,
-				"Stcd": "01"
-			},
 			"DocDtls": {
 				"Dt": "17/09/2022",
 				"No": "test_invoice_no",
@@ -444,15 +389,6 @@
 				"Pin": 193501,
 				"Stcd": "01",
 				"TrdNm": "Test Indian Registered Company"
-			},
-			"ShipDtls": {
-				"Addr1": "Test Address - 3",
-				"Gstin": "36AMBPG7773M002",
-				"LglNm": "Test Registered Customer",
-				"Loc": "Test City",
-				"Pin": 500055,
-				"Stcd": "36",
-				"TrdNm": "Test Registered Customer"
 			},
 			"TranDtls": {
 				"RegRev": "N",
