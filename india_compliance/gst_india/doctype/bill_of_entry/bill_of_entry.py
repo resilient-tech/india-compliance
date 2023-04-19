@@ -104,8 +104,8 @@ class BillofEntry(Document):
             if tax.charge_type == "On Net Total":
                 tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates)
 
-            if tax.account_head in frappe.flags.round_off_applicable_accounts:
-                tax.tax_amount = round(tax.tax_amount, 0)
+                if tax.account_head in frappe.flags.round_off_applicable_accounts:
+                    tax.tax_amount = round(tax.tax_amount, 0)
 
             total_taxes += tax.tax_amount
             tax.total = self.total_taxable_value + total_taxes

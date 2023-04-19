@@ -268,14 +268,14 @@
   {
    "fieldname": "bill_of_lading",
    "fieldtype": "Data",
-   "label": "Bill Of Lading"
+   "label": "Bill of Lading"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-04-19 09:14:13.405873",
+ "modified": "2023-04-19 12:50:55.133363",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

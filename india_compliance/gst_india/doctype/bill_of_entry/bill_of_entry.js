@@ -325,10 +325,10 @@ class TaxesController {
                 if (tax_amount !== row.tax_amount) {
                     row.tax_amount = tax_amount;
                 }
-            }
 
-            if (frappe.flags.round_off_applicable_accounts.includes(row.account_head)) {
-                row.tax_amount = Math.round(row.tax_amount);
+                if (frappe.flags.round_off_applicable_accounts.includes(row.account_head)) {
+                    row.tax_amount = Math.round(row.tax_amount);
+                }
             }
         });
 
