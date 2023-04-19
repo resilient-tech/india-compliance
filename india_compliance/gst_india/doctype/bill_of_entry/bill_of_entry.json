@@ -271,10 +271,11 @@
    "label": "Bill Of Lading"
   }
  ],
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-04-17 10:53:23.405243",
+ "modified": "2023-04-19 09:14:13.405873",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
