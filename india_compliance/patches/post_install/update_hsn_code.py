@@ -26,19 +26,17 @@ def execute():
     )
 
     frappe.db.delete("GST HSN Code", {"name": ("not in", used_hsn_code)})
-
-    if used_hsn_code:
-        for hsn_code in used_hsn_code:
-            length = len(hsn_code)
-
-            if length in [3, 5, 7]:
-                new_hsn = hsn_code.zfill(length + 1)
-
-                if frappe.db.exists("GST HSN Code", new_hsn):
-                    frappe.rename_doc(
-                        "GST HSN Code", hsn_code, new_hsn, force=True, merge=True
-                    )
-                else:
-                    frappe.rename_doc("GST HSN Code", hsn_code, new_hsn, force=True)
-
     _create_hsn_codes()
+
+    for hsn_code in used_hsn_code:
+        length = len(hsn_code)
+
+        if length not in [3, 5, 7]:
+            continue
+
+        new_hsn = hsn_code.zfill(length + 1)
+
+        if frappe.db.exists("GST HSN Code", new_hsn):
+            frappe.rename_doc("GST HSN Code", hsn_code, new_hsn, force=True, merge=True)
+        else:
+            frappe.rename_doc("GST HSN Code", hsn_code, new_hsn, force=True)
