@@ -213,22 +213,22 @@ class TaxesController {
     fetch_round_off_accounts() {
         if (this.frm.doc.docstatus !== 0) return;
 
-		frappe.flags.round_off_applicable_accounts = [];
+        frappe.flags.round_off_applicable_accounts = [];
 
-		if (this.frm.doc.company) {
-			return frappe.call({
-				"method": "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
-				"args": {
-					"company": this.frm.doc.company,
-					"account_list": frappe.flags.round_off_applicable_accounts
-				},
-				callback(r) {
-					if (r.message) {
-						frappe.flags.round_off_applicable_accounts.push(...r.message);
-					}
-				}
-			});
-		}
+        if (this.frm.doc.company) {
+            return frappe.call({
+                "method": "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
+                "args": {
+                    "company": this.frm.doc.company,
+                    "account_list": frappe.flags.round_off_applicable_accounts
+                },
+                callback(r) {
+                    if (r.message) {
+                        frappe.flags.round_off_applicable_accounts.push(...r.message);
+                    }
+                }
+            });
+        }
     }
 
     set_item_tax_template_query() {
