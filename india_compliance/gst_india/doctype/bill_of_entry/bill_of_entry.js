@@ -211,6 +211,8 @@ class TaxesController {
     }
 
     fetch_round_off_accounts() {
+        if (this.frm.doc.docstatus !== 0) return;
+
 		frappe.flags.round_off_applicable_accounts = [];
 
 		if (this.frm.doc.company) {
