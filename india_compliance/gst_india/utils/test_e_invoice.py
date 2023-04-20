@@ -369,14 +369,20 @@ class TestEInvoice(FrappeTestCase):
             si,
         )
 
-        gst_settings.apply_e_invoice_only_for_selected_companies = 1
-
-        gst_settings.append(
-            "e_invoice_applicable_for",
+        gst_settings.update(
             {
-                "company": si.company,
-                "applicable_from": "2045-05-18",
-            },
+                "apply_e_invoice_only_for_selected_companies": 1,
+                "e_invoice_applicable_for": [
+                    {
+                        "company": si.company,
+                        "applicable_from": "2045-05-18",
+                    },
+                    {
+                        "company": "_Test Indian Unregistered Company",
+                        "applicable_from": "2045-05-18",
+                    },
+                ],
+            }
         )
         gst_settings.save()
 

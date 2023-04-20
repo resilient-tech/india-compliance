@@ -177,10 +177,10 @@ function validate_e_invoice_applicability_date(frm) {
 
     gst_settings.e_invoice_applicable_for.forEach(row => {
         if (row.company != frm.doc.company) return;
-        
+
         e_invoice_applicable_from = row.applicable_from;
 
     });
-       
+
     return (moment(frm.doc.posting_date).diff(e_invoice_applicable_from) >= 0) ? true : false;
 }
