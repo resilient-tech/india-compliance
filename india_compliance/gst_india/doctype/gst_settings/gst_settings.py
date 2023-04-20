@@ -115,36 +115,9 @@ class GSTSettings(Document):
             frappe.throw(_message)
 
         if self.apply_e_invoice_only_for_selected_companies:
-            if not self.e_invoice_applicable_for:
-                return _throw(
-                    self.meta.get_label("e_invoice_applicable_for"),
-                    "is mandatory to enable e-Invoice for Selected Companies",
-                )
-
-            company_list = []
-            for row in self.e_invoice_applicable_for:
-                if not row.applicable_from:
-                    return _throw(
-                        row.meta.get_label("applicable_from"),
-                        "is mandatory for enabling e-Invoice",
-                        row.idx,
-                    )
-
-                if getdate(row.applicable_from) < getdate("2021-01-01"):
-                    return _throw(
-                        row.meta.get_label("applicable_from"),
-                        "cannot be before 2021-01-01",
-                        row.idx,
-                    )
-
-                if row.company in company_list:
-                    return _throw(
-                        row.meta.get_label("company"),
-                        "{0} appears multiple times".format(row.company),
-                        row.idx,
-                    )
-
-                company_list.append(row.company)
+            label, message, idx = self.validate_e_invoice_applicable_for_company()
+            if label and message:
+                return _throw(label, message, idx)
 
         elif not self.e_invoice_applicable_from:
             return _throw(
@@ -203,6 +176,44 @@ class GSTSettings(Document):
                     "enable API features"
                 )
             )
+
+    def validate_e_invoice_applicable_for_company(self, date=None):
+        if not date:
+            date = "2021-01-01"
+
+        if not self.e_invoice_applicable_for:
+            return (
+                self.meta.get_label("e_invoice_applicable_for"),
+                "is mandatory to enable e-Invoice for Selected Companies",
+                0,
+            )
+
+        company_list = []
+        for row in self.e_invoice_applicable_for:
+            if not row.applicable_from:
+                return (
+                    row.meta.get_label("applicable_from"),
+                    "is mandatory for enabling e-Invoice",
+                    row.idx,
+                )
+
+            if getdate(row.applicable_from) < getdate(date):
+                return (
+                    row.meta.get_label("applicable_from"),
+                    f"cannot be before {date}",
+                    row.idx,
+                )
+
+            if row.company in company_list:
+                return (
+                    row.meta.get_label("company"),
+                    "{0} appears multiple times".format(row.company),
+                    row.idx,
+                )
+
+            company_list.append(row.company)
+
+        return (None, None, None)
 
 
 @frappe.whitelist()

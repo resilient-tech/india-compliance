@@ -250,12 +250,23 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    if getdate(gst_settings.e_invoice_applicable_from) > getdate(doc.posting_date):
+    e_invoice_applicable_from = gst_settings.e_invoice_applicable_from
+
+    if gst_settings.apply_e_invoice_only_for_selected_companies:
+        for row in gst_settings.e_invoice_applicable_for:
+            if row.company != doc.company:
+                return _throw(
+                    _("e-Invoice is not applicable for company {0}").format(doc.company)
+                )
+
+            e_invoice_applicable_from = row.applicable_from
+
+    if getdate(e_invoice_applicable_from) > getdate(doc.posting_date):
         return _throw(
             _(
                 "e-Invoice is not applicable for invoices before {0} as per your"
                 " GST Settings"
-            ).format(frappe.bold(format_date(gst_settings.e_invoice_applicable_from)))
+            ).format(frappe.bold(format_date(e_invoice_applicable_from)))
         )
 
     return True
