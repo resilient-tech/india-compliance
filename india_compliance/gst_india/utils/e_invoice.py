@@ -253,13 +253,18 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     e_invoice_applicable_from = gst_settings.e_invoice_applicable_from
 
     if gst_settings.apply_e_invoice_only_for_selected_companies:
-        for row in gst_settings.e_invoice_applicable_for:
-            if row.company != doc.company:
-                return _throw(
-                    _("e-Invoice is not applicable for company {0}").format(doc.company)
-                )
+        comapny_data = {
+            row.company: row.applicable_from
+            for row in gst_settings.e_invoice_applicable_for
+            if row.company == doc.company
+        }
 
-            e_invoice_applicable_from = row.applicable_from
+        if not comapny_data:
+            return _throw(
+                _("e-Invoice is not applicable for company {0}").format(doc.company)
+            )
+
+        e_invoice_applicable_from = comapny_data.get(doc.company)
 
     if getdate(e_invoice_applicable_from) > getdate(doc.posting_date):
         return _throw(

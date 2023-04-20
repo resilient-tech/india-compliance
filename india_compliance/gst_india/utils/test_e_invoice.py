@@ -353,8 +353,13 @@ class TestEInvoice(FrappeTestCase):
             }
         )
         si.save(ignore_permissions=True)
-        frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", "2045-05-18"
+
+        gst_settings = frappe.get_cached_doc("GST Settings")
+        gst_settings.db_set(
+            {
+                "apply_e_invoice_only_for_selected_companies": 0,
+                "e_invoice_applicable_from": "2045-05-18",
+            }
         )
 
         self.assertRaisesRegex(
@@ -364,8 +369,43 @@ class TestEInvoice(FrappeTestCase):
             si,
         )
 
+        gst_settings.apply_e_invoice_only_for_selected_companies = 1
+
+        gst_settings.append(
+            "e_invoice_applicable_for",
+            {
+                "company": si.company,
+                "applicable_from": "2045-05-18",
+            },
+        )
+        gst_settings.save()
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice is not applicable for invoices before.*)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        for row in gst_settings.e_invoice_applicable_for:
+            if row.company == si.company:
+                gst_settings.e_invoice_applicable_for.remove(row)
+
+        gst_settings.save()
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice is not applicable for company.*)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
         frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", get_datetime()
+            "GST Settings",
+            {
+                "e_invoice_applicable_from": str(get_datetime()),
+                "apply_e_invoice_only_for_selected_companies": 0,
+            },
         )
 
     def _cancel_e_invoice(self, invoice_no):
