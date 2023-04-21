@@ -81,23 +81,11 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        frappe.db.set_single_value(
-            "GST Settings",
-            {
-                "auto_generate_e_waybill": 1,
-                "auto_generate_e_invoice": 1,
-            },
-        )
+        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 1)
 
-        generate_e_invoice(si.name, submitted_from_ui=True)
+        generate_e_invoice(si.name, throw=False)
 
-        frappe.db.set_single_value(
-            "GST Settings",
-            {
-                "auto_generate_e_waybill": 0,
-                "auto_generate_e_invoice": 0,
-            },
-        )
+        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 0)
 
         # Assert if Integration Request Log generated
         self.assertDocumentEqual(
@@ -321,30 +309,17 @@ class TestEInvoice(FrappeTestCase):
             {"AckDt": str(now_datetime())}
         )
 
-        frappe.db.set_single_value(
-            "GST Settings",
-            {
-                "auto_generate_e_waybill": 1,
-                "auto_generate_e_invoice": 1,
-            },
-        )
+        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 1)
 
         # Assert if request data given in Json
-        si._submitted_from_ui = True
         self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
 
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(si.name, submitted_from_ui=True)
+        generate_e_invoice(si.name, throw=False)
 
-        frappe.db.set_single_value(
-            "GST Settings",
-            {
-                "auto_generate_e_waybill": 0,
-                "auto_generate_e_invoice": 0,
-            },
-        )
+        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 0)
 
         si_doc = load_doc("Sales Invoice", si.name, "cancel")
         si_doc.get_onload().get("e_invoice_info", {}).update({"acknowledged_on": None})
