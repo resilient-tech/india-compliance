@@ -60,7 +60,7 @@ class GSTTransactionData:
                 ),
                 "discount_amount": (
                     abs(self.rounded(self.doc.base_discount_amount))
-                    if self.doc.is_cash_or_non_trade_discount
+                    if self.doc.get("is_cash_or_non_trade_discount")
                     else 0
                 ),
                 "company_gstin": self.doc.company_gstin,
