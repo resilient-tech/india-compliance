@@ -314,9 +314,9 @@ class TaxesController {
         else taxes = this.frm.doc.taxes;
 
         taxes.forEach(async row => {
-            if (row.charge_type !== "On Net Total") 
+            if (row.charge_type !== "On Net Total")
                 return;
-            
+
             const tax_amount = this.get_tax_on_net_total(row);
 
             // update if tax amount is changed manually
