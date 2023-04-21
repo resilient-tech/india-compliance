@@ -30,7 +30,7 @@ class TestEInvoice(FrappeTestCase):
             {
                 "enable_api": 1,
                 "enable_e_invoice": 1,
-                "auto_generate_e_waybill": 1,
+                "auto_generate_e_waybill": 0,
                 "auto_generate_e_invoice": 0,
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
@@ -74,9 +74,7 @@ class TestEInvoice(FrappeTestCase):
         """Generate test e-Invoice for goods item"""
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
-        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 0)
         si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
-        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 1)
 
         # Assert if request data given in Json
         self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
@@ -84,7 +82,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(si.name, throw=False)
+        generate_e_invoice(si.name)
 
         # Assert if Integration Request Log generated
         self.assertDocumentEqual(
@@ -296,9 +294,7 @@ class TestEInvoice(FrappeTestCase):
 
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
-        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 0)
         si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
-        frappe.db.set_single_value("GST Settings", "auto_generate_e_waybill", 1)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -317,7 +313,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(si.name, throw=False)
+        generate_e_invoice(si.name)
 
         si_doc = load_doc("Sales Invoice", si.name, "cancel")
         si_doc.get_onload().get("e_invoice_info", {}).update({"acknowledged_on": None})
