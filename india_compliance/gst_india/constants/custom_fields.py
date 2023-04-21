@@ -760,7 +760,7 @@ E_WAYBILL_SI_FIELDS = [
         "label": "Transporter Name",
         "fieldtype": "Small Text",
         "insert_after": "transporter_col_break",
-        "fetch_from": "transporter.name",
+        "fetch_from": "transporter.supplier_name",
         "read_only": 1,
         "print_hide": 1,
         "translatable": 0,
