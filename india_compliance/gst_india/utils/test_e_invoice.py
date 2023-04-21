@@ -25,12 +25,12 @@ from india_compliance.gst_india.utils.tests import create_sales_invoice
 class TestEInvoice(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "enable_api": 1,
                 "enable_e_invoice": 1,
+                "auto_generate_e_waybill": 0,
                 "auto_generate_e_invoice": 0,
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
@@ -73,7 +73,8 @@ class TestEInvoice(FrappeTestCase):
     def test_generate_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for goods item"""
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
-        si = create_sales_invoice(**test_data.get("kwargs"))
+
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
 
         # Assert if request data given in Json
         self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
@@ -292,7 +293,8 @@ class TestEInvoice(FrappeTestCase):
         """
 
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
-        si = create_sales_invoice(**test_data.get("kwargs"))
+
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
