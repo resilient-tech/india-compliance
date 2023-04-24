@@ -13,9 +13,7 @@ def update_transporter_gstin(doc, method=None):
         return
 
     if doc.gstin:
-        if (
-            doc.gst_transporter_id and doc.pan != doc.gst_transporter_id[2:12]
-        ) or doc.gstin != doc.gst_transporter_id:
+        if not doc.gst_transporter_id:
             doc.gst_transporter_id = doc.gstin
             frappe.msgprint(
                 _(
@@ -24,8 +22,16 @@ def update_transporter_gstin(doc, method=None):
                 ).format(bold(doc.gstin)),
                 alert=True,
             )
+            return
 
-        return
+        if doc.pan != doc.gst_transporter_id[2:12]:
+            frappe.throw(
+                _(
+                    "The PAN of GSTIN {0} doesn't match the PAN of the GST Transporter"
+                    " ID {1}. Please correct the GST Transporter ID if needed."
+                ).format(bold(doc.gstin), bold(doc.gst_transporter_id)),
+                title=_("Invalid GST Transporter ID"),
+            )
 
     if not doc.gst_transporter_id:
         return
