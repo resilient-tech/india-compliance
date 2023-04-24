@@ -13,7 +13,9 @@ def update_transporter_gstin(doc, method=None):
         return
 
     if doc.gstin:
-        if doc.gstin != doc.gst_transporter_id:
+        if (
+            doc.gst_transporter_id and doc.pan != doc.gst_transporter_id[2:12]
+        ) or doc.gstin != doc.gst_transporter_id:
             doc.gst_transporter_id = doc.gstin
             frappe.msgprint(
                 _(
