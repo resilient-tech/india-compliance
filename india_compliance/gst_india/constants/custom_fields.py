@@ -403,7 +403,6 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "gst_category",
             "depends_on": "eval:doc.is_transporter",
-            "read_only_depends_on": "eval:doc.gstin && doc.gstin == doc.gst_transporter_id",
             "translatable": 0,
         }
     ],
