@@ -403,6 +403,8 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "gst_category",
             "depends_on": "eval:doc.is_transporter",
+            # don't delete below line; required to unset existing value
+            "read_only_depends_on": None,
             "translatable": 0,
         }
     ],
