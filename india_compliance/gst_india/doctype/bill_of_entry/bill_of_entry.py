@@ -36,7 +36,6 @@ class BillofEntry(Document):
         )
 
     def before_validate(self):
-        self.set_round_off_accounts()
         self.set_taxes_and_totals()
 
     def validate(self):
@@ -100,11 +99,12 @@ class BillofEntry(Document):
     def set_total_taxes(self):
         total_taxes = 0
 
+        round_off_accounts = get_round_off_applicable_accounts(self.company, []) or []
         for tax in self.taxes:
             if tax.charge_type == "On Net Total":
                 tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates)
 
-                if tax.account_head in frappe.flags.round_off_applicable_accounts:
+                if tax.account_head in round_off_accounts:
                     tax.tax_amount = round(tax.tax_amount, 0)
 
             total_taxes += tax.tax_amount
@@ -299,12 +299,6 @@ class BillofEntry(Document):
         taxes = self.get("taxes", {"name": tax_name}) if tax_name else self.taxes
 
         return items, taxes
-
-    def set_round_off_accounts(self):
-        frappe.flags.round_off_applicable_accounts = []
-        get_round_off_applicable_accounts(
-            self.company, frappe.flags.round_off_applicable_accounts
-        )
 
 
 @frappe.whitelist()

@@ -23,7 +23,7 @@
   "bill_of_entry_date",
   "column_break_v3jw",
   "port_code",
-  "bill_of_lading",
+  "bill_of_lading_no",
   "column_break_srom",
   "posting_date",
   "accounting_details_section",
@@ -266,16 +266,16 @@
    "reqd": 1
   },
   {
-   "fieldname": "bill_of_lading",
+   "fieldname": "bill_of_lading_no",
    "fieldtype": "Data",
-   "label": "Bill of Lading"
+   "label": "Bill of Lading No"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-04-19 12:50:55.133363",
+ "modified": "2023-04-24 18:36:45.661131",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
