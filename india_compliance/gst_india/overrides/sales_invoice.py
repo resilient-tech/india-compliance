@@ -53,7 +53,6 @@ def validate(doc, method=None):
 
     validate_invoice_number(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
-    validate_billing_address_gstin(doc)
 
 
 def validate_invoice_number(doc):
@@ -90,14 +89,6 @@ def validate_fields_and_set_status_for_e_invoice(doc):
 
     if doc._action == "submit" and not doc.irn:
         doc.einvoice_status = "Pending"
-
-
-def validate_billing_address_gstin(doc):
-    if doc.company_gstin == doc.billing_address_gstin:
-        frappe.throw(
-            _("Billing Address GSTIN and Company GSTIN cannot be the same"),
-            title=_("Invalid Billing Address GSTIN"),
-        )
 
 
 def on_submit(doc, method=None):
