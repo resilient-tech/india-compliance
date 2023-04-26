@@ -29,6 +29,8 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
                 !is_e_waybill_applicable(frm) ||
+                (frm.doctype === "Sales Invoice" &&
+                    frm.doc.company_gstin === frm.doc.billing_address_gstin) ||
                 (frm.doctype === "Delivery Note" && !frm.doc.customer_address)
             )
                 return;
@@ -115,6 +117,7 @@ function setup_e_waybill_actions(doctype) {
             if (
                 // threshold is only met for Sales Invoice
                 !has_e_waybill_threshold_met(frm) ||
+                frm.doc.company_gstin === frm.doc.billing_address_gstin ||
                 frm.doc.ewaybill ||
                 frm.doc.is_return ||
                 frm.doc.is_debit_note ||

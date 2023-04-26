@@ -116,6 +116,7 @@ def on_submit(doc, method=None):
     elif (
         not gst_settings.enable_e_waybill
         or not gst_settings.auto_generate_e_waybill
+        or doc.company_gstin == doc.billing_address_gstin
         or doc.ewaybill
         or doc.is_return
         or doc.is_debit_note
