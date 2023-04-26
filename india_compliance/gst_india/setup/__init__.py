@@ -5,6 +5,9 @@ from frappe.custom.doctype.custom_field.custom_field import (
     create_custom_fields as _create_custom_fields,
 )
 from frappe.utils import now_datetime, nowdate
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    make_dimension_in_accounting_doctypes,
+)
 
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
@@ -13,16 +16,15 @@ from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
-from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_fields
-from india_compliance.patches.post_install.update_e_invoice_fields_and_logs import (
-    delete_custom_fields as _delete_custom_fields,
-)
+from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
 ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gst"))
 
 
 def after_install():
     create_custom_fields()
+    create_accounting_dimension_fields()
     create_property_setters()
     create_address_template()
     set_default_gst_settings()
@@ -31,49 +33,28 @@ def after_install():
     add_fields_to_item_variant_settings()
 
 
-def before_uninstall():
-    delete_custom_fields()
-    delete_property_setters()
-    remove_fields_from_item_variant_settings()
-
-
 def create_custom_fields():
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
-    _create_custom_fields(
-        _get_custom_fields_map(
-            CUSTOM_FIELDS,
-            SALES_REVERSE_CHARGE_FIELDS,
-            E_INVOICE_FIELDS,
-            E_WAYBILL_FIELDS,
-        ),
-        ignore_validate=True,
+    _create_custom_fields(get_all_custom_fields(), ignore_validate=True)
+
+
+def create_accounting_dimension_fields():
+    doctypes = frappe.get_hooks(
+        "accounting_dimension_doctypes",
+        app_name="india_compliance",
     )
+
+    dimensions = frappe.get_all("Accounting Dimension", pluck="name")
+    for dimension in dimensions:
+        doc = frappe.get_doc("Accounting Dimension", dimension)
+        make_dimension_in_accounting_doctypes(doc, doctypes)
 
 
 def create_property_setters():
     for property_setter in get_property_setters():
         frappe.make_property_setter(property_setter)
-
-
-def delete_custom_fields():
-    _delete_custom_fields(
-        _get_custom_fields_map(
-            CUSTOM_FIELDS,
-            SALES_REVERSE_CHARGE_FIELDS,
-            E_INVOICE_FIELDS,
-            E_WAYBILL_FIELDS,
-        )
-    )
-
-
-def delete_property_setters():
-    for property_setter in get_property_setters():
-        keys_to_update = ["doc_type", "field_name", "property", "value"]
-        # Update the keys to match with the property setter fields
-        filters = dict(zip(keys_to_update, list(property_setter.values())))
-        frappe.db.delete("Property Setter", filters)
 
 
 def create_address_template():
@@ -224,16 +205,23 @@ def show_accounts_settings_override_warning():
     )
 
     click.secho(
-        "This is being set as Billing Address, since that's the correct "
-        "address for determining GST applicablility.",
+        (
+            "This is being set as Billing Address, since that's the correct "
+            "address for determining GST applicablility."
+        ),
         fg="yellow",
     )
 
 
-def _get_custom_fields_map(*custom_fields_list):
+def get_all_custom_fields():
     result = {}
 
-    for custom_fields in custom_fields_list:
+    for custom_fields in (
+        CUSTOM_FIELDS,
+        SALES_REVERSE_CHARGE_FIELDS,
+        E_INVOICE_FIELDS,
+        E_WAYBILL_FIELDS,
+    ):
         for doctypes, fields in custom_fields.items():
             if isinstance(fields, dict):
                 fields = [fields]
@@ -241,11 +229,3 @@ def _get_custom_fields_map(*custom_fields_list):
             result.setdefault(doctypes, []).extend(fields)
 
     return result
-
-
-def remove_fields_from_item_variant_settings():
-    settings = frappe.get_doc("Item Variant Settings")
-    settings.fields = [
-        row for row in settings.fields if row.field_name not in ITEM_VARIANT_FIELDNAMES
-    ]
-    settings.save()

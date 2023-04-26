@@ -1,12 +1,12 @@
-from copy import deepcopy
-
 import frappe
 
 from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
+from india_compliance.gst_india.utils import get_place_of_supply_options
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
 gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
+
 
 party_fields = [
     {
@@ -39,11 +39,28 @@ party_fields = [
     },
 ]
 
-company_fields = deepcopy(party_fields)
-company_fields[0]["insert_after"] = "parent_company"
-
 CUSTOM_FIELDS = {
-    "Company": company_fields,
+    "Company": [
+        {
+            **party_fields[0],
+            "insert_after": "parent_company",
+        },
+        *party_fields[1:],
+        {
+            "fieldname": "default_customs_expense_account",
+            "label": "Default Customs Duty Expense Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "unrealized_profit_loss_account",
+        },
+        {
+            "fieldname": "default_customs_payable_account",
+            "label": "Default Customs Duty Payable Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "default_finance_book",
+        },
+    ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
     ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [
@@ -83,11 +100,13 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "company_gstin",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "translatable": 0,
+            "fetch_from": "",
         },
         {
             "fieldname": "is_reverse_charge",
@@ -164,12 +183,14 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(with_other_countries=True),
             "insert_after": "gst_category",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "length": 50,
             "translatable": 0,
+            "fetch_from": "",
         },
         {
             "fieldname": "company_gstin",
@@ -319,7 +340,7 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_section",
             "print_hide": 1,
             "options": (
-                "Input Service Distributor\nImport Of Service\nImport Of Capital"
+                "Input Service Distributor\nImport Of Service\nImport Of"
                 " Goods\nITC on Reverse Charge\nIneligible As Per Section"
                 " 17(5)\nIneligible Others\nAll Other ITC"
             ),
@@ -371,7 +392,8 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "gst_category",
             "depends_on": "eval:doc.is_transporter",
-            "read_only_depends_on": "eval:doc.gstin",
+            # don't delete below line; required to unset existing value
+            "read_only_depends_on": None,
             "translatable": 0,
         }
     ],
@@ -728,7 +750,7 @@ E_WAYBILL_SI_FIELDS = [
         "label": "Transporter Name",
         "fieldtype": "Small Text",
         "insert_after": "transporter_col_break",
-        "fetch_from": "transporter.name",
+        "fetch_from": "transporter.supplier_name",
         "read_only": 1,
         "print_hide": 1,
         "translatable": 0,

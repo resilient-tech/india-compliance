@@ -1,8 +1,11 @@
 import frappe
-from frappe import _, bold
+from frappe import _
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.overrides.transaction import (
+    validate_mandatory_fields,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -79,13 +82,11 @@ def validate_fields_and_set_status_for_e_invoice(doc):
     ):
         return
 
-    for field in ("customer_address",):
-        if not doc.get(field):
-            frappe.throw(
-                _("{0} is a mandatory field for generating e-Invoices").format(
-                    bold(_(doc.meta.get_label(field))),
-                )
-            )
+    validate_mandatory_fields(
+        doc,
+        "customer_address",
+        _("{0} is a mandatory field for generating e-Invoices"),
+    )
 
     if doc._action == "submit" and not doc.irn:
         doc.einvoice_status = "Pending"
@@ -176,29 +177,3 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
     transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
 
     return data
-
-
-@frappe.whitelist()
-def generate_e_invoice(docnames):
-    """
-    Bulk generate e-Invoices for the given Sales Invoices.
-    Permission checks are done in the `generate_e_invoice` function.
-    """
-    gst_settings = frappe.get_cached_doc("GST Settings")
-    if not is_api_enabled(gst_settings):
-        return
-
-    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
-    for doc in docnames:
-        doc = frappe.get_doc("Sales Invoice", doc)
-        if doc.docstatus != 1 or not validate_e_invoice_applicability(
-            doc, gst_settings, throw=False
-        ):
-            continue
-
-        frappe.enqueue(
-            "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-            queue="short",
-            docname=doc.name,
-            throw=False,
-        )

@@ -1,3 +1,5 @@
+import json
+
 import jwt
 
 import frappe
@@ -22,6 +24,7 @@ from india_compliance.gst_india.constants.e_invoice import (
     ITEM_LIMIT,
 )
 from india_compliance.gst_india.utils import (
+    is_api_enabled,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -38,19 +41,68 @@ from india_compliance.gst_india.utils.transaction_data import (
 
 
 @frappe.whitelist()
+def enqueue_bulk_e_invoice_generation(docnames):
+    """
+    Enqueue bulk generation of e-Invoices for the given Sales Invoices.
+    """
+
+    frappe.has_permission("Sales Invoice", "submit", throw=True)
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not is_api_enabled(gst_settings) or not gst_settings.enable_e_invoice:
+        frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    rq_job = frappe.enqueue(
+        "india_compliance.gst_india.utils.e_invoice.generate_e_invoices",
+        queue="long",
+        timeout=len(docnames) * 240,  # 4 mins per e-Invoice
+        docnames=docnames,
+    )
+
+    return rq_job.id
+
+
+def generate_e_invoices(docnames):
+    """
+    Bulk generate e-Invoices for the given Sales Invoices.
+    Permission checks are done in the `generate_e_invoice` function.
+    """
+
+    for docname in docnames:
+        try:
+            generate_e_invoice(docname)
+
+        except Exception:
+            frappe.log_error(
+                title=_("e-Invoice generation failed for Sales Invoice {0}").format(
+                    docname
+                ),
+                message=frappe.get_traceback(),
+            )
+
+        finally:
+            # each e-Invoice needs to be committed individually
+            # nosemgrep
+            frappe.db.commit()
+
+
+@frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
+
     try:
-        data = EInvoiceData(doc).get_data()
+        data = EInvoiceData(doc).get_data(for_auto_generation=not throw)
         api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
 
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
-            response = api.get_e_invoice_by_irn(result.Desc.get("Irn"))
+            response = api.get_e_invoice_by_irn(result.Desc.Irn)
 
-            # Handle: IRN details cannot be provided as it is generated more than 2 days ago
-            result = result.Desc if "2283" in response.get("message", "") else response
+            # Handle error 2283:
+            # IRN details cannot be provided as it is generated more than 2 days ago
+            result = result.Desc if response.error_code == "2283" else response
 
     except frappe.ValidationError as e:
         if throw:
@@ -75,8 +127,8 @@ def generate_e_invoice(docname, throw=True):
     )
 
     invoice_data = None
-    if result.get("SignedInvoice"):
-        decoded_invoice = frappe.parse_json(
+    if result.SignedInvoice:
+        decoded_invoice = json.loads(
             jwt.decode(result.SignedInvoice, options={"verify_signature": False})[
                 "data"
             ]
@@ -90,8 +142,8 @@ def generate_e_invoice(docname, throw=True):
             "sales_invoice": docname,
             "acknowledgement_number": result.AckNo,
             "acknowledged_on": parse_datetime(result.AckDt),
-            "signed_invoice": result.get("SignedInvoice"),
-            "signed_qr_code": result.get("SignedQRCode"),
+            "signed_invoice": result.SignedInvoice,
+            "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
         },
     )
@@ -210,11 +262,11 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
 
 
 class EInvoiceData(GSTTransactionData):
-    def get_data(self):
+    def get_data(self, *, for_auto_generation=False):
         self.validate_transaction()
         self.set_transaction_details()
         self.set_item_list()
-        self.set_transporter_details()
+        self.set_transporter_details(for_auto_generation)
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
@@ -325,11 +377,6 @@ class EInvoiceData(GSTTransactionData):
                 "credit_days": credit_days,
                 "outstanding_amount": abs(self.rounded(self.doc.outstanding_amount)),
                 "payment_terms": self.sanitize_value(self.doc.payment_terms_template),
-                "grand_total": (
-                    abs(self.rounded(self.doc.grand_total))
-                    if self.doc.currency != "INR"
-                    else ""
-                ),
             }
         )
 
@@ -350,6 +397,17 @@ class EInvoiceData(GSTTransactionData):
 
         return supply_type
 
+    def set_transporter_details(self, for_auto_generation=False):
+        if (
+            # e-waybill threshold is not met
+            self.transaction_details.grand_total < self.settings.e_waybill_threshold
+            # e-waybill auto-generation is disabled by user
+            or (for_auto_generation and not self.settings.auto_generate_e_waybill)
+        ):
+            return
+
+        return super().set_transporter_details()
+
     def set_party_address_details(self):
         self.billing_address = self.get_address_details(
             self.doc.customer_address,
@@ -360,8 +418,8 @@ class EInvoiceData(GSTTransactionData):
         )
 
         # Defaults
-        self.shipping_address = self.billing_address
-        self.dispatch_address = self.company_address
+        self.shipping_address = None
+        self.dispatch_address = None
 
         if (
             self.doc.shipping_address_name
@@ -380,7 +438,8 @@ class EInvoiceData(GSTTransactionData):
             )
 
         self.billing_address.legal_name = self.sanitize_value(
-            self.doc.customer_name or self.doc.customer
+            self.doc.customer_name
+            or frappe.db.get_value("Customer", self.doc.customer, "customer_name")
         )
         self.company_address.legal_name = self.sanitize_value(self.doc.company)
 
@@ -392,11 +451,14 @@ class EInvoiceData(GSTTransactionData):
                 "pincode": 193501,
             }
             self.company_address.update(seller)
-            self.dispatch_address.update(seller)
-            self.transaction_details.name = random_string(6).lstrip("0")
+            if self.dispatch_address:
+                self.dispatch_address.update(seller)
 
-            if frappe.flags.in_test:
-                self.transaction_details.name = "test_invoice_no"
+            self.transaction_details.name = (
+                random_string(6).lstrip("0")
+                if not frappe.flags.in_test
+                else "test_invoice_no"
+            )
 
             # For overseas transactions, dummy GSTIN is not needed
             if self.doc.gst_category != "Overseas":
@@ -406,7 +468,8 @@ class EInvoiceData(GSTTransactionData):
                     "pincode": 500055,
                 }
                 self.billing_address.update(buyer)
-                self.shipping_address.update(buyer)
+                if self.shipping_address:
+                    self.shipping_address.update(buyer)
 
                 if self.transaction_details.total_igst_amount > 0:
                     self.transaction_details.place_of_supply = "36"
@@ -419,7 +482,7 @@ class EInvoiceData(GSTTransactionData):
                 self.dispatch_address,
             )
 
-        return {
+        invoice_data = {
             "Version": "1.1",
             "TranDtls": {
                 "TaxSch": self.transaction_details.tax_scheme,
@@ -453,37 +516,21 @@ class EInvoiceData(GSTTransactionData):
                 "Stcd": self.billing_address.state_number,
                 "Pos": self.transaction_details.place_of_supply,
             },
-            "DispDtls": {
-                "Nm": self.dispatch_address.address_title,
-                "Addr1": self.dispatch_address.address_line1,
-                "Addr2": self.dispatch_address.address_line2,
-                "Loc": self.dispatch_address.city,
-                "Pin": self.dispatch_address.pincode,
-                "Stcd": self.dispatch_address.state_number,
-            },
-            "ShipDtls": {
-                "Gstin": self.shipping_address.gstin,
-                "LglNm": self.shipping_address.address_title,
-                "TrdNm": self.shipping_address.address_title,
-                "Addr1": self.shipping_address.address_line1,
-                "Addr2": self.shipping_address.address_line2,
-                "Loc": self.shipping_address.city,
-                "Pin": self.shipping_address.pincode,
-                "Stcd": self.shipping_address.state_number,
-            },
             "ItemList": self.item_list,
             "ValDtls": {
-                "AssVal": self.transaction_details.base_total,
+                "AssVal": self.transaction_details.total,
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,
-                "CesVal": self.transaction_details.total_cess_amount
-                + self.transaction_details.total_cess_non_advol_amount,
+                "CesVal": (
+                    self.transaction_details.total_cess_amount
+                    + self.transaction_details.total_cess_non_advol_amount
+                ),
                 "Discount": self.transaction_details.discount_amount,
                 "RndOffAmt": self.transaction_details.rounding_adjustment,
                 "OthChrg": self.transaction_details.other_charges,
-                "TotInvVal": self.transaction_details.base_grand_total,
-                "TotInvValFc": self.transaction_details.grand_total,
+                "TotInvVal": self.transaction_details.grand_total,
+                "TotInvValFc": self.transaction_details.grand_total_in_foreign_currency,
             },
             "PayDtls": {
                 "Nm": self.transaction_details.payee_name,
@@ -512,6 +559,30 @@ class EInvoiceData(GSTTransactionData):
                 "VehType": self.transaction_details.vehicle_type,
             },
         }
+
+        if self.dispatch_address:
+            invoice_data["DispDtls"] = {
+                "Nm": self.dispatch_address.address_title,
+                "Addr1": self.dispatch_address.address_line1,
+                "Addr2": self.dispatch_address.address_line2,
+                "Loc": self.dispatch_address.city,
+                "Pin": self.dispatch_address.pincode,
+                "Stcd": self.dispatch_address.state_number,
+            }
+
+        if self.shipping_address:
+            invoice_data["ShipDtls"] = {
+                "Gstin": self.shipping_address.gstin,
+                "LglNm": self.shipping_address.address_title,
+                "TrdNm": self.shipping_address.address_title,
+                "Addr1": self.shipping_address.address_line1,
+                "Addr2": self.shipping_address.address_line2,
+                "Loc": self.shipping_address.city,
+                "Pin": self.shipping_address.pincode,
+                "Stcd": self.shipping_address.state_number,
+            }
+
+        return invoice_data
 
     def get_item_data(self, item_details):
         return {

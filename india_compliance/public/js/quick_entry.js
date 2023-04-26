@@ -1,17 +1,13 @@
-const GSTIN_FIELD_DESCRIPTION = __(
-    "Autofill party information by entering their GSTIN"
-);
-
 class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
         this.skip_redirect_on_error = true;
-        this.api_enabled = ic.is_api_enabled() && gst_settings.autofill_party_info;
+        this.api_enabled = india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
     }
 
     render_dialog() {
         super.render_dialog();
-        ic.set_state_options(this.dialog);
+        india_compliance.set_state_options(this.dialog);
     }
 
     get_address_fields() {
@@ -22,10 +18,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                          `When you enter a GSTIN, the permanent address linked to it is
-                        auto-filled by default.<br>
+                        `When you enter a GSTIN, the permanent address linked to it is
+                        autofilled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                      )
+                    )
                     : "",
                 collapsible: 0,
             },
@@ -67,7 +63,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 options: "Country",
                 default: frappe.defaults.get_user_default("country"),
                 onchange: () => {
-                    ic.set_state_options(this.dialog);
+                    india_compliance.set_state_options(this.dialog);
                 },
             },
             {
@@ -85,7 +81,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 label: "GSTIN",
                 fieldname: "_gstin",
                 fieldtype: "Autocomplete",
-                description: this.api_enabled ? GSTIN_FIELD_DESCRIPTION : "",
+                description: this.api_enabled ? get_gstin_description() : "",
                 ignore_validation: true,
                 onchange: () => {
                     const d = this.dialog;
@@ -93,7 +89,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
 
                     d.set_value(
                         "gst_category",
-                        ic.guess_gst_category(d.doc._gstin, d.doc.country)
+                        india_compliance.guess_gst_category(d.doc._gstin, d.doc.country)
                     );
                 },
             },
@@ -280,7 +276,16 @@ async function autofill_fields(dialog) {
         pincode_field.set_data([]);
         pincode_field.df.onchange = null;
 
-        gstin_field.set_description(GSTIN_FIELD_DESCRIPTION);
+        gstin_field.set_description(get_gstin_description());
+        return;
+    }
+
+    if (gst_settings.sandbox_mode && gstin !== "33GSPTN9771G3ZP") {
+        frappe.show_alert({
+            message: __("Skipping data retrieval for GSTIN restricted in Sandbox Mode"),
+        });
+
+        gstin_field.set_description("");
         return;
     }
 
@@ -293,6 +298,11 @@ async function autofill_fields(dialog) {
 }
 
 function set_gstin_description(gstin_field, status) {
+    if (!status) {
+        gstin_field.set_description("");
+        return;
+    }
+
     const STATUS_COLORS = { Active: "green", Cancelled: "red" };
 
     gstin_field.set_description(
@@ -366,5 +376,16 @@ function autofill_address(doc, { all_addresses }) {
     update_address_info(
         doc,
         all_addresses.find(address => address.pincode == pincode)
+    );
+}
+
+function get_gstin_description() {
+    if (!gst_settings.sandbox_mode) {
+        return __("Autofill party information by entering their GSTIN");
+    }
+
+    return __(
+        `To test the feature to autofill party information in Sandbox Mode,
+        use the following GSTIN: <br><strong>33GSPTN9771G3ZP</strong>`
     );
 }

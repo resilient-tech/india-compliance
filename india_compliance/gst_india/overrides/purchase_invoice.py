@@ -43,3 +43,16 @@ def validate_supplier_gstin(doc):
             _("Supplier GSTIN and Company GSTIN cannot be the same"),
             title=_("Invalid Supplier GSTIN"),
         )
+
+
+def onload(doc, method):
+    if doc.docstatus != 1 or doc.gst_category != "Overseas":
+        return
+
+    doc.set_onload(
+        "bill_of_entry_exists",
+        frappe.db.exists(
+            "Bill of Entry",
+            {"purchase_invoice": doc.name, "docstatus": 1},
+        ),
+    )

@@ -16,12 +16,9 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def execute(filters=None):
-    return _execute(filters)
-
-
-def _execute(filters=None):
     if not filters:
         filters = {}
+
     columns = get_columns()
 
     output_gst_accounts = [
@@ -40,25 +37,39 @@ def _execute(filters=None):
     data = []
     added_item = []
     for d in item_list:
-        if (d.parent, d.gst_hsn_code, d.item_code) not in added_item:
-            row = [d.gst_hsn_code, d.description, d.stock_uom, d.stock_qty]
-            total_tax = 0
-            tax_rate = 0
-            for tax in tax_columns:
-                item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
-                tax_rate += flt(item_tax.get("tax_rate", 0))
-                total_tax += flt(item_tax.get("tax_amount", 0))
+        if (d.parent, d.gst_hsn_code, d.item_code) in added_item:
+            continue
 
-            row += [tax_rate, d.taxable_value + total_tax, d.taxable_value]
+        if d.gst_hsn_code.startswith("99"):
+            # service item doesnt have qty / uom
+            d.stock_qty = 0
+            d.uqc = "NA"
 
-            for tax in tax_columns:
-                item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
-                row += [item_tax.get("tax_amount", 0)]
+        else:
+            d.uqc = d.get("uqc", "").upper()
+            if d.uqc not in UOMS:
+                d.uqc = "OTH"
 
-            data.append(row)
-            added_item.append((d.parent, d.gst_hsn_code, d.item_code))
+        row = [d.gst_hsn_code, d.description, d.uqc, d.stock_qty]
+        total_tax = 0
+        tax_rate = 0
+        for tax in tax_columns:
+            item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
+            tax_rate += flt(item_tax.get("tax_rate", 0))
+            total_tax += flt(item_tax.get("tax_amount", 0))
+
+        row += [tax_rate, d.taxable_value + total_tax, d.taxable_value]
+
+        for tax in tax_columns:
+            item_tax = itemised_tax.get((d.parent, d.item_code), {}).get(tax, {})
+            row += [item_tax.get("tax_amount", 0)]
+
+        data.append(row)
+        added_item.append((d.parent, d.gst_hsn_code, d.item_code))
+
     if data:
         data = get_merged_data(columns, data)  # merge same hsn code data
+
     return columns, data
 
 
@@ -78,8 +89,8 @@ def get_columns():
             "width": 300,
         },
         {
-            "fieldname": "stock_uom",
-            "label": _("Stock UOM"),
+            "fieldname": "uqc",
+            "label": _("UQC"),
             "fieldtype": "Data",
             "width": 100,
         },
@@ -138,7 +149,7 @@ def get_items(filters):
         f"""
         SELECT
             `tabSales Invoice Item`.gst_hsn_code,
-            `tabSales Invoice Item`.stock_uom,
+            `tabSales Invoice Item`.stock_uom as uqc,
             sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
             sum(`tabSales Invoice Item`.base_price_list_rate) AS base_price_list_rate,
@@ -215,10 +226,7 @@ def get_tax_accounts(
 
         try:
             for item_code, tax_data in json.loads(item_wise_tax_detail).items():
-                if (
-                    not frappe.db.get_value("Item", item_code, "gst_hsn_code")
-                    or not tax_data
-                ):
+                if not tax_data:
                     continue
 
                 tax_rate, tax_amount = tax_data
@@ -308,30 +316,27 @@ def download_json_file():
 
 
 def get_hsn_wise_json_data(filters, report_data):
-
     filters = frappe._dict(filters)
     gst_accounts = get_gst_accounts_by_type(filters.company, "Output")
     data = []
     count = 1
 
     for hsn in report_data:
-        uom = hsn.get("stock_uom", "").upper()
-        if uom not in UOMS:
-            uom = "OTH"
-
         row = {
             "num": count,
             "hsn_sc": hsn.get("gst_hsn_code"),
-            "desc": hsn.get("description")[:30],
-            "uqc": uom,
+            "uqc": hsn.get("uqc"),
             "qty": hsn.get("stock_qty"),
             "rt": flt(hsn.get("tax_rate"), 2),
-            "txval": flt(hsn.get("taxable_amount", 2)),
+            "txval": flt(hsn.get("taxable_amount"), 2),
             "iamt": 0.0,
             "camt": 0.0,
             "samt": 0.0,
             "csamt": 0.0,
         }
+
+        if hsn_description := hsn.get("description"):
+            row["desc"] = hsn_description[:30]
 
         row["iamt"] += flt(
             hsn.get(frappe.scrub(cstr(gst_accounts.get("igst_account"))), 0.0), 2
