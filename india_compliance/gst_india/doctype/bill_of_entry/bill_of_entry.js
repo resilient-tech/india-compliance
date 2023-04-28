@@ -205,8 +205,26 @@ class TaxesController {
     }
 
     setup() {
+        this.fetch_round_off_accounts();
         this.set_item_tax_template_query();
         this.set_account_head_query();
+    }
+
+    fetch_round_off_accounts() {
+        if (this.frm.doc.docstatus !== 0 || !this.frm.doc.company) return;
+
+        frappe.call({
+            method: "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
+            args: {
+                company: this.frm.doc.company,
+                account_list: [],
+            },
+            callback(r) {
+                if (r.message) {
+                    frappe.flags.round_off_applicable_accounts = r.message;
+                }
+            },
+        });
     }
 
     set_item_tax_template_query() {
@@ -296,13 +314,17 @@ class TaxesController {
         else taxes = this.frm.doc.taxes;
 
         taxes.forEach(async row => {
-            if (row.charge_type === "On Net Total") {
-                const tax_amount = this.get_tax_on_net_total(row);
+            if (row.charge_type !== "On Net Total") return;
 
-                // update if tax amount is changed manually
-                if (tax_amount !== row.tax_amount) {
-                    row.tax_amount = tax_amount;
-                }
+            const tax_amount = this.get_tax_on_net_total(row);
+
+            // update if tax amount is changed manually
+            if (tax_amount !== row.tax_amount) {
+                row.tax_amount = tax_amount;
+            }
+
+            if (frappe.flags.round_off_applicable_accounts?.includes(row.account_head)) {
+                row.tax_amount = Math.round(row.tax_amount);
             }
         });
 
