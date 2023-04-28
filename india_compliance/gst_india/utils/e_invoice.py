@@ -167,11 +167,17 @@ def generate_e_invoice(docname, throw=True):
 def cancel_e_invoice(docname, values):
     doc = load_doc("Sales Invoice", docname, "cancel")
     values = frappe.parse_json(values)
+    validate_if_e_invoice_can_be_cancelled(doc)
 
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
-    data = EInvoiceData(doc).get_data_for_cancellation(values)
+    data = {
+        "Irn": doc.irn,
+        "Cnlrsn": CANCEL_REASON_CODES[values.reason],
+        "Cnlrem": values.remark if values.remark else values.reason,
+    }
+
     result = EInvoiceAPI(doc).cancel_irn(data)
     log_e_invoice(
         doc,
@@ -285,15 +291,6 @@ class EInvoiceData(GSTTransactionData):
         self.set_transporter_details(for_auto_generation)
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
-
-    def get_data_for_cancellation(self, values):
-        validate_if_e_invoice_can_be_cancelled(self.doc)
-
-        return {
-            "Irn": self.doc.irn,
-            "Cnlrsn": CANCEL_REASON_CODES[values.reason],
-            "Cnlrem": values.remark if values.remark else values.reason,
-        }
 
     def validate_transaction(self):
         super().validate_transaction()
