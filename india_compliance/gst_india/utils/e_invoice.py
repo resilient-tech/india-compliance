@@ -189,7 +189,7 @@ def cancel_e_invoice(docname, values):
             "cancelled_on": (
                 get_datetime()  # Fallback to handle already cancelled IRN
                 if result.error_code == "9999"
-                else parse_datetime(result.CancelDate, day_first=True)
+                else parse_datetime(result.CancelDate)
             ),
         },
     )
