@@ -171,7 +171,11 @@ def _cancel_e_waybill(doc, values):
             "is_cancelled": 1,
             "cancel_reason_code": CANCEL_REASON_CODES[values.reason],
             "cancel_remark": values.remark if values.remark else values.reason,
-            "cancelled_on": parse_datetime(result.cancelDate, day_first=True),
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled e-Waybill
+                if result.error_code == "312"
+                else parse_datetime(result.cancelDate, day_first=True)
+            ),
         },
     )
 
