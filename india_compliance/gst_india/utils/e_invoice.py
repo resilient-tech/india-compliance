@@ -179,18 +179,22 @@ def cancel_e_invoice(docname, values):
     }
 
     result = EInvoiceAPI(doc).cancel_irn(data)
-    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
-
     log_e_invoice(
         doc,
         {
-            "name": result.Irn,
+            "name": doc.irn,
             "is_cancelled": 1,
             "cancel_reason_code": values.reason,
             "cancel_remark": values.remark,
-            "cancelled_on": parse_datetime(result.CancelDate),
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled IRN
+                if result.error_code == "9999"
+                else parse_datetime(result.CancelDate)
+            ),
         },
     )
+
+    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
 
     frappe.msgprint(
         _("e-Invoice cancelled successfully"),
