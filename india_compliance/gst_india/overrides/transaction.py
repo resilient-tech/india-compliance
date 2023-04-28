@@ -482,15 +482,13 @@ def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
 
 def get_regional_round_off_accounts(company, account_list):
     country = frappe.get_cached_value("Company", company, "country")
-
-    if country != "India":
-        return
+    if country != "India" or not frappe.get_cached_value(
+        "GST Settings", "GST Settings", "round_off_gst_values"
+    ):
+        return account_list
 
     if isinstance(account_list, str):
         account_list = json.loads(account_list)
-
-    if not frappe.db.get_single_value("GST Settings", "round_off_gst_values"):
-        return
 
     account_list.extend(get_all_gst_accounts(company))
 
