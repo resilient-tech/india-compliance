@@ -5,9 +5,11 @@ from india_compliance.gst_india.constants import REGISTERED
 from india_compliance.gst_india.utils import validate_gstin
 
 
-def update_transporter_gstin(doc, method=None):
+def validate_gst_transporter_id(doc, method=None):
     """
-    Validate GST Transporter GSTIN with GSTIN if exists.
+    - Set as GSTIN if not set
+    - Match PAN with GSTIN
+    - Validate length, check digit and format (as applicable)
     """
     if not doc.is_transporter:
         return
