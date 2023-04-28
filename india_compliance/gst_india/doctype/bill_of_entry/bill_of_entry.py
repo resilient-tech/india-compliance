@@ -99,7 +99,7 @@ class BillofEntry(Document):
     def set_total_taxes(self):
         total_taxes = 0
 
-        round_off_accounts = get_round_off_applicable_accounts(self.company, []) or []
+        round_off_accounts = get_round_off_applicable_accounts(self.company, [])
         for tax in self.taxes:
             if tax.charge_type == "On Net Total":
                 tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates)
@@ -177,6 +177,7 @@ class BillofEntry(Document):
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
+        # nosemgrep
         self.company_currency = erpnext.get_company_currency(self.company)
 
         gl_entries = []

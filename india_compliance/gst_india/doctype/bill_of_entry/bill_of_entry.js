@@ -214,16 +214,16 @@ class TaxesController {
         if (this.frm.doc.docstatus !== 0 || !this.frm.doc.company) return;
 
         frappe.call({
-            "method": "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
-            "args": {
-                "company": this.frm.doc.company,
-                "account_list": []
+            method: "erpnext.controllers.taxes_and_totals.get_round_off_applicable_accounts",
+            args: {
+                company: this.frm.doc.company,
+                account_list: [],
             },
             callback(r) {
                 if (r.message) {
                     frappe.flags.round_off_applicable_accounts = r.message;
                 }
-            }
+            },
         });
     }
 
@@ -314,8 +314,7 @@ class TaxesController {
         else taxes = this.frm.doc.taxes;
 
         taxes.forEach(async row => {
-            if (row.charge_type !== "On Net Total")
-                return;
+            if (row.charge_type !== "On Net Total") return;
 
             const tax_amount = this.get_tax_on_net_total(row);
 
@@ -324,7 +323,7 @@ class TaxesController {
                 row.tax_amount = tax_amount;
             }
 
-            if (frappe.flags.round_off_applicable_accounts.includes(row.account_head)) {
+            if (frappe.flags.round_off_applicable_accounts?.includes(row.account_head)) {
                 row.tax_amount = Math.round(row.tax_amount);
             }
         });
