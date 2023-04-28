@@ -171,11 +171,8 @@ def cancel_e_invoice(docname, values):
     if doc.get("ewaybill"):
         _cancel_e_waybill(doc, values)
 
-    e_invoice_data = EInvoiceData(doc)
-    result = EInvoiceAPI(doc).cancel_irn(
-        e_invoice_data.get_data_for_cancellation(values)
-    )
-
+    data = EInvoiceData(doc).get_data_for_cancellation(values)
+    result = EInvoiceAPI(doc).cancel_irn(data)
     log_e_invoice(
         doc,
         {
@@ -183,9 +180,11 @@ def cancel_e_invoice(docname, values):
             "is_cancelled": 1,
             "cancel_reason_code": values.reason,
             "cancel_remark": values.remark,
-            "cancelled_on": parse_datetime(
-                result.get("CancelDate") or str(get_datetime())
-            ),  # fallback to handle already cancelled IRN
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled IRN
+                if result.error_code == "9999"
+                else parse_datetime(result.CancelDate, day_first=True)
+            ),
         },
     )
 

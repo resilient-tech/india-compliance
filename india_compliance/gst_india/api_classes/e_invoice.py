@@ -14,7 +14,7 @@ class EInvoiceAPI(BaseAPI):
     IGNORED_ERROR_CODES = {
         # Generate IRN errors
         "2150": "Duplicate IRN",
-        # Get e_invoice by IRN errors
+        # Get e-Invoice by IRN errors
         "2283": (
             "IRN details cannot be provided as it is generated more than 2 days ago"
         ),
