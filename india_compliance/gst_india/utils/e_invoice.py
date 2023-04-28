@@ -261,6 +261,23 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     return True
 
 
+def validate_if_e_invoice_can_be_cancelled(doc):
+    if not doc.irn:
+        frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
+
+    # this works because we do run_onload in load_doc above
+    acknowledged_on = doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
+
+    if (
+        not acknowledged_on
+        or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
+        < get_datetime()
+    ):
+        frappe.throw(
+            _("e-Invoice can only be cancelled upto 24 hours after it is generated")
+        )
+
+
 class EInvoiceData(GSTTransactionData):
     def get_data(self, *, for_auto_generation=False):
         self.validate_transaction()
@@ -269,6 +286,15 @@ class EInvoiceData(GSTTransactionData):
         self.set_transporter_details(for_auto_generation)
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
+
+    def get_data_for_cancellation(self, values):
+        validate_if_e_invoice_can_be_cancelled(self.doc)
+
+        return {
+            "Irn": self.doc.irn,
+            "Cnlrsn": CANCEL_REASON_CODES[values.reason],
+            "Cnlrem": values.remark if values.remark else values.reason,
+        }
 
     def validate_transaction(self):
         super().validate_transaction()
@@ -611,32 +637,3 @@ class EInvoiceData(GSTTransactionData):
                 "ExpDt": item_details.batch_expiry_date,
             },
         }
-
-    def get_data_for_cancellation(self, values):
-        self.validate_if_irn_is_set()
-        self.validate_if_e_invoice_can_be_cancelled()
-
-        return {
-            "Irn": self.doc.irn,
-            "Cnlrsn": CANCEL_REASON_CODES[values.reason],
-            "Cnlrem": values.remark if values.remark else values.reason,
-        }
-
-    def validate_if_irn_is_set(self):
-        if not self.doc.irn:
-            frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
-
-    def validate_if_e_invoice_can_be_cancelled(self):
-        # this works because we do run_onload in load_doc above
-        acknowledged_on = (
-            self.doc.get_onload().get("e_invoice_info", {}).get("acknowledged_on")
-        )
-
-        if (
-            not acknowledged_on
-            or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
-            < get_datetime()
-        ):
-            frappe.throw(
-                _("e-Invoice can only be cancelled upto 24 hours after it is generated")
-            )
