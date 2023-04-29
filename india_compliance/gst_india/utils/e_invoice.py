@@ -459,11 +459,8 @@ class EInvoiceData(GSTTransactionData):
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = self.sanitize_value(
-            self.doc.customer_name
-            or frappe.db.get_value("Customer", self.doc.customer, "customer_name")
-        )
-        self.company_address.legal_name = self.sanitize_value(self.doc.company)
+        self.billing_address.legal_name = self.transaction_details.customer_name
+        self.company_address.legal_name = self.transaction_details.company_name
 
     def get_invoice_data(self):
         if self.sandbox_mode:
@@ -520,7 +517,7 @@ class EInvoiceData(GSTTransactionData):
             "SellerDtls": {
                 "Gstin": self.company_address.gstin,
                 "LglNm": self.company_address.legal_name,
-                "TrdNm": self.company_address.address_title,
+                "TrdNm": self.company_address.legal_name,
                 "Loc": self.company_address.city,
                 "Pin": self.company_address.pincode,
                 "Stcd": self.company_address.state_number,
@@ -530,7 +527,7 @@ class EInvoiceData(GSTTransactionData):
             "BuyerDtls": {
                 "Gstin": self.billing_address.gstin,
                 "LglNm": self.billing_address.legal_name,
-                "TrdNm": self.billing_address.address_title,
+                "TrdNm": self.billing_address.legal_name,
                 "Addr1": self.billing_address.address_line1,
                 "Addr2": self.billing_address.address_line2,
                 "Loc": self.billing_address.city,
