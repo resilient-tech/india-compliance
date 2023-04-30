@@ -768,6 +768,9 @@ class EWaybillData(GSTTransactionData):
 
         self.transaction_details.transaction_type = transaction_type
 
+        self.to_address.legal_name = self.transaction_details.customer_name
+        self.from_address.legal_name = self.transaction_details.company_name
+
         if self.doc.gst_category == "SEZ":
             self.to_address.state_number = 96
 
@@ -822,7 +825,7 @@ class EWaybillData(GSTTransactionData):
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.from_address.address_title,
+            "fromTrdName": self.from_address.legal_name,
             "fromGstin": self.from_address.gstin,
             "fromAddr1": self.dispatch_address.address_line1,
             "fromAddr2": self.dispatch_address.address_line2,
@@ -830,7 +833,7 @@ class EWaybillData(GSTTransactionData):
             "fromPincode": self.dispatch_address.pincode,
             "fromStateCode": self.from_address.state_number,
             "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.to_address.address_title,
+            "toTrdName": self.to_address.legal_name,
             "toGstin": self.to_address.gstin,
             "toAddr1": self.shipping_address.address_line1,
             "toAddr2": self.shipping_address.address_line2,
