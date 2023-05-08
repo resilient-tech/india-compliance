@@ -11,6 +11,7 @@ from frappe.utils import today
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -98,9 +99,13 @@ class BillofEntry(Document):
     def set_total_taxes(self):
         total_taxes = 0
 
+        round_off_accounts = get_round_off_applicable_accounts(self.company, [])
         for tax in self.taxes:
             if tax.charge_type == "On Net Total":
                 tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates)
+
+                if tax.account_head in round_off_accounts:
+                    tax.tax_amount = round(tax.tax_amount, 0)
 
             total_taxes += tax.tax_amount
             tax.total = self.total_taxable_value + total_taxes
@@ -172,6 +177,7 @@ class BillofEntry(Document):
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
+        # nosemgrep
         self.company_currency = erpnext.get_company_currency(self.company)
 
         gl_entries = []

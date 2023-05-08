@@ -171,7 +171,11 @@ def _cancel_e_waybill(doc, values):
             "is_cancelled": 1,
             "cancel_reason_code": CANCEL_REASON_CODES[values.reason],
             "cancel_remark": values.remark if values.remark else values.reason,
-            "cancelled_on": parse_datetime(result.cancelDate, day_first=True),
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled e-Waybill
+                if result.error_code == "312"
+                else parse_datetime(result.cancelDate, day_first=True)
+            ),
         },
     )
 
@@ -570,6 +574,7 @@ class EWaybillData(GSTTransactionData):
         - Atleast one item with HSN for goods is required
         - Basic transporter details must be present
         - Transaction does not have any non-GST items
+        - Sales Invoice with same company and billing gstin
         """
 
         for fieldname in ("company_address", "customer_address"):
@@ -599,6 +604,18 @@ class EWaybillData(GSTTransactionData):
             self.validate_mode_of_transport()
 
         self.validate_non_gst_items()
+
+        if (
+            self.doc.doctype == "Sales Invoice"
+            and self.doc.company_gstin == self.doc.billing_address_gstin
+        ):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be generated because billing GSTIN is same as"
+                    " company GSTIN"
+                ),
+                title=_("Invalid Data"),
+            )
 
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
@@ -757,6 +774,9 @@ class EWaybillData(GSTTransactionData):
 
         self.transaction_details.transaction_type = transaction_type
 
+        self.to_address.legal_name = self.transaction_details.customer_name
+        self.from_address.legal_name = self.transaction_details.company_name
+
         if self.doc.gst_category == "SEZ":
             self.to_address.state_number = 96
 
@@ -811,7 +831,7 @@ class EWaybillData(GSTTransactionData):
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.from_address.address_title,
+            "fromTrdName": self.from_address.legal_name,
             "fromGstin": self.from_address.gstin,
             "fromAddr1": self.dispatch_address.address_line1,
             "fromAddr2": self.dispatch_address.address_line2,
@@ -819,7 +839,7 @@ class EWaybillData(GSTTransactionData):
             "fromPincode": self.dispatch_address.pincode,
             "fromStateCode": self.from_address.state_number,
             "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.to_address.address_title,
+            "toTrdName": self.to_address.legal_name,
             "toGstin": self.to_address.gstin,
             "toAddr1": self.shipping_address.address_line1,
             "toAddr2": self.shipping_address.address_line2,

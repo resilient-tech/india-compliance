@@ -14,7 +14,7 @@
 				"Pin": 500055,
 				"Pos": "01",
 				"Stcd": "36",
-				"TrdNm": "Test Registered Customer"
+				"TrdNm": "_Test Registered Customer"
 			},
 			"DocDtls": {
 				"Dt": "16/09/2022",
@@ -29,7 +29,7 @@
 			},
 			"ItemList": [
 				{
-					"AssAmt": 100,
+					"AssAmt": 100000,
 					"CesAmt": 0,
 					"CesNonAdvlAmt": 0,
 					"CesRt": 0,
@@ -40,11 +40,11 @@
 					"IgstAmt": 0,
 					"IsServc": "N",
 					"PrdDesc": "Test Trading Goods 1",
-					"Qty": 1,
+					"Qty": 1000,
 					"SgstAmt": 0,
 					"SlNo": "1",
-					"TotAmt": 100,
-					"TotItemVal": 100,
+					"TotAmt": 100000,
+					"TotItemVal": 100000,
 					"Unit": "NOS",
 					"UnitPrice": 100
 				}
@@ -52,7 +52,7 @@
 			"PayDtls": {
 				"CrDay": 0,
 				"PaidAmt": 0,
-				"PaymtDue": 100
+				"PaymtDue": 100000
 			},
 			"SellerDtls": {
 				"Addr1": "Test Address - 1",
@@ -61,7 +61,7 @@
 				"Loc": "Test City",
 				"Pin": 193501,
 				"Stcd": "01",
-				"TrdNm": "Test Indian Registered Company"
+				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
 				"RegRev": "N",
@@ -69,7 +69,7 @@
 				"TaxSch": "GST"
 			},
 			"ValDtls": {
-				"AssVal": 100,
+				"AssVal": 100000,
 				"CesVal": 0,
 				"CgstVal": 0,
 				"Discount": 0,
@@ -77,7 +77,7 @@
 				"OthChrg": 0,
 				"RndOffAmt": 0,
 				"SgstVal": 0,
-				"TotInvVal": 100
+				"TotInvVal": 100000
 			},
 			"Version": "1.1"
 		},
@@ -120,15 +120,12 @@
 				"Pin": 500055,
 				"Pos": "01",
 				"Stcd": "36",
-				"TrdNm": "Test Registered Customer"
+				"TrdNm": "_Test Registered Customer"
 			},
 			"DocDtls": {
 				"Dt": "17/09/2022",
 				"No": "test_invoice_no",
 				"Typ": "INV"
-			},
-			"EwbDtls": {
-				"Distance": 0
 			},
 			"ItemList": [
 				{
@@ -164,7 +161,7 @@
 				"Loc": "Test City",
 				"Pin": 193501,
 				"Stcd": "01",
-				"TrdNm": "Test Indian Registered Company"
+				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
 				"RegRev": "N",
@@ -228,15 +225,12 @@
 				"Pin": 500055,
 				"Pos": "01",
 				"Stcd": "36",
-				"TrdNm": "Test Registered Customer"
+				"TrdNm": "_Test Registered Customer"
 			},
 			"DocDtls": {
 				"Dt": "17/09/2022",
 				"No": "test_invoice_no",
 				"Typ": "CRN"
-			},
-			"EwbDtls": {
-				"Distance": 0
 			},
 			"ItemList": [
 				{
@@ -280,7 +274,7 @@
 				"Loc": "Test City",
 				"Pin": 193501,
 				"Stcd": "01",
-				"TrdNm": "Test Indian Registered Company"
+				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
 				"RegRev": "N",
@@ -344,15 +338,12 @@
 				"Pin": 500055,
 				"Pos": "01",
 				"Stcd": "36",
-				"TrdNm": "Test Registered Customer"
+				"TrdNm": "_Test Registered Customer"
 			},
 			"DocDtls": {
 				"Dt": "17/09/2022",
 				"No": "test_invoice_no",
 				"Typ": "DBN"
-			},
-			"EwbDtls": {
-				"Distance": 0
 			},
 			"ItemList": [
 				{
@@ -388,7 +379,7 @@
 				"Loc": "Test City",
 				"Pin": 193501,
 				"Stcd": "01",
-				"TrdNm": "Test Indian Registered Company"
+				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
 				"RegRev": "N",

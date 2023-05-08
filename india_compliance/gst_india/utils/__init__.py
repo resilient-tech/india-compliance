@@ -397,3 +397,18 @@ def is_api_enabled(settings=None):
 
 def can_enable_api(settings):
     return settings.api_secret or frappe.conf.ic_api_secret
+
+
+def get_place_of_supply_options(*, as_list=False, with_other_countries=False):
+    options = []
+
+    for state_name, state_number in STATE_NUMBERS.items():
+        options.append(f"{state_number}-{state_name}")
+
+    if with_other_countries:
+        options.append("96-Other Countries")
+
+    if as_list:
+        return options
+
+    return "\n".join(sorted(options))

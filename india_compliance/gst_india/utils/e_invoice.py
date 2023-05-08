@@ -90,8 +90,9 @@ def generate_e_invoices(docnames):
 @frappe.whitelist()
 def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
+
     try:
-        data = EInvoiceData(doc).get_data()
+        data = EInvoiceData(doc).get_data(for_auto_generation=not throw)
         api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
 
@@ -178,18 +179,22 @@ def cancel_e_invoice(docname, values):
     }
 
     result = EInvoiceAPI(doc).cancel_irn(data)
-    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
-
     log_e_invoice(
         doc,
         {
-            "name": result.Irn,
+            "name": doc.irn,
             "is_cancelled": 1,
             "cancel_reason_code": values.reason,
             "cancel_remark": values.remark,
-            "cancelled_on": parse_datetime(result.CancelDate),
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled IRN
+                if result.error_code == "9999"
+                else parse_datetime(result.CancelDate)
+            ),
         },
     )
+
+    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
 
     frappe.msgprint(
         _("e-Invoice cancelled successfully"),
@@ -228,6 +233,13 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     def _throw(error):
         if throw:
             frappe.throw(error)
+
+    if doc.company_gstin == doc.billing_address_gstin:
+        return _throw(
+            _(
+                "e-Invoice is not applicable for invoices with same company and billing GSTIN"
+            )
+        )
 
     if doc.irn:
         return _throw(
@@ -279,11 +291,11 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
 
 class EInvoiceData(GSTTransactionData):
-    def get_data(self):
+    def get_data(self, *, for_auto_generation=False):
         self.validate_transaction()
         self.set_transaction_details()
         self.set_item_list()
-        self.set_transporter_details()
+        self.set_transporter_details(for_auto_generation)
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
@@ -414,6 +426,17 @@ class EInvoiceData(GSTTransactionData):
 
         return supply_type
 
+    def set_transporter_details(self, for_auto_generation=False):
+        if (
+            # e-waybill threshold is not met
+            self.transaction_details.grand_total < self.settings.e_waybill_threshold
+            # e-waybill auto-generation is disabled by user
+            or (for_auto_generation and not self.settings.auto_generate_e_waybill)
+        ):
+            return
+
+        return super().set_transporter_details()
+
     def set_party_address_details(self):
         self.billing_address = self.get_address_details(
             self.doc.customer_address,
@@ -444,11 +467,8 @@ class EInvoiceData(GSTTransactionData):
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = self.sanitize_value(
-            self.doc.customer_name
-            or frappe.db.get_value("Customer", self.doc.customer, "customer_name")
-        )
-        self.company_address.legal_name = self.sanitize_value(self.doc.company)
+        self.billing_address.legal_name = self.transaction_details.customer_name
+        self.company_address.legal_name = self.transaction_details.company_name
 
     def get_invoice_data(self):
         if self.sandbox_mode:
@@ -505,7 +525,7 @@ class EInvoiceData(GSTTransactionData):
             "SellerDtls": {
                 "Gstin": self.company_address.gstin,
                 "LglNm": self.company_address.legal_name,
-                "TrdNm": self.company_address.address_title,
+                "TrdNm": self.company_address.legal_name,
                 "Loc": self.company_address.city,
                 "Pin": self.company_address.pincode,
                 "Stcd": self.company_address.state_number,
@@ -515,7 +535,7 @@ class EInvoiceData(GSTTransactionData):
             "BuyerDtls": {
                 "Gstin": self.billing_address.gstin,
                 "LglNm": self.billing_address.legal_name,
-                "TrdNm": self.billing_address.address_title,
+                "TrdNm": self.billing_address.legal_name,
                 "Addr1": self.billing_address.address_line1,
                 "Addr2": self.billing_address.address_line2,
                 "Loc": self.billing_address.city,

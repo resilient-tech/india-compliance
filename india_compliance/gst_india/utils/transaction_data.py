@@ -47,6 +47,13 @@ class GSTTransactionData:
 
         self.transaction_details.update(
             {
+                "company_name": self.sanitize_value(self.doc.company),
+                "customer_name": self.sanitize_value(
+                    self.doc.customer_name
+                    or frappe.db.get_value(
+                        "Customer", self.doc.customer, "customer_name"
+                    )
+                ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "total": abs(
                     self.rounded(sum(row.taxable_value for row in self.doc.items))
@@ -60,7 +67,7 @@ class GSTTransactionData:
                 ),
                 "discount_amount": (
                     abs(self.rounded(self.doc.base_discount_amount))
-                    if self.doc.is_cash_or_non_trade_discount
+                    if self.doc.get("is_cash_or_non_trade_discount")
                     else 0
                 ),
                 "company_gstin": self.doc.company_gstin,

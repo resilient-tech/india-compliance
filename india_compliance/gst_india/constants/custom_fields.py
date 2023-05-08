@@ -1,22 +1,11 @@
 import frappe
 
 from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
+from india_compliance.gst_india.utils import get_place_of_supply_options
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
 gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
-
-
-def get_place_of_supply_options(with_other_countries=False):
-    options = []
-
-    for state_name, state_number in STATE_NUMBERS.items():
-        options.append(f"{state_number}-{state_name}")
-
-    if with_other_countries:
-        options.append("96-Other Countries")
-
-    return "\n".join(sorted(options))
 
 
 party_fields = [
@@ -419,7 +408,8 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "gst_category",
             "depends_on": "eval:doc.is_transporter",
-            "read_only_depends_on": "eval:doc.gstin",
+            # don't delete below line; required to unset existing value
+            "read_only_depends_on": None,
             "translatable": 0,
         }
     ],
@@ -776,7 +766,7 @@ E_WAYBILL_SI_FIELDS = [
         "label": "Transporter Name",
         "fieldtype": "Small Text",
         "insert_after": "transporter_col_break",
-        "fetch_from": "transporter.name",
+        "fetch_from": "transporter.supplier_name",
         "read_only": 1,
         "print_hide": 1,
         "translatable": 0,
