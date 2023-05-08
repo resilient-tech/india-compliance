@@ -9,7 +9,7 @@ frappe.query_reports["Bill of Entry Summary"] = {
       "label": __("Company"),
       "fieldtype": "Link",
       "options": "Company",
-      // "reqd": 1,
+      "reqd": 1,
       "default": frappe.defaults.get_user_default("Company")
     },
     {
