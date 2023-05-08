@@ -143,6 +143,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     """
     Validate GST accounts
     - Only Valid Accounts should be allowed
+    - No GST account should be specified for transactions where Company GSTIN = Party GSTIN
     - If export is made without GST, then no GST account should be specified
     - SEZ / Inter-State supplies should not have CGST or SGST account
     - Intra-State supplies should not have IGST account
@@ -178,6 +179,19 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
         doc.company, is_sales_transaction
     )
+
+    # Company GSTIN = Party GSTIN
+    party_gstin = doc.get("billing_address_gstin") or doc.get("supplier_gstin")
+    if (
+        party_gstin
+        and doc.company_gstin == party_gstin
+        and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
+    ):
+        _throw(
+            _(
+                "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are same"
+            ).format(idx)
+        )
 
     # Sales / Purchase Validations
 

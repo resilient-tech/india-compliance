@@ -575,6 +575,7 @@ class EWaybillData(GSTTransactionData):
         - Overseas Returns are not allowed
         - Basic transporter details must be present
         - Grand Total Amount must be greater than Criteria
+        - Sales Invoice with same company and billing gstin
         """
 
         for fieldname in ("company_address", "customer_address"):
@@ -611,6 +612,18 @@ class EWaybillData(GSTTransactionData):
             self.validate_mode_of_transport()
 
         self.validate_non_gst_items()
+
+        if (
+            self.doc.doctype == "Sales Invoice"
+            and self.doc.company_gstin == self.doc.billing_address_gstin
+        ):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be generated because billing GSTIN is same as"
+                    " company GSTIN"
+                ),
+                title=_("Invalid Data"),
+            )
 
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
