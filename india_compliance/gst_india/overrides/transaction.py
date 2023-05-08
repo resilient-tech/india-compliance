@@ -292,6 +292,16 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
+    if not is_inter_state:
+        used_accounts = set(row.account_head for row in rows_to_validate)
+        if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
+            _throw(
+                _(
+                    "Cannot use only one of CGST or SGST account for intra-state supplies"
+                ),
+                title=_("Invalid GST Accounts"),
+            )
+
     if len(previous_row_references) > 1:
         _throw(
             _(
