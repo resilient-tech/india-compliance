@@ -181,7 +181,9 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     )
 
     # Company GSTIN = Party GSTIN
-    party_gstin = doc.get("billing_address_gstin") or doc.get("supplier_gstin")
+    party_gstin = (
+        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+    )
     if (
         party_gstin
         and doc.company_gstin == party_gstin
