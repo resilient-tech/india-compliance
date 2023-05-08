@@ -53,7 +53,6 @@ def validate(doc, method=None):
 
     validate_invoice_number(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
-    validate_billing_address_gstin(doc)
 
 
 def validate_invoice_number(doc):
@@ -92,14 +91,6 @@ def validate_fields_and_set_status_for_e_invoice(doc):
         doc.einvoice_status = "Pending"
 
 
-def validate_billing_address_gstin(doc):
-    if doc.company_gstin == doc.billing_address_gstin:
-        frappe.throw(
-            _("Billing Address GSTIN and Company GSTIN cannot be the same"),
-            title=_("Invalid Billing Address GSTIN"),
-        )
-
-
 def on_submit(doc, method=None):
     if getattr(doc, "_submitted_from_ui", None) or not doc.company_gstin:
         return
@@ -125,6 +116,7 @@ def on_submit(doc, method=None):
     elif (
         not gst_settings.enable_e_waybill
         or not gst_settings.auto_generate_e_waybill
+        or doc.company_gstin == doc.billing_address_gstin
         or doc.ewaybill
         or doc.is_return
         or doc.is_debit_note

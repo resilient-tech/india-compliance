@@ -618,7 +618,12 @@ function has_e_waybill_threshold_met(frm) {
 
 function is_e_waybill_applicable(frm) {
     // means company is Indian and not Unregistered
-    if (!frm.doc.company_gstin) return;
+    if (
+        !frm.doc.company_gstin ||
+        (frm.doctype === "Sales Invoice" &&
+            frm.doc.company_gstin === frm.doc.billing_address_gstin)
+    )
+        return;
 
     // at least one item is not a service
     for (const item of frm.doc.items) {
