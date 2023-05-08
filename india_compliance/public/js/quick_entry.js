@@ -85,7 +85,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 ignore_validation: true,
                 onchange: () => {
                     const d = this.dialog;
-                    if (this.api_enabled) return autofill_fields(d);
+                    if (this.api_enabled && !gst_settings.sandbox_mode) return autofill_fields(d);
 
                     d.set_value(
                         "gst_category",
@@ -280,15 +280,6 @@ async function autofill_fields(dialog) {
         return;
     }
 
-    if (gst_settings.sandbox_mode && gstin !== "33GSPTN9771G3ZP") {
-        frappe.show_alert({
-            message: __("Skipping data retrieval for GSTIN restricted in Sandbox Mode"),
-        });
-
-        gstin_field.set_description("");
-        return;
-    }
-
     const gstin_info = await get_gstin_info(gstin);
     set_gstin_description(gstin_field, gstin_info.status);
     map_gstin_info(dialog.doc, gstin_info);
@@ -385,7 +376,6 @@ function get_gstin_description() {
     }
 
     return __(
-        `To test the feature to autofill party information in Sandbox Mode,
-        use the following GSTIN: <br><strong>33GSPTN9771G3ZP</strong>`
+        `Autofill is not supported in sandbox mode`
     );
 }

@@ -159,6 +159,17 @@ class GSTSettings(Document):
                 )
             )
 
+        if (
+            self.sandbox_mode
+            and self.autofill_party_info
+            and self.has_value_changed("sandbox_mode")
+        ):
+            frappe.msgprint(
+                _(
+                    "Autofill Party Information based on GSTIN is not supported in sandbox mode"
+                ),
+            )
+
 
 @frappe.whitelist()
 def disable_api_promo():
