@@ -180,6 +180,24 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         doc.company, is_sales_transaction
     )
 
+<<<<<<< HEAD
+=======
+    # Company GSTIN = Party GSTIN
+    party_gstin = (
+        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+    )
+    if (
+        party_gstin
+        and doc.company_gstin == party_gstin
+        and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
+    ):
+        _throw(
+            _(
+                "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are same"
+            ).format(idx)
+        )
+
+>>>>>>> f1d98316 (refactor: more explicit condition to get party_gstin)
     # Sales / Purchase Validations
 
     if is_sales_transaction:
