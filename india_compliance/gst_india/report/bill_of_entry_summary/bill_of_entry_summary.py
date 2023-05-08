@@ -2,9 +2,11 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 
 
 def execute(filters=None):
+    validate_filters(filters)
     if not filters:
         filters = {}
 
@@ -113,43 +115,69 @@ def get_data(filters):
     return result
 
 
+def validate_filters(filters=None):
+    if filters is None:
+        filters = {}
+    filters = frappe._dict(filters)
+
+    if not filters.company:
+        frappe.throw(
+            _("{} is mandatory for generating Bill of Entry Summary Report").format(
+                _("Company")
+            ),
+            title=_("Invalid Filter"),
+        )
+    if not filters.from_date or not filters.to_date:
+        frappe.throw(
+            _(
+                "From Date & To Date is mandatory for generating e-Invoice Summary"
+                " Report"
+            ),
+            title=_("Invalid Filter"),
+        )
+    if filters.from_date > filters.to_date:
+        frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
+
+
 def get_boe_data(filters):
-    pi = frappe.qb.DocType("Purchase Invoice")
-    boe = frappe.qb.DocType("Bill of Entry")
-    jv_par = frappe.qb.DocType("Journal Entry")
-    jv = frappe.qb.DocType("Journal Entry Account")
+    purchase_invoice = frappe.qb.DocType("Purchase Invoice")
+    bill_of_entry = frappe.qb.DocType("Bill of Entry")
+    journal_entry = frappe.qb.DocType("Journal Entry")
+    jea = frappe.qb.DocType("Journal Entry Account")
 
     query = (
-        frappe.qb.from_(boe)
-        .inner_join(pi)
-        .on(pi.name == boe.purchase_invoice)
-        .left_join(jv)
-        .on(jv.reference_name == boe.name)
-        .left_join(jv_par)
-        .on(jv_par.name == jv.parent)
+        frappe.qb.from_(bill_of_entry)
+        .inner_join(purchase_invoice)
+        .on(purchase_invoice.name == bill_of_entry.purchase_invoice)
+        .left_join(jea)
+        .on(jea.reference_name == bill_of_entry.name)
+        .left_join(journal_entry)
+        .on(journal_entry.name == jea.parent)
         .select(
-            boe.name,
-            boe.bill_of_entry_no,
-            boe.bill_of_entry_date,
-            boe.purchase_invoice,
-            boe.bill_of_lading_no,
-            pi.supplier,
-            pi.posting_date,
-            pi.grand_total,
-            boe.total_taxable_value,
-            boe.total_customs_duty,
-            (boe.total_taxable_value - boe.total_customs_duty).as_(
+            bill_of_entry.name,
+            bill_of_entry.bill_of_entry_no,
+            bill_of_entry.bill_of_entry_date,
+            bill_of_entry.purchase_invoice,
+            bill_of_entry.bill_of_lading_no,
+            purchase_invoice.supplier,
+            purchase_invoice.posting_date,
+            purchase_invoice.grand_total,
+            bill_of_entry.total_taxable_value,
+            bill_of_entry.total_customs_duty,
+            (bill_of_entry.total_taxable_value - bill_of_entry.total_customs_duty).as_(
                 "total_assessable_value"
             ),
-            boe.total_taxes,
-            boe.total_amount_payable,
-            jv_par.name.as_("parent_journal_entry"),
+            bill_of_entry.total_taxes,
+            bill_of_entry.total_amount_payable,
+            journal_entry.name.as_("parent_journal_entry"),
         )
-        .where(boe.docstatus == 1)
+        .where(bill_of_entry.docstatus == 1)
         .where(
-            boe.bill_of_entry_date[filters.get("from_date") : filters.get("to_date")]
+            bill_of_entry.bill_of_entry_date[
+                filters.get("from_date") : filters.get("to_date")
+            ]
         )
-        .where(pi.company == filters.get("company"))
+        .where(purchase_invoice.company == filters.get("company"))
     )
 
     boe_query = query.run(as_dict=True)
