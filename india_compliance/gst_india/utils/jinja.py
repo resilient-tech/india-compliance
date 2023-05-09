@@ -12,7 +12,34 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     TRANSPORT_TYPES,
 )
+from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import as_ist
+
+E_INVOICE_ITEM_FIELDS = {
+    "SlNo": "Sr.",
+    "PrdDesc": "Product Description",
+    "HsnCd": "HSN Code",
+    "Qty": "Qty",
+    "Unit": "UOM",
+    "UnitPrice": "Rate",
+    "Discount": "Discount",
+    "AssAmt": "Taxable Amount",
+    "GstRt": "Tax Rate",
+    "CesRt": "Cess Rate",
+    "TotItemVal": "Total",
+}
+
+E_INVOICE_AMOUNT_FIELDS = {
+    "AssVal": "Taxable Value",
+    "CgstVal": "CGST",
+    "SgstVal": "SGST",
+    "IgstVal": "IGST",
+    "CesVal": "CESS",
+    "Discount": "Discount",
+    "OthChrg": "Other Charges",
+    "RndOffAmt": "Round Off",
+    "TotInvVal": "Total Value",
+}
 
 
 def add_spacing(string, interval):
@@ -82,16 +109,40 @@ def get_ewaybill_barcode(ewaybill):
 
 
 def get_non_zero_fields(data, fields):
-    """Returns a list of fields with non-zero values in order of fields specified"""
+    """Returns a list of fields with non-zero values"""
 
     if isinstance(data, dict):
         data = [data]
 
-    non_zero_fields = []
+    non_zero_fields = set()
+
     for row in data:
         for field in fields:
-            if row.get(field, 0) != 0 and field not in non_zero_fields:
-                non_zero_fields.append(field)
-                continue
+            if field not in non_zero_fields and row.get(field, 0) != 0:
+                non_zero_fields.add(field)
 
     return non_zero_fields
+
+
+def get_fields_to_display(data, field_map, mandatory_fields=None):
+    fields_to_display = get_non_zero_fields(data, field_map)
+    if mandatory_fields:
+        fields_to_display.update(mandatory_fields)
+
+    return {
+        field: label for field, label in field_map.items() if field in fields_to_display
+    }
+
+
+def get_e_invoice_item_fields(data):
+    return get_fields_to_display(data, E_INVOICE_ITEM_FIELDS, {"GstRt"})
+
+
+def get_e_invoice_amount_fields(data, doc):
+    mandatory_fields = set()
+    if is_inter_state_supply(doc):
+        mandatory_fields.add("IgstVal")
+    else:
+        mandatory_fields.update(("CgstVal", "SgstVal"))
+
+    return get_fields_to_display(data, E_INVOICE_AMOUNT_FIELDS, mandatory_fields)

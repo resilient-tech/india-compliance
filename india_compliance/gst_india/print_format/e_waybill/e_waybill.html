@@ -1,4 +1,5 @@
 {% set data = _dict(json.loads(doc.data)) %}
+{%- set irn = frappe.db.get_value("Sales Invoice", {"ewaybill": data.ewbNo}, "irn") -%}
 
 <html lang="en">
 
@@ -67,38 +68,50 @@
                         <span>
                             <strong>{{ data.ewayBillDate | replace(":00 ", " ") }}
                                 {{ " [" }}{{ data.actualDist }}{{ "Kms]" }}</strong>
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <span>Valid Until:</span>
-                    </td>
-                    <td>
-                        <span>
-                            <strong>{{ data.validUpto[:10] }}</strong>
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2">
-                        <div class="section-separator"></div>
-                        <strong>Part - A</strong>
-                    </td>
-                </tr>
-                <tr>
-                    <td>GSTIN of Supplier</td>
-                    <td>
-                        <span>
-                            <strong>{{ add_spacing(data.fromGstin, 5) }}-{{ data.fromTrdName }}</strong>
-                        </span>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Place of Dispatch</td>
-                    <td>
-                        <span>
-                            <strong>{{ data.fromPlace }},
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span>Valid Until:</span>
+                        </td>
+                        <td>
+                            <span>
+                                <strong>{{ data.validUpto[:10] }}</strong>
+                            </span>
+                        </td>
+                    </tr>
+                    {% if irn %}
+                    <tr>
+                        <td>
+                            <span>IRN:</span>
+                        </td>
+                        <td>
+                            <span>
+                                <strong>{{ irn }}</strong>
+                            </span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td colspan="2">
+                            <div class="section-separator"></div>
+                            <strong>Part - A</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>GSTIN of Supplier</td>
+                        <td>
+                            <span>
+                                <strong>{{ add_spacing(data.fromGstin, 5) }}-{{ data.fromTrdName }}</strong>
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Place of Dispatch</td>
+                        <td>
+                            <span>
+                                <strong>{{ data.fromPlace }},
                                 {{ get_state(data.actFromStateCode) }} -
                                 {{ data.fromPincode }}</strong>
                         </span>

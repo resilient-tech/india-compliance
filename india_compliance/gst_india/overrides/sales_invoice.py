@@ -1,9 +1,11 @@
 import frappe
-from frappe import _, bold
-from frappe.model import delete_doc
+from frappe import _
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import validate_transaction
+from india_compliance.gst_india.overrides.transaction import (
+    validate_mandatory_fields,
+    validate_transaction,
+)
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 
@@ -51,7 +53,6 @@ def validate(doc, method=None):
 
     validate_invoice_number(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
-    validate_billing_address_gstin(doc)
 
 
 def validate_invoice_number(doc):
@@ -80,24 +81,14 @@ def validate_fields_and_set_status_for_e_invoice(doc):
     ):
         return
 
-    for field in ("customer_address",):
-        if not doc.get(field):
-            frappe.throw(
-                _("{0} is a mandatory field for generating e-Invoices").format(
-                    bold(_(doc.meta.get_label(field))),
-                )
-            )
+    validate_mandatory_fields(
+        doc,
+        "customer_address",
+        _("{0} is a mandatory field for generating e-Invoices"),
+    )
 
     if doc._action == "submit" and not doc.irn:
         doc.einvoice_status = "Pending"
-
-
-def validate_billing_address_gstin(doc):
-    if doc.company_gstin == doc.billing_address_gstin:
-        frappe.throw(
-            _("Billing Address GSTIN and Company GSTIN cannot be the same"),
-            title=_("Invalid Billing Address GSTIN"),
-        )
 
 
 def on_submit(doc, method=None):
@@ -108,13 +99,10 @@ def on_submit(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    if gst_settings.enable_e_invoice:
-        if (
-            not gst_settings.auto_generate_e_invoice
-            or not validate_e_invoice_applicability(doc, gst_settings, throw=False)
-        ):
-            return
-
+    if (
+        validate_e_invoice_applicability(doc, gst_settings, throw=False)
+        and gst_settings.auto_generate_e_invoice
+    ):
         frappe.enqueue(
             "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
             enqueue_after_commit=True,
@@ -125,9 +113,10 @@ def on_submit(doc, method=None):
 
         return
 
-    if (
+    elif (
         not gst_settings.enable_e_waybill
         or not gst_settings.auto_generate_e_waybill
+        or doc.company_gstin == doc.billing_address_gstin
         or doc.ewaybill
         or doc.is_return
         or doc.is_debit_note
@@ -149,15 +138,6 @@ def on_submit(doc, method=None):
         doctype=doc.doctype,
         docname=doc.name,
     )
-
-
-def ignore_logs_on_trash(doc, method=None):
-    # TODO: design better way to achieve this
-    if "e-Waybill Log" not in delete_doc.doctypes_to_skip:
-        delete_doc.doctypes_to_skip += (
-            "e-Waybill Log",
-            "e-Invoice Log",
-        )
 
 
 def get_dashboard_data(data):

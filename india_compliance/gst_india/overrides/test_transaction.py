@@ -107,20 +107,25 @@ class TestTransaction(FrappeTestCase):
         self.assertTrue(doc.place_of_supply)
 
     def test_validate_mandatory_company_gstin(self):
+        def unset_company_gstin():
+            doc.set(
+                "company_address" if self.is_sales_doctype else "billing_address", ""
+            )
+            doc.company_gstin = ""
+
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
-
-        if self.is_sales_doctype:
-            doc.company_address = ""
-        else:
-            doc.billing_address = ""
-
-        doc.company_gstin = ""
+        unset_company_gstin()
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*is a mandatory field for GST Transactions.*)$"),
             doc.save,
         )
+
+        doc.reload()
+        unset_company_gstin()
+        doc.flags.ignore_mandatory = True
+        doc.save()
 
     def test_validate_mandatory_gst_category(self):
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
@@ -431,13 +436,34 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+    def test_purchase_with_different_place_of_supply(self):
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_out_state=True,
+            do_not_save=True,
+        )
+
+        doc.place_of_supply = "27-Maharashtra"
+        doc.save()
+
+        # place of supply shouldn't get overwritten
+        self.assertEqual(doc.place_of_supply, "27-Maharashtra")
+
+        # IGST should get applied
+        self.assertIn("IGST", doc.taxes[-1].description)
+
     def test_invalid_gst_account_type(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         doc.append(
             "taxes",
             {
                 "charge_type": "On Net Total",
-                "account_head": f"{'Input' if self.is_sales_doctype else 'Output'} Tax IGST - _TIRC",
+                "account_head": (
+                    f"{'Input' if self.is_sales_doctype else 'Output'} Tax IGST - _TIRC"
+                ),
                 "description": "IGST",
                 "rate": 18,
                 "cost_center": "Main - _TIRC",
@@ -529,3 +555,36 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(.*Only one row can be selected as a Reference Row.*)$"),
             doc.insert,
         )
+
+
+class TestQuotationTransaction(FrappeTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+        cls.lead_name = get_lead("_Test Lead")
+
+    def test_quotation_to_lead(self):
+        doc = create_transaction(
+            doctype="Quotation",
+            quotation_to="Lead",
+            party_name=self.lead_name,
+            company_address="_Test Indian Registered Company-Billing",
+        )
+
+        self.assertEqual(doc.gst_category, "Unregistered")
+
+
+def get_lead(first_name):
+    if name := frappe.db.exists("Lead", {"first_name": first_name}):
+        return name
+
+    lead = frappe.get_doc(
+        {
+            "doctype": "Lead",
+            "first_name": first_name,
+        }
+    )
+    lead.insert(ignore_permissions=True)
+
+    return lead.name

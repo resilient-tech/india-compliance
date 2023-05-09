@@ -16,7 +16,8 @@ from india_compliance.gst_india.page.india_compliance_account import (
     _disable_api_promo,
     post_login,
 )
-from india_compliance.gst_india.utils import can_enable_api, toggle_custom_fields
+from india_compliance.gst_india.utils import can_enable_api
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
 
 class GSTSettings(Document):
@@ -42,9 +43,6 @@ class GSTSettings(Document):
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
 
-        if self.enable_e_invoice:
-            self.auto_generate_e_waybill = self.auto_generate_e_invoice
-
     def on_update(self):
         self.update_custom_fields()
 
@@ -56,7 +54,6 @@ class GSTSettings(Document):
         company_wise_account_types = {}
 
         for row in self.gst_accounts:
-
             # Validate Duplicate Accounts
             for fieldname in GST_ACCOUNT_FIELDS:
                 account = row.get(fieldname)

@@ -116,11 +116,13 @@ function show_overseas_disabled_warning(doctype) {
 
 function set_gstin_query(doctype) {
     frappe.ui.form.on(doctype, {
-        onload(frm) {
-            if (frm.is_new()) return;
+        async refresh(frm) {
+            if (frm.is_new() || frm._gstin_options_set_for == frm.doc.name) return;
 
-            frm.get_field("gstin").df.ignore_validation = true;
-            frm.set_query("gstin", ic.get_gstin_query(frm.doc.name, doctype));
+            frm._gstin_options_set_for = frm.doc.name;
+            const field = frm.get_field("gstin");
+            field.df.ignore_validation = true;
+            field.set_data(await india_compliance.get_gstin_options(frm.doc.name, doctype));
         },
     });
 }
@@ -130,7 +132,7 @@ function set_gst_category(doctype) {
         gstin(frm) {
             frm.set_value(
                 "gst_category",
-                ic.guess_gst_category(frm.doc.gstin, frm.doc.country)
+                india_compliance.guess_gst_category(frm.doc.gstin, frm.doc.country)
             );
         },
     });
