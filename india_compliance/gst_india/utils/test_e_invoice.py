@@ -374,7 +374,7 @@ class TestEInvoice(FrappeTestCase):
         gst_settings.update(
             {
                 "apply_e_invoice_only_for_selected_companies": 1,
-                "e_invoice_applicable_for": [
+                "e_invoice_applicable_companies": [
                     {
                         "company": si.company,
                         "applicable_from": "2045-05-18",
@@ -395,9 +395,9 @@ class TestEInvoice(FrappeTestCase):
             si,
         )
 
-        for row in gst_settings.e_invoice_applicable_for:
+        for row in gst_settings.e_invoice_applicable_companies:
             if row.company == si.company:
-                gst_settings.e_invoice_applicable_for.remove(row)
+                gst_settings.e_invoice_applicable_companies.remove(row)
 
         gst_settings.save()
 

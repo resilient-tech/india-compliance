@@ -101,34 +101,34 @@ class GSTSettings(Document):
         if not self.enable_api or not self.enable_e_invoice:
             return
 
-        def _throw(label, message, idx=None):
-            _message = _("{0} {1}").format(frappe.bold(label), message)
-
-            if idx:
-                _message = _("Row #{0}: {1} {2}").format(
-                    idx, frappe.bold(label), message
+        if (
+            not self.e_invoice_applicable_from
+            and not self.apply_e_invoice_only_for_selected_companies
+        ):
+            frappe.throw(
+                _("{0} or {1} is mandatory for enabling e-Invoice").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")),
+                    frappe.bold(
+                        self.meta.get_label(
+                            "apply_e_invoice_only_for_selected_companies"
+                        )
+                    ),
                 )
-
-            frappe.throw(_message)
-
-        if self.apply_e_invoice_only_for_selected_companies:
-            label, message, idx = self.validate_e_invoice_applicable_for_company()
-            if label and message:
-                return _throw(label, message, idx)
-
-        elif not self.e_invoice_applicable_from:
-            return _throw(
-                self.meta.get_label("e_invoice_applicable_from"),
-                "is mandatory for enabling e-Invoice",
             )
+
+        date = "2021-01-01"
 
         if self.e_invoice_applicable_from and (
-            getdate(self.e_invoice_applicable_from) < getdate("2021-01-01")
+            getdate(self.e_invoice_applicable_from) < getdate(date)
         ):
-            return _throw(
-                self.meta.get_label("e_invoice_applicable_from"),
-                "cannot be before 2021-01-01",
+            frappe.throw(
+                _("{0} date cannot be before {1}").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")), date
+                )
             )
+
+        if self.apply_e_invoice_only_for_selected_companies:
+            self.validate_e_invoice_applicable_companies(date)
 
     def validate_credentials(self):
         if not self.enable_api:
@@ -174,43 +174,43 @@ class GSTSettings(Document):
                 )
             )
 
-    def validate_e_invoice_applicable_for_company(self, date=None):
+    def validate_e_invoice_applicable_companies(self, date=None):
         if not date:
             date = "2021-01-01"
 
-        if not self.e_invoice_applicable_for:
-            return (
-                self.meta.get_label("e_invoice_applicable_for"),
-                "is mandatory to enable e-Invoice for Selected Companies",
-                0,
+        if not self.e_invoice_applicable_companies:
+            frappe.throw(
+                _("{0} is mandatory to enable e-Invoice for Selected Companies").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_companies"))
+                )
             )
 
         company_list = []
-        for row in self.e_invoice_applicable_for:
+        for row in self.e_invoice_applicable_companies:
             if not row.applicable_from:
-                return (
-                    row.meta.get_label("applicable_from"),
-                    "is mandatory for enabling e-Invoice",
-                    row.idx,
+                frappe.throw(
+                    _("Row #{0}: {1} is mandatory for enabling e-Invoice").format(
+                        row.idx, frappe.bold(row.meta.get_label("applicable_from"))
+                    )
                 )
 
             if getdate(row.applicable_from) < getdate(date):
-                return (
-                    row.meta.get_label("applicable_from"),
-                    f"cannot be before {date}",
-                    row.idx,
+                frappe.throw(
+                    _("Row #{0}: {1} date cannot be before {2}").format(
+                        row.idx,
+                        frappe.bold(row.meta.get_label("applicable_from")),
+                        date,
+                    )
                 )
 
             if row.company in company_list:
-                return (
-                    row.meta.get_label("company"),
-                    "{0} appears multiple times".format(row.company),
-                    row.idx,
+                frappe.throw(
+                    _("Row #{0}: {1} {2} appears multiple times").format(
+                        row.idx, row.meta.get_label("company"), frappe.bold(row.company)
+                    )
                 )
 
             company_list.append(row.company)
-
-        return (None, None, None)
 
 
 @frappe.whitelist()

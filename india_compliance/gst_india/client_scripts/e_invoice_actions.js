@@ -164,23 +164,23 @@ function is_e_invoice_applicable(frm) {
         frm.doc.company_gstin &&
         frm.doc.gst_category != "Unregistered" &&
         !frm.doc.items[0].is_non_gst &&
-        validate_e_invoice_applicability_date(frm)
+        is_valid_e_invoice_applicable_from_date(frm)
     );
 }
 
-function validate_e_invoice_applicability_date(frm) {
-    let e_invoice_applicable_from = '';
+function is_valid_e_invoice_applicable_from_date(frm) {
+    if (!gst_settings.e_invoice_applicable_from && !gst_settings.apply_e_invoice_only_for_selected_companies) return false;
 
-    if (!gst_settings.apply_e_invoice_only_for_selected_companies) {
-        e_invoice_applicable_from = gst_settings.e_invoice_applicable_from;
+    let e_invoice_applicable_from = gst_settings.e_invoice_applicable_from;
+
+    if (gst_settings.apply_e_invoice_only_for_selected_companies) {
+        gst_settings.e_invoice_applicable_companies.forEach((row) => {
+            if (row.company != frm.doc.company) return;
+
+            e_invoice_applicable_from = row.applicable_from;
+
+        });
     }
-
-    gst_settings.e_invoice_applicable_for.forEach(row => {
-        if (row.company != frm.doc.company) return;
-
-        e_invoice_applicable_from = row.applicable_from;
-
-    });
 
     return (moment(frm.doc.posting_date).diff(e_invoice_applicable_from) >= 0) ? true : false;
 }

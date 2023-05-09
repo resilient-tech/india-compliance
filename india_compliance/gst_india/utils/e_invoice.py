@@ -251,31 +251,32 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    e_invoice_applicable_from = gst_settings.e_invoice_applicable_from
-
-    if gst_settings.apply_e_invoice_only_for_selected_companies:
-        comapny_data = {
-            row.company: row.applicable_from
-            for row in gst_settings.e_invoice_applicable_for
-            if row.company == doc.company
-        }
-
-        if not comapny_data:
-            return _throw(
-                _("e-Invoice is not applicable for company {0}").format(doc.company)
-            )
-
-        e_invoice_applicable_from = comapny_data.get(doc.company)
-
-    if getdate(e_invoice_applicable_from) > getdate(doc.posting_date):
-        return _throw(
-            _(
-                "e-Invoice is not applicable for invoices before {0} as per your"
-                " GST Settings"
-            ).format(frappe.bold(format_date(e_invoice_applicable_from)))
-        )
+    if error := validate_e_invoice_applicability_date(doc, gst_settings):
+        return _throw(error)
 
     return True
+
+
+def validate_e_invoice_applicability_date(doc, settings=None):
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    e_invoice_applicable_from = settings.e_invoice_applicable_from
+
+    if settings.apply_e_invoice_only_for_selected_companies:
+        for row in settings.e_invoice_applicable_companies:
+            if doc.company == row.company:
+                e_invoice_applicable_from = row.applicable_from
+                break
+
+        else:
+            return _("e-Invoice is not applicable for company {0}").format(doc.company)
+
+    if getdate(e_invoice_applicable_from) > getdate(doc.posting_date):
+        return _(
+            "e-Invoice is not applicable for invoices before {0} as per your"
+            " GST Settings"
+        ).format(frappe.bold(format_date(e_invoice_applicable_from)))
 
 
 def validate_if_e_invoice_can_be_cancelled(doc):
