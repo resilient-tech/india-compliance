@@ -278,34 +278,9 @@ class Gstr1Report(object):
                 row.append(invoice_details.get(fieldname))
         taxable_value = 0
 
-        if invoice in self.cgst_sgst_invoices:
-            division_factor = 2
-        else:
-            division_factor = 1
-
         for item_code, net_amount in self.invoice_items.get(invoice).items():
             if item_code in items:
-                if self.item_tax_rate.get(
-                    invoice
-                ) and tax_rate / division_factor in self.item_tax_rate.get(
-                    invoice, {}
-                ).get(
-                    item_code, []
-                ):
-                    taxable_value += abs(net_amount)
-                elif not self.item_tax_rate.get(invoice):
-                    taxable_value += abs(net_amount)
-                elif tax_rate:
-                    taxable_value += abs(net_amount)
-                elif (
-                    not tax_rate
-                    and (
-                        self.filters.get("type_of_business") == "EXPORT"
-                        or invoice_details.get("gst_category") == "SEZ"
-                    )
-                    and not invoice_details.get("is_export_with_gst")
-                ):
-                    taxable_value += abs(net_amount)
+                taxable_value += abs(net_amount)
 
         row += [tax_rate or 0, taxable_value]
 
@@ -404,7 +379,6 @@ class Gstr1Report(object):
 
     def get_invoice_items(self):
         self.invoice_items = frappe._dict()
-        self.item_tax_rate = frappe._dict()
         self.nil_exempt_non_gst = {}
 
         items = frappe.db.sql(
@@ -425,20 +399,9 @@ class Gstr1Report(object):
                 "taxable_value", 0
             ) or d.get("base_net_amount", 0)
 
-            item_tax_rate = {}
-
-            if d.item_tax_rate:
-                item_tax_rate = json.loads(d.item_tax_rate)
-
-                for account, rate in item_tax_rate.items():
-                    tax_rate_dict = self.item_tax_rate.setdefault(
-                        d.parent, {}
-                    ).setdefault(d.item_code, [])
-                    tax_rate_dict.append(rate)
-
             if d.is_nil_exempt:
                 self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
-                if item_tax_rate:
+                if d.item_tax_rate:
                     self.nil_exempt_non_gst[d.parent][0] += d.get("taxable_value", 0)
                 else:
                     self.nil_exempt_non_gst[d.parent][1] += d.get("taxable_value", 0)
