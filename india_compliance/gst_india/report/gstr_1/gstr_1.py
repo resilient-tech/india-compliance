@@ -494,21 +494,23 @@ class Gstr1Report(object):
 
                         for item_code, tax_amounts in item_wise_tax_detail.items():
                             tax_rate = tax_amounts[0]
-                            if tax_rate:
-                                if cgst_or_sgst:
-                                    tax_rate *= 2
-                                    if parent not in self.cgst_sgst_invoices:
-                                        self.cgst_sgst_invoices.append(parent)
+                            if not tax_rate and parent not in self.nil_exempt_non_gst:
+                                continue
 
-                                rate_based_dict = (
-                                    self.items_based_on_tax_rate.setdefault(
-                                        parent, {}
-                                    ).setdefault(tax_rate, [])
-                                )
-                                if item_code not in rate_based_dict:
-                                    rate_based_dict.append(item_code)
+                            if cgst_or_sgst:
+                                tax_rate *= 2
+                                if parent not in self.cgst_sgst_invoices:
+                                    self.cgst_sgst_invoices.append(parent)
+
+                            rate_based_dict = self.items_based_on_tax_rate.setdefault(
+                                parent, {}
+                            ).setdefault(tax_rate, [])
+                            if item_code not in rate_based_dict:
+                                rate_based_dict.append(item_code)
+
                     except ValueError:
                         continue
+
         if unidentified_gst_accounts:
             frappe.msgprint(
                 _("Following accounts might be selected in GST Settings:")
@@ -534,6 +536,7 @@ class Gstr1Report(object):
                     0, []
                 ).extend(items)
 
+            # Show invoice with all items are in nil exempt or non gst
             if invoice in self.nil_exempt_non_gst:
                 self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
                     0, []
