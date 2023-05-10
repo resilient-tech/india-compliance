@@ -33,8 +33,7 @@ DATE_FORMAT = "dd/mm/yyyy"
 class TestEWaybill(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "enable_api": 1,
@@ -47,8 +46,12 @@ class TestEWaybill(FrappeTestCase):
             },
         )
 
-        cls.e_waybill_test_data = frappe.get_file_json(
-            frappe.get_app_path("india_compliance", "tests", "e_waybill_test_data.json")
+        cls.e_waybill_test_data = frappe._dict(
+            frappe.get_file_json(
+                frappe.get_app_path(
+                    "india_compliance", "gst_india", "data", "test_e_waybill.json"
+                )
+            )
         )
 
         cls.si, cls._goods_item_test_data = _create_sales_invoice(
@@ -57,8 +60,7 @@ class TestEWaybill(FrappeTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        frappe.db.set_value(
-            "GST Settings",
+        frappe.db.set_single_value(
             "GST Settings",
             {
                 "enable_api": 0,
@@ -74,6 +76,17 @@ class TestEWaybill(FrappeTestCase):
     @classmethod
     def setUp(cls):
         update_dates_for_test_data(cls.e_waybill_test_data)
+
+    def test_get_data(self):
+        e_waybill_data = EWaybillData(self.si).get_data()
+        test_data = self.e_waybill_test_data.goods_item_with_ewaybill.get(
+            "request_data"
+        )
+
+        self.assertDictContainsSubset(
+            e_waybill_data,
+            test_data,
+        )
 
     @change_settings(
         "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}

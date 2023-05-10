@@ -392,7 +392,6 @@ def log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         log_data=log_data,
         fetch=fetch,
         comment=comment,
-        now=frappe.flags.in_test,
     )
 
     update_onload(doc, "e_waybill_info", log_data)
@@ -809,14 +808,10 @@ class EWaybillData(GSTTransactionData):
 
     def get_transaction_data(self):
         if self.sandbox_mode:
-            self.transaction_details.update(
-                {
-                    "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6).lstrip("0"),
-                }
+            self.transaction_details.company_gstin = "05AAACG2115R1ZN"
+            self.transaction_details.name = (
+                random_string(6).lstrip("0") if not frappe.flags.in_test else "53amoi"
             )
-            if frappe.flags.in_test:
-                self.transaction_details["name"] = "53amoi"
 
             self.from_address.gstin = "05AAACG2115R1ZN"
             self.to_address.gstin = (
