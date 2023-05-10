@@ -482,7 +482,7 @@ class EWaybillData(GSTTransactionData):
         self.validate_transaction()
 
         if with_irn:
-            return self.get_data_for_irn()
+            return self.get_data_with_irn()
 
         self.set_transaction_details()
         self.set_item_list()
@@ -492,7 +492,7 @@ class EWaybillData(GSTTransactionData):
 
         return self.get_transaction_data()
 
-    def get_data_for_irn(self):
+    def get_data_with_irn(self):
         self.set_transporter_details()
         self.set_party_address_details()
         self.set_same_pincode_distance()
@@ -761,9 +761,9 @@ class EWaybillData(GSTTransactionData):
         self.from_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
-        # billing state is changed for SEZ, hence copy()
+        # calling copy() since we're mutating from_address and to_address below
         self.shipping_address = self.to_address.copy()
-        self.dispatch_address = self.from_address
+        self.dispatch_address = self.from_address.copy()
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
