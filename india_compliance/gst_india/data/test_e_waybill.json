@@ -126,8 +126,10 @@
 			"cancelRsnCode": "3",
 			"cancelRmrk": "For Test"
 		},
-		"params": {
-			"action": "CANEWB"
+		"params": "action=CANEWB",
+		"values": {
+			"reason": "Data Entry Mistake", 
+			"remark": "For Test"
 		},
 		"response_data": {
 			"message": "E-Way Bill is cancelled successfully",
@@ -234,17 +236,5 @@
 			},
 			"success": true
 		}
-	},
-	"vehicle_values": {
-		"vehicle_no": "GJ07DL9001",
-		"mode_of_transport": "Road",
-		"gst_vehicle_type": "Regular",
-		"reason": "Others",
-		"remark": "Vehicle Info added",
-		"update_e_waybill_data": 1
-	},
-	"transporter_values": {
-		"transporter": "_Test Common Supplier",
-		"gst_transporter_id": "05AAACG2140A1ZL"
 	}
 }
