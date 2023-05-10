@@ -480,29 +480,36 @@ class EWaybillData(GSTTransactionData):
 
     def get_data(self, *, with_irn=False):
         self.validate_transaction()
-        self.set_transporter_details()
-        self.set_party_address_details()
-        self.update_distance_if_zero()
 
         if with_irn:
-            return self.sanitize_data(
-                {
-                    "Irn": self.doc.irn,
-                    "Distance": self.transaction_details.distance,
-                    "TransMode": str(self.transaction_details.mode_of_transport),
-                    "TransId": self.transaction_details.gst_transporter_id,
-                    "TransName": self.transaction_details.transporter_name,
-                    "TransDocDt": self.transaction_details.lr_date,
-                    "TransDocNo": self.transaction_details.lr_no,
-                    "VehNo": self.transaction_details.vehicle_no,
-                    "VehType": self.transaction_details.vehicle_type,
-                }
-            )
+            return self.get_data_with_irn()
 
         self.set_transaction_details()
         self.set_item_list()
+        self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance_for_same_pincode()
 
         return self.get_transaction_data()
+
+    def get_data_with_irn(self):
+        self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance_for_same_pincode()
+
+        return self.sanitize_data(
+            {
+                "Irn": self.doc.irn,
+                "Distance": self.transaction_details.distance,
+                "TransMode": str(self.transaction_details.mode_of_transport),
+                "TransId": self.transaction_details.gst_transporter_id,
+                "TransName": self.transaction_details.transporter_name,
+                "TransDocDt": self.transaction_details.lr_date,
+                "TransDocNo": self.transaction_details.lr_no,
+                "VehNo": self.transaction_details.vehicle_no,
+                "VehType": self.transaction_details.vehicle_type,
+            }
+        )
 
     def get_data_for_cancellation(self, values):
         self.validate_if_e_waybill_is_set()
@@ -754,9 +761,9 @@ class EWaybillData(GSTTransactionData):
         self.from_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
-        # billing state is changed for SEZ, hence copy()
+        # calling copy() since we're mutating from_address and to_address below
         self.shipping_address = self.to_address.copy()
-        self.dispatch_address = self.from_address
+        self.dispatch_address = self.from_address.copy()
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
@@ -793,17 +800,27 @@ class EWaybillData(GSTTransactionData):
 
         return address_details
 
-    def update_distance_if_zero(self):
+    def validate_distance_for_same_pincode(self):
         """
-        e-Waybill portal doesn't return distance where from and to pincode is same.
+        1. For same pincode, distance should be between 1 and 100 km.
+
+        2. e-Waybill portal doesn't return distance where from and to pincode is same.
         Hardcode distance to 1 km to simplify and automate this.
         Accuracy of distance is immaterial and used only for e-Waybill validity determination.
         """
 
-        if (
-            self.transaction_details.distance == 0
-            and self.dispatch_address.pincode == self.shipping_address.pincode
-        ):
+        if self.dispatch_address.pincode != self.shipping_address.pincode:
+            return
+
+        if self.transaction_details.distance > 100:
+            frappe.throw(
+                _(
+                    "Distance should be less than 100km when the Pincode is same for"
+                    " Dispatch and Shipping Address"
+                )
+            )
+
+        if self.transaction_details.distance == 0:
             self.transaction_details.distance = 1
 
     def get_transaction_data(self):
