@@ -157,33 +157,26 @@ class TestEWaybill(FrappeTestCase):
         self._generate_e_waybill()
 
         # get test data from test json and update date accordingly
-        test_data = self.e_waybill_test_data.get("update_transporter")
-
-        # transporter values to update transporter
-        transporter_values = frappe._dict(
-            self.e_waybill_test_data.get("transporter_values")
-        )
-
-        request_data = test_data.get("request_data")
+        transporter_data = self.e_waybill_test_data.get("update_transporter")
 
         # Mock response for UPDATETRANSPORTER
         self._mock_e_waybill_response(
-            data=test_data,
+            data=transporter_data.get("response_data"),
             match_list=[
-                matchers.query_param_matcher(test_data.get("params")),
-                matchers.json_params_matcher(request_data),
+                matchers.query_string_matcher(transporter_data.get("params")),
+                matchers.json_params_matcher(transporter_data.get("request_data")),
             ],
         )
 
         update_transporter(
             doctype="Sales Invoice",
             docname=self.sales_invoice.name,
-            values=transporter_values,
+            values=transporter_data.get("values"),
         )
 
         # assertions
         self.assertDocumentEqual(
-            {"name": request_data.get("ewbNo")},
+            {"name": transporter_data.get("request_data").get("ewbNo")},
             frappe.get_doc(
                 "e-Waybill Log", {"reference_name": self.sales_invoice.name}
             ),
@@ -192,10 +185,13 @@ class TestEWaybill(FrappeTestCase):
         self.assertDocumentEqual(
             {
                 "reference_doctype": "e-Waybill Log",
-                "reference_name": request_data.get("ewbNo"),
+                "reference_name": transporter_data.get("request_data").get("ewbNo"),
                 "content": "Transporter Info has been updated by <strong>Administrator</strong>. New Transporter ID is <strong>05AAACG2140A1ZL</strong>.",
             },
-            frappe.get_doc("Comment", {"reference_name": request_data.get("ewbNo")}),
+            frappe.get_doc(
+                "Comment",
+                {"reference_name": transporter_data.get("request_data").get("ewbNo")},
+            ),
         )
 
     @responses.activate

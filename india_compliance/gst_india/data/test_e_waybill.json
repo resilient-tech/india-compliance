@@ -70,8 +70,10 @@
 		}
 	},
 	"update_transporter": {
-		"params": {
-			"action": "UPDATETRANSPORTER"
+		"params": "action=UPDATETRANSPORTER",
+		"values": {
+			"transporter": "_Test Common Supplier",
+			"gst_transporter_id": "05AAACG2140A1ZL"
 		},
 		"request_data": {
 			"ewbNo": "301002999920",
