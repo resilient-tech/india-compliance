@@ -488,14 +488,14 @@ class EWaybillData(GSTTransactionData):
         self.set_item_list()
         self.set_transporter_details()
         self.set_party_address_details()
-        self.set_same_pincode_distance()
+        self.validate_distance_for_same_pincode()
 
         return self.get_transaction_data()
 
     def get_data_with_irn(self):
         self.set_transporter_details()
         self.set_party_address_details()
-        self.set_same_pincode_distance()
+        self.validate_distance_for_same_pincode()
 
         return self.sanitize_data(
             {
@@ -800,7 +800,7 @@ class EWaybillData(GSTTransactionData):
 
         return address_details
 
-    def set_same_pincode_distance(self):
+    def validate_distance_for_same_pincode(self):
         """
         1. For same pincode, distance should be between 1 and 100 km.
 
@@ -808,11 +808,17 @@ class EWaybillData(GSTTransactionData):
         Hardcode distance to 1 km to simplify and automate this.
         Accuracy of distance is immaterial and used only for e-Waybill validity determination.
         """
+
         if self.dispatch_address.pincode != self.shipping_address.pincode:
             return
 
         if self.transaction_details.distance > 100:
-            self.transaction_details.distance = 100
+            frappe.throw(
+                _(
+                    "Distance should be less than 100km when the Pincode is same for"
+                    " Dispatch and Shipping Address"
+                )
+            )
 
         if self.transaction_details.distance == 0:
             self.transaction_details.distance = 1
