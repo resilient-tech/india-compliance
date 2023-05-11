@@ -1,6 +1,8 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+from functools import reduce
+
 import frappe
 from frappe import _
 from frappe.query_builder import Case
@@ -27,9 +29,7 @@ def validate_filters(filters=None):
             ),
             title=_("Invalid Filter"),
         )
-    if filters.company:
-        # validate if company has e-invoicing enabled
-        pass
+
     if not filters.from_date or not filters.to_date:
         frappe.throw(
             _(
@@ -45,17 +45,20 @@ def validate_filters(filters=None):
 def get_data(filters=None):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     e_invoice_log = frappe.qb.DocType("e-Invoice Log")
+
+    conditions = e_invoice_conditions(filters)
+
     query = (
         frappe.qb.from_(sales_invoice)
-        .inner_join(e_invoice_log)
-        .on(sales_invoice.name == e_invoice_log.sales_invoice)
+        .left_join(e_invoice_log)
+        .on(sales_invoice.irn == e_invoice_log.irn)
         .select(
             sales_invoice.posting_date,
             sales_invoice.einvoice_status,
             sales_invoice.customer,
             Case().when(sales_invoice.is_return == 1, "Y").else_("N").as_("is_return"),
             sales_invoice.base_grand_total,
-            e_invoice_log.sales_invoice,
+            sales_invoice.name.as_("sales_invoice"),
             e_invoice_log.acknowledgement_number,
             e_invoice_log.acknowledged_on,
             e_invoice_log.irn,
@@ -65,8 +68,11 @@ def get_data(filters=None):
                 filters.get("from_date") : filters.get("to_date")
             ]
         )
-        .where(sales_invoice.company == filters.get("company"))
+        .where(conditions)
     )
+
+    if filters.get("status_checkbox") == 1:
+        query = query.where(((sales_invoice.irn == "") | (sales_invoice.irn.isnull())))
 
     if filters.get("status"):
         query = query.where(sales_invoice.einvoice_status == filters.get("status"))
@@ -74,7 +80,39 @@ def get_data(filters=None):
     if filters.get("customer"):
         query = query.where(sales_invoice.customer == filters.get("customer"))
 
+    query = query.orderby(sales_invoice.posting_date)
+
     return query.run(as_dict=True)
+
+
+def e_invoice_conditions(filters):
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+    sub_query = validate_sales_invoice_item(filters)
+
+    conditions = []
+    if filters.get("company"):
+        conditions.append(sales_invoice.company == filters.get("company"))
+    if sales_invoice.docstatus == 1:
+        conditions.append(sales_invoice.docstatus == 1)
+    if sales_invoice.gst_category != "Unregistered":
+        conditions.append(sales_invoice.gst_category != "Unregistered")
+    conditions.append(~sales_invoice.name.isin(sub_query))
+
+    return reduce(lambda a, b: a & b, conditions)
+
+
+def validate_sales_invoice_item(filters=None):
+    sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
+
+    sub_query = (
+        frappe.qb.from_(sales_invoice_item)
+        .select(sales_invoice_item.parent)
+        .where(sales_invoice_item.is_non_gst == 1)
+        .where(sales_invoice_item.parenttype == "Sales Invoice")
+        .distinct()
+    )
+    return sub_query
+
 
 
 def get_columns():
