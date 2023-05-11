@@ -35,7 +35,6 @@ class TestEInvoice(FrappeTestCase):
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
                 "apply_e_invoice_only_for_selected_companies": 0,
-                "e_invoice_applicable_from": frappe.utils.today(),
             },
         )
         cls.e_invoice_test_data = frappe._dict(
