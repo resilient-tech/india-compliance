@@ -179,5 +179,7 @@ function is_valid_e_invoice_applicability_date(frm) {
 
     if (!e_invoice_applicable_from) return false;
 
-    return (moment(frm.doc.posting_date).diff(e_invoice_applicable_from) >= 0) ? true : false;
+    return moment(frm.doc.posting_date).diff(e_invoice_applicable_from) >= 0
+        ? true
+        : false;
 }
