@@ -35,8 +35,14 @@ frappe.query_reports["e-Invoice Summary"] = {
 		{
 			"fieldtype": "Select",
 			"fieldname": "status",
-			"label": __("Status"),
+			"label": __("e-Invoice Status"),
 			"options": "\nPending\nGenerated\nCancelled\nFailed"
+		},
+		{
+			"fieldtype": "Check",
+			"fieldname": "status_checkbox",
+			"label": __("e-Invoice not available"),
+			"default": 1,
 		}
 	],
 
@@ -53,3 +59,4 @@ frappe.query_reports["e-Invoice Summary"] = {
 		return value;
 	}
 };
+
