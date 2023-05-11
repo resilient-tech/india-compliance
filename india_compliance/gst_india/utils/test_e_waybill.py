@@ -32,6 +32,8 @@ DATE_FORMAT = "dd/mm/yyyy"
 class TestEWaybill(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
+
         frappe.db.set_single_value(
             "GST Settings",
             {
@@ -54,21 +56,6 @@ class TestEWaybill(FrappeTestCase):
         )
 
         cls.sales_invoice = _create_sales_invoice(cls.e_waybill_test_data)
-
-    @classmethod
-    def tearDownClass(cls):
-        frappe.db.set_single_value(
-            "GST Settings",
-            {
-                "enable_api": 0,
-                "enable_e_invoice": 0,
-                "auto_generate_e_invoice": 1,
-                "enable_e_waybill": 0,
-                "fetch_e_waybill_data": 1,
-                "attach_e_waybill_print": 1,
-            },
-        )
-        frappe.db.rollback()
 
     @classmethod
     def setUp(cls):
