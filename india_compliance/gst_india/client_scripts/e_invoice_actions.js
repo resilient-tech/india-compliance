@@ -160,7 +160,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
 function is_e_invoice_applicable(frm) {
     return (
         india_compliance.is_e_invoice_enabled() &&
-        // frm.doc.docstatus == 1 &&
+        frm.doc.docstatus == 1 &&
         frm.doc.company_gstin &&
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
         frm.doc.gst_category != "Unregistered" &&
@@ -170,22 +170,14 @@ function is_e_invoice_applicable(frm) {
 }
 
 function is_valid_e_invoice_applicability_date(frm) {
-    if (!gst_settings.e_invoice_applicable_from && !gst_settings.apply_e_invoice_only_for_selected_companies) return false;
+    let e_invoice_applicable_from = gst_settings.e_invoice_applicable_from;
 
-    let e_invoice_applicable_from = !gst_settings.apply_e_invoice_only_for_selected_companies && gst_settings.e_invoice_applicable_from
-        ? gst_settings.e_invoice_applicable_from
-        : '';
+    if (gst_settings.apply_e_invoice_only_for_selected_companies)
+        e_invoice_applicable_from = gst_settings.e_invoice_applicable_companies.find(
+            row => row.company == frm.doc.company
+        )?.applicable_from;
 
-    if (gst_settings.apply_e_invoice_only_for_selected_companies) {
-        gst_settings.e_invoice_applicable_companies.forEach((row) => {
-            if (row.company == frm.doc.company) {
-                e_invoice_applicable_from = row.applicable_from;
-                return;
-            }
-        });
-
-        if (!e_invoice_applicable_from) return false;
-    }
+    if (!e_invoice_applicable_from) return false;
 
     return (moment(frm.doc.posting_date).diff(e_invoice_applicable_from) >= 0) ? true : false;
 }

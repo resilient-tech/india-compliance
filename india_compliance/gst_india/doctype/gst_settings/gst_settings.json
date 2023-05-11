@@ -249,13 +249,14 @@
   },
   {
    "default": "0",
+   "depends_on": "eval:doc.enable_e_invoice",
    "description": "e-Invoice will be generated for only selected companies.",
    "fieldname": "apply_e_invoice_only_for_selected_companies",
    "fieldtype": "Check",
    "label": "Apply e-Invoice for Selected Companies"
   },
   {
-   "depends_on": "eval:doc.apply_e_invoice_only_for_selected_companies",
+   "depends_on": "eval:doc.enable_e_invoice && doc.apply_e_invoice_only_for_selected_companies",
    "fieldname": "e_invoice_applicable_companies",
    "fieldtype": "Table",
    "label": "e-Invoice Applicable Companies",
@@ -265,7 +266,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-05-09 09:22:46.552696",
+ "modified": "2023-05-11 11:49:48.016210",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

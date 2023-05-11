@@ -262,8 +262,7 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    if error := validate_e_invoice_applicability_date(doc, gst_settings):
-        return _throw(error)
+    validate_e_invoice_applicability_date(doc, gst_settings)
 
     return True
 
@@ -281,13 +280,17 @@ def validate_e_invoice_applicability_date(doc, settings=None):
                 break
 
         else:
-            return _("e-Invoice is not applicable for company {0}").format(doc.company)
+            frappe.throw(
+                _("e-Invoice is not applicable for company {0}").format(doc.company)
+            )
 
     if getdate(e_invoice_applicable_from) > getdate(doc.posting_date):
-        return _(
-            "e-Invoice is not applicable for invoices before {0} as per your"
-            " GST Settings"
-        ).format(frappe.bold(format_date(e_invoice_applicable_from)))
+        frappe.throw(
+            _(
+                "e-Invoice is not applicable for invoices before {0} as per your"
+                " GST Settings"
+            ).format(frappe.bold(format_date(e_invoice_applicable_from)))
+        )
 
 
 def validate_if_e_invoice_can_be_cancelled(doc):

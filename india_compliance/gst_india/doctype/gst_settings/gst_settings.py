@@ -19,6 +19,8 @@ from india_compliance.gst_india.page.india_compliance_account import (
 from india_compliance.gst_india.utils import can_enable_api
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
+E_INVOICE_START_DATE = "2021-01-01"
+
 
 class GSTSettings(Document):
     def onload(self):
@@ -106,29 +108,23 @@ class GSTSettings(Document):
             and not self.apply_e_invoice_only_for_selected_companies
         ):
             frappe.throw(
-                _("{0} or {1} is mandatory for enabling e-Invoice").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")),
-                    frappe.bold(
-                        self.meta.get_label(
-                            "apply_e_invoice_only_for_selected_companies"
-                        )
-                    ),
+                _("{0} is mandatory for enabling e-Invoice").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
                 )
             )
 
-        date = "2021-01-01"
-
         if self.e_invoice_applicable_from and (
-            getdate(self.e_invoice_applicable_from) < getdate(date)
+            getdate(self.e_invoice_applicable_from) < getdate(E_INVOICE_START_DATE)
         ):
             frappe.throw(
                 _("{0} date cannot be before {1}").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")), date
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")),
+                    E_INVOICE_START_DATE,
                 )
             )
 
         if self.apply_e_invoice_only_for_selected_companies:
-            self.validate_e_invoice_applicable_companies(date)
+            self.validate_e_invoice_applicable_companies()
 
     def validate_credentials(self):
         if not self.enable_api:
@@ -185,14 +181,11 @@ class GSTSettings(Document):
                 ),
             )
 
-    def validate_e_invoice_applicable_companies(self, date=None):
-        if not date:
-            date = "2021-01-01"
-
+    def validate_e_invoice_applicable_companies(self):
         if not self.e_invoice_applicable_companies:
             frappe.throw(
-                _("{0} is mandatory to enable e-Invoice for Selected Companies").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_companies"))
+                _(
+                    "You must select at least one company to which e-Invoice is Applicable"
                 )
             )
 
@@ -205,12 +198,12 @@ class GSTSettings(Document):
                     )
                 )
 
-            if getdate(row.applicable_from) < getdate(date):
+            if getdate(row.applicable_from) < getdate(E_INVOICE_START_DATE):
                 frappe.throw(
                     _("Row #{0}: {1} date cannot be before {2}").format(
                         row.idx,
                         frappe.bold(row.meta.get_label("applicable_from")),
-                        date,
+                        E_INVOICE_START_DATE,
                     )
                 )
 
