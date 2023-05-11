@@ -825,11 +825,11 @@ class EWaybillData(GSTTransactionData):
 
     def get_transaction_data(self):
         if self.sandbox_mode:
-            self.transaction_details.update(
-                {
-                    "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6).lstrip("0"),
-                }
+            self.transaction_details.company_gstin = "05AAACG2115R1ZN"
+            self.transaction_details.name = (
+                random_string(6).lstrip("0")
+                if not frappe.flags.in_test
+                else "test_invoice_no"
             )
 
             self.from_address.gstin = "05AAACG2115R1ZN"
