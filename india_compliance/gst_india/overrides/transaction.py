@@ -14,6 +14,7 @@ from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
     get_place_of_supply,
+    get_place_of_supply_options,
     validate_gst_category,
 )
 
@@ -142,6 +143,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     """
     Validate GST accounts
     - Only Valid Accounts should be allowed
+    - No GST account should be specified for transactions where Company GSTIN = Party GSTIN
     - If export is made without GST, then no GST account should be specified
     - SEZ / Inter-State supplies should not have CGST or SGST account
     - Intra-State supplies should not have IGST account
@@ -177,6 +179,21 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
         doc.company, is_sales_transaction
     )
+
+    # Company GSTIN = Party GSTIN
+    party_gstin = (
+        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+    )
+    if (
+        party_gstin
+        and doc.company_gstin == party_gstin
+        and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
+    ):
+        _throw(
+            _(
+                "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are same"
+            ).format(idx)
+        )
 
     # Sales / Purchase Validations
 
@@ -274,6 +291,16 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
+    if not is_inter_state:
+        used_accounts = set(row.account_head for row in rows_to_validate)
+        if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
+            _throw(
+                _(
+                    "Cannot use only one of CGST or SGST account for intra-state supplies"
+                ),
+                title=_("Invalid GST Accounts"),
+            )
+
     if len(previous_row_references) > 1:
         _throw(
             _(
@@ -352,7 +379,11 @@ def validate_items(doc):
 
 
 def validate_place_of_supply(doc):
-    valid_options = doc.meta.get_field("place_of_supply").options.split("\n")
+    valid_options = get_place_of_supply_options(
+        as_list=True,
+        with_other_countries=doc.doctype in SALES_DOCTYPES,
+    )
+
     if doc.place_of_supply not in valid_options:
         frappe.throw(
             _(
@@ -476,15 +507,13 @@ def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
 
 def get_regional_round_off_accounts(company, account_list):
     country = frappe.get_cached_value("Company", company, "country")
-
-    if country != "India":
-        return
+    if country != "India" or not frappe.get_cached_value(
+        "GST Settings", "GST Settings", "round_off_gst_values"
+    ):
+        return account_list
 
     if isinstance(account_list, str):
         account_list = json.loads(account_list)
-
-    if not frappe.db.get_single_value("GST Settings", "round_off_gst_values"):
-        return
 
     account_list.extend(get_all_gst_accounts(company))
 

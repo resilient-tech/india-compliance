@@ -174,6 +174,17 @@ class GSTSettings(Document):
                 )
             )
 
+        if (
+            self.sandbox_mode
+            and self.autofill_party_info
+            and self.has_value_changed("sandbox_mode")
+        ):
+            frappe.msgprint(
+                _(
+                    "Autofill Party Information based on GSTIN is not supported in sandbox mode"
+                ),
+            )
+
     def validate_e_invoice_applicable_companies(self, date=None):
         if not date:
             date = "2021-01-01"

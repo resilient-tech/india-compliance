@@ -326,7 +326,7 @@ def get_hsn_wise_json_data(filters, report_data):
             "num": count,
             "hsn_sc": hsn.get("gst_hsn_code"),
             "uqc": hsn.get("uqc"),
-            "qty": hsn.get("stock_qty"),
+            "qty": flt(hsn.get("stock_qty"), 2),
             "rt": flt(hsn.get("tax_rate"), 2),
             "txval": flt(hsn.get("taxable_amount"), 2),
             "iamt": 0.0,
