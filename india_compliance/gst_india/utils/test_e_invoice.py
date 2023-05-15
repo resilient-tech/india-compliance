@@ -52,7 +52,7 @@ class TestEInvoice(FrappeTestCase):
         si = create_sales_invoice(
             **test_data.get("kwargs"), qty=1000, do_not_submit=True
         )
-
+        si.dispatch_address_name = ""
         self.assertDictEqual(
             test_data.get("request_data"),
             EInvoiceData(si).get_data(),
@@ -60,14 +60,14 @@ class TestEInvoice(FrappeTestCase):
 
         si.update(
             {
-                "dispatch_address_name": "_Test Indian Registered Company-Billing",
+                "dispatch_address_name": "_Test Indian Registered Company-Shipping",
                 "shipping_address_name": "_Test Registered Customer-Billing-1",
             }
         )
         si.save()
 
         self.assertDictEqual(
-            test_data.get("request_data").copy()
+            test_data.get("request_data")
             | self.e_invoice_test_data.dispatch_details
             | self.e_invoice_test_data.shipping_details,
             EInvoiceData(si).get_data(),
@@ -262,8 +262,8 @@ class TestEInvoice(FrappeTestCase):
         """Generate test e-Invoice for debit note with zero quantity"""
         test_data = self.e_invoice_test_data.get("debit_invoice")
         si = create_sales_invoice(
-            customer_address="_Test Registered Customer-Billing",
-            shipping_address_name="_Test Registered Customer-Billing",
+            customer_address=test_data.get("kwargs").get("customer_address"),
+            shipping_address_name=test_data.get("kwargs").get("shipping_address_name"),
         )
 
         test_data.get("kwargs").update({"return_against": si.name})
