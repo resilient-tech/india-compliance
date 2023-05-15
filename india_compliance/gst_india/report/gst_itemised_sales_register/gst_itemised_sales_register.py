@@ -23,8 +23,24 @@ def execute(filters=None):
         }
     )
 
+    additional_query_columns = [
+        row.get("fieldname") for row in additional_table_columns
+    ]
+    additional_conditions = get_conditions(filters, additional_query_columns)
+
     return _execute(
         filters,
         additional_table_columns,
         get_column_names(additional_table_columns),
+        additional_conditions,
     )
+
+
+def get_conditions(filters, additional_query_columns):
+    conditions = ""
+
+    for opts in additional_query_columns:
+        if filters.get(opts):
+            conditions += f" and {opts}=%({opts})s"
+
+    return conditions
