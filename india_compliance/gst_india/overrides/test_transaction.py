@@ -342,9 +342,36 @@ class TestTransaction(FrappeTestCase):
         doc.insert()
         self.assertDocumentEqual({"taxable_value": 100}, doc.items[0])
 
+    def test_validate_place_of_supply(self):
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+        doc.place_of_supply = "96-Others"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*not a valid Place of Supply.*)$"),
+            doc.save,
+        )
+
     #######################################################################################
     #            Validate GST Accounts                                                    #
     #######################################################################################
+    def test_validate_same_company_and_party_gstin(self):
+        doc = create_transaction(
+            **self.transaction_details, is_in_state=True, do_not_save=True
+        )
+
+        party_gstin_field = (
+            "billing_address_gstin" if self.is_sales_doctype else "supplier_gstin"
+        )
+
+        doc.company_gstin = "24AAQCA8719H1ZC"
+        doc.set(party_gstin_field, doc.company_gstin)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.* Company GSTIN and Party GSTIN are same)$"),
+            doc.insert,
+        )
 
     def test_export_without_payment_of_gst(self):
         if not self.is_sales_doctype:
@@ -528,6 +555,18 @@ class TestTransaction(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*Charge Type cannot be.*)$"),
+            doc.insert,
+        )
+
+    def test_invalid_intra_state_supply(self):
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+
+        # Adding CGST Account only
+        _append_taxes(doc, "CGST")
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Cannot use only one .* intra-state supplies)$"),
             doc.insert,
         )
 
