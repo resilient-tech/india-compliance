@@ -25,6 +25,7 @@ from india_compliance.gst_india.utils.tests import create_sales_invoice
 class TestEInvoice(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         frappe.db.set_single_value(
             "GST Settings",
             {
@@ -34,6 +35,7 @@ class TestEInvoice(FrappeTestCase):
                 "auto_generate_e_invoice": 0,
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
+                "e_invoice_applicable_from": "2021-01-01",
             },
         )
         cls.e_invoice_test_data = frappe._dict(
@@ -45,8 +47,34 @@ class TestEInvoice(FrappeTestCase):
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
 
-    @change_settings("Selling Settings", {"allow_multiple_items": 1})
     def test_get_data(self):
+        test_data = self.e_invoice_test_data.goods_item_with_ewaybill
+        si = create_sales_invoice(
+            **test_data.get("kwargs"), qty=1000, do_not_submit=True
+        )
+
+        self.assertDictEqual(
+            test_data.get("request_data"),
+            EInvoiceData(si).get_data(),
+        )
+
+        si.update(
+            {
+                "dispatch_address_name": "_Test Indian Registered Company-Billing",
+                "shipping_address_name": "_Test Registered Customer-Billing-1",
+            }
+        )
+        si.save()
+
+        self.assertDictEqual(
+            test_data.get("request_data").copy()
+            | self.e_invoice_test_data.dispatch_details
+            | self.e_invoice_test_data.shipping_details,
+            EInvoiceData(si).get_data(),
+        )
+
+    @change_settings("Selling Settings", {"allow_multiple_items": 1})
+    def test_validate_transaction(self):
         """Validation test for more than 1000 items in sales invoice"""
         si = create_sales_invoice(do_not_submit=True)
         item_row = si.get("items")[0]
@@ -61,12 +89,15 @@ class TestEInvoice(FrappeTestCase):
                 },
             )
         si.save()
-        si.submit()
+
+        frappe.db.set_single_value(
+            "GST Settings", "e_invoice_applicable_from", "2021-01-01"
+        )
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Invoice can only be generated.*)$"),
-            EInvoiceData(si).get_data,
+            EInvoiceData(si).validate_transaction,
         )
 
     @responses.activate

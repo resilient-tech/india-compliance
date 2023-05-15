@@ -29,30 +29,30 @@
 			},
 			"ItemList": [
 				{
-					"AssAmt": 100000,
+					"AssAmt": 100000.0,
 					"CesAmt": 0,
 					"CesNonAdvlAmt": 0,
 					"CesRt": 0,
 					"CgstAmt": 0,
 					"Discount": 0,
-					"GstRt": 0,
+					"GstRt": 0.0,
 					"HsnCd": "61149090",
 					"IgstAmt": 0,
 					"IsServc": "N",
 					"PrdDesc": "Test Trading Goods 1",
-					"Qty": 1000,
+					"Qty": 1000.0,
 					"SgstAmt": 0,
 					"SlNo": "1",
-					"TotAmt": 100000,
-					"TotItemVal": 100000,
+					"TotAmt": 100000.0,
+					"TotItemVal": 100000.0,
 					"Unit": "NOS",
-					"UnitPrice": 100
+					"UnitPrice": 100.0
 				}
 			],
 			"PayDtls": {
 				"CrDay": 0,
 				"PaidAmt": 0,
-				"PaymtDue": 100000
+				"PaymtDue": 100000.0
 			},
 			"SellerDtls": {
 				"Addr1": "Test Address - 1",
@@ -69,15 +69,15 @@
 				"TaxSch": "GST"
 			},
 			"ValDtls": {
-				"AssVal": 100000,
+				"AssVal": 100000.0,
 				"CesVal": 0,
 				"CgstVal": 0,
 				"Discount": 0,
 				"IgstVal": 0,
-				"OthChrg": 0,
-				"RndOffAmt": 0,
+				"OthChrg": 0.0,
+				"RndOffAmt": 0.0,
 				"SgstVal": 0,
-				"TotInvVal": 100000
+				"TotInvVal": 100000.0
 			},
 			"Version": "1.1"
 		},
@@ -455,6 +455,26 @@
 				"ewayBillNo": "391009149369"
 			},
 			"success": true
+		}
+	},
+	"dispatch_details": {
+		"DispDtls": {
+			"Nm": "Test Indian Registered Company",
+			"Addr1": "Test Address - 1",
+			"Loc": "Test City",
+			"Pin": 193501,
+			"Stcd": "01"
+		}
+	},
+	"shipping_details": {
+		"ShipDtls": {
+			"Gstin": "36AMBPG7773M002",
+			"LglNm": "Test Registered Customer",
+			"TrdNm": "Test Registered Customer",
+			"Addr1": "Test Address - 4",
+			"Loc": "Test City",
+			"Pin": 500055,
+			"Stcd": "36"
 		}
 	}
 }
