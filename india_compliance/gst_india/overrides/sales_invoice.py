@@ -11,6 +11,9 @@ from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applic
 
 
 def onload(doc, method=None):
+    if not doc.get("ewaybill"):
+        doc.set_onload("shipping_address_in_india", doc.flags.shipping_address_in_india)
+
     if not doc.get("ewaybill") and not doc.get("irn"):
         return
 
@@ -97,14 +100,13 @@ def validate_port_address(doc):
         doc.gst_category != "Overseas"
         or not is_e_waybill_applicable(doc)
         or doc.port_address
-        or (
-            doc.shipping_address_name
-            and (
-                frappe.db.get_value("Address", doc.shipping_address_name, "country")
-                == "India"
-            )
-        )
     ):
+        return
+
+    if doc.shipping_address_name and (
+        frappe.db.get_value("Address", doc.shipping_address_name, "country") == "India"
+    ):
+        doc.flags.shipping_address_in_india = True
         return
 
     label = doc.meta.get_label("port_address")
