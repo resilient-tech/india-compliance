@@ -6,7 +6,7 @@ from responses import matchers
 
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
+from frappe.utils import add_to_date, getdate, now_datetime
 from frappe.utils.data import format_date
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -337,26 +337,68 @@ class TestEInvoice(FrappeTestCase):
         """Test if e_invoicing is applicable"""
 
         si = create_sales_invoice(
-            customer="_Test Unregistered Customer",
-            gst_category="Unregistered",
-            do_not_submit=True,
+            customer="_Test Registered Customer", do_not_submit=True
         )
+
+        si.company_gstin = "24AAQCA8719H1ZC"
+        si.set("billing_address_gstin", si.company_gstin)
+
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Invoice is not applicable for invoices.*)$"),
+            re.compile(
+                r"^(e-Invoice is not applicable.*same company and billing GSTIN)$"
+            ),
             validate_e_invoice_applicability,
             si,
         )
 
         si.update(
             {
-                "gst_category": "Registered Regular",
-                "customer": "_Test Registered Customer",
+                "billing_address_gstin": "24AANFA2641L1ZF",
+                "irn": "706daeccda0ef6f818da78f3a2a05a1288731057373002289b46c3229289a2e7",
             }
         )
-        si.save(ignore_permissions=True)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice has already been generated.*)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        si.update(
+            {
+                "customer": "_Test Unregistered Customer",
+                "gst_category": "Unregistered",
+                "irn": "",
+            }
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*not applicable.*with Unregistered Customers)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        si.update(
+            {
+                "customer": "_Test Registered Customer",
+                "gst_category": "Registered Regular",
+            }
+        )
+
+        frappe.db.set_single_value("GST Settings", "enable_e_invoice", 0)
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice is not enabled.*)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
         frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", "2045-05-18"
+            "GST Settings",
+            {"enable_e_invoice": 1, "e_invoice_applicable_from": "2045-05-18"},
         )
 
         self.assertRaisesRegex(
@@ -364,10 +406,6 @@ class TestEInvoice(FrappeTestCase):
             re.compile(r"^(e-Invoice is not applicable for invoices before.*)$"),
             validate_e_invoice_applicability,
             si,
-        )
-
-        frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", get_datetime()
         )
 
     def _cancel_e_invoice(self, invoice_no):

@@ -390,50 +390,62 @@ class TestEWaybill(FrappeTestCase):
         - Transaction with Non GST Item is not allowed
         """
 
-        e_waybill_data = self.e_waybill_test_data.get("goods_item_with_ewaybill")
-        e_waybill_data.get("kwargs").update(
-            {"customer_address": "", "item_code": "999900"}
-        )
-        self.sales_invoice = create_sales_invoice(**e_waybill_data.get("kwargs"))
+        args = self.e_waybill_test_data.get("goods_item_with_ewaybill").get("kwargs")
+        args.update({"customer_address": "", "item_code": "_Test Service Item"})
+        si = create_sales_invoice(**args, do_not_submit=True)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*is required to generate e-Waybill)$"),
-            EWaybillData(self.sales_invoice).validate_applicability,
+            EWaybillData(si).validate_applicability,
         )
 
-        self.sales_invoice.customer_address = "_Test Registered Customer-Billing"
+        si.customer_address = "_Test Registered Customer-Billing"
+        si.company_address = "Test Address - 1"
+
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Waybill cannot be generated because all items have.*)$"),
-            EWaybillData(self.sales_invoice).validate_applicability,
+            EWaybillData(si).validate_applicability,
         )
 
         append_item(
-            self.sales_invoice,
+            si,
             frappe._dict(
                 {"item_code": "_Test Trading Goods 1", "gst_hsn_code": "61149090"}
             ),
         )
-        self.sales_invoice.update({"gst_transporter_id": "", "mode_of_transport": ""})
+        si.update({"gst_transporter_id": "", "mode_of_transport": ""})
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(Either GST Transporter ID or Mode.*)$"),
-            EWaybillData(self.sales_invoice).validate_applicability,
+            EWaybillData(si).validate_applicability,
         )
 
-        self.sales_invoice.update(
+        si.update(
             {"gst_transporter_id": "05AAACG2140A1ZL", "mode_of_transport": "Road"}
         )
 
-        for item in self.sales_invoice.items:
-            item.is_non_gst = 1
+        si.items[0].is_non_gst = 1
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(.*transactions with non-GST items)$"),
-            EWaybillData(self.sales_invoice).validate_applicability,
+            EWaybillData(si).validate_applicability,
+        )
+
+        si.items[0].is_non_gst = 0
+        si.update(
+            {
+                "company_gstin": "05AAACG2115R1ZN",
+                "billing_address_gstin": "05AAACG2115R1ZN",
+            }
+        )
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*billing GSTIN is same as company GSTIN.*)$"),
+            EWaybillData(si).validate_applicability,
         )
 
     @responses.activate
