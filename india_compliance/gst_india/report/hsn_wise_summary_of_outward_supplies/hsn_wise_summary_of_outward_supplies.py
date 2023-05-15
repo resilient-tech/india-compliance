@@ -159,12 +159,14 @@ def get_items(filters):
             `tabSales Invoice Item`.gst_hsn_code,
             `tabSales Invoice Item`.stock_uom as uqc,
             sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
-            sum(`tabSales Invoice Item`.taxable_value) AS taxable_value
+            sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
+            `tabGST HSN Code`.description
         FROM
             `tabSales Invoice`
             INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
+            INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
         WHERE
             `tabSales Invoice`.docstatus = 1
             AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
