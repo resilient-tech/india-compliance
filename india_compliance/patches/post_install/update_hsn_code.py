@@ -4,17 +4,7 @@ from india_compliance.gst_india.setup import _create_hsn_codes
 
 
 def execute():
-    # using db.get_value instead of db.get_global because cache is not cleared.
-    is_hsn_code_updated = frappe.db.get_value(
-        "DefaultValue",
-        {
-            "parent": "__global",
-            "defkey": "updated_hsn_code",
-        },
-        "defvalue",
-    )
-
-    if is_hsn_code_updated == "1":
+    if frappe.flags.hsn_codes_corrected:
         return
 
     used_hsn_code = frappe.get_all(
