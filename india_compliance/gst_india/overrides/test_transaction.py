@@ -604,6 +604,7 @@ class TestQuotationTransaction(FrappeTestCase):
         cls.lead_name = get_lead("_Test Lead")
 
     def test_quotation_to_lead(self):
+        print(self.lead_name)
         doc = create_transaction(
             doctype="Quotation",
             quotation_to="Lead",
