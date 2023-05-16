@@ -165,6 +165,21 @@ function is_e_invoice_applicable(frm) {
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
         frm.doc.gst_category != "Unregistered" &&
         !frm.doc.items[0].is_non_gst &&
-        moment(frm.doc.posting_date).diff(gst_settings.e_invoice_applicable_from) >= 0
+        is_valid_e_invoice_applicability_date(frm)
     );
+}
+
+function is_valid_e_invoice_applicability_date(frm) {
+    let e_invoice_applicable_from = gst_settings.e_invoice_applicable_from;
+
+    if (gst_settings.apply_e_invoice_only_for_selected_companies)
+        e_invoice_applicable_from = gst_settings.e_invoice_applicable_companies.find(
+            row => row.company == frm.doc.company
+        )?.applicable_from;
+
+    if (!e_invoice_applicable_from) return false;
+
+    return moment(frm.doc.posting_date).diff(e_invoice_applicable_from) >= 0
+        ? true
+        : false;
 }
