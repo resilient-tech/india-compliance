@@ -28,8 +28,10 @@
   "e_invoice_section",
   "enable_e_invoice",
   "auto_generate_e_invoice",
+  "apply_e_invoice_only_for_selected_companies",
   "column_break_17",
   "e_invoice_applicable_from",
+  "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
   "accounts_tab",
@@ -145,12 +147,12 @@
    "label": "e-Invoice"
   },
   {
-   "depends_on": "eval: doc.enable_e_invoice",
+   "depends_on": "eval: doc.enable_e_invoice && !doc.apply_e_invoice_only_for_selected_companies",
    "description": "Posting Date from which e-Invoicing features should be enabled",
    "fieldname": "e_invoice_applicable_from",
    "fieldtype": "Date",
    "label": "e-Invoice Applicable From",
-   "mandatory_depends_on": "eval: doc.enable_e_invoice"
+   "mandatory_depends_on": "eval: doc.enable_e_invoice && !doc.apply_e_invoice_only_for_selected_companies"
   },
   {
    "fieldname": "column_break_17",
@@ -244,12 +246,27 @@
    "fieldname": "sandbox_mode",
    "fieldtype": "Check",
    "label": "Use API in Sandbox Mode?"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.enable_e_invoice",
+   "description": "e-Invoice will be generated for only selected companies.",
+   "fieldname": "apply_e_invoice_only_for_selected_companies",
+   "fieldtype": "Check",
+   "label": "Apply e-Invoice for Selected Companies"
+  },
+  {
+   "depends_on": "eval:doc.enable_e_invoice && doc.apply_e_invoice_only_for_selected_companies",
+   "fieldname": "e_invoice_applicable_companies",
+   "fieldtype": "Table",
+   "label": "e-Invoice Applicable Companies",
+   "options": "e-Invoice Applicable Company"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-04-16 21:18:20.822550",
+ "modified": "2023-05-16 17:02:32.432677",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
