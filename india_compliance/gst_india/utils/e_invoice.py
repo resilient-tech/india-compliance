@@ -179,18 +179,22 @@ def cancel_e_invoice(docname, values):
     }
 
     result = EInvoiceAPI(doc).cancel_irn(data)
-    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
-
     log_e_invoice(
         doc,
         {
-            "name": result.Irn,
+            "name": doc.irn,
             "is_cancelled": 1,
             "cancel_reason_code": values.reason,
             "cancel_remark": values.remark,
-            "cancelled_on": parse_datetime(result.CancelDate),
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled IRN
+                if result.error_code == "9999"
+                else parse_datetime(result.CancelDate)
+            ),
         },
     )
+
+    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
 
     frappe.msgprint(
         _("e-Invoice cancelled successfully"),
@@ -229,6 +233,13 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     def _throw(error):
         if throw:
             frappe.throw(error)
+
+    if doc.company_gstin == doc.billing_address_gstin:
+        return _throw(
+            _(
+                "e-Invoice is not applicable for invoices with same company and billing GSTIN"
+            )
+        )
 
     if doc.irn:
         return _throw(
@@ -455,11 +466,8 @@ class EInvoiceData(GSTTransactionData):
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = self.sanitize_value(
-            self.doc.customer_name
-            or frappe.db.get_value("Customer", self.doc.customer, "customer_name")
-        )
-        self.company_address.legal_name = self.sanitize_value(self.doc.company)
+        self.billing_address.legal_name = self.transaction_details.customer_name
+        self.company_address.legal_name = self.transaction_details.company_name
 
     def get_invoice_data(self):
         if self.sandbox_mode:
@@ -516,7 +524,7 @@ class EInvoiceData(GSTTransactionData):
             "SellerDtls": {
                 "Gstin": self.company_address.gstin,
                 "LglNm": self.company_address.legal_name,
-                "TrdNm": self.company_address.address_title,
+                "TrdNm": self.company_address.legal_name,
                 "Loc": self.company_address.city,
                 "Pin": self.company_address.pincode,
                 "Stcd": self.company_address.state_number,
@@ -526,7 +534,7 @@ class EInvoiceData(GSTTransactionData):
             "BuyerDtls": {
                 "Gstin": self.billing_address.gstin,
                 "LglNm": self.billing_address.legal_name,
-                "TrdNm": self.billing_address.address_title,
+                "TrdNm": self.billing_address.legal_name,
                 "Addr1": self.billing_address.address_line1,
                 "Addr2": self.billing_address.address_line2,
                 "Loc": self.billing_address.city,

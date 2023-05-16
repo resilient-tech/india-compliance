@@ -184,6 +184,14 @@
             "gst_transporter_id": "88AAACD8017H1ZX",
             "gstin": "",
             "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Common Supplier",
+            "supplier_name": "_Test Common Supplier",
+            "supplier_type": "Company",
+            "gstin": "05AAACG2140A1ZL",
+            "gst_category": "Registered Regular",
+            "is_transporter": 1
         }
     ],
     "Address": [

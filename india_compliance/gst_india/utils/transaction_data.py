@@ -47,6 +47,13 @@ class GSTTransactionData:
 
         self.transaction_details.update(
             {
+                "company_name": self.sanitize_value(self.doc.company),
+                "customer_name": self.sanitize_value(
+                    self.doc.customer_name
+                    or frappe.db.get_value(
+                        "Customer", self.doc.customer, "customer_name"
+                    )
+                ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "total": abs(
                     self.rounded(sum(row.taxable_value for row in self.doc.items))
@@ -224,6 +231,9 @@ class GSTTransactionData:
     def get_all_item_details(self):
         all_item_details = []
 
+        # progressive error of item tax amounts
+        self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
+
         for row in self.doc.items:
             uom = row.uom.upper()
 
@@ -273,12 +283,11 @@ class GSTTransactionData:
             )
 
             # considers senarios where same item is there multiple times
-            tax_amount = abs(
-                self.rounded(
-                    tax_rate * item.qty
-                    if row.charge_type == "On Item Quantity"
-                    else tax_rate * item.taxable_value / 100
-                ),
+            tax_amount = self.get_progressive_item_tax_amount(
+                tax_rate * item.qty
+                if row.charge_type == "On Item Quantity"
+                else tax_rate * item.taxable_value / 100,
+                tax,
             )
 
             item_details.update(
@@ -305,6 +314,19 @@ class GSTTransactionData:
                 ),
             }
         )
+
+    def get_progressive_item_tax_amount(self, amount, tax_type):
+        """
+        Helper function to calculate progressive tax amount for an item to remove
+        rounding errors.
+        """
+        error_field = f"{tax_type}_rounding_error"
+        error_amount = self.rounding_errors[error_field]
+
+        response = abs(self.rounded(amount + error_amount))
+        self.rounding_errors[error_field] = amount + error_amount - response
+
+        return response
 
     def get_address_details(self, address_name, validate_gstin=False):
         address = frappe.get_cached_value(
