@@ -491,7 +491,7 @@ class Gstr1Report(object):
                 continue
 
             if (
-                self.invoices.get(invoice, {}).get("is_export_with_gst")
+                not self.invoices.get(invoice, {}).get("is_export_with_gst")
                 and self.invoices.get(invoice, {}).get("gst_category")
                 in OVERSEAS_GST_CATEGORIES
             ):
