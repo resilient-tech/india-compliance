@@ -4,13 +4,13 @@
 import frappe
 from frappe import _
 
+
 def execute(filters=None):
     validate_filters(filters)
     if not filters:
         filters = {}
 
-    columns, data = get_columns(), get_data(filters)
-    return columns, data
+    return get_columns(), get_data(filters)
 
 
 def validate_filters(filters=None):
@@ -38,18 +38,10 @@ def validate_filters(filters=None):
 
 
 def get_data(filters):
-    data = get_boe_data(filters)
-    return data
-
-
-def get_boe_data(filters):
     bill_of_entry = frappe.qb.DocType("Bill of Entry")
-    jea = frappe.qb.DocType("Journal Entry Account")
 
     query = (
         frappe.qb.from_(bill_of_entry)
-        .left_join(jea)
-        .on(bill_of_entry.name == jea.reference_name)
         .select(
             bill_of_entry.name,
             bill_of_entry.purchase_invoice,
@@ -62,7 +54,6 @@ def get_boe_data(filters):
             bill_of_entry.total_customs_duty,
             bill_of_entry.total_taxes,
             bill_of_entry.total_amount_payable,
-            jea.parent.as_("parent_journal_entry"),
         )
         .where(bill_of_entry.docstatus == 1)
         .where(
@@ -73,19 +64,32 @@ def get_boe_data(filters):
         .where(bill_of_entry.company == filters.get("company"))
     )
 
+    query = update_journal_entry_for_payment(query)
     query = update_purchase_invoice_query(query)
-    boe_query = query.run(as_dict=1)
-    return boe_query
+    return query.run(as_dict=1)
+
+
+def update_journal_entry_for_payment(query):
+    bill_of_entry = frappe.qb.DocType("Bill of Entry")
+    journal_entry_account = frappe.qb.DocType("Journal Entry Account")
+
+    return (
+        query.left_join(journal_entry_account)
+        .on(bill_of_entry.name == journal_entry_account.reference_name)
+        .select(journal_entry_account.parent.as_("payment_journal_entry"))
+    )
 
 
 def update_purchase_invoice_query(query):
-    purchase_invoice = frappe.qb.DocType("Purchase Invoice")
     bill_of_entry = frappe.qb.DocType("Bill of Entry")
+    purchase_invoice = frappe.qb.DocType("Purchase Invoice")
 
-    return query.left_join(purchase_invoice).on(
-        purchase_invoice.name == bill_of_entry.purchase_invoice
-    ).select(
-        purchase_invoice.supplier,
+    return (
+        query.left_join(purchase_invoice)
+        .on(purchase_invoice.name == bill_of_entry.purchase_invoice)
+        .select(
+            purchase_invoice.supplier,
+        )
     )
 
 
@@ -132,7 +136,7 @@ def get_columns():
             "width": 80,
         },
         {
-            "fieldname": "parent_journal_entry",
+            "fieldname": "payment_journal_entry",
             "label": _("Journal Entry for Payment"),
             "fieldtype": "Link",
             "options": "Journal Entry",
