@@ -38,10 +38,10 @@ frappe.query_reports["e-Invoice Summary"] = {
             options: "\nPending\nGenerated\nCancelled\nFailed",
         },
         {
-            fieldtype: "Check",
-            fieldname: "e_invoice_not_available",
-            label: __("e-Invoice not available"),
-            default: 1,
+            fieldtype: "Select",
+            fieldname: "exceptions",
+            label: __("e-Invoice Exceptions"),
+            options: "\ne-Invoice Not Generated\nInvoice Cancelled but not e-Invoice",
         },
     ],
 
