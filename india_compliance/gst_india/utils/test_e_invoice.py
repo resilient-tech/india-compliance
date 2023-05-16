@@ -1,5 +1,6 @@
 import json
 import re
+from functools import reduce
 
 import responses
 from responses import matchers
@@ -19,7 +20,7 @@ from india_compliance.gst_india.utils.e_invoice import (
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import EWaybillData
-from india_compliance.gst_india.utils.tests import create_sales_invoice
+from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
 class TestEInvoice(FrappeTestCase):
@@ -53,6 +54,7 @@ class TestEInvoice(FrappeTestCase):
             **test_data.get("kwargs"), qty=1000, do_not_submit=True
         )
         si.dispatch_address_name = ""
+
         self.assertDictEqual(
             test_data.get("request_data"),
             EInvoiceData(si).get_data(),
@@ -71,6 +73,87 @@ class TestEInvoice(FrappeTestCase):
             | self.e_invoice_test_data.dispatch_details
             | self.e_invoice_test_data.shipping_details,
             EInvoiceData(si).get_data(),
+        )
+
+    def test_set_item_list(self):
+        test_data = self.e_invoice_test_data.goods_item_with_ewaybill
+
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            item_tax_template="GST 12% - _TIRC",
+            rate=7.6,
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        append_item(
+            si,
+            frappe._dict(rate=7.6, item_tax_template="GST 12% - _TIRC", uom="Nos"),
+        )
+        si.save()
+        si.submit()
+
+        e_invoice_data = EInvoiceData(si)
+        e_invoice_data.set_item_list()
+
+        self.assertListEqual(
+            e_invoice_data.item_list,
+            [
+                {
+                    "SlNo": "1",
+                    "PrdDesc": "Test Trading Goods 1",
+                    "IsServc": "N",
+                    "HsnCd": "61149090",
+                    "Barcde": None,
+                    "Unit": "NOS",
+                    "Qty": 1.0,
+                    "UnitPrice": 7.6,
+                    "TotAmt": 7.6,
+                    "Discount": 0,
+                    "AssAmt": 7.6,
+                    "PrdSlNo": "",
+                    "GstRt": 12.0,
+                    "IgstAmt": 0,
+                    "CgstAmt": 0.46,
+                    "SgstAmt": 0.46,
+                    "CesRt": 0,
+                    "CesAmt": 0,
+                    "CesNonAdvlAmt": 0,
+                    "TotItemVal": 8.52,
+                    "BchDtls": {"Nm": None, "ExpDt": None},
+                },
+                {
+                    "SlNo": "2",
+                    "PrdDesc": "Test Trading Goods 1",
+                    "IsServc": "N",
+                    "HsnCd": "61149090",
+                    "Barcde": None,
+                    "Unit": "NOS",
+                    "Qty": 1.0,
+                    "UnitPrice": 7.6,
+                    "TotAmt": 7.6,
+                    "Discount": 0,
+                    "AssAmt": 7.6,
+                    "PrdSlNo": "",
+                    "GstRt": 12.0,
+                    "IgstAmt": 0,
+                    "CgstAmt": 0.45,
+                    "SgstAmt": 0.45,
+                    "CesRt": 0,
+                    "CesAmt": 0,
+                    "CesNonAdvlAmt": 0,
+                    "TotItemVal": 8.5,
+                    "BchDtls": {"Nm": None, "ExpDt": None},
+                },
+            ],
+        )
+
+        self.assertEqual(
+            si.taxes[0].tax_amount,
+            reduce(
+                lambda a, b: a * 1 + b * 1,
+                [row["CgstAmt"] for row in e_invoice_data.item_list],
+            ),
         )
 
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
