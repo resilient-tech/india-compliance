@@ -71,7 +71,7 @@ def get_data(filters=None):
         .where(conditions)
     )
 
-    if filters.get("status_checkbox") == 1:
+    if filters.get("e_invoice_not_available") == 1:
         query = query.where(((sales_invoice.irn == "") | (sales_invoice.irn.isnull())))
 
     if filters.get("status"):
@@ -112,7 +112,6 @@ def validate_sales_invoice_item(filters=None):
         .distinct()
     )
     return sub_query
-
 
 
 def get_columns():
