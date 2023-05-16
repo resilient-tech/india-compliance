@@ -260,13 +260,13 @@
    "fieldname": "e_invoice_applicable_companies",
    "fieldtype": "Table",
    "label": "e-Invoice Applicable Companies",
-   "options": "e-Invoice Applicable Companies"
+   "options": "e-Invoice Applicable Company"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-05-11 11:49:48.016210",
+ "modified": "2023-05-16 17:02:32.432677",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

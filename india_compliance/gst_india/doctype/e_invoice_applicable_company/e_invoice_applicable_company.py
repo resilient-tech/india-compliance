@@ -5,5 +5,5 @@
 from frappe.model.document import Document
 
 
-class eInvoiceApplicableCompanies(Document):
+class eInvoiceApplicableCompany(Document):
     pass
