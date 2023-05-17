@@ -146,7 +146,7 @@ def get_dashboard_data(data):
     )
 
 
-def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
+def update_dashboard_with_gst_logs(doctype, data, *log_doctypes, label=None):
     if not is_api_enabled():
         return data
 
@@ -166,6 +166,6 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
 
     # GST Logs section looks best at the 3rd position
     # If there are less than 2 transactions, insert will be equivalent to append
-    transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
+    transactions.insert(2, {"label": _(label or "GST Logs"), "items": log_doctypes})
 
     return data

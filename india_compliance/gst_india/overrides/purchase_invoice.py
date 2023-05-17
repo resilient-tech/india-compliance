@@ -1,6 +1,9 @@
 import frappe
 from frappe.utils import flt
 
+from india_compliance.gst_india.overrides.sales_invoice import (
+    update_dashboard_with_gst_logs,
+)
 from india_compliance.gst_india.overrides.transaction import validate_transaction
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -45,4 +48,10 @@ def onload(doc, method):
             "Bill of Entry",
             {"purchase_invoice": doc.name, "docstatus": 1},
         ),
+    )
+
+
+def get_dashboard_data(data):
+    return update_dashboard_with_gst_logs(
+        "Purchase Invoice", data, "Bill of Entry", label="Transactions"
     )
