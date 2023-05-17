@@ -47,7 +47,7 @@ class TestEInvoice(FrappeTestCase):
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
 
-    def test_e_invoice_request_data(self):
+    def test_request_data_for_different_shipping_dispatch_address(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
         si = create_sales_invoice(
             **test_data.get("kwargs"), qty=1000, do_not_submit=True

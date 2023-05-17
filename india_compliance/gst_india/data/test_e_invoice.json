@@ -3,8 +3,7 @@
 		"kwargs": {
 			"vehicle_no": "GJ07DL9009",
 			"customer_address": "_Test Registered Customer-Billing",
-			"shipping_address_name": "_Test Registered Customer-Billing",
-			"company_address": "_Test Indian Registered Company-Billing"
+			"shipping_address_name": "_Test Registered Customer-Billing"
 		},
 		"request_data": {
 			"BuyerDtls": {
@@ -110,8 +109,7 @@
 		"kwargs": {
 			"item_code": "_Test Service Item",
 			"customer_address": "_Test Registered Customer-Billing",
-			"shipping_address_name": "_Test Registered Customer-Billing",
-			"company_address": "_Test Indian Registered Company-Billing"
+			"shipping_address_name": "_Test Registered Customer-Billing"
 		},
 		"request_data": {
 			"BuyerDtls": {
@@ -216,8 +214,7 @@
 			"qty": -1,
 			"is_return": 1,
 			"customer_address": "_Test Registered Customer-Billing",
-			"shipping_address_name": "_Test Registered Customer-Billing",
-			"company_address": "_Test Indian Registered Company-Billing"
+			"shipping_address_name": "_Test Registered Customer-Billing"
 		},
 		"request_data": {
 			"BuyerDtls": {
@@ -330,8 +327,7 @@
 			"is_debit_note": 1,
 			"qty": 0,
 			"customer_address": "_Test Registered Customer-Billing",
-			"shipping_address_name": "_Test Registered Customer-Billing",
-			"company_address": "_Test Indian Registered Company-Billing"
+			"shipping_address_name": "_Test Registered Customer-Billing"
 		},
 		"request_data": {
 			"BuyerDtls": {

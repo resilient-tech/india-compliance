@@ -355,7 +355,6 @@
             "country": "India",
             "gstin": "24AAQCA8719H1ZC",
             "gst_category": "Registered Regular",
-            "is_primary_address": 1,
             "is_shipping_address": 1,
             "is_company_address": 1,
             "links": [
