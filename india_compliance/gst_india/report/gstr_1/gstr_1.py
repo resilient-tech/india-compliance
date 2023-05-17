@@ -59,11 +59,12 @@ class Gstr1Report(object):
         self.gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
         self.get_invoice_data()
 
-        if self.invoices:
-            self.get_invoice_items()
-            self.get_items_based_on_tax_rate()
-            self.invoice_fields = [d["fieldname"] for d in self.invoice_columns]
+        if not self.invoices:
+            return
 
+        self.get_invoice_items()
+        self.get_items_based_on_tax_rate()
+        self.invoice_fields = [d["fieldname"] for d in self.invoice_columns]
         self.get_data()
 
         return self.columns, self.data
@@ -75,7 +76,7 @@ class Gstr1Report(object):
             self.get_advance_data()
         elif self.filters.get("type_of_business") == "NIL Rated":
             self.get_nil_rated_invoices()
-        elif self.invoices:
+        else:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
                 for rate, items in items_based_on_rate.items():
@@ -183,58 +184,55 @@ class Gstr1Report(object):
     def get_b2c_data(self):
         b2c_output = {}
 
-        if self.invoices:
-            for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
-                invoice_details = self.invoices.get(inv)
+        for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
+            invoice_details = self.invoices.get(inv)
 
-                # for B2C Small, skip if B2CL CDN
-                if self.filters.get(
-                    "type_of_business"
-                ) == "B2C Small" and self.is_b2cl_cdn(invoice_details):
-                    continue
+            # for B2C Small, skip if B2CL CDN
+            if self.filters.get("type_of_business") == "B2C Small" and self.is_b2cl_cdn(
+                invoice_details
+            ):
+                continue
 
-                for rate, items in items_based_on_rate.items():
-                    place_of_supply = invoice_details.get("place_of_supply")
-                    ecommerce_gstin = invoice_details.get("ecommerce_gstin")
-                    invoice_number = invoice_details.get("invoice_number")
+            for rate, items in items_based_on_rate.items():
+                place_of_supply = invoice_details.get("place_of_supply")
+                ecommerce_gstin = invoice_details.get("ecommerce_gstin")
+                invoice_number = invoice_details.get("invoice_number")
 
-                    if self.filters.get("type_of_business") == "B2C Small":
-                        default_key = (rate, place_of_supply, ecommerce_gstin)
+                if self.filters.get("type_of_business") == "B2C Small":
+                    default_key = (rate, place_of_supply, ecommerce_gstin)
 
-                    else:
-                        # B2C Large
-                        default_key = (rate, place_of_supply, invoice_number)
+                else:
+                    # B2C Large
+                    default_key = (rate, place_of_supply, invoice_number)
 
-                    b2c_output.setdefault(
-                        default_key,
-                        {
-                            "place_of_supply": place_of_supply,
-                            "ecommerce_gstin": ecommerce_gstin,
-                            "rate": rate,
-                            "taxable_value": 0,
-                            "cess_amount": 0,
-                            "type": "",
-                            "invoice_number": invoice_number,
-                            "posting_date": invoice_details.get("posting_date"),
-                            "invoice_value": invoice_details.get("base_grand_total"),
-                        },
-                    )
+                b2c_output.setdefault(
+                    default_key,
+                    {
+                        "place_of_supply": place_of_supply,
+                        "ecommerce_gstin": ecommerce_gstin,
+                        "rate": rate,
+                        "taxable_value": 0,
+                        "cess_amount": 0,
+                        "type": "",
+                        "invoice_number": invoice_number,
+                        "posting_date": invoice_details.get("posting_date"),
+                        "invoice_value": invoice_details.get("base_grand_total"),
+                    },
+                )
 
-                    row = b2c_output.get(default_key)
-                    row["taxable_value"] += sum(
-                        [
-                            net_amount
-                            for item_code, net_amount in self.invoice_items.get(
-                                inv
-                            ).items()
-                            if item_code in items
-                        ]
-                    )
-                    row["cess_amount"] += flt(self.invoice_cess.get(inv), 2)
-                    row["type"] = "E" if ecommerce_gstin else "OE"
+                row = b2c_output.get(default_key)
+                row["taxable_value"] += sum(
+                    [
+                        net_amount
+                        for item_code, net_amount in self.invoice_items.get(inv).items()
+                        if item_code in items
+                    ]
+                )
+                row["cess_amount"] += flt(self.invoice_cess.get(inv), 2)
+                row["type"] = "E" if ecommerce_gstin else "OE"
 
-            for key, value in b2c_output.items():
-                self.data.append(value)
+        for key, value in b2c_output.items():
+            self.data.append(value)
 
     def is_b2cl_cdn(self, invoice):
         if not (invoice.is_return or invoice.is_debit_note):
