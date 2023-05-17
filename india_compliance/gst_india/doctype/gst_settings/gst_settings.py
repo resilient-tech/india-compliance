@@ -19,6 +19,8 @@ from india_compliance.gst_india.page.india_compliance_account import (
 from india_compliance.gst_india.utils import can_enable_api
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
+E_INVOICE_START_DATE = "2021-01-01"
+
 
 class GSTSettings(Document):
     def onload(self):
@@ -101,19 +103,28 @@ class GSTSettings(Document):
         if not self.enable_api or not self.enable_e_invoice:
             return
 
-        if not self.e_invoice_applicable_from:
+        if (
+            not self.e_invoice_applicable_from
+            and not self.apply_e_invoice_only_for_selected_companies
+        ):
             frappe.throw(
                 _("{0} is mandatory for enabling e-Invoice").format(
                     frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
                 )
             )
 
-        if getdate(self.e_invoice_applicable_from) < getdate("2021-01-01"):
+        if self.e_invoice_applicable_from and (
+            getdate(self.e_invoice_applicable_from) < getdate(E_INVOICE_START_DATE)
+        ):
             frappe.throw(
-                _("{0} cannot be before 2021-01-01").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
+                _("{0} date cannot be before {1}").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")),
+                    E_INVOICE_START_DATE,
                 )
             )
+
+        if self.apply_e_invoice_only_for_selected_companies:
+            self.validate_e_invoice_applicable_companies()
 
     def validate_credentials(self):
         if not self.enable_api:
@@ -169,6 +180,41 @@ class GSTSettings(Document):
                     "Autofill Party Information based on GSTIN is not supported in sandbox mode"
                 ),
             )
+
+    def validate_e_invoice_applicable_companies(self):
+        if not self.e_invoice_applicable_companies:
+            frappe.throw(
+                _(
+                    "You must select at least one company to which e-Invoice is Applicable"
+                )
+            )
+
+        company_list = []
+        for row in self.e_invoice_applicable_companies:
+            if not row.applicable_from:
+                frappe.throw(
+                    _("Row #{0}: {1} is mandatory for enabling e-Invoice").format(
+                        row.idx, frappe.bold(row.meta.get_label("applicable_from"))
+                    )
+                )
+
+            if getdate(row.applicable_from) < getdate(E_INVOICE_START_DATE):
+                frappe.throw(
+                    _("Row #{0}: {1} date cannot be before {2}").format(
+                        row.idx,
+                        frappe.bold(row.meta.get_label("applicable_from")),
+                        E_INVOICE_START_DATE,
+                    )
+                )
+
+            if row.company in company_list:
+                frappe.throw(
+                    _("Row #{0}: {1} {2} appears multiple times").format(
+                        row.idx, row.meta.get_label("company"), frappe.bold(row.company)
+                    )
+                )
+
+            company_list.append(row.company)
 
 
 @frappe.whitelist()
