@@ -278,34 +278,9 @@ class Gstr1Report(object):
                 row.append(invoice_details.get(fieldname))
         taxable_value = 0
 
-        if invoice in self.cgst_sgst_invoices:
-            division_factor = 2
-        else:
-            division_factor = 1
-
         for item_code, net_amount in self.invoice_items.get(invoice).items():
             if item_code in items:
-                if self.item_tax_rate.get(
-                    invoice
-                ) and tax_rate / division_factor in self.item_tax_rate.get(
-                    invoice, {}
-                ).get(
-                    item_code, []
-                ):
-                    taxable_value += abs(net_amount)
-                elif not self.item_tax_rate.get(invoice):
-                    taxable_value += abs(net_amount)
-                elif tax_rate:
-                    taxable_value += abs(net_amount)
-                elif (
-                    not tax_rate
-                    and (
-                        self.filters.get("type_of_business") == "EXPORT"
-                        or invoice_details.get("gst_category") == "SEZ"
-                    )
-                    and not invoice_details.get("is_export_with_gst")
-                ):
-                    taxable_value += abs(net_amount)
+                taxable_value += abs(net_amount)
 
         row += [tax_rate or 0, taxable_value]
 
@@ -388,7 +363,7 @@ class Gstr1Report(object):
             )
 
         elif self.filters.get("type_of_business") == "CDNR-REG":
-            conditions += """ AND (is_return = 1 OR is_debit_note = 1) AND IFNULL(gst_category, '') in ('Registered Regular', 'Deemed Export', 'SEZ')"""
+            conditions += """ AND (is_return = 1 OR is_debit_note = 1) AND IFNULL(gst_category, '') not in ('Unregistered', 'Overseas')"""
 
         elif self.filters.get("type_of_business") == "CDNR-UNREG":
             conditions += """ AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
@@ -404,7 +379,6 @@ class Gstr1Report(object):
 
     def get_invoice_items(self):
         self.invoice_items = frappe._dict()
-        self.item_tax_rate = frappe._dict()
         self.nil_exempt_non_gst = {}
 
         items = frappe.db.sql(
@@ -425,20 +399,9 @@ class Gstr1Report(object):
                 "taxable_value", 0
             ) or d.get("base_net_amount", 0)
 
-            item_tax_rate = {}
-
-            if d.item_tax_rate:
-                item_tax_rate = json.loads(d.item_tax_rate)
-
-                for account, rate in item_tax_rate.items():
-                    tax_rate_dict = self.item_tax_rate.setdefault(
-                        d.parent, {}
-                    ).setdefault(d.item_code, [])
-                    tax_rate_dict.append(rate)
-
             if d.is_nil_exempt:
                 self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
-                if item_tax_rate:
+                if d.item_tax_rate:
                     self.nil_exempt_non_gst[d.parent][0] += d.get("taxable_value", 0)
                 else:
                     self.nil_exempt_non_gst[d.parent][1] += d.get("taxable_value", 0)
@@ -494,21 +457,23 @@ class Gstr1Report(object):
 
                         for item_code, tax_amounts in item_wise_tax_detail.items():
                             tax_rate = tax_amounts[0]
-                            if tax_rate:
-                                if cgst_or_sgst:
-                                    tax_rate *= 2
-                                    if parent not in self.cgst_sgst_invoices:
-                                        self.cgst_sgst_invoices.append(parent)
+                            if not tax_rate and parent not in self.nil_exempt_non_gst:
+                                continue
 
-                                rate_based_dict = (
-                                    self.items_based_on_tax_rate.setdefault(
-                                        parent, {}
-                                    ).setdefault(tax_rate, [])
-                                )
-                                if item_code not in rate_based_dict:
-                                    rate_based_dict.append(item_code)
+                            if cgst_or_sgst:
+                                tax_rate *= 2
+                                if parent not in self.cgst_sgst_invoices:
+                                    self.cgst_sgst_invoices.append(parent)
+
+                            rate_based_dict = self.items_based_on_tax_rate.setdefault(
+                                parent, {}
+                            ).setdefault(tax_rate, [])
+                            if item_code not in rate_based_dict:
+                                rate_based_dict.append(item_code)
+
                     except ValueError:
                         continue
+
         if unidentified_gst_accounts:
             frappe.msgprint(
                 _("Following accounts might be selected in GST Settings:")
@@ -520,12 +485,22 @@ class Gstr1Report(object):
         # Build itemised tax for export invoices where tax table is blank
         for invoice, items in self.invoice_items.items():
             if (
-                invoice not in self.items_based_on_tax_rate
-                and invoice not in unidentified_gst_accounts_invoice
-                and not self.invoices.get(invoice, {}).get("is_export_with_gst")
+                invoice in self.items_based_on_tax_rate
+                or invoice in unidentified_gst_accounts_invoice
+            ):
+                continue
+
+            if (
+                not self.invoices.get(invoice, {}).get("is_export_with_gst")
                 and self.invoices.get(invoice, {}).get("gst_category")
                 in OVERSEAS_GST_CATEGORIES
             ):
+                self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
+                    0, []
+                ).extend(items)
+
+            # Show invoice with all items are in nil exempt or non gst
+            if invoice in self.nil_exempt_non_gst:
                 self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
                     0, []
                 ).extend(items)
