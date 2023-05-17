@@ -1,6 +1,5 @@
 import json
 import re
-from functools import reduce
 
 import responses
 from responses import matchers
@@ -48,7 +47,7 @@ class TestEInvoice(FrappeTestCase):
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
 
-    def test_get_data(self):
+    def test_e_invoice_request_data(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
         si = create_sales_invoice(
             **test_data.get("kwargs"), qty=1000, do_not_submit=True
@@ -75,7 +74,7 @@ class TestEInvoice(FrappeTestCase):
             EInvoiceData(si).get_data(),
         )
 
-    def test_set_item_list(self):
+    def test_progressive_item_tax_amount(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
 
         si = create_sales_invoice(
@@ -148,12 +147,15 @@ class TestEInvoice(FrappeTestCase):
             ],
         )
 
+        total_item_wise_cgst = sum(row["CgstAmt"] for row in e_invoice_data.item_list)
         self.assertEqual(
             si.taxes[0].tax_amount,
-            reduce(
-                lambda a, b: a * 1 + b * 1,
-                [row["CgstAmt"] for row in e_invoice_data.item_list],
-            ),
+            total_item_wise_cgst,
+        )
+
+        self.assertEqual(
+            EInvoiceData(si).get_data().get("ValDtls").get("CgstVal"),
+            total_item_wise_cgst,
         )
 
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
