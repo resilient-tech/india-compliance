@@ -324,7 +324,7 @@ class GSTTransactionData:
         error_amount = self.rounding_errors[error_field]
 
         response = abs(self.rounded(amount + error_amount))
-        self.rounding_errors[error_field] = amount + error_amount - response
+        self.rounding_errors[error_field] = abs(amount) + error_amount - response
 
         return response
 
