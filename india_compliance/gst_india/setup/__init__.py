@@ -252,13 +252,13 @@ def map_default_uoms(settings=None):
     settings = settings or frappe.get_doc("GST Settings")
 
     def _is_uom_mapped():
-        return any(mapping.uom == uom for mapping in settings.gst_uom_mapping)
+        return any(mapping.uom == uom for mapping in settings.gst_uom_map)
 
     for uom, gst_uom in GST_UOMS.items():
         if not frappe.db.exists("UOM", uom) or _is_uom_mapped():
             continue
 
-        settings.append("gst_uom_mapping", {"uom": uom, "gst_uom": gst_uom})
+        settings.append("gst_uom_map", {"uom": uom, "gst_uom": gst_uom})
 
-    for row in settings.gst_uom_mapping:
+    for row in settings.gst_uom_map:
         row.db_update()

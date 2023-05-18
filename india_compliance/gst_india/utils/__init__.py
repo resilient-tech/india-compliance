@@ -403,7 +403,7 @@ def get_gst_uom(uom, settings=None):
     """Returns the GST UOM from ERPNext UOM"""
     settings = settings or frappe.get_cached_doc("GST Settings")
 
-    for row in settings.get("gst_uom_mapping"):
+    for row in settings.get("gst_uom_map"):
         if row.uom == uom:
             return row.gst_uom.split("(")[0].strip()
 
