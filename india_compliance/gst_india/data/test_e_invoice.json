@@ -1,9 +1,7 @@
 {
 	"goods_item_with_ewaybill": {
 		"kwargs": {
-			"vehicle_no": "GJ07DL9009",
-			"customer_address": "_Test Registered Customer-Billing",
-			"shipping_address_name": "_Test Registered Customer-Billing"
+			"vehicle_no": "GJ07DL9009"
 		},
 		"request_data": {
 			"BuyerDtls": {
@@ -455,6 +453,26 @@
 				"ewayBillNo": "391009149369"
 			},
 			"success": true
+		}
+	},
+	"dispatch_details": {
+		"DispDtls": {
+			"Nm": "Test Indian Registered Company",
+			"Addr1": "Test Address - 5",
+			"Loc": "Test City",
+			"Pin": 193501,
+			"Stcd": "01"
+		}
+	},
+	"shipping_details": {
+		"ShipDtls": {
+			"Gstin": "36AMBPG7773M002",
+			"LglNm": "Test Registered Customer",
+			"TrdNm": "Test Registered Customer",
+			"Addr1": "Test Address - 4",
+			"Loc": "Test City",
+			"Pin": 500055,
+			"Stcd": "36"
 		}
 	}
 }
