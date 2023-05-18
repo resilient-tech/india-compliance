@@ -206,13 +206,10 @@ def setup_wizard_complete(user_input):
 
 
 def map_default_uoms(settings=None):
-    def _is_uom_mapped():
-        return next(
-            (True for mapping in settings.gst_uom_mapping if mapping.uom == uom), False
-        )
+    settings = settings or frappe.get_doc("GST Settings")
 
-    if not settings:
-        settings = frappe.get_doc("GST Settings")
+    def _is_uom_mapped():
+        return any(mapping.uom == uom for mapping in settings.gst_uom_mapping)
 
     for uom, gst_uom in GST_UOMS.items():
         if not frappe.db.exists("UOM", uom) or _is_uom_mapped():

@@ -441,14 +441,10 @@ def can_enable_api(settings):
 
 def get_gst_uom(uom, settings=None):
     """Returns the GST UOM from ERPNext UOM"""
-    if not settings:
-        settings = frappe.get_cached_doc("GST Settings")
+    settings = settings or frappe.get_cached_doc("GST Settings")
 
-    return next(
-        (
-            row.gst_uom.split("(")[0].strip()
-            for row in settings.get("gst_uom_mapping")
-            if row.uom == uom
-        ),
-        "OTH",
-    )
+    for row in settings.get("gst_uom_mapping"):
+        if row.uom == uom:
+            return row.gst_uom.split("(")[0].strip()
+
+    return "OTH"
