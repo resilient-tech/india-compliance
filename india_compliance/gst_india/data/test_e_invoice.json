@@ -1,9 +1,7 @@
 {
 	"goods_item_with_ewaybill": {
 		"kwargs": {
-			"vehicle_no": "GJ07DL9009",
-			"customer_address": "_Test Registered Customer-Billing",
-			"shipping_address_name": "_Test Registered Customer-Billing"
+			"vehicle_no": "GJ07DL9009"
 		},
 		"request_data": {
 			"BuyerDtls": {

@@ -52,7 +52,6 @@ class TestEInvoice(FrappeTestCase):
         si = create_sales_invoice(
             **test_data.get("kwargs"), qty=1000, do_not_submit=True
         )
-        si.dispatch_address_name = ""
 
         self.assertDictEqual(
             test_data.get("request_data"),

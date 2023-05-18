@@ -362,14 +362,6 @@ class TestEWaybill(FrappeTestCase):
     def test_validate_transaction(self):
         """Test validation if ewaybill is already generated for the transaction"""
         e_waybill_data = self.e_waybill_test_data.goods_item_with_ewaybill
-        e_waybill_data.get("kwargs").update(
-            {
-                "transporter": "_Test Common Supplier",
-                "distance": 10,
-                "mode_of_transport": "Road",
-            }
-        )
-        self.sales_invoice = create_sales_invoice(**e_waybill_data.get("kwargs"))
 
         self.sales_invoice.ewaybill = (
             e_waybill_data.get("response_data").get("result").get("ewayBillNo")
