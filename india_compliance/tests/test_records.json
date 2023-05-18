@@ -344,6 +344,24 @@
                     "link_name": "_Test Registered Composition Supplier"
                 }
             ]
+        },
+        {
+            "name": "_Test Indian Registered Company-Shipping",
+            "address_type": "Shipping",
+            "address_line1": "Test Address - 5",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular",
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
+                }
+            ]
         }
     ],
     "POS Profile": [
