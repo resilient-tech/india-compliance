@@ -76,6 +76,13 @@ def create_address_template():
 
 
 def create_hsn_codes():
+    if frappe.db.count("GST HSN Code") > 0:
+        return
+
+    _create_hsn_codes()
+
+
+def _create_hsn_codes():
     user = frappe.session.user
     now = now_datetime()
 
@@ -109,6 +116,8 @@ def create_hsn_codes():
         ignore_duplicates=True,
         chunk_size=20_000,
     )
+
+    frappe.flags.hsn_codes_corrected = 1
 
 
 def add_fields_to_item_variant_settings():
