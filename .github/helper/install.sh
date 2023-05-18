@@ -54,3 +54,5 @@ bench start &
 bench reinstall --yes
 
 bench --verbose install-app india_compliance
+bench --site test_site add-to-hosts
+

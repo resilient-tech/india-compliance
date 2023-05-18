@@ -1,70 +1,46 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-
+from frappe import _
 from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register import (
     _execute,
 )
 
+from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
+    get_additional_table_columns,
+    get_column_names,
+)
+
 
 def execute(filters=None):
+    additional_table_columns = get_additional_table_columns()
+    additional_table_columns.append(
+        {
+            "fieldtype": "Data",
+            "label": _("HSN Code"),
+            "fieldname": "gst_hsn_code",
+            "width": 120,
+        }
+    )
+
+    additional_query_columns = [
+        row.get("fieldname") for row in additional_table_columns
+    ]
+    additional_conditions = get_conditions(filters, additional_query_columns)
+
     return _execute(
         filters,
-        additional_table_columns=[
-            dict(
-                fieldtype="Data",
-                label="Billing Address GSTIN",
-                fieldname="billing_address_gstin",
-                width=140,
-            ),
-            dict(
-                fieldtype="Data",
-                label="Company GSTIN",
-                fieldname="company_gstin",
-                width=120,
-            ),
-            dict(
-                fieldtype="Data",
-                label="Place of Supply",
-                fieldname="place_of_supply",
-                width=120,
-            ),
-            dict(
-                fieldtype="Check",
-                label="Is Reverse Charge",
-                fieldname="is_reverse_charge",
-                width=120,
-            ),
-            dict(
-                fieldtype="Data",
-                label="GST Category",
-                fieldname="gst_category",
-                width=120,
-            ),
-            dict(
-                fieldtype="Check",
-                label="Is Export With GST",
-                fieldname="is_export_with_gst",
-                width=120,
-            ),
-            dict(
-                fieldtype="Data",
-                label="E-Commerce GSTIN",
-                fieldname="ecommerce_gstin",
-                width=130,
-            ),
-            dict(
-                fieldtype="Data", label="HSN Code", fieldname="gst_hsn_code", width=120
-            ),
-        ],
-        additional_query_columns=[
-            "billing_address_gstin",
-            "company_gstin",
-            "place_of_supply",
-            "is_reverse_charge",
-            "gst_category",
-            "is_export_with_gst",
-            "ecommerce_gstin",
-            "gst_hsn_code",
-        ],
+        additional_table_columns,
+        get_column_names(additional_table_columns),
+        additional_conditions,
     )
+
+
+def get_conditions(filters, additional_query_columns):
+    conditions = ""
+
+    for opts in additional_query_columns:
+        if filters.get(opts):
+            conditions += f" and {opts}=%({opts})s"
+
+    return conditions
