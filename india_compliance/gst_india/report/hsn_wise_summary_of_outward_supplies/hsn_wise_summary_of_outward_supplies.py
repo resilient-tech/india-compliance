@@ -209,13 +209,15 @@ def get_tax_accounts(
             from `tab{tax_doctype}`
             where
                 parenttype = "Sales Invoice" and docstatus = 1
-                and (item_wise_tax_detail is not null and item_wise_tax_detail != '')
                 and parent in ({", ".join(frappe.db.escape(invoice) for invoice in invoice_numbers)})
                 and account_head in ({", ".join(frappe.db.escape(account) for account in output_gst_accounts)})
         """,
     )
 
     for parent, account_head, item_wise_tax_detail, tax_amount in tax_details:
+        if not item_wise_tax_detail:
+            continue
+
         if account_head and tax_amount:
             # as description is text editor earlier and markup can break the column convention in reports
             tax_columns.add(account_head)
