@@ -593,6 +593,7 @@ CUSTOM_FIELDS = {
             "options": "GST HSN Code",
             "insert_after": "item_group",
             "allow_in_quick_entry": 1,
+            "description": "You can search code by the description of the category.",
         },
         {
             "fieldname": "is_nil_exempt",
