@@ -3,9 +3,8 @@
 
 import frappe
 from frappe import _
-from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.model.document import Document
-from frappe.utils import cint, getdate
+from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 from india_compliance.gst_india.constants.custom_fields import (
@@ -37,7 +36,6 @@ class GSTSettings(Document):
         self.validate_e_invoice_applicability_date()
         self.validate_credentials()
         self.clear_api_auth_session()
-        self.update_propery_setters()
 
     def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
@@ -100,16 +98,6 @@ class GSTSettings(Document):
             toggle_custom_fields(
                 SALES_REVERSE_CHARGE_FIELDS, self.enable_reverse_charge_in_sales
             )
-
-    def update_propery_setters(self):
-        make_property_setter(
-            "Item",
-            "gst_hsn_code",
-            "reqd",
-            cint(self.validate_hsn_code),
-            property_type="docfield",
-            validate_fields_for_doctype=True,
-        )
 
     def validate_e_invoice_applicability_date(self):
         if not self.enable_api or not self.enable_e_invoice:
