@@ -3,7 +3,7 @@
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #12
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #13
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #2
 india_compliance.patches.post_install.update_custom_role_for_e_invoice_summary
 india_compliance.patches.v14.remove_ecommerce_gstin_from_purchase_invoice
