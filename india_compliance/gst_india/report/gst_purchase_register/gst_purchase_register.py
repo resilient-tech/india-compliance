@@ -1,5 +1,6 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
+from itertools import chain
 
 import frappe
 from frappe import _
@@ -84,9 +85,6 @@ def update_bill_of_entry_data(filters, data, columns):
                     elif column == "Total Tax":
                         row[idx] += tax.tax_amount
 
-                if column == "Total Customs Duty":
-                    row[idx] += boe_doc.total_customs_duty
-
                 if column == "Grand Total":
                     row[idx] += boe_doc.total_amount_payable
 
@@ -95,31 +93,29 @@ def update_bill_of_entry_data(filters, data, columns):
 
 
 def get_additional_tax_accounts(data):
-    return frappe.db.sql_list(
-        """
-            select
-                distinct boe_taxes.account_head
-            from
-                `tabBill of Entry` as boe
-            INNER JOIN
-                `tabBill of Entry Taxes` as boe_taxes
-            ON
-                boe.name = boe_taxes.parent
-            where
-                boe.docstatus = 1
-                and (boe_taxes.account_head is not null and boe_taxes.account_head != '')
-                and boe.purchase_invoice in (%s) order by boe_taxes.account_head"""
-        % ", ".join(["%s"] * len(data)),
-        tuple(inv[0] for inv in data),
+    bill_of_entry = frappe.qb.DocType("Bill of Entry")
+    boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
+
+    return (
+        frappe.qb.from_(bill_of_entry)
+        .inner_join(boe_taxes)
+        .on(bill_of_entry.name == boe_taxes.parent)
+        .select(boe_taxes.account_head)
+        .where(bill_of_entry.docstatus == 1)
+        .where(boe_taxes.account_head.isnotnull() and boe_taxes.account_head != "")
+        .where(bill_of_entry.purchase_invoice.isin(tuple(inv[0] for inv in data)))
+        .orderby(boe_taxes.account_head)
+        .distinct()
+        .run(as_list=True)
     )
 
 
 def insert_additional_columns(data, columns):
-    tax_accounts = get_additional_tax_accounts(data)
+    tax_accounts = list(chain(*get_additional_tax_accounts(data)))
     total_tax_column_index = columns.index("Total Tax:Currency/currency:120")
 
     boe_tax_accounts = []
-    for account in tax_accounts + ["Total Customs Duty"]:
+    for account in tax_accounts:
         if (account + ":Currency/currency:120") not in columns:
             boe_tax_accounts.append(account)
             columns.insert(
