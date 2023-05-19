@@ -593,6 +593,7 @@ CUSTOM_FIELDS = {
             "options": "GST HSN Code",
             "insert_after": "item_group",
             "allow_in_quick_entry": 1,
+            "mandatory_depends_on": "eval:gst_settings.validate_hsn_code && doc.is_sales_item",
             "description": "You can search code by the description of the category.",
         },
         {
