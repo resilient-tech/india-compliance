@@ -2,7 +2,10 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from erpnext.accounts.report.purchase_register.purchase_register import _execute
+
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def execute(filters=None):
@@ -47,23 +50,80 @@ def execute(filters=None):
 
 
 def update_bill_of_entry_data(filters, data, columns):
+    boe_tax_accounts = insert_additional_columns(data, columns)
+    doctype = "Bill of Entry"
+    input_accounts = get_gst_accounts_by_type(filters.get("company"), "Input")
+
     for row in data:
-        if not (
-            boe := frappe.db.exists(
-                "Bill of Entry", {"purchase_invoice": row[0], "docstatus": 1}
+        boe = frappe.db.exists(doctype, {"purchase_invoice": row[0], "docstatus": 1})
+        boe_doc = frappe.get_doc(doctype, boe) if boe else None
+
+        for idx, _column in enumerate(columns):
+            if not isinstance(_column, str):
+                continue
+
+            column = _column.split(":")[0]
+
+            if column in boe_tax_accounts:
+                row.insert(idx, 0)
+
+            if boe_doc:
+                for tax in boe_doc.taxes:
+                    if (
+                        column == tax.account_head
+                        and tax.account_head == input_accounts.igst_account
+                    ):
+                        row[idx] += tax.tax_amount
+
+                    elif (
+                        column == tax.account_head
+                        and tax.account_head == input_accounts.cess_account
+                    ):
+                        row[idx] += tax.tax_amount
+
+                    elif column == "Total Tax":
+                        row[idx] += tax.tax_amount
+
+                if column == "Total Customs Duty":
+                    row[idx] += boe_doc.total_customs_duty
+
+                if column == "Grand Total":
+                    row[idx] += boe_doc.total_amount_payable
+
+                if column == "Rounded Total":
+                    row[idx] += round(boe_doc.total_amount_payable)
+
+
+def get_additional_tax_accounts(data):
+    return frappe.db.sql_list(
+        """
+            select
+                distinct boe_taxes.account_head
+            from
+                `tabBill of Entry` as boe
+            INNER JOIN
+                `tabBill of Entry Taxes` as boe_taxes
+            ON
+                boe.name = boe_taxes.parent
+            where
+                boe.docstatus = 1
+                and (boe_taxes.account_head is not null and boe_taxes.account_head != '')
+                and boe.purchase_invoice in (%s) order by boe_taxes.account_head"""
+        % ", ".join(["%s"] * len(data)),
+        tuple(inv[0] for inv in data),
+    )
+
+
+def insert_additional_columns(data, columns):
+    tax_accounts = get_additional_tax_accounts(data)
+    total_tax_column_index = columns.index("Total Tax:Currency/currency:120")
+
+    boe_tax_accounts = []
+    for account in tax_accounts + ["Total Customs Duty"]:
+        if (account + ":Currency/currency:120") not in columns:
+            boe_tax_accounts.append(account)
+            columns.insert(
+                total_tax_column_index, _(account + ":Currency/currency:120")
             )
-        ):
-            continue
 
-        boe_doc = frappe.get_cached_doc("Bill of Entry", boe)
-
-        total_tax = 0
-        for tax in boe_doc.taxes:
-            total_tax += tax.tax_amount
-            for idx, column in enumerate(columns):
-                if not isinstance(column, str):
-                    continue
-                if column.split(":")[0] == tax.account_head:
-                    row[idx] += tax.tax_amount
-                if column.split(":")[0] == "Total Tax":
-                    row[idx] += total_tax
+    return boe_tax_accounts
