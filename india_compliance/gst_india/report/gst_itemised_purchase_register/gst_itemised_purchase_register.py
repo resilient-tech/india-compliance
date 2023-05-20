@@ -6,9 +6,13 @@ from erpnext.accounts.report.item_wise_purchase_register.item_wise_purchase_regi
     _execute,
 )
 
+from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
+    update_bill_of_entry_data,
+)
+
 
 def execute(filters=None):
-    return _execute(
+    columns, data, value1, value2, value3, skip_total_row = _execute(
         filters,
         additional_table_columns=[
             dict(
@@ -61,3 +65,6 @@ def execute(filters=None):
             "bill_date",
         ],
     )
+
+    update_bill_of_entry_data(filters, data, columns, True)
+    return columns, data, value1, value2, value3, skip_total_row
