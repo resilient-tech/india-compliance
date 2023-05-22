@@ -73,21 +73,23 @@ def execute(filters=None):
 
 
 def update_bill_of_entry_data(filters, data, columns):
+    # Used separate function because data is list of dictioanries here.
+
     doctype = "Bill of Entry"
-    boe_tax_accounts = insert_additional_columns(data, columns, with_rate=True)
+    boe_tax_accounts = insert_additional_columns(data, columns, is_itemised_report=True)
     input_accounts = get_gst_accounts_by_type(filters.get("company"), "Input")
 
     for idx, _column in enumerate(columns):
         column_label = _column.get("label")
+        fieldname = _column.get("fieldname")
 
+        # To extract account names from columns because column names are like Input Tax CGST @ 9.0 Amount and TDS - RT Amount
         if "@" in column_label:
             column_label = column_label.split("@")[0].strip()
         elif column_label.endswith("Rate") and len(column_label) > 4:
             column_label = column_label[:-5]
         elif column_label.endswith("Amount") and len(column_label) > 4:
             column_label = column_label[:-7]
-
-        fieldname = _column.get("fieldname")
 
         for row in data:
             if column_label in boe_tax_accounts:
@@ -98,9 +100,7 @@ def update_bill_of_entry_data(filters, data, columns):
                 row[0] if isinstance(row, list) else row.get("invoice")
             )
 
-            boe_doc = get_bill_of_entry(doctype, purchase_invoice_no)
-
-            if boe_doc:
+            if boe_doc := get_bill_of_entry(doctype, purchase_invoice_no):
                 for tax in boe_doc.taxes:
                     if (
                         column_label in tax.account_head

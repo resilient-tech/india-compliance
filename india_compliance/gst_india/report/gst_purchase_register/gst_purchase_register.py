@@ -50,9 +50,9 @@ def execute(filters=None):
     return columns, data
 
 
-def update_bill_of_entry_data(filters, data, columns, with_rate=False):
+def update_bill_of_entry_data(filters, data, columns):
     doctype = "Bill of Entry"
-    boe_tax_accounts = insert_additional_columns(data, columns, with_rate)
+    boe_tax_accounts = insert_additional_columns(data, columns)
     input_accounts = get_gst_accounts_by_type(filters.get("company"), "Input")
 
     for idx, _column in enumerate(columns):
@@ -70,9 +70,7 @@ def update_bill_of_entry_data(filters, data, columns, with_rate=False):
                 row[0] if isinstance(row, list) else row.get("invoice")
             )
 
-            boe_doc = get_bill_of_entry(doctype, purchase_invoice_no)
-
-            if boe_doc:
+            if boe_doc := get_bill_of_entry(doctype, purchase_invoice_no):
                 for tax in boe_doc.taxes:
                     if (
                         column_label == tax.account_head
@@ -114,12 +112,12 @@ def get_additional_tax_accounts(data):
     )
 
 
-def insert_additional_columns(data, columns, with_rate=False):
+def insert_additional_columns(data, columns, is_itemised_report=False):
     tax_accounts = list(chain(*get_additional_tax_accounts(data)))
 
     boe_tax_accounts = []
     for account in tax_accounts:
-        if with_rate:
+        if is_itemised_report:
             # In GST Purchase Register Column name as account name only But in Itemised Purchase Register column name is description of account head, so the hack to match column name for IGST
             account = "Input Tax IGST @ 18.0" if "IGST" in account else account
             total_tax_column_index = next(
