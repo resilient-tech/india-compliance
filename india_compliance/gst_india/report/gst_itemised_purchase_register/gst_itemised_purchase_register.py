@@ -7,8 +7,10 @@ from erpnext.accounts.report.item_wise_purchase_register.item_wise_purchase_regi
 )
 
 from india_compliance.gst_india.report.gst_purchase_register.gst_purchase_register import (
-    update_bill_of_entry_data,
+    get_bill_of_entry,
+    insert_additional_columns,
 )
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def execute(filters=None):
@@ -66,5 +68,60 @@ def execute(filters=None):
         ],
     )
 
-    update_bill_of_entry_data(filters, data, columns, True)
+    update_bill_of_entry_data(filters, data, columns)
     return columns, data, value1, value2, value3, skip_total_row
+
+
+def update_bill_of_entry_data(filters, data, columns):
+    doctype = "Bill of Entry"
+    boe_tax_accounts = insert_additional_columns(data, columns, with_rate=True)
+    input_accounts = get_gst_accounts_by_type(filters.get("company"), "Input")
+
+    for idx, _column in enumerate(columns):
+        column_label = _column.get("label")
+
+        if "@" in column_label:
+            column_label = column_label.split("@")[0].strip()
+        elif column_label.endswith("Rate") and len(column_label) > 4:
+            column_label = column_label[:-5]
+        elif column_label.endswith("Amount") and len(column_label) > 4:
+            column_label = column_label[:-7]
+
+        fieldname = _column.get("fieldname")
+
+        for row in data:
+            if column_label in boe_tax_accounts:
+                if not row.get(fieldname):
+                    row[fieldname] = 0
+
+            purchase_invoice_no = (
+                row[0] if isinstance(row, list) else row.get("invoice")
+            )
+
+            boe_doc = get_bill_of_entry(doctype, purchase_invoice_no)
+
+            if boe_doc:
+                for tax in boe_doc.taxes:
+                    if (
+                        column_label in tax.account_head
+                        and tax.account_head == input_accounts.igst_account
+                    ):
+                        if _column.get("fieldname").endswith("amount"):
+                            row[fieldname] += tax.tax_amount
+                        elif _column.get("fieldname").endswith("rate"):
+                            row[fieldname] = tax.rate
+
+                    elif (
+                        column_label in tax.account_head
+                        and tax.account_head == input_accounts.cess_account
+                    ):
+                        if _column.get("fieldname").endswith("amount"):
+                            row[fieldname] += tax.tax_amount
+                        elif _column.get("fieldname").endswith("rate"):
+                            row[fieldname] = tax.rate
+
+                    elif column_label == "Total Tax":
+                        row[fieldname] += tax.tax_amount
+
+                if column_label == "Total":
+                    row[fieldname] += boe_doc.total_taxes

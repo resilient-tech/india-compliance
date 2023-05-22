@@ -55,77 +55,42 @@ def update_bill_of_entry_data(filters, data, columns, with_rate=False):
     boe_tax_accounts = insert_additional_columns(data, columns, with_rate)
     input_accounts = get_gst_accounts_by_type(filters.get("company"), "Input")
 
-    for row in data:
-        purchase_invoice_no = row[0] if isinstance(row, list) else row.get("invoice")
+    for idx, _column in enumerate(columns):
+        column_label = (
+            _column.split(":")[0].strip()
+            if isinstance(_column, str)
+            else _column.get("label")
+        )
 
-        boe_doc = get_bill_of_entry(doctype, purchase_invoice_no)
+        for row in data:
+            if column_label in boe_tax_accounts:
+                row.insert(idx, 0)
 
-        for idx, _column in enumerate(columns):
-            if with_rate:
-                column_label = _column.get("label")
-                if "@" in column_label:
-                    column_label = column_label.split("@")[0].strip()
-                elif _column.get("fieldname").endswith("Rate"):
-                    column_label = _column.get("fieldname").split("_")[0].strip()
+            purchase_invoice_no = (
+                row[0] if isinstance(row, list) else row.get("invoice")
+            )
 
-                fieldname = _column.get("fieldname")
-                if boe_doc:
-                    for tax in boe_doc.taxes:
-                        if (
-                            column_label in tax.account_head
-                            and tax.account_head == input_accounts.igst_account
-                        ):
-                            row[fieldname] += (
-                                tax.tax_amount
-                                if _column.get("fieldname").endswith("amount")
-                                else tax.rate
-                            )
+            boe_doc = get_bill_of_entry(doctype, purchase_invoice_no)
 
-                        elif (
-                            column_label in tax.account_head
-                            and tax.account_head == input_accounts.cess_account
-                        ):
-                            row[fieldname] += (
-                                tax.tax_amount
-                                if _column.get("fieldname").endswith("amount")
-                                else tax.rate
-                            )
+            if boe_doc:
+                for tax in boe_doc.taxes:
+                    if (
+                        column_label == tax.account_head
+                        and tax.account_head == input_accounts.igst_account
+                    ):
+                        row[idx] += tax.tax_amount
 
-                        elif column_label == "Total Tax":
-                            row[fieldname] += tax.tax_amount
+                    elif (
+                        column_label == tax.account_head
+                        and tax.account_head == input_accounts.cess_account
+                    ):
+                        row[idx] += tax.tax_amount
 
-                    if column_label == "Total":
-                        row[fieldname] += boe_doc.total_taxes
+                    elif column_label == "Total Tax":
+                        row[idx] += tax.tax_amount
 
-            else:
-                column_label = (
-                    _column.split(":")[0].strip()
-                    if isinstance(_column, str)
-                    else _column.get("label")
-                )
-
-                if column_label in boe_tax_accounts:
-                    row.insert(idx, 0)
-
-                if boe_doc:
-                    for tax in boe_doc.taxes:
-                        if (
-                            column_label == tax.account_head
-                            and tax.account_head == input_accounts.igst_account
-                        ):
-                            row[idx] += tax.tax_amount
-
-                        elif (
-                            column_label == tax.account_head
-                            and tax.account_head == input_accounts.cess_account
-                        ):
-                            row[idx] += tax.tax_amount
-
-                        elif column_label == "Total Tax":
-                            row[idx] += tax.tax_amount
-
-                    if column_label in ("Rounded Total", "Rounded Total"):
-                        row[idx] += boe_doc.total_taxes
+                if column_label in ("Grand Total", "Rounded Total"):
+                    row[idx] += boe_doc.total_taxes
 
 
 def get_additional_tax_accounts(data):
@@ -218,5 +183,5 @@ def get_bill_of_entry(doctype, invoice):
     if not boe:
         return
 
-    doc = frappe.get_doc(doctype, boe)
+    doc = frappe.get_cached_doc(doctype, boe)
     return doc
