@@ -231,27 +231,47 @@
 				"Typ": "CRN"
 			},
 			"ItemList": [
-				{
-					"AssAmt": 100.0,
-					"CesAmt": 0,
-					"CesNonAdvlAmt": 0,
-					"CesRt": 0,
-					"CgstAmt": 0,
-					"Discount": 0,
-					"GstRt": 0.0,
-					"HsnCd": "61149090",
-					"IgstAmt": 0,
-					"IsServc": "N",
-					"PrdDesc": "Test Trading Goods 1",
-					"Qty": 1.0,
-					"SgstAmt": 0,
-					"SlNo": "1",
-					"TotAmt": 100.0,
-					"TotItemVal": 100.0,
-					"Unit": "NOS",
-					"UnitPrice": 100.0
-				}
-			],
+                {
+                    "SlNo": "1",
+                    "PrdDesc": "Test Trading Goods 1",
+                    "IsServc": "N",
+                    "HsnCd": "61149090",
+                    "Unit": "NOS",
+                    "Qty": 1.0,
+                    "UnitPrice": 7.6,
+                    "TotAmt": 7.6,
+                    "Discount": 0,
+                    "AssAmt": 7.6,
+                    "GstRt": 12.0,
+                    "IgstAmt": 0,
+                    "CgstAmt": 0.46,
+                    "SgstAmt": 0.46,
+                    "CesRt": 0,
+                    "CesAmt": 0,
+                    "CesNonAdvlAmt": 0,
+                    "TotItemVal": 8.52
+                },
+                {
+                    "SlNo": "2",
+                    "PrdDesc": "Test Trading Goods 1",
+                    "IsServc": "N",
+                    "HsnCd": "61149090",
+                    "Unit": "NOS",
+                    "Qty": 1.0,
+                    "UnitPrice": 7.6,
+                    "TotAmt": 7.6,
+                    "Discount": 0,
+                    "AssAmt": 7.6,
+                    "GstRt": 12.0,
+                    "IgstAmt": 0,
+                    "CgstAmt": 0.45,
+                    "SgstAmt": 0.45,
+                    "CesRt": 0,
+                    "CesAmt": 0,
+                    "CesNonAdvlAmt": 0,
+                    "TotItemVal": 8.5
+                }
+            ],
 			"PayDtls": {
 				"CrDay": 0,
 				"PaidAmt": 0,
@@ -280,15 +300,15 @@
 				"TaxSch": "GST"
 			},
 			"ValDtls": {
-				"AssVal": 100.0,
+				"AssVal": 15.2,
 				"CesVal": 0,
-				"CgstVal": 0,
+				"CgstVal": 0.91,
 				"Discount": 0,
 				"IgstVal": 0,
 				"OthChrg": 0.0,
-				"RndOffAmt": -0.0,
-				"SgstVal": 0,
-				"TotInvVal": 100.0
+				"RndOffAmt": -0.02,
+				"SgstVal": 0.91,
+				"TotInvVal": 17.0
 			},
 			"Version": "1.1"
 		},
