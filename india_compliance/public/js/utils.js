@@ -6,11 +6,11 @@ import {
     TDS_REGEX,
 } from "./regex_constants";
 
-frappe.provide("ic");
+frappe.provide("india_compliance");
 
 window.gst_settings = frappe.boot.gst_settings;
 
-Object.assign(ic, {
+Object.assign(india_compliance, {
     get_gstin_query(party, party_type = "Company") {
         if (!party) {
             frappe.show_alert({
@@ -24,6 +24,15 @@ Object.assign(ic, {
             query: "india_compliance.gst_india.utils.get_gstin_list",
             params: { party, party_type },
         };
+    },
+
+    async get_gstin_options(party, party_type = "Company") {
+        const { query, params } = india_compliance.get_gstin_query(party, party_type);
+        const { message } = await frappe.call({
+            method: query,
+            args: params,
+        });
+        return message;
     },
 
     get_party_type(doctype) {
@@ -47,11 +56,11 @@ Object.assign(ic, {
 
     is_api_enabled(settings) {
         if (!settings) settings = gst_settings;
-        return settings.enable_api && ic.can_enable_api(settings);
+        return settings.enable_api && india_compliance.can_enable_api(settings);
     },
 
     is_e_invoice_enabled() {
-        return ic.is_api_enabled() && gst_settings.enable_e_invoice;
+        return india_compliance.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
     validate_gstin(gstin) {
@@ -66,7 +75,8 @@ Object.assign(ic, {
 
     guess_gst_category(gstin, country) {
         if (!gstin) {
-            return (!country || (country === "India")) ? "Unregistered" : "Overseas";
+            if (country && country !== "India") return "Overseas";
+            return "Unregistered";
         }
 
         if (TDS_REGEX.test(gstin)) return "Tax Deductor";
@@ -104,3 +114,7 @@ function is_gstin_check_digit_valid(gstin) {
     const checkCodePoint = (mod - (sum % mod)) % mod;
     return GSTIN_CODEPOINT_CHARS[checkCodePoint] === gstin[14];
 }
+
+// Will be deprecated after v15 release, kept only for compatibility
+// DO NOT USE IN CODE
+window.ic = window.india_compliance;

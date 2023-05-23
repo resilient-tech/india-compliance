@@ -26,7 +26,7 @@ class BaseAPI:
                 )
             )
 
-        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
+        self.sandbox_mode = self.settings.sandbox_mode
         self.default_headers = {
             "x-api-key": (
                 (self.settings.api_secret and self.settings.get_password("api_secret"))
@@ -170,6 +170,13 @@ class BaseAPI:
         finally:
             log.output = response_json
             enqueue_integration_request(**log)
+
+            if self.sandbox_mode and not frappe.flags.ic_sandbox_message_shown:
+                frappe.msgprint(
+                    _("GST API request was made in Sandbox Mode"),
+                    alert=True,
+                )
+                frappe.flags.ic_sandbox_message_shown = True
 
     def handle_failed_response(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw

@@ -5,6 +5,9 @@ from frappe.custom.doctype.custom_field.custom_field import (
     create_custom_fields as _create_custom_fields,
 )
 from frappe.utils import now_datetime, nowdate
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+    make_dimension_in_accounting_doctypes,
+)
 
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
@@ -13,31 +16,40 @@ from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
-from india_compliance.gst_india.utils import get_data_file_path, toggle_custom_fields
+from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
+
+ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gst"))
 
 
 def after_install():
     create_custom_fields()
+    create_accounting_dimension_fields()
     create_property_setters()
     create_address_template()
     set_default_gst_settings()
     set_default_accounts_settings()
     create_hsn_codes()
+    add_fields_to_item_variant_settings()
 
 
 def create_custom_fields():
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
-    _create_custom_fields(
-        _get_custom_fields_to_create(
-            CUSTOM_FIELDS,
-            SALES_REVERSE_CHARGE_FIELDS,
-            E_INVOICE_FIELDS,
-            E_WAYBILL_FIELDS,
-        ),
-        ignore_validate=True,
+    _create_custom_fields(get_all_custom_fields(), ignore_validate=True)
+
+
+def create_accounting_dimension_fields():
+    doctypes = frappe.get_hooks(
+        "accounting_dimension_doctypes",
+        app_name="india_compliance",
     )
+
+    dimensions = frappe.get_all("Accounting Dimension", pluck="name")
+    for dimension in dimensions:
+        doc = frappe.get_doc("Accounting Dimension", dimension)
+        make_dimension_in_accounting_doctypes(doc, doctypes)
 
 
 def create_property_setters():
@@ -64,6 +76,13 @@ def create_address_template():
 
 
 def create_hsn_codes():
+    if frappe.db.count("GST HSN Code") > 0:
+        return
+
+    _create_hsn_codes()
+
+
+def _create_hsn_codes():
     user = frappe.session.user
     now = now_datetime()
 
@@ -98,26 +117,43 @@ def create_hsn_codes():
         chunk_size=20_000,
     )
 
+    frappe.flags.hsn_codes_corrected = 1
+
+
+def add_fields_to_item_variant_settings():
+    settings = frappe.get_doc("Item Variant Settings")
+    fields_to_add = ITEM_VARIANT_FIELDNAMES - {
+        row.field_name for row in settings.fields
+    }
+
+    for fieldname in fields_to_add:
+        settings.append("fields", {"field_name": fieldname})
+
+    settings.save()
+
 
 def set_default_gst_settings():
     settings = frappe.get_doc("GST Settings")
-    settings.db_set(
-        {
-            "hsn_wise_tax_breakup": 1,
-            "enable_reverse_charge_in_sales": 0,
-            "validate_hsn_code": 1,
-            "min_hsn_digits": 6,
-            "enable_e_waybill": 1,
-            "e_waybill_threshold": 50000,
-            # Default API Settings
-            "fetch_e_waybill_data": 1,
-            "attach_e_waybill_print": 1,
-            "auto_generate_e_waybill": 1,
-            "auto_generate_e_invoice": 1,
-            "e_invoice_applicable_from": nowdate(),
-            "auto_fill_party_info": 1,
-        }
-    )
+    default_settings = {
+        "hsn_wise_tax_breakup": 1,
+        "enable_reverse_charge_in_sales": 0,
+        "validate_hsn_code": 1,
+        "min_hsn_digits": 6,
+        "enable_e_waybill": 1,
+        "e_waybill_threshold": 50000,
+        # Default API Settings
+        "fetch_e_waybill_data": 1,
+        "attach_e_waybill_print": 1,
+        "auto_generate_e_waybill": 1,
+        "auto_generate_e_invoice": 1,
+        "e_invoice_applicable_from": nowdate(),
+        "auto_fill_party_info": 1,
+    }
+
+    if frappe.conf.developer_mode:
+        default_settings["sandbox_mode"] = 1
+
+    settings.db_set(default_settings)
 
     # Hide the fields as not enabled by default
     for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
@@ -178,16 +214,23 @@ def show_accounts_settings_override_warning():
     )
 
     click.secho(
-        "This is being set as Billing Address, since that's the correct "
-        "address for determining GST applicablility.",
+        (
+            "This is being set as Billing Address, since that's the correct "
+            "address for determining GST applicablility."
+        ),
         fg="yellow",
     )
 
 
-def _get_custom_fields_to_create(*custom_fields_list):
+def get_all_custom_fields():
     result = {}
 
-    for custom_fields in custom_fields_list:
+    for custom_fields in (
+        CUSTOM_FIELDS,
+        SALES_REVERSE_CHARGE_FIELDS,
+        E_INVOICE_FIELDS,
+        E_WAYBILL_FIELDS,
+    ):
         for doctypes, fields in custom_fields.items():
             if isinstance(fields, dict):
                 fields = [fields]

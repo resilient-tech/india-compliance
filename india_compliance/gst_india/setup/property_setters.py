@@ -24,6 +24,12 @@ def get_property_setters():
             "naming_series",
             ["PINV-.YY.-", "PRET-.YY.-", ""],
         ),
+        get_options_property_setter(
+            "Journal Entry Account",
+            "reference_type",
+            ["Bill of Entry"],
+            prepend=False,
+        ),
         {
             "doctype": "Address",
             "fieldname": "state",

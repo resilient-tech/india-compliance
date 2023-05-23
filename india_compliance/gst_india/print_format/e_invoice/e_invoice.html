@@ -1,30 +1,3 @@
-{% set ITEM_FIELDS_MAP = {
-    "SlNo": "Sr.",
-    "PrdDesc": "Product Description",
-    "HsnCd": "HSN Code",
-    "Qty": "Qty",
-    "Unit": "UOM",
-    "UnitPrice": "Rate",
-    "Discount": "Discount",
-    "AssAmt": "Taxable Amount",
-    "GstRt": "Tax Rate",
-    "CesRt": "Cess Rate",
-    "TotItemVal": "Total",
-} %}
-
-{% set AMOUNT_FIELDS_MAP = {
-	"AssVal": "Taxable Value",
-	"CgstVal": "CGST",
-	"SgstVal": "SGST",
-	"IgstVal": "IGST",
-	"CessVal": "CESS",
-	"Discount": "Discount",
-	"OthChrg": "Other Charges",
-	"RndOffAmt": "Round Off",
-	"TotInvVal": "Total Value",
-} %}
-
-
 <style>
     {% include "india_compliance/gst_india/print_format/e_invoice/e_invoice.css" %}
 </style>
@@ -47,6 +20,14 @@
 
 <div class="text-center no-preview-available">
 	The e-Invoice Log linked to this Sales Invoice could not be found.
+</div>
+
+{% else %}
+
+{% if not e_invoice_log.invoice_data %}
+
+<div class="text-center no-preview-available">
+	Invoice Data is not available in the e-Invoice Log linked to this invoice.
 </div>
 
 {% else %}
@@ -89,20 +70,23 @@
 		{%
 			set transaction_details = {
 				"IRN": invoice_data.Irn,
-				"Ack. No": invoice_data.AckNo,
+				"Ack. No.": invoice_data.AckNo,
 				"Ack. Date": frappe.utils.format_datetime(
 					invoice_data.AckDt, "dd/MM/yyyy hh:mm:ss"
 				),
 				"Category": invoice_data.TranDtls.SupTyp,
 				"Document Type": invoice_data.DocDtls.Typ,
-				"Document No": invoice_data.DocDtls.No,
+				"Document No.": invoice_data.DocDtls.No,
+				"e-Waybill No.": doc.ewaybill,
 			}
 		%}
 		{% for key, value in transaction_details.items() %}
-			<div class="row data-field">
-				<div class="col-xs-4"><label>{{ key }}</label></div>
-				<div class="col-xs-8 value">{{ value }}</div>
-			</div>
+			{% if value %}
+				<div class="row data-field">
+					<div class="col-xs-4"><label>{{ key }}</label></div>
+					<div class="col-xs-8 value">{{ value }}</div>
+				</div>
+			{% endif %}
 		{% endfor %}
 	</div>
 	<div class="col-xs-4 column-break text-right">
@@ -113,13 +97,8 @@
 <h5 class="section-heading">2. Party Details</h5>
 <div class="row section-break info-section">
 	<div class="col-xs-6 column-break">
-		{%- set is_dispatch_address_different = invoice_data.DispDtls and (
-			invoice_data.DispDtls.Addr1 != invoice_data.SellerDtls.Addr1
-			or invoice_data.DispDtls.Pin != invoice_data.SellerDtls.Pin
-		) -%}
-
 		<h6 class="address-heading">
-			{% if is_dispatch_address_different %}
+			{% if invoice_data.DispDtls %}
 				Seller Details
 			{% else %}
 				Seller and Dispatch Details
@@ -127,19 +106,14 @@
 		</h6>
 		{{ get_address_html(invoice_data.SellerDtls) }}
 
-		{%- if is_dispatch_address_different -%}
+		{%- if invoice_data.DispDtls -%}
 		<h6 class="address-heading">Dispatched From</h6>
 			{{ get_address_html(invoice_data.DispDtls) }}
 		{% endif %}
 	</div>
 	<div class="col-xs-6 column-break">
-		{%- set is_shipping_address_different = invoice_data.ShipDtls and (
-			invoice_data.ShipDtls.Addr1 != invoice_data.BuyerDtls.Addr1
-			or invoice_data.ShipDtls.Pin != invoice_data.BuyerDtls.Pin
-		) -%}
-
 		<h6 class="address-heading">
-			{% if is_shipping_address_different %}
+			{% if invoice_data.ShipDtls %}
 				Buyer Details
 			{% else %}
 				Buyer and Shipping Details
@@ -147,7 +121,7 @@
 		</h6>
 		{{ get_address_html(invoice_data.BuyerDtls) }}
 
-		{%- if is_shipping_address_different -%}
+		{%- if invoice_data.ShipDtls -%}
 			<h6 class="address-heading">Shipped To</h6>
 			{{ get_address_html(invoice_data.ShipDtls) }}
 		{% endif %}
@@ -155,19 +129,19 @@
 </div>
 
 {% set items = invoice_data.ItemList %}
-{% set item_fields = get_non_zero_fields(items, ITEM_FIELDS_MAP) %}
+{% set item_fields = get_e_invoice_item_fields(items) %}
 <h5 class="section-heading">3. Item Details</h5>
 <div class="row section-break info-section item-details">
 <div class="col-xs-12 column-break">
 	<table class="table table-bordered e-invoice-table">
 		<thead>
 			<tr>
-				{% for field in item_fields %}
+				{% for field, label in item_fields.items() %}
 					<th
 					{% if field not in ("HsnCd", "PrdDesc", "Unit") -%}
 					class="text-right"
 					{%- endif -%}
-					>{{ ITEM_FIELDS_MAP[field] }}</th>
+					>{{ label }}</th>
 				{% endfor %}
 			</tr>
 		</thead>
@@ -205,15 +179,15 @@
 </div>
 
 {%- set amounts = invoice_data.ValDtls -%}
-{% set amount_fields = get_non_zero_fields(amounts, AMOUNT_FIELDS_MAP) %}
+{% set amount_fields = get_e_invoice_amount_fields(amounts, doc) %}
 <h5 class="section-heading">4. Value Details</h5>
 <div class="row section-break">
 <div class="col-xs-12 column-break">
 	<table class="table table-bordered e-invoice-table">
 		<thead>
 			<tr>
-				{% for field in amount_fields %}
-					<th class="text-right">{{ AMOUNT_FIELDS_MAP[field] }}</th>
+				{% for field, label in amount_fields.items() %}
+					<th class="text-right">{{ label }}</th>
 				{% endfor %}
 			</tr>
 		</thead>
@@ -230,5 +204,6 @@
 </div>
 </div>
 
+{% endif %}
 {% endif %}
 {% endif %}

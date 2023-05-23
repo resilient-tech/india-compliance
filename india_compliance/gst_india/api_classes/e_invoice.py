@@ -11,6 +11,16 @@ class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
     BASE_PATH = "ei/api"
     SENSITIVE_HEADERS = BaseAPI.SENSITIVE_HEADERS + ("password",)
+    IGNORED_ERROR_CODES = {
+        # Generate IRN errors
+        "2150": "Duplicate IRN",
+        # Get e-Invoice by IRN errors
+        "2283": (
+            "IRN details cannot be provided as it is generated more than 2 days ago"
+        ),
+        # Cancel IRN errors
+        "9999": "Invoice is not active",
+    }
 
     def setup(self, doc=None, *, company_gstin=None):
         if not self.settings.enable_e_invoice:
@@ -43,9 +53,12 @@ class EInvoiceAPI(BaseAPI):
         )
 
     def handle_failed_response(self, response_json):
-        # Don't fail in case of Duplicate IRN
-        if response_json.get("message").startswith("2150"):
-            return True
+        message = response_json.get("message", "").strip()
+
+        for error_code in self.IGNORED_ERROR_CODES:
+            if message.startswith(error_code):
+                response_json.error_code = error_code
+                return True
 
     def get_e_invoice_by_irn(self, irn):
         return self.get(endpoint="invoice/irn", params={"irn": irn})
