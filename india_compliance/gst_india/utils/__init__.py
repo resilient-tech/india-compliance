@@ -20,6 +20,7 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
     TCS,
     TIMEZONE,
+    UOM_MAP,
 )
 
 
@@ -407,7 +408,11 @@ def get_gst_uom(uom, settings=None):
         if row.uom == uom:
             return row.gst_uom.split("(")[0].strip()
 
-    return "OTH"
+    uom = uom.upper()
+    if uom in UOM_MAP:
+        return uom
+
+    return next((k for k, v in UOM_MAP.items() if v == uom), "OTH")
 
 
 def get_place_of_supply_options(*, as_list=False, with_other_countries=False):

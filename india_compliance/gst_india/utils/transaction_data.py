@@ -244,7 +244,6 @@ class GSTTransactionData:
                         row.item_name, regex=3, max_length=300
                     ),
                     "uom": get_gst_uom(row.uom, self.settings),
-                    # "uom": uom if uom in UOMS else "OTH",
                 }
             )
             self.update_item_details(item_details, row)

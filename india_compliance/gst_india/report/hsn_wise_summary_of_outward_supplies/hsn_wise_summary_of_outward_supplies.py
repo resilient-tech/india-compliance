@@ -304,7 +304,6 @@ def download_json_file():
 
 def get_hsn_wise_json_data(filters, report_data):
     filters = frappe._dict(filters)
-    # settings = frappe.get_cached_doc("GST Settings")
     gst_accounts = get_gst_accounts_by_type(filters.company, "Output")
     data = []
     count = 1
