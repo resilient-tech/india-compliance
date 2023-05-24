@@ -10,9 +10,8 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import cstr, flt, getdate
 import erpnext
 
-from india_compliance.gst_india.constants.e_waybill import UOMS
 from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 
 def execute(filters=None):
@@ -46,9 +45,7 @@ def execute(filters=None):
             d.stock_qty = 0
             d.uqc = "NA"
         else:
-            d.uqc = d.get("uqc", "").upper()
-            if d.uqc not in UOMS:
-                d.uqc = "OTH"
+            d.uqc = get_gst_uom(d.get("uqc"))
 
         total_tax = 0
         tax_rate = 0

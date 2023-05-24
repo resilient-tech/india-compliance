@@ -7,10 +7,9 @@ from frappe.utils import format_date, get_link_to_form, getdate, rounded
 from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
-    UOMS,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
@@ -235,8 +234,6 @@ class GSTTransactionData:
         self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
 
         for row in self.doc.items:
-            uom = row.uom.upper()
-
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
@@ -246,7 +243,7 @@ class GSTTransactionData:
                     "item_name": self.sanitize_value(
                         row.item_name, regex=3, max_length=300
                     ),
-                    "uom": uom if uom in UOMS else "OTH",
+                    "uom": get_gst_uom(row.uom, self.settings),
                 }
             )
             self.update_item_details(item_details, row)

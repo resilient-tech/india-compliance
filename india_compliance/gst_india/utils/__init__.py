@@ -20,6 +20,7 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
     TCS,
     TIMEZONE,
+    UOM_MAP,
 )
 
 
@@ -397,6 +398,21 @@ def is_api_enabled(settings=None):
 
 def can_enable_api(settings):
     return settings.api_secret or frappe.conf.ic_api_secret
+
+
+def get_gst_uom(uom, settings=None):
+    """Returns the GST UOM from ERPNext UOM"""
+    settings = settings or frappe.get_cached_doc("GST Settings")
+
+    for row in settings.get("gst_uom_map"):
+        if row.uom == uom:
+            return row.gst_uom.split("(")[0].strip()
+
+    uom = uom.upper()
+    if uom in UOM_MAP:
+        return uom
+
+    return next((k for k, v in UOM_MAP.items() if v == uom), "OTH")
 
 
 def get_place_of_supply_options(*, as_list=False, with_other_countries=False):

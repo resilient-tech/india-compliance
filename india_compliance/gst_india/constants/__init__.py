@@ -76,6 +76,63 @@ STATE_NUMBERS = {
     "West Bengal": "19",
 }
 
+GST_UOMS = {
+    "Bottle": "BTL (Bottles)",
+    "Dozen": "DOZ (Dozens)",
+    "Gram": "GMS (Grammes)",
+    "Litre": "LTR (Liters)",
+    "Meter": "MTR (Meters)",
+    "Nos": "NOS (Numbers)",
+}
+
+UOM_MAP = {
+    "BAG": "BAGS",
+    "BAL": "BALE",
+    "BDL": "BUNDLES",
+    "BKL": "BUCKLES",
+    "BOU": "BILLION OF UNITS",
+    "BOX": "BOX",
+    "BTL": "BOTTLES",
+    "BUN": "BUNCHES",
+    "CAN": "CANS",
+    "CBM": "CUBIC METERS",
+    "CCM": "CUBIC CENTIMETERS",
+    "CMS": "CENTIMETERS",
+    "CTN": "CARTONS",
+    "DOZ": "DOZENS",
+    "DRM": "DRUMS",
+    "GGK": "GREAT GROSS",
+    "GMS": "GRAMMES",
+    "GRS": "GROSS",
+    "GYD": "GROSS YARDS",
+    "KGS": "KILOGRAMS",
+    "KLR": "KILOLITRE",
+    "KME": "KILOMETRE",
+    "LTR": "LITRES",
+    "MLT": "MILILITRE",
+    "MTR": "METERS",
+    "MTS": "METRIC TON",
+    "NOS": "NUMBERS",
+    "OTH": "OTHERS",
+    "PAC": "PACKS",
+    "PCS": "PIECES",
+    "PRS": "PAIRS",
+    "QTL": "QUINTAL",
+    "ROL": "ROLLS",
+    "SET": "SETS",
+    "SQF": "SQUARE FEET",
+    "SQM": "SQUARE METERS",
+    "SQY": "SQUARE YARDS",
+    "TBS": "TABLETS",
+    "TGM": "TEN GROSS",
+    "THD": "THOUSANDS",
+    "TON": "TONNES",
+    "TUB": "TUBES",
+    "UGS": "US GALLONS",
+    "UNT": "UNITS",
+    "YDS": "YARDS",
+}
+
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
 
 NORMAL = (  # Normal but not TCS

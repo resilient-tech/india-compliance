@@ -1,0 +1,43 @@
+{
+ "actions": [],
+ "creation": "2022-11-15 19:15:06.551557",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "uom",
+  "gst_uom"
+ ],
+ "fields": [
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "UOM",
+   "options": "UOM",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "gst_uom",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "GST UOM",
+   "options": "\nBAG (Bags)\nBAL (Bale)\nBDL (Bundles)\nBKL (Buckles)\nBOU (Billion of Units)\nBOX (Box)\nBTL (Bottles)\nBUN (Bunches)\nCAN (Cans)\nCBM (Cubic Meters)\nCCM (Cubic Centimeters)\nCMS (Centimeters)\nCTN (Cartons)\nDOZ (Dozens)\nDRM (Drums)\nGGK (Great Gross)\nGMS (Grammes)\nGRS (Gross)\nGYD (Gross Yards)\nKGS (Kilograms)\nKLR (Kilolitre)\nKME (Kilometre)\nLTR (Litres)\nMLT (Mililitre)\nMTR (Meters)\nMTS (Metric Ton)\nNOS (Numbers)\nOTH (Others)\nPAC (Packs)\nPCS (Pieces)\nPRS (Pairs)\nQTL (Quintal)\nROL (Rolls)\nSET (Sets)\nSQF (Square Feet)\nSQM (Square Meters)\nSQY (Square Yards)\nTBS (Tablets)\nTGM (Ten Gross)\nTHD (Thousands)\nTON (Tonnes)\nTUB (Tubes)\nUGS (US Gallons)\nUNT (Units)\nYDS (Yards)",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2023-05-18 15:07:29.656671",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GST UOM Map",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
