@@ -153,7 +153,7 @@ class Gstr1Report(object):
             },
         ]
 
-        for invoice, details in self.nil_exempt_non_gst.items():
+        for invoice, details in getattr(self, "nil_exempt_non_gst", {}).items():
             invoice_detail = self.invoices.get(invoice)
             if invoice_detail.get("gst_category") in (
                 "Registered Regular",
