@@ -3,15 +3,11 @@ from frappe import _
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.transaction import (
-    ignore_gst_validations,
     validate_mandatory_fields,
     validate_transaction,
 )
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
-from india_compliance.gst_india.utils.transaction_data import (
-    validate_unique_hsn_and_uom,
-)
 
 
 def onload(doc, method=None):
@@ -63,7 +59,6 @@ def validate(doc, method=None):
 
     validate_invoice_number(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
-    validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
 
 
@@ -184,20 +179,6 @@ def is_e_waybill_applicable(doc, gst_settings=None):
             and item.qty != 0
         )
     )
-
-
-def on_update_after_submit(doc, method=None):
-    if not doc.has_value_changed("group_same_items") or ignore_gst_validations(doc):
-        return
-
-    if doc.ewaybill or doc.irn:
-        frappe.msgprint(
-            _(
-                "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
-            ),
-            title="Possible Inconsistent Item Details",
-            indicator="orange",
-        )
 
 
 def get_dashboard_data(data):
