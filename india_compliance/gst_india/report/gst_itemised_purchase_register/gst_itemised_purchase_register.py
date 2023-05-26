@@ -100,11 +100,7 @@ def update_bill_of_entry_data(filters, data, columns):
             if column_label == "Invoice":
                 row[fieldname] = inv
 
-            elif [
-                value
-                for key, value in input_accounts.items()
-                if value is not None and column_label in value
-            ]:
+            elif is_account_in_gst_accounts(column_label, input_accounts):
                 for account in boe_data.account_detail:
                     if column_label in account.account_head:
                         if account.account_head == input_accounts.igst_account:
@@ -130,3 +126,11 @@ def update_bill_of_entry_data(filters, data, columns):
                 row[fieldname] = ""
 
         data.append(row)
+
+
+def is_account_in_gst_accounts(column_label, input_accounts):
+    for account in input_accounts.values():
+        if account is not None and column_label in account:
+            return True
+
+    return False
