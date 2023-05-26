@@ -737,7 +737,11 @@ def is_export_without_payment_of_gst(doc):
 
 
 def validate_transaction(doc, method=None):
-    if ignore_gst_validations(doc):
+    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
+        return False
+
+    if validate_items(doc) is False:
+        # If there are no GST items, then no need to proceed further
         return False
 
     if doc.place_of_supply:
@@ -782,7 +786,6 @@ def validate_transaction(doc, method=None):
     update_taxable_values(doc, valid_accounts)
 
 
-<<<<<<< HEAD
 # Note: This is kept for backwards compatibility with Frappe versions < 14.21.0
 def ignore_logs_on_trash(doc, method=None):
     if (
@@ -795,13 +798,3 @@ def ignore_logs_on_trash(doc, method=None):
         "e-Waybill Log",
         "e-Invoice Log",
     )
-=======
-def ignore_gst_validations(doc):
-    if (
-        not is_indian_registered_company(doc)
-        or doc.get("is_opening") == "Yes"
-        # If there are no GST items, then no need to proceed further
-        or validate_items(doc) is False
-    ):
-        return True
->>>>>>> c192cf00 (feat: group similar items in print format if applicable (#429))

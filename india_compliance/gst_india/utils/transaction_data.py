@@ -233,11 +233,7 @@ class GSTTransactionData:
         # progressive error of item tax amounts
         self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
 
-        items = self.doc.items
-        if self.doc.group_same_items:
-            items = self.group_same_items()
-
-        for row in items:
+        for row in self.doc.items:
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
@@ -255,28 +251,6 @@ class GSTTransactionData:
             all_item_details.append(item_details)
 
         return all_item_details
-
-    def group_same_items(self):
-        validate_unique_hsn_and_uom(self.doc)
-        grouped_items = {}
-        idx = 1
-
-        for row in self.doc.items:
-            item = grouped_items.setdefault(
-                row.item_code,
-                frappe._dict(
-                    {**row.as_dict(), "idx": 0, "qty": 0.00, "taxable_value": 0.00}
-                ),
-            )
-
-            if not item.idx:
-                item.idx = idx
-                idx += 1
-
-            item.qty += row.qty
-            item.taxable_value += row.taxable_value
-
-        return list(grouped_items.values())
 
     def set_item_list(self):
         self.item_list = []
@@ -571,35 +545,3 @@ def validate_non_gst_items(doc, throw=True):
         )
 
     return True
-
-
-def validate_unique_hsn_and_uom(doc):
-    """
-    Raise an exception if
-    - Group same items is checked and
-    - Same item code has different HSN code or UOM
-    """
-
-    if not doc.group_same_items:
-        return
-
-    def _throw(label, value):
-        frappe.throw(
-            _(
-                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is not possible."
-            ).format(item.idx, label, value, frappe.bold(item.item_code))
-        )
-
-    def _validate_unique(item_wise_values, field_value, label):
-        values_set = item_wise_values.setdefault(item.item_code, set())
-        values_set.add(field_value)
-
-        if len(values_set) > 1:
-            _throw(label, field_value)
-
-    item_wise_uom = {}
-    item_wise_hsn = {}
-
-    for item in doc.items:
-        _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
-        _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
