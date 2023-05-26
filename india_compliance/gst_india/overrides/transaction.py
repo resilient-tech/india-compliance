@@ -736,11 +736,7 @@ def is_export_without_payment_of_gst(doc):
 
 
 def validate_transaction(doc, method=None):
-    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
-        return False
-
-    if validate_items(doc) is False:
-        # If there are no GST items, then no need to proceed further
+    if ignore_gst_validations(doc):
         return False
 
     if doc.place_of_supply:
@@ -783,3 +779,13 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+
+
+def ignore_gst_validations(doc):
+    if (
+        not is_indian_registered_company(doc)
+        or doc.get("is_opening") == "Yes"
+        # If there are no GST items, then no need to proceed further
+        or validate_items(doc) is False
+    ):
+        return True
