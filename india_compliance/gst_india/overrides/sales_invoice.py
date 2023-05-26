@@ -63,7 +63,6 @@ def validate(doc, method=None):
 
     validate_invoice_number(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
-    validate_billing_address_gstin(doc)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
 
@@ -194,12 +193,11 @@ def on_update_after_submit(doc, method=None):
     if doc.ewaybill or doc.irn:
         frappe.msgprint(
             _(
-                "You have already generated e-Waybill or e-Invoice for this document with/without grouping items. This will result in mismatch of item details in e-Waybill/e-Invoice.",
-                title="Inconsistent Item Details",
+                "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
             ),
+            title="Possible Inconsistent Item Details",
+            indicator="orange",
         )
-
-    validate_unique_hsn_and_uom(doc)
 
 
 def get_dashboard_data(data):

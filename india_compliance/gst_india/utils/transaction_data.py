@@ -229,6 +229,7 @@ class GSTTransactionData:
 
     def get_all_item_details(self):
         all_item_details = []
+
         # progressive error of item tax amounts
         self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
 
@@ -237,8 +238,6 @@ class GSTTransactionData:
             items = self.group_same_items()
 
         for row in items:
-            uom = row.uom.upper()
-
             item_details = frappe._dict(
                 {
                     "item_no": row.idx,
@@ -587,23 +586,20 @@ def validate_unique_hsn_and_uom(doc):
     def _throw(label, value):
         frappe.throw(
             _(
-                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping"
-                " of items is not possible."
-            ).format(item.idx, label, value, frappe.bold(item.item_code)),
+                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is not possible."
+            ).format(item.idx, label, value, frappe.bold(item.item_code))
         )
 
-    def _validate_unique(item_wise_list, fieldname, label):
-        list = item_wise_list.setdefault(item.item_code, [])
+    def _validate_unique(item_wise_values, field_value, label):
+        values_set = item_wise_values.setdefault(item.item_code, set())
+        values_set.add(field_value)
 
-        if item.get(fieldname) not in list:
-            list.append(item.get(fieldname))
-
-            if len(list) > 1:
-                _throw(label, item.get(fieldname))
+        if len(values_set) > 1:
+            _throw(label, field_value)
 
     item_wise_uom = {}
     item_wise_hsn = {}
 
     for item in doc.items:
-        _validate_unique(item_wise_uom, "uom", "UOM")
-        _validate_unique(item_wise_hsn, "gst_hsn_code", "HSN Code")
+        _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
+        _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
