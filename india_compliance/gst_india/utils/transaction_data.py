@@ -7,10 +7,9 @@ from frappe.utils import format_date, get_link_to_form, getdate, rounded
 from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
-    UOMS,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
@@ -35,7 +34,7 @@ class GSTTransactionData:
         }
 
     def set_transaction_details(self):
-        rounding_adjustment = self.rounded(self.doc.rounding_adjustment)
+        rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
         if self.doc.is_return:
             rounding_adjustment = -rounding_adjustment
 
@@ -47,15 +46,29 @@ class GSTTransactionData:
 
         self.transaction_details.update(
             {
+                "company_name": self.sanitize_value(self.doc.company),
+                "customer_name": self.sanitize_value(
+                    self.doc.customer_name
+                    or frappe.db.get_value(
+                        "Customer", self.doc.customer, "customer_name"
+                    )
+                ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
-                "base_total": abs(
+                "total": abs(
                     self.rounded(sum(row.taxable_value for row in self.doc.items))
                 ),
                 "rounding_adjustment": rounding_adjustment,
-                "base_grand_total": abs(
-                    self.rounded(self.doc.get(grand_total_fieldname))
+                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
+                "grand_total_in_foreign_currency": (
+                    abs(self.rounded(self.doc.grand_total))
+                    if self.doc.currency != "INR"
+                    else ""
                 ),
-                "discount_amount": 0,
+                "discount_amount": (
+                    abs(self.rounded(self.doc.base_discount_amount))
+                    if self.doc.get("is_cash_or_non_trade_discount")
+                    else 0
+                ),
                 "company_gstin": self.doc.company_gstin,
                 "name": self.doc.name,
                 "other_charges": 0,
@@ -69,9 +82,9 @@ class GSTTransactionData:
         pass
 
     def update_transaction_tax_details(self):
-        tax_totals = [f"total_{tax}_amount" for tax in GST_TAX_TYPES]
+        tax_total_keys = tuple(f"total_{tax}_amount" for tax in GST_TAX_TYPES)
 
-        for key in tax_totals:
+        for key in tax_total_keys:
             self.transaction_details[key] = 0
 
         for row in self.doc.taxes:
@@ -85,10 +98,11 @@ class GSTTransactionData:
 
         # Other Charges
         current_total = 0
-        for total in ["base_total", "rounding_adjustment", *tax_totals]:
-            current_total += self.transaction_details.get(total)
+        for key in ("total", "rounding_adjustment", *tax_total_keys):
+            current_total += self.transaction_details.get(key)
 
-        other_charges = self.transaction_details.base_grand_total - current_total
+        current_total -= self.transaction_details.discount_amount
+        other_charges = self.transaction_details.grand_total - current_total
 
         if 0 > other_charges > -0.1:
             # other charges cannot be negative
@@ -184,6 +198,14 @@ class GSTTransactionData:
             )
 
     def validate_transaction(self):
+        if self.doc.docstatus > 1:
+            frappe.throw(
+                msg=_(
+                    "Cannot generate e-Waybill or e-Invoice for a cancelled transaction"
+                ),
+                title=_("Invalid Document State"),
+            )
+
         posting_date = getdate(self.doc.posting_date)
 
         if posting_date > getdate():
@@ -207,6 +229,8 @@ class GSTTransactionData:
 
     def get_all_item_details(self):
         all_item_details = []
+        # progressive error of item tax amounts
+        self.rounding_errors = {f"{tax}_rounding_error": 0 for tax in GST_TAX_TYPES}
 
         items = self.doc.items
         if self.doc.group_same_items:
@@ -224,7 +248,7 @@ class GSTTransactionData:
                     "item_name": self.sanitize_value(
                         row.item_name, regex=3, max_length=300
                     ),
-                    "uom": uom if uom in UOMS else "OTH",
+                    "uom": get_gst_uom(row.uom, self.settings),
                 }
             )
             self.update_item_details(item_details, row)
@@ -283,12 +307,11 @@ class GSTTransactionData:
             )
 
             # considers senarios where same item is there multiple times
-            tax_amount = abs(
-                self.rounded(
-                    tax_rate * item.qty
-                    if row.charge_type == "On Item Quantity"
-                    else tax_rate * item.taxable_value / 100
-                ),
+            tax_amount = self.get_progressive_item_tax_amount(
+                tax_rate * item.qty
+                if row.charge_type == "On Item Quantity"
+                else tax_rate * item.taxable_value / 100,
+                tax,
             )
 
             item_details.update(
@@ -315,6 +338,19 @@ class GSTTransactionData:
                 ),
             }
         )
+
+    def get_progressive_item_tax_amount(self, amount, tax_type):
+        """
+        Helper function to calculate progressive tax amount for an item to remove
+        rounding errors.
+        """
+        error_field = f"{tax_type}_rounding_error"
+        error_amount = self.rounding_errors[error_field]
+
+        response = self.rounded(amount + error_amount)
+        self.rounding_errors[error_field] = amount + error_amount - response
+
+        return abs(response)
 
     def get_address_details(self, address_name, validate_gstin=False):
         address = frappe.get_cached_value(

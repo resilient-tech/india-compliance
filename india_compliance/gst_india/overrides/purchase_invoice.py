@@ -1,5 +1,4 @@
 import frappe
-from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.transaction import validate_transaction
@@ -11,7 +10,6 @@ def validate(doc, method=None):
         return
 
     update_itc_totals(doc)
-    validate_supplier_gstin(doc)
 
 
 def update_itc_totals(doc, method=None):
@@ -37,9 +35,14 @@ def update_itc_totals(doc, method=None):
             doc.itc_cess_amount += flt(tax.base_tax_amount_after_discount_amount)
 
 
-def validate_supplier_gstin(doc):
-    if doc.company_gstin == doc.supplier_gstin:
-        frappe.throw(
-            _("Supplier GSTIN and Company GSTIN cannot be the same"),
-            title=_("Invalid Supplier GSTIN"),
-        )
+def onload(doc, method):
+    if doc.docstatus != 1 or doc.gst_category != "Overseas":
+        return
+
+    doc.set_onload(
+        "bill_of_entry_exists",
+        frappe.db.exists(
+            "Bill of Entry",
+            {"purchase_invoice": doc.name, "docstatus": 1},
+        ),
+    )

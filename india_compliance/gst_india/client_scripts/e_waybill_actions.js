@@ -332,6 +332,24 @@ function show_generate_e_waybill_dialog(frm) {
         });
     }
 
+    if (frm.doctype === "Sales Invoice" && frm.doc.gst_category === "Overseas") {
+        fields.splice(5, 0, {
+            label: "Origin Port / Border Checkpost Address",
+            fieldname: "port_address",
+            fieldtype: "Link",
+            options: "Address",
+            default: frm.doc.port_address,
+            reqd: frm.doc?.__onload?.shipping_address_in_india != true,
+            get_query: () => {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
+            },
+        });
+    }
+
     const api_enabled = india_compliance.is_api_enabled();
 
     const d = new frappe.ui.Dialog({
@@ -618,7 +636,12 @@ function has_e_waybill_threshold_met(frm) {
 
 function is_e_waybill_applicable(frm) {
     // means company is Indian and not Unregistered
-    if (!frm.doc.company_gstin) return;
+    if (
+        !frm.doc.company_gstin ||
+        (frm.doctype === "Sales Invoice" &&
+            frm.doc.company_gstin === frm.doc.billing_address_gstin)
+    )
+        return;
 
     // at least one item is not a service
     for (const item of frm.doc.items) {

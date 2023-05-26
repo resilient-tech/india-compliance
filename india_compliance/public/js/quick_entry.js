@@ -1,7 +1,3 @@
-const GSTIN_FIELD_DESCRIPTION = __(
-    "Autofill party information by entering their GSTIN"
-);
-
 class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     constructor(...args) {
         super(...args);
@@ -22,10 +18,10 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                          `When you enter a GSTIN, the permanent address linked to it is
-                        auto-filled by default.<br>
+                        `When you enter a GSTIN, the permanent address linked to it is
+                        autofilled by default.<br>
                         Change the Pincode to autofill other addresses.`
-                      )
+                    )
                     : "",
                 collapsible: 0,
             },
@@ -85,11 +81,11 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 label: "GSTIN",
                 fieldname: "_gstin",
                 fieldtype: "Autocomplete",
-                description: this.api_enabled ? GSTIN_FIELD_DESCRIPTION : "",
+                description: this.api_enabled ? get_gstin_description() : "",
                 ignore_validation: true,
                 onchange: () => {
                     const d = this.dialog;
-                    if (this.api_enabled) return autofill_fields(d);
+                    if (this.api_enabled && !gst_settings.sandbox_mode) return autofill_fields(d);
 
                     d.set_value(
                         "gst_category",
@@ -280,7 +276,7 @@ async function autofill_fields(dialog) {
         pincode_field.set_data([]);
         pincode_field.df.onchange = null;
 
-        gstin_field.set_description(GSTIN_FIELD_DESCRIPTION);
+        gstin_field.set_description(get_gstin_description());
         return;
     }
 
@@ -293,6 +289,11 @@ async function autofill_fields(dialog) {
 }
 
 function set_gstin_description(gstin_field, status) {
+    if (!status) {
+        gstin_field.set_description("");
+        return;
+    }
+
     const STATUS_COLORS = { Active: "green", Cancelled: "red" };
 
     gstin_field.set_description(
@@ -366,5 +367,15 @@ function autofill_address(doc, { all_addresses }) {
     update_address_info(
         doc,
         all_addresses.find(address => address.pincode == pincode)
+    );
+}
+
+function get_gstin_description() {
+    if (!gst_settings.sandbox_mode) {
+        return __("Autofill party information by entering their GSTIN");
+    }
+
+    return __(
+        `Autofill is not supported in sandbox mode`
     );
 }

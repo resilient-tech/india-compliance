@@ -16,6 +16,12 @@ frappe.ui.form.on(DOCTYPE, {
                 },
             };
         });
+
+        frm.set_query("port_address", {
+            filters: {
+                country: "India",
+            },
+        });
     },
 
     before_submit(frm) {

@@ -171,7 +171,11 @@ def _cancel_e_waybill(doc, values):
             "is_cancelled": 1,
             "cancel_reason_code": CANCEL_REASON_CODES[values.reason],
             "cancel_remark": values.remark if values.remark else values.reason,
-            "cancelled_on": parse_datetime(result.cancelDate, day_first=True),
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled e-Waybill
+                if result.error_code == "312"
+                else parse_datetime(result.cancelDate, day_first=True)
+            ),
         },
     )
 
@@ -453,6 +457,7 @@ def update_transaction(doc, values):
         "lr_date": values.lr_date,
         "mode_of_transport": values.mode_of_transport,
         "gst_vehicle_type": values.gst_vehicle_type,
+        "port_address": values.port_address,
     }
 
     doc.db_set(data)
@@ -476,29 +481,36 @@ class EWaybillData(GSTTransactionData):
 
     def get_data(self, *, with_irn=False):
         self.validate_transaction()
-        self.set_transporter_details()
-        self.set_party_address_details()
-        self.update_distance_if_zero()
 
         if with_irn:
-            return self.sanitize_data(
-                {
-                    "Irn": self.doc.irn,
-                    "Distance": self.transaction_details.distance,
-                    "TransMode": str(self.transaction_details.mode_of_transport),
-                    "TransId": self.transaction_details.gst_transporter_id,
-                    "TransName": self.transaction_details.transporter_name,
-                    "TransDocDt": self.transaction_details.lr_date,
-                    "TransDocNo": self.transaction_details.lr_no,
-                    "VehNo": self.transaction_details.vehicle_no,
-                    "VehType": self.transaction_details.vehicle_type,
-                }
-            )
+            return self.get_data_with_irn()
 
         self.set_transaction_details()
         self.set_item_list()
+        self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance_for_same_pincode()
 
         return self.get_transaction_data()
+
+    def get_data_with_irn(self):
+        self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance_for_same_pincode()
+
+        return self.sanitize_data(
+            {
+                "Irn": self.doc.irn,
+                "Distance": self.transaction_details.distance,
+                "TransMode": str(self.transaction_details.mode_of_transport),
+                "TransId": self.transaction_details.gst_transporter_id,
+                "TransName": self.transaction_details.transporter_name,
+                "TransDocDt": self.transaction_details.lr_date,
+                "TransDocNo": self.transaction_details.lr_no,
+                "VehNo": self.transaction_details.vehicle_no,
+                "VehType": self.transaction_details.vehicle_type,
+            }
+        )
 
     def get_data_for_cancellation(self, values):
         self.validate_if_e_waybill_is_set()
@@ -568,9 +580,9 @@ class EWaybillData(GSTTransactionData):
         Validates:
         - Required fields
         - Atleast one item with HSN for goods is required
-        - Overseas Returns are not allowed
         - Basic transporter details must be present
-        - Grand Total Amount must be greater than Criteria
+        - Transaction does not have any non-GST items
+        - Sales Invoice with same company and billing gstin
         """
 
         for fieldname in ("company_address", "customer_address"):
@@ -596,17 +608,22 @@ class EWaybillData(GSTTransactionData):
                 title=_("Invalid Data"),
             )
 
-        # TODO: check if this validation is required
-        # if self.doc.is_return and self.doc.gst_category == "Overseas":
-        #     frappe.throw(
-        #         msg=_("Return/Credit Note is not supported for Overseas e-Waybill"),
-        #         title=_("Incorrect Usage"),
-        #     )
-
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
         self.validate_non_gst_items()
+
+        if (
+            self.doc.doctype == "Sales Invoice"
+            and self.doc.company_gstin == self.doc.billing_address_gstin
+        ):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be generated because billing GSTIN is same as"
+                    " company GSTIN"
+                ),
+                title=_("Invalid Data"),
+            )
 
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
@@ -723,9 +740,14 @@ class EWaybillData(GSTTransactionData):
 
     def set_party_address_details(self):
         transaction_type = 1
+        ship_to_address = (
+            self.doc.port_address
+            if (self.doc.gst_category == "Overseas" and self.doc.port_address)
+            else self.doc.shipping_address_name
+        )
+
         has_different_shipping_address = (
-            self.doc.shipping_address_name
-            and self.doc.customer_address != self.doc.shipping_address_name
+            ship_to_address and self.doc.customer_address != ship_to_address
         )
 
         has_different_dispatch_address = (
@@ -737,15 +759,13 @@ class EWaybillData(GSTTransactionData):
         self.from_address = self.get_address_details(self.doc.company_address)
 
         # Defaults
-        # billing state is changed for SEZ, hence copy()
+        # calling copy() since we're mutating from_address and to_address below
         self.shipping_address = self.to_address.copy()
-        self.dispatch_address = self.from_address
+        self.dispatch_address = self.from_address.copy()
 
         if has_different_shipping_address and has_different_dispatch_address:
             transaction_type = 4
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+            self.shipping_address = self.get_address_details(ship_to_address)
             self.dispatch_address = self.get_address_details(
                 self.doc.dispatch_address_name
             )
@@ -758,11 +778,12 @@ class EWaybillData(GSTTransactionData):
 
         elif has_different_shipping_address:
             transaction_type = 2
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+            self.shipping_address = self.get_address_details(ship_to_address)
 
         self.transaction_details.transaction_type = transaction_type
+
+        self.to_address.legal_name = self.transaction_details.customer_name
+        self.from_address.legal_name = self.transaction_details.company_name
 
         if self.doc.gst_category == "SEZ":
             self.to_address.state_number = 96
@@ -773,26 +794,36 @@ class EWaybillData(GSTTransactionData):
 
         return address_details
 
-    def update_distance_if_zero(self):
+    def validate_distance_for_same_pincode(self):
         """
-        e-Waybill portal doesn't return distance where from and to pincode is same.
+        1. For same pincode, distance should be between 1 and 100 km.
+
+        2. e-Waybill portal doesn't return distance where from and to pincode is same.
         Hardcode distance to 1 km to simplify and automate this.
         Accuracy of distance is immaterial and used only for e-Waybill validity determination.
         """
 
-        if (
-            self.transaction_details.distance == 0
-            and self.dispatch_address.pincode == self.shipping_address.pincode
-        ):
+        if self.dispatch_address.pincode != self.shipping_address.pincode:
+            return
+
+        if self.transaction_details.distance > 100:
+            frappe.throw(
+                _(
+                    "Distance should be less than 100km when the Pincode is same for"
+                    " Dispatch and Shipping Address"
+                )
+            )
+
+        if self.transaction_details.distance == 0:
             self.transaction_details.distance = 1
 
     def get_transaction_data(self):
         if self.sandbox_mode:
-            self.transaction_details.update(
-                {
-                    "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6).lstrip("0"),
-                }
+            self.transaction_details.company_gstin = "05AAACG2115R1ZN"
+            self.transaction_details.name = (
+                random_string(6).lstrip("0")
+                if not frappe.flags.in_test
+                else "test_invoice_no"
             )
 
             self.from_address.gstin = "05AAACG2115R1ZN"
@@ -818,7 +849,7 @@ class EWaybillData(GSTTransactionData):
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.from_address.address_title,
+            "fromTrdName": self.from_address.legal_name,
             "fromGstin": self.from_address.gstin,
             "fromAddr1": self.dispatch_address.address_line1,
             "fromAddr2": self.dispatch_address.address_line2,
@@ -826,7 +857,7 @@ class EWaybillData(GSTTransactionData):
             "fromPincode": self.dispatch_address.pincode,
             "fromStateCode": self.from_address.state_number,
             "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.to_address.address_title,
+            "toTrdName": self.to_address.legal_name,
             "toGstin": self.to_address.gstin,
             "toAddr1": self.shipping_address.address_line1,
             "toAddr2": self.shipping_address.address_line2,
@@ -834,15 +865,18 @@ class EWaybillData(GSTTransactionData):
             "toPincode": self.shipping_address.pincode,
             "toStateCode": self.to_address.state_number,
             "actToStateCode": self.shipping_address.state_number,
-            "totalValue": self.transaction_details.base_total,
+            "totalValue": self.transaction_details.total,
             "cgstValue": self.transaction_details.total_cgst_amount,
             "sgstValue": self.transaction_details.total_sgst_amount,
             "igstValue": self.transaction_details.total_igst_amount,
             "cessValue": self.transaction_details.total_cess_amount,
             "TotNonAdvolVal": self.transaction_details.total_cess_non_advol_amount,
-            "OthValue": self.transaction_details.rounding_adjustment
-            + self.transaction_details.other_charges,
-            "totInvValue": self.transaction_details.base_grand_total,
+            "OthValue": (
+                self.transaction_details.rounding_adjustment
+                + self.transaction_details.other_charges
+                - self.transaction_details.discount_amount
+            ),
+            "totInvValue": self.transaction_details.grand_total,
             "transMode": self.transaction_details.mode_of_transport,
             "transDistance": self.transaction_details.distance,
             "transporterName": self.transaction_details.transporter_name,

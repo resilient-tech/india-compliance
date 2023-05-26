@@ -1,9 +1,10 @@
 import frappe
-from frappe import _, bold
+from frappe import _
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
+    validate_mandatory_fields,
     validate_transaction,
 )
 from india_compliance.gst_india.utils import is_api_enabled
@@ -14,8 +15,14 @@ from india_compliance.gst_india.utils.transaction_data import (
 
 
 def onload(doc, method=None):
-    if not doc.get("ewaybill") and not doc.get("irn"):
-        return
+    if not doc.get("ewaybill"):
+        if doc.gst_category == "Overseas" and is_e_waybill_applicable(doc):
+            doc.set_onload(
+                "shipping_address_in_india", is_shipping_address_in_india(doc)
+            )
+
+        if not doc.get("irn"):
+            return
 
     gst_settings = frappe.get_cached_value(
         "GST Settings",
@@ -58,6 +65,7 @@ def validate(doc, method=None):
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_billing_address_gstin(doc)
     validate_unique_hsn_and_uom(doc)
+    validate_port_address(doc)
 
 
 def validate_invoice_number(doc):
@@ -86,24 +94,42 @@ def validate_fields_and_set_status_for_e_invoice(doc):
     ):
         return
 
-    for field in ("customer_address",):
-        if not doc.get(field):
-            frappe.throw(
-                _("{0} is a mandatory field for generating e-Invoices").format(
-                    bold(_(doc.meta.get_label(field))),
-                )
-            )
+    validate_mandatory_fields(
+        doc,
+        "customer_address",
+        _("{0} is a mandatory field for generating e-Invoices"),
+    )
 
     if doc._action == "submit" and not doc.irn:
         doc.einvoice_status = "Pending"
 
 
-def validate_billing_address_gstin(doc):
-    if doc.company_gstin == doc.billing_address_gstin:
-        frappe.throw(
-            _("Billing Address GSTIN and Company GSTIN cannot be the same"),
-            title=_("Invalid Billing Address GSTIN"),
-        )
+def validate_port_address(doc):
+    if (
+        doc.gst_category != "Overseas"
+        or not is_e_waybill_applicable(doc)
+        or doc.port_address
+        or is_shipping_address_in_india(doc)
+    ):
+        return
+
+    label = doc.meta.get_label("port_address")
+
+    frappe.msgprint(
+        _(
+            "{0} must be specified for generating e-Waybills against export of goods"
+            " (if Shipping Address is not in India)"
+        ).format(frappe.bold(label)),
+        title=_("{0} Not Set").format(label),
+        indicator="yellow",
+    )
+
+
+def is_shipping_address_in_india(doc):
+    if doc.shipping_address_name and (
+        frappe.db.get_value("Address", doc.shipping_address_name, "country") == "India"
+    ):
+        return True
 
 
 def on_submit(doc, method=None):
@@ -128,29 +154,36 @@ def on_submit(doc, method=None):
 
         return
 
-    elif (
-        not gst_settings.enable_e_waybill
-        or not gst_settings.auto_generate_e_waybill
-        or doc.ewaybill
-        or doc.is_return
-        or doc.is_debit_note
-        or abs(doc.base_grand_total) < gst_settings.e_waybill_threshold
-        or not any(
+    if gst_settings.auto_generate_e_waybill and is_e_waybill_applicable(
+        doc, gst_settings
+    ):
+        frappe.enqueue(
+            "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+            enqueue_after_commit=True,
+            queue="short",
+            doctype=doc.doctype,
+            docname=doc.name,
+        )
+
+
+def is_e_waybill_applicable(doc, gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    return bool(
+        gst_settings.enable_e_waybill
+        and doc.company_gstin != doc.billing_address_gstin
+        and not doc.ewaybill
+        and not doc.is_return
+        and not doc.is_debit_note
+        and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
+        and any(
             item
             for item in doc.items
             if item.gst_hsn_code
             and not item.gst_hsn_code.startswith("99")
             and item.qty != 0
         )
-    ):
-        return
-
-    frappe.enqueue(
-        "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-        enqueue_after_commit=True,
-        queue="short",
-        doctype=doc.doctype,
-        docname=doc.name,
     )
 
 
