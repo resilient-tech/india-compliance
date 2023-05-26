@@ -220,6 +220,7 @@ class TestEWaybill(FrappeTestCase):
 
     def test_credit_note_e_waybill(self):
         si = create_sales_invoice(
+            vehicle_no="GJ05DL9009",
             item_tax_template="GST 12% - _TIRC",
             rate=7.6,
             is_in_state=True,
@@ -242,7 +243,7 @@ class TestEWaybill(FrappeTestCase):
         # Assert if request data given in Json
         self.assertDictEqual(
             self.e_waybill_test_data.credit_note.get("request_data"),
-            EWaybillData(credit_note.as_dict()).get_data(),
+            EWaybillData(credit_note).get_data(),
         )
 
     @responses.activate
