@@ -8,6 +8,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, getdate, now_datetime, today
 from frappe.utils.data import format_date
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.utils import load_doc
@@ -215,6 +216,33 @@ class TestEWaybill(FrappeTestCase):
                     "attached_to_name": self.sales_invoice.name,
                 },
             )
+        )
+
+    def test_credit_note_e_waybill(self):
+        si = create_sales_invoice(
+            item_tax_template="GST 12% - _TIRC",
+            rate=7.6,
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        append_item(
+            si,
+            frappe._dict(rate=7.6, item_tax_template="GST 12% - _TIRC", uom="Nos"),
+        )
+        si.save()
+        si.submit()
+
+        self._generate_e_waybill()
+
+        credit_note = make_return_doc("Sales Invoice", si.name)
+        credit_note.save()
+        credit_note.submit()
+
+        # Assert if request data given in Json
+        self.assertDictEqual(
+            self.e_waybill_test_data.credit_note.get("request_data"),
+            EWaybillData(credit_note.as_dict()).get_data(),
         )
 
     @responses.activate
