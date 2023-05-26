@@ -1,7 +1,5 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
-from itertools import chain
-
 import frappe
 from frappe import _
 from erpnext.accounts.report.purchase_register.purchase_register import _execute
@@ -59,11 +57,11 @@ def update_bill_of_entry_data(filters, data, columns):
     if not bill_of_entries:
         return columns, data
 
-    insert_additional_columns(data, columns)
+    insert_additional_columns(data, columns, bill_of_entries)
     input_accounts = get_gst_accounts_by_type(filters.get("company"), "Input")
 
     for inv, boe_data in bill_of_entries.items():
-        row = [inv]
+        row = []
         for _column in columns:
             column_label = (
                 _column.split(":")[0].strip()
@@ -72,10 +70,11 @@ def update_bill_of_entry_data(filters, data, columns):
             )
 
             if column_label == "Invoice":
-                continue
+                row.append(inv)
 
-            if column_label in input_accounts.values():
+            elif column_label in input_accounts.values():
                 for account in boe_data.account_detail:
+
                     if column_label == account.account_head:
                         if account.account_head == input_accounts.igst_account:
                             row.append(account.tax_amount)
@@ -84,9 +83,9 @@ def update_bill_of_entry_data(filters, data, columns):
                         elif account.account_head == input_accounts.cess_account:
                             row.append(account.tax_amount)
                             break
-                    else:
-                        row.append(0)
-                        break
+                else:
+                    row.append(0)
+
             elif column_label == "Total Tax":
                 row.append(boe_data.total_taxes)
 
@@ -96,29 +95,14 @@ def update_bill_of_entry_data(filters, data, columns):
         data.append(row)
 
 
-def get_additional_tax_accounts(data):
-    bill_of_entry = frappe.qb.DocType("Bill of Entry")
-    boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
-
-    invoices = tuple(
-        row[0] if isinstance(row, list) else row.get("invoice") for row in data
+def insert_additional_columns(data, columns, bill_of_entries, is_itemised_report=False):
+    tax_accounts = list(
+        set(
+            account.account_head
+            for key, value in bill_of_entries.items()
+            for account in value.account_detail
+        )
     )
-    return (
-        frappe.qb.from_(bill_of_entry)
-        .inner_join(boe_taxes)
-        .on(bill_of_entry.name == boe_taxes.parent)
-        .select(boe_taxes.account_head)
-        .where(bill_of_entry.docstatus == 1)
-        .where(boe_taxes.account_head.isnotnull() and boe_taxes.account_head != "")
-        .where(bill_of_entry.purchase_invoice.isin(invoices))
-        .orderby(boe_taxes.account_head)
-        .distinct()
-        .run(as_list=True)
-    )
-
-
-def insert_additional_columns(data, columns, is_itemised_report=False):
-    tax_accounts = list(chain(*get_additional_tax_accounts(data)))
 
     boe_tax_accounts = []
     for account in tax_accounts:
@@ -190,7 +174,7 @@ def is_column_exists(columns, key):
     return False
 
 
-def get_bill_of_entry(filters):
+def get_bill_of_entry(filters) -> dict:
     bill_of_entry = frappe.qb.DocType("Bill of Entry")
     bill_of_entry_taxes = frappe.qb.DocType("Bill of Entry Taxes")
 
@@ -214,6 +198,10 @@ def get_bill_of_entry(filters):
             bill_of_entry.bill_of_entry_date[
                 filters.get("from_date") : filters.get("to_date")
             ]
+        )
+        .where(
+            bill_of_entry_taxes.account_head.isnotnull()
+            and bill_of_entry_taxes.account_head != ""
         )
         .where(bill_of_entry.company == filters.get("company"))
     )

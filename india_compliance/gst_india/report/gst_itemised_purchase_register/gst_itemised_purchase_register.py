@@ -80,7 +80,7 @@ def update_bill_of_entry_data(filters, data, columns):
     if not bill_of_entries:
         return columns, data
 
-    insert_additional_columns(data, columns, is_itemised_report=True)
+    insert_additional_columns(data, columns, bill_of_entries, is_itemised_report=True)
     input_accounts = get_gst_accounts_by_type(filters.get("company"), "Input")
 
     for inv, boe_data in bill_of_entries.items():
@@ -89,7 +89,6 @@ def update_bill_of_entry_data(filters, data, columns):
             column_label = _column.get("label")
             fieldname = _column.get("fieldname")
 
-            print(column_label)
             # To extract account names from columns because column names are like Input Tax CGST @ 9.0 Amount and TDS - RT Amount
             if "@" in column_label:
                 column_label = column_label.split("@")[0].strip()
