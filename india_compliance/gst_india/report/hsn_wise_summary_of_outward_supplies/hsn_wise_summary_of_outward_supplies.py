@@ -166,6 +166,7 @@ def get_items(filters):
             INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
         WHERE
             `tabSales Invoice`.docstatus = 1
+            AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '')
             AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
         GROUP BY
             `tabSales Invoice Item`.parent,
