@@ -7,12 +7,19 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
 
     if (!frappe.perm.has_perm(DOCTYPE, 0, "submit")) return;
 
-    if (gst_settings.enable_e_waybill)
+    if (gst_settings.enable_e_waybill) {
         add_bulk_action_for_submitted_invoices(
             list_view,
             __("Generate e-Waybill JSON"),
             generate_e_waybill_json
         );
+
+        add_bulk_action_for_submitted_invoices(
+            list_view,
+            __("Enqueue Bulk e-Waybill Generation"),
+            enqueue_bulk_e_waybill_generation
+        );
+    }
 
     if (india_compliance.is_e_invoice_enabled())
         add_bulk_action_for_submitted_invoices(
@@ -37,6 +44,46 @@ async function generate_e_waybill_json(docnames) {
     );
 
     trigger_file_download(ewb_data, get_e_waybill_file_name());
+}
+
+async function enqueue_bulk_e_waybill_generation(docnames) {
+    const now = frappe.datetime.system_datetime();
+
+    const job_id = await frappe.xcall(
+        "india_compliance.gst_india.utils.e_waybill.enqueue_bulk_e_waybill_generation",
+        { doctype: DOCTYPE, docnames }
+    );
+
+    const creation_filter = `[">", "${now}"]`;
+    const api_requests_link = frappe.utils.generate_route({
+        type: "doctype",
+        name: "Integration Request",
+        route_options: {
+            integration_request_service: "India Compliance API",
+            creation: creation_filter,
+        },
+    });
+    const error_logs_link = frappe.utils.generate_route({
+        type: "doctype",
+        name: "Error Log",
+        route_options: {
+            creation: creation_filter,
+        },
+    });
+
+    frappe.msgprint(
+        __(
+            `Bulk e-Invoice Generation has been queued. You can track the
+            <a href='{0}'>Background Job</a>,
+            <a href='{1}'>API Request(s)</a>,
+            and <a href='{2}'>Error Log(s)</a>.`,
+            [
+                frappe.utils.get_form_link("RQ Job", job_id),
+                api_requests_link,
+                error_logs_link,
+            ]
+        )
+    );
 }
 
 async function enqueue_bulk_e_invoice_generation(docnames) {
