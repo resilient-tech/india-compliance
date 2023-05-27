@@ -65,6 +65,7 @@ def enqueue_bulk_e_waybill_generation(doctype, docnames):
     frappe.has_permission(doctype, "submit", throw=True)
 
     from india_compliance.gst_india.utils import is_api_enabled
+
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
         frappe.throw(_("Please enable e-Waybill in GST Settings first."))
@@ -93,8 +94,7 @@ def generate_e_waybills(doctype, docnames):
         except Exception:
             frappe.log_error(
                 title=_("e-Invoice generation failed for {0} {1}").format(
-                    doctype,
-                    docname
+                    doctype, docname
                 ),
                 message=frappe.get_traceback(),
             )
