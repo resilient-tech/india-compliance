@@ -323,10 +323,10 @@ class GSTTransactionData:
         error_field = f"{tax_type}_rounding_error"
         error_amount = self.rounding_errors[error_field]
 
-        response = abs(self.rounded(amount + error_amount))
-        self.rounding_errors[error_field] = abs(amount) + error_amount - response
+        response = self.rounded(amount + error_amount)
+        self.rounding_errors[error_field] = amount + error_amount - response
 
-        return response
+        return abs(response)
 
     def get_address_details(self, address_name, validate_gstin=False):
         address = frappe.get_cached_value(
