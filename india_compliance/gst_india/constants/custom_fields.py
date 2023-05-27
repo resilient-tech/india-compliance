@@ -295,6 +295,22 @@ CUSTOM_FIELDS = {
     ],
     "Sales Invoice": [
         {
+            "fieldname": "port_address",
+            "label": "Origin Port / Border Checkpost Address Name",
+            "fieldtype": "Link",
+            "options": "Address",
+            "print_hide": 1,
+            "description": (
+                "Address of the place / port in India from where goods are being"
+                " exported <br>(for generating e-Waybill against export of goods)"
+            ),
+            "insert_after": "shipping_address",
+            "depends_on": (
+                "eval:doc.company_gstin && doc.gst_category === 'Overseas' &&"
+                " gst_settings.enable_e_waybill"
+            ),
+        },
+        {
             "fieldname": "invoice_copy",
             "label": "Invoice Copy",
             "length": 30,
@@ -577,6 +593,8 @@ CUSTOM_FIELDS = {
             "options": "GST HSN Code",
             "insert_after": "item_group",
             "allow_in_quick_entry": 1,
+            "mandatory_depends_on": "eval:gst_settings.validate_hsn_code && doc.is_sales_item",
+            "description": "You can search code by the description of the category.",
         },
         {
             "fieldname": "is_nil_exempt",

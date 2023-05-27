@@ -9,6 +9,7 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
     make_dimension_in_accounting_doctypes,
 )
 
+from india_compliance.gst_india.constants import GST_UOMS
 from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
@@ -76,6 +77,13 @@ def create_address_template():
 
 
 def create_hsn_codes():
+    if frappe.db.count("GST HSN Code") > 0:
+        return
+
+    _create_hsn_codes()
+
+
+def _create_hsn_codes():
     user = frappe.session.user
     now = now_datetime()
 
@@ -109,6 +117,8 @@ def create_hsn_codes():
         ignore_duplicates=True,
         chunk_size=20_000,
     )
+
+    frappe.flags.hsn_codes_corrected = 1
 
 
 def add_fields_to_item_variant_settings():
@@ -149,6 +159,8 @@ def set_default_gst_settings():
     # Hide the fields as not enabled by default
     for fields in (E_INVOICE_FIELDS, SALES_REVERSE_CHARGE_FIELDS):
         toggle_custom_fields(fields, False)
+
+    map_default_uoms(settings)
 
 
 def set_default_accounts_settings():
@@ -229,3 +241,24 @@ def get_all_custom_fields():
             result.setdefault(doctypes, []).extend(fields)
 
     return result
+
+
+def setup_wizard_complete(user_input):
+    # UOMs are created in setup wizard
+    map_default_uoms()
+
+
+def map_default_uoms(settings=None):
+    settings = settings or frappe.get_doc("GST Settings")
+
+    def _is_uom_mapped():
+        return any(mapping.uom == uom for mapping in settings.gst_uom_map)
+
+    for uom, gst_uom in GST_UOMS.items():
+        if not frappe.db.exists("UOM", uom) or _is_uom_mapped():
+            continue
+
+        settings.append("gst_uom_map", {"uom": uom, "gst_uom": gst_uom})
+
+    for row in settings.gst_uom_map:
+        row.db_update()

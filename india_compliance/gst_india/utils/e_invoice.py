@@ -262,15 +262,35 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    if getdate(gst_settings.e_invoice_applicable_from) > getdate(doc.posting_date):
-        return _throw(
+    validate_e_invoice_applicability_date(doc, gst_settings)
+
+    return True
+
+
+def validate_e_invoice_applicability_date(doc, settings=None):
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    e_invoice_applicable_from = settings.e_invoice_applicable_from
+
+    if settings.apply_e_invoice_only_for_selected_companies:
+        for row in settings.e_invoice_applicable_companies:
+            if doc.company == row.company:
+                e_invoice_applicable_from = row.applicable_from
+                break
+
+        else:
+            frappe.throw(
+                _("e-Invoice is not applicable for company {0}").format(doc.company)
+            )
+
+    if getdate(e_invoice_applicable_from) > getdate(doc.posting_date):
+        frappe.throw(
             _(
                 "e-Invoice is not applicable for invoices before {0} as per your"
                 " GST Settings"
-            ).format(frappe.bold(format_date(gst_settings.e_invoice_applicable_from)))
+            ).format(frappe.bold(format_date(e_invoice_applicable_from)))
         )
-
-    return True
 
 
 def validate_if_e_invoice_can_be_cancelled(doc):
@@ -446,17 +466,18 @@ class EInvoiceData(GSTTransactionData):
             self.doc.company_address, validate_gstin=True
         )
 
+        ship_to_address = (
+            self.doc.port_address
+            if (self.doc.gst_category == "Overseas" and self.doc.port_address)
+            else self.doc.shipping_address_name
+        )
+
         # Defaults
         self.shipping_address = None
         self.dispatch_address = None
 
-        if (
-            self.doc.shipping_address_name
-            and self.doc.customer_address != self.doc.shipping_address_name
-        ):
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+        if ship_to_address and self.doc.customer_address != ship_to_address:
+            self.shipping_address = self.get_address_details(ship_to_address)
 
         if (
             self.doc.dispatch_address_name

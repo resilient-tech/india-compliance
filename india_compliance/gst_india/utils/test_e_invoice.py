@@ -19,12 +19,13 @@ from india_compliance.gst_india.utils.e_invoice import (
     validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import EWaybillData
-from india_compliance.gst_india.utils.tests import create_sales_invoice
+from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 
 
 class TestEInvoice(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         frappe.db.set_single_value(
             "GST Settings",
             {
@@ -34,6 +35,7 @@ class TestEInvoice(FrappeTestCase):
                 "auto_generate_e_invoice": 0,
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
+                "apply_e_invoice_only_for_selected_companies": 0,
             },
         )
         cls.e_invoice_test_data = frappe._dict(
@@ -45,8 +47,118 @@ class TestEInvoice(FrappeTestCase):
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
 
+    def test_request_data_for_different_shipping_dispatch_address(self):
+        test_data = self.e_invoice_test_data.goods_item_with_ewaybill
+        si = create_sales_invoice(
+            **test_data.get("kwargs"), qty=1000, do_not_submit=True
+        )
+
+        self.assertDictEqual(
+            test_data.get("request_data"),
+            EInvoiceData(si).get_data(),
+        )
+
+        si.update(
+            {
+                "dispatch_address_name": "_Test Indian Registered Company-Shipping",
+                "shipping_address_name": "_Test Registered Customer-Billing-1",
+            }
+        )
+        si.save()
+
+        self.assertDictEqual(
+            test_data.get("request_data")
+            | self.e_invoice_test_data.dispatch_details
+            | self.e_invoice_test_data.shipping_details,
+            EInvoiceData(si).get_data(),
+        )
+
+    def test_progressive_item_tax_amount(self):
+        test_data = self.e_invoice_test_data.goods_item_with_ewaybill
+
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            item_tax_template="GST 12% - _TIRC",
+            rate=7.6,
+            is_in_state=True,
+            do_not_submit=True,
+        )
+
+        append_item(
+            si,
+            frappe._dict(rate=7.6, item_tax_template="GST 12% - _TIRC", uom="Nos"),
+        )
+        si.save()
+        si.submit()
+
+        e_invoice_data = EInvoiceData(si)
+        e_invoice_data.set_item_list()
+
+        self.assertListEqual(
+            e_invoice_data.item_list,
+            [
+                {
+                    "SlNo": "1",
+                    "PrdDesc": "Test Trading Goods 1",
+                    "IsServc": "N",
+                    "HsnCd": "61149090",
+                    "Barcde": None,
+                    "Unit": "NOS",
+                    "Qty": 1.0,
+                    "UnitPrice": 7.6,
+                    "TotAmt": 7.6,
+                    "Discount": 0,
+                    "AssAmt": 7.6,
+                    "PrdSlNo": "",
+                    "GstRt": 12.0,
+                    "IgstAmt": 0,
+                    "CgstAmt": 0.46,
+                    "SgstAmt": 0.46,
+                    "CesRt": 0,
+                    "CesAmt": 0,
+                    "CesNonAdvlAmt": 0,
+                    "TotItemVal": 8.52,
+                    "BchDtls": {"Nm": None, "ExpDt": None},
+                },
+                {
+                    "SlNo": "2",
+                    "PrdDesc": "Test Trading Goods 1",
+                    "IsServc": "N",
+                    "HsnCd": "61149090",
+                    "Barcde": None,
+                    "Unit": "NOS",
+                    "Qty": 1.0,
+                    "UnitPrice": 7.6,
+                    "TotAmt": 7.6,
+                    "Discount": 0,
+                    "AssAmt": 7.6,
+                    "PrdSlNo": "",
+                    "GstRt": 12.0,
+                    "IgstAmt": 0,
+                    "CgstAmt": 0.45,
+                    "SgstAmt": 0.45,
+                    "CesRt": 0,
+                    "CesAmt": 0,
+                    "CesNonAdvlAmt": 0,
+                    "TotItemVal": 8.5,
+                    "BchDtls": {"Nm": None, "ExpDt": None},
+                },
+            ],
+        )
+
+        total_item_wise_cgst = sum(row["CgstAmt"] for row in e_invoice_data.item_list)
+        self.assertEqual(
+            si.taxes[0].tax_amount,
+            total_item_wise_cgst,
+        )
+
+        self.assertEqual(
+            EInvoiceData(si).get_data().get("ValDtls").get("CgstVal"),
+            total_item_wise_cgst,
+        )
+
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
-    def test_get_data(self):
+    def test_validate_transaction(self):
         """Validation test for more than 1000 items in sales invoice"""
         si = create_sales_invoice(do_not_submit=True)
         item_row = si.get("items")[0]
@@ -61,12 +173,15 @@ class TestEInvoice(FrappeTestCase):
                 },
             )
         si.save()
-        si.submit()
+
+        frappe.db.set_single_value(
+            "GST Settings", "e_invoice_applicable_from", "2021-01-01"
+        )
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(r"^(e-Invoice can only be generated.*)$"),
-            EInvoiceData(si).get_data,
+            EInvoiceData(si).validate_transaction,
         )
 
     @responses.activate
@@ -231,8 +346,8 @@ class TestEInvoice(FrappeTestCase):
         """Generate test e-Invoice for debit note with zero quantity"""
         test_data = self.e_invoice_test_data.get("debit_invoice")
         si = create_sales_invoice(
-            customer_address="_Test Registered Customer-Billing",
-            shipping_address_name="_Test Registered Customer-Billing",
+            customer_address=test_data.get("kwargs").get("customer_address"),
+            shipping_address_name=test_data.get("kwargs").get("shipping_address_name"),
         )
 
         test_data.get("kwargs").update({"return_against": si.name})
@@ -337,13 +452,31 @@ class TestEInvoice(FrappeTestCase):
         """Test if e_invoicing is applicable"""
 
         si = create_sales_invoice(
-            customer="_Test Unregistered Customer",
-            gst_category="Unregistered",
+            customer="_Test Registered Customer",
+            gst_category="Registered Regular",
             do_not_submit=True,
         )
+
+        si.billing_address_gstin = "24AAQCA8719H1ZC"
+
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Invoice is not applicable for invoices.*)$"),
+            re.compile(r"^(e-Invoice is not applicable .* company and billing GSTIN)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        si.update(
+            {
+                "customer": "_Test Unregistered Customer",
+                "gst_category": "Unregistered",
+                "billing_address_gstin": "24AANFA2641L1ZF",
+            }
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice is not applicable .* Unregistered Customers)$"),
             validate_e_invoice_applicability,
             si,
         )
@@ -352,11 +485,34 @@ class TestEInvoice(FrappeTestCase):
             {
                 "gst_category": "Registered Regular",
                 "customer": "_Test Registered Customer",
+                "irn": "706daeccda0ef6f818da78f3a2a05a1288731057373002289b46c3229289a2e7",
             }
         )
-        si.save(ignore_permissions=True)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice has already been generated .*)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        si.irn = ""
+        frappe.db.set_single_value("GST Settings", "enable_e_invoice", 0)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice is not enabled in GST Settings)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
         frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", "2045-05-18"
+            "GST Settings",
+            {
+                "enable_e_invoice": 1,
+                "apply_e_invoice_only_for_selected_companies": 0,
+                "e_invoice_applicable_from": "2045-05-18",
+            },
         )
 
         self.assertRaisesRegex(
@@ -366,8 +522,41 @@ class TestEInvoice(FrappeTestCase):
             si,
         )
 
+        gst_settings = frappe.get_cached_doc("GST Settings")
+        gst_settings.update(
+            {
+                "apply_e_invoice_only_for_selected_companies": 1,
+                "e_invoice_applicable_companies": [
+                    {
+                        "company": si.company,
+                        "applicable_from": "2045-05-18",
+                    },
+                ],
+            },
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice is not applicable for invoices before.*)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        si.company = "_Test Foreign Company"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Invoice is not applicable for company.*)$"),
+            validate_e_invoice_applicability,
+            si,
+        )
+
         frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", get_datetime()
+            "GST Settings",
+            {
+                "e_invoice_applicable_from": str(get_datetime()),
+                "apply_e_invoice_only_for_selected_companies": 0,
+            },
         )
 
     def _cancel_e_invoice(self, invoice_no):
