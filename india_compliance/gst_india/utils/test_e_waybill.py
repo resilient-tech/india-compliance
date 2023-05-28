@@ -333,21 +333,21 @@ class TestEWaybill(FrappeTestCase):
             if hsn_code == "61149090":
                 continue
 
-            si.append(
-                "items",
-                {
-                    "item_code": hsn_code,
-                    "item_name": "Test Item {}".format(i),
-                    "qty": 1,
-                    "rate": 100,
-                    "gst_hsn_code": hsn_code,
-                },
+            append_item(
+                si,
+                frappe._dict(
+                    item_code=hsn_code,
+                    item_name="Test Item {}".format(i),
+                    rate=100,
+                    gst_hsn_code=hsn_code,
+                ),
             )
+
         si.save()
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Waybill can only be generated for upto.*)$"),
+            re.compile(r"^(e-Waybill can only be .* HSN/SAC Codes)$"),
             EWaybillData(si).get_all_item_details,
         )
 
@@ -385,6 +385,29 @@ class TestEWaybill(FrappeTestCase):
                 }
             ],
             EWaybillData(si).get_all_item_details(),
+        )
+
+        for i in range(0, 250):
+            append_item(si)
+        si.save()
+
+        self.assertListEqual(
+            list(EWaybillData(si).get_all_item_details()),
+            [
+                {
+                    "hsn_code": "61149090",
+                    "uom": "NOS",
+                    "item_name": "",
+                    "cgst_rate": 0,
+                    "sgst_rate": 0,
+                    "igst_rate": 0,
+                    "cess_rate": 0,
+                    "cess_non_advol_rate": 0,
+                    "item_no": 1,
+                    "qty": 251.0,
+                    "taxable_value": 25100.0,
+                }
+            ],
         )
 
     @responses.activate
