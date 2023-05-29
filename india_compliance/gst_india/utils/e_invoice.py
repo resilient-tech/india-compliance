@@ -92,7 +92,7 @@ def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
 
     try:
-        data = EInvoiceData(doc).get_data(for_auto_generation=not throw)
+        data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
 
@@ -311,11 +311,11 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
 
 class EInvoiceData(GSTTransactionData):
-    def get_data(self, *, for_auto_generation=False):
+    def get_data(self):
         self.validate_transaction()
         self.set_transaction_details()
         self.set_item_list()
-        self.set_transporter_details(for_auto_generation)
+        self.set_transporter_details()
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
@@ -446,12 +446,12 @@ class EInvoiceData(GSTTransactionData):
 
         return supply_type
 
-    def set_transporter_details(self, for_auto_generation=False):
+    def set_transporter_details(self):
         if (
             # e-waybill threshold is not met
             self.transaction_details.grand_total < self.settings.e_waybill_threshold
             # e-waybill auto-generation is disabled by user
-            or (for_auto_generation and not self.settings.auto_generate_e_waybill)
+            or not self.settings.auto_generate_e_way_with_e_invoice
         ):
             return
 

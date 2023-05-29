@@ -28,6 +28,7 @@
   "e_invoice_section",
   "enable_e_invoice",
   "auto_generate_e_invoice",
+  "auto_generate_e_way_with_e_invoice",
   "apply_e_invoice_only_for_selected_companies",
   "column_break_17",
   "e_invoice_applicable_from",
@@ -274,12 +275,20 @@
    "fieldname": "gst_uom_map",
    "fieldtype": "Table",
    "options": "GST UOM Map"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "e-Waybill will be automatically generated with e-Invoice if the invoice value threshold is met, and data is available and valid",
+   "fieldname": "auto_generate_e_way_with_e_invoice",
+   "fieldtype": "Check",
+   "label": "Automatically Generate e-Waybill with e-Invoice"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-05-18 14:31:43.398745",
+ "modified": "2023-05-29 15:20:11.900592",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
