@@ -567,6 +567,24 @@ class TestEInvoice(FrappeTestCase):
             },
         )
 
+    @responses.activate
+    def test_invoice_update_after_submit(self):
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+        self._mock_e_invoice_response(data=test_data)
+        generate_e_invoice(si.name)
+
+        doc = load_doc("Sales Invoice", si.name, "submit")
+
+        doc.group_same_items = True
+        doc.save()
+
+        self.assertEqual(
+            json.loads(frappe.message_log[-1]).get("message"),
+            "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
+        )
+
     def _cancel_e_invoice(self, invoice_no):
         values = frappe._dict(
             {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}

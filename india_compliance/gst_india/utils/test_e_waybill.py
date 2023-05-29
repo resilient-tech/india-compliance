@@ -1,3 +1,4 @@
+import json
 import random
 import re
 
@@ -218,6 +219,7 @@ class TestEWaybill(FrappeTestCase):
             )
         )
 
+    @responses.activate
     def test_credit_note_e_waybill(self):
         si = create_sales_invoice(
             vehicle_no="GJ05DL9009",
@@ -565,6 +567,19 @@ class TestEWaybill(FrappeTestCase):
             re.compile(r"^(Only Sales Invoice and Delivery Note are supported.*)$"),
             EWaybillData,
             purchase_invoice,
+        )
+
+    @responses.activate
+    def test_invoice_update_after_submit(self):
+        self._generate_e_waybill()
+        doc = load_doc("Sales Invoice", self.sales_invoice.name, "submit")
+
+        doc.group_same_items = True
+        doc.save()
+
+        self.assertEqual(
+            json.loads(frappe.message_log[-1]).get("message"),
+            "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
     # helper functions
