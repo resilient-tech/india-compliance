@@ -34,6 +34,8 @@
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "uom_mapping_section",
+  "gst_uom_map",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
@@ -231,6 +233,12 @@
    "label": "Autofill Party Information based on GSTIN"
   },
   {
+   "collapsible": 1,
+   "fieldname": "uom_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "UOM Mapping"
+  },
+  {
    "fieldname": "api_section",
    "fieldtype": "Section Break",
    "label": "API"
@@ -261,12 +269,17 @@
    "fieldtype": "Table",
    "label": "e-Invoice Applicable Companies",
    "options": "e-Invoice Applicable Company"
+  },
+  {
+   "fieldname": "gst_uom_map",
+   "fieldtype": "Table",
+   "options": "GST UOM Map"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-05-16 17:02:32.432677",
+ "modified": "2023-05-18 14:31:43.398745",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

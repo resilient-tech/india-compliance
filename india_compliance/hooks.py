@@ -17,6 +17,7 @@ boot_session = "india_compliance.boot.set_bootinfo"
 before_uninstall = "india_compliance.uninstall.before_uninstall"
 
 setup_wizard_requires = "assets/india_compliance/js/setup_wizard.js"
+setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
 setup_wizard_stages = "india_compliance.audit_trail.setup.get_setup_wizard_stages"
 
 app_include_js = "india_compliance.bundle.js"
@@ -107,6 +108,7 @@ doc_events = {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
+        "on_update_after_submit": "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit",
     },
     "Sales Order": {
         "validate": (
