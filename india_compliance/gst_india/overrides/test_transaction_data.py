@@ -5,7 +5,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.utils.tests import create_sales_invoice
+from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
 from india_compliance.gst_india.utils.transaction_data import (
     GSTTransactionData,
     validate_non_gst_items,
@@ -209,4 +209,17 @@ class TestTransactionData(FrappeTestCase):
                     "total_value": 100.0,
                 }
             ],
+        )
+
+    def test_validate_unique_hsn_and_uom(self):
+        doc = create_sales_invoice(do_not_submit=True)
+
+        append_item(doc, frappe._dict(item_code="_Test Trading Goods 1", uom="Box"))
+
+        doc.group_same_items = True
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Row #.*Grouping of items is not possible.)$"),
+            doc.submit,
         )
