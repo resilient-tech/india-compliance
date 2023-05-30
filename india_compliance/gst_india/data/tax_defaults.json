@@ -76,22 +76,19 @@
                         {
                             "tax_type": {
                                 "account_name": "Input Tax SGST RCM",
-                                "tax_rate": 9.0,
-                                "root_type": "Asset"
+                                "tax_rate": 9.0
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax CGST RCM",
-                                "tax_rate": 9.0,
-                                "root_type": "Asset"
+                                "tax_rate": 9.0
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax IGST RCM",
-                                "tax_rate": 18.0,
-                                "root_type": "Asset"
+                                "tax_rate": 18.0
                             }
                         }
                     ]
@@ -141,22 +138,19 @@
                         {
                             "tax_type": {
                                 "account_name": "Input Tax SGST RCM",
-                                "tax_rate": 2.5,
-                                "root_type": "Asset"
+                                "tax_rate": 2.5
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax CGST RCM",
-                                "tax_rate": 2.5,
-                                "root_type": "Asset"
+                                "tax_rate": 2.5
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax IGST RCM",
-                                "tax_rate": 5.0,
-                                "root_type": "Asset"
+                                "tax_rate": 5.0
                             }
                         }
                     ]
@@ -206,22 +200,19 @@
                         {
                             "tax_type": {
                                 "account_name": "Input Tax SGST RCM",
-                                "tax_rate": 6.0,
-                                "root_type": "Asset"
+                                "tax_rate": 6.0
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax CGST RCM",
-                                "tax_rate": 6.0,
-                                "root_type": "Asset"
+                                "tax_rate": 6.0
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax IGST RCM",
-                                "tax_rate": 12.0,
-                                "root_type": "Asset"
+                                "tax_rate": 12.0
                             }
                         }
                     ]
@@ -271,22 +262,19 @@
                         {
                             "tax_type": {
                                 "account_name": "Input Tax SGST RCM",
-                                "tax_rate": 14.0,
-                                "root_type": "Asset"
+                                "tax_rate": 14.0
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax CGST RCM",
-                                "tax_rate": 14.0,
-                                "root_type": "Asset"
+                                "tax_rate": 14.0
                             }
                         },
                         {
                             "tax_type": {
                                 "account_name": "Input Tax IGST RCM",
-                                "tax_rate": 28.0,
-                                "root_type": "Asset"
+                                "tax_rate": 28.0
                             }
                         }
                     ]
@@ -387,7 +375,6 @@
                             "account_head": {
                                 "account_name": "Input Tax CGST RCM",
                                 "tax_rate": 9.0,
-                                "root_type": "Asset",
                                 "account_type": "Tax"
                             },
                             "add_deduct_tax": "Deduct"
@@ -396,7 +383,6 @@
                             "account_head": {
                                 "account_name": "Input Tax SGST RCM",
                                 "tax_rate": 9.0,
-                                "root_type": "Asset",
                                 "account_type": "Tax"
                             },
                             "add_deduct_tax": "Deduct"
@@ -419,7 +405,6 @@
                             "account_head": {
                                 "account_name": "Input Tax IGST RCM",
                                 "tax_rate": 18.0,
-                                "root_type": "Asset",
                                 "account_type": "Tax"
                             },
                             "add_deduct_tax": "Deduct"
