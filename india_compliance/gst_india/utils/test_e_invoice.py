@@ -470,13 +470,13 @@ class TestEInvoice(FrappeTestCase):
             {
                 "customer": "_Test Unregistered Customer",
                 "gst_category": "Unregistered",
-                "billing_address_gstin": "24AANFA2641L1ZF",
+                "billing_address_gstin": "",
             }
         )
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Invoice is not applicable .* Unregistered Customers)$"),
+            re.compile(r"^(e-Invoice is not applicable for B2C invoices)$"),
             validate_e_invoice_applicability,
             si,
         )
@@ -485,6 +485,7 @@ class TestEInvoice(FrappeTestCase):
             {
                 "gst_category": "Registered Regular",
                 "customer": "_Test Registered Customer",
+                "billing_address_gstin": "24AANFA2641L1ZF",
                 "irn": "706daeccda0ef6f818da78f3a2a05a1288731057373002289b46c3229289a2e7",
             }
         )
