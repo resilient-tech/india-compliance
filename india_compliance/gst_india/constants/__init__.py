@@ -29,8 +29,6 @@ GST_CATEGORIES = {
     "Tax Deductor": "B2B",
 }
 
-OVERSEAS_GST_CATEGORIES = {"Overseas", "SEZ"}
-
 EXPORT_TYPES = (
     "WOP",  # Without Payment of Tax [0]
     "WP",  # With Payment of Tax [1]

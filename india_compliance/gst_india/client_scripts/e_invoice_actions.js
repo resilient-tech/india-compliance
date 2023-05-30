@@ -163,7 +163,7 @@ function is_e_invoice_applicable(frm) {
         frm.doc.docstatus == 1 &&
         frm.doc.company_gstin &&
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
-        frm.doc.gst_category != "Unregistered" &&
+        (frm.doc.place_of_supply === "96-Other Countries" || frm.doc.billing_address_gstin) &&
         !frm.doc.items[0].is_non_gst &&
         is_valid_e_invoice_applicability_date(frm)
     );
