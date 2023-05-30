@@ -344,8 +344,7 @@ class Gstr1Report(object):
 
         if self.filters.get("type_of_business") == "B2B":
             conditions += (
-                "AND IFNULL(gst_category, '') in ('Registered Regular', 'Registered"
-                " Composition', 'Deemed Export', 'SEZ') AND is_return != 1 AND"
+                "AND IFNULL(gst_category, '') not in ('Unregistered', 'Overseas') AND is_return != 1 AND"
                 " is_debit_note !=1"
             )
 
@@ -1290,6 +1289,8 @@ def get_invoice_type(row):
             "Deemed Export": "DE",
             "Registered Regular": "R",
             "Registered Composition": "R",
+            "Tax Deductor": "R",
+            "UIN Holders": "R",
             "Unregistered": "B2CL",
         }
     ).get(gst_category)
