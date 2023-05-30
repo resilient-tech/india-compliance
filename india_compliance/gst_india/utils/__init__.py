@@ -200,6 +200,28 @@ def validate_gstin_check_digit(gstin, label="GSTIN"):
         )
 
 
+def is_overseas_doc(doc):
+    return is_overseas_transaction(doc.doctype, doc.gst_category, doc.place_of_supply)
+
+
+def is_overseas_transaction(doctype, gst_category, place_of_supply):
+    if gst_category == "SEZ":
+        return True
+
+    if doctype in SALES_DOCTYPES:
+        return is_foreign_transaction(gst_category, place_of_supply)
+
+    return gst_category == "Overseas"
+
+
+def is_foreign_doc(doc):
+    return is_foreign_transaction(doc.gst_category, doc.place_of_supply)
+
+
+def is_foreign_transaction(gst_category, place_of_supply):
+    return gst_category == "Overseas" and place_of_supply == "96-Other Countries"
+
+
 def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
     itemised_tax = get_itemised_tax(doc.taxes, with_tax_account=account_wise)
 

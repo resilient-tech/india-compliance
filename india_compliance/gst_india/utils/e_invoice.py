@@ -14,17 +14,15 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.constants import (
-    EXPORT_TYPES,
-    GST_CATEGORIES,
-    OVERSEAS_GST_CATEGORIES,
-)
+from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
 from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
 )
 from india_compliance.gst_india.utils import (
     is_api_enabled,
+    is_foreign_doc,
+    is_overseas_doc,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -251,10 +249,8 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not validate_non_gst_items(doc, throw=throw):
         return
 
-    if doc.gst_category == "Unregistered":
-        return _throw(
-            _("e-Invoice is not applicable for invoices with Unregistered Customers")
-        )
+    if not (doc.place_of_supply == "96-Other Countries" or doc.billing_address_gstin):
+        return _throw(_("e-Invoice is not applicable for B2C invoices"))
 
     if not gst_settings:
         gst_settings = frappe.get_cached_doc("GST Settings")
@@ -441,7 +437,7 @@ class EInvoiceData(GSTTransactionData):
 
     def get_supply_type(self):
         supply_type = GST_CATEGORIES[self.doc.gst_category]
-        if self.doc.gst_category in OVERSEAS_GST_CATEGORIES:
+        if is_overseas_doc(self.doc):
             supply_type = f"{supply_type}{EXPORT_TYPES[self.doc.is_export_with_gst]}"
 
         return supply_type
@@ -468,7 +464,7 @@ class EInvoiceData(GSTTransactionData):
 
         ship_to_address = (
             self.doc.port_address
-            if (self.doc.gst_category == "Overseas" and self.doc.port_address)
+            if (is_foreign_doc(self.doc) and self.doc.port_address)
             else self.doc.shipping_address_name
         )
 
@@ -508,7 +504,7 @@ class EInvoiceData(GSTTransactionData):
             )
 
             # For overseas transactions, dummy GSTIN is not needed
-            if self.doc.gst_category != "Overseas":
+            if not is_foreign_doc(self.doc):
                 buyer = {
                     "gstin": "36AMBPG7773M002",
                     "state_number": "36",
