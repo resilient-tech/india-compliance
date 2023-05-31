@@ -84,6 +84,9 @@ def get_gstin_log(gstin):
 def get_gstin_status(gstin: str) -> str:
     gstin_result = get_gstin_log(gstin)
 
+    if not gstin_result:
+        return
+
     return gstin_result.get("sts") or gstin_result.get("status")
 
 
