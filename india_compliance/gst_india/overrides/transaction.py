@@ -17,6 +17,7 @@ from india_compliance.gst_india.utils import (
     get_place_of_supply_options,
     validate_gst_category,
 )
+from india_compliance.gst_india.utils.gstin_info import get_gstin_status
 
 DOCTYPES_WITH_TAXABLE_VALUE = {
     "Purchase Invoice",
@@ -788,7 +789,7 @@ def validate_gstin_status(gstin):
     if not gstin:
         return
 
-    gstin_status = frappe.db.get_value("GSTIN Detail", gstin, "status")
+    gstin_status = get_gstin_status(gstin)
 
     if not gstin_status:
         return
