@@ -1,3 +1,4 @@
+from datetime import timedelta
 from string import whitespace
 
 import frappe
@@ -28,10 +29,10 @@ def get_gstin_info(gstin):
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
     validate_gstin(gstin)
-    response = PublicAPI().get_gstin_info(gstin)
+    response = get_gstin_log(gstin)
 
-    if response.sts:
-        update_gstin_detail(response.gstin, response.sts)
+    if not response:
+        response = PublicAPI().get_gstin_info(gstin)
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
@@ -53,23 +54,36 @@ def get_gstin_info(gstin):
     return gstin_info
 
 
-def update_gstin_detail(gstin, status):
-    """Update GSTIN status and last updated on in `GSTIN Detail` table"""
+def get_gstin_log(gstin):
+    archive_party_information = frappe.get_cached_value(
+        "GST Settings", None, "archive_party_information"
+    )
+    current_date = frappe.utils.now_datetime()
+    archive_date = current_date - timedelta(days=archive_party_information)
 
-    if frappe.db.exists("GSTIN Detail", gstin):
-        gstin_detail = frappe.get_doc("GSTIN Detail", gstin)
-    else:
-        gstin_detail = frappe.new_doc("GSTIN Detail")
-
-    gstin_detail.update(
+    integration_log = frappe.get_cached_doc(
+        "Integration Request",
         {
-            "gstin": gstin,
-            "status": status,
-            "last_updated_on": frappe.utils.now_datetime(),
-        }
+            # "status": "Completed",
+            "url": ("like", "%" + "search"),
+            "data": ("like", "%" + gstin + "%"),
+            "creation": ["between", (archive_date, current_date)],
+        },
     )
 
-    gstin_detail.save(ignore_permissions=True)
+    if not integration_log:
+        return
+
+    gstin_result = frappe.parse_json(integration_log.output)
+
+    return gstin_result
+
+
+@frappe.whitelist()
+def get_gstin_status(gstin: str) -> str:
+    gstin_result = get_gstin_log(gstin)
+
+    return gstin_result.get("sts") or gstin_result.get("status")
 
 
 def _get_address(address):

@@ -122,7 +122,9 @@ function set_gstin_query(doctype) {
             frm._gstin_options_set_for = frm.doc.name;
             const field = frm.get_field("gstin");
             field.df.ignore_validation = true;
-            field.set_data(await india_compliance.get_gstin_options(frm.doc.name, doctype));
+            field.set_data(
+                await india_compliance.get_gstin_options(frm.doc.name, doctype)
+            );
         },
     });
 }
@@ -138,14 +140,14 @@ function set_gst_category(doctype) {
     });
 }
 
-function show_gstin_status_in_description(doctype) {
+function show_gstin_status(doctype) {
     frappe.ui.form.on(doctype, {
-        onload(frm) {
+        gstin(frm) {
             if (!frm.doc.gstin) return;
 
-            frappe.db.get_value("GSTIN Detail", { 'name': frm.doc.gstin }, "status", (r) => {
-                frm.get_field('gstin').set_description(__('{0}', [r.status || ""]));
-            });
-        }
-    })
+            frm.get_field("gstin").set_description(
+                __("{0}", [india_compliance.get_gstin_status(frm.doc.gstin) || ""])
+            );
+        },
+    });
 }

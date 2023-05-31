@@ -34,6 +34,8 @@
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "column_break_ywyb",
+  "archive_party_information",
   "uom_mapping_section",
   "gst_uom_map",
   "accounts_tab",
@@ -274,12 +276,23 @@
    "fieldname": "gst_uom_map",
    "fieldtype": "Table",
    "options": "GST UOM Map"
+  },
+  {
+   "fieldname": "column_break_ywyb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.autofill_party_info",
+   "description": "Fetch GSTIN Info from Integration Request",
+   "fieldname": "archive_party_information",
+   "fieldtype": "Int",
+   "label": "Archive Party Information (In Days)"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-05-18 14:31:43.398745",
+ "modified": "2023-05-31 16:33:17.916269",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

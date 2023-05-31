@@ -84,6 +84,17 @@ Object.assign(india_compliance, {
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
     },
+
+    async get_gstin_status(gstin) {
+        if (!gstin) return;
+
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.utils.gstin_info.get_gstin_status",
+            args: { gstin },
+        });
+
+        return message;
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {
