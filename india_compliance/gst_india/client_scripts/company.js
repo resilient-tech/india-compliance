@@ -7,7 +7,7 @@ validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
 show_overseas_disabled_warning(DOCTYPE);
 set_gstin_query(DOCTYPE);
-show_gstin_status_in_description(DOCTYPE);
+show_gstin_status(DOCTYPE);
 
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {

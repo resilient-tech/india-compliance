@@ -8,7 +8,7 @@ update_gstin_in_other_documents(DOCTYPE);
 show_overseas_disabled_warning(DOCTYPE);
 set_gstin_query(DOCTYPE);
 set_gst_category(DOCTYPE);
-show_gstin_status_in_description(DOCTYPE);
+show_gstin_status(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     gstin(frm) {
