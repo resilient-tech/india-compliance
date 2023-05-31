@@ -61,20 +61,21 @@ def get_gstin_log(gstin):
     current_date = frappe.utils.now_datetime()
     archive_date = current_date - timedelta(days=archive_party_information)
 
-    integration_log = frappe.get_cached_doc(
+    integration_log_output = frappe.get_all(
         "Integration Request",
         {
-            # "status": "Completed",
+            "status": "Completed",
             "url": ("like", "%" + "search"),
             "data": ("like", "%" + gstin + "%"),
             "creation": ["between", (archive_date, current_date)],
         },
+        ["output"],
     )
 
-    if not integration_log:
+    if not integration_log_output:
         return
 
-    gstin_result = frappe.parse_json(integration_log.output)
+    gstin_result = frappe.parse_json(integration_log_output[0].output)
 
     return gstin_result
 
