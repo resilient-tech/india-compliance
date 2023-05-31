@@ -789,12 +789,13 @@ def validate_gstin_status(gstin):
     if not gstin:
         return
 
-    gstin_status = get_gstin_status(gstin)
+    if not (gstin_status := get_gstin_status(gstin)):
+        return
 
     if gstin_status != "Active":
         frappe.throw(
-            _("Billing Address GSTIN is {0}").format(gstin_status),
-            title=_("{0} Invalid Billing Address GSTIN").format(gstin_status),
+            _("Billing Address GSTIN Status is {0}").format(gstin_status),
+            title=_("{0} Invalid Billing Address GSTIN Status").format(gstin_status),
         )
 
 
