@@ -3,7 +3,8 @@ import frappe
 
 def enqueue_integration_request(**kwargs):
     frappe.enqueue(
-        "india_compliance.gst_india.utils.api.create_integration_request", **kwargs
+        "india_compliance.gst_india.utils.api.create_integration_request",
+        **kwargs,
     )
 
 
@@ -14,6 +15,8 @@ def create_integration_request(
     data=None,
     output=None,
     error=None,
+    reference_doctype=None,
+    reference_name=None,
 ):
 
     return frappe.get_doc(
@@ -27,6 +30,8 @@ def create_integration_request(
             "output": pretty_json(output),
             "error": pretty_json(error),
             "status": "Failed" if error else "Completed",
+            "reference_doctype": reference_doctype,
+            "reference_docname": reference_name,
         }
     ).insert(ignore_permissions=True)
 

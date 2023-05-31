@@ -19,7 +19,11 @@ function update_gstin_in_other_documents(doctype) {
                 message += `<br><strong>${__(doctype)}</strong>:<br>`;
 
                 docnames.forEach(docname => {
-                    message += `${frappe.utils.get_form_link(doctype, docname, true)}<br>`;
+                    message += `${frappe.utils.get_form_link(
+                        doctype,
+                        docname,
+                        true
+                    )}<br>`;
                 });
             }
             message += `<br>Do you want to update these with the following new values?
@@ -30,7 +34,11 @@ function update_gstin_in_other_documents(doctype) {
             frappe.confirm(message, function () {
                 frappe.call({
                     method: "india_compliance.gst_india.overrides.party.update_docs_with_previous_gstin",
-                    args: { gstin: gstin || "", gst_category, docs_with_previous_gstin },
+                    args: {
+                        gstin: gstin || "",
+                        gst_category,
+                        docs_with_previous_gstin,
+                    },
                 });
             });
         },
@@ -91,7 +99,7 @@ function show_overseas_disabled_warning(doctype) {
     frappe.ui.form.on(doctype, {
         after_save(frm) {
             if (
-                !frappe.boot.gst_settings.enable_overseas_transactions &&
+                !gst_settings.enable_overseas_transactions &&
                 in_list(["SEZ", "Overseas"], frm.doc.gst_category)
             ) {
                 frappe.msgprint({
@@ -106,6 +114,30 @@ function show_overseas_disabled_warning(doctype) {
     });
 }
 
+function set_gstin_query(doctype) {
+    frappe.ui.form.on(doctype, {
+        async refresh(frm) {
+            if (frm.is_new() || frm._gstin_options_set_for == frm.doc.name) return;
+
+            frm._gstin_options_set_for = frm.doc.name;
+            const field = frm.get_field("gstin");
+            field.df.ignore_validation = true;
+            field.set_data(await india_compliance.get_gstin_options(frm.doc.name, doctype));
+        },
+    });
+}
+
+function set_gst_category(doctype) {
+    frappe.ui.form.on(doctype, {
+        gstin(frm) {
+            frm.set_value(
+                "gst_category",
+                india_compliance.guess_gst_category(frm.doc.gstin, frm.doc.country)
+            );
+        },
+    });
+}
+
 function show_gstin_status_in_description(doctype) {
     frappe.ui.form.on(doctype, {
         onload(frm) {
@@ -115,5 +147,5 @@ function show_gstin_status_in_description(doctype) {
                 frm.get_field('gstin').set_description(__('{0}', [r.status || ""]));
             });
         }
-    });
+    })
 }

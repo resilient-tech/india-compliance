@@ -1,9 +1,10 @@
 import frappe
 
+from india_compliance.gst_india.constants import OVERSEAS_GST_CATEGORIES
 from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
-from india_compliance.gst_india.utils import toggle_custom_fields
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
 # Enable setting only if transaction exists in last 3 years.
 POSTING_DATE_CONDITION = {
@@ -35,7 +36,7 @@ def enable_overseas_transactions(settings):
     for doctype in ("Sales Invoice", "Purchase Invoice"):
         if frappe.db.exists(
             doctype,
-            {"gst_category": ("in", ("Overseas", "SEZ")), **POSTING_DATE_CONDITION},
+            {"gst_category": ("in", OVERSEAS_GST_CATEGORIES), **POSTING_DATE_CONDITION},
         ):
             settings["enable_overseas_transactions"] = 1
             return

@@ -6,27 +6,34 @@ import frappe
 from frappe import _
 from frappe.utils import sbool
 
+from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
 
 
 class BaseAPI:
-    def __init__(self, *args, **kwargs):
-        self.api_name = "GST"
-        self.base_path = ""
-        self.sandbox = frappe.conf.use_gst_api_sandbox or frappe.flags.in_test
-        self.settings = frappe.get_cached_doc("GST Settings")
-        self.default_headers = {
-            "x-api-key": self.settings.get_password("api_secret"),
-        }
+    API_NAME = "GST"
+    BASE_PATH = ""
+    SENSITIVE_HEADERS = ("x-api-key",)
 
-        if not self.settings.enable_api:
+    def __init__(self, *args, **kwargs):
+        self.settings = frappe.get_cached_doc("GST Settings")
+        if not is_api_enabled(self.settings):
             frappe.throw(
                 _("Please enable API in GST Settings to use the {0} API").format(
-                    self.api_name
+                    self.API_NAME
                 )
             )
+
+        self.sandbox_mode = self.settings.sandbox_mode
+        self.default_headers = {
+            "x-api-key": (
+                (self.settings.api_secret and self.settings.get_password("api_secret"))
+                or frappe.conf.ic_api_secret
+            )
+        }
+        self.default_log_values = {}
 
         self.setup(*args, **kwargs)
 
@@ -43,7 +50,7 @@ class BaseAPI:
                 _(
                     "Please set the relevant credentials in GST Settings to use the"
                     " {0} API"
-                ).format(self.api_name),
+                ).format(self.API_NAME),
                 frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
             )
@@ -55,10 +62,10 @@ class BaseAPI:
     def get_url(self, *parts):
         parts = list(parts)
 
-        if self.base_path:
-            parts.insert(0, self.base_path)
+        if self.BASE_PATH:
+            parts.insert(0, self.BASE_PATH)
 
-        if self.sandbox:
+        if self.sandbox_mode:
             parts.insert(0, "test")
 
         return urljoin(BASE_URL, "/".join(part.strip("/") for part in parts))
@@ -92,18 +99,32 @@ class BaseAPI:
             },
         )
 
-        if method == "POST":
-            request_args.json = json
+        log_headers = request_args.headers.copy()
 
-        response_json = None
+        # Mask sensitive headers
+        for header in self.SENSITIVE_HEADERS:
+            if header in log_headers:
+                log_headers[header] = "*****"
+
         log = frappe._dict(
+            **self.default_log_values,
             url=request_args.url,
             data=request_args.params,
-            request_headers=request_args.headers.copy(),
+            request_headers=log_headers,
         )
 
-        # Don't log API secret
-        log.request_headers.pop("x-api-key", None)
+        if method == "POST" and json:
+            request_args.json = json
+
+            if not request_args.params:
+                log.data = json
+            else:
+                log.data = {
+                    "params": request_args.params,
+                    "body": json,
+                }
+
+        response_json = None
 
         try:
             response = requests.request(method, **request_args)
@@ -150,6 +171,13 @@ class BaseAPI:
             log.output = response_json
             enqueue_integration_request(**log)
 
+            if self.sandbox_mode and not frappe.flags.ic_sandbox_message_shown:
+                frappe.msgprint(
+                    _("GST API request was made in Sandbox Mode"),
+                    alert=True,
+                )
+                frappe.flags.ic_sandbox_message_shown = True
+
     def handle_failed_response(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
         pass
@@ -164,9 +192,10 @@ class BaseAPI:
             and response_json.get("error") == "access_denied"
         ):
             frappe.throw(
-                _(
-                    "Error establishing connection to GSP. "
-                    "Please contact India Compliance API Support."
+                _("Error establishing connection to GSP. Please contact {0}.").format(
+                    _("your Service Provider")
+                    if frappe.conf.ic_api_key
+                    else _("India Compliance API Support")
                 ),
                 title=_("GSP Connection Error"),
             )

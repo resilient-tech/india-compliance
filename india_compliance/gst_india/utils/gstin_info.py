@@ -1,3 +1,5 @@
+from string import whitespace
+
 import frappe
 from frappe import _
 
@@ -39,6 +41,7 @@ def get_gstin_info(gstin):
         gstin=response.gstin,
         business_name=titlecase(business_name),
         gst_category=GST_CATEGORIES.get(response.dty, ""),
+        status=response.sts,
     )
 
     if permanent_address := response.get("pradr"):
@@ -75,8 +78,8 @@ def _get_address(address):
     address = address.get("addr", {})
     address_lines = _extract_address_lines(address)
     return {
-        "address_line1": titlecase(address_lines[0]),
-        "address_line2": titlecase(address_lines[1]),
+        "address_line1": address_lines[0],
+        "address_line2": address_lines[1],
         "city": titlecase(address.get("dst")),
         "state": titlecase(address.get("stcd")),
         "pincode": address.get("pncd"),
@@ -87,22 +90,23 @@ def _get_address(address):
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
 
-    STRIP_CHARS = "\n\t ,"
-
     for key in address:
-        address[key] = address[key].strip(STRIP_CHARS)
+        address[key] = address[key].strip(f"{whitespace},")
 
     address_line1 = ", ".join(
-        value for key in ("bno", "flno", "bnm") if (value := address.get(key))
+        titlecase(value)
+        for key in ("bno", "flno", "bnm")
+        if (value := address.get(key))
     )
 
     address_line2 = ", ".join(
-        value for key in ("loc", "city") if (value := address.get(key))
+        titlecase(value) for key in ("loc", "city") if (value := address.get(key))
     )
 
     if not (street := address.get("st")):
         return address_line1, address_line2
 
+    street = titlecase(street)
     if len(address_line1) > len(address_line2):
         address_line2 = f"{street}, {address_line2}"
     else:

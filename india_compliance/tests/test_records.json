@@ -1,0 +1,411 @@
+{
+    "Company": [
+        {
+            "abbr": "_TIRC",
+            "company_name": "_Test Indian Registered Company",
+            "country": "India",
+            "default_currency": "INR",
+            "doctype": "Company",
+            "domain": "Manufacturing",
+            "chart_of_accounts": "Standard",
+            "enable_perpetual_inventory": 0,
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "abbr": "_TIUC",
+            "company_name": "_Test Indian Unregistered Company",
+            "country": "India",
+            "default_currency": "INR",
+            "doctype": "Company",
+            "domain": "Manufacturing",
+            "chart_of_accounts": "Standard",
+            "enable_perpetual_inventory": 0,
+            "gst_category": "Unregistered"
+        },
+        {
+            "abbr": "_TFC",
+            "company_name": "_Test Foreign Company",
+            "country": "United States",
+            "default_currency": "USD",
+            "doctype": "Company",
+            "domain": "Manufacturing",
+            "chart_of_accounts": "Standard",
+            "enable_perpetual_inventory": 0
+        }
+    ],
+    "Item": [
+        {
+            "description": "_Test Trading Goods 1",
+            "doctype": "Item",
+            "is_stock_item": 1,
+            "item_code": "_Test Trading Goods 1",
+            "item_name": "_Test Trading Goods 1",
+            "valuation_rate": 100,
+            "gst_hsn_code": "61149090",
+            "uoms": [
+                {
+                    "conversion_factor": 1,
+                    "uom": "Nos",
+                    "name": "_Test Trading Goods 1"
+                }
+            ],
+            "item_defaults": [
+                {
+                    "name": "_Test Trading Goods 1",
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "expense_account": "Cost of Goods Sold - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Sales - _TIRC"
+                }
+            ]
+        },
+        {
+            "description": "_Test Non GST Item",
+            "doctype": "Item",
+            "is_stock_item": 1,
+            "item_code": "_Test Non GST Item",
+            "item_name": "_Test Non GST Item",
+            "is_non_gst": 1,
+            "valuation_rate": 100,
+            "gst_hsn_code": "27131100",
+            "uoms": [
+                {
+                    "conversion_factor": 1,
+                    "uom": "Nos",
+                    "name": "_Test Non GST Item"
+                }
+            ],
+            "item_defaults": [
+                {
+                    "name": "_Test Non GST Item",
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "expense_account": "Cost of Goods Sold - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Sales - _TIRC"
+                }
+            ]
+        },
+        {
+            "description": "_Test Service Item",
+            "doctype": "Item",
+            "item_code": "_Test Service Item",
+            "item_name": "_Test Service Item",
+            "valuation_rate": 100,
+            "item_group": "Services",
+            "gst_hsn_code": "999900",
+            "uoms": [
+                {
+                    "conversion_factor": 1,
+                    "uom": "Nos",
+                    "name": "_Test Service Item"
+                }
+            ],
+            "item_defaults": [
+                {
+                    "name": "_Test Service Item",
+                    "company": "_Test Indian Registered Company",
+                    "default_warehouse": "Stores - _TIRC",
+                    "buying_cost_center": "Main - _TIRC",
+                    "selling_cost_center": "Main - _TIRC",
+                    "income_account": "Service - _TIRC"
+                }
+            ]
+        }
+    ],
+    "Customer": [
+        {
+            "name": "_Test Registered Customer",
+            "customer_name": "_Test Registered Customer",
+            "customer_type": "Company",
+            "gstin": "24AANFA2641L1ZF",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "name": "_Test Registered Composition Customer",
+            "customer_name": "_Test Registered Composition Customer",
+            "customer_type": "Individual",
+            "gstin": "29AABCR1718E1ZL",
+            "gst_category": "Registered Composition"
+        },
+        {
+            "name": "_Test Unregistered Customer",
+            "customer_name": "_Test Unregistered Customer",
+            "customer_type": "Individual",
+            "gstin": "",
+            "gst_category": "Unregistered"
+        }
+    ],
+    "Supplier": [
+        {
+            "name": "_Test Registered Supplier",
+            "supplier_name": "_Test Registered Supplier",
+            "supplier_type": "Company",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "name": "_Test Registered Composition Supplier",
+            "supplier_name": "_Test Registered Composition Supplier",
+            "supplier_type": "Individual",
+            "gstin": "33AAAAR6720M1ZG",
+            "gst_category": "Registered Composition"
+        },
+        {
+            "name": "_Test Registered InterState Supplier",
+            "supplier_name": "_Test Registered InterState Supplier",
+            "supplier_type": "Individual",
+            "gstin": "33AAAAR6720M1ZG",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "name": "_Test Unregistered Supplier",
+            "supplier_name": "_Test Unregistered Supplier",
+            "supplier_type": "Individual",
+            "gstin": "",
+            "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Foreign Supplier",
+            "supplier_name": "_Test Foreign Supplier",
+            "supplier_type": "Individual",
+            "gstin": "",
+            "gst_category": "Overseas"
+        },
+        {
+            "name": "_Test Transporter with Enrolment No",
+            "supplier_name": "_Test Transporter with Enrolment No",
+            "supplier_type": "Individual",
+            "is_transporter": 1,
+            "gst_transporter_id": "88AAACD8017H1ZX",
+            "gstin": "",
+            "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Common Supplier",
+            "supplier_name": "_Test Common Supplier",
+            "supplier_type": "Company",
+            "gstin": "05AAACG2140A1ZL",
+            "gst_category": "Registered Regular",
+            "is_transporter": 1
+        }
+    ],
+    "Address": [
+        {
+            "name": "_Test Indian Registered Company-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
+                }
+            ]
+        },
+        {
+            "name": "_Test Indian Unregistered Company-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 2",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Unregistered Company"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Customer-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 3",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AANFA2641L1ZF",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Customer-Billing-1",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 4",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AANCA4892J1Z8",
+            "gst_category": "SEZ",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Composition Customer-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 6",
+            "city": "Test City",
+            "state": "Karnataka",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "29AABCR1718E1ZL",
+            "gst_category": "Registered Composition",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Registered Composition Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Supplier-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 7",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AABCR6898M1ZN",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Supplier-Billing-1",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 7",
+            "city": "Test City",
+            "state": "Texas",
+            "pincode": "75001",
+            "country": "United States",
+            "gstin": "",
+            "gst_category": "Overseas",
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Registered Composition Supplier-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 8",
+            "city": "Test City",
+            "state": "Tamil Nadu",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "33AAAAR6720M1ZG",
+            "gst_category": "Registered Composition",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Registered Composition Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Indian Registered Company-Shipping",
+            "address_type": "Shipping",
+            "address_line1": "Test Address - 5",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular",
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
+                }
+            ]
+        }
+    ],
+    "POS Profile": [
+        {
+            "name": "_Test POS Profile",
+            "company": "_Test Indian Registered Company",
+            "warehouse": "Stores - _TIRC",
+            "write_off_account": "Write Off - _TIRC",
+            "write_off_cost_center": "Main - _TIRC",
+            "payments": [
+                {
+                    "name": "tirc",
+                    "mode_of_payment": "Cash",
+                    "default": 1
+                }
+            ]
+        },
+        {
+            "name": "_Test POS Profile 2",
+            "company": "_Test Indian Unregistered Company",
+            "warehouse": "Stores - _TIUC",
+            "write_off_account": "Write Off - _TIUC",
+            "write_off_cost_center": "Main - _TIUC",
+            "payments": [
+                {
+                    "name": "tiuc",
+                    "mode_of_payment": "Cash",
+                    "default": 1
+                }
+            ]
+        },
+        {
+            "name": "_Test POS Profile 3",
+            "company": "_Test Foreign Company",
+            "warehouse": "Stores - _TFC",
+            "write_off_account": "Write Off - _TFC",
+            "write_off_cost_center": "Main - _TFC",
+            "payments": [
+                {
+                    "name": "tfc",
+                    "mode_of_payment": "Cash",
+                    "default": 1
+                }
+            ]
+        }
+    ]
+}

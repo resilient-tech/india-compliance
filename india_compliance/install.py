@@ -2,6 +2,8 @@ import click
 
 import frappe
 
+from india_compliance.audit_trail.setup import setup_fixtures as setup_audit_trail
+from india_compliance.gst_india.constants import BUG_REPORT_URL
 from india_compliance.gst_india.setup import after_install as setup_gst
 from india_compliance.income_tax_india.setup import after_install as setup_income_tax
 
@@ -18,6 +20,9 @@ POST_INSTALL_PATCHES = (
     "update_gst_accounts",  # this is an India Compliance patch, but needs priority
     "update_itc_amounts",
     ## India Compliance
+    "update_state_name_to_puducherry",
+    "rename_import_of_capital_goods",
+    "update_hsn_code",
     "create_company_fixtures",
     "merge_utgst_account_into_sgst_account",
     "remove_consumer_gst_category",
@@ -25,16 +30,38 @@ POST_INSTALL_PATCHES = (
     "update_reverse_charge_and_export_type",
     "update_gstin_and_gst_category",
     "update_e_invoice_fields_and_logs",
-    "delete_gst_e_invoice_print_format",
     "set_default_gst_settings",
+    "remove_deprecated_docs",
     "remove_old_fields",
+    "update_custom_role_for_e_invoice_summary",
 )
 
 
 def after_install():
-    setup_income_tax()
-    setup_gst()
-    run_post_install_patches()
+    try:
+        setup_audit_trail()
+
+        print("Setting up Income Tax...")
+        setup_income_tax()
+
+        print("Setting up GST...")
+        setup_gst()
+        disable_ic_account_page()
+
+        print("Patching Existing Data...")
+        run_post_install_patches()
+
+    except Exception as e:
+        click.secho(
+            (
+                "Installation for India Compliance failed due to an error."
+                " Please try re-installing the app or"
+                f" report the issue on {BUG_REPORT_URL} if not resolved."
+            ),
+            fg="bright_red",
+        )
+        raise e
+
     click.secho("Thank you for installing India Compliance!", fg="green")
 
 
@@ -42,6 +69,24 @@ def run_post_install_patches():
     if not frappe.db.exists("Company", {"country": "India"}):
         return
 
-    print("\nPatching Existing Data...")
-    for patch in POST_INSTALL_PATCHES:
-        frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()
+    frappe.flags.in_patch = True
+
+    try:
+        for patch in POST_INSTALL_PATCHES:
+            frappe.get_attr(f"india_compliance.patches.post_install.{patch}.execute")()
+
+    finally:
+        frappe.flags.in_patch = False
+
+
+def disable_ic_account_page():
+    """
+    Disable the India Compliance Account Page if API secret is set in frappe.conf
+    """
+
+    if not frappe.conf.ic_api_secret or frappe.db.exists(
+        "Custom Role", {"page": "india-compliance-account"}
+    ):
+        return
+
+    frappe.get_doc(doctype="Custom Role", page="india-compliance-account").insert()

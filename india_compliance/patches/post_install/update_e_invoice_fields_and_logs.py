@@ -1,6 +1,7 @@
 import frappe
 
 from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.utils.custom_fields import delete_custom_fields
 
 user = None
 
@@ -13,11 +14,12 @@ def execute():
     migrate_e_invoice_fields()
     migrate_e_invoice_request_log()
     delete_e_invoice_fields()
-    delete_old_doctypes()
-    delete_old_reports()
 
 
 def migrate_e_waybill_fields():
+    if not frappe.db.has_column("Sales Invoice", "eway_bill_validity"):
+        return
+
     docs = frappe.get_all(
         "Sales Invoice",
         filters={"eway_bill_validity": ("not in", ("", None))},
@@ -64,6 +66,9 @@ def migrate_e_waybill_fields():
 
 
 def migrate_e_invoice_fields():
+    if not frappe.db.has_column("Sales Invoice", "irn_cancelled"):
+        return
+
     docs = frappe.get_all(
         "Sales Invoice",
         filters={"irn": ("not in", ("", None))},
@@ -120,9 +125,21 @@ def migrate_e_invoice_fields():
 
 
 def migrate_e_invoice_request_log():
-    docs = frappe.get_all(
+    if not frappe.db.table_exists("E Invoice Request Log"):
+        return
+
+    if frappe.db.exists(
+        "Integration Request",
+        {"integration_request_service": "Migrated from e-Invoice Request Log"},
+    ):
+        return
+
+    # Using db.get_values instead of get_all to avoid retrieving meta,
+    # since the DocType E Invoice Request Log gets deleted in ERPNext patch
+    docs = frappe.db.get_values(
         "E Invoice Request Log",
-        fields=(
+        filters={},
+        fieldname=(
             "user",
             "creation",
             "url",
@@ -135,6 +152,7 @@ def migrate_e_invoice_request_log():
             "name",
             "owner",
         ),
+        as_dict=True,
     )
 
     values = []
@@ -300,55 +318,3 @@ def delete_e_invoice_fields():
         ]
     }
     delete_custom_fields(FIELDS_TO_DELETE)
-
-
-def delete_old_doctypes():
-    for doctype in ("E Invoice Settings", "E Invoice User", "E Invoice Request Log"):
-        frappe.delete_doc(
-            "DocType",
-            doctype,
-            force=True,
-            ignore_permissions=True,
-            ignore_missing=True,
-        )
-
-
-def delete_old_reports():
-    for report in ("E-Invoice Summary",):
-        frappe.delete_doc(
-            "Report",
-            report,
-            force=True,
-            ignore_permissions=True,
-            ignore_on_trash=True,
-            ignore_missing=True,
-        )
-
-
-### Helper Function
-
-
-def delete_custom_fields(custom_fields):
-    """
-    :param custom_fields: a dict like `{'Sales Invoice': [{fieldname: 'test', ...}]}`
-    """
-
-    for doctypes, fields in custom_fields.items():
-        if isinstance(fields, dict):
-            # only one field
-            fields = [fields]
-
-        if isinstance(doctypes, str):
-            # only one doctype
-            doctypes = (doctypes,)
-
-        for doctype in doctypes:
-            frappe.db.delete(
-                "Custom Field",
-                {
-                    "fieldname": ("in", [field["fieldname"] for field in fields]),
-                    "dt": doctype,
-                },
-            )
-
-            frappe.clear_cache(doctype=doctype)

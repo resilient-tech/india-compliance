@@ -5,7 +5,7 @@ from frappe.utils import sbool
 from frappe.utils.password import decrypt
 
 from india_compliance.gst_india.constants.custom_fields import E_INVOICE_FIELDS
-from india_compliance.gst_india.utils import toggle_custom_fields
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
 
 def execute():
@@ -18,24 +18,31 @@ def execute():
         .run()
     )
 
-    if old_settings.applicable_from:
-        frappe.db.set_value(
-            "GST Settings",
-            "GST Settings",
-            "e_invoice_applicable_from",
-            old_settings.applicable_from,
-        )
+    if not old_settings.applicable_from:
+        return
+
+    gst_settings = frappe.get_doc("GST Settings")
+    gst_settings.e_invoice_applicable_from = old_settings.applicable_from
 
     if old_credentials := get_credentials_from_e_invoice_user():
-        gst_settings = frappe.get_single("GST Settings")
         gst_settings.extend("credentials", old_credentials)
-        gst_settings.update_child_table("credentials")
+        frappe.db.delete("E Invoice User")
+
+    gst_settings.flags.update(
+        ignore_mandatory=True,
+        ignore_validate=True,
+        ignore_permissions=True,
+    )
+
+    gst_settings.save()
 
     if sbool(old_settings.enable):
         toggle_custom_fields(E_INVOICE_FIELDS, True)
         click.secho(
-            "Your e-Invoice Settings have been migrated to GST Settings."
-            " Please enable the e-Invoice API in GST Settings manually.\n",
+            (
+                "Your e-Invoice Settings have been migrated to GST Settings."
+                " Please enable the e-Invoice API in GST Settings manually.\n"
+            ),
             fg="yellow",
         )
 

@@ -15,21 +15,40 @@ def delete_gst_settings_for_company(doc, method=None):
         row for row in gst_settings.get("gst_accounts", []) if row.company != doc.name
     ]
 
+    gst_settings.flags.ignore_mandatory = True
     gst_settings.save()
 
 
-def create_default_tax_templates(doc, method=None):
-    if not frappe.flags.country_change:
+def make_company_fixtures(doc, method=None):
+    if not frappe.flags.country_change or doc.country != "India":
         return
 
-    make_default_tax_templates(doc.name, doc.country)
+    create_company_fixtures(doc.name)
+
+
+def create_company_fixtures(company):
+    make_default_tax_templates(company)
+    make_default_customs_accounts(company)
+
+
+def make_default_customs_accounts(company):
+    create_default_company_account(
+        company,
+        account_name="Customs Duty Payable",
+        parent="Duties and Taxes",
+        default_fieldname="default_customs_payable_account",
+    )
+
+    create_default_company_account(
+        company,
+        account_name="Customs Duty Expense",
+        parent="Stock Expenses",
+        default_fieldname="default_customs_expense_account",
+    )
 
 
 @frappe.whitelist()
-def make_default_tax_templates(company: str, country: str):
-    if country != "India":
-        return
-
+def make_default_tax_templates(company: str):
     if not frappe.db.exists("Company", company):
         frappe.throw(
             _("Company {0} does not exist yet. Taxes setup aborted.").format(company)
@@ -40,15 +59,6 @@ def make_default_tax_templates(company: str, country: str):
     default_taxes = frappe.get_file_json(get_data_file_path("tax_defaults.json"))
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
-
-
-def update_accounts_settings_for_taxes(doc, method=None):
-    if doc.country != "India" or frappe.db.count("Company") > 1:
-        return
-
-    frappe.db.set_value(
-        "Accounts Settings", None, "add_taxes_from_item_tax_template", 0
-    )
 
 
 def update_gst_settings(company):
@@ -103,6 +113,10 @@ def update_gst_settings(company):
         "Reverse Charge",
     )
 
+    # Ignore mandatory during install, some values may not be set by post install patch
+    if frappe.flags.in_install:
+        gst_settings.flags.ignore_mandatory = True
+
     gst_settings.save()
 
 
@@ -134,4 +148,36 @@ def add_accounts_in_gst_settings(
                 "igst_account": gst_accounts.get(account_names[2]),
                 "account_type": account_type,
             },
+        )
+
+
+def create_default_company_account(
+    company,
+    account_name,
+    parent,
+    default_fieldname=None,
+):
+    parent_account = frappe.db.get_value(
+        "Account", filters={"account_name": parent, "company": company}
+    )
+
+    if not parent_account:
+        return
+
+    account = frappe.get_doc(
+        {
+            "doctype": "Account",
+            "account_name": account_name,
+            "parent_account": parent_account,
+            "company": company,
+            "is_group": 0,
+            "account_type": "Tax",
+        }
+    )
+    account.flags.ignore_permissions = True
+    account.insert(ignore_if_duplicate=True)
+
+    if default_fieldname:
+        frappe.db.set_value(
+            "Company", company, default_fieldname, account.name, update_modified=False
         )

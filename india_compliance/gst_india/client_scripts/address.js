@@ -5,12 +5,13 @@ const DOCTYPE = "Address";
 validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
 show_overseas_disabled_warning(DOCTYPE);
+set_gst_category(DOCTYPE);
 show_gstin_status_in_description(DOCTYPE);
 
 
 frappe.ui.form.on(DOCTYPE, {
     country(frm) {
-        ic.set_state_options(frm);
+        india_compliance.set_state_options(frm);
 
         if (!frm.doc.country) return;
 
@@ -21,13 +22,13 @@ frappe.ui.form.on(DOCTYPE, {
         }
     },
     async refresh(frm) {
-        ic.set_state_options(frm);
+        india_compliance.set_state_options(frm);
 
         // set default values for GST fields
         if (!frm.is_new() || !frm.doc.links || frm.doc.gstin) return;
 
         const row = frm.doc.links[0];
-        if (!ic.gstin_doctypes.includes(row.link_doctype)) return;
+        if (!frappe.boot.gst_party_types.includes(row.link_doctype)) return;
 
         // Try to get clean doc from locals
         let doc = frappe.get_doc(row.link_doctype, row.link_name);

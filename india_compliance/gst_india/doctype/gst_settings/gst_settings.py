@@ -12,28 +12,38 @@ from india_compliance.gst_india.constants.custom_fields import (
     E_WAYBILL_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
-from india_compliance.gst_india.utils import toggle_custom_fields
+from india_compliance.gst_india.page.india_compliance_account import (
+    _disable_api_promo,
+    post_login,
+)
+from india_compliance.gst_india.utils import can_enable_api
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
+
+E_INVOICE_START_DATE = "2021-01-01"
 
 
 class GSTSettings(Document):
+    def onload(self):
+        if can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed"):
+            return
+
+        self.set_onload("can_show_promo", True)
+
     def validate(self):
+        self.update_dependant_fields()
+        self.validate_enable_api()
         self.validate_gst_accounts()
         self.validate_e_invoice_applicability_date()
-        self.update_dependant_fields()
         self.validate_credentials()
+        self.clear_api_auth_session()
+
+    def clear_api_auth_session(self):
+        if self.has_value_changed("api_secret") and self.api_secret:
+            post_login()
 
     def update_dependant_fields(self):
-        if not self.api_secret:
-            self.enable_api = 0
-
-        if not self.enable_api:
-            self.enable_e_invoice = 0
-
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
-
-        if self.enable_e_invoice and self.auto_generate_e_invoice:
-            self.auto_generate_e_waybill = 1
 
     def on_update(self):
         self.update_custom_fields()
@@ -46,7 +56,6 @@ class GSTSettings(Document):
         company_wise_account_types = {}
 
         for row in self.gst_accounts:
-
             # Validate Duplicate Accounts
             for fieldname in GST_ACCOUNT_FIELDS:
                 account = row.get(fieldname)
@@ -94,28 +103,49 @@ class GSTSettings(Document):
         if not self.enable_api or not self.enable_e_invoice:
             return
 
-        if not self.e_invoice_applicable_from:
+        if (
+            not self.e_invoice_applicable_from
+            and not self.apply_e_invoice_only_for_selected_companies
+        ):
             frappe.throw(
                 _("{0} is mandatory for enabling e-Invoice").format(
                     frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
                 )
             )
 
-        if getdate(self.e_invoice_applicable_from) < getdate("2021-01-01"):
+        if self.e_invoice_applicable_from and (
+            getdate(self.e_invoice_applicable_from) < getdate(E_INVOICE_START_DATE)
+        ):
             frappe.throw(
-                _("{0} cannot be before 2021-01-01").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
+                _("{0} date cannot be before {1}").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")),
+                    E_INVOICE_START_DATE,
                 )
             )
 
+        if self.apply_e_invoice_only_for_selected_companies:
+            self.validate_e_invoice_applicable_companies()
+
     def validate_credentials(self):
-        if (
-            self.enable_api
-            and (self.enable_e_invoice or self.enable_e_waybill)
-            and all(
-                credential.service != "e-Waybill / e-Invoice"
-                for credential in self.credentials
+        if not self.enable_api:
+            return
+
+        for credential in self.credentials:
+            if credential.service == "Returns" or credential.password:
+                continue
+
+            frappe.throw(
+                _(
+                    "Row #{0}: Password is required when setting a GST Credential"
+                    " for {1}"
+                ).format(credential.idx, credential.service),
+                frappe.MandatoryError,
+                _("Missing Required Field"),
             )
+
+        if (self.enable_e_invoice or self.enable_e_waybill) and all(
+            credential.service != "e-Waybill / e-Invoice"
+            for credential in self.credentials
         ):
             frappe.msgprint(
                 # TODO: Add Link to Documentation.
@@ -126,3 +156,68 @@ class GSTSettings(Document):
                 indicator="yellow",
                 alert=True,
             )
+
+    def validate_enable_api(self):
+        if (
+            self.enable_api
+            and self.has_value_changed("enable_api")
+            and not can_enable_api(self)
+        ):
+            frappe.throw(
+                _(
+                    "Please counfigure your India Compliance Account to "
+                    "enable API features"
+                )
+            )
+
+        if (
+            self.sandbox_mode
+            and self.autofill_party_info
+            and self.has_value_changed("sandbox_mode")
+        ):
+            frappe.msgprint(
+                _(
+                    "Autofill Party Information based on GSTIN is not supported in sandbox mode"
+                ),
+            )
+
+    def validate_e_invoice_applicable_companies(self):
+        if not self.e_invoice_applicable_companies:
+            frappe.throw(
+                _(
+                    "You must select at least one company to which e-Invoice is Applicable"
+                )
+            )
+
+        company_list = []
+        for row in self.e_invoice_applicable_companies:
+            if not row.applicable_from:
+                frappe.throw(
+                    _("Row #{0}: {1} is mandatory for enabling e-Invoice").format(
+                        row.idx, frappe.bold(row.meta.get_label("applicable_from"))
+                    )
+                )
+
+            if getdate(row.applicable_from) < getdate(E_INVOICE_START_DATE):
+                frappe.throw(
+                    _("Row #{0}: {1} date cannot be before {2}").format(
+                        row.idx,
+                        frappe.bold(row.meta.get_label("applicable_from")),
+                        E_INVOICE_START_DATE,
+                    )
+                )
+
+            if row.company in company_list:
+                frappe.throw(
+                    _("Row #{0}: {1} {2} appears multiple times").format(
+                        row.idx, row.meta.get_label("company"), frappe.bold(row.company)
+                    )
+                )
+
+            company_list.append(row.company)
+
+
+@frappe.whitelist()
+def disable_api_promo():
+    if frappe.has_permission("GST Settings", "write"):
+        _disable_api_promo()

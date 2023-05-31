@@ -1,10 +1,29 @@
+import frappe
+from frappe import _
+
 from india_compliance.gst_india.api_classes.base import BaseAPI
 
 
 class PublicAPI(BaseAPI):
+    API_NAME = "GST Public"
+    BASE_PATH = "commonapi"
+
     def setup(self):
-        self.api_name = "GST Public"
-        self.base_path = "commonapi"
+        if self.sandbox_mode:
+            frappe.throw(
+                _(
+                    "Autofill Party Information based on GSTIN is not supported in sandbox mode"
+                )
+            )
 
     def get_gstin_info(self, gstin):
-        return self.get("search", params={"action": "TP", "gstin": gstin})
+        response = self.get("search", params={"action": "TP", "gstin": gstin})
+        if self.sandbox_mode:
+            response.update(
+                {
+                    "tradeNam": "Resilient Tech",
+                    "lgnm": "Resilient Tech",
+                }
+            )
+
+        return response
