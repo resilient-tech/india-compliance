@@ -451,7 +451,7 @@ class EInvoiceData(GSTTransactionData):
             # e-waybill threshold is not met
             self.transaction_details.grand_total < self.settings.e_waybill_threshold
             # e-waybill auto-generation is disabled by user
-            or not self.settings.auto_generate_e_way_with_e_invoice
+            or not self.settings.generate_e_waybill_with_e_invoice
         ):
             return
 
