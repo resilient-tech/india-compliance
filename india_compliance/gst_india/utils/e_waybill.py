@@ -76,9 +76,9 @@ def _fetch_active_e_waybills(doc, ewaybill_date):
         return send_updated_doc(doc)
 
     frappe.msgprint(
-        _(
-            "Could not fetch e-Waybill related to Sales Invoice {0}"
-        ).format(str(doc.name)),
+        _("Could not fetch e-Waybill related to Sales Invoice {0}").format(
+            str(doc.name)
+        ),
         _("Warning"),
         indicator="yellow",
     )
@@ -552,7 +552,7 @@ class EWaybillData(GSTTransactionData):
             "cancelRsnCode": CANCEL_REASON_CODES[values.reason],
             "cancelRmrk": values.remark if values.remark else values.reason,
         }
-    
+
     def get_data_for_fetching(self, date):
         return {
             "date": self.get_parsed_date(date),

@@ -40,7 +40,7 @@ function setup_e_waybill_actions(doctype) {
                         () => show_generate_e_waybill_dialog(frm),
                         "e-Waybill"
                     );
-                    
+
                     frm.add_custom_button(
                         __("Fetch"),
                         () => show_fetch_e_waybill_dialog(frm),
