@@ -17,3 +17,4 @@ india_compliance.patches.post_install.rename_import_of_capital_goods
 execute:from india_compliance.audit_trail.setup import create_custom_fields, CUSTOM_FIELDS; create_custom_fields(CUSTOM_FIELDS)
 india_compliance.patches.post_install.update_hsn_code
 execute:from india_compliance.gst_india.setup import map_default_uoms; map_default_uoms()
+india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice

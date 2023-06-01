@@ -147,6 +147,7 @@ def set_default_gst_settings():
         "attach_e_waybill_print": 1,
         "auto_generate_e_waybill": 1,
         "auto_generate_e_invoice": 1,
+        "generate_e_waybill_with_e_invoice": 1,
         "e_invoice_applicable_from": nowdate(),
         "auto_fill_party_info": 1,
     }
