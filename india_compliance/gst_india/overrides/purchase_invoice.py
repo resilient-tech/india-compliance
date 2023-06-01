@@ -46,3 +46,18 @@ def onload(doc, method):
             {"purchase_invoice": doc.name, "docstatus": 1},
         ),
     )
+
+
+def get_dashboard_data(data):
+    transactions = data.setdefault("transactions", [])
+    reference_section = next(
+        (row for row in transactions if row.get("label") == "Reference"), None
+    )
+
+    if reference_section is None:
+        reference_section = {"label": "Reference", "items": []}
+        transactions.append(reference_section)
+
+    reference_section["items"].append("Bill of Entry")
+
+    return data
