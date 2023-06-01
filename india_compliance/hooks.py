@@ -18,7 +18,9 @@ before_uninstall = "india_compliance.uninstall.before_uninstall"
 
 setup_wizard_requires = "assets/india_compliance/js/setup_wizard.js"
 setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
-setup_wizard_stages = "india_compliance.audit_trail.setup.get_setup_wizard_stages"
+setup_wizard_stages = (
+    "india_compliance.setup_wizard.setup_wizard.get_setup_wizard_stages"
+)
 
 app_include_js = "india_compliance.bundle.js"
 

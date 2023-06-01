@@ -174,6 +174,12 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def guess_gst_category(gstin: str) -> str:
+    for category, regex in GSTIN_FORMATS.items():
+        if regex.match(gstin):
+            return category
+
+
 def get_data_file_path(file_name):
     return frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
 
