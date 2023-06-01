@@ -65,7 +65,8 @@ def setup_company_gstin_details(args):
         return
 
     gstin_info = get_gstin_info(args.company_gstin)
-    create_address(args.company_name, gstin_info.permanent_address)
+    if gstin_info.permanent_address:
+        create_address(args.company_name, gstin_info.permanent_address)
 
 
 def create_address(company_name: str, address: dict) -> None:
