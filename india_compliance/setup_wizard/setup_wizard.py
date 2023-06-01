@@ -44,18 +44,18 @@ def get_setup_wizard_stages(args=None):
 # A utility functions to perform task on setup wizard stages
 
 
-def configure_audit_trail(args):
-    if args.enable_audit_trail:
+def configure_audit_trail(setup_args):
+    if setup_args.enable_audit_trail:
         enable_audit_trail()
 
 
-def setup_company_gstin_details(args):
-    if not args.company_gstin:
+def setup_company_gstin_details(setup_args):
+    if not setup_args.company_gstin:
         return
 
-    company_doc = frappe.get_cached_doc("Company", args.company_name)
-    company_doc.gstin = args.company_gstin
-    company_doc.gst_category = guess_gst_category(args.company_gstin)
+    company_doc = frappe.get_cached_doc("Company", setup_args.company_name)
+    company_doc.gstin = setup_args.company_gstin
+    company_doc.gst_category = guess_gst_category(setup_args.company_gstin)
     validate_pan(company_doc)
     company_doc.save()
 
@@ -64,9 +64,9 @@ def setup_company_gstin_details(args):
     ):
         return
 
-    gstin_info = get_gstin_info(args.company_gstin)
+    gstin_info = get_gstin_info(setup_args.company_gstin)
     if gstin_info.permanent_address:
-        create_address(args.company_name, gstin_info.permanent_address)
+        create_address(setup_args.company_name, gstin_info.permanent_address)
 
 
 def create_address(company_name: str, address: dict) -> None:
