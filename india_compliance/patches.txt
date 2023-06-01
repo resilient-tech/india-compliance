@@ -17,4 +17,8 @@ india_compliance.patches.post_install.rename_import_of_capital_goods
 execute:from india_compliance.audit_trail.setup import create_custom_fields, CUSTOM_FIELDS; create_custom_fields(CUSTOM_FIELDS)
 india_compliance.patches.post_install.update_hsn_code
 execute:from india_compliance.gst_india.setup import map_default_uoms; map_default_uoms()
+<<<<<<< HEAD
 india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice
+=======
+india_compliance.patches.v14.set_correct_root_account_for_rcm
+>>>>>>> 96c38180 (fix(patch): update reverse charge accounts with root type as liability)
