@@ -125,7 +125,7 @@ CUSTOM_FIELDS = {
         "fieldtype": "Check",
         "insert_after": "is_reverse_charge",
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
+        "depends_on": 'eval:doc.gst_category == "SEZ" || (doc.gst_category == "Overseas" && doc.place_of_supply == "96-Other Countries")',
         "default": 0,
         "translatable": 0,
     },
@@ -212,7 +212,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "gst_col_break",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' ",
+            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
             "length": 15,
             "translatable": 0,
         },
@@ -222,7 +222,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "port_code",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' ",
+            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
             "length": 50,
             "translatable": 0,
         },
@@ -232,7 +232,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Date",
             "insert_after": "shipping_bill_number",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' ",
+            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
         },
     ],
     # Transaction Item Fields
@@ -307,7 +307,7 @@ CUSTOM_FIELDS = {
             "insert_after": "shipping_address",
             "depends_on": (
                 "eval:doc.company_gstin && doc.gst_category === 'Overseas' &&"
-                " gst_settings.enable_e_waybill"
+                " doc.place_of_supply == '96-Other Countries' && gst_settings.enable_e_waybill"
             ),
         },
         {

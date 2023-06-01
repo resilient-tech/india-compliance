@@ -9,8 +9,10 @@ import frappe
 from frappe import _
 from frappe.utils import flt, formatdate, getdate
 
-from india_compliance.gst_india.constants import OVERSEAS_GST_CATEGORIES
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    is_overseas_transaction,
+)
 
 B2C_LIMIT = 2_50_000
 
@@ -351,14 +353,17 @@ class Gstr1Report(object):
 
         if self.filters.get("type_of_business") == "B2C Large":
             conditions += """ AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
-				AND grand_total > {0} AND is_return != 1 AND is_debit_note !=1 AND gst_category ='Unregistered' """.format(
+				AND grand_total > {0} AND is_return != 1 AND is_debit_note !=1
+                AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
+                AND SUBSTR(place_of_supply, 1, 2) != '96'""".format(
                 B2C_LIMIT
             )
 
         elif self.filters.get("type_of_business") == "B2C Small":
             conditions += """ AND (
 				SUBSTR(place_of_supply, 1, 2) = SUBSTR(company_gstin, 1, 2)
-					OR grand_total <= {0}) AND gst_category ='Unregistered' """.format(
+					OR grand_total <= {0}) AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
+                    AND SUBSTR(place_of_supply, 1, 2) != '96' """.format(
                 B2C_LIMIT
             )
 
@@ -371,7 +376,7 @@ class Gstr1Report(object):
 				AND IFNULL(gst_category, '') in ('Unregistered', 'Overseas')"""
 
         elif self.filters.get("type_of_business") == "EXPORT":
-            conditions += """ AND is_return !=1 and gst_category = 'Overseas' """
+            conditions += """ AND is_return !=1 and gst_category = 'Overseas' and place_of_supply = '96-Other Countries' """
 
         conditions += " AND IFNULL(billing_address_gstin, '') != company_gstin"
 
@@ -483,25 +488,24 @@ class Gstr1Report(object):
             )
 
         # Build itemised tax for export invoices where tax table is blank
-        for invoice, items in self.invoice_items.items():
+        for invoice_no, items in self.invoice_items.items():
             if (
-                invoice in self.items_based_on_tax_rate
-                or invoice in unidentified_gst_accounts_invoice
+                invoice_no in self.items_based_on_tax_rate
+                or invoice_no in unidentified_gst_accounts_invoice
             ):
                 continue
 
-            if (
-                not self.invoices.get(invoice, {}).get("is_export_with_gst")
-                and self.invoices.get(invoice, {}).get("gst_category")
-                in OVERSEAS_GST_CATEGORIES
+            invoice = self.invoices.get(invoice_no, {})
+            if not invoice.get("is_export_with_gst") and is_overseas_transaction(
+                "Sales Invoice", invoice.gst_category, invoice.place_of_supply
             ):
-                self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
+                self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(
                     0, []
                 ).extend(items)
 
             # Show invoice with all items are in nil exempt or non gst
-            if invoice in self.nil_exempt_non_gst:
-                self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
+            if invoice_no in self.nil_exempt_non_gst:
+                self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(
                     0, []
                 ).extend(items)
 
