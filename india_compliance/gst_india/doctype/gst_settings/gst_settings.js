@@ -29,6 +29,7 @@ frappe.ui.form.on("GST Settings", {
     },
     enable_e_invoice: set_auto_generate_e_waybill,
     auto_generate_e_invoice: set_auto_generate_e_waybill,
+    generate_e_waybill_with_e_invoice: set_auto_generate_e_waybill,
     after_save(frm) {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
@@ -94,5 +95,8 @@ function show_ic_api_promo(frm) {
 function set_auto_generate_e_waybill(frm) {
     if (!frm.doc.enable_e_invoice) return;
 
-    frm.set_value("auto_generate_e_waybill", frm.doc.auto_generate_e_invoice);
+    frm.set_value(
+        "auto_generate_e_waybill",
+        frm.doc.auto_generate_e_invoice && frm.doc.generate_e_waybill_with_e_invoice
+    );
 }

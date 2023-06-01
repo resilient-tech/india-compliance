@@ -18,3 +18,4 @@ execute:from india_compliance.audit_trail.setup import create_custom_fields, CUS
 india_compliance.patches.post_install.update_hsn_code
 execute:from india_compliance.gst_india.setup import map_default_uoms; map_default_uoms()
 india_compliance.patches.v14.set_correct_root_account_for_rcm
+india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice
