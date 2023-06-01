@@ -121,15 +121,23 @@ function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
         gst_category(frm) {
             const { enable_overseas_transactions } = gst_settings;
-            if (
-                !["SEZ", "Overseas"].includes(frm.doc.gst_category) ||
-                enable_overseas_transactions
-            )
-                return;
+            if (!is_overseas_transaction(frm) || enable_overseas_transactions) return;
 
             frappe.throw(
                 __("Please enable SEZ / Overseas transactions in GST Settings first")
             );
         },
     });
+}
+
+function is_overseas_transaction(frm) {
+    if (frm.doc.gst_category === "SEZ") return true;
+
+    if (frappe.boot.sales_doctypes)
+        return (
+            frm.doc.gst_category === "Overseas" &&
+            frm.doc.place_of_supply === "96-Other Countries"
+        );
+
+    return frm.doc.gst_category === "Overseas";
 }
