@@ -728,7 +728,7 @@ def validate_reverse_charge_transaction(doc, method=None):
 
         frappe.throw(msg)
 
-    if doc.eligibility_for_itc == "All Other ITC":
+    if doc.get("eligibility_for_itc") == "All Other ITC":
         doc.eligibility_for_itc = "ITC on Reverse Charge"
 
 
