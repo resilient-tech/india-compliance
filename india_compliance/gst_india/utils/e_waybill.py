@@ -57,6 +57,35 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 
 @frappe.whitelist()
+def fetch_active_e_waybills(*, doctype, docname, ewaybill_date):
+    doc = load_doc(doctype, docname, "submit")
+    _fetch_active_e_waybills(doc, ewaybill_date)
+
+
+def _fetch_active_e_waybills(doc, ewaybill_date):
+    data = EWaybillData(doc).get_data_for_fetching(ewaybill_date)
+    result = EWaybillAPI(doc).get_active_e_waybills(data)
+
+    for e_way_bill in result:
+        if e_way_bill["docNo"] != doc.name:
+            continue
+
+        e_way_bill["ewayBillNo"] = e_way_bill["ewbNo"]
+        e_way_bill["ewayBillDate"] = e_way_bill["ewbDate"]
+        log_and_process_e_waybill_generation(doc, e_way_bill)
+        return send_updated_doc(doc)
+
+    frappe.msgprint(
+        _(
+            "Could not fetch e-Waybill related to Sales Invoice {0}"
+        ).format(str(doc.name)),
+        _("Warning"),
+        indicator="yellow",
+    )
+    return
+
+
+@frappe.whitelist()
 def generate_e_waybill(*, doctype, docname, values=None):
     doc = load_doc(doctype, docname, "submit")
     if values:
@@ -522,6 +551,11 @@ class EWaybillData(GSTTransactionData):
             "ewbNo": self.doc.ewaybill,
             "cancelRsnCode": CANCEL_REASON_CODES[values.reason],
             "cancelRmrk": values.remark if values.remark else values.reason,
+        }
+    
+    def get_data_for_fetching(self, date):
+        return {
+            "date": self.get_parsed_date(date),
         }
 
     def get_update_vehicle_data(self, values):

@@ -52,6 +52,9 @@ class EWaybillAPI(BaseAPI):
     def get_e_waybill(self, ewaybill_number):
         return self.get("getewaybill", params={"ewbNo": ewaybill_number})
 
+    def get_active_e_waybills(self, data):
+        return self.get("GetEwayBillsByDate", params=data)
+
     def generate_e_waybill(self, data):
         result = self.post("GENEWAYBILL", data)
         self.update_distance(result)

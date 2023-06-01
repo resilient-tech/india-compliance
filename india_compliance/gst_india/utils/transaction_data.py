@@ -33,6 +33,9 @@ class GSTTransactionData:
             for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
         }
 
+    def get_parsed_date(self, date):
+        return format_date(date, self.DATE_FORMAT)
+
     def set_transaction_details(self):
         rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
         if self.doc.is_return:

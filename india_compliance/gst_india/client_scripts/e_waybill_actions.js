@@ -40,6 +40,12 @@ function setup_e_waybill_actions(doctype) {
                         () => show_generate_e_waybill_dialog(frm),
                         "e-Waybill"
                     );
+                    
+                    frm.add_custom_button(
+                        __("Fetch"),
+                        () => show_fetch_e_waybill_dialog(frm),
+                        "e-Waybill"
+                    );
                 }
 
                 if (
@@ -396,6 +402,40 @@ function show_generate_e_waybill_dialog(frm) {
         `).prependTo(d.wrapper);
     }
 }
+
+function show_fetch_e_waybill_dialog(frm, callback) {
+    const d = new frappe.ui.Dialog({
+        title: __("Fetch e-Waybill"),
+        fields: [
+            {
+                label: "e-Waybill Date",
+                fieldname: "ewaybill_date",
+                fieldtype: "Date",
+                reqd: 1,
+                default: frappe.datetime.get_today(),
+            },
+        ],
+        primary_action_label: __("Fetch"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.fetch_active_e_waybills",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    ewaybill_date: values.ewaybill_date,
+                },
+                callback: () => {
+                    frm.refresh();
+                    if (callback) callback();
+                },
+            });
+            d.hide();
+        },
+    });
+
+    d.show();
+}
+
 
 function show_cancel_e_waybill_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
