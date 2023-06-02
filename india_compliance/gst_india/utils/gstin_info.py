@@ -1,3 +1,4 @@
+from datetime import timedelta
 from string import whitespace
 
 import frappe
@@ -28,7 +29,11 @@ def get_gstin_info(gstin):
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
     validate_gstin(gstin)
-    response = PublicAPI().get_gstin_info(gstin)
+    response = get_gstin_log(gstin)
+
+    if not response:
+        response = PublicAPI().get_gstin_info(gstin)
+
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
     )
@@ -47,6 +52,34 @@ def get_gstin_info(gstin):
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
     return gstin_info
+
+
+def get_gstin_log(gstin):
+    archive_party_information = frappe.get_cached_value(
+        "GST Settings", None, "archive_party_information"
+    )
+
+    archive_date = frappe.utils.now_datetime() - timedelta(
+        days=archive_party_information
+    )
+
+    integration_log_output = frappe.get_all(
+        "Integration Request",
+        {
+            "status": "Completed",
+            "url": ("=", "https://asp.resilient.tech/commonapi/search"),
+            "data": ("like", "%" + gstin + "%"),
+            "modified": (">", archive_date),
+        },
+        ["output"],
+    )
+
+    if not integration_log_output:
+        return
+
+    gstin_result = frappe.parse_json(integration_log_output[0].output)
+
+    return gstin_result
 
 
 def _get_address(address):
