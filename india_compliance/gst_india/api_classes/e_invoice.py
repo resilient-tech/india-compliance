@@ -63,6 +63,9 @@ class EInvoiceAPI(BaseAPI):
     def get_e_invoice_by_irn(self, irn):
         return self.get(endpoint="invoice/irn", params={"irn": irn})
 
+    def get_e_waybill_by_irn(self, irn):
+        return self.get(endpoint="ewaybill/irn", params={"irn": irn})
+
     def generate_irn(self, data):
         result = self.post(endpoint="invoice", json=data)
 

@@ -57,32 +57,46 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 
 @frappe.whitelist()
-def fetch_active_e_waybills(*, doctype, docname, ewaybill_date):
+def fetch_active_e_waybills(*, doctype, docname, fetch_using, ewaybill_date):
     doc = load_doc(doctype, docname, "submit")
-    _fetch_active_e_waybills(doc, ewaybill_date)
+    _fetch_active_e_waybills(doc, ewaybill_date, fetch_using == "IRN")
 
 
-def _fetch_active_e_waybills(doc, ewaybill_date):
-    data = EWaybillData(doc).get_data_for_fetching(ewaybill_date)
-    result = EWaybillAPI(doc).get_active_e_waybills(data)
+def _fetch_active_e_waybills(doc, ewaybill_date, with_irn):
+    try:
+        data = EWaybillData(doc).get_data_for_fetching(ewaybill_date)
 
-    for e_way_bill in result:
-        if e_way_bill["docNo"] != doc.name:
-            continue
+        if with_irn and doc.get("irn"):
+            result = EInvoiceAPI(doc).get_e_waybill_by_irn(doc.irn)
+            log_and_process_e_waybill_generation(doc, result, with_irn=True)
+            return send_updated_doc(doc)
 
-        e_way_bill["ewayBillNo"] = e_way_bill["ewbNo"]
-        e_way_bill["ewayBillDate"] = e_way_bill["ewbDate"]
-        log_and_process_e_waybill_generation(doc, e_way_bill)
-        return send_updated_doc(doc)
+        result = EWaybillAPI(doc).get_active_e_waybills(data)
 
-    frappe.msgprint(
-        _("Could not fetch e-Waybill related to Sales Invoice {0}").format(
-            str(doc.name)
-        ),
-        _("Warning"),
-        indicator="yellow",
-    )
-    return
+        for e_way_bill in result:
+            if e_way_bill["docNo"] != doc.name:
+                continue
+
+            e_way_bill["ewayBillNo"] = e_way_bill["ewbNo"]
+            e_way_bill["ewayBillDate"] = e_way_bill["ewbDate"]
+            log_and_process_e_waybill_generation(doc, e_way_bill)
+            return send_updated_doc(doc)
+
+        frappe.msgprint(
+            _("Could not fetch e-Waybill related to Sales Invoice {0}").format(
+                str(doc.name)
+            ),
+            _("Warning"),
+            indicator="yellow",
+        )
+    except frappe.ValidationError as e:
+        frappe.clear_last_message()
+        frappe.msgprint(
+            _("e-Waybill fetch failed with error:<br>{0}<br><br>").format(str(e)),
+            _("Warning"),
+            indicator="yellow",
+        )
+        return
 
 
 @frappe.whitelist()

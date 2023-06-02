@@ -404,14 +404,26 @@ function show_generate_e_waybill_dialog(frm) {
 }
 
 function show_fetch_e_waybill_dialog(frm, callback) {
+    let fetch_using_opts = ["Date"]
+    if (frm.doc.irn) fetch_using_opts.unshift("IRN")
+
     const d = new frappe.ui.Dialog({
         title: __("Fetch e-Waybill"),
         fields: [
             {
+                label: "Fetch Using",
+                fieldname: "fetch_using",
+                fieldtype: "Select",
+                options: fetch_using_opts,
+                reqd: 1,
+                default: fetch_using_opts[0]
+            },
+            {
                 label: "e-Waybill Date",
                 fieldname: "ewaybill_date",
                 fieldtype: "Date",
-                reqd: 1,
+                depends_on: "eval: doc.fetch_using == 'Date'",
+                mandatory_depends_on: "eval: doc.fetch_using == 'Date'",
                 default: frappe.datetime.get_today(),
             },
         ],
@@ -422,6 +434,7 @@ function show_fetch_e_waybill_dialog(frm, callback) {
                 args: {
                     doctype: frm.doctype,
                     docname: frm.doc.name,
+                    fetch_using: values.fetch_using,
                     ewaybill_date: values.ewaybill_date,
                 },
                 callback: () => {
