@@ -9,7 +9,7 @@ from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 # Setup Wizard
 
 
-def get_setup_wizard_stages(args=None):
+def get_setup_wizard_stages(params=None):
     if frappe.db.exists("Company"):
         return []
 
@@ -20,7 +20,7 @@ def get_setup_wizard_stages(args=None):
             "tasks": [
                 {
                     "fn": configure_audit_trail,
-                    "args": args,
+                    "args": params,
                     "fail_msg": _("Failed to enable Audit Trail"),
                 }
             ],
@@ -31,7 +31,7 @@ def get_setup_wizard_stages(args=None):
             "tasks": [
                 {
                     "fn": setup_company_gstin_details,
-                    "args": args,
+                    "args": params,
                     "fail_msg": _("Failed to Update Company GSTIN"),
                 }
             ],
@@ -42,37 +42,56 @@ def get_setup_wizard_stages(args=None):
 
 
 # A utility functions to perform task on setup wizard stages
+def can_fetch_gstin_info():
+    return is_api_enabled() and not frappe.get_cached_value(
+        "GST Settings", None, "sandbox_mode"
+    )
 
 
-def configure_audit_trail(setup_args):
-    if setup_args.enable_audit_trail:
+def configure_audit_trail(params):
+    if params.enable_audit_trail:
         enable_audit_trail()
 
 
-def setup_company_gstin_details(setup_args):
-    if not setup_args.company_gstin:
+def setup_company_gstin_details(params):
+    if not params.company_gstin:
         return
 
-    company_doc = frappe.get_cached_doc("Company", setup_args.company_name)
-    company_doc.gstin = setup_args.company_gstin
-    company_doc.gst_category = guess_gst_category(setup_args.company_gstin)
+    if can_fetch_gstin_info():
+        autofill_company_info()
+        return
+
+    update_company_info(params)
+
+
+def autofill_company_info(params):
+    gstin_info = get_gstin_info(params.company_gstin)
+
+    create_address(gstin_info)
+    update_company_info(params, gstin_info.gst_category)
+
+
+def update_company_info(params, gst_category=None):
+    if not gst_category:
+        gst_category = guess_gst_category(params.company_gstin)
+
+    company_doc = frappe.get_cached_doc("Company", params.company_name)
+    company_doc.gstin = params.company_gstin
+    company_doc.gst_category = gst_category
     validate_pan(company_doc)
     company_doc.save()
 
-    if not is_api_enabled() or frappe.get_cached_value(
-        "GST Settings", None, "sandbox_mode"
-    ):
+
+def create_address(gstin_info: dict) -> None:
+    if not gstin_info.permanent_address:
         return
 
-    gstin_info = get_gstin_info(setup_args.company_gstin)
-    if gstin_info.permanent_address:
-        create_address(setup_args.company_name, gstin_info.permanent_address)
-
-
-def create_address(company_name: str, address: dict) -> None:
     address = frappe.new_doc("Address")
-    address.append("links", {"link_doctype": "Company", "link_name": company_name})
+    address.append(
+        "links", {"link_doctype": "Company", "link_name": gstin_info.business_name}
+    )
 
-    for key, value in address.items():
+    for key, value in gstin_info.permanent_address.items():
         setattr(address, key, value)
+
     address.insert()

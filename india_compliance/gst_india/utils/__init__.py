@@ -174,9 +174,12 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
-def guess_gst_category(gstin: str) -> str:
+def guess_gst_category(gstin: str | None, gst_category: str | None) -> str:
     for category, regex in GSTIN_FORMATS.items():
-        if regex.match(gstin):
+        if gstin and regex.match(gstin):
+            return category
+
+        if gst_category and (gst_category in category or gst_category == category):
             return category
 
 
