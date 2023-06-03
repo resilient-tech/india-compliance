@@ -744,7 +744,8 @@ def validate_reverse_charge_transaction(doc, method=None):
 
         frappe.throw(msg)
 
-    doc.eligibility_for_itc = "ITC on Reverse Charge"
+    if doc.get("eligibility_for_itc") == "All Other ITC":
+        doc.eligibility_for_itc = "ITC on Reverse Charge"
 
 
 def is_export_without_payment_of_gst(doc):
