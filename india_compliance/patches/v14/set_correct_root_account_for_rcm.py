@@ -1,12 +1,6 @@
 import frappe
 
-GST_ACCOUNT_FIELDS = [
-    "cgst_account",
-    "sgst_account",
-    "igst_account",
-    "cess_account",
-    "cess_non_advol_account",
-]
+from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 
 
 def execute():
