@@ -36,7 +36,7 @@
   "other_apis_section",
   "autofill_party_info",
   "column_break_bydp",
-  "archive_party_information",
+  "archive_party_info_days",
   "uom_mapping_section",
   "gst_uom_map",
   "accounts_tab",
@@ -292,9 +292,10 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "7",
    "depends_on": "eval: doc.autofill_party_info",
-   "description": "Fetch GSTIN Info from Integration Request",
-   "fieldname": "archive_party_information",
+   "description": "Minimize API usage by reusing GSTIN party information retained from recent days",
+   "fieldname": "archive_party_info_days",
    "fieldtype": "Int",
    "label": "Archive Party Information (In Days)"
   }
@@ -302,7 +303,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-02 10:49:00.385106",
+ "modified": "2023-06-03 11:08:21.240509",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

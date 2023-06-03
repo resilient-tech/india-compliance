@@ -1,9 +1,11 @@
+import json
 from datetime import timedelta
 from string import whitespace
 
 import frappe
 from frappe import _
 
+from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import titlecase, validate_gstin
 
@@ -29,7 +31,7 @@ def get_gstin_info(gstin):
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
     validate_gstin(gstin)
-    response = get_gstin_log(gstin)
+    response = get_archived_gstin_info(gstin)
 
     if not response:
         response = PublicAPI().get_gstin_info(gstin)
@@ -54,32 +56,37 @@ def get_gstin_info(gstin):
     return gstin_info
 
 
-def get_gstin_log(gstin):
-    archive_party_information = frappe.get_cached_value(
-        "GST Settings", None, "archive_party_information"
+def get_archived_gstin_info(gstin):
+    """
+    Use Integration Requests to get the GSTIN info if available
+    """
+    archive_days = frappe.get_cached_value(
+        "GST Settings", None, "archive_party_info_days"
     )
 
-    archive_date = frappe.utils.now_datetime() - timedelta(
-        days=archive_party_information
-    )
+    if not archive_days:
+        return
 
-    integration_log_output = frappe.get_all(
+    archive_date_limit = frappe.utils.now_datetime() - timedelta(days=archive_days)
+
+    completed_requestes = frappe.get_all(
         "Integration Request",
         {
             "status": "Completed",
-            "url": ("=", "https://asp.resilient.tech/commonapi/search"),
-            "data": ("like", "%" + gstin + "%"),
-            "modified": (">", archive_date),
+            "url": ("=", f"{BASE_URL}/{PublicAPI.BASE_PATH}/search"),
+            "data": ("like", f"%{gstin}%"),
+            "modified": (">", archive_date_limit),
         },
-        ["output"],
+        pluck="output",
+        limit=1,
     )
 
-    if not integration_log_output:
+    if not completed_requestes:
         return
 
-    gstin_result = frappe.parse_json(integration_log_output[0].output)
+    response = json.loads(completed_requestes[0], object_hook=frappe._dict)
 
-    return gstin_result
+    return response.result
 
 
 def _get_address(address):
