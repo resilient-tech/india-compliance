@@ -31,8 +31,10 @@ function update_erpnext_slides_settings() {
         ),
     });
 
+    const _bind_events = slide.bind_events;
     slide.bind_events = function (slide) {
-        let me = this;
+        _bind_events.call(this, slide);
+
         slide.get_input("company_gstin").on("change", async function () {
             autofill_company_info(slide);
         });
