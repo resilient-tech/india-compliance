@@ -1,8 +1,11 @@
+import json
+from datetime import timedelta
 from string import whitespace
 
 import frappe
 from frappe import _
 
+from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import titlecase, validate_gstin
 
@@ -28,7 +31,11 @@ def get_gstin_info(gstin):
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
     validate_gstin(gstin)
-    response = PublicAPI().get_gstin_info(gstin)
+    response = get_archived_gstin_info(gstin)
+
+    if not response:
+        response = PublicAPI().get_gstin_info(gstin)
+
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
     )
@@ -47,6 +54,39 @@ def get_gstin_info(gstin):
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
     return gstin_info
+
+
+def get_archived_gstin_info(gstin):
+    """
+    Use Integration Requests to get the GSTIN info if available
+    """
+    archive_days = frappe.get_cached_value(
+        "GST Settings", None, "archive_party_info_days"
+    )
+
+    if not archive_days:
+        return
+
+    archive_date_limit = frappe.utils.now_datetime() - timedelta(days=archive_days)
+
+    completed_requestes = frappe.get_all(
+        "Integration Request",
+        {
+            "status": "Completed",
+            "url": ("=", f"{BASE_URL}/{PublicAPI.BASE_PATH}/search"),
+            "data": ("like", f"%{gstin}%"),
+            "modified": (">", archive_date_limit),
+        },
+        pluck="output",
+        limit=1,
+    )
+
+    if not completed_requestes:
+        return
+
+    response = json.loads(completed_requestes[0], object_hook=frappe._dict)
+
+    return response.result
 
 
 def _get_address(address):
