@@ -35,6 +35,18 @@ Object.assign(india_compliance, {
         return message;
     },
 
+    async get_account_options(company) {
+        if (!company) return;
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.utils.get_all_gst_accounts",
+            args: {
+                company,
+            },
+        });
+
+        return message || [];
+    },
+
     get_party_type(doctype) {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
