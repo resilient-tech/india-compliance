@@ -31,9 +31,9 @@ function update_erpnext_slides_settings() {
         ),
     });
 
-    const _bind_events = slide.bind_events;
-    slide.bind_events = function (slide) {
-        _bind_events.call(this, slide);
+    const _onload = slide.onload;
+    slide.onload = function (slide) {
+        _onload.call(this, slide);
 
         slide.get_input("company_gstin").on("change", async function () {
             autofill_company_info(slide);
@@ -54,11 +54,21 @@ async function autofill_company_info(slide) {
         const gstin_info = await get_gstin_info(gstin);
 
         if (gstin_info.business_name) {
-            slide.get_field("company_name").set_value(gstin_info.business_name);
+            await slide.get_field("company_name").set_value(gstin_info.business_name);
         }
 
         set_gstin_description(gstin_field, gstin_info.status);
+        set_company_abbr(slide);
     }
+}
+
+function set_company_abbr(slide) {
+    let parts = slide.get_input("company_name").val().split(" ");
+    console.log(parts);
+    let abbr = $.map(parts, function (p) {
+        return p ? p.substr(0, 1) : null;
+    }).join("");
+    slide.get_field("company_abbr").set_value(abbr.slice(0, 10).toUpperCase());
 }
 
 function can_fetch_gstin_info() {

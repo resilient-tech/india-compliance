@@ -58,7 +58,7 @@ def setup_company_gstin_details(params):
         return
 
     if can_fetch_gstin_info():
-        autofill_company_info()
+        autofill_company_info(params)
         return
 
     update_company_info(params)
