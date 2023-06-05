@@ -129,6 +129,7 @@ function show_update_gstin_button(frm) {
 }
 
 function get_update_gstin_message(voucher_types) {
+    // nosemgrep
     let message = __(
         `
         Company GSTIN is a mandatory field for all transactions.
