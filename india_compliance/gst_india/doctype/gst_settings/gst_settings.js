@@ -23,6 +23,10 @@ frappe.ui.form.on("GST Settings", {
         });
     },
     onload: show_ic_api_promo,
+    refresh(frm) {
+        if (frm.doc?.__onload?.voucher_types_for_gstin_update)
+            show_update_gstin_button(frm);
+    },
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
         frm.set_value("fetch_e_waybill_data", 1);
@@ -99,4 +103,59 @@ function set_auto_generate_e_waybill(frm) {
         "auto_generate_e_waybill",
         frm.doc.auto_generate_e_invoice && frm.doc.generate_e_waybill_with_e_invoice
     );
+}
+
+// TEMPORARY CODE: trigger patch manually
+function show_update_gstin_button(frm) {
+    const voucher_types = frm.doc.__onload.voucher_types_for_gstin_update;
+
+    frm.add_custom_button(__("Update Company GSTIN"), () => {
+        const message = get_update_gstin_message(voucher_types);
+        frappe.msgprint({
+            title: __("Update Company GSTIN"),
+            message: message,
+            primary_action: {
+                label: __("Execute Patch"),
+                server_action:
+                    "india_compliance.patches.post_install.update_company_gstin.execute",
+                hide_on_success: true,
+            },
+        });
+
+        frappe.msg_dialog.custom_onhide = () => {
+            frm.reload_doc();
+        };
+    });
+}
+
+function get_update_gstin_message(voucher_types) {
+    let message = __(
+        `
+        Company GSTIN is a mandatory field for all transactions.
+        It could not be set automatically as you have Multi-GSTIN setup.
+        Please update the GSTIN for the following transactions <strong>before</strong>
+        executing the patch:<br>
+        `
+    );
+
+    voucher_types.forEach(voucher_type => {
+        let account_field = "account_head";
+        if (voucher_type === "Journal Entry") account_field = "account";
+
+        let element_text = `<br><a><span class="custom-link" data-fieldtype="Link" data-doctype="${voucher_type}" data-accountfield="${account_field}">${voucher_type}</span></a>`;
+        message += element_text;
+    });
+
+    $(document).on("click", ".custom-link", function () {
+        const doctype = $(this).data("doctype");
+        const account_field = $(this).data("accountfield");
+
+        frappe.set_route("List", doctype, {
+            docstatus: 1,
+            company_gstin: ["is", "not set"],
+            [account_field]: ["like", "%gst%"],
+        });
+    });
+
+    return message;
 }

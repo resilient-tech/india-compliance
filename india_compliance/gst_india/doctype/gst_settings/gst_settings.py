@@ -18,16 +18,20 @@ from india_compliance.gst_india.page.india_compliance_account import (
 )
 from india_compliance.gst_india.utils import can_enable_api
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
+from india_compliance.patches.post_install.update_company_gstin import (
+    verify_gstin_update,
+)
 
 E_INVOICE_START_DATE = "2021-01-01"
 
 
 class GSTSettings(Document):
     def onload(self):
-        if can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed"):
-            return
+        if not (can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed")):
+            self.set_onload("can_show_promo", True)
 
-        self.set_onload("can_show_promo", True)
+        if not frappe.db.get_global("company_gstin_updated"):
+            self.set_onload("voucher_types_for_gstin_update", verify_gstin_update())
 
     def validate(self):
         self.update_dependant_fields()
