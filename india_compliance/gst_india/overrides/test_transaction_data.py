@@ -5,7 +5,11 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.utils.tests import append_item, create_sales_invoice
+from india_compliance.gst_india.utils.tests import (
+    _append_taxes,
+    append_item,
+    create_sales_invoice,
+)
 from india_compliance.gst_india.utils.transaction_data import (
     GSTTransactionData,
     validate_non_gst_items,
@@ -238,6 +242,35 @@ class TestTransactionData(FrappeTestCase):
                     "cess_non_advol_rate": 0,
                     "tax_rate": 0.0,
                     "total_value": 200.0,
+                }
+            ],
+        )
+
+        _append_taxes(doc, ("CGST", "SGST"))
+        doc.save()
+
+        self.assertListEqual(
+            GSTTransactionData(doc).get_all_item_details(),
+            [
+                {
+                    "item_no": 1,
+                    "qty": 2.0,
+                    "taxable_value": 200.0,
+                    "hsn_code": "61149090",
+                    "item_name": "Test Trading Goods 1",
+                    "uom": "NOS",
+                    "cgst_amount": 18.0,
+                    "cgst_rate": 9.0,
+                    "sgst_amount": 18.0,
+                    "sgst_rate": 9.0,
+                    "igst_amount": 0,
+                    "igst_rate": 0,
+                    "cess_amount": 0,
+                    "cess_rate": 0,
+                    "cess_non_advol_amount": 0,
+                    "cess_non_advol_rate": 0,
+                    "tax_rate": 18.0,
+                    "total_value": 236.0,
                 }
             ],
         )

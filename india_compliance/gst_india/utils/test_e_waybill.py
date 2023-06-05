@@ -22,6 +22,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_vehicle_info,
 )
 from india_compliance.gst_india.utils.tests import (
+    _append_taxes,
     append_item,
     create_purchase_invoice,
     create_sales_invoice,
@@ -402,6 +403,28 @@ class TestEWaybill(FrappeTestCase):
                     "item_name": "",
                     "cgst_rate": 0,
                     "sgst_rate": 0,
+                    "igst_rate": 0,
+                    "cess_rate": 0,
+                    "cess_non_advol_rate": 0,
+                    "item_no": 1,
+                    "qty": 251.0,
+                    "taxable_value": 25100.0,
+                }
+            ],
+        )
+
+        _append_taxes(si, ("CGST", "SGST"))
+        si.save()
+
+        self.assertListEqual(
+            list(EWaybillData(si).get_all_item_details()),
+            [
+                {
+                    "hsn_code": "61149090",
+                    "uom": "NOS",
+                    "item_name": "",
+                    "cgst_rate": 9.0,
+                    "sgst_rate": 9.0,
                     "igst_rate": 0,
                     "cess_rate": 0,
                     "cess_non_advol_rate": 0,
