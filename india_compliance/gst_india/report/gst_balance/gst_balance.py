@@ -181,7 +181,7 @@ class GSTBalanceReport:
             .where(
                 (self.gl_entry.posting_date >= self.filters.from_date)
                 & (self.gl_entry.posting_date <= self.filters.to_date)
-                & (self.gl_entry.is_opening == 0)
+                & (self.gl_entry.is_opening == "No")
             )
             .run(as_dict=True)
         )
@@ -194,7 +194,7 @@ class GSTBalanceReport:
                 | (
                     (self.gl_entry.posting_date >= self.filters.from_date)
                     & (self.gl_entry.posting_date <= self.filters.to_date)
-                    & (self.gl_entry.is_opening == 1)
+                    & (self.gl_entry.is_opening == "Yes")
                 )
             )
             .run(as_dict=True)
