@@ -1,7 +1,4 @@
-const quick_entry = frappe.require(
-    "assets/india_compliance/js/quick_entry.js",
-    update_erpnext_slides_settings()
-);
+await frappe.require("assets/india_compliance/js/quick_entry.js");
 
 function update_erpnext_slides_settings() {
     const slide =
@@ -41,6 +38,8 @@ function update_erpnext_slides_settings() {
     };
 }
 
+update_erpnext_slides_settings();
+
 async function autofill_company_info(slide) {
     let gstin = slide.get_input("company_gstin").val();
     const gstin_field = slide.get_field("company_gstin");
@@ -64,10 +63,11 @@ async function autofill_company_info(slide) {
 
 function set_company_abbr(slide) {
     let parts = slide.get_input("company_name").val().split(" ");
-    console.log(parts);
+
     let abbr = $.map(parts, function (p) {
         return p ? p.substr(0, 1) : null;
     }).join("");
+
     slide.get_field("company_abbr").set_value(abbr.slice(0, 10).toUpperCase());
 }
 

@@ -17,7 +17,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
-from india_compliance.gst_india.utils import get_data_file_path
+from india_compliance.gst_india.utils import can_enable_api, get_data_file_path
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
 ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gst"))
@@ -151,6 +151,9 @@ def set_default_gst_settings():
         "e_invoice_applicable_from": nowdate(),
         "auto_fill_party_info": 1,
     }
+
+    if can_enable_api(settings):
+        default_settings["enable_api"] = 1
 
     if frappe.conf.developer_mode:
         default_settings["sandbox_mode"] = 1
