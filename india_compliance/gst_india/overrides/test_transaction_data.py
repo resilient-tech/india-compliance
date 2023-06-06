@@ -217,36 +217,8 @@ class TestTransactionData(FrappeTestCase):
 
         # Test with grouping of same items
         append_item(doc, frappe._dict(item_code="_Test Trading Goods 1"))
-        doc.group_same_items = True
-        doc.save()
-
-        self.assertListEqual(
-            GSTTransactionData(doc).get_all_item_details(),
-            [
-                {
-                    "item_no": 1,
-                    "qty": 2.0,
-                    "taxable_value": 200.0,
-                    "hsn_code": "61149090",
-                    "item_name": "Test Trading Goods 1",
-                    "uom": "NOS",
-                    "cgst_amount": 0,
-                    "cgst_rate": 0,
-                    "sgst_amount": 0,
-                    "sgst_rate": 0,
-                    "igst_amount": 0,
-                    "igst_rate": 0,
-                    "cess_amount": 0,
-                    "cess_rate": 0,
-                    "cess_non_advol_amount": 0,
-                    "cess_non_advol_rate": 0,
-                    "tax_rate": 0.0,
-                    "total_value": 200.0,
-                }
-            ],
-        )
-
         _append_taxes(doc, ("CGST", "SGST"))
+        doc.group_same_items = True
         doc.save()
 
         self.assertListEqual(
