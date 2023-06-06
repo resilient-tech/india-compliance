@@ -13,7 +13,10 @@ from frappe.query_builder.functions import Extract, Sum
 from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    is_overseas_transaction,
+)
 
 
 class GSTR3BReport(Document):
@@ -364,7 +367,11 @@ class GSTR3BReport(Document):
             if (
                 invoice not in self.items_based_on_tax_rate
                 and not invoice_details.get("is_export_with_gst")
-                and invoice_details.get("gst_category") == "Overseas"
+                and is_overseas_transaction(
+                    "Sales Invoice",
+                    invoice_details.get("gst_category"),
+                    invoice_details.get("place_of_supply"),
+                )
             ):
                 self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
                     0, items.keys()
@@ -403,7 +410,9 @@ class GSTR3BReport(Document):
                                 "txval"
                             ] += taxable_value
                         elif rate == 0 or (
-                            gst_category == "Overseas"
+                            is_overseas_transaction(
+                                "Sales Invoice", gst_category, place_of_supply
+                            )
                             and not invoice_details.get("is_export_with_gst")
                         ):
                             self.report_dict["sup_details"]["osup_zero"][
