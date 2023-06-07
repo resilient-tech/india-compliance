@@ -20,3 +20,4 @@ execute:from india_compliance.gst_india.setup import map_default_uoms; map_defau
 india_compliance.patches.v14.set_correct_root_account_for_rcm
 india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice
 execute:import frappe; frappe.db.set_value("GST Settings", None, "archive_party_info_days", 7)
+india_compliance.patches.v14.update_currency_in_tax_accounts
