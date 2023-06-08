@@ -1,4 +1,5 @@
 import frappe
+from erpnext.setup.setup_wizard.operations.taxes_setup import get_or_create_tax_group
 
 from india_compliance.gst_india.overrides.company import (
     create_company_fixtures as create_gst_fixtures,
@@ -22,8 +23,8 @@ def execute():
             create_income_tax_fixtures(company)
 
         # GST fixtures
+        update_root_for_rcm(company)
         if not frappe.db.exists("GST Account", {"company": company}):
-            update_root_for_rcm(company)
             create_gst_fixtures(company)
 
 
@@ -36,7 +37,7 @@ def update_root_for_rcm(company):
         "Account",
         filters={
             "root_type": "Asset",
-            "name": ("like", "Input Tax %GST RCM%"),
+            "account_name": ("like", "Input Tax _GST RCM"),
             "company": company,
         },
         pluck="name",
@@ -47,15 +48,15 @@ def update_root_for_rcm(company):
 
     output_account = frappe.db.get_value(
         "Account",
-        {"name": ("like", "Output Tax %GST%"), "company": company},
+        {"account_name": ("like", "Output Tax _GST"), "company": company},
         ["parent_account", "root_type"],
         as_dict=True,
     )
 
     if not output_account:
-        abbr = frappe.db.get_value("Company", company, "abbr")
+        parent_account = get_or_create_tax_group(company, "Liability")
         output_account = {
-            "parent_account": f"Duties and Taxes - {abbr}",
+            "parent_account": parent_account,
             "root_type": "Liability",
         }
 
