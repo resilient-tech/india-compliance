@@ -175,6 +175,14 @@ def is_valid_pan(pan):
 
 
 def guess_gst_category(gstin: str | None, gst_category: str | None) -> str:
+    """
+    :param: gstin: Party GSTIN Number
+    :param: gst_category: GST Category
+    Returns GST Category for given GSTIN No or the perfect match of GST Category received from search API.
+    """
+    if not (gstin or gst_category):
+        return
+
     for category, regex in GSTIN_FORMATS.items():
         if gstin and regex.match(gstin):
             return category
