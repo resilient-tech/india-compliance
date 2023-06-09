@@ -209,7 +209,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "port_code",
             "label": "Port Code",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
             "insert_after": "gst_col_break",
             "print_hide": 1,
             "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
