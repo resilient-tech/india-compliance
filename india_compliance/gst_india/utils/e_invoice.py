@@ -625,6 +625,9 @@ class EInvoiceData(GSTTransactionData):
                 "Stcd": self.shipping_address.state_number,
             }
 
+        if is_foreign_doc(self.doc):
+            invoice_data["ExpDtls"] = self.get_export_details()
+
         return invoice_data
 
     def get_item_data(self, item_details):
@@ -654,3 +657,26 @@ class EInvoiceData(GSTTransactionData):
                 "ExpDt": item_details.batch_expiry_date,
             },
         }
+
+    def get_export_details(self):
+        export_details = {
+            "CntCode": self.shipping_address.country_code,
+        }
+
+        if any(
+            item
+            for item in self.doc.items
+            if item.gst_hsn_code and not item.gst_hsn_code.startswith("99")
+        ):
+            export_details.update(
+                {
+                    "ShipBNo": self.doc.shipping_bill_number,
+                    "ShipBDt": self.doc.shipping_bill_date,
+                    "Port": self.doc.port_code,
+                }
+            )
+
+        if self.doc.currency != "INR":
+            export_details["ForCur"] = self.doc.currency
+
+        return export_details

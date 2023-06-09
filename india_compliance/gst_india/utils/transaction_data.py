@@ -409,6 +409,7 @@ class GSTTransactionData:
                     **error_context,
                 ),
                 "pincode": int(address.pincode),
+                "country_code": get_country_code(address.country),
             }
         )
 
@@ -603,3 +604,7 @@ def validate_unique_hsn_and_uom(doc):
     for item in doc.items:
         _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
+
+
+def get_country_code(country):
+    return frappe.get_cached_value("Country", country, "code")
