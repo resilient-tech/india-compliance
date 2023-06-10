@@ -74,6 +74,7 @@ class TestEInvoice(FrappeTestCase):
             EInvoiceData(si).get_data(),
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_request_data_for_foreign_transactions(self):
         test_data = self.e_invoice_test_data.foreign_transaction
         si = create_sales_invoice(
