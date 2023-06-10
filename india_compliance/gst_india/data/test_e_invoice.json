@@ -559,15 +559,6 @@
 				"Stcd": "01",
 				"TrdNm": "_Test Indian Registered Company"
 			},
-			"ShipDtls": {
-				"Gstin": "URP",
-				"LglNm": "Test Foreign Customer",
-				"TrdNm": "Test Foreign Customer",
-				"Addr1": "Test Address - 9",
-				"Loc": "Test City",
-				"Pin": 999999,
-				"Stcd": "96"
-			},
 			"TranDtls": {
 				"RegRev": "N",
 				"SupTyp": "EXPWOP",
