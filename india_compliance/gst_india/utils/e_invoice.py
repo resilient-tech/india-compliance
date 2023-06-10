@@ -659,9 +659,13 @@ class EInvoiceData(GSTTransactionData):
         }
 
     def get_export_details(self):
-        export_details = {
-            "CntCode": self.shipping_address.country_code,
-        }
+        country_code = (
+            self.shipping_address.country_code
+            if self.shipping_address
+            else self.billing_address.country_code
+        )
+
+        export_details = {"CntCode": country_code}
 
         if any(
             item
