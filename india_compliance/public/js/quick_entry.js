@@ -5,7 +5,8 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         this.api_enabled = india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
     }
 
-    render_dialog() {
+    async render_dialog() {
+        await frappe.model.with_doctype("Address");
         super.render_dialog();
         india_compliance.set_state_options(this.dialog);
     }
@@ -26,7 +27,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 collapsible: 0,
             },
             {
-                label: __("Pincode"),
+                ...frappe.meta.get_docfield("Address", "pincode"),
                 // set as _pincode so that frappe.ui.form.Layout doesn't override it
                 fieldname: "_pincode",
                 fieldtype: "Autocomplete",
@@ -78,7 +79,7 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
     get_gstin_field() {
         return [
             {
-                label: "GSTIN",
+                ...frappe.meta.get_docfield("Address", "gstin"),
                 fieldname: "_gstin",
                 fieldtype: "Autocomplete",
                 description: this.api_enabled ? get_gstin_description() : "",
