@@ -20,8 +20,9 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 description: this.api_enabled
                     ? __(
                         `When you enter a GSTIN, the permanent address linked to it is
-                        autofilled by default.<br>
-                        Change the Pincode to autofill other addresses.`
+                        autofilled.<br>
+                        Change the {0} to autofill other addresses.`,
+                        [frappe.meta.get_label("Address", "pincode")]
                     )
                     : "",
                 collapsible: 0,
