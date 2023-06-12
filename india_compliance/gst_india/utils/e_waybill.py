@@ -812,7 +812,7 @@ class EWaybillData(GSTTransactionData):
         if self.transaction_details.distance > 100:
             frappe.throw(
                 _(
-                    "Distance should be less than 100km when the Postal Code is same"
+                    "Distance should be less than 100km when the PIN Code is same"
                     " for Dispatch and Shipping Address"
                 )
             )
