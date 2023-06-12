@@ -235,7 +235,8 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(
             _(
-                "e-Invoice is not applicable for invoices with same company and billing GSTIN"
+                "e-Invoice is not applicable for invoices with same company and billing"
+                " GSTIN"
             )
         )
 
@@ -362,10 +363,7 @@ class EInvoiceData(GSTTransactionData):
     def update_transaction_details(self):
         invoice_type = "INV"
 
-        if self.doc.is_debit_note:
-            invoice_type = "DBN"
-
-        elif self.doc.is_return:
+        if self.doc.is_return:
             invoice_type = "CRN"
 
             if return_against := self.doc.return_against:
@@ -380,6 +378,9 @@ class EInvoiceData(GSTTransactionData):
                         ),
                     }
                 )
+
+        elif self.doc.is_debit_note:
+            invoice_type = "DBN"
 
         self.transaction_details.update(
             {
