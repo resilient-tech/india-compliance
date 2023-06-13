@@ -27,6 +27,7 @@ def update_taxable_values(doc, valid_accounts):
     if doc.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
         return
 
+    reference_row_index = None
     total_charges = 0
     apportioned_charges = 0
 
@@ -46,9 +47,6 @@ def update_taxable_values(doc, valid_accounts):
                 ),
                 None,
             )
-
-        else:
-            reference_row_index = -1
 
         if reference_row_index is not None:
             total_charges = (
