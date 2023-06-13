@@ -77,8 +77,23 @@ def get_column_names(additional_table_columns):
 def execute(filters=None):
     additional_table_columns = get_additional_table_columns()
 
-    return _execute(
+    columns, data = _execute(
         filters,
         additional_table_columns,
         get_column_names(additional_table_columns),
     )
+
+    data = remove_internal_customer_data(data)
+    return columns, data
+
+
+def remove_internal_customer_data(data):
+    new_data = [
+        row
+        for row in data
+        if not frappe.get_cached_value(
+            "Customer", row.get("customer"), "is_internal_customer"
+        )
+    ]
+
+    return new_data
