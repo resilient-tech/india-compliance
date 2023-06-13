@@ -199,7 +199,7 @@ export default {
             }
           },
           {
-            label: "Pincode",
+            label: "Postal Code",
             fieldname: "pincode",
             fieldtype: "Data",
             default: this.pincode,
