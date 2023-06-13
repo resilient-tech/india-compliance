@@ -5,8 +5,12 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
         this.api_enabled = india_compliance.is_api_enabled() && gst_settings.autofill_party_info;
     }
 
-    async render_dialog() {
+    async setup() {
         await frappe.model.with_doctype("Address");
+        super.setup();
+    }
+
+    render_dialog() {
         super.render_dialog();
         india_compliance.set_state_options(this.dialog);
     }
