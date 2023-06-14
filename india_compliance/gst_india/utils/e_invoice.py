@@ -674,7 +674,9 @@ class EInvoiceData(GSTTransactionData):
             export_details.update(
                 {
                     "ShipBNo": self.doc.shipping_bill_number,
-                    "ShipBDt": self.doc.shipping_bill_date,
+                    "ShipBDt": format_date(
+                        self.doc.shipping_bill_date, self.DATE_FORMAT
+                    ),
                 }
             )
 
