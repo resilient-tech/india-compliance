@@ -10,12 +10,9 @@ frappe.ui.form.on(DOCTYPE, {
         )
             return;
 
-        frappe.show_alert(
-            {
+        frappe.show_alert({
                 message: __("Billing Address is required to create e-Waybill"),
                 indicator: "yellow",
-            },
-            10
-        );
+            }, 10);
     },
 });
