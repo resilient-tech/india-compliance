@@ -1153,7 +1153,6 @@ CURRENCY_CODES = {
     "AZN": "Azerbaijani manat",
     "BAM": "Bosnia and Herzegovina convertible mark",
     "BBD": "Barbados dollar",
-    "BDT": "Bangladeshi taka",
     "BGN": "Bulgarian lev",
     "BHD": "Bahraini dinar",
     "BIF": "Burundian franc",
