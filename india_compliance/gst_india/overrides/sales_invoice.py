@@ -99,7 +99,7 @@ def validate_fields_and_set_status_for_e_invoice(doc):
         _("{0} is a mandatory field for generating e-Invoices"),
     )
 
-    if doc._action == "submit" and not doc.irn:
+    if doc.docstatus == 1 and not doc.irn:
         doc.einvoice_status = "Pending"
 
 
