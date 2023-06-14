@@ -181,9 +181,8 @@ def set_default_accounts_settings():
 
     show_accounts_settings_override_warning()
 
-    frappe.db.set_value(
+    frappe.db.set_single_value(
         "Accounts Settings",
-        None,
         {
             "determine_address_tax_category_from": "Billing Address",
             "add_taxes_from_item_tax_template": 0,
