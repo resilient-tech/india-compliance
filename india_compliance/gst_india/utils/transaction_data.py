@@ -5,6 +5,7 @@ from frappe import _
 from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
 from india_compliance.gst_india.constants import (
+    E_INVOICE_MASTER_CODES_URL,
     GST_TAX_RATES,
     GST_TAX_TYPES,
     PINCODE_FORMAT,
@@ -309,8 +310,6 @@ class GSTTransactionData:
                 3,
             )
 
-            validate_gst_tax_rate(tax_rate)
-
             # considers senarios where same item is there multiple times
             tax_amount = self.get_progressive_item_tax_amount(
                 tax_rate * item.qty
@@ -326,12 +325,16 @@ class GSTTransactionData:
                 }
             )
 
+        tax_rate = sum(
+            self.rounded(item_details.get(f"{tax}_rate", 0), 3)
+            for tax in GST_TAX_TYPES[:3]
+        )
+
+        validate_gst_tax_rate(tax_rate, item)
+
         item_details.update(
             {
-                "tax_rate": sum(
-                    self.rounded(item_details.get(f"{tax}_rate", 0), 3)
-                    for tax in GST_TAX_TYPES[:3]
-                ),
+                "tax_rate": tax_rate,
                 "total_value": abs(
                     self.rounded(
                         item_details.taxable_value
@@ -611,6 +614,14 @@ def validate_unique_hsn_and_uom(doc):
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
 
 
-def validate_gst_tax_rate(tax_rate):
+def validate_gst_tax_rate(tax_rate, item):
     if tax_rate not in GST_TAX_RATES:
-        frappe.throw(_("GST Tax Rate {0} is not matched with GST Tax Rate"))
+        frappe.throw(
+            _(
+                "Row # {0}: The tax rate for Item {1} is not permitted and doesn't adhere to the e-Invoice Masters. Please check {2}."
+            ).format(
+                item.idx,
+                item.item_code,
+                f"""<a href=f"{E_INVOICE_MASTER_CODES_URL}">here</a>""",
+            )
+        )

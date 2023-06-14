@@ -186,3 +186,4 @@ INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
 
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
+E_INVOICE_MASTER_CODES_URL = "https://einvoice1.gst.gov.in/Others/MasterCodes"
