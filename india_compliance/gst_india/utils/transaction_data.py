@@ -4,7 +4,11 @@ import frappe
 from frappe import _
 from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
+from india_compliance.gst_india.constants import (
+    GST_TAX_RATES,
+    GST_TAX_TYPES,
+    PINCODE_FORMAT,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     VEHICLE_TYPES,
@@ -305,6 +309,8 @@ class GSTTransactionData:
                 3,
             )
 
+            validate_gst_tax_rate(tax_rate)
+
             # considers senarios where same item is there multiple times
             tax_amount = self.get_progressive_item_tax_amount(
                 tax_rate * item.qty
@@ -603,3 +609,8 @@ def validate_unique_hsn_and_uom(doc):
     for item in doc.items:
         _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
+
+
+def validate_gst_tax_rate(tax_rate):
+    if tax_rate not in GST_TAX_RATES:
+        frappe.throw(_("GST Tax Rate {0} is not matched with GST Tax Rate"))

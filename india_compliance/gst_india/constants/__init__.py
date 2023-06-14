@@ -131,6 +131,20 @@ UOM_MAP = {
     "YDS": "YARDS",
 }
 
+GST_TAX_RATES = {
+    0.000,
+    0.100,
+    0.250,
+    1.000,
+    1.500,
+    3.000,
+    5.000,
+    6.000,
+    7.500,
+    12.000,
+    18.000,
+    28.000,
+}
 # REGEX PATTERNS (https://developer.gst.gov.in/apiportal/taxpayer/returns)
 
 NORMAL = (  # Normal but not TCS
