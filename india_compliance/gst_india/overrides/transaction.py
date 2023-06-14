@@ -458,7 +458,7 @@ def validate_hsn_codes(doc, method=None):
         elif len(hsn_code) < min_hsn_digits:
             rows_with_invalid_hsn.append(str(item.idx))
 
-    if doc._action == "submit":
+    if not doc.get("_action") or doc._action == "submit":
         # Same error for erroneous rows on submit
         rows_with_invalid_hsn += rows_with_missing_hsn
 
