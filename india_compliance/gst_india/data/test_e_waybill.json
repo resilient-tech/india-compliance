@@ -118,6 +118,82 @@
 			"success": true
 		}
 	},
+	"credit_note": {
+		"request_data": {
+			"userGstin": "05AAACG2115R1ZN",
+			"supplyType": "I",
+			"subSupplyType": 7,
+			"docType": "CHL",
+			"docNo": "test_invoice_no",
+			"docDate": "22/05/2023",
+			"transactionType": 1,
+			"fromTrdName": "_Test Registered Customer",
+			"fromGstin": "05AAACG2140A1ZL",
+			"fromAddr1": "Test Address - 3",
+			"fromPlace": "Test City",
+			"fromPincode": 380015,
+			"fromStateCode": 24,
+			"actFromStateCode": 24,
+			"toTrdName": "_Test Indian Registered Company",
+			"toGstin": "05AAACG2115R1ZN",
+			"toAddr1": "Test Address - 1",
+			"toPlace": "Test City",
+			"toPincode": 380015,
+			"toStateCode": 24,
+			"actToStateCode": 24,
+			"totalValue": 15.2,
+			"cgstValue": 0.91,
+			"sgstValue": 0.91,
+			"igstValue": 0,
+			"cessValue": 0,
+			"TotNonAdvolVal": 0,
+			"OthValue": -0.02,
+			"totInvValue": 17.0,
+			"transMode": 1,
+			"transDistance": 1,
+			"vehicleNo": "GJ05DL9009",
+			"vehicleType": "R",
+			"itemList": [
+				{
+					"itemNo": 1,
+					"productDesc": "Test Trading Goods 1",
+					"hsnCode": "61149090",
+					"qtyUnit": "NOS",
+					"quantity": 1.0,
+					"taxableAmount": 7.6,
+					"sgstRate": 6.0,
+					"cgstRate": 6.0,
+					"igstRate": 0,
+					"cessRate": 0,
+					"cessNonAdvol": 0
+				},
+				{
+					"itemNo": 2,
+					"productDesc": "Test Trading Goods 1",
+					"hsnCode": "61149090",
+					"qtyUnit": "NOS",
+					"quantity": 1.0,
+					"taxableAmount": 7.6,
+					"sgstRate": 6.0,
+					"cgstRate": 6.0,
+					"igstRate": 0,
+					"cessRate": 0,
+					"cessNonAdvol": 0
+				}
+			],
+			"mainHsnCode": "61149090"
+		},
+		"response_data": {
+			"message": "E-Way Bill is generated successfully",
+			"result": {
+				"alert": "",
+				"ewayBillDate": "22/05/2023 06:22:00 PM",
+				"ewayBillNo": 341003154687,
+				"validUpto": "23/05/2023 11:59:00 PM"
+			},
+			"success": true
+		}
+	},
 	"cancel_e_waybill": {
 		"request_data": {
 			"ewbNo": "301002999920",

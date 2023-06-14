@@ -8,6 +8,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, getdate, now_datetime
 from frappe.utils.data import format_date
+from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.utils import load_doc
@@ -273,16 +274,23 @@ class TestEInvoice(FrappeTestCase):
         )
 
     @responses.activate
-    def test_return_e_invoice_with_goods_item(self):
+    def test_credit_note_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for returned Sales Invoices"""
         test_data = self.e_invoice_test_data.get("return_invoice")
 
         si = create_sales_invoice(
-            customer_address="_Test Registered Customer-Billing",
-            shipping_address_name="_Test Registered Customer-Billing",
+            item_tax_template="GST 12% - _TIRC",
+            rate=7.6,
+            is_in_state=True,
+            do_not_submit=True,
         )
 
-        test_data.get("kwargs").update({"return_against": si.name})
+        append_item(
+            si,
+            frappe._dict(rate=7.6, item_tax_template="GST 12% - _TIRC", uom="Nos"),
+        )
+        si.save()
+        si.submit()
 
         for data in test_data.get("request_data").get("RefDtls").get("PrecDocDtls"):
             data.update(
@@ -292,20 +300,20 @@ class TestEInvoice(FrappeTestCase):
                 }
             )
 
-        return_si = create_sales_invoice(
-            **test_data.get("kwargs"),
-        )
+        credit_note = make_return_doc("Sales Invoice", si.name)
+        credit_note.save()
+        credit_note.submit()
 
         # Assert if request data given in Json
         self.assertDictEqual(
             test_data.get("request_data"),
-            EInvoiceData(frappe.get_doc("Sales Invoice", return_si.name)).get_data(),
+            EInvoiceData(frappe.get_doc("Sales Invoice", credit_note.name)).get_data(),
         )
 
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(return_si.name)
+        generate_e_invoice(credit_note.name)
 
         # Assert if Integration Request Log generated
         self.assertDocumentEqual(
@@ -316,7 +324,7 @@ class TestEInvoice(FrappeTestCase):
                 "Integration Request",
                 {
                     "reference_doctype": "Sales Invoice",
-                    "reference_docname": return_si.name,
+                    "reference_docname": credit_note.name,
                 },
             ),
         )
@@ -327,17 +335,17 @@ class TestEInvoice(FrappeTestCase):
                 "irn": test_data.get("response_data").get("result").get("Irn"),
                 "einvoice_status": "Generated",
             },
-            frappe.get_doc("Sales Invoice", return_si.name),
+            frappe.get_doc("Sales Invoice", credit_note.name),
         )
 
         self.assertDocumentEqual(
             {"name": test_data.get("response_data").get("result").get("Irn")},
-            frappe.get_doc("e-Invoice Log", {"sales_invoice": return_si.name}),
+            frappe.get_doc("e-Invoice Log", {"sales_invoice": credit_note.name}),
         )
 
         self.assertFalse(
             frappe.db.get_value(
-                "e-Waybill Log", {"reference_name": return_si.name}, "name"
+                "e-Waybill Log", {"reference_name": credit_note.name}, "name"
             )
         )
 
@@ -470,13 +478,13 @@ class TestEInvoice(FrappeTestCase):
             {
                 "customer": "_Test Unregistered Customer",
                 "gst_category": "Unregistered",
-                "billing_address_gstin": "24AANFA2641L1ZF",
+                "billing_address_gstin": "",
             }
         )
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(e-Invoice is not applicable .* Unregistered Customers)$"),
+            re.compile(r"^(e-Invoice is not applicable for B2C invoices)$"),
             validate_e_invoice_applicability,
             si,
         )
@@ -485,6 +493,7 @@ class TestEInvoice(FrappeTestCase):
             {
                 "gst_category": "Registered Regular",
                 "customer": "_Test Registered Customer",
+                "billing_address_gstin": "24AANFA2641L1ZF",
                 "irn": "706daeccda0ef6f818da78f3a2a05a1288731057373002289b46c3229289a2e7",
             }
         )
@@ -557,6 +566,24 @@ class TestEInvoice(FrappeTestCase):
                 "e_invoice_applicable_from": str(get_datetime()),
                 "apply_e_invoice_only_for_selected_companies": 0,
             },
+        )
+
+    @responses.activate
+    def test_invoice_update_after_submit(self):
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+        self._mock_e_invoice_response(data=test_data)
+        generate_e_invoice(si.name)
+
+        doc = load_doc("Sales Invoice", si.name, "submit")
+
+        doc.group_same_items = True
+        doc.save()
+
+        self.assertEqual(
+            json.loads(frappe.message_log[-1]).get("message"),
+            "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
     def _cancel_e_invoice(self, invoice_no):

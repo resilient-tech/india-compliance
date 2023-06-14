@@ -15,6 +15,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     UPDATE_VEHICLE_REASON_CODES,
 )
 from india_compliance.gst_india.utils import (
+    is_foreign_doc,
     load_doc,
     parse_datetime,
     send_updated_doc,
@@ -774,7 +775,7 @@ class EWaybillData(GSTTransactionData):
                 }
             )
 
-        elif self.doc.gst_category == "Overseas":
+        elif is_foreign_doc(self.doc):
             self.transaction_details.sub_supply_type = 3
 
             if not self.doc.is_export_with_gst:
@@ -792,7 +793,7 @@ class EWaybillData(GSTTransactionData):
         transaction_type = 1
         ship_to_address = (
             self.doc.port_address
-            if (self.doc.gst_category == "Overseas" and self.doc.port_address)
+            if (is_foreign_doc(self.doc) and self.doc.port_address)
             else self.doc.shipping_address_name
         )
 
@@ -859,8 +860,8 @@ class EWaybillData(GSTTransactionData):
         if self.transaction_details.distance > 100:
             frappe.throw(
                 _(
-                    "Distance should be less than 100km when the Pincode is same for"
-                    " Dispatch and Shipping Address"
+                    "Distance should be less than 100km when the PIN Code is same"
+                    " for Dispatch and Shipping Address"
                 )
             )
 
