@@ -377,7 +377,7 @@ class TestTransaction(FrappeTestCase):
         if not self.is_sales_doctype:
             return
 
-        frappe.db.set_value("GST Settings", None, "enable_overseas_transactions", 1)
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
         # default is_export_with_gst is 0
         doc = create_transaction(
             **self.transaction_details,
@@ -391,13 +391,13 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(.*since export is without.*)$"),
             doc.insert,
         )
-        frappe.db.set_value("GST Settings", None, "enable_overseas_transactions", 0)
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
 
     def test_reverse_charge_for_sales_transaction(self):
         if not self.is_sales_doctype:
             return
 
-        frappe.db.set_value("GST Settings", None, "enable_reverse_charge_in_sales", 1)
+        frappe.db.set_single_value("GST Settings", "enable_reverse_charge_in_sales", 1)
         doc = create_transaction(
             **self.transaction_details,
             is_reverse_charge=1,
@@ -410,7 +410,7 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(.*since supply is under reverse charge.*)$"),
             doc.insert,
         )
-        frappe.db.set_value("GST Settings", None, "enable_reverse_charge_in_sales", 0)
+        frappe.db.set_single_value("GST Settings", "enable_reverse_charge_in_sales", 0)
 
     def test_purchase_from_composition_dealer(self):
         if self.is_sales_doctype:

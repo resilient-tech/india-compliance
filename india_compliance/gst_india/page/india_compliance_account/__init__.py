@@ -31,7 +31,9 @@ def set_api_secret(api_secret: str):
     set_encrypted_password(
         "GST Settings", "GST Settings", api_secret, fieldname="api_secret"
     )
-    frappe.db.set_value("GST Settings", None, "api_secret", "*" * random.randint(8, 16))
+    frappe.db.set_single_value(
+        "GST Settings", "api_secret", "*" * random.randint(8, 16)
+    )
     post_login()
 
 
@@ -42,7 +44,7 @@ def post_login():
 
 def logout():
     remove_encrypted_password("GST Settings", "GST Settings", fieldname="api_secret")
-    frappe.db.set_value("GST Settings", None, "api_secret", None)
+    frappe.db.set_single_value("GST Settings", "api_secret", None)
 
 
 @frappe.whitelist()

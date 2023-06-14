@@ -18,7 +18,7 @@ def execute():
     enable_e_waybill_from_dn(new_settings)
 
     if new_settings:
-        frappe.db.set_value("GST Settings", None, new_settings)
+        frappe.db.set_single_value("GST Settings", new_settings)
 
 
 def enable_e_waybill_from_dn(settings):
