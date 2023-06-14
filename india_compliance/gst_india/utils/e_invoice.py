@@ -14,7 +14,12 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
+from india_compliance.gst_india.constants import (
+    CURRENCY_CODES,
+    EXPORT_TYPES,
+    GST_CATEGORIES,
+    PORT_CODES,
+)
 from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
@@ -659,13 +664,7 @@ class EInvoiceData(GSTTransactionData):
         }
 
     def get_export_details(self):
-        country_code = (
-            self.shipping_address.country_code
-            if self.shipping_address
-            else self.billing_address.country_code
-        )
-
-        export_details = {"CntCode": country_code}
+        export_details = {"CntCode": self.billing_address.country_code}
 
         if any(
             item
@@ -676,11 +675,13 @@ class EInvoiceData(GSTTransactionData):
                 {
                     "ShipBNo": self.doc.shipping_bill_number,
                     "ShipBDt": self.doc.shipping_bill_date,
-                    "Port": self.doc.port_code,
                 }
             )
 
-        if self.doc.currency != "INR":
+        if self.doc.port_code in PORT_CODES:
+            export_details["Port"] = self.doc.port_code
+
+        if self.doc.currency != "INR" and self.doc.currency in CURRENCY_CODES:
             export_details["ForCur"] = self.doc.currency
 
         return export_details

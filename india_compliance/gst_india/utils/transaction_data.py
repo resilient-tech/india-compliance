@@ -2,9 +2,20 @@ import re
 
 import frappe
 from frappe import _
-from frappe.utils import format_date, get_link_to_form, getdate, rounded
+from frappe.utils import (
+    format_date,
+    get_link_to_form,
+    get_url_to_list,
+    getdate,
+    rounded,
+)
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
+from india_compliance.gst_india.constants import (
+    COUNTRY_CODES,
+    E_INVOICE_MASTER_CODES_URL,
+    GST_TAX_TYPES,
+    PINCODE_FORMAT,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     VEHICLE_TYPES,
@@ -383,7 +394,7 @@ class GSTTransactionData:
             "reference_name": address.name,
         }
 
-        return frappe._dict(
+        address_details = frappe._dict(
             {
                 "gstin": address.get("gstin") or "URP",
                 "state_number": address.gst_state_number,
@@ -409,11 +420,16 @@ class GSTTransactionData:
                     **error_context,
                 ),
                 "pincode": int(address.pincode),
-                "country_code": self.sanitize_value(
-                    get_country_code(address.country), min_length=2, max_length=2
-                ),
             }
         )
+
+        if address.country != "India":
+            country_code = frappe.get_cached_value("Country", address.country, "code")
+            validate_country_code(country_code)
+
+            address_details["country_code"] = country_code.upper()
+
+        return address_details
 
     def check_missing_address_fields(self, address, validate_gstin=False):
         fieldnames = [
@@ -608,9 +624,26 @@ def validate_unique_hsn_and_uom(doc):
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
 
 
-def get_country_code(country):
-    country_code = frappe.get_cached_value("Country", country, "code")
-    if not country_code:
-        return
+def validate_country_code(country_code: str | None):
+    doctype = "Country"
+    master_code_url = f"""<a href="{E_INVOICE_MASTER_CODES_URL}">Master Code</a>"""
 
-    return country_code.upper()
+    if not country_code:
+        frappe.throw(
+            _(
+                "Country Code cannot be empty. Please create {0} as per the e-Invoice {1}"
+            ).format(
+                f"""<a href="{get_url_to_list(doctype)}">{doctype}</a>""",
+                master_code_url,
+            )
+        )
+
+    if len(country_code) != 2:
+        frappe.throw(
+            _("Country Code must be 2 characters only. Check {0}").format(
+                master_code_url
+            )
+        )
+
+    if country_code.upper() not in COUNTRY_CODES:
+        frappe.throw(_("Country Code {0} does not match with Master Codes"))

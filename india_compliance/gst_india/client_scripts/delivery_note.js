@@ -18,9 +18,4 @@ frappe.ui.form.on(DOCTYPE, {
             10
         );
     },
-
-    refresh(frm) {
-        frm.set_df_property("port_code", "ignore_validation", 1);
-        india_compliance.set_port_code_options(frm);
-    },
 });

@@ -336,10 +336,11 @@ function show_generate_e_waybill_dialog(frm) {
         });
     }
 
-    if (
-        frm.doctype === "Sales Invoice" &&
-        india_compliance.is_foreign_transaction(frm)
-    ) {
+    const is_foreign_transaction =
+        frm.doc.gst_category === "Overseas" &&
+        frm.doc.place_of_supply === "96-Other Countries";
+
+    if (frm.doctype === "Sales Invoice" && is_foreign_transaction) {
         fields.splice(5, 0, {
             label: "Origin Port / Border Checkpost Address",
             fieldname: "port_address",

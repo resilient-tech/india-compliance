@@ -6,8 +6,6 @@ import {
     TDS_REGEX,
 } from "./regex_constants";
 
-import { PORT_CODES } from "./constants";
-
 frappe.provide("india_compliance");
 
 window.gst_settings = frappe.boot.gst_settings;
@@ -85,21 +83,6 @@ Object.assign(india_compliance, {
         if (REGISTERED_REGEX.test(gstin)) return "Registered Regular";
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
-    },
-
-    set_port_code_options(frm) {
-        if (!india_compliance.is_foreign_transaction(frm)) return;
-
-        const port_code_field = frm.get_field("port_code");
-
-        port_code_field.set_data(Object.keys(PORT_CODES) || []);
-    },
-
-    is_foreign_transaction(frm) {
-        return (
-            frm.doc.gst_category === "Overseas" &&
-            frm.doc.place_of_supply === "96-Other Countries"
-        );
     },
 });
 
