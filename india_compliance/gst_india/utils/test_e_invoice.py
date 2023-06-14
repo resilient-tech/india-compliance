@@ -700,6 +700,9 @@ def update_dates_for_test_data(test_data):
         "foreign_transaction",
     ):
         test_data.get(key).get("request_data").get("DocDtls")["Dt"] = today
+        if exp_details := test_data.get(key).get("request_data").get("ExpDtls"):
+            exp_details["ShipBDt"] = today
+
         if "response_data" in test_data.get(key):
             test_data.get(key).get("response_data").get("result")["AckDt"] = now
 

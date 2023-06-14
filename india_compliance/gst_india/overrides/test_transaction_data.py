@@ -105,7 +105,6 @@ class TestTransactionData(FrappeTestCase):
                 "address_line2": None,
                 "city": "Test City",
                 "pincode": 380015,
-                "country_code": "IN",
             },
         )
 
