@@ -11,7 +11,11 @@
       <div class="main-content">
         <div class="card subscription-info">
           <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
-          <div class="subscription-details-item">
+          <div v-if="is_unlimited_account" class="subscription-details-item">
+            <p class="label">Used Credits</p>
+            <p class="value">{{ getReadableNumber(balance_credits, 0) }}</p>
+          </div>
+          <div v-else class="subscription-details-item">
             <p class="label">Available Credits</p>
             <p class="value">{{ getReadableNumber(balance_credits, 0) }}</p>
           </div>
@@ -94,7 +98,15 @@ export default {
       return this.$store.state.account.subscriptionDetails || {};
     },
 
+    is_unlimited_account() {
+      if (this.subscriptionDetails.balance_credits < 0) return true
+      return false
+    },
+
     balance_credits() {
+      if(this.subscriptionDetails.balance_credits < 0) {
+        return -1 * (this.subscriptionDetails.balance_credits + 1);
+      }
       return this.subscriptionDetails.balance_credits;
     },
 
