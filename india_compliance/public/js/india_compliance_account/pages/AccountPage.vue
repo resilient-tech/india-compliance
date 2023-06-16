@@ -20,7 +20,8 @@
             <p class="value">{{ getReadableNumber(balance_credits, 0) }}</p>
           </div>
           <div class="subscription-details-item">
-            <p class="label">Valid Upto</p>
+            <p v-if="is_unlimited_account" class="label">Next Billing Date</p>
+            <p v-else class="label">Valid Upto</p>
             <p class="value">{{ valid_upto }}</p>
           </div>
           <router-link v-if="!is_unlimited_account"
