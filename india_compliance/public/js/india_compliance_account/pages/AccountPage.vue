@@ -17,7 +17,7 @@
           </div>
           <div class="subscription-details-item">
             <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
-            <p class="value">{{ valid_upto }}</p>
+            <p class="value" :class="{ 'mb-4': is_unlimited_account }">{{ valid_upto }}</p>
           </div>
           <router-link v-if="!is_unlimited_account"
             class="btn btn-primary btn-sm btn-block"
