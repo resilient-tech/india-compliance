@@ -43,9 +43,9 @@ Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/
     | Frappe Branch | India Compliance Branch |
     |---------------|-------------------------|
     | version-14    | version-14              |
-    | develop       | next                    |
+    | develop       | develop                 |
 
-    If it isn't specified, the `--branch` option will default to `next`.
+    If it isn't specified, the `--branch` option will default to `develop`.
 
 2. Install the app on your site.
 

@@ -10,7 +10,7 @@ function setup_e_waybill_actions(doctype) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
         },
         setup(frm) {
-            if (!ic.is_api_enabled()) return;
+            if (!india_compliance.is_api_enabled()) return;
 
             frappe.realtime.on("e_waybill_pdf_update", message => {
                 frappe.model.sync_docinfo(message);
@@ -59,7 +59,10 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            if (!ic.is_api_enabled() || !is_e_waybill_generated_using_api(frm)) {
+            if (
+                !india_compliance.is_api_enabled() ||
+                !is_e_waybill_generated_using_api(frm)
+            ) {
                 return;
             }
 
@@ -118,7 +121,7 @@ function setup_e_waybill_actions(doctype) {
                 frm.doc.ewaybill ||
                 frm.doc.is_return ||
                 frm.doc.is_debit_note ||
-                !ic.is_api_enabled() ||
+                !india_compliance.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
                 is_e_invoice_applicable(frm) ||
                 !is_e_waybill_applicable(frm)
@@ -134,7 +137,8 @@ function setup_e_waybill_actions(doctype) {
         },
         before_cancel(frm) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action
-            if (!ic.is_api_enabled() || frm.doc.irn || !frm.doc.ewaybill) return;
+            if (!india_compliance.is_api_enabled() || frm.doc.irn || !frm.doc.ewaybill)
+                return;
 
             frappe.validated = false;
 
@@ -332,7 +336,29 @@ function show_generate_e_waybill_dialog(frm) {
         });
     }
 
-    const api_enabled = ic.is_api_enabled();
+    const is_foreign_transaction =
+        frm.doc.gst_category === "Overseas" &&
+        frm.doc.place_of_supply === "96-Other Countries";
+
+    if (frm.doctype === "Sales Invoice" && is_foreign_transaction) {
+        fields.splice(5, 0, {
+            label: "Origin Port / Border Checkpost Address",
+            fieldname: "port_address",
+            fieldtype: "Link",
+            options: "Address",
+            default: frm.doc.port_address,
+            reqd: frm.doc?.__onload?.shipping_address_in_india != true,
+            get_query: () => {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
+            },
+        });
+    }
+
+    const api_enabled = india_compliance.is_api_enabled();
 
     const d = new frappe.ui.Dialog({
         title: __("Generate e-Waybill"),
@@ -618,7 +644,12 @@ function has_e_waybill_threshold_met(frm) {
 
 function is_e_waybill_applicable(frm) {
     // means company is Indian and not Unregistered
-    if (!frm.doc.company_gstin) return;
+    if (
+        !frm.doc.company_gstin ||
+        (frm.doctype === "Sales Invoice" &&
+            frm.doc.company_gstin === frm.doc.billing_address_gstin)
+    )
+        return;
 
     // at least one item is not a service
     for (const item of frm.doc.items) {
@@ -668,7 +699,9 @@ function update_generation_dialog(dialog) {
 }
 
 function get_primary_action_label_for_generation(doc) {
-    const label = ic.is_api_enabled() ? __("Generate") : __("Download JSON");
+    const label = india_compliance.is_api_enabled()
+        ? __("Generate")
+        : __("Download JSON");
 
     if (are_transport_details_available(doc)) {
         return label;

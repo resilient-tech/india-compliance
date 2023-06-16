@@ -10,7 +10,7 @@ on:
             - "**.csv"
 
     push:
-        branches: [next, version-14-hotfix, version-14]
+        branches: [develop, version-14-hotfix, version-14]
         paths-ignore:
             - "**.css"
             - "**.js"
@@ -94,7 +94,7 @@ jobs:
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
-                  BRANCH_TO_CLONE: ${{ env.IC_BRANCH == 'next' && 'develop' || env.IC_BRANCH }}
+                  BRANCH_TO_CLONE: ${{ env.IC_BRANCH }}
 
             - name: Run Tests
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance

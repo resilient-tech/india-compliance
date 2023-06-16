@@ -5,15 +5,13 @@ from frappe import _, bold
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
-from india_compliance.gst_india.constants import (
-    OVERSEAS_GST_CATEGORIES,
-    SALES_DOCTYPES,
-    STATE_NUMBERS,
-)
+from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
     get_place_of_supply,
+    get_place_of_supply_options,
+    is_overseas_doc,
     validate_gst_category,
 )
 
@@ -95,20 +93,26 @@ def is_indian_registered_company(doc):
     return True
 
 
-def validate_mandatory_fields(doc, fields, message=None):
+def validate_mandatory_fields(doc, fields, error_message=None):
+    ignore_mandatory = not doc.docstatus and doc.flags.ignore_mandatory
+
     if isinstance(fields, str):
         fields = (fields,)
 
+    if not error_message:
+        error_message = _("{0} is a mandatory field for GST Transactions")
+
     for field in fields:
-        if not doc.get(field):
-            error_message = _("{0} is a mandatory field for GST Transactions").format(
-                bold(_(doc.meta.get_label(field))),
-            )
+        if doc.get(field):
+            continue
 
-            if message:
-                error_message += f". {message}"
+        if ignore_mandatory:
+            return False
 
-            frappe.throw(error_message, title=_("Missing Required Field"))
+        frappe.throw(
+            error_message.format(bold(_(doc.meta.get_label(field)))),
+            title=_("Missing Required Field"),
+        )
 
 
 def get_valid_accounts(company, is_sales_transaction=False):
@@ -136,6 +140,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     """
     Validate GST accounts
     - Only Valid Accounts should be allowed
+    - No GST account should be specified for transactions where Company GSTIN = Party GSTIN
     - If export is made without GST, then no GST account should be specified
     - SEZ / Inter-State supplies should not have CGST or SGST account
     - Intra-State supplies should not have IGST account
@@ -171,6 +176,21 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
         doc.company, is_sales_transaction
     )
+
+    # Company GSTIN = Party GSTIN
+    party_gstin = (
+        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
+    )
+    if (
+        party_gstin
+        and doc.company_gstin == party_gstin
+        and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
+    ):
+        _throw(
+            _(
+                "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are same"
+            ).format(idx)
+        )
 
     # Sales / Purchase Validations
 
@@ -268,6 +288,16 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
+    if not is_inter_state:
+        used_accounts = set(row.account_head for row in rows_to_validate)
+        if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
+            _throw(
+                _(
+                    "Cannot use only one of CGST or SGST account for intra-state supplies"
+                ),
+                title=_("Invalid GST Accounts"),
+            )
+
     if len(previous_row_references) > 1:
         _throw(
             _(
@@ -345,8 +375,38 @@ def validate_items(doc):
         )
 
 
-def set_place_of_supply(doc, method=None):
-    doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+def validate_place_of_supply(doc):
+    valid_options = get_place_of_supply_options(
+        as_list=True,
+        with_other_countries=doc.doctype in SALES_DOCTYPES,
+    )
+
+    if doc.place_of_supply not in valid_options:
+        frappe.throw(
+            _(
+                '"<strong>{0}</strong>" is not a valid Place of Supply. Please choose'
+                " from available options."
+            ).format(doc.place_of_supply),
+            title=_("Invalid Place of Supply"),
+        )
+
+    if (
+        doc.doctype in SALES_DOCTYPES
+        and doc.gst_category == "Overseas"
+        and doc.place_of_supply != "96-Other Countries"
+        and (
+            not doc.shipping_address_name
+            or frappe.db.get_value("Address", doc.shipping_address_name, "country")
+            != "India"
+        )
+    ):
+        frappe.throw(
+            _(
+                "GST Category is set to <strong>Overseas</strong> but Place of Supply"
+                " is within India. Shipping Address in India is required for classifing this as B2C."
+            ),
+            title=_("Invalid Shipping Address"),
+        )
 
 
 def is_inter_state_supply(doc):
@@ -398,7 +458,7 @@ def validate_hsn_codes(doc, method=None):
         elif len(hsn_code) < min_hsn_digits:
             rows_with_invalid_hsn.append(str(item.idx))
 
-    if doc._action == "submit":
+    if doc.docstatus == 1:
         # Same error for erroneous rows on submit
         rows_with_invalid_hsn += rows_with_missing_hsn
 
@@ -429,7 +489,7 @@ def validate_hsn_codes(doc, method=None):
 
 
 def validate_overseas_gst_category(doc, method=None):
-    if doc.gst_category not in OVERSEAS_GST_CATEGORIES:
+    if not is_overseas_doc(doc):
         return
 
     overseas_enabled = frappe.get_cached_value(
@@ -462,15 +522,13 @@ def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
 
 def get_regional_round_off_accounts(company, account_list):
     country = frappe.get_cached_value("Company", company, "country")
-
-    if country != "India":
-        return
+    if country != "India" or not frappe.get_cached_value(
+        "GST Settings", "GST Settings", "round_off_gst_values"
+    ):
+        return account_list
 
     if isinstance(account_list, str):
         account_list = json.loads(account_list)
-
-    if not frappe.db.get_single_value("GST Settings", "round_off_gst_values"):
-        return
 
     account_list.extend(get_all_gst_accounts(company))
 
@@ -478,11 +536,13 @@ def get_regional_round_off_accounts(company, account_list):
 
 
 def update_party_details(party_details, doctype, company):
-    party_details.update(get_gst_details(party_details, doctype, company))
+    party_details.update(
+        get_gst_details(party_details, doctype, company, update_place_of_supply=True)
+    )
 
 
 @frappe.whitelist()
-def get_gst_details(party_details, doctype, company):
+def get_gst_details(party_details, doctype, company, *, update_place_of_supply=False):
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)
@@ -505,11 +565,17 @@ def get_gst_details(party_details, doctype, company):
     )
     if not party_details.get(party_address_field):
         party_gst_details = get_party_gst_details(party_details, is_sales_transaction)
-        # updating party details to get correct place of supply
-        party_details.update(party_gst_details)
-        gst_details.update(party_gst_details)
 
-    gst_details.place_of_supply = get_place_of_supply(party_details, doctype)
+        # updating party details to get correct place of supply
+        if party_gst_details:
+            party_details.update(party_gst_details)
+            gst_details.update(party_gst_details)
+
+    gst_details.place_of_supply = (
+        party_details.place_of_supply
+        if (not update_place_of_supply and party_details.place_of_supply)
+        else get_place_of_supply(party_details, doctype)
+    )
 
     if is_sales_transaction:
         source_gstin = party_details.company_gstin
@@ -588,9 +654,12 @@ def get_party_gst_details(party_details, is_sales_transaction):
         "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
     )
 
+    if not (party := party_details.get(party_type.lower())):
+        return
+
     return frappe.db.get_value(
         party_type,
-        party_details[party_type.lower()],
+        party,
         ("gst_category", f"gstin as {gstin_fieldname}"),
         as_dict=True,
     )
@@ -634,21 +703,6 @@ def get_tax_template(master_doctype, company, is_inter_state, state_code):
     return default_tax
 
 
-def set_item_tax_from_hsn_code(item):
-    if not item.taxes and item.gst_hsn_code:
-        hsn_doc = frappe.get_doc("GST HSN Code", item.gst_hsn_code)
-
-        for tax in hsn_doc.taxes:
-            item.append(
-                "taxes",
-                {
-                    "item_tax_template": tax.item_tax_template,
-                    "tax_category": tax.tax_category,
-                    "valid_from": tax.valid_from,
-                },
-            )
-
-
 def validate_reverse_charge_transaction(doc, method=None):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
@@ -689,26 +743,44 @@ def validate_reverse_charge_transaction(doc, method=None):
 
         frappe.throw(msg)
 
-    doc.eligibility_for_itc = "ITC on Reverse Charge"
+    if doc.get("eligibility_for_itc") == "All Other ITC":
+        doc.eligibility_for_itc = "ITC on Reverse Charge"
 
 
 def is_export_without_payment_of_gst(doc):
-    return doc.gst_category in OVERSEAS_GST_CATEGORIES and not doc.is_export_with_gst
+    return is_overseas_doc(doc) and not doc.is_export_with_gst
 
 
 def validate_transaction(doc, method=None):
-    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
+    if ignore_gst_validations(doc):
         return False
 
-    if validate_items(doc) is False:
-        # If there are no GST items, then no need to proceed further
+    if doc.place_of_supply:
+        validate_place_of_supply(doc)
+    else:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+    if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
         return False
 
-    set_place_of_supply(doc)
-    validate_mandatory_fields(doc, ("company_gstin", "place_of_supply"))
-    validate_mandatory_fields(
-        doc, "gst_category", _("Please ensure it is set in the Party and / or Address.")
-    )
+    # Ignore validation for Quotation not to Customer
+    if doc.doctype != "Quotation" or doc.quotation_to == "Customer":
+        if (
+            validate_mandatory_fields(
+                doc,
+                "gst_category",
+                _(
+                    "{0} is a mandatory field for GST Transactions. Please ensure that"
+                    " it is set in the Party and / or Address."
+                ),
+            )
+            is False
+        ):
+            return False
+
+    elif not doc.gst_category:
+        doc.gst_category = "Unregistered"
+
     validate_overseas_gst_category(doc)
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
@@ -723,3 +795,13 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+
+
+def ignore_gst_validations(doc):
+    if (
+        not is_indian_registered_company(doc)
+        or doc.get("is_opening") == "Yes"
+        # If there are no GST items, then no need to proceed further
+        or validate_items(doc) is False
+    ):
+        return True

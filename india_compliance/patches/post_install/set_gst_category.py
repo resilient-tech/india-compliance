@@ -1,6 +1,6 @@
 import frappe
 
-from india_compliance.gst_india.utils import delete_old_fields
+from india_compliance.gst_india.utils.custom_fields import delete_old_fields
 
 
 def execute():
@@ -32,7 +32,7 @@ def execute():
     for old_value, new_value in {
         "ineligible": "Ineligible",
         "input service": "Input Service Distributor",
-        "capital goods": "Import Of Capital Goods",
+        "capital goods": "Import Of Goods",
         "input": "All Other ITC",
     }.items():
         frappe.db.set_value(

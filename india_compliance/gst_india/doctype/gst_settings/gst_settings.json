@@ -6,7 +6,6 @@
  "engine": "InnoDB",
  "field_order": [
   "general_tab",
-  "enable_api",
   "hsn_wise_tax_breakup",
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
@@ -14,6 +13,10 @@
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
+  "api_section",
+  "enable_api",
+  "column_break_rk3h",
+  "sandbox_mode",
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
@@ -25,10 +28,17 @@
   "e_invoice_section",
   "enable_e_invoice",
   "auto_generate_e_invoice",
+  "generate_e_waybill_with_e_invoice",
+  "apply_e_invoice_only_for_selected_companies",
   "column_break_17",
   "e_invoice_applicable_from",
+  "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "column_break_bydp",
+  "archive_party_info_days",
+  "uom_mapping_section",
+  "gst_uom_map",
   "accounts_tab",
   "gst_accounts",
   "credentials_tab",
@@ -88,7 +98,7 @@
    "label": "Accounts"
   },
   {
-   "depends_on": "eval: ic.is_api_enabled(doc)",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "fieldname": "credentials_tab",
    "fieldtype": "Tab Break",
    "label": "Credentials"
@@ -121,7 +131,7 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_waybill",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_e_waybill",
    "description": "If checked, a PDF of the e-Waybill will be automatically attached to the transaction after it's generation",
    "fieldname": "attach_e_waybill_print",
    "fieldtype": "Check",
@@ -129,25 +139,25 @@
   },
   {
    "default": "0",
-   "depends_on": "eval: ic.can_enable_api(doc)",
+   "depends_on": "eval: india_compliance.can_enable_api(doc)",
    "description": "Enable this to use API features like e-Waybill / e-Invoice generation from your ERP",
    "fieldname": "enable_api",
    "fieldtype": "Check",
    "label": "Enable API Features"
   },
   {
-   "depends_on": "eval: ic.is_api_enabled(doc)",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "fieldname": "e_invoice_section",
    "fieldtype": "Section Break",
    "label": "e-Invoice"
   },
   {
-   "depends_on": "eval: doc.enable_e_invoice",
+   "depends_on": "eval: doc.enable_e_invoice && !doc.apply_e_invoice_only_for_selected_companies",
    "description": "Posting Date from which e-Invoicing features should be enabled",
    "fieldname": "e_invoice_applicable_from",
    "fieldtype": "Date",
    "label": "e-Invoice Applicable From",
-   "mandatory_depends_on": "eval: doc.enable_e_invoice"
+   "mandatory_depends_on": "eval: doc.enable_e_invoice && !doc.apply_e_invoice_only_for_selected_companies"
   },
   {
    "fieldname": "column_break_17",
@@ -163,16 +173,16 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_waybill",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_e_waybill",
    "description": "e-Waybill will be automatically generated after Sales Invoice submission if the invoice value threshold is met, and data is available and valid",
    "fieldname": "auto_generate_e_waybill",
    "fieldtype": "Check",
    "label": "Automatically Generate e-Waybill on Invoice Submission",
-   "read_only_depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_invoice"
+   "read_only_depends_on": "eval: doc.enable_e_invoice"
   },
   {
    "default": "1",
-   "depends_on": "eval: ic.is_api_enabled(doc) && doc.enable_e_waybill",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc) && doc.enable_e_waybill",
    "description": "Automatically fetch e-Waybill data after it's generation for printing or logging purposes. This will lead to one additional API request.",
    "fieldname": "fetch_e_waybill_data",
    "fieldtype": "Check",
@@ -214,7 +224,7 @@
    "label": "Enable SEZ / Overseas Transactions"
   },
   {
-   "depends_on": "eval: ic.is_api_enabled(doc)",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "fieldname": "other_apis_section",
    "fieldtype": "Section Break",
    "label": "Other APIs"
@@ -225,12 +235,75 @@
    "fieldname": "autofill_party_info",
    "fieldtype": "Check",
    "label": "Autofill Party Information based on GSTIN"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "uom_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "UOM Mapping"
+  },
+  {
+   "fieldname": "api_section",
+   "fieldtype": "Section Break",
+   "label": "API"
+  },
+  {
+   "fieldname": "column_break_rk3h",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "Enable this to explore GST API features in a test environment. API actions executed in sandbox mode won't affect your actual business data on the GST portal.",
+   "fieldname": "sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Use API in Sandbox Mode?"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.enable_e_invoice",
+   "description": "e-Invoice will be generated for only selected companies.",
+   "fieldname": "apply_e_invoice_only_for_selected_companies",
+   "fieldtype": "Check",
+   "label": "Apply e-Invoice for Selected Companies"
+  },
+  {
+   "depends_on": "eval:doc.enable_e_invoice && doc.apply_e_invoice_only_for_selected_companies",
+   "fieldname": "e_invoice_applicable_companies",
+   "fieldtype": "Table",
+   "label": "e-Invoice Applicable Companies",
+   "options": "e-Invoice Applicable Company"
+  },
+  {
+   "fieldname": "gst_uom_map",
+   "fieldtype": "Table",
+   "options": "GST UOM Map"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "e-Waybill will be generated along with e-Invoice if the invoice value threshold is met, and data is available and valid",
+   "fieldname": "generate_e_waybill_with_e_invoice",
+   "fieldtype": "Check",
+   "label": "Generate e-Waybill with e-Invoice"
+  },
+  {
+   "fieldname": "column_break_bydp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "7",
+   "depends_on": "eval: doc.autofill_party_info",
+   "description": "Minimize API usage by reusing GSTIN party information retained from recent days",
+   "fieldname": "archive_party_info_days",
+   "fieldtype": "Int",
+   "label": "Archive Party Information (In Days)"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-09-07 09:49:38.261631",
+ "modified": "2023-06-03 11:08:21.240509",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

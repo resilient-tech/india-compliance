@@ -44,10 +44,15 @@ def before_tests():
 
 
 def set_default_settings_for_tests():
+    # e.g. set "All Customer Groups" as the default Customer Group
     for key in ("Customer Group", "Supplier Group", "Item Group", "Territory"):
         frappe.db.set_default(frappe.scrub(key), get_root_of(key))
 
+    # Allow Negative Stock
     frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)
+
+    # Enable Sandbox Mode in GST Settings
+    frappe.db.set_single_value("GST Settings", "sandbox_mode", 1)
 
 
 def create_test_records():
