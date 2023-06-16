@@ -180,7 +180,7 @@ export default {
             fieldname: "state",
             fieldtype: "Autocomplete",
             default: this.state,
-            options: this.country.toLowerCase() == "india" ? states : [],
+            options: this.country.toLowerCase() === "india" ? states : [],
           },
           {
             label: "Country",
@@ -189,7 +189,7 @@ export default {
             default: this.country,
             onchange() {
               // TODO: fix in frappe needed to update dialog options
-              this.value.toLowerCase() == "india"
+              this.value.toLowerCase() === "india"
                 ? dialog.set_df_property("state", "options", states)
                 : dialog.set_df_property("state", "options", []);
             },
