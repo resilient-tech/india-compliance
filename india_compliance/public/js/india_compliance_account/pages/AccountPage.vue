@@ -13,7 +13,7 @@
           <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
           <div v-if="is_unlimited_account" class="subscription-details-item">
             <p class="label">Used Credits</p>
-            <p class="value">{{ getReadableNumber(balance_credits, 0) }}</p>
+            <p class="value">{{ getReadableNumber(used_credits, 0) }}</p>
           </div>
           <div v-else class="subscription-details-item">
             <p class="label">Available Credits</p>
@@ -23,7 +23,7 @@
             <p class="label">Valid Upto</p>
             <p class="value">{{ valid_upto }}</p>
           </div>
-          <router-link
+          <router-link v-if="!is_unlimited_account"
             class="btn btn-primary btn-sm btn-block"
             to="/purchase-credits"
           >
@@ -99,8 +99,12 @@ export default {
     },
 
     is_unlimited_account() {
-      if (this.subscriptionDetails.balance_credits < 0) return true
+      if (this.subscriptionDetails.total_credits == -1) return true
       return false
+    },
+
+    used_credits() {
+      return this.subscriptionDetails.used_credits;
     },
 
     balance_credits() {
