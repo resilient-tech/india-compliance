@@ -13,7 +13,7 @@
           <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
           <div class="subscription-details-item">
             <p class="label">{{ is_unlimited_account ? 'Used Credits' : 'Available Credits' }}</p>
-            <p class="value">{{ is_unlimited_account ? getReadableNumber(used_credits, 0) : getReadableNumber(balance_credits, 0) }}</p>
+            <p class="value">{{ getReadableNumber(is_unlimited_account ? used_credits : balance_credits, 0)}}</p>
           </div>
           <div class="subscription-details-item">
             <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
