@@ -189,9 +189,11 @@ export default {
             default: this.country,
             onchange() {
               // TODO: fix in frappe needed to update dialog options
-              this.value.toLowerCase() === "india"
-                ? dialog.set_df_property("state", "options", states)
-                : dialog.set_df_property("state", "options", []);
+              dialog.set_df_property(
+                "state",
+                "options",
+                this.value.toLowerCase() === "india" ? states : [],
+              );
             },
           },
           {
@@ -228,7 +230,7 @@ export default {
 
     redirectToHome(message, color) {
       this.$store.dispatch("setMessage", { message, color });
-      this.$router.replace({name: "home"});
+      this.$router.replace({ name: "home" });
     },
 
     initCashFree(orderToken) {
