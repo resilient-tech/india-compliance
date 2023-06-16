@@ -11,17 +11,12 @@
       <div class="main-content">
         <div class="card subscription-info">
           <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
-          <div v-if="is_unlimited_account" class="subscription-details-item">
-            <p class="label">Used Credits</p>
-            <p class="value">{{ getReadableNumber(used_credits, 0) }}</p>
-          </div>
-          <div v-else class="subscription-details-item">
-            <p class="label">Available Credits</p>
-            <p class="value">{{ getReadableNumber(balance_credits, 0) }}</p>
+          <div class="subscription-details-item">
+            <p class="label">{{ is_unlimited_account ? 'Used Credits' : 'Available Credits' }}</p>
+            <p class="value">{{ is_unlimited_account ? getReadableNumber(used_credits, 0) : getReadableNumber(balance_credits, 0) }}</p>
           </div>
           <div class="subscription-details-item">
-            <p v-if="is_unlimited_account" class="label">Next Billing Date</p>
-            <p v-else class="label">Valid Upto</p>
+            <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
             <p class="value">{{ valid_upto }}</p>
           </div>
           <router-link v-if="!is_unlimited_account"
@@ -100,8 +95,7 @@ export default {
     },
 
     is_unlimited_account() {
-      if (this.subscriptionDetails.total_credits == -1) return true
-      return false
+      return this.subscriptionDetails.total_credits === -1;
     },
 
     used_credits() {
@@ -109,9 +103,6 @@ export default {
     },
 
     balance_credits() {
-      if(this.subscriptionDetails.balance_credits < 0) {
-        return -1 * (this.subscriptionDetails.balance_credits + 1);
-      }
       return this.subscriptionDetails.balance_credits;
     },
 
