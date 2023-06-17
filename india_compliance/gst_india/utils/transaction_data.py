@@ -14,7 +14,11 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    get_gst_uom,
+    get_validated_country_code,
+)
 
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
@@ -418,6 +422,7 @@ class GSTTransactionData:
                     **error_context,
                 ),
                 "pincode": int(address.pincode),
+                "country_code": get_validated_country_code(address.country),
             }
         )
 

@@ -74,6 +74,25 @@ class TestEInvoice(FrappeTestCase):
             EInvoiceData(si).get_data(),
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_request_data_for_foreign_transactions(self):
+        test_data = self.e_invoice_test_data.foreign_transaction
+        si = create_sales_invoice(
+            **test_data.get("kwargs"), qty=1000, do_not_submit=True
+        )
+        si.update(
+            {
+                "shipping_bill_number": "1234",
+                "shipping_bill_date": frappe.utils.today(),
+                "port_code": "INABG1",
+            }
+        )
+
+        self.assertDictEqual(
+            test_data.get("request_data"),
+            EInvoiceData(si).get_data(),
+        )
+
     def test_progressive_item_tax_amount(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
 
@@ -662,9 +681,14 @@ def update_dates_for_test_data(test_data):
         "service_item",
         "return_invoice",
         "debit_invoice",
+        "foreign_transaction",
     ):
         test_data.get(key).get("request_data").get("DocDtls")["Dt"] = today
-        test_data.get(key).get("response_data").get("result")["AckDt"] = now
+        if exp_details := test_data.get(key).get("request_data").get("ExpDtls"):
+            exp_details["ShipBDt"] = today
+
+        if "response_data" in test_data.get(key):
+            test_data.get(key).get("response_data").get("result")["AckDt"] = now
 
     response = test_data.cancel_e_waybill.get("response_data")
     response.get("result")["cancelDate"] = now_datetime().strftime(

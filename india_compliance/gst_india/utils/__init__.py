@@ -5,7 +5,7 @@ from titlecase import titlecase as _titlecase
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import cstr, get_datetime, get_system_timezone
+from frappe.utils import get_datetime, get_link_to_form, get_system_timezone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -13,6 +13,8 @@ from erpnext.controllers.taxes_and_totals import (
 
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
+    COUNTRY_CODES,
+    E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
@@ -450,3 +452,44 @@ def get_place_of_supply_options(*, as_list=False, with_other_countries=False):
         return options
 
     return "\n".join(sorted(options))
+
+
+def are_goods_supplied(doc):
+    return any(
+        item
+        for item in doc.items
+        if item.gst_hsn_code
+        and not item.gst_hsn_code.startswith("99")
+        and item.qty != 0
+    )
+
+
+def get_validated_country_code(country):
+    if country == "India":
+        return
+
+    code = frappe.db.get_value("Country", country, "code")
+
+    if not code:
+        frappe.throw(
+            _(
+                "Country Code not found for {0}. Please set it as per the <a href='{1}'>e-Invoice Master Codes</a>"
+            ).format(
+                frappe.bold(get_link_to_form("Country", country)),
+                E_INVOICE_MASTER_CODES_URL,
+            )
+        )
+
+    code = code.upper()
+
+    if code not in COUNTRY_CODES:
+        frappe.throw(
+            _(
+                "Country Code {0} does not match with the <a href='{1}'>e-Invoice Master Codes</a>"
+            ).format(
+                frappe.bold(get_link_to_form("Country", country, code)),
+                E_INVOICE_MASTER_CODES_URL,
+            )
+        )
+
+    return code
