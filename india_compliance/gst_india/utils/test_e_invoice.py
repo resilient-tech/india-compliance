@@ -82,27 +82,11 @@ class TestEInvoice(FrappeTestCase):
         )
         si.update(
             {
-                "gst_category": "Overseas",
                 "shipping_bill_number": "1234",
                 "shipping_bill_date": frappe.utils.today(),
                 "port_code": "INABG1",
             }
         )
-
-        if si.customer_address != si.port_address:
-            test_data.get("request_data").update(
-                {
-                    "ShipDtls": {
-                        "Gstin": "URP",
-                        "LglNm": "Test Foreign Customer",
-                        "TrdNm": "Test Foreign Customer",
-                        "Addr1": "Test Address - 9",
-                        "Loc": "Test City",
-                        "Pin": 999999,
-                        "Stcd": "96",
-                    }
-                }
-            )
 
         self.assertDictEqual(
             test_data.get("request_data"),

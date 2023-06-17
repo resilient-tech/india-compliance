@@ -498,7 +498,7 @@
 	"foreign_transaction": {
 		"kwargs": {
 			"customer": "_Test Foreign Customer",
-			"port_address": "_Test Foreign Customer-Billing",
+			"port_address": "_Test Indian Unregistered Company-Billing",
 			"vehicle_no": "GJ07DL9009"
 		},
 		"request_data": {
@@ -558,6 +558,15 @@
 				"Pin": 193501,
 				"Stcd": "01",
 				"TrdNm": "_Test Indian Registered Company"
+			},
+			"ShipDtls": {
+				"Gstin": "URP",
+				"LglNm": "Test Indian Unregistered Company",
+				"TrdNm": "Test Indian Unregistered Company",
+				"Addr1": "Test Address - 2",
+				"Loc": "Test City",
+				"Pin": 380015,
+				"Stcd": "24"
 			},
 			"TranDtls": {
 				"RegRev": "N",
