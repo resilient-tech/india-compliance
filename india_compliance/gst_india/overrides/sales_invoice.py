@@ -7,7 +7,12 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_transaction,
 )
-from india_compliance.gst_india.utils import are_goods_supplied, is_api_enabled
+from india_compliance.gst_india.utils import (
+    are_goods_supplied,
+    get_validated_country_code,
+    is_api_enabled,
+    is_foreign_doc,
+)
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
@@ -98,6 +103,10 @@ def validate_fields_and_set_status_for_e_invoice(doc):
         "customer_address",
         _("{0} is a mandatory field for generating e-Invoices"),
     )
+
+    if is_foreign_doc(doc):
+        country = frappe.db.get_value("Address", doc.customer_address, "country")
+        get_validated_country_code(country)
 
     if doc._action == "submit" and not doc.irn:
         doc.einvoice_status = "Pending"

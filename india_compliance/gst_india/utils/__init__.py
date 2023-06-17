@@ -5,7 +5,7 @@ from titlecase import titlecase as _titlecase
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import get_datetime, get_system_timezone, get_url_to_list
+from frappe.utils import get_datetime, get_link_to_form, get_system_timezone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -473,9 +473,9 @@ def get_validated_country_code(country):
     if not code:
         frappe.throw(
             _(
-                "Country Code not found for {0}. Please set it as per the <a href='{1}'>e-Invoice Master Code</a>"
+                "Country Code not found for {0}. Please set it as per the <a href='{1}'>e-Invoice Master Codes</a>"
             ).format(
-                f"<a href='{get_url_to_list('Country')}'>{frappe.bold(country)}</a>",
+                frappe.bold(get_link_to_form("Country", country)),
                 E_INVOICE_MASTER_CODES_URL,
             )
         )
@@ -485,8 +485,11 @@ def get_validated_country_code(country):
     if code not in COUNTRY_CODES:
         frappe.throw(
             _(
-                "Country Code {0} does not match with the <a href='{1}'>e-Invoice Master Code</a>"
-            ).format(frappe.bold(code), E_INVOICE_MASTER_CODES_URL)
+                "Country Code {0} does not match with the <a href='{1}'>e-Invoice Master Codes</a>"
+            ).format(
+                frappe.bold(get_link_to_form("Country", country, code)),
+                E_INVOICE_MASTER_CODES_URL,
+            )
         )
 
     return code
