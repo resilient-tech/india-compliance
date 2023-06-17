@@ -1,41 +1,18 @@
-import json
-
 import frappe
 from frappe.utils import sbool
 
 
 def execute():
-    if not frappe.db.has_column("Sales Invoice", "signed_einvoice"):
+    # Sales Invoice should have field signed_einvoice
+    # and E Invoice Settings should be enabled
+
+    if not frappe.db.has_column("Sales Invoice", "signed_einvoice") or not sbool(
+        frappe.db.get_value(
+            "E Invoice Settings", "E Invoice Settings", "enable", ignore=True
+        )
+    ):
         return
 
-    if not sbool(
-        frappe.db.get_value("E Invoice Settings", None, "enable", ignore=True)
-    ):
-        set_e_invoice_statuses()
-
-    # set correct acknowledgement in e-invoices
-    for name, signed_einvoice in frappe.get_all(
-        "Sales Invoice",
-        {
-            "ack_no": ("is", "not set"),
-            "irn": ("is", "set"),
-            "signed_einvoice": ("is", "set"),
-        },
-        ("name", "signed_einvoice"),
-    ):
-        signed_einvoice = json.loads(signed_einvoice)
-        frappe.db.set_value(
-            "Sales Invoice",
-            name,
-            {
-                "ack_no": signed_einvoice.get("AckNo"),
-                "ack_date": signed_einvoice.get("AckDt"),
-            },
-            update_modified=False,
-        )
-
-
-def set_e_invoice_statuses():
     frappe.db.sql(
         """
         UPDATE `tabSales Invoice` SET einvoice_status = 'Pending'
