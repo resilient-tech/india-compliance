@@ -138,6 +138,13 @@
             "customer_type": "Individual",
             "gstin": "",
             "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Foreign Customer",
+            "customer_name": "_Test Foreign Customer",
+            "customer_type": "Individual",
+            "gstin": "",
+            "gst_category": "Overseas"
         }
     ],
     "Supplier": [
@@ -287,6 +294,23 @@
                 {
                     "link_doctype": "Customer",
                     "link_name": "_Test Registered Composition Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Foreign Customer-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 9",
+            "city": "Test City",
+            "state": "Texas",
+            "pincode": "75001",
+            "country": "United States",
+            "gstin": "",
+            "gst_category": "Overseas",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Foreign Customer"
                 }
             ]
         },
