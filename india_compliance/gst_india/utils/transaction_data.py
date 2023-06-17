@@ -618,10 +618,13 @@ def validate_gst_tax_rate(tax_rate, item):
     if tax_rate not in GST_TAX_RATES:
         frappe.throw(
             _(
-                "Row # {0}: The tax rate for Item {1} is not permitted and doesn't adhere to the e-Invoice Masters. Please check {2}."
+                "Row #{0}: GST tax rate {1} for Item {2} is not permitted for generating e-Invoice as it"
+                " doesn't adhere to the e-Invoice Masters.<br><br> Check valid tax rates <a href='{3}'>here</a>."
             ).format(
                 item.idx,
+                frappe.bold(f"{tax_rate}%"),
                 item.item_code,
-                f"""<a href=f"{E_INVOICE_MASTER_CODES_URL}">here</a>""",
-            )
+                E_INVOICE_MASTER_CODES_URL,
+            ),
+            title=_("Invalid Tax Rate"),
         )
