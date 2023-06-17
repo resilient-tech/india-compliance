@@ -1,3 +1,5 @@
+import json
+
 import frappe
 
 from india_compliance.gst_india.utils import parse_datetime
@@ -101,6 +103,15 @@ def migrate_e_invoice_fields():
         "signed_qr_code",
     )
     for doc in docs:
+        if doc.signed_einvoice and not doc.ack_no:
+            try:
+                signed_einvoice = json.loads(doc.signed_einvoice)
+                doc.ack_no = signed_einvoice.get("AckNo")
+                doc.ack_date = signed_einvoice.get("AckDt")
+
+            except json.decoder.JSONDecodeError:
+                pass
+
         values.append(
             [
                 doc.irn,
