@@ -1,11 +1,18 @@
 import frappe
 
-from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GST_CATEGORIES,
+    PORT_CODES,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.utils import get_place_of_supply_options
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
 gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
+port_code_options = frappe.as_json(
+    [{"label": f"{code} - {name}", "value": code} for code, name in PORT_CODES.items()]
+)
 
 
 party_fields = [
@@ -210,6 +217,7 @@ CUSTOM_FIELDS = {
             "fieldname": "port_code",
             "label": "Port Code",
             "fieldtype": "Autocomplete",
+            "options": port_code_options,
             "insert_after": "gst_col_break",
             "print_hide": 1,
             "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
