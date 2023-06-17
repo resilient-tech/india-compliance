@@ -25,6 +25,7 @@ from india_compliance.gst_india.constants.e_invoice import (
     ITEM_LIMIT,
 )
 from india_compliance.gst_india.utils import (
+    are_goods_supplied,
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
@@ -666,24 +667,19 @@ class EInvoiceData(GSTTransactionData):
     def get_export_details(self):
         export_details = {"CntCode": self.billing_address.country_code}
 
-        if any(
-            item
-            for item in self.doc.items
-            if item.gst_hsn_code and not item.gst_hsn_code.startswith("99")
-        ):
-            export_details.update(
-                {
-                    "ShipBNo": self.doc.shipping_bill_number,
-                    "ShipBDt": format_date(
-                        self.doc.shipping_bill_date, self.DATE_FORMAT
-                    ),
-                }
-            )
+        currency = self.doc.currency and self.doc.currency.upper()
+        if currency != "INR" and currency in CURRENCY_CODES:
+            export_details["ForCur"] = currency
+
+        if not are_goods_supplied(self.doc):
+            return export_details
+
+        export_details["ShipBNo"] = self.doc.shipping_bill_number
+        export_details["ShipBDt"] = format_date(
+            self.doc.shipping_bill_date, self.DATE_FORMAT
+        )
 
         if self.doc.port_code in PORT_CODES:
             export_details["Port"] = self.doc.port_code
-
-        if self.doc.currency != "INR" and self.doc.currency in CURRENCY_CODES:
-            export_details["ForCur"] = self.doc.currency
 
         return export_details
