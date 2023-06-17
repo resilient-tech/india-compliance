@@ -4,12 +4,21 @@ import frappe
 from frappe import _
 from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
+from india_compliance.gst_india.constants import (
+    E_INVOICE_MASTER_CODES_URL,
+    GST_TAX_RATES,
+    GST_TAX_TYPES,
+    PINCODE_FORMAT,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    get_gst_uom,
+    get_validated_country_code,
+)
 
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
@@ -320,12 +329,16 @@ class GSTTransactionData:
                 }
             )
 
+        tax_rate = sum(
+            self.rounded(item_details.get(f"{tax}_rate", 0), 3)
+            for tax in GST_TAX_TYPES[:3]
+        )
+
+        validate_gst_tax_rate(tax_rate, item)
+
         item_details.update(
             {
-                "tax_rate": sum(
-                    self.rounded(item_details.get(f"{tax}_rate", 0), 3)
-                    for tax in GST_TAX_TYPES[:3]
-                ),
+                "tax_rate": tax_rate,
                 "total_value": abs(
                     self.rounded(
                         item_details.taxable_value
@@ -409,6 +422,7 @@ class GSTTransactionData:
                     **error_context,
                 ),
                 "pincode": int(address.pincode),
+                "country_code": get_validated_country_code(address.country),
             }
         )
 
@@ -603,3 +617,19 @@ def validate_unique_hsn_and_uom(doc):
     for item in doc.items:
         _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
+
+
+def validate_gst_tax_rate(tax_rate, item):
+    if tax_rate not in GST_TAX_RATES:
+        frappe.throw(
+            _(
+                "Row #{0}: GST tax rate {1} for Item {2} is not permitted for generating e-Invoice as it"
+                " doesn't adhere to the e-Invoice Masters.<br><br> Check valid tax rates <a href='{3}'>here</a>."
+            ).format(
+                item.idx,
+                frappe.bold(f"{tax_rate}%"),
+                item.item_code,
+                E_INVOICE_MASTER_CODES_URL,
+            ),
+            title=_("Invalid Tax Rate"),
+        )

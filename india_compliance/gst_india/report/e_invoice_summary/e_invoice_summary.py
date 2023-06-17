@@ -86,7 +86,7 @@ def get_data(filters=None):
     else:
         # invoice is cancelled but irn is not cancelled
         query = query.where(sales_invoice.docstatus == 2).where(
-            (sales_invoice.irn != "") | (sales_invoice.irn.notnull())
+            (sales_invoice.irn != "") & (sales_invoice.irn.notnull())
         )
 
         valid_irns = frappe.get_all(
