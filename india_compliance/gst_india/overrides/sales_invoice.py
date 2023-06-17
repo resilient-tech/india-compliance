@@ -108,7 +108,7 @@ def validate_fields_and_set_status_for_e_invoice(doc):
         country = frappe.db.get_value("Address", doc.customer_address, "country")
         get_validated_country_code(country)
 
-    if doc._action == "submit" and not doc.irn:
+    if doc.docstatus == 1 and not doc.irn:
         doc.einvoice_status = "Pending"
 
 
