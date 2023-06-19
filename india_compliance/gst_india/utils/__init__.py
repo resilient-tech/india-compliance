@@ -5,7 +5,7 @@ from titlecase import titlecase as _titlecase
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import cint, get_datetime, get_link_to_form, get_system_timezone
+from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_timezone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -317,6 +317,18 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
     return hsn_tax, hsn_taxable_amount
 
 
+def get_hsn_settings():
+    validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
+        "GST Settings",
+        "GST Settings",
+        ("validate_hsn_code", "min_hsn_digits"),
+    )
+
+    valid_hsn_length = (4, 6, 8) if cint(min_hsn_digits) == 4 else (6, 8)
+
+    return validate_hsn_code, valid_hsn_length
+
+
 def get_place_of_supply(party_details, doctype):
     """
     :param party_details: A frappe._dict or document containing fields related to party
@@ -439,6 +451,23 @@ def as_ist(value=None):
         .localize(parsed)
         .astimezone(timezone(TIMEZONE))
         .replace(tzinfo=None)
+    )
+
+
+def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):
+    if type(input) not in (list, tuple):
+        return
+
+    if not input:
+        return
+
+    if len(input) == 1:
+        return cstr(input[0])
+
+    return (
+        separator.join(cstr(item) for item in input[:-1])
+        + last_separator
+        + cstr(input[-1])
     )
 
 

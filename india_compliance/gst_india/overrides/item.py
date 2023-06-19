@@ -1,6 +1,11 @@
 import frappe
 from frappe import _
 
+from india_compliance.gst_india.utils import (
+    get_hsn_settings,
+    join_list_with_custom_separators,
+)
+
 
 def validate(doc, method=None):
     validate_hsn_code(doc)
@@ -12,11 +17,7 @@ def validate_hsn_code(doc):
     if not doc.is_sales_item:
         return
 
-    validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        ("validate_hsn_code", "min_hsn_digits"),
-    )
+    validate_hsn_code, valid_hsn_length = get_hsn_settings()
 
     if not validate_hsn_code:
         return
@@ -29,12 +30,13 @@ def validate_hsn_code(doc):
             frappe.MandatoryError,
         )
 
-    if len(doc.gst_hsn_code) < int(min_hsn_digits):
+    if len(doc.gst_hsn_code) not in valid_hsn_length:
         frappe.throw(
             _(
-                "HSN/SAC Code should be at least {0} digits long. Please enter a valid"
+                "HSN/SAC Code should be {0} digits long. Please enter a valid"
                 " HSN/SAC code."
-            ).format(min_hsn_digits)
+            ).format(join_list_with_custom_separators(valid_hsn_length)),
+            title=_("Invalid HSN/SAC"),
         )
 
 
