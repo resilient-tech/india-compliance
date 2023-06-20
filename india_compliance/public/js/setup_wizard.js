@@ -1,4 +1,5 @@
-await frappe.require("assets/india_compliance/js/quick_entry.js");
+frappe.require("assets/india_compliance/js/quick_entry.js");
+update_erpnext_slides_settings();
 
 function update_erpnext_slides_settings() {
     const slide =
@@ -28,6 +29,8 @@ function update_erpnext_slides_settings() {
         ),
     });
 
+    if (!can_fetch_gstin_info()) return;
+
     const _onload = slide.onload;
     slide.onload = function (slide) {
         _onload.call(this, slide);
@@ -38,37 +41,17 @@ function update_erpnext_slides_settings() {
     };
 }
 
-update_erpnext_slides_settings();
-
 async function autofill_company_info(slide) {
-    let gstin = slide.get_input("company_gstin").val();
+    const gstin = slide.get_input("company_gstin").val();
     const gstin_field = slide.get_field("company_gstin");
+    const gstin_info = await get_gstin_info(gstin);
 
-    if (!india_compliance.validate_gstin(gstin)) {
-        gstin_field.set_description(get_gstin_description());
-        return;
+    if (gstin_info.business_name) {
+        await slide.get_field("company_name").set_value(gstin_info.business_name);
+        slide.get_input("company_name").trigger("change");
     }
 
-    if (can_fetch_gstin_info) {
-        const gstin_info = await get_gstin_info(gstin);
-
-        if (gstin_info.business_name) {
-            await slide.get_field("company_name").set_value(gstin_info.business_name);
-        }
-
-        set_gstin_description(gstin_field, gstin_info.status);
-        set_company_abbr(slide);
-    }
-}
-
-function set_company_abbr(slide) {
-    let parts = slide.get_input("company_name").val().split(" ");
-
-    let abbr = $.map(parts, function (p) {
-        return p ? p.substr(0, 1) : null;
-    }).join("");
-
-    slide.get_field("company_abbr").set_value(abbr.slice(0, 10).toUpperCase());
+    set_gstin_description(gstin_field, gstin_info.status);
 }
 
 function can_fetch_gstin_info() {

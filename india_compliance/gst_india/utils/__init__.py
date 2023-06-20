@@ -174,21 +174,24 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
-def guess_gst_category(gstin: str | None, gst_category: str | None) -> str:
-    """
-    :param: gstin: Party GSTIN Number
-    :param: gst_category: GST Category
-    Returns GST Category for given GSTIN No or the perfect match of GST Category received from search API.
-    """
-    if not (gstin or gst_category):
-        return
+def guess_gst_category(gstin: str | None, country: str | None) -> str:
+    if not gstin:
+        if country and country != "India":
+            return "Overseas"
 
-    for category, regex in GSTIN_FORMATS.items():
-        if gstin and regex.match(gstin):
-            return category
+        return "Unregistered"
 
-        if gst_category and (gst_category in category or gst_category == category):
-            return category
+    if GSTIN_FORMATS["Tax Deductor"].match(gstin):
+        return "Tax Deductor"
+
+    if GSTIN_FORMATS["Registered Regular"].match(gstin):
+        return "Registered Regular"
+
+    if GSTIN_FORMATS["UIN Holders"].match(gstin):
+        return "UIN Holders"
+
+    if GSTIN_FORMATS["Overseas"].match(gstin):
+        return "Overseas"
 
 
 def get_data_file_path(file_name):
