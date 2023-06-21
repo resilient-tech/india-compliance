@@ -115,6 +115,8 @@ function show_overseas_disabled_warning(doctype) {
 }
 
 function set_gstin_query(doctype) {
+    const STATUS_COLORS = { Active: "green", Cancelled: "red" };
+
     frappe.ui.form.on(doctype, {
         async refresh(frm) {
             if (frm.is_new() || frm._gstin_options_set_for == frm.doc.name) return;
@@ -122,7 +124,23 @@ function set_gstin_query(doctype) {
             frm._gstin_options_set_for = frm.doc.name;
             const field = frm.get_field("gstin");
             field.df.ignore_validation = true;
-            field.set_data(await india_compliance.get_gstin_options(frm.doc.name, doctype));
+            let data = await india_compliance.get_gstin_options(frm.doc.name, doctype);
+            field.set_data(data);
+
+            frappe.call({
+                method: "india_compliance.gst_india.doctype.gstin_detail.gstin_detail.get_gstin_status",
+                args: {
+                    gstin: data[0]
+                },
+                callback: (res) => {
+                    field.set_description(
+                        `<div class="d-flex indicator ${STATUS_COLORS[res.message] || "orange"}">
+                            Status:&nbsp;<strong>${res.message}</strong>
+                        </div>`
+                    );
+                },
+            });
+
         },
     });
 }

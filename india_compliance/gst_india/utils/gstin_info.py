@@ -7,7 +7,7 @@ from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.public import PublicAPI
-from india_compliance.gst_india.utils import titlecase, validate_gstin
+from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
 GST_CATEGORIES = {
     "Regular": "Registered Regular",
@@ -35,6 +35,7 @@ def get_gstin_info(gstin):
 
     if not response:
         response = PublicAPI().get_gstin_info(gstin)
+        update_gstin_details(response)
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
@@ -54,6 +55,26 @@ def get_gstin_info(gstin):
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
     return gstin_info
+
+
+def update_gstin_details(response):
+    registration_date = response.rgdt
+    cancelled_date = response.cxdt
+
+    try:
+        cancelled_date = parse_datetime(cancelled_date, day_first=True)
+    except Exception:
+        cancelled_date = None
+
+    frappe.enqueue(
+        "india_compliance.gst_india.doctype.gstin_detail.gstin_detail.create_gstin_detail",
+        queue="short",
+        now=True,
+        gstin=response.gstin,
+        status=response.sts,
+        registration_date=registration_date,
+        cancelled_date=cancelled_date,
+    )
 
 
 def get_archived_gstin_info(gstin):
