@@ -2,7 +2,11 @@ import frappe
 from frappe import _
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.utils import validate_gst_category, validate_gstin
+from india_compliance.gst_india.utils import (
+    validate_gst_category,
+    validate_gstin,
+    validate_pincode,
+)
 
 
 def validate(doc, method=None):
@@ -10,6 +14,7 @@ def validate(doc, method=None):
     validate_gst_category(doc.gst_category, doc.gstin)
     validate_overseas_gst_category(doc)
     validate_state(doc)
+    validate_pincode(doc)
 
 
 def validate_overseas_gst_category(doc):

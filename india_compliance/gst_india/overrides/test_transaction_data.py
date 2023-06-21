@@ -87,7 +87,9 @@ class TestTransactionData(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(PIN Code.* a 6-digit number.*)$"),
+            re.compile(
+                r"^(Postal Code for Address.* must be a 6-digit number and cannot start with 0)$"
+            ),
             GSTTransactionData(doc).check_missing_address_fields,
             address,
         )
