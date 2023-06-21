@@ -115,8 +115,6 @@ function show_overseas_disabled_warning(doctype) {
 }
 
 function set_gstin_query(doctype) {
-    const STATUS_COLORS = { Active: "green", Cancelled: "red" };
-
     frappe.ui.form.on(doctype, {
         async refresh(frm) {
             if (frm.is_new() || frm._gstin_options_set_for == frm.doc.name) return;
@@ -134,9 +132,7 @@ function set_gstin_query(doctype) {
                 },
                 callback: (res) => {
                     field.set_description(
-                        `<div class="d-flex indicator ${STATUS_COLORS[res.message] || "orange"}">
-                            Status:&nbsp;<strong>${res.message}</strong>
-                        </div>`
+                        india_compliance.set_gstin_status(res.message)
                     );
                 },
             });

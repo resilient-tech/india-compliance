@@ -39,6 +39,13 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
+    set_gstin_status(status) {
+        const STATUS_COLORS = { Active: "green", Cancelled: "red" };
+        return `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
+                    Status:&nbsp;<strong>${status}</strong>
+                </div>`
+    },
+
     set_state_options(frm) {
         const state_field = frm.get_field("state");
         const country = frm.get_field("country").value;
