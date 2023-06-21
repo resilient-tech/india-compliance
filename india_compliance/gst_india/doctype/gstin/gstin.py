@@ -11,8 +11,8 @@ class GSTIN(Document):
 
 
 def create_gstin(gstin, status, registration_date, cancelled_date):
-    gstin_exists = frappe.db.exists("GSTIN Detail", gstin)
-    gstin = {
+    gstin_exists = frappe.db.exists("GSTIN", gstin)
+    gstin_detail = {
         "status": status,
         "registration_date": registration_date,
         "last_updated_on": datetime.now(),
@@ -20,13 +20,13 @@ def create_gstin(gstin, status, registration_date, cancelled_date):
     }
 
     if gstin_exists:
-        frappe.get_doc("GSTIN Detail", gstin).update(gstin).save()
+        frappe.get_doc("GSTIN", gstin).update(gstin_detail).save()
     else:
-        gstin["doctype"] = "GSTIN Detail"
-        gstin["gstin"] = gstin
-        frappe.get_doc(gstin).insert()
+        gstin_detail["doctype"] = "GSTIN"
+        gstin_detail["gstin"] = gstin
+        frappe.get_doc(gstin_detail).insert()
 
 
 @frappe.whitelist()
 def get_gstin_status(gstin):
-    return frappe.get_value("GSTIN Detail", gstin, "status")
+    return frappe.get_value("GSTIN", gstin, "status")

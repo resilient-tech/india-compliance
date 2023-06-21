@@ -35,7 +35,8 @@ def get_gstin_info(gstin):
 
     if not response:
         response = PublicAPI().get_gstin_info(gstin)
-        update_gstin_details(response)
+
+    update_gstin_details(response)
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
@@ -58,16 +59,15 @@ def get_gstin_info(gstin):
 
 
 def update_gstin_details(response):
-    registration_date = response.rgdt
+    registration_date = parse_datetime(response.rgdt, day_first=True)
     cancelled_date = response.cxdt
 
     try:
         cancelled_date = parse_datetime(cancelled_date, day_first=True)
     except Exception:
-        cancelled_date = None
-
+        cancelled_date = registration_date if response.sts == "Cancelled" else None
     frappe.enqueue(
-        "india_compliance.gst_india.doctype.gstin.gstin.create_gstin_detail",
+        "india_compliance.gst_india.doctype.gstin.gstin.create_gstin",
         queue="short",
         now=True,
         gstin=response.gstin,
