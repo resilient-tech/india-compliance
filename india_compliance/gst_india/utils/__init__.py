@@ -229,6 +229,26 @@ def validate_pincode(address):
     )
 
 
+def guess_gst_category(gstin: str | None, country: str | None) -> str:
+    if not gstin:
+        if country and country != "India":
+            return "Overseas"
+
+        return "Unregistered"
+
+    if GSTIN_FORMATS["Tax Deductor"].match(gstin):
+        return "Tax Deductor"
+
+    if GSTIN_FORMATS["Registered Regular"].match(gstin):
+        return "Registered Regular"
+
+    if GSTIN_FORMATS["UIN Holders"].match(gstin):
+        return "UIN Holders"
+
+    if GSTIN_FORMATS["Overseas"].match(gstin):
+        return "Overseas"
+
+
 def get_data_file_path(file_name):
     return frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
 
