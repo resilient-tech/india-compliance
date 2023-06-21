@@ -67,6 +67,7 @@ def validate(doc, method=None):
         return
 
     validate_invoice_number(doc)
+    validate_credit_debit_note(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
@@ -88,6 +89,16 @@ def validate_invoice_number(doc):
                 " only contain alphanumeric characters, dash (-) and slash (/)"
             ),
             title=_("Invalid GST Invoice Number"),
+        )
+
+
+def validate_credit_debit_note(doc):
+    if doc.is_return and doc.is_debit_note:
+        frappe.throw(
+            _(
+                "You have selected both 'Is Return' and 'Is Rate Adjustment Entry'. You can select only one of them."
+            ),
+            title=_("Invalid Options Selected"),
         )
 
 
