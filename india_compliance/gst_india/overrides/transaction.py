@@ -9,9 +9,11 @@ from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
+    get_hsn_settings,
     get_place_of_supply,
     get_place_of_supply_options,
     is_overseas_doc,
+    join_list_with_custom_separators,
     validate_gst_category,
 )
 
@@ -438,24 +440,19 @@ def get_source_state_code(doc):
 
 
 def validate_hsn_codes(doc, method=None):
-    validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        ("validate_hsn_code", "min_hsn_digits"),
-    )
+    validate_hsn_code, valid_hsn_length = get_hsn_settings()
 
     if not validate_hsn_code:
         return
 
     rows_with_missing_hsn = []
     rows_with_invalid_hsn = []
-    min_hsn_digits = int(min_hsn_digits)
 
     for item in doc.items:
         if not (hsn_code := item.get("gst_hsn_code")):
             rows_with_missing_hsn.append(str(item.idx))
 
-        elif len(hsn_code) < min_hsn_digits:
+        elif len(hsn_code) not in valid_hsn_length:
             rows_with_invalid_hsn.append(str(item.idx))
 
     if doc.docstatus == 1:
@@ -469,22 +466,28 @@ def validate_hsn_codes(doc, method=None):
             _(
                 "Please enter a valid HSN/SAC code for the following row numbers:"
                 " <br>{0}"
-            ).format(frappe.bold(", ".join(rows_with_invalid_hsn)))
+            ).format(frappe.bold(", ".join(rows_with_invalid_hsn))),
+            title=_("Invalid HSN/SAC"),
         )
 
     if rows_with_missing_hsn:
         frappe.msgprint(
             _(
                 "Please enter HSN/SAC code for the following row numbers: <br>{0}"
-            ).format(frappe.bold(", ".join(rows_with_missing_hsn)))
+            ).format(frappe.bold(", ".join(rows_with_missing_hsn))),
+            title=_("Invalid HSN/SAC"),
         )
 
     if rows_with_invalid_hsn:
         frappe.msgprint(
             _(
-                "HSN/SAC code should be at least {0} digits long for the following"
+                "HSN/SAC code should be {0} digits long for the following"
                 " row numbers: <br>{1}"
-            ).format(min_hsn_digits, frappe.bold(", ".join(rows_with_invalid_hsn)))
+            ).format(
+                join_list_with_custom_separators(valid_hsn_length),
+                frappe.bold(", ".join(rows_with_invalid_hsn)),
+            ),
+            title=_("Invalid HSN/SAC"),
         )
 
 
