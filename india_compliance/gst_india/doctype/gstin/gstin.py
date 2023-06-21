@@ -6,13 +6,13 @@ import frappe
 from frappe.model.document import Document
 
 
-class GSTINDetail(Document):
+class GSTIN(Document):
     pass
 
 
-def create_gstin_detail(gstin, status, registration_date, cancelled_date):
+def create_gstin(gstin, status, registration_date, cancelled_date):
     gstin_exists = frappe.db.exists("GSTIN Detail", gstin)
-    gstin_detail = {
+    gstin = {
         "status": status,
         "registration_date": registration_date,
         "last_updated_on": datetime.now(),
@@ -20,11 +20,11 @@ def create_gstin_detail(gstin, status, registration_date, cancelled_date):
     }
 
     if gstin_exists:
-        frappe.get_doc("GSTIN Detail", gstin).update(gstin_detail).save()
+        frappe.get_doc("GSTIN Detail", gstin).update(gstin).save()
     else:
-        gstin_detail["doctype"] = "GSTIN Detail"
-        gstin_detail["gstin"] = gstin
-        frappe.get_doc(gstin_detail).insert()
+        gstin["doctype"] = "GSTIN Detail"
+        gstin["gstin"] = gstin
+        frappe.get_doc(gstin).insert()
 
 
 @frappe.whitelist()

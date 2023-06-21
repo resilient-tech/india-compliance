@@ -53,7 +53,7 @@
  "modified": "2023-06-19 18:16:47.324987",
  "modified_by": "Administrator",
  "module": "GST India",
- "name": "GSTIN Detail",
+ "name": "GSTIN",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [

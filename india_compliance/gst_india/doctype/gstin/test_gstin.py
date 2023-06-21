@@ -5,5 +5,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestGSTINDetail(FrappeTestCase):
+class TestGSTIN(FrappeTestCase):
     pass

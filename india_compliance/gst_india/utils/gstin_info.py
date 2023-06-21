@@ -67,7 +67,7 @@ def update_gstin_details(response):
         cancelled_date = None
 
     frappe.enqueue(
-        "india_compliance.gst_india.doctype.gstin_detail.gstin_detail.create_gstin_detail",
+        "india_compliance.gst_india.doctype.gstin.gstin.create_gstin_detail",
         queue="short",
         now=True,
         gstin=response.gstin,

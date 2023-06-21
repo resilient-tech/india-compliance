@@ -128,7 +128,7 @@ function set_gstin_query(doctype) {
             field.set_data(data);
 
             frappe.call({
-                method: "india_compliance.gst_india.doctype.gstin_detail.gstin_detail.get_gstin_status",
+                method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
                 args: {
                     gstin: data[0]
                 },
