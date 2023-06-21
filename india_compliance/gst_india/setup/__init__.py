@@ -143,6 +143,7 @@ def set_default_gst_settings():
         "enable_e_waybill": 1,
         "e_waybill_threshold": 50000,
         # Default API Settings
+        "enable_api": 1,
         "fetch_e_waybill_data": 1,
         "attach_e_waybill_print": 1,
         "auto_generate_e_waybill": 1,
