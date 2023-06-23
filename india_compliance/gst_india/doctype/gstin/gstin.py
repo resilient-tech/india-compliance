@@ -17,20 +17,25 @@ class GSTIN(Document):
 
 def create_gstin(gstin, status, registration_date, cancelled_date, block_status=None):
     gstin_exists = frappe.db.exists("GSTIN", gstin)
-    gstin_detail = {
-        "status": status,
-        "registration_date": registration_date,
-        "last_updated_on": datetime.now(),
-        "cancelled_date": cancelled_date,
-        "block_status": block_status,
-    }
 
     if gstin_exists:
+        gstin_detail = {
+            "status": status,
+            "registration_date": registration_date,
+            "last_updated_on": datetime.now(),
+            "cancelled_date": cancelled_date,
+            "block_status": block_status,
+        }
         frappe.get_doc("GSTIN", gstin).update(gstin_detail).save()
     else:
-        gstin_detail["doctype"] = "GSTIN"
-        gstin_detail["gstin"] = gstin
-        frappe.get_doc(gstin_detail).insert()
+        gstin_detail = frappe.new_doc("GSTIN")
+        gstin_detail.gstin = gstin
+        gstin_detail.status = status
+        gstin_detail.registration_date= registration_date
+        gstin_detail.last_updated_on = datetime.now()
+        gstin_detail.cancelled_date = cancelled_date
+        gstin_detail.block_status = block_status
+        gstin_detail.insert()
 
 
 @frappe.whitelist()
@@ -58,6 +63,7 @@ def fetch_gstin_details(gstin):
     GSTIN_STATUS = {"ACT": "Active", "CNL": "Cancelled"}
 
     gst_settings = frappe.get_cached_doc("GST Settings")
+    company_gstin = None
     for row in gst_settings.credentials:
         if row.service == "e-Waybill / e-Invoice":
             company_gstin = row.gstin
