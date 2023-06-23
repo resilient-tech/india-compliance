@@ -20,6 +20,14 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
 
+for (const doctype of ["Purchase Invoice", "Purchase Receipt", "Purchase Order"]) {
+    on_change_gstin_field(doctype, "supplier_gstin");
+}
+
+for (const doctype of ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"]) {
+    on_change_gstin_field(doctype, "billing_address_gstin");
+}
+
 function fetch_gst_details(doctype) {
     const event_fields = ["tax_category", "company_gstin", "place_of_supply"];
 
@@ -155,4 +163,24 @@ function is_foreign_transaction(frm) {
         frm.doc.gst_category === "Overseas" &&
         frm.doc.place_of_supply === "96-Other Countries"
     );
+}
+
+function on_change_gstin_field(doctype, field_name) {
+    frappe.ui.form.on(doctype, {
+        [field_name](frm) {
+            let field = frm.get_field(field_name);
+            frappe.call({
+                method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin",
+                args: {
+                    gstin: field.value
+                },
+                callback: (res) => {
+                    let gstin_detail = res.message;
+                    field.set_description(
+                        india_compliance.set_gstin_status(gstin_detail.status)
+                    );
+                },
+            });
+        }
+    });
 }

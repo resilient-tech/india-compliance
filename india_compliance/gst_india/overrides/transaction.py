@@ -2,10 +2,11 @@ import json
 
 import frappe
 from frappe import _, bold
-from frappe.utils import cint, flt
+from frappe.utils import cint, date_diff, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
+from india_compliance.gst_india.doctype.gstin.gstin import get_gstin
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
@@ -22,6 +23,28 @@ DOCTYPES_WITH_TAXABLE_VALUE = {
     "Delivery Note",
     "Sales Invoice",
     "POS Invoice",
+}
+
+DATE_FIELD = {
+    "Purchase Invoice": "posting_date",
+    "Purchase Receipt": "posting_date",
+    "Purchase Order": "transaction_date",
+    "Quotation": "transaction_date",
+    "Sales Order": "transaction_date",
+    "Delivery Note": "posting_date",
+    "Sales Invoice": "posting_date",
+    "POS Invoice": "posting_date",
+}
+
+GSTIN_FIELD = {
+    "Purchase Invoice": "supplier_gstin",
+    "Purchase Receipt": "supplier_gstin",
+    "Purchase Order": "supplier_gstin",
+    "Quotation": "billing_address_gstin",
+    "Sales Order": "billing_address_gstin",
+    "Delivery Note": "billing_address_gstin",
+    "Sales Invoice": "billing_address_gstin",
+    "POS Invoice": "billing_address_gstin",
 }
 
 
@@ -791,6 +814,11 @@ def validate_transaction(doc, method=None):
     else:
         validate_reverse_charge_transaction(doc)
 
+    validate_gstin(
+        doc.get(GSTIN_FIELD[doc.doctype]),
+        doc.get(DATE_FIELD[doc.doctype]),
+    )
+
     validate_gst_category(
         doc.gst_category,
         doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin,
@@ -798,6 +826,20 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+
+
+def validate_gstin(gstin, date):
+    gstin_details = get_gstin(gstin=gstin)
+    if (
+        gstin_details
+        and gstin_details.status == "Cancelled"
+        and date_diff(date, gstin_details.cancelled_date) >= 0
+    ):
+        frappe.throw(
+            ("GSTIN was cancelled on {0}, Kindly check the address.").format(
+                gstin_details.cancelled_date
+            )
+        )
 
 
 def ignore_gst_validations(doc):

@@ -12,7 +12,8 @@
   "status",
   "registration_date",
   "cancelled_date",
-  "last_updated_on"
+  "last_updated_on",
+  "block_status"
  ],
  "fields": [
   {
@@ -46,11 +47,16 @@
    "fieldname": "last_updated_on",
    "fieldtype": "Datetime",
    "label": "Last Updated On"
+  },
+  {
+   "fieldname": "block_status",
+   "fieldtype": "Data",
+   "label": "Block Status"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-06-19 18:16:47.324987",
+ "modified": "2023-06-21 16:52:37.612439",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",

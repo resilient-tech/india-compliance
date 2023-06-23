@@ -35,8 +35,7 @@ def get_gstin_info(gstin):
 
     if not response:
         response = PublicAPI().get_gstin_info(gstin)
-
-    update_gstin_details(response)
+        update_gstin_details(response)
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
