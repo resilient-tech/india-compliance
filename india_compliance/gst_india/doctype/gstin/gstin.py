@@ -41,6 +41,10 @@ def get_gstin_status(gstin):
 @frappe.whitelist()
 def get_gstin(gstin):
     gstin_detail = frappe.db.get("GSTIN", gstin)
+    if not gstin_detail:
+        fetch_gstin_details(gstin)
+        gstin_detail = frappe.db.get("GSTIN", gstin)
+
     days_since_update = date_diff(
         datetime.now(), gstin_detail.get("last_updated_on", datetime.now())
     )
