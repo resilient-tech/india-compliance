@@ -787,11 +787,6 @@ def is_export_without_payment_of_gst(doc):
 
 
 def validate_transaction(doc, method=None):
-    validate_gstin(
-        doc.get(GSTIN_FIELD[doc.doctype]),
-        doc.get(DATE_FIELD[doc.doctype]),
-        "Supplier" if doc.doctype in SUPPLIER_DOCTYPES else "Customer",
-    )
     if ignore_gst_validations(doc):
         return False
     if doc.place_of_supply:

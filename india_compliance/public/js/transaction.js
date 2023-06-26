@@ -212,14 +212,15 @@ function on_change_gstin_field(doctype, field_name) {
                             : "Customer";
                         frappe.throw(
                             __(
-                                `GSTIN is ${gstin_detail.status} ${
+                                "GSTIN is {0}{1}, Kindly change your {2} or {3} Address",
+                                [
+                                    gstin_detail.status,
                                     gstin_detail.status == "Cancelled"
                                         ? "on " + gstin_detail.cancelled_date
-                                        : ""
-                                },
-                                Kindly change your ${party} or ${
-                                    party == "Supplier" ? party : "Billing"
-                                } Address`
+                                        : "",
+                                    party,
+                                    party == "Supplier" ? party : "Billing",
+                                ]
                             )
                         );
                     }
