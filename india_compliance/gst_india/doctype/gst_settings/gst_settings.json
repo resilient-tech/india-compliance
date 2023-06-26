@@ -35,6 +35,7 @@
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "gstin_status_refresh_interval",
   "column_break_bydp",
   "archive_party_info_days",
   "uom_mapping_section",
@@ -78,7 +79,7 @@
   },
   {
    "default": "1",
-   "description": "As per <a href=\"https://old.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
+   "description": "As per <a href=\"https://www.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
    "label": "Validate HSN/SAC Code in Sales Items and Transactions"
@@ -298,12 +299,19 @@
    "fieldname": "archive_party_info_days",
    "fieldtype": "Int",
    "label": "Archive Party Information (In Days)"
+  },
+  {
+   "default": "60",
+   "description": "Ensures valid GSTIN in transactions by refreshing status periodically.",
+   "fieldname": "gstin_status_refresh_interval",
+   "fieldtype": "Int",
+   "label": "GSTIN Status Refresh Interval"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-03 11:08:21.240509",
+ "modified": "2023-06-26 15:03:26.339033",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

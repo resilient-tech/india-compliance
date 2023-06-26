@@ -47,6 +47,15 @@ GSTIN_FIELD = {
     "POS Invoice": "billing_address_gstin",
 }
 
+SUPPLIER_DOCTYPES = ["Purchase Invoice", "Purchase Receipt", "Purchase Order"]
+CUSTOMER_DOCTYPES = [
+    "Quotation",
+    "Sales Order",
+    "Delivery Note",
+    "Sales Invoice",
+    "POS Invoice",
+]
+
 
 def update_taxable_values(doc, valid_accounts):
     if doc.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
@@ -778,9 +787,13 @@ def is_export_without_payment_of_gst(doc):
 
 
 def validate_transaction(doc, method=None):
+    validate_gstin(
+        doc.get(GSTIN_FIELD[doc.doctype]),
+        doc.get(DATE_FIELD[doc.doctype]),
+        "Supplier" if doc.doctype in SUPPLIER_DOCTYPES else "Customer",
+    )
     if ignore_gst_validations(doc):
         return False
-
     if doc.place_of_supply:
         validate_place_of_supply(doc)
     else:
@@ -788,7 +801,6 @@ def validate_transaction(doc, method=None):
 
     if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
         return False
-
     # Ignore validation for Quotation not to Customer
     if doc.doctype != "Quotation" or doc.quotation_to == "Customer":
         if (
@@ -813,10 +825,10 @@ def validate_transaction(doc, method=None):
         validate_hsn_codes(doc)
     else:
         validate_reverse_charge_transaction(doc)
-
     validate_gstin(
         doc.get(GSTIN_FIELD[doc.doctype]),
         doc.get(DATE_FIELD[doc.doctype]),
+        "Supplier" if doc.doctype in SUPPLIER_DOCTYPES else "Customer",
     )
 
     validate_gst_category(
@@ -828,16 +840,25 @@ def validate_transaction(doc, method=None):
     update_taxable_values(doc, valid_accounts)
 
 
-def validate_gstin(gstin, date):
+def validate_gstin(gstin, date, party):
     gstin_details = get_gstin(gstin=gstin)
     if (
         gstin_details
-        and gstin_details.status == "Cancelled"
-        and date_diff(date, gstin_details.cancelled_date) >= 0
+        and gstin_details.status != "Active"
+        and (
+            date_diff(date, gstin_details.cancelled_date) >= 0
+            if gstin_details.status == "Cancelled"
+            else True
+        )
     ):
         frappe.throw(
-            ("GSTIN was cancelled on {0}, Kindly check the address.").format(
-                gstin_details.cancelled_date
+            ("GSTIN is {0}{3}, Kindly change the {1} or {2} Address.").format(
+                gstin_details.status,
+                party,
+                party if party == "Supplier" else "Billing",
+                f" on {gstin_details.cancelled_date}"
+                if gstin_details.status == "Cancelled"
+                else "",
             )
         )
 

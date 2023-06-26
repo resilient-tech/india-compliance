@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
+from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import parse_datetime, titlecase, validate_gstin
 
@@ -21,6 +22,15 @@ GST_CATEGORIES = {
     "URP": "Unregistered",
 }
 
+GSTIN_STATUS = {
+    "ACT": "Active",
+    "CNL": "Cancelled",
+    "INA": "Inactive",
+    "PRO": "Provision",
+}
+
+GSTIN_BLOCK_STATUS = {"U": "Unblocked", "B": "Blocked"}
+
 
 @frappe.whitelist()
 def get_gstin_info(gstin):
@@ -34,8 +44,13 @@ def get_gstin_info(gstin):
     response = get_archived_gstin_info(gstin)
 
     if not response:
-        response = PublicAPI().get_gstin_info(gstin)
-        update_gstin_details(response)
+        gstin_detail, response = get_gstin_public_api(gstin)
+        frappe.enqueue(
+            "india_compliance.gst_india.doctype.gstin.gstin.create_gstin",
+            queue="short",
+            now=True,
+            **gstin_detail,
+        )
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
@@ -55,25 +70,6 @@ def get_gstin_info(gstin):
         gstin_info.permanent_address = gstin_info.all_addresses[0]
 
     return gstin_info
-
-
-def update_gstin_details(response):
-    registration_date = parse_datetime(response.rgdt, day_first=True)
-    cancelled_date = response.cxdt
-
-    try:
-        cancelled_date = parse_datetime(cancelled_date, day_first=True)
-    except Exception:
-        cancelled_date = registration_date if response.sts == "Cancelled" else None
-    frappe.enqueue(
-        "india_compliance.gst_india.doctype.gstin.gstin.create_gstin",
-        queue="short",
-        now=True,
-        gstin=response.gstin,
-        status=response.sts,
-        registration_date=registration_date,
-        cancelled_date=cancelled_date,
-    )
 
 
 def get_archived_gstin_info(gstin):
@@ -150,6 +146,47 @@ def _extract_address_lines(address):
         address_line1 = f"{address_line1}, {street}"
 
     return address_line1, address_line2
+
+
+def get_gstin_e_invoice_api(company_gstin, gstin):
+    response = EInvoiceAPI(company_gstin=company_gstin).get_gstin_info(gstin)
+    registration_date = parse_datetime(response.DtReg, day_first=True)
+    status = GSTIN_STATUS.get(response.Status, response.Status)
+
+    try:
+        cancelled_date = parse_datetime(response.DtDReg, day_first=True)
+    except Exception:
+        cancelled_date = registration_date if status == "Cancelled" else None
+
+    gstin_detail = {
+        "gstin": gstin,
+        "registration_date": registration_date,
+        "cancelled_date": cancelled_date,
+        "status": status,
+        "block_status": GSTIN_BLOCK_STATUS.get(response.BlkStatus, response.BlkStatus),
+    }
+    return gstin_detail, response
+
+
+def get_gstin_public_api(gstin):
+    response = PublicAPI().get_gstin_info(gstin)
+    registration_date = parse_datetime(response.rgdt, day_first=True)
+    status = response.sts
+
+    try:
+        cancelled_date = parse_datetime(response.cxdt, day_first=True)
+    except Exception:
+        cancelled_date = registration_date if status == "Cancelled" else None
+
+    gstin_detail = {
+        "gstin": gstin,
+        "registration_date": parse_datetime(response.rgdt, day_first=True),
+        "cancelled_date": cancelled_date,
+        "status": status,
+        "block_status": None,
+    }
+
+    return gstin_detail, response
 
 
 # ####### SAMPLE DATA for GST_CATEGORIES ########

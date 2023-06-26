@@ -11,6 +11,26 @@ const TRANSACTION_DOCTYPES = [
     "Purchase Invoice",
 ];
 
+const DATE_FIELD = {
+    "Purchase Invoice": "posting_date",
+    "Purchase Receipt": "posting_date",
+    "Purchase Order": "transaction_date",
+    "Quotation": "transaction_date",
+    "Sales Order": "transaction_date",
+    "Delivery Note": "posting_date",
+    "Sales Invoice": "posting_date",
+    "POS Invoice": "posting_date",
+};
+
+const SUPPLIER_DOCTYPES = ["Purchase Invoice", "Purchase Receipt", "Purchase Order"];
+const CUSTOMER_DOCTYPES = [
+    "Quotation",
+    "Sales Order",
+    "Delivery Note",
+    "Sales Invoice",
+    "POS Invoice",
+];
+
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
@@ -20,11 +40,11 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
 
-for (const doctype of ["Purchase Invoice", "Purchase Receipt", "Purchase Order"]) {
+for (const doctype of SUPPLIER_DOCTYPES) {
     on_change_gstin_field(doctype, "supplier_gstin");
 }
 
-for (const doctype of ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice", "POS Invoice"]) {
+for (const doctype of CUSTOMER_DOCTYPES) {
     on_change_gstin_field(doctype, "billing_address_gstin");
 }
 
@@ -169,18 +189,42 @@ function on_change_gstin_field(doctype, field_name) {
     frappe.ui.form.on(doctype, {
         [field_name](frm) {
             let field = frm.get_field(field_name);
+            let transaction_date = frm.get_field(DATE_FIELD[frm.doctype]).value;
             frappe.call({
                 method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin",
                 args: {
-                    gstin: field.value
+                    gstin: field.value,
                 },
-                callback: (res) => {
+                callback: res => {
                     let gstin_detail = res.message;
                     field.set_description(
                         india_compliance.set_gstin_status(gstin_detail.status)
                     );
+                    if (
+                        gstin_detail.status != "Active" &&
+                        (gstin_detail.status == "Cancelled"
+                            ? new Date(transaction_date) >=
+                              new Date(gstin_detail.cancelled_date)
+                            : true)
+                    ) {
+                        let party = SUPPLIER_DOCTYPES.includes(frm.doctype)
+                            ? "Supplier"
+                            : "Customer";
+                        frappe.throw(
+                            __(
+                                `GSTIN is ${gstin_detail.status} ${
+                                    gstin_detail.status == "Cancelled"
+                                        ? "on " + gstin_detail.cancelled_date
+                                        : ""
+                                },
+                                Kindly change your ${party} or ${
+                                    party == "Supplier" ? party : "Billing"
+                                } Address`
+                            )
+                        );
+                    }
                 },
             });
-        }
+        },
     });
 }
