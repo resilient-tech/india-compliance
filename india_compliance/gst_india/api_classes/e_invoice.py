@@ -20,6 +20,7 @@ class EInvoiceAPI(BaseAPI):
         ),
         # Cancel IRN errors
         "9999": "Invoice is not active",
+        "4002": "EwayBill is already generated for this IRN",
     }
 
     def setup(self, doc=None, *, company_gstin=None):
@@ -62,6 +63,9 @@ class EInvoiceAPI(BaseAPI):
 
     def get_e_invoice_by_irn(self, irn):
         return self.get(endpoint="invoice/irn", params={"irn": irn})
+
+    def get_e_waybill_by_irn(self, irn):
+        return self.get(endpoint="ewaybill/irn", params={"irn": irn})
 
     def generate_irn(self, data):
         result = self.post(endpoint="invoice", json=data)
