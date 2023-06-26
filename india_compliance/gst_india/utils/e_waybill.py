@@ -3,7 +3,13 @@ import os
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo
-from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
+from frappe.utils import (
+    add_to_date,
+    format_date,
+    get_datetime,
+    get_fullname,
+    random_string,
+)
 from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
@@ -292,7 +298,7 @@ def update_transporter(*, doctype, docname, values):
 
 
 #######################################################################################
-### e-Waybill Print and Attach Functions ##############################################
+### e-Waybill Fetch, Print and Attach Functions ##############################################
 #######################################################################################
 
 
@@ -323,6 +329,43 @@ def _fetch_e_waybill_data(doc, log):
             "is_latest_data": 1,
         }
     )
+
+
+@frappe.whitelist()
+def fetch_active_e_waybills_by_date(*, doctype, docname, e_waybill_date):
+    doc = load_doc(doctype, docname, "submit")
+
+    if doc.irn and not doc.ewaybill:
+        frappe.msgprint(_("Try Generating e-Waybill with IRN"))
+        return
+
+    try:
+        response = EWaybillAPI(doc).get_e_waybills_by_date(
+            format_date(e_waybill_date, "dd/mm/yyyy")
+        )
+
+        result = {
+            k: v
+            for e_waybill in response
+            for k, v in e_waybill.items()
+            if e_waybill.get("docNo") == doc.name
+        }
+
+        # To log and process e_waybill generation Without IRN
+        result["ewayBillNo"] = result["ewbNo"]
+        result["ewayBillDate"] = result["ewbDate"]
+
+    except frappe.ValidationError as e:
+        frappe.clear_messages()
+        frappe.msgprint(
+            _("Fetch e-Waybill by Date failed with error: <br/>{0}").format(str(e)),
+            _("Warning"),
+            indicator="yellow",
+        )
+        return
+
+    log_and_process_e_waybill_generation(doc, result)
+    return send_updated_doc(doc)
 
 
 def attach_e_waybill_pdf(doc, log=None):
