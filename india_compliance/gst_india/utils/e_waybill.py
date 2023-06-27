@@ -343,7 +343,7 @@ def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
         k: v
         for e_waybill in response
         for k, v in e_waybill.items()
-        if e_waybill.get("docNo") == "cRU64e" and e_waybill.get("status") == "ACT"
+        if e_waybill.get("docNo") == doc.name and e_waybill.get("status") == "ACT"
     }
 
     if not result:
@@ -888,7 +888,7 @@ class EWaybillData(GSTTransactionData):
             "subSupplyType": self.transaction_details.sub_supply_type,
             "subSupplyDesc": "",
             "docType": self.transaction_details.document_type,
-            "docNo": "cRU64e" or self.transaction_details.name,
+            "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
             "fromTrdName": self.from_address.legal_name,

@@ -155,9 +155,9 @@ class BaseAPI:
 
             if not success_value and not self.handle_failed_response(response_json):
                 frappe.throw(
-                    response_json.get("message") or
+                    response_json.get("message")
                     # Fallback to response body if message is not present
-                    frappe.as_json(response_json, indent=4),
+                    or frappe.as_json(response_json, indent=4),
                     title=_("API Request Failed"),
                 )
 
