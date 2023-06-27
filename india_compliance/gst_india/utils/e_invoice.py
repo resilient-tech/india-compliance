@@ -264,7 +264,8 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    validate_e_invoice_applicability_date(doc, gst_settings)
+    if doc.is_opening == "No":
+        validate_e_invoice_applicability_date(doc, gst_settings)
 
     return True
 
