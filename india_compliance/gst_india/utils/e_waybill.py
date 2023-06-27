@@ -91,6 +91,10 @@ def _generate_e_waybill(doc, throw=True):
 
     api = EWaybillAPI if not with_irn else EInvoiceAPI
     result = api(doc).generate_e_waybill(data)
+
+    if result.error_code == "4002":
+        result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
     if not frappe.request:
