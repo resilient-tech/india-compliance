@@ -6,7 +6,7 @@ from frappe.utils import cint, date_diff, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
-from india_compliance.gst_india.doctype.gstin.gstin import get_gstin
+from india_compliance.gst_india.doctype.gstin.gstin import get_gstin_status
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
@@ -836,7 +836,7 @@ def validate_transaction(doc, method=None):
 
 
 def validate_gstin(gstin, date, party):
-    gstin_details = get_gstin(gstin=gstin)
+    gstin_details = get_gstin_status(gstin)
     if (
         gstin_details
         and gstin_details.status != "Active"

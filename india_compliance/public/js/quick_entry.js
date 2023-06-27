@@ -323,7 +323,7 @@ function set_gstin_description(gstin_field, status) {
     }
 
     gstin_field.set_description(
-        india_compliance.set_gstin_status(status)
+        india_compliance.get_gstin_status_desc(status)
     );
 }
 

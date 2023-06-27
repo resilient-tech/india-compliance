@@ -114,32 +114,27 @@ function show_overseas_disabled_warning(doctype) {
     });
 }
 
-function set_gstin_query(doctype) {
+function set_gstin_options_and_status(doctype) {
     frappe.ui.form.on(doctype, {
-        async refresh(frm) {
-            if (frm.is_new() || frm._gstin_options_set_for == frm.doc.name) return;
-
-            frm._gstin_options_set_for = frm.doc.name;
-            const field = frm.get_field("gstin");
-            field.df.ignore_validation = true;
-            let data = await india_compliance.get_gstin_options(frm.doc.name, doctype);
-            field.set_data(data);
-
-            frappe.call({
-                method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
-                args: {
-                    gstin: data[0]
-                },
-                callback: (res) => {
-                    field.set_description(
-                        india_compliance.set_gstin_status(res.message)
-                    );
-                },
-            });
-
+        refresh(frm) {
+            set_gstin_options(frm);
+            india_compliance.set_gstin_status(frm.get_field("gstin"));
+        },
+        gstin(frm) {
+            india_compliance.set_gstin_status(frm.get_field("gstin"));
         },
     });
 }
+
+async function set_gstin_options(frm) {
+    if (frm.is_new() || frm._gstin_options_set_for == frm.doc.name) return;
+
+    frm._gstin_options_set_for = frm.doc.name;
+    const field = frm.get_field("gstin");
+    field.df.ignore_validation = true;
+    field.set_data(await india_compliance.get_gstin_options(frm.doc.name, frm.doctype));
+}
+
 
 function set_gst_category(doctype) {
     frappe.ui.form.on(doctype, {

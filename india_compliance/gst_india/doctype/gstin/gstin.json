@@ -1,19 +1,18 @@
 {
  "actions": [],
- "allow_rename": 1,
  "autoname": "field:gstin",
  "creation": "2023-06-19 18:16:47.324987",
  "default_view": "List",
  "doctype": "DocType",
- "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "gstin",
-  "status",
   "registration_date",
+  "block_status",
+  "column_break_nrjd",
+  "status",
   "cancelled_date",
-  "last_updated_on",
-  "block_status"
+  "last_updated_on"
  ],
  "fields": [
   {
@@ -50,13 +49,18 @@
   },
   {
    "fieldname": "block_status",
-   "fieldtype": "Data",
+   "fieldtype": "Check",
    "label": "Block Status"
+  },
+  {
+   "fieldname": "column_break_nrjd",
+   "fieldtype": "Column Break"
   }
  ],
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-06-26 16:10:10.548744",
+ "modified": "2023-06-27 16:28:28.101147",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",
@@ -64,16 +68,22 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
-   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
    "role": "System Manager",
-   "share": 1,
-   "write": 1
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1
   }
  ],
  "sort_field": "modified",

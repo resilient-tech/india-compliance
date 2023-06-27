@@ -79,7 +79,7 @@
   },
   {
    "default": "1",
-   "description": "As per <a href=\"https://www.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
+   "description": "As per <a href=\"https://old.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
    "label": "Validate HSN/SAC Code in Sales Items and Transactions"
@@ -311,7 +311,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-26 15:03:26.339033",
+ "modified": "2023-06-26 15:03:26.339035",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
