@@ -121,6 +121,13 @@ def generate_e_invoice(docname, throw=True):
             _("Warning"),
             indicator="yellow",
         )
+
+        doc.db_set(
+            {
+                "einvoice_status": "Failed",
+            }
+        )
+
         return
 
     doc.db_set(
