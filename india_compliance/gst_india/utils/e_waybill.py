@@ -332,37 +332,33 @@ def _fetch_e_waybill_data(doc, log):
 
 
 @frappe.whitelist()
-def fetch_active_e_waybills_by_date(*, doctype, docname, e_waybill_date):
+def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
     doc = load_doc(doctype, docname, "submit")
 
-    if doc.irn and not doc.ewaybill:
-        frappe.msgprint(_("Try Generating e-Waybill with IRN"))
-        return
+    response = EWaybillAPI(doc).get_e_waybills_by_date(
+        format_date(e_waybill_date, "dd/mm/yyyy")
+    )
 
-    try:
-        response = EWaybillAPI(doc).get_e_waybills_by_date(
-            format_date(e_waybill_date, "dd/mm/yyyy")
-        )
+    result = {
+        k: v
+        for e_waybill in response
+        for k, v in e_waybill.items()
+        if e_waybill.get("docNo") == "cRU64e" and e_waybill.get("status") == "ACT"
+    }
 
-        result = {
-            k: v
-            for e_waybill in response
-            for k, v in e_waybill.items()
-            if e_waybill.get("docNo") == doc.name
-        }
-
-        # To log and process e_waybill generation Without IRN
-        result["ewayBillNo"] = result["ewbNo"]
-        result["ewayBillDate"] = result["ewbDate"]
-
-    except frappe.ValidationError as e:
-        frappe.clear_messages()
+    if not result:
         frappe.msgprint(
-            _("Fetch e-Waybill by Date failed with error: <br/>{0}").format(str(e)),
+            _(
+                "We couldn't find a matching e-Waybill for the date {0}. Please verify the date and try again."
+            ).format(frappe.bold(format_date(e_waybill_date))),
             _("Warning"),
             indicator="yellow",
         )
         return
+
+    # To log and process e_waybill generation Without IRN
+    result["ewayBillNo"] = result["ewbNo"]
+    result["ewayBillDate"] = result["ewbDate"]
 
     log_and_process_e_waybill_generation(doc, result)
     return send_updated_doc(doc)
@@ -892,7 +888,7 @@ class EWaybillData(GSTTransactionData):
             "subSupplyType": self.transaction_details.sub_supply_type,
             "subSupplyDesc": "",
             "docType": self.transaction_details.document_type,
-            "docNo": self.transaction_details.name,
+            "docNo": "cRU64e" or self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
             "fromTrdName": self.from_address.legal_name,

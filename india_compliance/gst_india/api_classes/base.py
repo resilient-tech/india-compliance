@@ -154,18 +154,10 @@ class BaseAPI:
                 success_value = sbool(success_value)
 
             if not success_value and not self.handle_failed_response(response_json):
-                error_message = (
-                    response_json.get("message")
-                    or
-                    # Fallback to response body if message is not present
-                    frappe.as_json(response_json, indent=4)
-                )
-
-                if error_message.startswith("E-way bill(s) are already generated"):
-                    error_message += """<br/><br/> Try to fetch e_waybill by Date"""
-
                 frappe.throw(
-                    error_message,
+                    response_json.get("message") or
+                    # Fallback to response body if message is not present
+                    frappe.as_json(response_json, indent=4),
                     title=_("API Request Failed"),
                 )
 
