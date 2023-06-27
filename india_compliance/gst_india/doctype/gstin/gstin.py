@@ -45,11 +45,13 @@ def get_gstin_status(gstin):
         return
 
     gstin_doc = get_updated_gstin(gstin, gstin_refresh_interval)
-    return {
-        "status": gstin_doc.get("status"),
-        "registration_date": gstin_doc.get("registration_date"),
-        "cancelled_date": gstin_doc.get("cancelled_date"),
-    }
+    return frappe._dict(
+        {
+            "status": gstin_doc.get("status"),
+            "registration_date": gstin_doc.get("registration_date"),
+            "cancelled_date": gstin_doc.get("cancelled_date"),
+        }
+    )
 
 
 def get_updated_gstin(gstin, gstin_refresh_interval):

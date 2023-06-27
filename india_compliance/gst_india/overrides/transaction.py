@@ -2,7 +2,7 @@ import json
 
 import frappe
 from frappe import _, bold
-from frappe.utils import cint, date_diff, flt
+from frappe.utils import cint, date_diff, flt, format_date
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
@@ -24,37 +24,6 @@ DOCTYPES_WITH_TAXABLE_VALUE = {
     "Sales Invoice",
     "POS Invoice",
 }
-
-DATE_FIELD = {
-    "Purchase Invoice": "posting_date",
-    "Purchase Receipt": "posting_date",
-    "Purchase Order": "transaction_date",
-    "Quotation": "transaction_date",
-    "Sales Order": "transaction_date",
-    "Delivery Note": "posting_date",
-    "Sales Invoice": "posting_date",
-    "POS Invoice": "posting_date",
-}
-
-GSTIN_FIELD = {
-    "Purchase Invoice": "supplier_gstin",
-    "Purchase Receipt": "supplier_gstin",
-    "Purchase Order": "supplier_gstin",
-    "Quotation": "billing_address_gstin",
-    "Sales Order": "billing_address_gstin",
-    "Delivery Note": "billing_address_gstin",
-    "Sales Invoice": "billing_address_gstin",
-    "POS Invoice": "billing_address_gstin",
-}
-
-SUPPLIER_DOCTYPES = ["Purchase Invoice", "Purchase Receipt", "Purchase Order"]
-CUSTOMER_DOCTYPES = [
-    "Quotation",
-    "Sales Order",
-    "Delivery Note",
-    "Sales Invoice",
-    "POS Invoice",
-]
 
 
 def update_taxable_values(doc, valid_accounts):
@@ -818,43 +787,55 @@ def validate_transaction(doc, method=None):
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
+        gstin = doc.billing_address_gstin
+        party_type = "Customer"
     else:
         validate_reverse_charge_transaction(doc)
+        gstin = doc.supplier_gstin
+        party_type = "Supplier"
+
     validate_gstin(
-        doc.get(GSTIN_FIELD[doc.doctype]),
-        doc.get(DATE_FIELD[doc.doctype]),
-        "Supplier" if doc.doctype in SUPPLIER_DOCTYPES else "Customer",
+        gstin, doc.get("posting_date", doc.get("transaction_date")), party_type
     )
 
-    validate_gst_category(
-        doc.gst_category,
-        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin,
-    )
+    validate_gst_category(doc.gst_category, gstin)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
 
 
-def validate_gstin(gstin, date, party):
-    gstin_details = get_gstin_status(gstin)
+def validate_gstin(gstin, transaction_date, party):
+    gstin_doc = get_gstin_status(gstin)
+
+    if not gstin_doc:
+        return
+
     if (
-        gstin_details
-        and gstin_details.status != "Active"
-        and (
-            date_diff(date, gstin_details.cancelled_date) >= 0
-            if gstin_details.status == "Cancelled"
-            else True
-        )
+        not gstin_doc.registration_date
+        or date_diff(transaction_date, gstin_doc.registration_date) < 0
     ):
         frappe.throw(
-            ("GSTIN is {0}{3}, Kindly change the {1} or {2} Address.").format(
-                gstin_details.status,
-                party,
-                party if party == "Supplier" else "Billing",
-                f" on {gstin_details.cancelled_date}"
-                if gstin_details.status == "Cancelled"
-                else "",
-            )
+            _(
+                "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
+            ).format(format_date(gstin_doc.registration_date)),
+            title=_("Invalid Party GSTIN"),
+        )
+
+    if (
+        gstin_doc.status == "Cancelled"
+        and date_diff(transaction_date, gstin_doc.cancelled_date) >= 0
+    ):
+        frappe.throw(
+            _(
+                "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
+            ).format(format_date(gstin_doc.cancelled_date)),
+            title=_("Invalid Party GSTIN"),
+        )
+
+    if gstin_doc.status not in ("Active", "Cancelled"):
+        frappe.throw(
+            _("Status of Party GSTIN is {0}").format(gstin_doc.status),
+            title=_("Invalid Party GSTIN Status"),
         )
 
 

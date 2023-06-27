@@ -210,31 +210,37 @@ function validate_gstin_status(gstin_doc, date_field, gstin_field) {
     const cancelled_date = frappe.datetime.str_to_obj(gstin_doc.cancelled_date);
 
     if (!registration_date || transaction_date < registration_date)
-        frappe.throw(
-            __(
+        frappe.throw({
+            message: __(
                 "{0} is Registered on {1}. Please make sure that the {2} is on or after {1}",
                 [
                     gstin_field.df.label,
                     frappe.datetime.str_to_user(gstin_doc.registration_date),
                     date_field.df.label,
                 ]
-            )
-        );
+            ),
+            title: __("Invalid Party GSTIN"),
+        });
 
     if (gstin_doc.status === "Cancelled" && transaction_date >= cancelled_date)
-        frappe.throw(
-            __(
+        frappe.throw({
+            message: __(
                 "{0} is Cancelled from {1}. Please make sure that the {2} is before {1}",
                 [
                     gstin_field.df.label,
                     frappe.datetime.str_to_user(gstin_doc.cancelled_date),
                     date_field.df.label,
                 ]
-            )
-        );
+            ),
+            title: __("Invalid Party GSTIN"),
+        });
 
     if (!["Active", "Cancelled"].includes(gstin_doc.status))
-        frappe.throw(
-            __("Status of {0} is {1}", [gstin_field.df.label, gstin_doc.status])
-        );
+        frappe.throw({
+            message: __("Status of {0} is {1}", [
+                gstin_field.df.label,
+                gstin_doc.status,
+            ]),
+            title: __("Invalid GSTIN Status"),
+        });
 }
