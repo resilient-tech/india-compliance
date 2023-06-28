@@ -130,6 +130,15 @@ def generate_e_invoice(docname, throw=True):
 
         return
 
+    except Exception:
+        doc.db_set(
+            {
+                "einvoice_status": "Failed",
+            }
+        )
+
+        return
+
     doc.db_set(
         {
             "irn": result.Irn,
