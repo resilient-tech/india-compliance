@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 
 import jwt
 
@@ -10,9 +11,11 @@ from frappe.utils import (
     format_date,
     get_datetime,
     getdate,
+    now_datetime,
     random_string,
 )
 
+from india_compliance.gst_india.api_classes.base import GatewayTimeoutError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
@@ -96,6 +99,26 @@ def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
 
     try:
+        e_invoice_auto_retry_after = get_datetime(
+            frappe.get_cached_value("GST Settings", None, "e_invoice_auto_retry_after")
+        )
+
+        if e_invoice_auto_retry_after > now_datetime():
+            doc.db_set({"einvoice_status": "Auto-Retry"})
+
+            frappe.msgprint(
+                _(
+                    "Government services are currently experiencing downtime, \
+                    resulting in high response times and a Gateway Timeout error. \
+                    We apologize for the inconvenience caused. \
+                    Your e-invoice generation will be automatically retried after {0} minutes."
+                ).format(str(e_invoice_auto_retry_after.replace(microsecond=0))),
+                _("Warning"),
+                indicator="yellow",
+            )
+
+            return
+
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
         result = api.generate_irn(data)
@@ -107,6 +130,27 @@ def generate_e_invoice(docname, throw=True):
             # Handle error 2283:
             # IRN details cannot be provided as it is generated more than 2 days ago
             result = result.Desc if response.error_code == "2283" else response
+
+    except GatewayTimeoutError:
+        doc.db_set({"einvoice_status": "Auto-Retry"})
+        e_invoice_auto_retry_after = now_datetime() + timedelta(minutes=5)
+
+        frappe.db.set_single_value(
+            "GST Settings", "e_invoice_auto_retry_after", e_invoice_auto_retry_after
+        )
+
+        frappe.msgprint(
+            _(
+                "Government services are currently experiencing downtime, \
+                    resulting in high response times and a Gateway Timeout error. \
+                    We apologize for the inconvenience caused. \
+                    Your e-invoice generation will be automatically retried after {0} minutes."
+            ).format(str(e_invoice_auto_retry_after.replace(microsecond=0))),
+            _("Warning"),
+            indicator="yellow",
+        )
+
+        return
 
     except frappe.ValidationError as e:
         if throw:
@@ -121,6 +165,15 @@ def generate_e_invoice(docname, throw=True):
             _("Warning"),
             indicator="yellow",
         )
+        return
+
+    except Exception:
+        doc.db_set(
+            {
+                "einvoice_status": "Failed",
+            }
+        )
+
         return
 
     doc.db_set(
@@ -310,6 +363,34 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         frappe.throw(
             _("e-Invoice can only be cancelled upto 24 hours after it is generated")
         )
+
+
+def auto_retry_generate_e_invoice():
+    e_invoice_auto_retry_after = get_datetime(
+        frappe.get_cached_value("GST Settings", None, "e_invoice_auto_retry_after")
+    )
+    if e_invoice_auto_retry_after and e_invoice_auto_retry_after > now_datetime():
+        return
+
+    queued_sales_invoices = frappe.db.get_all(
+        "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
+    )
+
+    if not queued_sales_invoices:
+        frappe.db.set_single_value("GST Settings", "e_invoice_auto_retry_after", None)
+        return
+
+    generate_e_invoices(queued_sales_invoices)
+
+    queued_sales_invoices = frappe.db.get_all(
+        "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
+    )
+
+    if not queued_sales_invoices:
+        frappe.db.set_single_value("GST Settings", "e_invoice_auto_retry_after", None)
+        return
+
+    return
 
 
 class EInvoiceData(GSTTransactionData):

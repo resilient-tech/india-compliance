@@ -32,9 +32,11 @@
   "apply_e_invoice_only_for_selected_companies",
   "column_break_17",
   "e_invoice_applicable_from",
+  "e_invoice_auto_retry_after",
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "gstin_status_refresh_interval",
   "column_break_bydp",
   "archive_party_info_days",
   "uom_mapping_section",
@@ -298,12 +300,24 @@
    "fieldname": "archive_party_info_days",
    "fieldtype": "Int",
    "label": "Archive Party Information (In Days)"
+  },
+  {
+   "fieldname": "e_invoice_auto_retry_after",
+   "fieldtype": "Datetime",
+   "label": "e-Invoice Auto Retry After"
+  },
+  {
+   "default": "60",
+   "description": "Ensures valid GSTIN in transactions by refreshing status periodically.",
+   "fieldname": "gstin_status_refresh_interval",
+   "fieldtype": "Int",
+   "label": "GSTIN Status Refresh Interval"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-03 11:08:21.240509",
+ "modified": "2023-06-27 18:08:48.468374",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

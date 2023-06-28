@@ -238,6 +238,12 @@ audit_trail_doctypes = [
     "Bill of Entry",
 ]
 
+scheduler_events = {
+    "all": [
+        "india_compliance.gst_india.utils.e_invoice.auto_retry_generate_e_invoice",
+    ],
+}
+
 
 # Includes in <head>
 # ------------------

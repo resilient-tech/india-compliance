@@ -12,6 +12,10 @@ from india_compliance.gst_india.utils.api import enqueue_integration_request
 BASE_URL = "https://asp.resilient.tech"
 
 
+class GatewayTimeoutError(Exception):
+    pass
+
+
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
@@ -212,6 +216,9 @@ class BaseAPI:
                 _("Your India Compliance API key is invalid"),
                 title=_("Invalid API Key"),
             )
+
+        if status_code == 504:
+            raise GatewayTimeoutError("Gateway Timeout")
 
     def generate_request_id(self, length=12):
         return frappe.generate_hash(length=length)
