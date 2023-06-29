@@ -108,10 +108,7 @@ def generate_e_invoice(docname, throw=True):
 
             frappe.msgprint(
                 _(
-                    "Government services are currently experiencing downtime, \
-                    resulting in high response times and a Gateway Timeout error. \
-                    We apologize for the inconvenience caused. \
-                    Your e-invoice generation will be automatically retried after {0} minutes."
+                    "Government services are currently experiencing downtime, resulting in high response times and a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried after {0} minutes."
                 ).format(str(e_invoice_auto_retry_after.replace(microsecond=0))),
                 _("Warning"),
                 indicator="yellow",
@@ -141,10 +138,7 @@ def generate_e_invoice(docname, throw=True):
 
         frappe.msgprint(
             _(
-                "Government services are currently experiencing downtime, \
-                    resulting in high response times and a Gateway Timeout error. \
-                    We apologize for the inconvenience caused. \
-                    Your e-invoice generation will be automatically retried after {0} minutes."
+                "Government services are currently experiencing downtime, resulting in high response times and a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried after {0} minutes."
             ).format(str(e_invoice_auto_retry_after.replace(microsecond=0))),
             _("Warning"),
             indicator="yellow",
