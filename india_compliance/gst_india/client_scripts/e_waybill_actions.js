@@ -83,6 +83,14 @@ function setup_e_waybill_actions(doctype) {
                     () => show_update_transporter_dialog(frm),
                     "e-Waybill"
                 );
+
+                if (frm.doc.gst_transporter_id) return;
+
+                frm.add_custom_button(
+                    __("Extend Validity"),
+                    () => show_extend_validity_dialog(frm),
+                    "e-Waybill"
+                );
             }
 
             if (
@@ -620,6 +628,121 @@ function show_update_transporter_dialog(frm) {
         },
     });
 
+    d.show();
+}
+
+function show_extend_validity_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Extend Validity"),
+        fields: [
+            {
+                label: "e-Waybill",
+                fieldname: "ewaybill",
+                fieldtype: "Data",
+                read_only: 1,
+                default: frm.doc.ewaybill,
+            },
+            {
+                label: "Transit Type",
+                fieldname: "transit_type",
+                fieldtype: "Select",
+                options: `\nRoad\nWarehouse\nOthers`,
+                default: frm.doc.ewaybill,
+                reqd: 1,
+            },
+            {
+                label: "Current State",
+                fieldname: "current_state",
+                fieldtype: "Autocomplete",
+                options: frappe.boot.india_state_options.join("\n"),
+                reqd: 1,
+            },
+            {
+                label: "Distance (in km)",
+                fieldname: "distance",
+                fieldtype: "Float",
+                default: frm.doc.distance,
+                description:
+                    "Set remaining distance to tranvel from current place to destination",
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                label: "Mode Of Transport",
+                fieldname: "mode_of_transport",
+                fieldtype: "Select",
+                options: `\nRoad\nAir\nRail\nShip\ninTransit`,
+                default: frm.doc.mode_of_transport,
+                mandatory_depends_on: "eval: doc.lr_no",
+                onchange: () => update_vehicle_type(d),
+            },
+            {
+                label: "GST Vehicle Type",
+                fieldname: "gst_vehicle_type",
+                fieldtype: "Select",
+                options: `Regular\nOver Dimensional Cargo (ODC)`,
+                depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+                read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
+                default: frm.doc.gst_vehicle_type,
+            },
+            {
+                label: "Vehicle No",
+                fieldname: "vehicle_no",
+                fieldtype: "Data",
+                default: frm.doc.vehicle_no,
+                mandatory_depends_on: "eval: doc.mode_of_transport == 'Road'",
+            },
+            {
+                label: "Transport Receipt No",
+                fieldname: "lr_no",
+                fieldtype: "Data",
+                default: frm.doc.lr_no,
+                depends_on:
+                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
+                mandatory_depends_on:
+                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
+            },
+            {
+                fieldtype: "Section Break",
+            },
+            {
+                fieldname: "reason",
+                label: "Reason",
+                fieldtype: "Select",
+                options: [
+                    "Natural Calamity",
+                    "Law and Order Situation",
+                    "Transshipment",
+                    "Accident",
+                    "Others",
+                ],
+                reqd: 1,
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                fieldname: "remark",
+                label: "Remark",
+                fieldtype: "Data",
+                mandatory_depends_on: 'eval: doc.reason == "Others"',
+            },
+        ],
+        primary_action_label: __("Extend"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.extend_validity",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    values,
+                },
+                callback: () => frm.refresh(),
+            });
+            d.hide();
+        },
+    });
     d.show();
 }
 
