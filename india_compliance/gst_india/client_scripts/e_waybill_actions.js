@@ -631,7 +631,7 @@ function show_update_transporter_dialog(frm) {
     d.show();
 }
 
-function show_extend_validity_dialog(frm) {
+async function show_extend_validity_dialog(frm) {
     const d = new frappe.ui.Dialog({
         title: __("Extend Validity"),
         fields: [
@@ -643,23 +643,15 @@ function show_extend_validity_dialog(frm) {
                 default: frm.doc.ewaybill,
             },
             {
-                label: "Transit Type",
-                fieldname: "transit_type",
-                fieldtype: "Select",
-                options: `\nRoad\nWarehouse\nOthers`,
-                default: frm.doc.ewaybill,
-                reqd: 1,
+                label: "Vehicle No",
+                fieldname: "vehicle_no",
+                fieldtype: "Data",
+                default: frm.doc.vehicle_no,
+                mandatory_depends_on: "eval: doc.mode_of_transport == 'Road'",
             },
             {
-                label: "Current State",
-                fieldname: "current_state",
-                fieldtype: "Autocomplete",
-                options: frappe.boot.india_state_options.join("\n"),
-                reqd: 1,
-            },
-            {
-                label: "Distance (in km)",
-                fieldname: "distance",
+                label: "Remaining Distance (in km)",
+                fieldname: "remaining_distance",
                 fieldtype: "Float",
                 default: frm.doc.distance,
                 description:
@@ -673,9 +665,12 @@ function show_extend_validity_dialog(frm) {
                 fieldname: "mode_of_transport",
                 fieldtype: "Select",
                 options: `\nRoad\nAir\nRail\nShip\ninTransit`,
-                default: frm.doc.mode_of_transport,
+                default: "inTransit",
                 mandatory_depends_on: "eval: doc.lr_no",
-                onchange: () => update_vehicle_type(d),
+                onchange: () => {
+                    update_vehicle_type(d);
+                    update_transit_type(d);
+                },
             },
             {
                 label: "GST Vehicle Type",
@@ -687,11 +682,12 @@ function show_extend_validity_dialog(frm) {
                 default: frm.doc.gst_vehicle_type,
             },
             {
-                label: "Vehicle No",
-                fieldname: "vehicle_no",
-                fieldtype: "Data",
-                default: frm.doc.vehicle_no,
-                mandatory_depends_on: "eval: doc.mode_of_transport == 'Road'",
+                label: "Transit Type",
+                fieldname: "transit_type",
+                fieldtype: "Select",
+                options: `\nRoad\nWarehouse\nOthers`,
+                default: frm.doc.mode_of_transport == "Road" ? "Road" : "Others",
+                reqd: 1,
             },
             {
                 label: "Transport Receipt No",
@@ -702,6 +698,39 @@ function show_extend_validity_dialog(frm) {
                     "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
                 mandatory_depends_on:
                     "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
+            },
+            {
+                fieldtype: "Section Break",
+            },
+            {
+                label: "Current Place",
+                fieldname: "current_place",
+                fieldtype: "Data",
+                reqd: 1,
+            },
+            {
+                label: "From Pincode",
+                fieldname: "from_pincode",
+                fieldtype: "Data",
+                reqd: 1,
+                default: (
+                    await frappe.db.get_value(
+                        "Address",
+                        frm.doc.shipping_address_name,
+                        "pincode"
+                    )
+                ).message.pincode,
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                label: "Current State",
+                fieldname: "current_state",
+                fieldtype: "Autocomplete",
+                options: frappe.boot.india_state_options.join("\n"),
+                reqd: 1,
+                default: frm.doc.place_of_supply.substring(3),
             },
             {
                 fieldtype: "Section Break",
@@ -718,6 +747,12 @@ function show_extend_validity_dialog(frm) {
                     "Others",
                 ],
                 reqd: 1,
+            },
+            {
+                label: "Update e-Waybill Print/Data",
+                fieldname: "update_e_waybill_data",
+                fieldtype: "Check",
+                default: gst_settings.fetch_e_waybill_data,
             },
             {
                 fieldtype: "Column Break",
@@ -843,6 +878,16 @@ function are_transport_details_available(doc) {
 
 function update_vehicle_type(dialog) {
     dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
+}
+
+function update_transit_type(dialog) {
+    const dialog_values = dialog.get_values(true);
+    dialog.set_value(
+        "transit_type",
+        ["Road", "Rail", "Air", "Ship"].includes(dialog_values.mode_of_transport)
+            ? ""
+            : "Others"
+    );
 }
 
 function get_vehicle_type(doc) {

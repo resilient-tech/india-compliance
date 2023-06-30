@@ -19,6 +19,12 @@
   "column_break_2",
   "cancel_reason_code",
   "cancel_remark",
+  "extension_details_section",
+  "is_validity_extended",
+  "updated_on",
+  "column_break_yfy0",
+  "extension_reason_code",
+  "extension_remark",
   "section_break_31",
   "is_latest_data",
   "data"
@@ -117,6 +123,42 @@
    "fieldtype": "Datetime",
    "label": "Cancelled On",
    "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.is_validity_extended",
+   "fieldname": "extension_details_section",
+   "fieldtype": "Section Break",
+   "label": "Extension Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_validity_extended",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Is Validity Extended",
+   "read_only": 1
+  },
+  {
+   "fieldname": "updated_on",
+   "fieldtype": "Datetime",
+   "label": "Updated On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_yfy0",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "extension_reason_code",
+   "fieldtype": "Data",
+   "label": "Extension Reason Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "extension_remark",
+   "fieldtype": "Data",
+   "label": "Extension Remark",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -126,7 +168,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2022-09-08 06:23:30.944114",
+ "modified": "2023-06-30 12:07:22.744917",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

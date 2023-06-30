@@ -8,10 +8,13 @@ from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
+from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
+    EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     SUB_SUPPLY_TYPES,
+    TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
 )
 from india_compliance.gst_india.utils import (
@@ -295,6 +298,58 @@ def update_transporter(*, doctype, docname, values):
     return send_updated_doc(doc)
 
 
+@frappe.whitelist()
+def extend_validity(*, doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
+    values = frappe.parse_json(values)
+    doc.db_set(
+        {
+            "vehicle_no": values.vehicle_no.replace(" ", ""),
+            "lr_no": values.lr_no,
+            "mode_of_transport": values.mode_of_transport,
+            "gst_vehicle_type": values.gst_vehicle_type,
+        }
+    )
+    data = EWaybillData(doc).get_extend_validity_data(values)
+    result = EWaybillAPI(doc).extend_validity(data)
+
+    extended_validity_date = parse_datetime(result.validUpto, day_first=True)
+
+    comment = _(
+        "e-Waybill has been extended by {user}.<br><br> New details are: <br>"
+    ).format(user=frappe.bold(get_fullname()))
+
+    values_in_comment = {
+        "Transit Type": values.transit_type,
+        "Vehicle No": values.vehicle_no,
+        "LR No": values.lr_no,
+        "LR Date": values.lr_date,
+        "Mode of Transport": values.mode_of_transport,
+        "GST Vehicle Type": values.gst_vehicle_type,
+        "Valid Upto": extended_validity_date,
+    }
+
+    for key, value in values_in_comment.items():
+        if value:
+            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+
+    log_and_process_e_waybill(
+        doc,
+        {
+            "name": doc.ewaybill,
+            "is_validity_extended": 1,
+            "extension_reason_code": CANCEL_REASON_CODES[values.reason],
+            "extension_remark": values.remark if values.remark else values.reason,
+            "updated_on": parse_datetime(result.updatedDate, day_first=True),
+            "valid_upto": extended_validity_date,
+        },
+        fetch=values.update_e_waybill_data,
+        comment=comment,
+    )
+
+    return send_updated_doc(doc)
+
+
 #######################################################################################
 ### e-Waybill Print and Attach Functions ##############################################
 #######################################################################################
@@ -564,6 +619,37 @@ class EWaybillData(GSTTransactionData):
             "transporterId": values.gst_transporter_id,
         }
 
+    def get_extend_validity_data(self, values):
+        self.validate_if_e_waybill_is_set()
+        self.check_e_waybill_validity()
+        self.validate_if_e_waybill_can_be_extend()
+        self.validate_mode_of_transport()
+        self.validate_remaining_distance(values)
+        self.set_transporter_details()
+
+        extension_details = {
+            "ewbNo": self.doc.ewaybill,
+            "vehicleNo": self.transaction_details.vehicle_no,
+            "fromPlace": values.current_state,
+            "fromState": STATE_NUMBERS[values.current_state],
+            "fromPincode": values.from_pincode,
+            "remainingDistance": values.remaining_distance,
+            "transDocNo": self.transaction_details.lr_no,
+            "transDocDate": self.transaction_details.lr_date,
+            "transMode": self.transaction_details.mode_of_transport,
+            "extnRsnCode": EXTEND_VALIDITY_REASON_CODES[values.reason],
+            "extnRemarks": self.sanitize_value(values.remark, regex=3),
+        }
+
+        if extension_details["transMode"] == "5":
+            extension_details["consignmentStatus"] = "T"
+            extension_details["transitType"] = TRANSIT_TYPES[values.transit_type]
+        else:
+            extension_details["consignmentStatus"] = "M"
+            extension_details["transitType"] = ""
+
+        return extension_details
+
     def validate_transaction(self):
         # TODO: Add Support for Delivery Note
 
@@ -652,6 +738,33 @@ class EWaybillData(GSTTransactionData):
 
         if valid_upto and get_datetime(valid_upto) < get_datetime():
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
+
+    def validate_if_e_waybill_can_be_extend(self):
+        # this works because we do run_onload in load_doc above
+        valid_upto = get_datetime(
+            self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto")
+        )
+
+        can_extend_before = add_to_date(valid_upto, hours=-8, as_datetime=True)
+        can_extend_after = add_to_date(valid_upto, hours=8, as_datetime=True)
+
+        if get_datetime() < can_extend_before or get_datetime() > can_extend_after:
+            frappe.throw(
+                _(
+                    "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time"
+                )
+            )
+
+    def validate_remaining_distance(self, values):
+        if not values.remaining_distance:
+            frappe.throw(_("Distance is mandatory to extend the validity of e-Waybill"))
+
+        if self.doc.distance and values.remaining_distance > self.doc.distance:
+            frappe.throw(
+                _(
+                    "Remaining distance should be less than or equal to actual distance mentioned during the generation of e-Waybill"
+                )
+            )
 
     def validate_if_ewaybill_can_be_cancelled(self):
         cancel_upto = add_to_date(
