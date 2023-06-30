@@ -205,7 +205,7 @@ ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
 accounting_dimension_doctypes = ["Bill of Entry", "Bill of Entry Item"]
 
 # DocTypes for which Audit Trail must be maintained
-audit_trail_doctypes = [
+erpnext_audit_trail_doctypes = [
     # To track the "Enable Audit Trail" setting
     "Accounts Settings",
     # ERPNext DocTypes that make GL Entries
@@ -220,12 +220,6 @@ audit_trail_doctypes = [
     "Asset",
     "Asset Capitalization",
     "Asset Repair",
-    "Loan Balance Adjustment",
-    "Loan Disbursement",
-    "Loan Interest Accrual",
-    "Loan Refund",
-    "Loan Repayment",
-    "Loan Write Off",
     "Delivery Note",
     "Landed Cost Voucher",
     "Purchase Receipt",
@@ -234,10 +228,22 @@ audit_trail_doctypes = [
     "Subcontracting Receipt",
     # Additional ERPNext DocTypes that constitute "Books of Account"
     "POS Invoice",
+]
+
+india_compliance_audit_trail_doctypes = [
     # India Compliance DocTypes that make GL Entries
     "Bill of Entry",
 ]
 
+lending_audit_trail_doctypes = [
+    # Lending DocTypes that make GL Entries
+    "Loan Balance Adjustment",
+    "Loan Disbursement",
+    "Loan Interest Accrual",
+    "Loan Refund",
+    "Loan Repayment",
+    "Loan Write Off",
+]
 
 # Includes in <head>
 # ------------------

@@ -7,7 +7,15 @@ def is_audit_trail_enabled():
 
 
 def get_audit_trail_doctypes():
-    return set(frappe.get_hooks("audit_trail_doctypes"))
+    audit_trail_doctypes = []
+
+    audit_trail_doctypes += frappe.get_hooks("erpnext_audit_trail_doctypes")
+    audit_trail_doctypes += frappe.get_hooks("india_compliance_audit_trail_doctypes")
+
+    if "lending" in frappe.get_installed_apps():
+        audit_trail_doctypes += frappe.get_hooks("lending_audit_trail_doctypes")
+
+    return set(audit_trail_doctypes)
 
 
 def enqueue_disable_audit_trail_notification():
