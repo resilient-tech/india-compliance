@@ -11,6 +11,7 @@ from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
     CANCEL_REASON_CODES,
+    CONSIGNMENT_STATUS,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
     SUB_SUPPLY_TYPES,
@@ -302,6 +303,7 @@ def update_transporter(*, doctype, docname, values):
 def extend_validity(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
+
     doc.db_set(
         {
             "vehicle_no": values.vehicle_no.replace(" ", ""),
@@ -624,29 +626,36 @@ class EWaybillData(GSTTransactionData):
         self.check_e_waybill_validity()
         self.validate_if_e_waybill_can_be_extend()
         self.validate_mode_of_transport()
+        self.validate_transit_type(values)
         self.validate_remaining_distance(values)
         self.set_transporter_details()
 
         extension_details = {
-            "ewbNo": self.doc.ewaybill,
+            "ewbNo": int(self.doc.ewaybill),
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": values.current_state,
+            "fromPlace": values.current_place,
             "fromState": STATE_NUMBERS[values.current_state],
-            "fromPincode": values.from_pincode,
-            "remainingDistance": values.remaining_distance,
+            "fromPincode": int(values.current_pincode),
+            "remainingDistance": int(values.remaining_distance),
             "transDocNo": self.transaction_details.lr_no,
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
+            "consignmentStatus": CONSIGNMENT_STATUS[values.consignment_status],
+            "transitType": TRANSIT_TYPES[values.transit_type]
+            if self.transaction_details.mode_of_transport != "inTransit"
+            else "",
             "extnRsnCode": EXTEND_VALIDITY_REASON_CODES[values.reason],
             "extnRemarks": self.sanitize_value(values.remark, regex=3),
         }
 
-        if extension_details["transMode"] == "5":
-            extension_details["consignmentStatus"] = "T"
-            extension_details["transitType"] = TRANSIT_TYPES[values.transit_type]
-        else:
-            extension_details["consignmentStatus"] = "M"
-            extension_details["transitType"] = ""
+        if values.consignment_status == "inTransit":
+            extension_details.update(
+                {
+                    "addressLine1": values.address_line1,
+                    "addressLine2": values.address_line2,
+                    "addressLine3": values.address_line3,
+                }
+            )
 
         return extension_details
 
@@ -763,6 +772,21 @@ class EWaybillData(GSTTransactionData):
             frappe.throw(
                 _(
                     "Remaining distance should be less than or equal to actual distance mentioned during the generation of e-Waybill"
+                )
+            )
+
+    def validate_transit_type(self, values):
+        if values.consignment_status == "inMovement" and values.transit_type:
+            frappe.throw(
+                _("Transit Type should be empty for Mode of Transport {0}").format(
+                    frappe.bold(values.mode_of_transport)
+                )
+            )
+
+        if values.consignment_status == "inTransit" and not values.transit_type:
+            frappe.throw(
+                _("Transit Type is should be one of {0}").format(
+                    frappe.bold(" ,".join(TRANSIT_TYPES))
                 )
             )
 

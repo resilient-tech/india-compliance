@@ -27,11 +27,11 @@ UPDATE_VEHICLE_REASON_CODES = {
 }
 
 EXTEND_VALIDITY_REASON_CODES = {
-    "Natural Calamity": "1",
-    "Law and Order Situation": "2",
-    "Transshipment": "4",
-    "Accident": "5",
-    "Others": "99",
+    "Natural Calamity": 1,
+    "Law and Order Situation": 2,
+    "Transshipment": 4,
+    "Accident": 5,
+    "Others": 99,
 }
 
 SUPPLY_TYPES = {

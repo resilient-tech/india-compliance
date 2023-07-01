@@ -632,6 +632,10 @@ function show_update_transporter_dialog(frm) {
 }
 
 async function show_extend_validity_dialog(frm) {
+    const shipping_address_details = await get_address_details(
+        frm.doc.shipping_address_name
+    );
+
     const d = new frappe.ui.Dialog({
         title: __("Extend Validity"),
         fields: [
@@ -661,12 +665,25 @@ async function show_extend_validity_dialog(frm) {
                 fieldtype: "Column Break",
             },
             {
+                label: "Consignment Status",
+                fieldname: "consignment_status",
+                fieldtype: "Select",
+                options: `\inMovement\ninTransit`,
+                default: "inMovement",
+                reqd: 1,
+                onchange: () => {
+                    update_mode_of_transport(d);
+                    update_transit_type(d);
+                },
+            },
+            {
                 label: "Mode Of Transport",
                 fieldname: "mode_of_transport",
                 fieldtype: "Select",
                 options: `\nRoad\nAir\nRail\nShip\ninTransit`,
-                default: "inTransit",
-                mandatory_depends_on: "eval: doc.lr_no",
+                default: frm.doc.mode_of_transport,
+                depends_on: "eval: doc.consignment_status == 'inMovement'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'inMovement'",
                 onchange: () => {
                     update_vehicle_type(d);
                     update_transit_type(d);
@@ -678,7 +695,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldtype: "Select",
                 options: `Regular\nOver Dimensional Cargo (ODC)`,
                 depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-                read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
+                read_only: 1,
                 default: frm.doc.gst_vehicle_type,
             },
             {
@@ -686,16 +703,15 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "transit_type",
                 fieldtype: "Select",
                 options: `\nRoad\nWarehouse\nOthers`,
-                default: frm.doc.mode_of_transport == "Road" ? "Road" : "Others",
-                reqd: 1,
+                depends_on: "eval:doc.consignment_status == 'inTransit'",
+                mandatory_depends_on: "eval:doc.consignment_status == 'inTransit'",
             },
             {
                 label: "Transport Receipt No",
                 fieldname: "lr_no",
                 fieldtype: "Data",
                 default: frm.doc.lr_no,
-                depends_on:
-                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
+                depends_on: "eval: doc.consignment_status == 'inMovement'",
                 mandatory_depends_on:
                     "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
             },
@@ -709,20 +725,19 @@ async function show_extend_validity_dialog(frm) {
                 reqd: 1,
             },
             {
-                label: "From Pincode",
-                fieldname: "from_pincode",
+                label: "Current Pincode",
+                fieldname: "current_pincode",
                 fieldtype: "Data",
                 reqd: 1,
-                default: (
-                    await frappe.db.get_value(
-                        "Address",
-                        frm.doc.shipping_address_name,
-                        "pincode"
-                    )
-                ).message.pincode,
-            },
-            {
-                fieldtype: "Column Break",
+                description: `Destinaion pincode ${
+                    (
+                        await frappe.db.get_value(
+                            "Address",
+                            frm.doc.shipping_address_name,
+                            "pincode"
+                        )
+                    ).message.pincode
+                }`,
             },
             {
                 label: "Current State",
@@ -730,7 +745,40 @@ async function show_extend_validity_dialog(frm) {
                 fieldtype: "Autocomplete",
                 options: frappe.boot.india_state_options.join("\n"),
                 reqd: 1,
-                default: frm.doc.place_of_supply.substring(3),
+                default: shipping_address_details.state,
+            },
+            {
+                fieldtype: "Column Break",
+            },
+            {
+                label: "Address Line1",
+                fieldname: "address_line1",
+                fieldtype: "Data",
+                default: (
+                    await frappe.db.get_value(
+                        "Address",
+                        frm.doc.shipping_address_name,
+                        "address_line1"
+                    )
+                ).message.address_line1,
+                depends_on: "eval: doc.consignment_status == 'inTransit'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'inTransit'",
+            },
+            {
+                label: "Address Line2",
+                fieldname: "address_line2",
+                fieldtype: "Data",
+                default: shipping_address_details.address_line2,
+                depends_on: "eval: doc.consignment_status == 'inTransit'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'inTransit'",
+            },
+            {
+                label: "Address Line3",
+                fieldname: "address_line3",
+                fieldtype: "Data",
+                default: shipping_address_details.place_of_supply,
+                depends_on: "eval: doc.consignment_status == 'inTransit'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'inTransit'",
             },
             {
                 fieldtype: "Section Break",
@@ -880,20 +928,34 @@ function update_vehicle_type(dialog) {
     dialog.set_value("gst_vehicle_type", get_vehicle_type(dialog.get_values(true)));
 }
 
-function update_transit_type(dialog) {
-    const dialog_values = dialog.get_values(true);
-    dialog.set_value(
-        "transit_type",
-        ["Road", "Rail", "Air", "Ship"].includes(dialog_values.mode_of_transport)
-            ? ""
-            : "Others"
-    );
-}
-
 function get_vehicle_type(doc) {
     if (doc.mode_of_transport == "Road") return "Regular";
     if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
     return "";
+}
+
+function update_transit_type(dialog) {
+    dialog.set_value("transit_type", get_transit_type(dialog.get_values(true)));
+}
+
+function update_mode_of_transport(dialog) {
+    const dialog_values = dialog.get_values(true);
+
+    dialog.set_value(
+        "mode_of_transport",
+        dialog_values.consignment_status == "inTransit"
+            ? "inTransit"
+            : frm.doc.mode_of_transport
+    );
+}
+
+function get_transit_type(dialog) {
+    if (dialog.consignment_status == "inMovement") return "";
+    if (dialog.consignment_status == "inTransit") {
+        if (["Road", "Rail", "Air", "Ship"].includes(dialog.mode_of_transport))
+            return "";
+        if (dialog.mode_of_transport == "inTransit") return "Road";
+    }
 }
 
 /********
@@ -934,6 +996,20 @@ function get_e_waybill_file_name(docname) {
     }
 
     return `${prefix}_e-Waybill_Data_${frappe.utils.get_random(5)}.json`;
+}
+
+function get_address_details(address) {
+    const address_details = {};
+    frappe.db.get_doc("Address", address).then(address_doc => {
+        address_details.address_line1 = address_doc.address_line1;
+        address_details.address_line2 = address_doc.address_line2;
+        address_details.place_of_supply = `${address_doc.gst_state_number}-${address_doc.gst_state}`;
+        address_details.city = address_doc.city;
+        address_details.state = address_doc.state;
+        address_details.country = address_doc.country;
+        address_details.pincode = address_doc.pincode;
+    });
+    return address_details;
 }
 
 function set_primary_action_label(dialog, primary_action_label) {

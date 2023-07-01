@@ -1663,6 +1663,10 @@ GST_INVOICE_NUMBER_FORMAT = re.compile(r"^[^\W_][A-Za-z0-9\-\/]{0,15}$")
 # used to extract Distance (whole number) from string
 DISTANCE_REGEX = re.compile(r"\d+")
 
+VEHICLE_NO_REGEX = re.compile(
+    r"^[A-Z]{2}[\\s-]{0,1}[0-9]{2}[\\s-]{0,1}[A-Z]{1,2}[\\s-]{0,1}[0-9]{4}$"
+)
+
 INVOICE_DOCTYPES = {"Sales Invoice", "Purchase Invoice"}
 SALES_DOCTYPES = set(sales_doctypes)
 
