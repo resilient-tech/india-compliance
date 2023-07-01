@@ -102,7 +102,9 @@ doc_events = {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
-        "on_update_after_submit": "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit",
+        "on_update_after_submit": (
+            "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
+        ),
     },
     "Sales Order": {
         "validate": (
@@ -155,9 +157,7 @@ regional_overrides = {
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
-        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_depreciation_amount": (
-            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_depreciation_amount"
-        ),
+        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_depreciation_amount": "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_depreciation_amount",
     }
 }
 
@@ -220,12 +220,6 @@ audit_trail_doctypes = [
     "Asset",
     "Asset Capitalization",
     "Asset Repair",
-    "Loan Balance Adjustment",
-    "Loan Disbursement",
-    "Loan Interest Accrual",
-    "Loan Refund",
-    "Loan Repayment",
-    "Loan Write Off",
     "Delivery Note",
     "Landed Cost Voucher",
     "Purchase Receipt",
