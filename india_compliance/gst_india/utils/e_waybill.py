@@ -630,6 +630,13 @@ class EWaybillData(GSTTransactionData):
         self.validate_remaining_distance(values)
         self.set_transporter_details()
 
+        transit_type = (
+            TRANSIT_TYPES[values.transit_type]
+            if values.transit_type
+            and self.transaction_details.mode_of_transport != "inTransit"
+            else ""
+        )
+
         extension_details = {
             "ewbNo": int(self.doc.ewaybill),
             "vehicleNo": self.transaction_details.vehicle_no,
@@ -641,11 +648,11 @@ class EWaybillData(GSTTransactionData):
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
             "consignmentStatus": CONSIGNMENT_STATUS[values.consignment_status],
-            "transitType": TRANSIT_TYPES[values.transit_type]
-            if self.transaction_details.mode_of_transport != "inTransit"
-            else "",
+            "transitType": transit_type,
             "extnRsnCode": EXTEND_VALIDITY_REASON_CODES[values.reason],
-            "extnRemarks": self.sanitize_value(values.remark, regex=3),
+            "extnRemarks": self.sanitize_value(
+                values.remark if values.remark else values.reason, regex=3
+            ),
         }
 
         if values.consignment_status == "inTransit":
