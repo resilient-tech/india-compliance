@@ -100,3 +100,6 @@ class EInvoiceAPI(BaseAPI):
             and (distance_match := re.search(DISTANCE_REGEX, description))
         ):
             result.distance = int(distance_match.group())
+
+    def get_gstin_info(self, gstin):
+        return self.get(endpoint="master/gstin", params={"gstin": gstin})
