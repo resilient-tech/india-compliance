@@ -127,7 +127,7 @@ function set_gstin_options_and_status(doctype) {
 }
 
 async function set_gstin_options(frm) {
-    if (frm.is_new() || frm._gstin_options_set_for == frm.doc.name) return;
+    if (frm.is_new() || frm._gstin_options_set_for === frm.doc.name) return;
 
     frm._gstin_options_set_for = frm.doc.name;
     const field = frm.get_field("gstin");
