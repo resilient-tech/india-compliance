@@ -35,6 +35,7 @@
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "gstin_status_refresh_interval",
   "column_break_bydp",
   "archive_party_info_days",
   "uom_mapping_section",
@@ -298,12 +299,19 @@
    "fieldname": "archive_party_info_days",
    "fieldtype": "Int",
    "label": "Archive Party Information (In Days)"
+  },
+  {
+   "default": "60",
+   "description": "Ensures valid GSTIN in transactions by refreshing status periodically",
+   "fieldname": "gstin_status_refresh_interval",
+   "fieldtype": "Int",
+   "label": "GSTIN Status Refresh Interval"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-06-03 11:08:22.240509",
+ "modified": "2023-06-03 12:08:22.240509",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

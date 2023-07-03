@@ -35,6 +35,11 @@ def get_gstin_info(gstin):
 
     if not response:
         response = PublicAPI().get_gstin_info(gstin)
+        frappe.enqueue(
+            "india_compliance.gst_india.doctype.gstin.gstin.create_or_update_gstin_status",
+            queue="long",
+            response=response,
+        )
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
