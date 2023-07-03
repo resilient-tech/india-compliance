@@ -798,6 +798,16 @@ E_WAYBILL_SI_FIELDS = [
         "default": "Today",
         "print_hide": 1,
     },
+    {
+        "fieldname": "ewaybill_status",
+        "label": "e-Way Bill Status",
+        "fieldtype": "Select",
+        "insert_after": "ewaybill",
+        "options": "\nPending\nGenerated\nCancelled\nNot Applicable",
+        "default": None,
+        "print_hide": 1,
+        "read_only": 1,
+    },
     *E_WAYBILL_DN_FIELDS,
 ]
 

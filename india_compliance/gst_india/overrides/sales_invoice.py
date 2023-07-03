@@ -63,6 +63,10 @@ def onload(doc, method=None):
 
 
 def validate(doc, method=None):
+    if is_e_waybill_applicable(doc):
+        doc.ewaybill_status = "Pending"
+    else :
+        doc.ewaybill_status = "Not Applicable"
     if validate_transaction(doc) is False:
         return
 

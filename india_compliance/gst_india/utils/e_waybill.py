@@ -108,7 +108,7 @@ def _generate_e_waybill(doc, throw=True):
 
 def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     """Separate function, since called in backend from e-invoice utils"""
-
+    doc.ewaybill_status = "Generated"
     e_waybill_number = str(result["ewayBillNo" if not with_irn else "EwbNo"])
 
     data = {"ewaybill": e_waybill_number}
@@ -187,6 +187,7 @@ def _cancel_e_waybill(doc, values):
         indicator="green",
         alert=True,
     )
+    doc.ewaybill_status = 'Cancelled'
 
 
 @frappe.whitelist()
