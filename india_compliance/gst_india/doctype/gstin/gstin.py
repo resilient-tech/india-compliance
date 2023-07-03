@@ -53,13 +53,13 @@ def get_gstin_status(gstin):
     settings = frappe.get_cached_doc("GST Settings")
 
     if (
-        not settings.gstin_refresh_interval
+        not settings.gstin_status_refresh_interval
         or not is_api_enabled(settings)
         or settings.sandbox_mode
     ):
         return
 
-    gstin_doc = get_updated_gstin(gstin, settings.gstin_refresh_interval)
+    gstin_doc = get_updated_gstin(gstin, settings.gstin_status_refresh_interval)
     return frappe._dict(
         {
             "status": gstin_doc.get("status"),
@@ -69,13 +69,13 @@ def get_gstin_status(gstin):
     )
 
 
-def get_updated_gstin(gstin, gstin_refresh_interval):
+def get_updated_gstin(gstin, refresh_interval):
     if not frappe.db.exists("GSTIN", gstin):
         return create_or_update_gstin_status(gstin)
 
     gstin_doc = frappe.get_doc("GSTIN", gstin)
 
-    if needs_status_update(gstin_refresh_interval, gstin_doc):
+    if needs_status_update(refresh_interval, gstin_doc):
         return create_or_update_gstin_status(gstin, doc=gstin_doc)
 
     return gstin_doc
