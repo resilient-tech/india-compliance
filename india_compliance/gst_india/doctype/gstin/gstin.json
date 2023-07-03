@@ -8,11 +8,11 @@
  "field_order": [
   "gstin",
   "registration_date",
-  "block_status",
-  "column_break_nrjd",
   "status",
-  "cancelled_date",
-  "last_updated_on"
+  "is_blocked",
+  "column_break_nrjd",
+  "last_updated_on",
+  "cancelled_date"
  ],
  "fields": [
   {
@@ -27,6 +27,7 @@
    "fieldname": "status",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Status",
    "reqd": 1
   },
@@ -48,19 +49,23 @@
    "label": "Last Updated On"
   },
   {
-   "fieldname": "block_status",
-   "fieldtype": "Check",
-   "label": "Block Status"
-  },
-  {
    "fieldname": "column_break_nrjd",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "User is blocked from Generating e-Waybill or e-Invoice",
+   "fieldname": "is_blocked",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Is Blocked"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-06-27 16:28:28.101147",
+ "modified": "2023-07-03 16:12:02.139313",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTIN",
@@ -88,5 +93,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "gstin"
 }
