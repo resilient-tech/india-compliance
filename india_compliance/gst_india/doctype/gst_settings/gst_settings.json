@@ -311,11 +311,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2023-06-03 11:08:22.240509",
-=======
- "modified": "2023-06-27 16:48:18.638751",
->>>>>>> 2e20a57c (feat: fetch and save GSTIN details to validate Status in Transactions (#793))
+ "modified": "2023-06-03 12:08:22.240509",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

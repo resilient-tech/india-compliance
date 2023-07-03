@@ -2,12 +2,8 @@ import json
 
 import frappe
 from frappe import _, bold
-<<<<<<< HEAD
 from frappe.model import delete_doc
-from frappe.utils import cint, flt
-=======
 from frappe.utils import cint, date_diff, flt, format_date
->>>>>>> 2e20a57c (feat: fetch and save GSTIN details to validate Status in Transactions (#793))
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
