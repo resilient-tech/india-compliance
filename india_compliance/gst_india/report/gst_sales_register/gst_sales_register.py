@@ -71,7 +71,16 @@ def get_additional_table_columns():
 
 
 def get_column_names(additional_table_columns):
-    return [column["fieldname"] for column in additional_table_columns]
+    return [get_column(column["fieldname"]) for column in additional_table_columns]
+
+
+def get_column(fieldname):
+    if frappe.get_meta("Sales Invoice").get_field(fieldname):
+        return "`tabSales Invoice`.`{0}`".format(fieldname)
+    elif frappe.get_meta("Sales Invoice Item").get_field(fieldname):
+        return "`tabSales Invoice Item`.`{0}`".format(fieldname)
+    else:
+        return fieldname
 
 
 def execute(filters=None):
