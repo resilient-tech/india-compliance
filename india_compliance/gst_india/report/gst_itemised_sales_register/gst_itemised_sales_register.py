@@ -7,40 +7,42 @@ from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register i
 )
 
 from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
-    get_additional_table_columns,
-    get_column_names,
+    get_additional_table_columns as get_si_columns,
 )
 
 
 def execute(filters=None):
-    additional_table_columns = get_additional_table_columns()
+    return _execute(
+        filters,
+        get_additional_table_columns(),
+        get_additional_conditions(filters),
+    )
+
+
+def get_additional_table_columns():
+    additional_table_columns = get_si_columns()
+
+    for row in additional_table_columns:
+        row["_doctype"] = "Sales Invoice"
+
     additional_table_columns.append(
         {
             "fieldtype": "Data",
             "label": _("HSN Code"),
             "fieldname": "gst_hsn_code",
             "width": 120,
+            "_doctype": "Sales Invoice Item",
         }
     )
 
-    additional_query_columns = [
-        row.get("fieldname") for row in additional_table_columns
-    ]
-    additional_conditions = get_conditions(filters, additional_query_columns)
-
-    return _execute(
-        filters,
-        additional_table_columns,
-        get_column_names(additional_table_columns),
-        additional_conditions,
-    )
+    return additional_table_columns
 
 
-def get_conditions(filters, additional_query_columns):
-    conditions = ""
+def get_additional_conditions(filters):
+    additional_conditions = ""
+    if filters.get("company_gstin"):
+        additional_conditions += (
+            " AND `tabSales Invoice`.company_gstin = %(company_gstin)s"
+        )
 
-    for opts in additional_query_columns:
-        if filters.get(opts):
-            conditions += f" and {opts}=%({opts})s"
-
-    return conditions
+    return additional_conditions
