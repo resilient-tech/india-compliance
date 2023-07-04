@@ -84,13 +84,13 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
 
-                if (frm.doc.gst_transporter_id) return;
-
-                frm.add_custom_button(
-                    __("Extend Validity"),
-                    () => show_extend_validity_dialog(frm),
-                    "e-Waybill"
-                );
+                if (!frm.doc.gst_transporter_id && can_extend_e_waybill(frm)) {
+                    frm.add_custom_button(
+                        __("Extend Validity"),
+                        () => show_extend_validity_dialog(frm),
+                        "e-Waybill"
+                    );
+                }
             }
 
             if (
@@ -862,6 +862,23 @@ function is_e_waybill_applicable(frm) {
         if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0)
             return true;
     }
+}
+
+function can_extend_e_waybill(frm) {
+    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
+    const before_hours = moment(e_waybill_info.valid_upto)
+        .add(-8, "hours")
+        .format(frappe.defaultDatetimeFormat);
+    const after_hours = moment(e_waybill_info.valid_upto)
+        .add(8, "hours")
+        .format(frappe.defaultDatetimeFormat);
+
+    if (
+        frappe.datetime.now_datetime < before_hours ||
+        frappe.datetime.now_datetime > after_hours
+    )
+        return false;
+    return True;
 }
 
 function is_e_waybill_cancellable(frm) {
