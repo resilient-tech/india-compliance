@@ -5,6 +5,15 @@ from frappe import _
 from erpnext.accounts.report.sales_register.sales_register import _execute
 
 
+def execute(filters=None):
+    additional_table_columns = get_additional_table_columns()
+
+    return _execute(
+        filters,
+        additional_table_columns,
+    )
+
+
 def get_additional_table_columns():
     overseas_enabled, reverse_charge_enabled = frappe.get_cached_value(
         "GST Settings",
@@ -68,17 +77,3 @@ def get_additional_table_columns():
         )
 
     return additional_table_columns
-
-
-def get_column_names(additional_table_columns):
-    return [column["fieldname"] for column in additional_table_columns]
-
-
-def execute(filters=None):
-    additional_table_columns = get_additional_table_columns()
-
-    return _execute(
-        filters,
-        additional_table_columns,
-        get_column_names(additional_table_columns),
-    )
