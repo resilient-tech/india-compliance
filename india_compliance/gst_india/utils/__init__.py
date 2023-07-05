@@ -587,9 +587,10 @@ def get_validated_country_code(country):
     if code not in COUNTRY_CODES:
         frappe.throw(
             _(
-                "Country Code {0} does not match with the <a href='{1}'>e-Invoice Master Codes</a>"
+                "Country Code for {0} ({1}) does not match with the <a href='{2}'>e-Invoice Master Codes</a>"
             ).format(
-                frappe.bold(get_link_to_form("Country", country, code)),
+                frappe.bold(get_link_to_form("Country", country, country)),
+                frappe.bold(code),
                 E_INVOICE_MASTER_CODES_URL,
             )
         )
