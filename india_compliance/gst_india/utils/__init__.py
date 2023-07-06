@@ -566,8 +566,8 @@ def are_goods_supplied(doc):
     )
 
 
-def get_validated_country_code(country):
-    if country == "India":
+def get_validated_country_code(country, ignore_validation=False):
+    if country == "India" and not ignore_validation:
         return
 
     code = frappe.db.get_value("Country", country, "code")
@@ -584,7 +584,7 @@ def get_validated_country_code(country):
 
     code = code.upper()
 
-    if code not in COUNTRY_CODES:
+    if code not in COUNTRY_CODES and not ignore_validation:
         frappe.throw(
             _(
                 "Country Code {0} does not match with the <a href='{1}'>e-Invoice Master Codes</a>"
