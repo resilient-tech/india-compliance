@@ -303,11 +303,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2023-06-03 11:08:22.240509",
-=======
  "modified": "2023-07-11 01:48:08.607959",
->>>>>>> 7602ad78 (chore: remove GSTIN doctype for now)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
