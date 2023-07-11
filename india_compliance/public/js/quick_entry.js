@@ -322,8 +322,12 @@ function set_gstin_description(gstin_field, status) {
         return;
     }
 
+    const STATUS_COLORS = { Active: "green", Cancelled: "red" };
+
     gstin_field.set_description(
-        india_compliance.get_gstin_status_desc(status)
+        `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
+            Status:&nbsp;<strong>${status}</strong>
+        </div>`
     );
 }
 
