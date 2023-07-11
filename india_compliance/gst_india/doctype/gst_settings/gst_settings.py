@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import getdate
+from frappe.utils import cint, getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
 from india_compliance.gst_india.constants.custom_fields import (
@@ -26,7 +26,7 @@ E_INVOICE_START_DATE = "2021-01-01"
 class GSTSettings(Document):
     def onload(self):
         self.set_onload(
-            "has_multiple_gstin", frappe.db.get_global("has_multiple_gstin")
+            "has_multiple_gstin", cint(frappe.db.get_global("has_multiple_gstin"))
         )
 
         if can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed"):
