@@ -1,5 +1,10 @@
 [pre_model_sync]
+<<<<<<< HEAD
 
+=======
+india_compliance.patches.v15.check_version_compatibility
+execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
+>>>>>>> 7602ad78 (chore: remove GSTIN doctype for now)
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
