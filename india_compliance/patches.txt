@@ -20,4 +20,3 @@ execute:from india_compliance.gst_india.setup import map_default_uoms; map_defau
 india_compliance.patches.v14.set_correct_root_account_for_rcm
 india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice
 execute:import frappe; frappe.db.set_value("GST Settings", None, "archive_party_info_days", 7)
-execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_refresh_interval", 60)
