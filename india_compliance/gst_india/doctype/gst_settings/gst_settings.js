@@ -23,7 +23,7 @@ frappe.ui.form.on("GST Settings", {
         });
     },
     onload: show_ic_api_promo,
-    refresh: update_gstin_and_gst_category,
+    refresh: update_gst_category,
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
         frm.set_value("fetch_e_waybill_data", 1);
@@ -93,11 +93,11 @@ function show_ic_api_promo(frm) {
     });
 }
 
-function update_gstin_and_gst_category(frm) {
+function update_gst_category(frm) {
     if (!frm.doc.__onload?.has_multiple_gstin) return;
 
     frm.add_custom_button(
-        __("Party & Address"),
+        __("Address"),
         function () {
             frappe.call({
                 method: "india_compliance.gst_india.doctype.gst_settings.gst_settings.update_gst_category",
