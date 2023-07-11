@@ -85,11 +85,10 @@ def update_gstin_and_gst_category():
                 # update gstin in party only where there is one gstin per party
                 if len(gstins) == 1:
                     default_gstin = next(iter(gstins))
-                    new_gstins.setdefault((doctype, default_gstin), []).append(
-                        party.name
-                    )
                 else:
-                    print_warning = True
+                    default_gstin = list(gstins)[0]
+
+                new_gstins.setdefault((doctype, default_gstin), []).append(party.name)
 
             for address in address_list:
                 # User may have already set GST category in Address
@@ -115,9 +114,10 @@ def update_gstin_and_gst_category():
         )
 
     if print_warning:
+        frappe.db.set_global("has_multiple_gstin", 1)
+
         click.secho(
-            "We have identified multiple GSTINs for a few parties and couldn't set"
-            " newly created fields automatically for these. Please check for parties"
+            " Please check for parties"
             " without GSTINs or addresses without GST Category and set approporiate"
             " values.\n",
             fg="yellow",

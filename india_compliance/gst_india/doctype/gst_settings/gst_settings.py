@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
 
-from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
+from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
@@ -16,14 +16,19 @@ from india_compliance.gst_india.page.india_compliance_account import (
     _disable_api_promo,
     post_login,
 )
-from india_compliance.gst_india.utils import can_enable_api
+from india_compliance.gst_india.utils import can_enable_api, is_api_enabled
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
+from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 E_INVOICE_START_DATE = "2021-01-01"
 
 
 class GSTSettings(Document):
     def onload(self):
+        self.set_onload(
+            "has_multiple_gstin", frappe.db.get_global("has_multiple_gstin")
+        )
+
         if can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed"):
             return
 
@@ -221,3 +226,66 @@ class GSTSettings(Document):
 def disable_api_promo():
     if frappe.has_permission("GST Settings", "write"):
         _disable_api_promo()
+
+
+@frappe.whitelist()
+def update_gst_category():
+    if not is_api_enabled():
+        return
+
+    # get all Addresses with linked party
+    all_addresses = frappe.get_all(
+        "Address",
+        fields=(
+            "name",
+            "gstin",
+            "gst_category",
+            "`tabDynamic Link`.link_doctype",
+            "`tabDynamic Link`.link_name",
+        ),
+        filters={
+            "link_doctype": ("in", GST_PARTY_TYPES),
+            "link_name": ("!=", ""),
+        },
+    )
+
+    # party-wise addresses
+    address_map = {}
+    for address in all_addresses:
+        address_map.setdefault((address.link_doctype, address.link_name), []).append(
+            address
+        )
+
+    new_gst_categories = {}
+
+    for doctype in GST_PARTY_TYPES:
+        for party in frappe.get_all(doctype, fields=("name", "gstin", "gst_category")):
+            address_list = address_map.get((doctype, party.name))
+
+            if not address_list:
+                continue
+
+            default_gstin = list({address.gstin for address in address_list})[0]
+
+            for address in address_list:
+                # User may have already set GST category in Address
+                if address.gst_category != "Unregistered":
+                    continue
+
+                # update GST Category in Address from party
+                gst_category = party.gst_category
+
+                # GST category may be incorrect, set to empty
+                if address.gstin and address.gstin != default_gstin:
+                    gstin_info = get_gstin_info(address.gstin)
+                    gst_category = gstin_info.gst_category
+
+                new_gst_categories.setdefault(gst_category, []).append(address.name)
+
+    for gst_category, addresses in new_gst_categories.items():
+        frappe.db.set_value(
+            "Address", {"name": ("in", addresses)}, "gst_category", gst_category
+        )
+
+    frappe.db.set_global("has_multiple_gstin", 0)
+    return True

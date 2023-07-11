@@ -23,6 +23,7 @@ frappe.ui.form.on("GST Settings", {
         });
     },
     onload: show_ic_api_promo,
+    refresh: update_gstin_and_gst_category,
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
         frm.set_value("fetch_e_waybill_data", 1);
@@ -90,6 +91,27 @@ function show_ic_api_promo(frm) {
             "india_compliance.gst_india.doctype.gst_settings.gst_settings.disable_api_promo"
         );
     });
+}
+
+function update_gstin_and_gst_category(frm) {
+    if (!frm.doc.__onload?.has_multiple_gstin) return;
+
+    frm.add_custom_button(
+        __("Party & Address"),
+        function () {
+            frappe.call({
+                method: "india_compliance.gst_india.doctype.gst_settings.gst_settings.update_gst_category",
+                callaback: function (r) {
+                    if (!r.exc) {
+                        frappe.show_alert(
+                            __("GST Category has been updated in All Addresses")
+                        );
+                    }
+                },
+            });
+        },
+        __("Update")
+    );
 }
 
 function set_auto_generate_e_waybill(frm) {
