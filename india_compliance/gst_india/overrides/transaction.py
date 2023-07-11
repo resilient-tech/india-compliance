@@ -788,11 +788,15 @@ def validate_transaction(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
         gstin = doc.billing_address_gstin
+        party_type = "Customer"
     else:
         validate_reverse_charge_transaction(doc)
         gstin = doc.supplier_gstin
+        party_type = "Supplier"
 
-    validate_gstin_status(gstin, doc.get("posting_date", doc.get("transaction_date")))
+    validate_gstin(
+        gstin, doc.get("posting_date", doc.get("transaction_date")), party_type
+    )
 
     validate_gst_category(doc.gst_category, gstin)
 
@@ -800,10 +804,7 @@ def validate_transaction(doc, method=None):
     update_taxable_values(doc, valid_accounts)
 
 
-def validate_gstin_status(gstin, transaction_date):
-    if not gstin:
-        return
-
+def validate_gstin(gstin, transaction_date, party):
     gstin_doc = get_gstin_status(gstin)
 
     if not gstin_doc:
