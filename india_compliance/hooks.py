@@ -87,6 +87,7 @@ doc_events = {
     "Purchase Invoice": {
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
+        "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate",
     },
     "Purchase Order": {
         "validate": (
@@ -113,7 +114,7 @@ doc_events = {
     },
     "Supplier": {
         "validate": [
-            "india_compliance.gst_india.overrides.supplier.validate_gst_transporter_id",
+            "india_compliance.gst_india.overrides.supplier.validate",
             "india_compliance.gst_india.overrides.party.validate_party",
         ],
         "after_insert": (

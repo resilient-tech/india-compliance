@@ -1,11 +1,17 @@
 import frappe
 from frappe import _, bold
+from frappe.utils import cint
 
 from india_compliance.gst_india.constants import REGISTERED
 from india_compliance.gst_india.utils import validate_gstin
 
 
-def validate_gst_transporter_id(doc, method=None):
+def validate(doc, method=None):
+    validate_gst_transporter_id(doc)
+    set_reverse_charge_applicable(doc)
+
+
+def validate_gst_transporter_id(doc):
     """
     - Set as GSTIN if not set
     - Match PAN with GSTIN
@@ -56,3 +62,17 @@ def validate_gst_transporter_id(doc, method=None):
             ),
             title=_("Invalid GST Transporter ID"),
         )
+
+
+def set_reverse_charge_applicable(doc):
+    """
+    is_reverse_charge_applicable based on tax_category
+    """
+    if not doc.tax_category:
+        return
+
+    is_reverse_charge_tax_category = frappe.db.get_value(
+        "Tax Category", doc.tax_category, "is_reverse_charge"
+    )
+
+    doc.is_reverse_charge_applicable = cint(is_reverse_charge_tax_category)
