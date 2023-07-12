@@ -252,7 +252,7 @@ CUSTOM_FIELDS = {
             "hidden": 0,
             # clear original default values
             "read_only": 0,
-            "print_hide": 1,
+            "print_hide": 0,
             "fetch_from": "",
             "depends_on": "",
             "mandatory_depends_on": "",
