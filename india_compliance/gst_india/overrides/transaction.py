@@ -791,12 +791,12 @@ def set_reverse_charge_as_per_gst_settings(doc):
     gst_settings = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
-        ("auto_apply_reverse_charge_for_unregistered", "rcm_threshold"),
+        ("enable_rcm_for_unregistered_supplier", "rcm_threshold"),
         as_dict=1,
     )
 
     if (
-        not gst_settings.auto_apply_reverse_charge_for_unregistered
+        not gst_settings.enable_rcm_for_unregistered_supplier
         or doc.is_reverse_charge
         or not doc.gst_category == "Unregistered"
         or doc.grand_total <= gst_settings.rcm_threshold
