@@ -5,7 +5,7 @@ from titlecase import titlecase as _titlecase
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import get_datetime, get_link_to_form, get_system_timezone
+from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_timezone
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
     get_itemised_taxable_amount,
@@ -18,8 +18,10 @@ from india_compliance.gst_india.constants import (
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
     PAN_NUMBER,
+    PINCODE_FORMAT,
     SALES_DOCTYPES,
     STATE_NUMBERS,
+    STATE_PINCODE_MAPPING,
     TCS,
     TIMEZONE,
     UOM_MAP,
@@ -176,6 +178,77 @@ def is_valid_pan(pan):
     return PAN_NUMBER.match(pan)
 
 
+def validate_pincode(address):
+    """
+    Validate Pincode with following checks:
+    - Pincode should be a 6-digit number and cannot start with 0.
+    - First 3 digits of Pincode should match with State Mapping as per e-Invoice Master Codes.
+
+    @param address: Address document to validate
+    """
+    if address.country != "India" or not address.pincode:
+        return
+
+    if not PINCODE_FORMAT.match(address.pincode):
+        frappe.throw(
+            _(
+                "Postal Code for Address {0} must be a 6-digit number and cannot start"
+                " with 0"
+            ).format(get_link_to_form("Address", address.name)),
+            title=_("Invalid Postal Code"),
+        )
+
+    if address.state not in STATE_PINCODE_MAPPING:
+        return
+
+    first_three_digits = cint(address.pincode[:3])
+    pincode_range = STATE_PINCODE_MAPPING[address.state]
+
+    if type(pincode_range[0]) == int:
+        pincode_range = (pincode_range,)
+
+    for lower_limit, upper_limit in pincode_range:
+        if lower_limit <= int(first_three_digits) <= upper_limit:
+            return
+
+    frappe.throw(
+        _(
+            "Postal Code {postal_code} for address {name} is not associated with {state}. Ensure the initial three digits"
+            " of your postal code align correctly with the state as per the <a href='{url}'>e-Invoice Master Codes</a>."
+        ).format(
+            postal_code=frappe.bold(address.pincode),
+            name=(
+                get_link_to_form("Address", address.name)
+                if not address.get("__unsaved")
+                else ""
+            ),
+            state=frappe.bold(address.state),
+            url=E_INVOICE_MASTER_CODES_URL,
+        ),
+        title=_("Invalid Postal Code"),
+    )
+
+
+def guess_gst_category(gstin: str | None, country: str | None) -> str:
+    if not gstin:
+        if country and country != "India":
+            return "Overseas"
+
+        return "Unregistered"
+
+    if GSTIN_FORMATS["Tax Deductor"].match(gstin):
+        return "Tax Deductor"
+
+    if GSTIN_FORMATS["Registered Regular"].match(gstin):
+        return "Registered Regular"
+
+    if GSTIN_FORMATS["UIN Holders"].match(gstin):
+        return "UIN Holders"
+
+    if GSTIN_FORMATS["Overseas"].match(gstin):
+        return "Overseas"
+
+
 def get_data_file_path(file_name):
     return frappe.get_app_path("india_compliance", "gst_india", "data", file_name)
 
@@ -262,6 +335,18 @@ def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
         hsn_taxable_amount[item_or_hsn] += itemised_taxable_amount.get(item)
 
     return hsn_tax, hsn_taxable_amount
+
+
+def get_hsn_settings():
+    validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
+        "GST Settings",
+        "GST Settings",
+        ("validate_hsn_code", "min_hsn_digits"),
+    )
+
+    valid_hsn_length = (4, 6, 8) if cint(min_hsn_digits) == 4 else (6, 8)
+
+    return validate_hsn_code, valid_hsn_length
 
 
 def get_place_of_supply(party_details, doctype):
@@ -386,6 +471,23 @@ def as_ist(value=None):
         .localize(parsed)
         .astimezone(timezone(TIMEZONE))
         .replace(tzinfo=None)
+    )
+
+
+def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):
+    if type(input) not in (list, tuple):
+        return
+
+    if not input:
+        return
+
+    if len(input) == 1:
+        return cstr(input[0])
+
+    return (
+        separator.join(cstr(item) for item in input[:-1])
+        + last_separator
+        + cstr(input[-1])
     )
 
 

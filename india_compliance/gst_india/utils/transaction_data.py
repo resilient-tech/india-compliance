@@ -8,7 +8,6 @@ from india_compliance.gst_india.constants import (
     E_INVOICE_MASTER_CODES_URL,
     GST_TAX_RATES,
     GST_TAX_TYPES,
-    PINCODE_FORMAT,
 )
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
@@ -18,6 +17,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_gst_uom,
     get_validated_country_code,
+    validate_pincode,
 )
 
 REGEX_MAP = {
@@ -452,14 +452,7 @@ class GSTTransactionData:
                 title=_("Missing Address Details"),
             )
 
-        if not PINCODE_FORMAT.match(address.pincode):
-            frappe.throw(
-                _(
-                    "PIN Code for Address {0} must be a 6-digit number and cannot start"
-                    " with 0"
-                ).format(frappe.bold(address.name)),
-                title=_("Invalid Data"),
-            )
+        validate_pincode(address)
 
     def get_item_data(self, item_details):
         pass
