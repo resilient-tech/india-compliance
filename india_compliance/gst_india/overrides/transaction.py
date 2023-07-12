@@ -587,6 +587,14 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         source_gstin = party_details.supplier_gstin
         destination_gstin = party_details.company_gstin
 
+    # set is_reverse_charge as per party_gst_details if not set
+    if not is_sales_transaction:
+        is_reverse_charge = check_and_update_reverse_charge(party_details)
+
+        if is_reverse_charge:
+            party_details.update(is_reverse_charge)
+            gst_details.update(is_reverse_charge)
+
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
         or (
@@ -642,6 +650,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             )
         ),
         party_details.company_gstin[:2],
+        party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
         gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
@@ -668,6 +677,41 @@ def get_party_gst_details(party_details, is_sales_transaction):
     )
 
 
+def check_and_update_reverse_charge(party_details):
+    """check and update reverse charge in party details"""
+
+    if "is_reverse_charge" not in party_details:
+        return is_reverse_charge_applicable(party_details)
+
+    if party_details.get("tax_category"):
+        return get_reverse_charge_by_tax_category(party_details.tax_category)
+
+
+def is_reverse_charge_applicable(party_details):
+    """validate if reverse charge is applicable for the party"""
+
+    if not (party := party_details.get("supplier")):
+        return
+
+    return frappe.db.get_value(
+        "Supplier",
+        party,
+        ("is_reverse_charge_applicable as is_reverse_charge"),
+        as_dict=True,
+    )
+
+
+def get_reverse_charge_by_tax_category(tax_category):
+    """check if reverse charge is applicable for the tax category"""
+
+    return frappe.db.get_value(
+        "Tax Category",
+        tax_category,
+        "is_reverse_charge",
+        as_dict=True,
+    )
+
+
 def get_tax_template_based_on_category(master_doctype, company, party_details):
     if not party_details.tax_category:
         return
@@ -681,13 +725,15 @@ def get_tax_template_based_on_category(master_doctype, company, party_details):
     return default_tax
 
 
-def get_tax_template(master_doctype, company, is_inter_state, state_code):
+def get_tax_template(
+    master_doctype, company, is_inter_state, state_code, is_reverse_charge
+):
     tax_categories = frappe.get_all(
         "Tax Category",
         fields=["name", "is_inter_state", "gst_state"],
         filters={
             "is_inter_state": 1 if is_inter_state else 0,
-            "is_reverse_charge": 0,
+            "is_reverse_charge": 1 if is_reverse_charge else 0,
             "disabled": 0,
         },
     )
@@ -808,3 +854,58 @@ def ignore_gst_validations(doc):
         or validate_items(doc) is False
     ):
         return True
+
+
+def before_validate(doc, method=None):
+    validate_rcm_for_unregistered_supplier(doc)
+
+
+def get_rcm_settings():
+    rcm_settings = frappe._dict()
+
+    rcm_settings.auto_apply_reverse_charge_for_unregistered = (
+        frappe.db.get_single_value(
+            "GST Settings", "auto_apply_rcm_for_unregistered_supplier"
+        )
+    )
+    rcm_settings.rcm_threshold = frappe.db.get_single_value(
+        "GST Settings", "rcm_threshold"
+    )
+    return rcm_settings
+
+
+def validate_rcm_for_unregistered_supplier(doc):
+    rcm_settings = get_rcm_settings()
+
+    if not rcm_settings.auto_apply_reverse_charge_for_unregistered:
+        return
+
+    if doc.is_reverse_charge:
+        return
+
+    if not doc.gst_category == "Unregistered":
+        return
+
+    if doc.grand_total <= rcm_settings.rcm_threshold:
+        return
+
+    set_reverse_charge(doc)
+
+
+def set_reverse_charge(doc):
+    doc.is_reverse_charge = 1
+    default_tax = get_tax_template(
+        "Purchase Taxes and Charges Template",
+        doc.company,
+        is_inter_state_supply(doc),
+        doc.company_gstin[:2],
+        doc.is_reverse_charge,
+    )
+
+    if default_tax:
+        doc.taxes_and_charges = default_tax
+        template = (
+            get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax)
+            or []
+        )
+        doc.set("taxes", template)
