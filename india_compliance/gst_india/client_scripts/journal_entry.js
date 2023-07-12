@@ -19,7 +19,7 @@ async function toggle_company_gstin(frm) {
 }
 
 async function contains_gst_account(frm) {
-    if (!frm.gst_accounts || frm.company != frm.doc.company) {
+    if (!frm.gst_accounts || frm.company !== frm.doc.company) {
         frm.gst_accounts = await india_compliance.get_account_options(frm.doc.company);
         frm.company = frm.doc.company;
     }

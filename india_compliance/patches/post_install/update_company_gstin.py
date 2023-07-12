@@ -18,11 +18,7 @@ from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_lis
 ##############################################################################################################################
 
 
-@frappe.whitelist()
 def execute():
-    if not frappe.flags.in_install:
-        frappe.has_permission("GST Settings", ptype="write", throw=True)
-
     company_list = get_indian_companies()
     all_gst_accounts = get_gst_accounts(company_list)
 
@@ -57,11 +53,10 @@ def verify_gstin_update(gst_accounts=None):
     voucher_types = get_pending_voucher_types(gst_accounts)
 
     if voucher_types:
-        toggle_allow_on_submit(True)
+        toggle_allow_on_submit(True, voucher_types)
         return voucher_types
 
     toggle_allow_on_submit(False)
-    frappe.db.set_global("company_gstin_updated", 1)
 
 
 def update_gstin_for_je(company, gst_accounts):
@@ -138,7 +133,7 @@ def fetch_gl_entries(gst_accounts, voucher_type, error_voucher_types):
             .where(gl_doc.company_gstin.isnull() | (gl_doc.company_gstin == ""))
             .where(doc.company_gstin.notnull() & (doc.company_gstin != ""))
             .select(gl_doc.name, doc.company_gstin)
-            .limit(50000)
+            .limit(100000)
             .run(as_dict=True)
         )
     except Exception:
@@ -154,10 +149,10 @@ def get_gstin_wise_vouchers(entries):
 
 
 def _update_gl_entries(gstin_voucher_map):
-    doc = frappe.qb.DocType("GL Entry")
+    gl_entry = frappe.qb.DocType("GL Entry")
     for gstin, gl_entries in gstin_voucher_map.items():
-        frappe.qb.update(doc).set(doc.company_gstin, gstin).where(
-            doc.name.isin(gl_entries)
+        frappe.qb.update(gl_entry).set(gl_entry.company_gstin, gstin).where(
+            gl_entry.name.isin(gl_entries)
         ).run()
 
 
@@ -165,7 +160,7 @@ def get_pending_voucher_types(gst_accounts):
     return frappe.get_all(
         "GL Entry",
         filters={
-            "account": ["in", gst_accounts],
+            "account": ("in", gst_accounts),
             "company_gstin": ("is", "not set"),
             "is_cancelled": 0,
         },
@@ -174,10 +169,15 @@ def get_pending_voucher_types(gst_accounts):
     )
 
 
-def toggle_allow_on_submit(allow=True):
-    frappe.set_value(
-        "Custom Field",
-        {"fieldname": "company_gstin"},
-        "allow_on_submit",
-        allow,
+def toggle_allow_on_submit(allow=True, voucher_types=None):
+    custom_field = frappe.qb.DocType("Custom Field")
+    query = (
+        frappe.qb.update(custom_field)
+        .set(custom_field.allow_on_submit, bool(allow))
+        .where(custom_field.fieldname == "company_gstin")
     )
+
+    if voucher_types:
+        query = query.where(custom_field.dt.isin(voucher_types))
+
+    query.run()

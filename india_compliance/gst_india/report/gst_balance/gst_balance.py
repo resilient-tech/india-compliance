@@ -7,9 +7,24 @@ from frappe.query_builder.functions import Sum
 from frappe.utils import cstr
 
 from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_list
+from india_compliance.patches.post_install.update_company_gstin import (
+    execute as _update_company_gstin,
+)
+from india_compliance.patches.post_install.update_company_gstin import (
+    verify_gstin_update,
+)
 
 
 def execute(filters=None):
+    if get_pending_voucher_types(filters.get("company"))[0]:
+        frappe.msgprint(
+            _("Update Company GSTIN before generating GST Balance Report"),
+            alert=True,
+            indicator="red",
+        )
+
+        return [], []
+
     report = GSTBalanceReport(filters)
     columns = report.get_columns()
 
@@ -20,6 +35,24 @@ def execute(filters=None):
         data = report.get_summary_data()
 
     return columns, data
+
+
+@frappe.whitelist()
+def get_pending_voucher_types(company=None):
+    frappe.has_permission("GST Settings", ptype="write", throw=True)
+
+    company_accounts = ""
+    if company:
+        company_accounts = get_all_gst_accounts(company)
+
+    return verify_gstin_update(company_accounts), company_accounts
+
+
+@frappe.whitelist()
+def update_company_gstin():
+    frappe.has_permission("GST Settings", ptype="write", throw=True)
+
+    return _update_company_gstin()
 
 
 class GSTBalanceReport:
