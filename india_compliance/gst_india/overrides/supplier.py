@@ -8,7 +8,7 @@ from india_compliance.gst_india.utils import validate_gstin
 
 def validate(doc, method=None):
     validate_gst_transporter_id(doc)
-    set_reverse_charge_applicable(doc)
+    apply_reverse_charge_by_tax_category(doc)
 
 
 def validate_gst_transporter_id(doc):
@@ -64,10 +64,7 @@ def validate_gst_transporter_id(doc):
         )
 
 
-def set_reverse_charge_applicable(doc):
-    """
-    is_reverse_charge_applicable based on tax_category
-    """
+def apply_reverse_charge_by_tax_category(doc):
     if not doc.tax_category:
         return
 

@@ -90,14 +90,12 @@ doc_events = {
         "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate",
     },
     "Purchase Order": {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.validate_transaction"
-        ),
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_transaction",
+        "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate",
     },
     "Purchase Receipt": {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.validate_transaction"
-        ),
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_transaction",
+        "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate",
     },
     "Sales Invoice": {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",

@@ -300,12 +300,26 @@
    "fieldname": "archive_party_info_days",
    "fieldtype": "Int",
    "label": "Archive Party Information (In Days)"
+  },
+  {
+   "default": "0",
+   "description": "Reverse Charge will automatically be applied if the Supplier is Unregistered and RCM value threshold is met. ",
+   "fieldname": "auto_apply_rcm_for_unregistered_supplier",
+   "fieldtype": "Check",
+   "label": "Auto-Apply RCM for Unregistered Supplier"
+  },
+  {
+   "default": "5000",
+   "depends_on": "eval: doc.auto_apply_rcm_for_unregistered_supplier",
+   "fieldname": "rcm_threshold",
+   "fieldtype": "Currency",
+   "label": "RCM Threshold Value For Unregistered Supplier "
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-07-11 15:55:52.691571",
+ "modified": "2023-07-12 11:57:55.352250",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
