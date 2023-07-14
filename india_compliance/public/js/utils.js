@@ -46,6 +46,7 @@ Object.assign(india_compliance, {
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
             args: {
                 gstin: field.value,
+                is_request_from_ui: 1,
             }});
 
         field.set_description(
