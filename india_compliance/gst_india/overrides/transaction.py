@@ -800,6 +800,7 @@ def set_reverse_charge_as_per_gst_settings(doc):
         or doc.is_reverse_charge
         or not doc.gst_category == "Unregistered"
         or doc.grand_total <= gst_settings.rcm_threshold
+        or doc.get("is_opening") == "Yes"
     ):
         return
 
