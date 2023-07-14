@@ -805,7 +805,7 @@ def validate_transaction(doc, method=None):
 
 
 def validate_gstin(gstin, transaction_date, party):
-    gstin_doc = get_gstin_status(gstin)
+    gstin_doc = get_gstin_status(gstin, transaction_date)
 
     if not gstin_doc:
         return

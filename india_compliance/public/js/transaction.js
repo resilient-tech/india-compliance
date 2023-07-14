@@ -163,6 +163,10 @@ function is_foreign_transaction(frm) {
 
 function set_and_validate_gstin_status(doctype, gstin_field_name) {
     frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            _set_and_validate_gstin_status(frm, gstin_field_name);
+        },
+
         [gstin_field_name](frm) {
             _set_and_validate_gstin_status(frm, gstin_field_name);
         },
