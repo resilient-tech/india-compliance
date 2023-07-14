@@ -3,6 +3,10 @@ import click
 import frappe
 
 from india_compliance.gst_india.constants import GST_PARTY_TYPES
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    enqueue_update_gst_category,
+)
+from india_compliance.gst_india.utils import is_api_enabled
 
 
 def execute():
@@ -114,7 +118,7 @@ def update_gstin_and_gst_category():
         )
 
     if print_warning:
-        frappe.db.set_global("has_multiple_gstin", 1)
+        frappe.db.set_global("has_missing_gst_category", 1)
 
         click.secho(
             " Please check for parties"
@@ -122,3 +126,6 @@ def update_gstin_and_gst_category():
             " values.\n",
             fg="yellow",
         )
+
+        if is_api_enabled():
+            enqueue_update_gst_category()
