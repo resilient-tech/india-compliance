@@ -3,6 +3,10 @@ import click
 import frappe
 
 from india_compliance.gst_india.constants import GST_PARTY_TYPES
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    enqueue_update_gst_category,
+)
+from india_compliance.gst_india.utils import is_api_enabled
 
 
 def execute():
@@ -85,11 +89,10 @@ def update_gstin_and_gst_category():
                 # update gstin in party only where there is one gstin per party
                 if len(gstins) == 1:
                     default_gstin = next(iter(gstins))
-                    new_gstins.setdefault((doctype, default_gstin), []).append(
-                        party.name
-                    )
                 else:
-                    print_warning = True
+                    default_gstin = list(gstins)[0]
+
+                new_gstins.setdefault((doctype, default_gstin), []).append(party.name)
 
             for address in address_list:
                 # User may have already set GST category in Address
@@ -115,10 +118,14 @@ def update_gstin_and_gst_category():
         )
 
     if print_warning:
+        frappe.db.set_global("has_missing_gst_category", 1)
+
         click.secho(
-            "We have identified multiple GSTINs for a few parties and couldn't set"
-            " newly created fields automatically for these. Please check for parties"
+            " Please check for parties"
             " without GSTINs or addresses without GST Category and set approporiate"
             " values.\n",
             fg="yellow",
         )
+
+        if is_api_enabled():
+            enqueue_update_gst_category()
