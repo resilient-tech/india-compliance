@@ -51,7 +51,7 @@ class GSTSettings(Document):
         self.update_custom_fields()
 
         # clear session boot cache
-        frappe.cache().delete_keys("bootinfo")
+        frappe.cache.delete_keys("bootinfo")
 
     def validate_gst_accounts(self):
         account_list = []
