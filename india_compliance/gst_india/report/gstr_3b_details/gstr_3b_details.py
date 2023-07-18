@@ -138,6 +138,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             )
             .where(
                 (purchase_invoice.docstatus == 1)
+                & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
@@ -239,6 +240,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             )
             .where(
                 (journal_entry.docstatus == 1)
+                & (journal_entry.is_opening == "No")
                 & (journal_entry.posting_date[self.from_date : self.to_date])
                 & (journal_entry.company == self.company)
                 & (journal_entry.company_gstin == self.company_gstin)
@@ -281,14 +283,16 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
 
         address_state_map = self.get_address_state_map()
 
-        state = self.company_gstin[0:2]
+        state = cint(self.company_gstin[0:2])
 
         for invoice in invoices:
-            place_of_supply = cint(invoice.place_of_supply.split("-")[0] or state)
+            place_of_supply = cint(invoice.place_of_supply[0:2]) or state
 
-            supplier_state = cint(
-                address_state_map.get(invoice.supplier_address) or state
-            )
+            if invoice.gst_category == "Registered Composition":
+                supplier_state = cint(invoice.supplier_gstin[0:2])
+            else:
+                cint(address_state_map.get(invoice.supplier_address) or state)
+
             intra, inter = 0, 0
             base_amount = invoice.base_amount
 
@@ -296,20 +300,15 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 invoice.is_nil_exempt == 1
                 or invoice.get("gst_category") == "Registered Composition"
             ):
-                if supplier_state == place_of_supply:
-                    intra = base_amount
-                else:
-                    inter = base_amount
-
                 nature_of_supply = "Composition Scheme, Exempted, Nil Rated"
 
             elif invoice.is_non_gst == 1:
-                if supplier_state == place_of_supply:
-                    intra = base_amount
-                else:
-                    inter = base_amount
-
                 nature_of_supply = "Non GST Supply"
+
+            if supplier_state == place_of_supply:
+                intra = base_amount
+            else:
+                inter = base_amount
 
             formatted_data.append(
                 {
