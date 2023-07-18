@@ -291,7 +291,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             if invoice.gst_category == "Registered Composition":
                 supplier_state = cint(invoice.supplier_gstin[0:2])
             else:
-                cint(address_state_map.get(invoice.supplier_address) or state)
+                cint(address_state_map.get(invoice.supplier_address)) or state
 
             intra, inter = 0, 0
             base_amount = invoice.base_amount
