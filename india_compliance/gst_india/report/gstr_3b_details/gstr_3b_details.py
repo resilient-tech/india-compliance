@@ -39,8 +39,8 @@ class BaseGSTR3BDetails:
             {
                 "fieldname": "voucher_no",
                 "label": _("Voucher No"),
-                "fieldtype": "Link",
-                "options": "Purchase Invoice",
+                "fieldtype": "Dynamic Link",
+                "options": "voucher_type",
             },
             {
                 "fieldname": "posting_date",
