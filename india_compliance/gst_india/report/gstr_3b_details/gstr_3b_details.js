@@ -16,6 +16,7 @@ frappe.query_reports["GSTR-3B Details"] = {
 			"fieldname": "company_gstin",
 			"label": __("Company GSTIN"),
 			"fieldtype": "Autocomplete",
+			"reqd": 1,
 			"get_query": function () {
 				const company = frappe.query_report.get_filter_value('company');
 				return india_compliance.get_gstin_query(company);

@@ -65,10 +65,10 @@ class BaseGSTR3BDetails:
         return self.columns, self.data
 
     def extend_columns(self):
-        raise NotImplementedError("Subclasses must implement this method")
+        raise NotImplementedError("Report Not Available")
 
     def get_data(self):
-        raise NotImplementedError("Subclasses must implement this method")
+        raise NotImplementedError("Report Not Available")
 
 
 class GSTR3B_ITC_Details(BaseGSTR3BDetails):
