@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import LiteralValue, Sum
@@ -31,19 +32,19 @@ class BaseGSTR3BDetails:
         self.columns = [
             {
                 "fieldname": "voucher_type",
-                "label": "Voucher Type",
+                "label": _("Voucher Type"),
                 "fieldtype": "Data",
                 "width": 100,
             },
             {
                 "fieldname": "voucher_no",
-                "label": "Voucher No",
+                "label": _("Voucher No"),
                 "fieldtype": "Link",
                 "options": "Purchase Invoice",
             },
             {
                 "fieldname": "posting_date",
-                "label": "Posting Date",
+                "label": _("Posting Date"),
                 "fieldtype": "Date",
                 "width": 100,
             },
@@ -77,31 +78,31 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             [
                 {
                     "fieldname": "integrated_tax",
-                    "label": "Integrated Tax",
+                    "label": _("Integrated Tax"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "central_tax",
-                    "label": "Central Tax",
+                    "label": _("Central Tax"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "state_tax",
-                    "label": "State/UT Tax",
+                    "label": _("State/UT Tax"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "cess_amount",
-                    "label": "Cess Tax",
+                    "label": _("Cess Tax"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "eligibility_for_itc",
-                    "label": "Eligibility for ITC",
+                    "label": _("Eligibility for ITC"),
                     "fieldtype": "Data",
                     "width": 100,
                 },
@@ -254,19 +255,19 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             [
                 {
                     "fieldname": "intra",
-                    "label": "Intra State",
+                    "label": _("Intra State"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "inter",
-                    "label": "Inter State",
+                    "label": _("Inter State"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "nature_of_supply",
-                    "label": "Nature of Supply",
+                    "label": _("Nature of Supply"),
                     "fieldtype": "Data",
                     "width": 100,
                 },
