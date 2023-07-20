@@ -598,8 +598,13 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         destination_gstin = party_details.company_gstin
 
     # set is_reverse_charge as per party_gst_details if not set
-    if not is_sales_transaction:
-        is_reverse_charge = is_reverse_charge_applicable_for_purchase(party_details)
+    if not is_sales_transaction and "is_reverse_charge" not in party_details:
+        is_reverse_charge = frappe.db.get_value(
+            "Supplier",
+            party_details.supplier,
+            ("is_reverse_charge_applicable as is_reverse_charge"),
+            as_dict=True,
+        )
 
         if is_reverse_charge:
             party_details.update(is_reverse_charge)
@@ -685,28 +690,6 @@ def get_party_gst_details(party_details, is_sales_transaction):
         ("gst_category", f"gstin as {gstin_fieldname}"),
         as_dict=True,
     )
-
-
-def is_reverse_charge_applicable_for_purchase(party_details):
-    """Check if reverse charge is applicable for purchase transaction"""
-
-    # Get reverse charge applicabilit from supplier doctype
-    if "is_reverse_charge" not in party_details:
-        return frappe.db.get_value(
-            "Supplier",
-            party_details.supplier,
-            ("is_reverse_charge_applicable as is_reverse_charge"),
-            as_dict=True,
-        )
-
-    # Get reverse charge applicability from tax category
-    if party_details.get("tax_category"):
-        return frappe.db.get_value(
-            "Tax Category",
-            party_details.tax_category,
-            "is_reverse_charge",
-            as_dict=True,
-        )
 
 
 def get_tax_template_based_on_category(master_doctype, company, party_details):
@@ -807,7 +790,6 @@ def set_reverse_charge_as_per_gst_settings(doc):
 
     if (
         not gst_settings.enable_rcm_for_unregistered_supplier
-        or doc.is_reverse_charge
         or not doc.gst_category == "Unregistered"
         or doc.grand_total <= gst_settings.rcm_threshold
         or doc.get("is_opening") == "Yes"
