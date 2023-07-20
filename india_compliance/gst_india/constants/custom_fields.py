@@ -243,6 +243,22 @@ CUSTOM_FIELDS = {
             "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
         },
     ],
+    ("Journal Entry", "GL Entry"): [
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Autocomplete",
+            "insert_after": "company",
+            "hidden": 0,
+            # clear original default values
+            "read_only": 0,
+            "print_hide": 0,
+            "fetch_from": "",
+            "depends_on": "",
+            "mandatory_depends_on": "",
+            "translatable": 0,
+        }
+    ],
     # Transaction Item Fields
     (
         "Material Request Item",
@@ -299,6 +315,7 @@ CUSTOM_FIELDS = {
             "hidden": 1,
             "options": "Company:company:default_currency",
             "print_hide": 1,
+            "no_copy": 1,
         },
     ],
     "Sales Invoice": [
@@ -547,28 +564,6 @@ CUSTOM_FIELDS = {
             "options": "As per rules 42 & 43 of CGST Rules\nOthers",
             "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
             "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "translatable": 0,
-        },
-        {
-            "fieldname": "company_address",
-            "label": "Company Address",
-            "fieldtype": "Link",
-            "options": "Address",
-            "insert_after": "reversal_type",
-            "print_hide": 1,
-            "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-        },
-        {
-            "fieldname": "company_gstin",
-            "label": "Company GSTIN",
-            "fieldtype": "Data",
-            "read_only": 1,
-            "insert_after": "company_address",
-            "print_hide": 1,
-            "fetch_from": "company_address.gstin",
-            "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "mandatory_depends_on": "eval:doc.voucher_type=='Reversal Of ITC'",
             "translatable": 0,
         },
     ],
