@@ -1,5 +1,5 @@
 [pre_model_sync]
-india_compliance.patches.v15.check_version_compatibility
+india_compliance.patches.post_install.check_version_compatibility
 execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 
 [post_model_sync]
