@@ -83,6 +83,14 @@ def update_taxable_values(doc, valid_accounts):
         item.taxable_value += total_charges - apportioned_charges
 
 
+def update_taxable_values_for_non_gst(doc):
+    if doc.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
+        return
+
+    for item in doc.items:
+        item.taxable_value = 0
+
+
 def is_indian_registered_company(doc):
     if not doc.company_gstin:
         country, gst_category = frappe.get_cached_value(
@@ -354,7 +362,9 @@ def validate_items(doc):
             items_with_duplicate_taxes.append(bold(row.item_code))
 
     if not has_gst_items:
+        update_taxable_values_for_non_gst(doc)
         validate_tax_accounts_for_non_gst(doc)
+
         return False
 
     if non_gst_items:
