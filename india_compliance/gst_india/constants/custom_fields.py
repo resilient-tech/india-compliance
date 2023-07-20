@@ -444,6 +444,7 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_transporter_id",
             "print_hide": 1,
             "translatable": 0,
+            "depends_on": 'eval:in_list(["Registered Regular", "Overseas", "Unregistered"], doc.gst_category)',
         },
     ],
     "Address": [
