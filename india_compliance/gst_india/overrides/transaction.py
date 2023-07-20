@@ -588,6 +588,19 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         source_gstin = party_details.supplier_gstin
         destination_gstin = party_details.company_gstin
 
+    # set is_reverse_charge as per party_gst_details if not set
+    if not is_sales_transaction and "is_reverse_charge" not in party_details:
+        is_reverse_charge = frappe.db.get_value(
+            "Supplier",
+            party_details.supplier,
+            ("is_reverse_charge_applicable as is_reverse_charge"),
+            as_dict=True,
+        )
+
+        if is_reverse_charge:
+            party_details.update(is_reverse_charge)
+            gst_details.update(is_reverse_charge)
+
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
         or (
@@ -643,6 +656,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             )
         ),
         party_details.company_gstin[:2],
+        party_details.is_reverse_charge,
     ):
         gst_details.taxes_and_charges = default_tax
         gst_details.taxes = get_taxes_and_charges(master_doctype, default_tax)
@@ -682,13 +696,15 @@ def get_tax_template_based_on_category(master_doctype, company, party_details):
     return default_tax
 
 
-def get_tax_template(master_doctype, company, is_inter_state, state_code):
+def get_tax_template(
+    master_doctype, company, is_inter_state, state_code, is_reverse_charge
+):
     tax_categories = frappe.get_all(
         "Tax Category",
         fields=["name", "is_inter_state", "gst_state"],
         filters={
             "is_inter_state": 1 if is_inter_state else 0,
-            "is_reverse_charge": 0,
+            "is_reverse_charge": 1 if is_reverse_charge else 0,
             "disabled": 0,
         },
     )
@@ -755,6 +771,44 @@ def is_export_without_payment_of_gst(doc):
     return is_overseas_doc(doc) and not doc.is_export_with_gst
 
 
+def set_reverse_charge_as_per_gst_settings(doc):
+    gst_settings = frappe.get_cached_value(
+        "GST Settings",
+        "GST Settings",
+        ("enable_rcm_for_unregistered_supplier", "rcm_threshold"),
+        as_dict=1,
+    )
+
+    if (
+        not gst_settings.enable_rcm_for_unregistered_supplier
+        or not doc.gst_category == "Unregistered"
+        or doc.grand_total <= gst_settings.rcm_threshold
+        or doc.get("is_opening") == "Yes"
+    ):
+        return
+
+    set_reverse_charge(doc)
+
+
+def set_reverse_charge(doc):
+    doc.is_reverse_charge = 1
+    default_tax = get_tax_template(
+        "Purchase Taxes and Charges Template",
+        doc.company,
+        is_inter_state_supply(doc),
+        doc.company_gstin[:2],
+        doc.is_reverse_charge,
+    )
+
+    if default_tax:
+        doc.taxes_and_charges = default_tax
+        template = (
+            get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax)
+            or []
+        )
+        doc.set("taxes", template)
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -799,6 +853,10 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+
+
+def before_validate(doc, method=None):
+    set_reverse_charge_as_per_gst_settings(doc)
 
 
 def ignore_gst_validations(doc):

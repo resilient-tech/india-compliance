@@ -435,7 +435,15 @@ CUSTOM_FIELDS = {
             # don't delete below line; required to unset existing value
             "read_only_depends_on": None,
             "translatable": 0,
-        }
+        },
+        {
+            "fieldname": "is_reverse_charge_applicable",
+            "label": "Reverse Charge Applicable",
+            "fieldtype": "Check",
+            "insert_after": "gst_transporter_id",
+            "print_hide": 1,
+            "translatable": 0,
+        },
     ],
     "Address": [
         {
