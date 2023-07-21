@@ -1259,10 +1259,10 @@ def get_cdnr_unreg_json(res, gstin):
 def get_exempted_json(data):
     out = {
         "inv": [
-            {"sply_ty": "INTRB2B"},
-            {"sply_ty": "INTRAB2B"},
-            {"sply_ty": "INTRB2C"},
-            {"sply_ty": "INTRAB2C"},
+            {"sply_ty": "INTRB2B", "nil_amt": 0, "expt_amt": 0, "ngsup_amt": 0},
+            {"sply_ty": "INTRAB2B", "nil_amt": 0, "expt_amt": 0, "ngsup_amt": 0},
+            {"sply_ty": "INTRB2C", "nil_amt": 0, "expt_amt": 0, "ngsup_amt": 0},
+            {"sply_ty": "INTRAB2C", "nil_amt": 0, "expt_amt": 0, "ngsup_amt": 0},
         ]
     }
 
