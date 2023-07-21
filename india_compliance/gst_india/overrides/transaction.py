@@ -14,6 +14,9 @@ from india_compliance.gst_india.utils import (
     is_overseas_doc,
     validate_gst_category,
 )
+from india_compliance.income_tax_india.overrides.tax_withholding_category import (
+    get_tax_withholding_accounts,
+)
 
 DOCTYPES_WITH_TAXABLE_VALUE = {
     "Purchase Invoice",
@@ -29,6 +32,7 @@ def update_taxable_values(doc, valid_accounts):
 
     total_charges = 0
     apportioned_charges = 0
+    tax_witholding_amount = 0
 
     if doc.taxes:
         if any(
@@ -44,15 +48,19 @@ def update_taxable_values(doc, valid_accounts):
                     and row.charge_type == "On Previous Row Total"
                     and row.account_head in valid_accounts
                 ),
-                None,
+                None,  # ignore accounts after GST accounts
             )
 
         else:
+            # If no GST account is used
             reference_row_index = -1
+            # tax_witholding_amount = get_tds_amount(doc)
 
         if reference_row_index is not None:
             total_charges = (
-                doc.taxes[reference_row_index].base_total - doc.base_net_total
+                doc.taxes[reference_row_index].base_total
+                - doc.base_net_total
+                - tax_witholding_amount
             )
 
     # base net total may be zero if invoice has zero rated items + shipping
@@ -79,6 +87,22 @@ def update_taxable_values(doc, valid_accounts):
 
     if apportioned_charges != total_charges:
         item.taxable_value += total_charges - apportioned_charges
+
+
+def get_tds_amount(doc):
+    tds_accounts = get_tax_withholding_accounts(doc.company)
+    tds_amount = 0
+    for row in doc.taxes:
+        if row.account_head not in tds_accounts:
+            continue
+
+        if row.get("add_deduct_tax") and row.add_deduct_tax == "Deduct":
+            tds_amount -= row.tax_amount
+
+        else:
+            tds_amount += row.tax_amount
+
+    return tds_amount
 
 
 def is_indian_registered_company(doc):
