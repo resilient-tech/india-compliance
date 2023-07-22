@@ -109,6 +109,8 @@ def generate_e_invoice(docname, throw=True):
             result = result.Desc if response.error_code == "2283" else response
 
     except frappe.ValidationError as e:
+        doc.db_set({"einvoice_status": "Failed"})
+
         if throw:
             raise e
 
@@ -121,7 +123,12 @@ def generate_e_invoice(docname, throw=True):
             _("Warning"),
             indicator="yellow",
         )
+
         return
+
+    except Exception as e:
+        doc.db_set({"einvoice_status": "Failed"})
+        raise e
 
     doc.db_set(
         {

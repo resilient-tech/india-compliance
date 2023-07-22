@@ -315,6 +315,7 @@ CUSTOM_FIELDS = {
             "hidden": 1,
             "options": "Company:company:default_currency",
             "print_hide": 1,
+            "no_copy": 1,
         },
     ],
     "Sales Invoice": [
@@ -435,7 +436,16 @@ CUSTOM_FIELDS = {
             # don't delete below line; required to unset existing value
             "read_only_depends_on": None,
             "translatable": 0,
-        }
+        },
+        {
+            "fieldname": "is_reverse_charge_applicable",
+            "label": "Reverse Charge Applicable",
+            "fieldtype": "Check",
+            "insert_after": "gst_transporter_id",
+            "print_hide": 1,
+            "translatable": 0,
+            "depends_on": 'eval:in_list(["Registered Regular", "Overseas", "Unregistered"], doc.gst_category)',
+        },
     ],
     "Address": [
         {

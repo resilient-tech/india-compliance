@@ -96,16 +96,15 @@ doc_events = {
     "Purchase Invoice": {
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
+        "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate",
     },
     "Purchase Order": {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.validate_transaction"
-        ),
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_transaction",
+        "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate",
     },
     "Purchase Receipt": {
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.validate_transaction"
-        ),
+        "validate": "india_compliance.gst_india.overrides.transaction.validate_transaction",
+        "before_validate": "india_compliance.gst_india.overrides.transaction.before_validate",
     },
     "Sales Invoice": {
         "on_trash": (
@@ -123,7 +122,7 @@ doc_events = {
     },
     "Supplier": {
         "validate": [
-            "india_compliance.gst_india.overrides.supplier.validate_gst_transporter_id",
+            "india_compliance.gst_india.overrides.supplier.validate",
             "india_compliance.gst_india.overrides.party.validate_party",
         ],
         "after_insert": (
@@ -132,6 +131,9 @@ doc_events = {
     },
     "Tax Category": {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
+    },
+    "Tax Withholding Category": {
+        "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
     },
     "POS Invoice": {
         "validate": (
