@@ -1,10 +1,13 @@
 [pre_model_sync]
 india_compliance.patches.v15.check_version_compatibility
+execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #15
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #19
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #2
+india_compliance.patches.post_install.remove_old_fields
+india_compliance.patches.post_install.update_company_gstin
 india_compliance.patches.post_install.update_custom_role_for_e_invoice_summary
 india_compliance.patches.v14.remove_ecommerce_gstin_from_purchase_invoice
 india_compliance.patches.v14.set_sandbox_mode_in_gst_settings
@@ -20,3 +23,4 @@ execute:from india_compliance.gst_india.setup import map_default_uoms; map_defau
 india_compliance.patches.v14.set_correct_root_account_for_rcm
 india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice
 execute:import frappe; frappe.db.set_value("GST Settings", None, "archive_party_info_days", 7)
+india_compliance.patches.v14.set_reverse_charge_applicability_in_supplier
