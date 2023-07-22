@@ -132,6 +132,9 @@ doc_events = {
     "Tax Category": {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
     },
+    "Tax Withholding Category": {
+        "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
+    },
     "POS Invoice": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
