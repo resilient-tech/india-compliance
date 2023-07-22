@@ -56,7 +56,7 @@ def update_taxable_values(doc, valid_accounts):
         else:
             # If no GST account is used
             reference_row_index = -1
-            # tax_witholding_amount = get_tds_amount(doc)
+            tax_witholding_amount = get_tds_amount(doc)
 
         if reference_row_index is not None:
             total_charges = (
