@@ -502,8 +502,11 @@ class Gstr1Report(object):
                     0, []
                 ).extend(items)
 
-            # Show invoice with all items are in nil exempt or non gst
-            if invoice_no in self.nil_exempt_non_gst:
+            # Show invoice with all items are in nil exempt and exclude non-gst
+            if (
+                invoice_no in self.nil_exempt_non_gst
+                and self.nil_exempt_non_gst[invoice_no][2] == 0
+            ):
                 self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(
                     0, []
                 ).extend(items)
