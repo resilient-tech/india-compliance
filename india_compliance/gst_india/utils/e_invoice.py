@@ -147,6 +147,8 @@ def generate_e_invoice(docname, throw=True):
         return
 
     except frappe.ValidationError as e:
+        doc.db_set({"einvoice_status": "Failed"})
+
         if throw:
             raise e
 
@@ -159,16 +161,12 @@ def generate_e_invoice(docname, throw=True):
             _("Warning"),
             indicator="yellow",
         )
-        return
-
-    except Exception:
-        doc.db_set(
-            {
-                "einvoice_status": "Failed",
-            }
-        )
 
         return
+
+    except Exception as e:
+        doc.db_set({"einvoice_status": "Failed"})
+        raise e
 
     doc.db_set(
         {
@@ -570,9 +568,9 @@ class EInvoiceData(GSTTransactionData):
     def get_invoice_data(self):
         if self.sandbox_mode:
             seller = {
-                "gstin": "01AMBPG7773M002",
-                "state_number": "01",
-                "pincode": 193501,
+                "gstin": "02AMBPG7773M002",
+                "state_number": "02",
+                "pincode": 171302,
             }
             self.company_address.update(seller)
             if self.dispatch_address:

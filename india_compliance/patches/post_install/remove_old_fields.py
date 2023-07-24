@@ -18,3 +18,4 @@ def execute():
     )
     delete_old_fields("pan_details", "Company")
     delete_old_fields("export_type", ("Customer", "Supplier"))
+    delete_old_fields("company_address", "Journal Entry")
