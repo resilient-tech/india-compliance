@@ -49,9 +49,16 @@ class GSTSettings(Document):
 
     def on_update(self):
         self.update_custom_fields()
-
+        self.update_e_invoice_retry_job()
         # clear session boot cache
         frappe.cache.delete_keys("bootinfo")
+
+    def update_e_invoice_retry_job(self):
+        scheduled_job_doc = frappe.get_doc(
+            "Scheduled Job Type", "e_invoice.retry_e_invoice_generation"
+        )
+        scheduled_job_doc.update({"stopped": self.retry_e_invoice_generation})
+        scheduled_job_doc.save()
 
     def validate_gst_accounts(self):
         account_list = []

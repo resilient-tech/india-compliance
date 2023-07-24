@@ -37,6 +37,8 @@
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "retry_e_invoice_generation_after",
+  "retry_e_invoice_generation",
   "column_break_bydp",
   "archive_party_info_days",
   "uom_mapping_section",
@@ -314,7 +316,19 @@
    "fieldname": "enable_rcm_for_unregistered_supplier",
    "fieldtype": "Check",
    "label": "Enable Reverse Charge for Purchase from Unregistered Supplier"
-  }
+  },
+  {
+    "fieldname": "retry_e_invoice_generation_after",
+    "fieldtype": "Datetime",
+    "hidden": 1,
+    "label": "Retry e-Invoice generation after"
+   },
+   {
+    "default": "1",
+    "fieldname": "retry_e_invoice_generation",
+    "fieldtype": "Check",
+    "label": "Retry e-Invoice generation"
+   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,

@@ -6,14 +6,11 @@ import frappe
 from frappe import _
 from frappe.utils import sbool
 
+from india_compliance.exceptions import GatewayTimeoutError
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
 BASE_URL = "https://asp.resilient.tech"
-
-
-class GatewayTimeoutError(Exception):
-    pass
 
 
 class BaseAPI:
@@ -218,7 +215,7 @@ class BaseAPI:
             )
 
         if status_code == 504:
-            raise GatewayTimeoutError("Gateway Timeout")
+            raise GatewayTimeoutError()
 
     def generate_request_id(self, length=12):
         return frappe.generate_hash(length=length)
