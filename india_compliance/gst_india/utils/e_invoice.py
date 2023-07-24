@@ -78,7 +78,8 @@ def generate_e_invoices(docnames):
 
     for docname in docnames:
         try:
-            generate_e_invoice(docname)
+            if generate_e_invoice(docname) is False:
+                return
 
         except Exception:
             frappe.log_error(
@@ -149,7 +150,7 @@ def generate_e_invoice(docname, throw=True):
             indicator="yellow",
         )
 
-        return
+        return False
 
     except frappe.ValidationError as e:
         doc.db_set({"einvoice_status": "Failed"})
