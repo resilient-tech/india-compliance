@@ -36,7 +36,6 @@ class IndiaComplianceAccountPage {
 
     mountVueApp() {
         this.router = this.createRouter();
-
         this.app = createApp(IndiaComplianceAccountApp).use(this.router).use(store);
         SetVueGlobals(this.app);
         this.router.isReady().then(() => this.app.mount(this.wrapperId));
