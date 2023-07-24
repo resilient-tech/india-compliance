@@ -35,6 +35,10 @@ doctype_js = {
         "gst_india/client_scripts/delivery_note.js",
     ],
     "Item": "gst_india/client_scripts/item.js",
+    "Expense Claim": [
+        "gst_india/client_scripts/journal_entry.js",
+        "gst_india/client_scripts/expense_claim.js",
+    ],
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
     "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
