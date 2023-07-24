@@ -84,7 +84,7 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
 
-                if (!frm.doc.gst_transporter_id && can_extend_e_waybill(frm)) {
+                if (can_extend_e_waybill(frm)) {
                     frm.add_custom_button(
                         __("Extend Validity"),
                         () => show_extend_validity_dialog(frm),
@@ -874,11 +874,13 @@ function can_extend_e_waybill(frm) {
         .format(frappe.defaultDatetimeFormat);
 
     if (
-        frappe.datetime.now_datetime < before_hours ||
-        frappe.datetime.now_datetime > after_hours
+        (frappe.datetime.now_datetime < before_hours ||
+            frappe.datetime.now_datetime > after_hours) &&
+        frm.doc.gst_transporter_id &&
+        frm.doc.gst_transporter_id == frm.doc.company_gstin
     )
         return false;
-    return True;
+    return true;
 }
 
 function is_e_waybill_cancellable(frm) {

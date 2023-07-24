@@ -339,11 +339,9 @@ def extend_validity(*, doctype, docname, values):
         doc,
         {
             "name": doc.ewaybill,
-            "is_validity_extended": 1,
-            "extension_reason_code": EXTEND_VALIDITY_REASON_CODES[values.reason],
-            "extension_remark": values.remark if values.remark else values.reason,
             "updated_on": parse_datetime(result.updatedDate, day_first=True),
             "valid_upto": extended_validity_date,
+            "is_latest_data": 0,
         },
         fetch=values.update_e_waybill_data,
         comment=comment,
