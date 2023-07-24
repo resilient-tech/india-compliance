@@ -5,7 +5,10 @@ from frappe import _, bold
 from frappe.model import delete_doc
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
-from erpnext.controllers.taxes_and_totals import _get_itemised_tax_breakup_data
+from erpnext.controllers.taxes_and_totals import (
+    get_itemised_tax,
+    get_itemised_taxable_amount,
+)
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
 from india_compliance.gst_india.utils import (
@@ -546,9 +549,21 @@ def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
 
 
 def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
-    itemised_tax_data = _get_itemised_tax_breakup_data(
-        doc, with_tax_account=account_wise
-    )
+    itemised_tax = get_itemised_tax(doc.taxes, with_tax_account=account_wise)
+
+    itemised_taxable_amount = get_itemised_taxable_amount(doc.items)
+
+    itemised_tax_data = []
+    for item_code, taxes in itemised_tax.items():
+        itemised_tax_data.append(
+            frappe._dict(
+                {
+                    "item": item_code,
+                    "taxable_amount": itemised_taxable_amount.get(item_code),
+                    **taxes,
+                }
+            )
+        )
 
     tax_breakup_hsn_wise = hsn_wise or is_hsn_wise_tax_breakup_applicable(
         doc.doctype + " Item"
