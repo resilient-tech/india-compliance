@@ -194,30 +194,29 @@ export default {
 
     async proceedToPayment() {
       this.isRedirecting = true;
-      const response = await create_order(this.credits, this.grandTotal);
+
+      const orderDetails = {
+        credits: this.credits,
+        netTotal: this.netTotal,
+        tax: this.tax,
+        taxRate: this.taxRate,
+        grandTotal: this.grandTotal,
+        validity: frappe.datetime.add_months(
+          frappe.datetime.now_date(),
+          this.creditsValidity
+        ),
+      };
+
+      const orderCreated = await this.$store.dispatch("createOrder", orderDetails);
       this.isRedirecting = false;
 
-      if (response.invalid_token) return this.$store.dispatch("setApiSecret", null);
+      if (!orderCreated) {
+        frappe.throw(
+          "Something went wrong while creating order, please contact support!"
+        );
+      }
 
-      if (!response.success || !response.message?.order_token) return;
-
-      this.$router.push({
-        name: "paymentPage",
-        params: {
-          order: {
-            token: response.message.order_token,
-            credits: this.credits,
-            netTotal: this.netTotal,
-            tax: this.tax,
-            taxRate: this.taxRate,
-            grandTotal: this.grandTotal,
-            validity: frappe.datetime.add_months(
-              frappe.datetime.now_date(),
-              this.creditsValidity
-            ),
-          },
-        },
-      });
+      this.$router.push({ name: "paymentPage" });
     },
 
     updateCredits() {
@@ -244,51 +243,6 @@ export default {
   },
 };
 
-// taken from: https://stackoverflow.com/a/58812425
-function bisect_left(sortedList, value) {
-  if (!sortedList.length) return 0;
-
-  if (sortedList.length == 1) {
-    return value > sortedList[0] ? 1 : 0;
-  }
-
-  let lbound = 0;
-  let rbound = sortedList.length - 1;
-  return bisect_left(lbound, rbound);
-
-  // note that this function depends on closure over lbound and rbound
-  // to work correctly
-  function bisect_left(lb, rb) {
-    if (rb - lb == 1) {
-      if (sortedList[lb] < value && sortedList[rb] >= value) {
-        return lb + 1;
-      }
-
-      if (sortedList[lb] == value) {
-        return lb;
-      }
-    }
-
-    if (sortedList[lb] > value) {
-      return 0;
-    }
-
-    if (sortedList[rb] < value) {
-      return sortedList.length;
-    }
-
-    let midPoint = lb + Math.floor((rb - lb) / 2);
-    let midValue = sortedList[midPoint];
-
-    if (value <= midValue) {
-      rbound = midPoint;
-    } else if (value > midValue) {
-      lbound = midPoint;
-    }
-
-    return bisect_left(lbound, rbound);
-  }
-}
 </script>
 
 <style scoped>

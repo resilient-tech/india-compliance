@@ -28,9 +28,7 @@
           <div class="order-summary">
             <div class="sub-heading">
               <p class="title">Order Summary</p>
-              <a @click="$router.go(-1)" class="text-highlight text-right">
-                Edit
-              </a>
+              <a @click="$router.back()" class="text-highlight text-right"> Edit </a>
             </div>
             <div class="order-summary-body">
               <div class="row">
@@ -85,6 +83,7 @@ export default {
 
   data() {
     return {
+      orderDetails: null,
       isLoading: true,
       // TODO: fix reactivity of vuex store's state `billingDetails` and use computed property instead
       billingDetails: {},
@@ -124,14 +123,11 @@ export default {
       return this.billingDetails.pincode;
     },
 
-    orderDetails() {
-      return this.$route.params.order;
-    },
-
     creditsValidity() {
       return frappe.datetime.str_to_user(this.orderDetails.validity);
     },
   },
+
 
   methods: {
     getReadableNumber,
@@ -184,19 +180,21 @@ export default {
             fieldname: "state",
             fieldtype: "Autocomplete",
             default: this.state,
-            options: this.country.toLowerCase() === "india" ? states : []
+            options: this.country.toLowerCase() === "india" ? states : [],
           },
           {
             label: "Country",
             fieldname: "country",
             fieldtype: "Data",
             default: this.country,
-            onchange(){
+            onchange() {
               // TODO: fix in frappe needed to update dialog options
-              this.value.toLowerCase() === "india" ?
-              dialog.set_df_property("state","options", states):
-              dialog.set_df_property("state", "options", [])
-            }
+              dialog.set_df_property(
+                "state",
+                "options",
+                this.value.toLowerCase() === "india" ? states : [],
+              );
+            },
           },
           {
             label: "Postal Code",
@@ -231,23 +229,20 @@ export default {
     },
 
     redirectToHome(message, color) {
-      this.$router.push({
-        name: "home",
-        replace: true,
-        params: { message: { message, color } },
-      });
+      this.$store.dispatch("setMessage", { message, color });
+      this.$router.replace({ name: "home" });
     },
+
     initCashFree(orderToken) {
       const style = getComputedStyle(document.body);
       const primaryColor = style.getPropertyValue("--primary");
       const cardBg = style.getPropertyValue("--card-bg");
-      const theme =
-        document.documentElement.getAttribute("data-theme-mode") || "light";
+      const theme = document.documentElement.getAttribute("data-theme-mode") || "light";
 
       const dropConfig = {
         components: ["card", "netbanking", "app", "upi"],
         orderToken,
-        onSuccess: async (data) => {
+        onSuccess: async data => {
           if (data.order && data.order.status == "PAID") {
             const response = await verify_payment(data.order.orderId);
             if (!response.success || response.error) {
@@ -260,15 +255,14 @@ export default {
             );
           }
         },
-        onFailure: (data) => {
+        onFailure: data => {
           // redirecting on order related errors
           if (data.order.errorText) {
             return this.redirectToHome(data.order.errorText, "red");
           }
 
           frappe.throw(
-            data.transaction?.txMsg ||
-              "Something went wrong, please try again later",
+            data.transaction?.txMsg || "Something went wrong, please try again later",
             "Payment Failed"
           );
         },
@@ -286,17 +280,18 @@ export default {
       const paymentElement = document.getElementById("payment-gateway");
       cashfree.initialiseDropin(paymentElement, dropConfig);
 
-      document
-        .querySelector("#payment-gateway iframe")
-        .setAttribute("scrolling", "no");
+      document.querySelector("#payment-gateway iframe").setAttribute("scrolling", "no");
     },
   },
 
-  beforeRouteEnter(to) {
-    if (!to.params.order) return { name: "home", replace: true };
-  },
-
   created() {
+    this.orderDetails = this.$store.state.account.orderDetails;
+    this.$store.dispatch("resetOrder");
+
+    if (!this.orderDetails || !this.orderDetails.token) {
+      return this.redirectToHome("Invalid order details", "red");
+    }
+
     const script = document.createElement("script");
     script.setAttribute(
       "src",
@@ -304,7 +299,7 @@ export default {
     );
     document.head.appendChild(script);
     script.onload = async () => {
-      this.initCashFree(this.$route.params.order.token);
+      this.initCashFree(this.orderDetails.token);
       await this.$store.dispatch("fetchDetails", "billing");
       this.isLoading = false;
       this.billingDetails = this.$store.state.account.billingDetails;

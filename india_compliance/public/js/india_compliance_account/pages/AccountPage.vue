@@ -55,9 +55,10 @@ export default {
     PreLoader,
   },
 
-  data() {
+data() {
     return {
       isLoading: true,
+      message: null,
     };
   },
 
@@ -109,15 +110,14 @@ export default {
     valid_upto() {
       return frappe.datetime.str_to_user(this.subscriptionDetails.expiry_date);
     },
-
-    message() {
-      return this.$route.params.message;
-    },
   },
 
   async created() {
     await this.$store.dispatch("fetchDetails", "subscription");
     this.isLoading = false;
+
+    this.message = this.$store.state.account.message;
+    this.$store.dispatch("resetMessage");
   },
 };
 </script>
