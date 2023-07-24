@@ -502,9 +502,9 @@ class EInvoiceData(GSTTransactionData):
     def get_invoice_data(self):
         if self.sandbox_mode:
             seller = {
-                "gstin": "01AMBPG7773M002",
-                "state_number": "01",
-                "pincode": 193501,
+                "gstin": "02AMBPG7773M002",
+                "state_number": "02",
+                "pincode": 171302,
             }
             self.company_address.update(seller)
             if self.dispatch_address:
