@@ -7,7 +7,12 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_transaction,
 )
-from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils import (
+    are_goods_supplied,
+    get_validated_country_code,
+    is_api_enabled,
+    is_foreign_doc,
+)
 from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
@@ -62,6 +67,7 @@ def validate(doc, method=None):
         return
 
     validate_invoice_number(doc)
+    validate_credit_debit_note(doc)
     validate_fields_and_set_status_for_e_invoice(doc)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
@@ -86,6 +92,16 @@ def validate_invoice_number(doc):
         )
 
 
+def validate_credit_debit_note(doc):
+    if doc.is_return and doc.is_debit_note:
+        frappe.throw(
+            _(
+                "You have selected both 'Is Return' and 'Is Rate Adjustment Entry'. You can select only one of them."
+            ),
+            title=_("Invalid Options Selected"),
+        )
+
+
 def validate_fields_and_set_status_for_e_invoice(doc):
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
@@ -98,6 +114,10 @@ def validate_fields_and_set_status_for_e_invoice(doc):
         "customer_address",
         _("{0} is a mandatory field for generating e-Invoices"),
     )
+
+    if is_foreign_doc(doc):
+        country = frappe.db.get_value("Address", doc.customer_address, "country")
+        get_validated_country_code(country)
 
     if doc.docstatus == 1 and not doc.irn:
         doc.einvoice_status = "Pending"
@@ -132,7 +152,7 @@ def is_shipping_address_in_india(doc):
 
 
 def on_submit(doc, method=None):
-    if getattr(doc, "_submitted_from_ui", None) or not doc.company_gstin:
+    if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings")
@@ -176,13 +196,7 @@ def is_e_waybill_applicable(doc, gst_settings=None):
         and not doc.is_return
         and not doc.is_debit_note
         and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
-        and any(
-            item
-            for item in doc.items
-            if item.gst_hsn_code
-            and not item.gst_hsn_code.startswith("99")
-            and item.qty != 0
-        )
+        and are_goods_supplied(doc)
     )
 
 

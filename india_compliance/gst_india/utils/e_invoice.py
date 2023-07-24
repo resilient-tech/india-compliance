@@ -14,12 +14,18 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
-from india_compliance.gst_india.constants import EXPORT_TYPES, GST_CATEGORIES
+from india_compliance.gst_india.constants import (
+    CURRENCY_CODES,
+    EXPORT_TYPES,
+    GST_CATEGORIES,
+    PORT_CODES,
+)
 from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
 )
 from india_compliance.gst_india.utils import (
+    are_goods_supplied,
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
@@ -103,6 +109,8 @@ def generate_e_invoice(docname, throw=True):
             result = result.Desc if response.error_code == "2283" else response
 
     except frappe.ValidationError as e:
+        doc.db_set({"einvoice_status": "Failed"})
+
         if throw:
             raise e
 
@@ -115,7 +123,12 @@ def generate_e_invoice(docname, throw=True):
             _("Warning"),
             indicator="yellow",
         )
+
         return
+
+    except Exception as e:
+        doc.db_set({"einvoice_status": "Failed"})
+        raise e
 
     doc.db_set(
         {
@@ -625,6 +638,9 @@ class EInvoiceData(GSTTransactionData):
                 "Stcd": self.shipping_address.state_number,
             }
 
+        if is_foreign_doc(self.doc):
+            invoice_data["ExpDtls"] = self.get_export_details()
+
         return invoice_data
 
     def get_item_data(self, item_details):
@@ -654,3 +670,23 @@ class EInvoiceData(GSTTransactionData):
                 "ExpDt": item_details.batch_expiry_date,
             },
         }
+
+    def get_export_details(self):
+        export_details = {"CntCode": self.billing_address.country_code}
+
+        currency = self.doc.currency and self.doc.currency.upper()
+        if currency != "INR" and currency in CURRENCY_CODES:
+            export_details["ForCur"] = currency
+
+        if not are_goods_supplied(self.doc):
+            return export_details
+
+        export_details["ShipBNo"] = self.doc.shipping_bill_number
+        export_details["ShipBDt"] = format_date(
+            self.doc.shipping_bill_date, self.DATE_FORMAT
+        )
+
+        if self.doc.port_code in PORT_CODES:
+            export_details["Port"] = self.doc.port_code
+
+        return export_details

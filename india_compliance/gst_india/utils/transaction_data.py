@@ -4,12 +4,24 @@ import frappe
 from frappe import _
 from frappe.utils import format_date, get_link_to_form, getdate, rounded
 
-from india_compliance.gst_india.constants import GST_TAX_TYPES, PINCODE_FORMAT
+from india_compliance.gst_india.constants import (
+    E_INVOICE_MASTER_CODES_URL,
+    GST_TAX_RATES,
+    GST_TAX_TYPES,
+)
 from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     VEHICLE_TYPES,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    get_gst_uom,
+    get_validated_country_code,
+    validate_pincode,
+)
+from india_compliance.income_tax_india.overrides.tax_withholding_category import (
+    get_tax_withholding_accounts,
+)
 
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
@@ -34,16 +46,7 @@ class GSTTransactionData:
         }
 
     def set_transaction_details(self):
-        rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
-        if self.doc.is_return:
-            rounding_adjustment = -rounding_adjustment
-
-        grand_total_fieldname = (
-            "base_grand_total"
-            if self.doc.disable_rounded_total
-            else "base_rounded_total"
-        )
-
+        tds_amount = self.get_tds_amount()
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
@@ -57,13 +60,9 @@ class GSTTransactionData:
                 "total": abs(
                     self.rounded(sum(row.taxable_value for row in self.doc.items))
                 ),
-                "rounding_adjustment": rounding_adjustment,
-                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
-                "grand_total_in_foreign_currency": (
-                    abs(self.rounded(self.doc.grand_total))
-                    if self.doc.currency != "INR"
-                    else ""
-                ),
+                "rounding_adjustment": self.get_adjusted_rounding(tds_amount),
+                "grand_total": self.get_adjusted_grand_total(tds_amount),
+                "grand_total_in_foreign_currency": self.get_adjusted_total_in_foreign_currency(),
                 "discount_amount": (
                     abs(self.rounded(self.doc.base_discount_amount))
                     if self.doc.get("is_cash_or_non_trade_discount")
@@ -76,6 +75,60 @@ class GSTTransactionData:
         )
         self.update_transaction_details()
         self.update_transaction_tax_details()
+
+    def get_tds_amount(self, currency="INR"):
+        tds_accounts = get_tax_withholding_accounts(self.doc.company)
+        amount_field = (
+            "base_tax_amount_after_discount_amount"
+            if currency == "INR"
+            else "tax_amount_after_discount_amount"
+        )
+        tds_amount = 0
+
+        if not tds_accounts:
+            return tds_amount
+
+        for row in self.doc.taxes:
+            if row.account_head in tds_accounts:
+                tds_amount += row.get(amount_field)
+
+        return tds_amount
+
+    def get_adjusted_rounding(self, tds_amount):
+        """Adjust rounding for TDS Roundoff and Returns"""
+
+        if self.doc.disable_rounded_total:
+            return 0.0
+
+        tds_rounding_adjustment = self.rounded(tds_amount, 0) - tds_amount
+        rounding_adjustment = self.rounded(
+            self.doc.base_rounding_adjustment - tds_rounding_adjustment
+        )
+
+        if self.doc.is_return:
+            rounding_adjustment = -rounding_adjustment
+
+        return rounding_adjustment
+
+    def get_adjusted_grand_total(self, tds_amount):
+        grand_total_fieldname = "base_grand_total"
+
+        if not self.doc.disable_rounded_total:
+            grand_total_fieldname = "base_rounded_total"
+            tds_amount = self.rounded(tds_amount, 0)
+
+        return abs(self.rounded(self.doc.get(grand_total_fieldname) - tds_amount))
+
+    def get_adjusted_total_in_foreign_currency(self):
+        grand_total_in_foreign_currency = ""
+        if self.doc.currency != "INR":
+            grand_total_in_foreign_currency = abs(
+                self.rounded(
+                    self.doc.grand_total - self.get_tds_amount(self.doc.currency)
+                )
+            )
+
+        return grand_total_in_foreign_currency
 
     def update_transaction_details(self):
         # to be overrridden
@@ -320,12 +373,16 @@ class GSTTransactionData:
                 }
             )
 
+        tax_rate = sum(
+            self.rounded(item_details.get(f"{tax}_rate", 0), 3)
+            for tax in GST_TAX_TYPES[:3]
+        )
+
+        validate_gst_tax_rate(tax_rate, item)
+
         item_details.update(
             {
-                "tax_rate": sum(
-                    self.rounded(item_details.get(f"{tax}_rate", 0), 3)
-                    for tax in GST_TAX_TYPES[:3]
-                ),
+                "tax_rate": tax_rate,
                 "total_value": abs(
                     self.rounded(
                         item_details.taxable_value
@@ -409,6 +466,7 @@ class GSTTransactionData:
                     **error_context,
                 ),
                 "pincode": int(address.pincode),
+                "country_code": get_validated_country_code(address.country),
             }
         )
 
@@ -438,14 +496,7 @@ class GSTTransactionData:
                 title=_("Missing Address Details"),
             )
 
-        if not PINCODE_FORMAT.match(address.pincode):
-            frappe.throw(
-                _(
-                    "PIN Code for Address {0} must be a 6-digit number and cannot start"
-                    " with 0"
-                ).format(frappe.bold(address.name)),
-                title=_("Invalid Data"),
-            )
+        validate_pincode(address)
 
     def get_item_data(self, item_details):
         pass
@@ -603,3 +654,19 @@ def validate_unique_hsn_and_uom(doc):
     for item in doc.items:
         _validate_unique(item_wise_uom, item.get("uom"), _("UOM"))
         _validate_unique(item_wise_hsn, item.get("gst_hsn_code"), _("HSN Code"))
+
+
+def validate_gst_tax_rate(tax_rate, item):
+    if tax_rate not in GST_TAX_RATES:
+        frappe.throw(
+            _(
+                "Row #{0}: GST tax rate {1} for Item {2} is not permitted for generating e-Invoice as it"
+                " doesn't adhere to the e-Invoice Masters.<br><br> Check valid tax rates <a href='{3}'>here</a>."
+            ).format(
+                item.idx,
+                frappe.bold(f"{tax_rate}%"),
+                item.item_code,
+                E_INVOICE_MASTER_CODES_URL,
+            ),
+            title=_("Invalid Tax Rate"),
+        )
