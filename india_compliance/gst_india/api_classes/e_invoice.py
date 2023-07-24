@@ -35,8 +35,8 @@ class EInvoiceAPI(BaseAPI):
             )
 
         if self.sandbox_mode:
-            company_gstin = "01AMBPG7773M002"
-            self.username = "adqgspjkusr1"
+            company_gstin = "02AMBPG7773M002"
+            self.username = "adqgsphpusr1"
             self.password = "Gsp@1234"
 
         elif not company_gstin:
