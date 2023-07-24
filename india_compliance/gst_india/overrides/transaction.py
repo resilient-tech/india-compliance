@@ -515,66 +515,69 @@ def validate_overseas_gst_category(doc, method=None):
 
 
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
-    if is_hsn_wise_tax_breakup_applicable(item_doctype):
+    if is_hsn_wise_breakup_needed(item_doctype):
         return [_("HSN/SAC"), _("Taxable Amount")] + tax_accounts
     else:
         return [_("Item"), _("Taxable Amount")] + tax_accounts
 
 
-def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
-    itemised_tax = get_itemised_tax(doc.taxes, with_tax_account=account_wise)
+def get_itemised_tax_breakup_data(doc):
+    itemised_tax = get_itemised_tax(doc.taxes)
+    taxable_amounts = get_itemised_taxable_amount(doc.items)
 
-    itemised_taxable_amount = get_itemised_taxable_amount(doc.items)
+    if is_hsn_wise_breakup_needed(doc.doctype + " Item"):
+        return get_hsn_wise_breakup(doc, itemised_tax, taxable_amounts)
 
+    return get_item_wise_breakup(itemised_tax, taxable_amounts)
+
+
+def get_item_wise_breakup(itemised_tax, taxable_amounts):
     itemised_tax_data = []
     for item_code, taxes in itemised_tax.items():
         itemised_tax_data.append(
             frappe._dict(
                 {
                     "item": item_code,
-                    "taxable_amount": itemised_taxable_amount.get(item_code),
+                    "taxable_amount": taxable_amounts.get(item_code),
                     **taxes,
                 }
             )
         )
 
-    tax_breakup_hsn_wise = hsn_wise or is_hsn_wise_tax_breakup_applicable(
-        doc.doctype + " Item"
-    )
+    return itemised_tax_data
 
-    if not tax_breakup_hsn_wise:
-        return itemised_tax_data
 
-    item_hsn_map = frappe._dict()
-    for d in doc.items:
-        item_hsn_map.setdefault(d.item_code or d.item_name, d.get("gst_hsn_code"))
+def get_hsn_wise_breakup(doc, itemised_tax, taxable_amounts):
+    hsn_tax_data = frappe._dict()
+    considered_items = set()
+    for item in doc.items:
+        item_code = item.item_code or item.item_name
+        if item_code in considered_items:
+            continue
 
-    hsn_tax_data = []
-    for itemise_tax in itemised_tax_data:
-        hsn_code = item_hsn_map.get(itemise_tax.get("item"))
-        hsn_tax = frappe._dict(
-            {"item": hsn_code, "taxable_amount": itemise_tax.get("taxable_amount")}
+        hsn_code = item.gst_hsn_code
+        tax_row = itemised_tax.get(item_code, {})
+        tax_rate = next(iter(tax_row.values()), {}).get("tax_rate", 0)
+
+        hsn_tax = hsn_tax_data.setdefault(
+            (hsn_code, tax_rate),
+            frappe._dict({"item": hsn_code, "taxable_amount": 0}),
         )
 
-        # itemise_tax map should be like {'item': 'item_or_hsn', 'taxable_amount': 100000.0, 'Output Tax SGST @ 9.0': {'tax_rate': 6.0, 'tax_amount': 6000.0}},
-        for key, value in itemise_tax.items():
-            # Assuming value as dict for tax details
-            if key in ("item", "taxable_amount") or not isinstance(value, dict):
-                continue
+        hsn_tax.taxable_amount += taxable_amounts.get(item_code, 0)
+        for tax_account, tax_details in tax_row.items():
+            hsn_tax.setdefault(
+                tax_account, frappe._dict({"tax_rate": 0, "tax_amount": 0})
+            )
+            hsn_tax[tax_account].tax_rate = tax_details.get("tax_rate")
+            hsn_tax[tax_account].tax_amount += tax_details.get("tax_amount")
 
-            if account_wise:
-                key = value.get("tax_account")
+        considered_items.add(item_code)
 
-            hsn_tax[key] = {"tax_rate": 0, "tax_amount": 0}
-            hsn_tax[key]["tax_rate"] = value.get("tax_rate")
-            hsn_tax[key]["tax_amount"] += value.get("tax_amount")
-
-        hsn_tax_data.append(hsn_tax)
-
-    return hsn_tax_data
+    return list(hsn_tax_data.values())
 
 
-def is_hsn_wise_tax_breakup_applicable(doctype):
+def is_hsn_wise_breakup_needed(doctype):
     if frappe.get_meta(doctype).has_field("gst_hsn_code") and frappe.get_cached_value(
         "GST Settings", None, "hsn_wise_tax_breakup"
     ):
