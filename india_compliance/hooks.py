@@ -12,11 +12,13 @@ required_apps = ["frappe/erpnext"]
 
 before_install = "india_compliance.patches.check_version_compatibility.execute"
 after_install = "india_compliance.install.after_install"
+after_app_install = "india_compliance.install.after_app_install"
 before_migrate = "india_compliance.patches.check_version_compatibility.execute"
 after_migrate = "india_compliance.audit_trail.setup.after_migrate"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
 before_uninstall = "india_compliance.uninstall.before_uninstall"
+before_app_uninstall = "india_compliance.uninstall.before_app_uninstall"
 
 setup_wizard_requires = "assets/india_compliance/js/setup_wizard.js"
 setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
