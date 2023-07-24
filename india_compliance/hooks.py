@@ -10,7 +10,9 @@ app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 
+before_install = "india_compliance.patches.check_version_compatibility.execute"
 after_install = "india_compliance.install.after_install"
+before_migrate = "india_compliance.patches.check_version_compatibility.execute"
 after_migrate = "india_compliance.audit_trail.setup.after_migrate"
 before_tests = "india_compliance.tests.before_tests"
 boot_session = "india_compliance.boot.set_bootinfo"
