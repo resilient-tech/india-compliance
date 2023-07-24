@@ -1,8 +1,11 @@
 [pre_model_sync]
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 india_compliance.patches.post_install.check_version_compatibility
 >>>>>>> 8a7b25ea (fix: patch to check version compatibility where there are dependencies on other apps)
+=======
+>>>>>>> a9b630ae (fix: changes to pr as per review)
 execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 
 [post_model_sync]
