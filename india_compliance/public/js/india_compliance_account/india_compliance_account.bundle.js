@@ -25,10 +25,7 @@ class IndiaComplianceAccountPage {
 
             frappe.route_flags.replace_route = true;
             frappe.router.set_route(to);
-            history.destroy();
-
-            // force to remount the app on next show
-            this.router = null;
+            this.router.listening = false;
         });
 
         return createRouter({
@@ -53,7 +50,7 @@ class IndiaComplianceAccountPage {
         this.mountVueApp();
 
         $(frappe.pages[this.pageName]).on("show", () => {
-            this.mountVueApp();
+            this.router.listening = true;
             this.setTitle();
             this.router.replace(frappe.router.current_route.slice(1).join("/") || "/");
         });
