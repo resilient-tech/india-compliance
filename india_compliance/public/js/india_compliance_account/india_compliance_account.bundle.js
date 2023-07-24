@@ -21,14 +21,14 @@ class IndiaComplianceAccountPage {
         const history = createWebHistory("/app/india-compliance-account");
 
         history.listen(to => {
-            if (frappe.router.is_app_route(to)) {
-                frappe.route_flags.replace_route = true;
-                frappe.router.set_route(to);
-                history.destroy();
+            if (frappe.get_route_str().startsWith(this.pageName)) return;
 
-                // force to remount the app on next show
-                this.router = null;
-            }
+            frappe.route_flags.replace_route = true;
+            frappe.router.set_route(to);
+            history.destroy();
+
+            // force to remount the app on next show
+            this.router = null;
         });
 
         return createRouter({
@@ -53,8 +53,9 @@ class IndiaComplianceAccountPage {
         this.mountVueApp();
 
         $(frappe.pages[this.pageName]).on("show", () => {
+            this.mountVueApp();
             this.setTitle();
-            this.router.replace({ name: store.getters.guessRouteName });
+            this.router.replace(frappe.router.current_route.slice(1).join("/") || "/");
         });
     }
 }
