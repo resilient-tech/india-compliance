@@ -865,22 +865,24 @@ function is_e_waybill_applicable(frm) {
 }
 
 function can_extend_e_waybill(frm) {
-    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
-    const before_hours = moment(e_waybill_info.valid_upto)
-        .add(-8, "hours")
-        .format(frappe.defaultDatetimeFormat);
-    const after_hours = moment(e_waybill_info.valid_upto)
-        .add(8, "hours")
-        .format(frappe.defaultDatetimeFormat);
+    if (is_valid_duration(frm) && frm.doc.gst_transporter_id != frm.doc.company_gstin)
+        return true;
+    return false;
+}
 
-    if (
-        (frappe.datetime.now_datetime < before_hours ||
-            frappe.datetime.now_datetime > after_hours) &&
-        frm.doc.gst_transporter_id &&
-        frm.doc.gst_transporter_id == frm.doc.company_gstin
-    )
-        return false;
-    return true;
+function is_valid_duration(frm) {
+    function get_hours(date, hours) {
+        return moment(date).add(hours, "hours").format(frappe.defaultDatetimeFormat);
+    }
+
+    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
+    const before_hours = get_hours(e_waybill_info.valid_upto, -8);
+    const after_hours = get_hours(e_waybill_info.valid_upto, 8);
+
+    return (
+        frappe.datetime.now_datetime > before_hours &&
+        frappe.datetime.now_datetime < after_hours
+    );
 }
 
 function is_e_waybill_cancellable(frm) {
