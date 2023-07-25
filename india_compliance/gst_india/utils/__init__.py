@@ -6,10 +6,6 @@ import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_timezone
-from erpnext.controllers.taxes_and_totals import (
-    get_itemised_tax,
-    get_itemised_taxable_amount,
-)
 
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
@@ -297,46 +293,6 @@ def is_foreign_transaction(gst_category, place_of_supply):
     return gst_category == "Overseas" and place_of_supply == "96-Other Countries"
 
 
-def get_itemised_tax_breakup_data(doc, account_wise=False, hsn_wise=False):
-    itemised_tax = get_itemised_tax(doc.taxes, with_tax_account=account_wise)
-
-    itemised_taxable_amount = get_itemised_taxable_amount(doc.items)
-
-    if not frappe.get_meta(doc.doctype + " Item").has_field("gst_hsn_code"):
-        return itemised_tax, itemised_taxable_amount
-
-    hsn_wise_in_gst_settings = frappe.db.get_single_value(
-        "GST Settings", "hsn_wise_tax_breakup"
-    )
-
-    tax_breakup_hsn_wise = hsn_wise or hsn_wise_in_gst_settings
-    if tax_breakup_hsn_wise:
-        item_hsn_map = frappe._dict()
-        for d in doc.items:
-            item_hsn_map.setdefault(d.item_code or d.item_name, d.get("gst_hsn_code"))
-
-    hsn_tax = {}
-    for item, taxes in itemised_tax.items():
-        item_or_hsn = item if not tax_breakup_hsn_wise else item_hsn_map.get(item)
-        hsn_tax.setdefault(item_or_hsn, frappe._dict())
-        for tax_desc, tax_detail in taxes.items():
-            key = tax_desc
-            if account_wise:
-                key = tax_detail.get("tax_account")
-            hsn_tax[item_or_hsn].setdefault(key, {"tax_rate": 0, "tax_amount": 0})
-            hsn_tax[item_or_hsn][key]["tax_rate"] = tax_detail.get("tax_rate")
-            hsn_tax[item_or_hsn][key]["tax_amount"] += tax_detail.get("tax_amount")
-
-    # set taxable amount
-    hsn_taxable_amount = frappe._dict()
-    for item in itemised_taxable_amount:
-        item_or_hsn = item if not tax_breakup_hsn_wise else item_hsn_map.get(item)
-        hsn_taxable_amount.setdefault(item_or_hsn, 0)
-        hsn_taxable_amount[item_or_hsn] += itemised_taxable_amount.get(item)
-
-    return hsn_tax, hsn_taxable_amount
-
-
 def get_hsn_settings():
     validate_hsn_code, min_hsn_digits = frappe.get_cached_value(
         "GST Settings",
@@ -417,6 +373,7 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
     )
 
 
+@frappe.whitelist()
 def get_all_gst_accounts(company):
     if not company:
         frappe.throw(_("Please set Company first"))
@@ -587,9 +544,10 @@ def get_validated_country_code(country):
     if code not in COUNTRY_CODES:
         frappe.throw(
             _(
-                "Country Code {0} does not match with the <a href='{1}'>e-Invoice Master Codes</a>"
+                "Country Code for {0} ({1}) does not match with the <a href='{2}'>e-Invoice Master Codes</a>"
             ).format(
-                frappe.bold(get_link_to_form("Country", country, code)),
+                frappe.bold(get_link_to_form("Country", country, country)),
+                frappe.bold(code),
                 E_INVOICE_MASTER_CODES_URL,
             )
         )

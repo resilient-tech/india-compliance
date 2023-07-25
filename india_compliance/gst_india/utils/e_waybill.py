@@ -105,6 +105,9 @@ def _generate_e_waybill(doc, throw=True):
         )
         frappe.throw(error_message, title=_("API Request Failed"))
 
+    if result.error_code == "4002":
+        result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
     if not frappe.request:
