@@ -45,16 +45,87 @@ FIELDS = {
 
 
 def execute(filters=None):
-
-    _class = REPORT_MAP[filters.get("report")]()
-    filters.pop("report")
-
-    return _class.get_columns(), _class.get_data(filters)
+    _class = REPORT_MAP[filters.pop("report")](filters)
+    return _class.get_columns(), _class.get_data()
 
 
-class DetailedReport:
+class BaseAuditTrail:
+    def __init__(self, filters) -> None:
+        self.filters = filters
+
     def get_columns(self):
+        pass
 
+    def get_data(self):
+        pass
+
+    def append_rows(self):
+        pass
+
+    def get_conditions(self):
+        conditions = {}
+        conditions["modified"] = self.get_date()
+        conditions["owner"] = self.get_user()
+
+        return conditions
+
+    def get_date(self):
+        date_option = self.filters.pop("date_option", None)
+        date_range = self.filters.pop("date_range", None)
+        if date_option == "Custom":
+            return ["between", date_range]
+        else:
+            date_range = [get_timespan_date_range(date_option.lower())][0]
+            return ("between", date_range)
+
+    def get_user(self):
+        if self.filters.get("user"):
+            return self.filters["user"]
+
+        else:
+            users = frappe.db.get_all("User", pluck="name")
+            return ["in", users]
+
+    def get_doctypes(self):
+        doctypes = list(self.get_audit_trail_doctypes())
+        doctypes.remove("Accounts Settings")
+        return doctypes
+
+    def get_audit_trail_doctypes(self):
+        return get_audit_trail_doctypes()
+
+    def update_count(self):
+        fields = ["owner as user_name", "count(name) as count"]
+        self.filters["creation"] = self.get_date()
+
+        if doctype := self.filters.pop("doctype", None):
+            doctypes = [doctype]
+        else:
+            doctypes = self.get_doctypes()
+
+        if user := self.filters.pop("user", None):
+            self.filters["owner"] = user
+
+        for doctype in doctypes:
+            new_count = frappe.db.get_all(
+                doctype,
+                filters=self.filters,
+                fields=fields,
+                group_by=self.group_by,
+            )
+
+            modified_count = frappe.db.get_all(
+                "Version",
+                filters={**self.filters, "ref_doctype": doctype},
+                fields=fields,
+                group_by=self.group_by,
+            )
+
+            self.append_rows(new_count, modified_count, doctype)
+
+
+class DetailedReport(BaseAuditTrail):
+    def get_columns(self):
         columns = [
             {
                 "label": _("Date and Time"),
@@ -116,21 +187,21 @@ class DetailedReport:
 
         return columns
 
-    def get_data(self, filters):
-        data = []
-        conditions = get_conditions(filters)
-        print(conditions)
+    def get_data(self):
+        self.data = []
+        conditions = self.get_conditions()
 
-        if doctype := filters.get("doctype"):
+        if doctype := self.filters.get("doctype"):
             doctypes = [doctype]
         else:
-            doctypes = get_doctypes()
+            doctypes = self.get_doctypes()
 
         for doctype in doctypes:
             fields = self.get_fields(doctype)
             records = frappe.db.get_all(doctype, fields=fields, filters=conditions)
-            data = self.get_rows(records, doctype, data)
-        return data
+            self.append_rows(records, doctype)
+
+        return self.data
 
     def get_fields(self, doctype):
         fields = [
@@ -167,8 +238,7 @@ class DetailedReport:
 
         return fields
 
-    def get_rows(self, records, doctype, data):
-
+    def append_rows(self, records, doctype):
         for row in records:
             row["date_time"] = format_datetime(row["date_time"])
             row["doctype"] = doctype
@@ -180,12 +250,10 @@ class DetailedReport:
                 row["party_name"] = ""
                 row["party_amount"] = ""
 
-            data.append(row)
-
-        return data
+            self.data.append(row)
 
 
-class DoctypeReport:
+class DoctypeReport(BaseAuditTrail):
     def get_columns(self):
         columns = [
             {
@@ -197,38 +265,42 @@ class DoctypeReport:
             {
                 "label": _("New Records"),
                 "fieldtype": "data",
-                "fieldname": "new_record",
+                "fieldname": "new_count",
                 "width": 120,
             },
             {
                 "label": _("Modify"),
                 "fieldtype": "data",
-                "fieldname": "modify",
+                "fieldname": "modify_count",
                 "width": 80,
             },
         ]
 
         return columns
 
-    def get_data(self, filters):
-        data = []
-        data = get_count(filters, data, report="doctype")
-        return data
+    def get_data(self):
+        self.data = {}
+        self.group_by = ""
+        self.update_count()
 
-    def get_rows(self, new_count, modified_count, doctype, data):
-        new_record = modify = 0
-        for n in new_count:
-            new_record += n["count"]
-        for m in modified_count:
-            modify += m["count"]
+        return list(self.data.values())
 
-        if new_record != 0:
-            row = {"doctype": doctype, "new_record": new_record, "modify": modify}
-            data.append(row)
-        return data
+    def append_rows(self, new_records, modified_records, doctype):
+        new_count = modify_count = 0
+        for row in new_records:
+            new_count += row["count"]
+
+        for row in modified_records:
+            modify_count += row["count"]
+
+        if not (new_count or modify_count):
+            return
+
+        row = {"doctype": doctype, "new_count": new_count, "modify_count": modify_count}
+        self.data.setdefault(doctype, row)
 
 
-class UserReport:
+class UserReport(BaseAuditTrail):
     def get_columns(self):
         columns = [
             {
@@ -240,50 +312,52 @@ class UserReport:
             {
                 "label": _("New Records"),
                 "fieldtype": "data",
-                "fieldname": "count",
+                "fieldname": "new_count",
                 "width": 120,
             },
             {
                 "label": _("Modify"),
                 "fieldtype": "data",
-                "fieldname": "modify",
+                "fieldname": "modify_count",
                 "width": 80,
             },
         ]
 
         return columns
 
-    def get_data(self, filters):
-        data = []
-        data = get_count(filters, data, report="user")
+    def get_data(self):
+        self.data = {}
+        self.group_by = "owner"
+        self.update_count()
 
-        return data
+        return list(self.data.values())
 
-    def get_rows(self, new_count, modified_count, data):
-        if not data:
-            for row in new_count:
-                row["modify"] = 0
-                data.append(row)
-        else:
-            for row in new_count:
-                owner_matched = False
+    def append_rows(self, new_records, modified_records, doctype):
+        for row in new_records:
+            user_name = row["user_name"]
+            user_count = self.data.setdefault(
+                user_name,
+                {
+                    "user_name": user_name,
+                    "new_count": 0,
+                    "modify_count": 0,
+                },
+            )
 
-                for d in data:
-                    if row["user_name"] == d["user_name"]:
-                        d["count"] += row["count"]
-                        owner_matched = True
-                        break
+            user_count["new_count"] += row["count"]
 
-                if not owner_matched:
-                    row["modify"] = 0
-                    data.append(row)
+        for row in modified_records:
+            user_name = row["user_name"]
+            user_count = self.data.setdefault(
+                user_name,
+                {
+                    "user_name": user_name,
+                    "new_count": 0,
+                    "modify_count": 0,
+                },
+            )
 
-        for m in modified_count:
-            for d in data:
-                if m["user_name"] == d["user_name"]:
-                    d["modify"] += m["count"]
-                    break
-        return data
+            user_count["modify_count"] += row["count"]
 
 
 REPORT_MAP = {
@@ -291,76 +365,3 @@ REPORT_MAP = {
     "Summary by Doctype": DoctypeReport,
     "Summary by User": UserReport,
 }
-
-
-##################### Utils ###############################
-
-
-def get_conditions(filters):
-    conditions = {}
-    conditions["modified"] = get_date(filters)
-    conditions["owner"] = get_user(filters)
-
-    return conditions
-
-
-def get_date(filters):
-
-    if filters["date"] == "Custom":
-        return ["between", [filters["date_range"][0], filters["date_range"][1]]]
-    elif filters["date"] == "Today" or filters["date"] == "Yesterday":
-        date = [get_timespan_date_range(filters["date"].lower())][0]
-        return ("like", f"{date[0]}%")
-    else:
-        date = [get_timespan_date_range(filters["date"].lower())][0]
-        return ("between", [date[0], date[1]])
-
-
-def get_user(filters):
-
-    if filters.get("user"):
-        return filters["user"]
-
-    else:
-        users = frappe.db.get_all("User", fields=["name"])
-        return ["in", (user.name for user in users)]
-
-
-def get_doctypes():
-    doctypes = list(get_audit_trail_doctypes())
-    doctypes.remove("Accounts Settings")
-    return doctypes
-
-
-def get_count(filters, data, report):
-    group_by = "owner"
-    fields = ["owner as user_name", "count(name) as count"]
-    if doctype := filters.get("doctype"):
-        doctypes = [doctype]
-    else:
-        doctypes = get_doctypes()
-
-    filters.pop("doctype", None)
-    filters["creation"] = get_date(filters)
-    filters.pop("date")
-    if filters.get("user", None):
-        filters["owner"] = filters.pop("user")
-        group_by = ""
-
-    for doctype in doctypes:
-        new_count = frappe.db.get_all(
-            doctype, filters=filters, fields=fields, group_by=group_by
-        )
-        modified_count = frappe.db.get_all(
-            "Version",
-            filters={**filters, "ref_doctype": doctype},
-            fields=fields,
-            group_by=group_by,
-        )
-
-        if report == "doctype":
-            data = DoctypeReport().get_rows(new_count, modified_count, doctype, data)
-        if report == "user" and (new_count and new_count[0]["user_name"]):
-            data = UserReport().get_rows(new_count, modified_count, data)
-
-    return data
