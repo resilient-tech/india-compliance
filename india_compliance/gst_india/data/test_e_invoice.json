@@ -54,11 +54,11 @@
 			},
 			"SellerDtls": {
 				"Addr1": "Test Address - 1",
-				"Gstin": "01AMBPG7773M002",
+				"Gstin": "02AMBPG7773M002",
 				"LglNm": "_Test Indian Registered Company",
 				"Loc": "Test City",
-				"Pin": 193501,
-				"Stcd": "01",
+				"Pin": 171302,
+				"Stcd": "02",
 				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
@@ -154,11 +154,11 @@
 			},
 			"SellerDtls": {
 				"Addr1": "Test Address - 1",
-				"Gstin": "01AMBPG7773M002",
+				"Gstin": "02AMBPG7773M002",
 				"LglNm": "_Test Indian Registered Company",
 				"Loc": "Test City",
-				"Pin": 193501,
-				"Stcd": "01",
+				"Pin": 171302,
+				"Stcd": "02",
 				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
@@ -287,11 +287,11 @@
 			},
 			"SellerDtls": {
 				"Addr1": "Test Address - 1",
-				"Gstin": "01AMBPG7773M002",
+				"Gstin": "02AMBPG7773M002",
 				"LglNm": "_Test Indian Registered Company",
 				"Loc": "Test City",
-				"Pin": 193501,
-				"Stcd": "01",
+				"Pin": 171302,
+				"Stcd": "02",
 				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
@@ -392,11 +392,11 @@
 			},
 			"SellerDtls": {
 				"Addr1": "Test Address - 1",
-				"Gstin": "01AMBPG7773M002",
+				"Gstin": "02AMBPG7773M002",
 				"LglNm": "_Test Indian Registered Company",
 				"Loc": "Test City",
-				"Pin": 193501,
-				"Stcd": "01",
+				"Pin": 171302,
+				"Stcd": "02",
 				"TrdNm": "_Test Indian Registered Company"
 			},
 			"TranDtls": {
@@ -480,8 +480,8 @@
 			"Nm": "Test Indian Registered Company",
 			"Addr1": "Test Address - 5",
 			"Loc": "Test City",
-			"Pin": 193501,
-			"Stcd": "01"
+			"Pin": 171302,
+			"Stcd": "02"
 		}
 	},
 	"shipping_details": {
@@ -552,11 +552,11 @@
 			},
 			"SellerDtls": {
 				"Addr1": "Test Address - 1",
-				"Gstin": "01AMBPG7773M002",
+				"Gstin": "02AMBPG7773M002",
 				"LglNm": "_Test Indian Registered Company",
 				"Loc": "Test City",
-				"Pin": 193501,
-				"Stcd": "01",
+				"Pin": 171302,
+				"Stcd": "02",
 				"TrdNm": "_Test Indian Registered Company"
 			},
 			"ShipDtls": {

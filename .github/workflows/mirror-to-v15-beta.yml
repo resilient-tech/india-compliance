@@ -1,0 +1,13 @@
+name: Mirror branch
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  mirror-to-v15-beta:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: zofrex/mirror-branch@v1
+      with:
+        target-branch: version-15-beta
