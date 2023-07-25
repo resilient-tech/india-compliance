@@ -88,5 +88,4 @@ class EWaybillAPI(BaseAPI):
         for error_code, error_message in self.IGNORED_ERROR_CODES.items():
             if error_message in message:
                 response_json.error_code = error_code
-
                 return True
