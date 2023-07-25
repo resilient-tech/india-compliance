@@ -48,19 +48,32 @@ async function gst_invoice_warning(frm) {
 
 function is_gst_invoice(frm) {
     return (
-        (frm.doc.docstatus == 1 &&
-            frm.doc.is_opening != "Yes" &&
-            frm.doc.company_gstin &&
-            frm.doc.company_gstin != frm.doc.billing_address_gstin &&
-            !frm.doc.items.some(row => row.is_non_gst) &&
-            !frm.doc.items.every(row => row.is_nil_exempt)) ||
-        frm.doc.is_export_with_gst
+        !frm.is_dirty() &&
+        frm.doc.is_opening != "Yes" &&
+        frm.doc.company_gstin &&
+        frm.doc.company_gstin != frm.doc.billing_address_gstin &&
+        !frm.doc.items.some(row => row.is_non_gst) &&
+        !frm.doc.items.every(row => row.is_nil_exempt)
     );
 }
 
 async function contains_gst_account(frm) {
-    frm.gst_accounts = await india_compliance.get_account_options(frm.doc.company);
+    const gst_accounts = await _get_all_gst_accounts(frm.doc.company);
     frm.accounts = frm.doc.taxes.map(taxes => taxes.account_head);
 
-    return frm.accounts.some(row => frm.gst_accounts.includes(row));
+    return frm.accounts.some(row => gst_accounts.includes(row));
+}
+
+async function _get_all_gst_accounts(company) {
+    if (!frappe.flags.gst_accounts) {
+        frappe.flags.gst_accounts = {};
+    }
+
+    if (!frappe.flags.gst_accounts[company]) {
+        frappe.flags.gst_accounts[company] = await india_compliance.get_account_options(
+            company
+        );
+    }
+
+    return frappe.flags.gst_accounts[company];
 }
