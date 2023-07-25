@@ -168,6 +168,7 @@ def get_items(filters):
             `tabSales Invoice`.docstatus = 1
             AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '')
             AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
+            AND `tabSales Invoice`.is_internal_customer=0
         GROUP BY
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code
