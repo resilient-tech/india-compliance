@@ -554,7 +554,7 @@ class GSTTransactionData:
         @param max_length (default: 100): Maximum length of the value that is acceptable
         @param truncate (default: True): Truncate the value if it exceeds max_length
         @param fieldname: Fieldname for which the value is being sanitized
-        @param reference_doctype: Doctype of the document that contains the field
+        @param reference_doctype: DocType of the document that contains the field
         @param reference_name: Name of the document that contains the field
 
         Returns:
@@ -637,7 +637,8 @@ def validate_unique_hsn_and_uom(doc):
     def _throw(label, value):
         frappe.throw(
             _(
-                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is not possible."
+                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is"
+                " not possible."
             ).format(item.idx, label, value, frappe.bold(item.item_code))
         )
 
@@ -660,8 +661,9 @@ def validate_gst_tax_rate(tax_rate, item):
     if tax_rate not in GST_TAX_RATES:
         frappe.throw(
             _(
-                "Row #{0}: GST tax rate {1} for Item {2} is not permitted for generating e-Invoice as it"
-                " doesn't adhere to the e-Invoice Masters.<br><br> Check valid tax rates <a href='{3}'>here</a>."
+                "Row #{0}: GST tax rate {1} for Item {2} is not permitted for"
+                " generating e-Invoice as it doesn't adhere to the e-Invoice"
+                " Masters.<br><br> Check valid tax rates <a href='{3}'>here</a>."
             ).format(
                 item.idx,
                 frappe.bold(f"{tax_rate}%"),
