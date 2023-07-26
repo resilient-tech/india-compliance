@@ -305,7 +305,7 @@ class TaxesController {
          * - Update for all tax rows when cdt is null.
          * - Update for a single tax row when cdt and cdn are passed.
          *
-         * @param {string} cdt - Doctype of the tax row.
+         * @param {string} cdt - DocType of the tax row.
          * @param {string} cdn - Name of the tax row.
          */
 

@@ -8,11 +8,11 @@ from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_lis
 # Steps to manually migrate:
 ##############################################################################################################################
 # Method 1:
-# 1. Update company gstin for Doctypes where its Missing.
+# 1. Update company gstin for DocTypes where its Missing.
 # 2. Execute the patch once again from GST Settings.
 ##############################################################################################################################
 # Method 2 (Where Method 1 is not possible):
-# 1. Update same company gstin for all Doctypes where its Missing.
+# 1. Update same company gstin for all DocTypes where its Missing.
 # 2. Execute the patch once again from GST Settings.
 # 3. Create adjustment Journal Entry to distribute the balance between other company gstins.
 ##############################################################################################################################
