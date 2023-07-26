@@ -1,4 +1,1 @@
 __version__ = "14.13.0"
-
-MIN_FRAPPE_VERSION = "14.42.0"
-MIN_ERPNEXT_VERSION = "14.32.0"
