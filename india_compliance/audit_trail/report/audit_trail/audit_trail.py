@@ -83,7 +83,7 @@ class BaseAuditTrail:
             return self.filters["user"]
 
         else:
-            users = frappe.db.get_all("User", pluck="name")
+            users = frappe.get_all("User", pluck="name")
             return ["in", users]
 
     def get_doctypes(self):
@@ -107,14 +107,14 @@ class BaseAuditTrail:
             self.filters["owner"] = user
 
         for doctype in doctypes:
-            new_count = frappe.db.get_all(
+            new_count = frappe.get_all(
                 doctype,
                 filters=self.filters,
                 fields=fields,
                 group_by=self.group_by,
             )
 
-            modified_count = frappe.db.get_all(
+            modified_count = frappe.get_all(
                 "Version",
                 filters={**self.filters, "ref_doctype": doctype},
                 fields=fields,
@@ -135,33 +135,33 @@ class DetailedReport(BaseAuditTrail):
             },
             {
                 "label": _("Company"),
-                "fieldtype": "link",
+                "fieldtype": "Link",
                 "fieldname": "company",
                 "options": "Company",
                 "width": 150,
             },
             {
-                "label": _("Doctype"),
-                "fieldtype": "link",
+                "label": _("DocType"),
+                "fieldtype": "Link",
                 "fieldname": "doctype",
-                "options": "Doctype",
+                "options": "DocType",
                 "width": 150,
             },
             {
                 "label": _("Document Name"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "document_name",
                 "width": 150,
             },
             {
                 "label": _("Creation Date"),
-                "fieldtype": "date",
+                "fieldtype": "Date",
                 "fieldname": "creation_date",
                 "width": 150,
             },
             {
                 "label": _("Party Name/Remarks"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "party_name",
                 "width": 180,
             },
@@ -173,13 +173,13 @@ class DetailedReport(BaseAuditTrail):
             },
             {
                 "label": _("Created By"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "created_by",
                 "width": 200,
             },
             {
                 "label": _("Modified By"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "modified_by",
                 "width": 200,
             },
@@ -198,7 +198,7 @@ class DetailedReport(BaseAuditTrail):
 
         for doctype in doctypes:
             fields = self.get_fields(doctype)
-            records = frappe.db.get_all(doctype, fields=fields, filters=conditions)
+            records = frappe.get_all(doctype, fields=fields, filters=conditions)
             self.append_rows(records, doctype)
 
         return self.data
@@ -253,26 +253,27 @@ class DetailedReport(BaseAuditTrail):
             self.data.append(row)
 
 
-class DoctypeReport(BaseAuditTrail):
+class DocTypeReport(BaseAuditTrail):
     def get_columns(self):
         columns = [
             {
-                "label": _("Doctype"),
-                "fieldtype": "data",
+                "label": _("DocType"),
+                "fieldtype": "Link",
                 "fieldname": "doctype",
+                "options": "DocType",
                 "width": 150,
             },
             {
                 "label": _("New Records"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "new_count",
-                "width": 120,
+                "width": 150,
             },
             {
-                "label": _("Modify"),
-                "fieldtype": "data",
+                "label": _("Modified Records"),
+                "fieldtype": "Data",
                 "fieldname": "modify_count",
-                "width": 80,
+                "width": 150,
             },
         ]
 
@@ -304,22 +305,23 @@ class UserReport(BaseAuditTrail):
     def get_columns(self):
         columns = [
             {
-                "label": _("User Name"),
-                "fieldtype": "data",
+                "label": _("User"),
+                "fieldtype": "Link",
                 "fieldname": "user_name",
+                "options": "User",
                 "width": 200,
             },
             {
                 "label": _("New Records"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "new_count",
-                "width": 120,
+                "width": 150,
             },
             {
-                "label": _("Modify"),
-                "fieldtype": "data",
+                "label": _("Modified Records"),
+                "fieldtype": "Data",
                 "fieldname": "modify_count",
-                "width": 80,
+                "width": 150,
             },
         ]
 
@@ -362,6 +364,6 @@ class UserReport(BaseAuditTrail):
 
 REPORT_MAP = {
     "Detailed": DetailedReport,
-    "Summary by Doctype": DoctypeReport,
+    "Summary by DocType": DocTypeReport,
     "Summary by User": UserReport,
 }
