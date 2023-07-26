@@ -21,8 +21,8 @@ frappe.query_reports["Audit Trail"] = {
                 "Today\nYesterday\nThis Week\nThis Month\nThis Quarter\nThis Year\nLast Week\nLast Month\nLast Quarter\nLast Year\nCustom",
             reqd: 1,
             on_change: function (report) {
-                var selected_value = report.get_filter_value("date");
-                var date_range = report.get_filter("date_range");
+                let selected_value = report.get_filter_value("date_option");
+                let date_range = report.get_filter("date_range");
 
                 if (selected_value === "Custom") {
                     date_range.df.hidden = false;
@@ -45,7 +45,6 @@ frappe.query_reports["Audit Trail"] = {
             fieldtype: "Link",
             default: "",
             options: "User",
-            //reqd: 1
         },
         {
             fieldname: "doctype",
