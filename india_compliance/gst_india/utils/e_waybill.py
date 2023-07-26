@@ -519,6 +519,23 @@ def update_transaction(doc, values):
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
 
 
+def get_e_waybill_info(doc):
+    e_waybill_info = frappe.db.get_value(
+        "e-Waybill Log",
+        doc.ewaybill,
+        ("created_on", "valid_upto", "data"),
+        as_dict=True,
+    )
+    e_waybill_data = e_waybill_info.pop("data")
+    if not e_waybill_data:
+        return e_waybill_info, None
+    e_waybill_data = frappe.parse_json(e_waybill_data)
+    return (
+        e_waybill_info,
+        e_waybill_data.toGstin if doc.is_return else e_waybill_data.fromGstin,
+    )
+
+
 #######################################################################################
 ### e-Waybill Data Generation #########################################################
 #######################################################################################

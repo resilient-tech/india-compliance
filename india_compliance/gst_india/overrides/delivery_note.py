@@ -1,10 +1,10 @@
 import frappe
 
 from india_compliance.gst_india.overrides.sales_invoice import (
-    get_e_waybill_info,
     update_dashboard_with_gst_logs,
 )
 from india_compliance.gst_india.utils import is_api_enabled
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 
 def onload(doc, method=None):

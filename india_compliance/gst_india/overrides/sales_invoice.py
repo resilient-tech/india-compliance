@@ -13,7 +13,11 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
 )
-from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
+from india_compliance.gst_india.utils.e_invoice import (
+    get_e_invoice_info,
+    validate_e_invoice_applicability,
+)
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
 )
@@ -62,35 +66,6 @@ def onload(doc, method=None):
                 "e_invoice_generated_in_sandbox_mode",
                 True,
             )
-
-
-def get_e_waybill_info(doc):
-    e_waybill_info = frappe.db.get_value(
-        "e-Waybill Log",
-        doc.ewaybill,
-        ("created_on", "valid_upto", "data"),
-        as_dict=True,
-    )
-    e_waybill_data = e_waybill_info.pop("data")
-    if not e_waybill_data:
-        return e_waybill_info, None
-    e_waybill_data = frappe.parse_json(e_waybill_data)
-    return (
-        e_waybill_info,
-        e_waybill_data.toGstin if doc.is_return else e_waybill_data.fromGstin,
-    )
-
-
-def get_e_invoice_info(doc):
-    e_invoice_info = frappe.db.get_value(
-        "e-Invoice Log", doc.irn, ("invoice_data", "acknowledged_on"), as_dict=True
-    )
-    invoice_data = e_invoice_info.pop("invoice_data")
-    if not invoice_data:
-        return e_invoice_info, None
-    invoice_data = frappe.parse_json(invoice_data)
-    seller_gstin = invoice_data.SellerDtls.get("Gstin")
-    return e_invoice_info, seller_gstin
 
 
 def validate(doc, method=None):
