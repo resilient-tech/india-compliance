@@ -10,11 +10,19 @@ app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 
+before_install = "india_compliance.patches.check_version_compatibility.execute"
 after_install = "india_compliance.install.after_install"
-after_migrate = "india_compliance.audit_trail.setup.after_migrate"
-before_tests = "india_compliance.tests.before_tests"
-boot_session = "india_compliance.boot.set_bootinfo"
 before_uninstall = "india_compliance.uninstall.before_uninstall"
+
+after_app_install = "india_compliance.install.after_app_install"
+before_app_uninstall = "india_compliance.uninstall.before_app_uninstall"
+
+before_migrate = "india_compliance.patches.check_version_compatibility.execute"
+after_migrate = "india_compliance.audit_trail.setup.after_migrate"
+
+before_tests = "india_compliance.tests.before_tests"
+
+boot_session = "india_compliance.boot.set_bootinfo"
 
 setup_wizard_requires = "assets/india_compliance/js/setup_wizard.js"
 setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
@@ -31,6 +39,10 @@ doctype_js = {
         "gst_india/client_scripts/delivery_note.js",
     ],
     "Item": "gst_india/client_scripts/item.js",
+    "Expense Claim": [
+        "gst_india/client_scripts/journal_entry.js",
+        "gst_india/client_scripts/expense_claim.js",
+    ],
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
     "Purchase Invoice": "gst_india/client_scripts/purchase_invoice.js",
@@ -78,7 +90,13 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
+    "GL Entry": {
+        "validate": "india_compliance.gst_india.overrides.gl_entry.validate",
+    },
     "Item": {"validate": "india_compliance.gst_india.overrides.item.validate"},
+    "Journal Entry": {
+        "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
+    },
     "Payment Entry": {
         "validate": (
             "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
@@ -87,22 +105,33 @@ doc_events = {
     "Purchase Invoice": {
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
+        "before_validate": (
+            "india_compliance.gst_india.overrides.transaction.before_validate"
+        ),
     },
     "Purchase Order": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
+        "before_validate": (
+            "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
     },
     "Purchase Receipt": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_validate": (
+            "india_compliance.gst_india.overrides.transaction.before_validate"
+        ),
     },
     "Sales Invoice": {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
-        "on_update_after_submit": "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit",
+        "on_update_after_submit": (
+            "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
+        ),
     },
     "Sales Order": {
         "validate": (
@@ -111,7 +140,7 @@ doc_events = {
     },
     "Supplier": {
         "validate": [
-            "india_compliance.gst_india.overrides.supplier.validate_gst_transporter_id",
+            "india_compliance.gst_india.overrides.supplier.validate",
             "india_compliance.gst_india.overrides.party.validate_party",
         ],
         "after_insert": (
@@ -120,6 +149,9 @@ doc_events = {
     },
     "Tax Category": {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
+    },
+    "Tax Withholding Category": {
+        "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
     },
     "POS Invoice": {
         "validate": (
@@ -148,16 +180,13 @@ doc_events = {
 regional_overrides = {
     "India": {
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header",
-        "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": (
-            "india_compliance.gst_india.utils.get_itemised_tax_breakup_data"
-        ),
+        "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
+        "erpnext.controllers.accounts_controller.update_gl_dict_with_regional_fields": "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields",
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
-        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_depreciation_amount": (
-            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_depreciation_amount"
-        ),
+        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_depreciation_amount": "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_depreciation_amount",
     }
 }
 
@@ -220,12 +249,6 @@ audit_trail_doctypes = [
     "Asset",
     "Asset Capitalization",
     "Asset Repair",
-    "Loan Balance Adjustment",
-    "Loan Disbursement",
-    "Loan Interest Accrual",
-    "Loan Refund",
-    "Loan Repayment",
-    "Loan Write Off",
     "Delivery Note",
     "Landed Cost Voucher",
     "Purchase Receipt",

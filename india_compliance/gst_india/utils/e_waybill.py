@@ -3,7 +3,13 @@ import os
 import frappe
 from frappe import _
 from frappe.desk.form.load import get_docinfo
-from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
+from frappe.utils import (
+    add_to_date,
+    format_date,
+    get_datetime,
+    get_fullname,
+    random_string,
+)
 from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
@@ -91,6 +97,17 @@ def _generate_e_waybill(doc, throw=True):
 
     api = EWaybillAPI if not with_irn else EInvoiceAPI
     result = api(doc).generate_e_waybill(data)
+
+    if result.error_code == "604":
+        error_message = (
+            result.message
+            + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
+        )
+        frappe.throw(error_message, title=_("API Request Failed"))
+
+    if result.error_code == "4002":
+        result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
     if not frappe.request:
@@ -293,7 +310,7 @@ def update_transporter(*, doctype, docname, values):
 
 
 #######################################################################################
-### e-Waybill Print and Attach Functions ##############################################
+### e-Waybill Fetch, Print and Attach Functions ##############################################
 #######################################################################################
 
 
@@ -324,6 +341,39 @@ def _fetch_e_waybill_data(doc, log):
             "is_latest_data": 1,
         }
     )
+
+
+@frappe.whitelist()
+def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
+    doc = load_doc(doctype, docname, "submit")
+
+    response = EWaybillAPI(doc).get_e_waybills_by_date(
+        format_date(e_waybill_date, "dd/mm/yyyy")
+    )
+
+    result = {
+        k: v
+        for e_waybill in response
+        for k, v in e_waybill.items()
+        if e_waybill.get("docNo") == doc.name and e_waybill.get("status") == "ACT"
+    }
+
+    if not result:
+        frappe.msgprint(
+            _(
+                "We couldn't find a matching e-Waybill for the date {0}. Please verify the date and try again."
+            ).format(frappe.bold(format_date(e_waybill_date))),
+            _("Warning"),
+            indicator="yellow",
+        )
+        return
+
+    # To log and process e_waybill generation Without IRN
+    result["ewayBillNo"] = result["ewbNo"]
+    result["ewayBillDate"] = result["ewbDate"]
+
+    log_and_process_e_waybill_generation(doc, result)
+    return send_updated_doc(doc)
 
 
 def attach_e_waybill_pdf(doc, log=None):

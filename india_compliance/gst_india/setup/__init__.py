@@ -14,6 +14,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+    HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
@@ -39,6 +40,12 @@ def create_custom_fields():
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
     _create_custom_fields(get_all_custom_fields(), ignore_validate=True)
+    if "hrms" in frappe.get_installed_apps():
+        create_hrms_custom_fields()
+
+
+def create_hrms_custom_fields():
+    _create_custom_fields(HRMS_CUSTOM_FIELDS, ignore_validate=True)
 
 
 def create_accounting_dimension_fields():

@@ -156,7 +156,7 @@ def is_shipping_address_in_india(doc):
 
 
 def on_submit(doc, method=None):
-    if getattr(doc, "_submitted_from_ui", None) or not doc.company_gstin:
+    if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings")
