@@ -623,6 +623,18 @@ CUSTOM_FIELDS = {
     ],
 }
 
+HRMS_CUSTOM_FIELDS = {
+    "Expense Claim": [
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Autocomplete",
+            "insert_after": "company",
+            "translatable": 0,
+        }
+    ],
+}
+
 reverse_charge_field = frappe._dict(
     fieldname="is_reverse_charge",
     label="Is Reverse Charge",
