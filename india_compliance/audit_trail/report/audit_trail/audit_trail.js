@@ -35,7 +35,7 @@ frappe.query_reports["Audit Trail"] = {
         },
         {
             fieldname: "date_range",
-            label: __("Select Date"),
+            label: __("Select Dates"),
             fieldtype: "DateRange",
             hidden: true,
         },
@@ -48,13 +48,12 @@ frappe.query_reports["Audit Trail"] = {
         },
         {
             fieldname: "doctype",
-            label: __("Based On"),
+            label: __("DocType"),
             fieldtype: "Autocomplete",
             default: "",
             get_query: function () {
                 return {
                     query: "india_compliance.audit_trail.utils.get_audit_trail_doctypes",
-                    filters: {},
                 };
             },
         },

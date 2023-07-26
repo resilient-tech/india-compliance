@@ -83,7 +83,7 @@ class BaseAuditTrail:
             return self.filters["user"]
 
         else:
-            users = frappe.db.get_all("User", pluck="name")
+            users = frappe.get_all("User", pluck="name")
             return ["in", users]
 
     def get_doctypes(self):
@@ -107,14 +107,14 @@ class BaseAuditTrail:
             self.filters["owner"] = user
 
         for doctype in doctypes:
-            new_count = frappe.db.get_all(
+            new_count = frappe.get_all(
                 doctype,
                 filters=self.filters,
                 fields=fields,
                 group_by=self.group_by,
             )
 
-            modified_count = frappe.db.get_all(
+            modified_count = frappe.get_all(
                 "Version",
                 filters={**self.filters, "ref_doctype": doctype},
                 fields=fields,
@@ -198,7 +198,7 @@ class DetailedReport(BaseAuditTrail):
 
         for doctype in doctypes:
             fields = self.get_fields(doctype)
-            records = frappe.db.get_all(doctype, fields=fields, filters=conditions)
+            records = frappe.get_all(doctype, fields=fields, filters=conditions)
             self.append_rows(records, doctype)
 
         return self.data
@@ -269,10 +269,10 @@ class DoctypeReport(BaseAuditTrail):
                 "width": 120,
             },
             {
-                "label": _("Modify"),
+                "label": _("Modified Records"),
                 "fieldtype": "data",
                 "fieldname": "modify_count",
-                "width": 80,
+                "width": 120,
             },
         ]
 
@@ -316,10 +316,10 @@ class UserReport(BaseAuditTrail):
                 "width": 120,
             },
             {
-                "label": _("Modify"),
+                "label": _("Modified Records"),
                 "fieldtype": "data",
                 "fieldname": "modify_count",
-                "width": 80,
+                "width": 120,
             },
         ]
 
