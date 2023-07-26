@@ -11,6 +11,7 @@ VERSION_COMPATIBILITY = {
     "15.0.0-dev": {"frappe": "15.0.0-dev", "erpnext": "15.0.0-dev"},
     # Stable Versions
     "15.0.0": {"frappe": "15.0.0", "erpnext": "15.0.0"},
+    "14.14.0": {"frappe": "14.42.0", "erpnext": "14.32.0"},
     "14.10.4": {"frappe": "14.0.0", "erpnext": "14.29.0"},
     "14.0.0": {"frappe": "14.0.0", "erpnext": "14.0.0"},
 }
