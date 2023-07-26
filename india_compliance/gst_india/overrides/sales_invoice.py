@@ -49,6 +49,12 @@ def onload(doc, method=None):
                 as_dict=True,
             ),
         )
+        eway_bill_party_gstin = get_ewaybill_party_gstin_from_log(doc)
+        if eway_bill_party_gstin and eway_bill_party_gstin != doc.company_gstin:
+            doc.set_onload(
+                "set_ewaybill_description",
+                True,
+            )
 
     if gst_settings.enable_e_invoice and doc.irn:
         doc.set_onload(
@@ -60,6 +66,29 @@ def onload(doc, method=None):
                 as_dict=True,
             ),
         )
+        seller_gstin = get_seller_gstin_from_log(doc)
+        if seller_gstin and seller_gstin != doc.company_gstin:
+            doc.set_onload(
+                "set_irn_description",
+                True,
+            )
+
+
+def get_ewaybill_party_gstin_from_log(doc):
+    e_waybill_data = frappe.db.get_value("e-Waybill Log", doc.ewaybill, "data")
+    if not e_waybill_data:
+        return
+    e_waybill_data = frappe.parse_json(e_waybill_data)
+    return e_waybill_data.toGstin if doc.is_return else e_waybill_data.fromGstin
+
+
+def get_seller_gstin_from_log(doc):
+    invoice_data = frappe.db.get_value("e-Invoice Log", doc.irn, "invoice_data")
+    if not invoice_data:
+        return
+    invoice_data = frappe.parse_json(invoice_data)
+    seller_gstin = invoice_data.SellerDtls.get("Gstin")
+    return seller_gstin
 
 
 def validate(doc, method=None):

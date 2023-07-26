@@ -96,6 +96,14 @@ Object.assign(india_compliance, {
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
     },
+
+    get_field_description(color, text) {
+        return `
+            <div class="d-flex indicator ${color}">
+                <strong>${text}</strong>
+            </div>
+        `
+    }
 });
 
 function is_gstin_check_digit_valid(gstin) {

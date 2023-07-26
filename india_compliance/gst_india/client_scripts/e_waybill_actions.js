@@ -113,6 +113,18 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
             }
+            const EWAYBILL_DESCRIPTION = "e-Waybill was generated in sandbox mode";
+            if (frm.doc.__onload && frm.doc.__onload.set_ewaybill_description) {
+                let ewaybill_field = frm.get_field("ewaybill");
+                ewaybill_field.set_description(
+                    india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
+                )
+            } else if (frm.doc.ewaybill && gst_settings.sandbox_mode) {
+                let ewaybill_field = frm.get_field("ewaybill");
+                ewaybill_field.set_description(
+                    india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
+                )
+            }
         },
         async on_submit(frm) {
             if (
@@ -376,9 +388,9 @@ function show_generate_e_waybill_dialog(frm) {
         secondary_action_label: api_enabled ? __("Download JSON") : null,
         secondary_action: api_enabled
             ? () => {
-                  d.hide();
-                  json_action(d.get_values());
-              }
+                d.hide();
+                json_action(d.get_values());
+            }
             : null,
     });
 
@@ -594,7 +606,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                    frm.doc.gst_transporter_id.length == 15
+                        frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
             },

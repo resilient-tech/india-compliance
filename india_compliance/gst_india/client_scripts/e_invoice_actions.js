@@ -29,6 +29,18 @@ frappe.ui.form.on("Sales Invoice", {
                 "e-Invoice"
             );
         }
+        const IRN_DESCRIPTION = "e-Invoice was generated in sandbox mode";
+        if (frm.doc.__onload && frm.doc.__onload.set_irn_description) {
+            let irn_field = frm.get_field("irn");
+            irn_field.set_description(
+                india_compliance.get_field_description("red", IRN_DESCRIPTION)
+            )
+        } else if (frm.doc.irn && gst_settings.sandbox_mode) {
+            let irn_field = frm.get_field("irn");
+            irn_field.set_description(
+                india_compliance.get_field_description("red", IRN_DESCRIPTION)
+            )
+        }
     },
     async on_submit(frm) {
         if (

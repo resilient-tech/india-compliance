@@ -1,6 +1,7 @@
 import frappe
 
 from india_compliance.gst_india.overrides.sales_invoice import (
+    get_ewaybill_party_gstin_from_log,
     update_dashboard_with_gst_logs,
 )
 from india_compliance.gst_india.utils import is_api_enabled
@@ -28,6 +29,13 @@ def onload(doc, method=None):
             as_dict=True,
         ),
     )
+
+    eway_bill_party_gstin = get_ewaybill_party_gstin_from_log(doc)
+    if eway_bill_party_gstin != doc.company_gstin:
+        doc.set_onload(
+            "set_ewaybill_description",
+            True,
+        )
 
 
 def get_dashboard_data(data):
