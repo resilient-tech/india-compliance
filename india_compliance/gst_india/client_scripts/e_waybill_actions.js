@@ -119,8 +119,8 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
             }
-            const EWAYBILL_DESCRIPTION = "e-Waybill was generated in sandbox mode";
             if (frm.doc.__onload && frm.doc.__onload.e_waybill_generated_in_sandbox_mode) {
+                const EWAYBILL_DESCRIPTION = "e-Waybill was generated in sandbox mode";
                 let ewaybill_field = frm.get_field("ewaybill");
                 ewaybill_field.set_description(
                     india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
