@@ -1,43 +1,40 @@
+import click
 from packaging import version
 
 import frappe
 import erpnext
 
-import india_compliance
+from india_compliance import MIN_ERPNEXT_VERSION, MIN_FRAPPE_VERSION
 
-# Note: India Compliance versions in DESCENDING order only
-VERSION_COMPATIBILITY = {
-    # Development Versions
-    "15.0.0-dev": {"frappe": "15.0.0-dev", "erpnext": "15.0.0-dev"},
-    # Stable Versions
-    "15.0.0": {"frappe": "15.0.0", "erpnext": "15.0.0"},
-    "14.14.0": {"frappe": "14.42.0", "erpnext": "14.32.0"},
-    "14.10.4": {"frappe": "14.0.0", "erpnext": "14.29.0"},
-    "14.0.0": {"frappe": "14.0.0", "erpnext": "14.0.0"},
-}
-
-CURRENT_VERSIONS = {
-    "india_compliance": india_compliance.__version__,
-    "frappe": frappe.__version__,
-    "erpnext": erpnext.__version__,
-}
+VERSIONS_TO_COMPARE = [
+    {
+        "app_name": "frappe",
+        "current_version": frappe.__version__,
+        "required_version": MIN_FRAPPE_VERSION,
+    },
+    {
+        "app_name": "erpnext",
+        "current_version": erpnext.__version__,
+        "required_version": MIN_ERPNEXT_VERSION,
+    },
+]
 
 
 def execute():
-    current_version = version.parse(CURRENT_VERSIONS["india_compliance"])
+    for app in VERSIONS_TO_COMPARE:
+        app_name = app["app_name"]
+        current_version = app["current_version"]
+        required_version = app["required_version"]
 
-    # dependencies for current version
-    for _version, dependencies in VERSION_COMPATIBILITY.items():
-        if current_version < version.parse(_version):
+        if version.parse(current_version) >= version.parse(required_version):
             continue
 
-        break
+        click.secho(
+            (
+                f"Please upgrade {app_name} to version {required_version} or"
+                " above to use the current version of India Compliance."
+            ),
+            fg="red",
+        )
 
-    # check if all dependencies are satisfied
-    for app, required_version in dependencies.items():
-        app_version = version.parse(CURRENT_VERSIONS[app])
-
-        if app_version < version.parse(required_version):
-            frappe.throw(
-                f"Please upgrade {app} to version {required_version} or above to use India Compliance {current_version}"
-            )
+        frappe.throw(f"Incompatible {app_name.title()} Version")
