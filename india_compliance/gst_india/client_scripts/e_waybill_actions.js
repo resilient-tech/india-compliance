@@ -125,11 +125,6 @@ function setup_e_waybill_actions(doctype) {
                 ewaybill_field.set_description(
                     india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
                 )
-            } else if (frm.doc.ewaybill && gst_settings.sandbox_mode) {
-                let ewaybill_field = frm.get_field("ewaybill");
-                ewaybill_field.set_description(
-                    india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
-                )
             }
         },
         async on_submit(frm) {
@@ -152,6 +147,7 @@ function setup_e_waybill_actions(doctype) {
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 { doctype: frm.doctype, docname: frm.doc.name }
             );
+            if (gst_settings.sandbox_mode) frm.doc.__onload.set_ewaybill_description = true;
         },
         before_cancel(frm) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action
@@ -207,7 +203,10 @@ function show_generate_e_waybill_dialog(frm) {
                 docname: frm.doc.name,
                 values,
             },
-            callback: () => frm.refresh(),
+            callback: () => {
+                if (gst_settings.sandbox_mode) frm.doc.__onload.set_ewaybill_description = true;
+                return frm.refresh();
+            },
         });
     };
 
