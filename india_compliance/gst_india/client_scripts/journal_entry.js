@@ -10,21 +10,25 @@ async function set_gstin_options(frm) {
 }
 
 frappe.ui.form.on("Journal Entry Account", {
-    account: toggle_company_gstin,
-    accounts_remove: toggle_company_gstin,
+    account: toggle_gstin_for_journal_entry,
+    accounts_remove: toggle_gstin_for_journal_entry,
 });
 
-async function toggle_company_gstin(frm) {
-    _toggle_company_gstin(frm, await contains_gst_account(frm));
+function toggle_gstin_for_journal_entry(frm) {
+    toggle_company_gstin(frm, taxes_table="accounts", account_head="account");
 }
 
-async function contains_gst_account(frm) {
+async function toggle_company_gstin(frm, taxes_table, account_head) {
+    _toggle_company_gstin(frm, await contains_gst_account(frm, taxes_table, account_head));
+}
+
+async function contains_gst_account(frm, taxes_table, account_field) {
     if (!frm.gst_accounts || frm.company !== frm.doc.company) {
         frm.gst_accounts = await india_compliance.get_account_options(frm.doc.company);
         frm.company = frm.doc.company;
     }
 
-    return frm.doc.accounts.some(row => frm.gst_accounts.includes(row.account));
+    return frm.doc[taxes_table].some(row => frm.gst_accounts.includes(row[account_field]));
 }
 
 function _toggle_company_gstin(frm, reqd) {
