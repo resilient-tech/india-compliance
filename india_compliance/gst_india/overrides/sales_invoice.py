@@ -40,55 +40,57 @@ def onload(doc, method=None):
         return
 
     if gst_settings.enable_e_waybill and doc.ewaybill:
+        e_waybill_info, e_waybill_company_gstin = get_e_waybill_info(doc)
         doc.set_onload(
             "e_waybill_info",
-            frappe.get_value(
-                "e-Waybill Log",
-                doc.ewaybill,
-                ("created_on", "valid_upto"),
-                as_dict=True,
-            ),
+            e_waybill_info,
         )
-        eway_bill_party_gstin = get_ewaybill_party_gstin_from_log(doc)
-        if eway_bill_party_gstin and eway_bill_party_gstin != doc.company_gstin:
+        if e_waybill_company_gstin and e_waybill_company_gstin != doc.company_gstin:
             doc.set_onload(
-                "set_ewaybill_description",
+                "e_waybill_generated_in_sandbox_mode",
                 True,
             )
 
     if gst_settings.enable_e_invoice and doc.irn:
+        e_invoice_info, e_invoice_company_gstin = get_e_invoice_info(doc)
         doc.set_onload(
             "e_invoice_info",
-            frappe.get_value(
-                "e-Invoice Log",
-                doc.irn,
-                "acknowledged_on",
-                as_dict=True,
-            ),
+            e_invoice_info,
         )
-        seller_gstin = get_seller_gstin_from_log(doc)
-        if seller_gstin and seller_gstin != doc.company_gstin:
+        if e_invoice_company_gstin and e_invoice_company_gstin != doc.company_gstin:
             doc.set_onload(
-                "set_irn_description",
+                "e_invoice_generated_in_sandbox_mode",
                 True,
             )
 
 
-def get_ewaybill_party_gstin_from_log(doc):
-    e_waybill_data = frappe.db.get_value("e-Waybill Log", doc.ewaybill, "data")
+def get_e_waybill_info(doc):
+    e_waybill_info = frappe.db.get_value(
+        "e-Waybill Log",
+        doc.ewaybill,
+        ("created_on", "valid_upto", "data"),
+        as_dict=True,
+    )
+    e_waybill_data = e_waybill_info.pop("data")
     if not e_waybill_data:
-        return
+        return e_waybill_info, None
     e_waybill_data = frappe.parse_json(e_waybill_data)
-    return e_waybill_data.toGstin if doc.is_return else e_waybill_data.fromGstin
+    return (
+        e_waybill_info,
+        e_waybill_data.toGstin if doc.is_return else e_waybill_data.fromGstin,
+    )
 
 
-def get_seller_gstin_from_log(doc):
-    invoice_data = frappe.db.get_value("e-Invoice Log", doc.irn, "invoice_data")
+def get_e_invoice_info(doc):
+    e_invoice_info = frappe.db.get_value(
+        "e-Invoice Log", doc.irn, ("invoice_data", "acknowledged_on"), as_dict=True
+    )
+    invoice_data = e_invoice_info.pop("invoice_data")
     if not invoice_data:
-        return
+        return e_invoice_info, None
     invoice_data = frappe.parse_json(invoice_data)
     seller_gstin = invoice_data.SellerDtls.get("Gstin")
-    return seller_gstin
+    return e_invoice_info, seller_gstin
 
 
 def validate(doc, method=None):

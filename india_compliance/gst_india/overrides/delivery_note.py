@@ -1,7 +1,7 @@
 import frappe
 
 from india_compliance.gst_india.overrides.sales_invoice import (
-    get_ewaybill_party_gstin_from_log,
+    get_e_waybill_info,
     update_dashboard_with_gst_logs,
 )
 from india_compliance.gst_india.utils import is_api_enabled
@@ -20,20 +20,14 @@ def onload(doc, method=None):
     ):
         return
 
+    e_waybill_info, e_waybill_company_gstin = get_e_waybill_info(doc)
     doc.set_onload(
         "e_waybill_info",
-        frappe.get_value(
-            "e-Waybill Log",
-            doc.ewaybill,
-            ("created_on", "valid_upto"),
-            as_dict=True,
-        ),
+        e_waybill_info,
     )
-
-    eway_bill_party_gstin = get_ewaybill_party_gstin_from_log(doc)
-    if eway_bill_party_gstin != doc.company_gstin:
+    if e_waybill_company_gstin and e_waybill_company_gstin != doc.company_gstin:
         doc.set_onload(
-            "set_ewaybill_description",
+            "e_waybill_generated_in_sandbox_mode",
             True,
         )
 

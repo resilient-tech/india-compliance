@@ -13,7 +13,7 @@ frappe.ui.form.on("Sales Invoice", {
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name },
                         callback: () => {
-                            if (gst_settings.sandbox_mode) frm.doc.__onload.set_irn_description = true;
+                            if (gst_settings.sandbox_mode) frm.doc.__onload.e_invoice_generated_in_sandbox_mode = true;
                             return frm.refresh();
                         },
                     });
@@ -33,7 +33,7 @@ frappe.ui.form.on("Sales Invoice", {
             );
         }
         const IRN_DESCRIPTION = "e-Invoice was generated in sandbox mode";
-        if (frm.doc.__onload && frm.doc.__onload.set_irn_description) {
+        if (frm.doc.__onload && frm.doc.__onload.e_invoice_generated_in_sandbox_mode) {
             let irn_field = frm.get_field("irn");
             irn_field.set_description(
                 india_compliance.get_field_description("red", IRN_DESCRIPTION)
@@ -57,7 +57,7 @@ frappe.ui.form.on("Sales Invoice", {
                 throw: false,
             }
         );
-        if (gst_settings.sandbox_mode) frm.doc.__onload.set_irn_description = true;
+        if (gst_settings.sandbox_mode) frm.doc.__onload.e_invoice_generated_in_sandbox_mode = true;
     },
     before_cancel(frm) {
         if (!frm.doc.irn) return;
