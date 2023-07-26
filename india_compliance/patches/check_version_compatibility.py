@@ -29,7 +29,11 @@ def execute():
         app_version = app["current_version"]
 
         if IC_VERSION.major != app_version.major:
-            raise_incompatible_version_error(app_name, IC_VERSION.major)
+            show_error_and_exit(
+                f"Incompatible {app_name} Version: \nPlease switch to version"
+                f" {IC_VERSION.major} of {app_name} to use the current version of India"
+                " Compliance.\n"
+            )
 
         app_branch = get_app_branch(app_name.lower())
         required_versions = app["required_versions"]
@@ -40,17 +44,13 @@ def execute():
         required_version = version.parse(required_versions[app_branch])
 
         if app_version < required_version:
-            raise_incompatible_version_error(app_name, required_version)
+            show_error_and_exit(
+                f"Incompatible {app_name} Version: \nPlease upgrade {app_name} to"
+                f" version {required_version} or above to use the current version of"
+                " India Compliance.\n"
+            )
 
 
-def raise_incompatible_version_error(app_name, required_version):
-    click.secho(
-        (
-            f"Incompatible {app_name} Version: \nPlease upgrade {app_name} to version"
-            f" {required_version} or above to use the current version of India"
-            " Compliance.\n"
-        ),
-        fg="red",
-    )
-
+def show_error_and_exit(error_message):
+    click.secho(error_message, fg="red")
     raise SystemExit(1)
