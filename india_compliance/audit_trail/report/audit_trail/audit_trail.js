@@ -8,7 +8,7 @@ frappe.query_reports["Audit Trail"] = {
             fieldname: "report",
             label: __("Report"),
             fieldtype: "Select",
-            options: "Detailed\nSummary by Doctype\nSummary by User",
+            options: "Detailed\nSummary by DocType\nSummary by User",
             default: "Detailed",
             reqd: 1,
         },
@@ -16,7 +16,7 @@ frappe.query_reports["Audit Trail"] = {
             label: __("Select Day"),
             fieldtype: "Select",
             fieldname: "date_option",
-            default: "Today",
+            default: "This Week",
             options:
                 "Today\nYesterday\nThis Week\nThis Month\nThis Quarter\nThis Year\nLast Week\nLast Month\nLast Quarter\nLast Year\nCustom",
             reqd: 1,

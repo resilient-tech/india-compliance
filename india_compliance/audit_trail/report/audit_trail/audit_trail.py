@@ -135,33 +135,33 @@ class DetailedReport(BaseAuditTrail):
             },
             {
                 "label": _("Company"),
-                "fieldtype": "link",
+                "fieldtype": "Link",
                 "fieldname": "company",
                 "options": "Company",
                 "width": 150,
             },
             {
-                "label": _("Doctype"),
-                "fieldtype": "link",
+                "label": _("DocType"),
+                "fieldtype": "Link",
                 "fieldname": "doctype",
-                "options": "Doctype",
+                "options": "DocType",
                 "width": 150,
             },
             {
                 "label": _("Document Name"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "document_name",
                 "width": 150,
             },
             {
                 "label": _("Creation Date"),
-                "fieldtype": "date",
+                "fieldtype": "Date",
                 "fieldname": "creation_date",
                 "width": 150,
             },
             {
                 "label": _("Party Name/Remarks"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "party_name",
                 "width": 180,
             },
@@ -173,13 +173,13 @@ class DetailedReport(BaseAuditTrail):
             },
             {
                 "label": _("Created By"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "created_by",
                 "width": 200,
             },
             {
                 "label": _("Modified By"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "modified_by",
                 "width": 200,
             },
@@ -253,26 +253,27 @@ class DetailedReport(BaseAuditTrail):
             self.data.append(row)
 
 
-class DoctypeReport(BaseAuditTrail):
+class DocTypeReport(BaseAuditTrail):
     def get_columns(self):
         columns = [
             {
-                "label": _("Doctype"),
-                "fieldtype": "data",
+                "label": _("DocType"),
+                "fieldtype": "Link",
                 "fieldname": "doctype",
+                "options": "DocType",
                 "width": 150,
             },
             {
                 "label": _("New Records"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "new_count",
-                "width": 120,
+                "width": 150,
             },
             {
                 "label": _("Modified Records"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "modify_count",
-                "width": 120,
+                "width": 150,
             },
         ]
 
@@ -304,22 +305,23 @@ class UserReport(BaseAuditTrail):
     def get_columns(self):
         columns = [
             {
-                "label": _("User Name"),
-                "fieldtype": "data",
+                "label": _("User"),
+                "fieldtype": "Link",
                 "fieldname": "user_name",
+                "options": "User",
                 "width": 200,
             },
             {
                 "label": _("New Records"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "new_count",
-                "width": 120,
+                "width": 150,
             },
             {
                 "label": _("Modified Records"),
-                "fieldtype": "data",
+                "fieldtype": "Data",
                 "fieldname": "modify_count",
-                "width": 120,
+                "width": 150,
             },
         ]
 
@@ -362,6 +364,6 @@ class UserReport(BaseAuditTrail):
 
 REPORT_MAP = {
     "Detailed": DetailedReport,
-    "Summary by Doctype": DoctypeReport,
+    "Summary by DocType": DocTypeReport,
     "Summary by User": UserReport,
 }
