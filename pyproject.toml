@@ -27,4 +27,3 @@ sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FRAPPE", "ERPNEXT", "FIRSTPARTY",
 
 [tool.bench.dev-dependencies]
 parameterized = "~=0.8.1"
-responses = "~=0.21.0"
