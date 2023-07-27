@@ -526,14 +526,16 @@ def get_e_waybill_info(doc):
         ("created_on", "valid_upto", "data"),
         as_dict=True,
     )
-    e_waybill_data = e_waybill_info.pop("data")
-    if not e_waybill_data:
-        return e_waybill_info, None
+
+    if not (e_waybill_data := e_waybill_info.pop("data")):
+        return e_waybill_info
+
     e_waybill_data = frappe.parse_json(e_waybill_data)
-    return (
-        e_waybill_info,
-        e_waybill_data.toGstin if doc.is_return else e_waybill_data.fromGstin,
+    e_waybill_info.company_gstin = (
+        e_waybill_data.toGstin if doc.is_return else e_waybill_data.fromGstin
     )
+
+    return e_waybill_info
 
 
 #######################################################################################

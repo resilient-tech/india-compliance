@@ -44,28 +44,10 @@ def onload(doc, method=None):
         return
 
     if gst_settings.enable_e_waybill and doc.ewaybill:
-        e_waybill_info, e_waybill_company_gstin = get_e_waybill_info(doc)
-        doc.set_onload(
-            "e_waybill_info",
-            e_waybill_info,
-        )
-        if e_waybill_company_gstin and e_waybill_company_gstin != doc.company_gstin:
-            doc.set_onload(
-                "e_waybill_generated_in_sandbox_mode",
-                True,
-            )
+        doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
     if gst_settings.enable_e_invoice and doc.irn:
-        e_invoice_info, e_invoice_company_gstin = get_e_invoice_info(doc)
-        doc.set_onload(
-            "e_invoice_info",
-            e_invoice_info,
-        )
-        if e_invoice_company_gstin and e_invoice_company_gstin != doc.company_gstin:
-            doc.set_onload(
-                "e_invoice_generated_in_sandbox_mode",
-                True,
-            )
+        doc.set_onload("e_invoice_info", get_e_invoice_info(doc))
 
 
 def validate(doc, method=None):

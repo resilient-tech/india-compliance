@@ -119,13 +119,7 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
             }
-            if (frm.doc.__onload && frm.doc.__onload.e_waybill_generated_in_sandbox_mode) {
-                const EWAYBILL_DESCRIPTION = "e-Waybill was generated in sandbox mode";
-                let ewaybill_field = frm.get_field("ewaybill");
-                ewaybill_field.set_description(
-                    india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
-                )
-            }
+            show_e_waybill_sandbox_mode_desc(frm);
         },
         async on_submit(frm) {
             if (
@@ -147,7 +141,7 @@ function setup_e_waybill_actions(doctype) {
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 { doctype: frm.doctype, docname: frm.doc.name }
             );
-            if (gst_settings.sandbox_mode) frm.doc.__onload.e_waybill_generated_in_sandbox_mode = true;
+            show_e_waybill_sandbox_mode_desc(frm, (force = true));
         },
         before_cancel(frm) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action
@@ -184,6 +178,21 @@ function setup_e_waybill_actions(doctype) {
         },
     });
 }
+
+function show_e_waybill_sandbox_mode_desc(frm, force = false) {
+    const company_gstin = frm.doc.__onload?.e_waybill_info?.company_gstin;
+
+    if (
+        (gst_settings.sandbox_mode && force) ||
+        company_gstin != frm.doc.company_gstin
+    ) {
+        const EWAYBILL_DESCRIPTION = "Generated in Sandbox Mode";
+        frm.get_field("ewaybill").set_description(
+            india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
+        );
+    }
+}
+
 function fetch_e_waybill_data(frm, args, callback) {
     if (!args) args = {};
 
@@ -204,7 +213,7 @@ function show_generate_e_waybill_dialog(frm) {
                 values,
             },
             callback: () => {
-                if (gst_settings.sandbox_mode) frm.doc.__onload.e_waybill_generated_in_sandbox_mode = true;
+                show_e_waybill_sandbox_mode_desc(frm, (force = true));
                 return frm.refresh();
             },
         });
@@ -393,9 +402,9 @@ function show_generate_e_waybill_dialog(frm) {
         secondary_action_label: api_enabled ? __("Download JSON") : null,
         secondary_action: api_enabled
             ? () => {
-                d.hide();
-                json_action(d.get_values());
-            }
+                  d.hide();
+                  json_action(d.get_values());
+              }
             : null,
     });
 
@@ -640,7 +649,7 @@ function show_update_transporter_dialog(frm) {
                 reqd: 1,
                 default:
                     frm.doc.gst_transporter_id &&
-                        frm.doc.gst_transporter_id.length == 15
+                    frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
             },

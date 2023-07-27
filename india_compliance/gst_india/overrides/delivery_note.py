@@ -20,16 +20,7 @@ def onload(doc, method=None):
     ):
         return
 
-    e_waybill_info, e_waybill_company_gstin = get_e_waybill_info(doc)
-    doc.set_onload(
-        "e_waybill_info",
-        e_waybill_info,
-    )
-    if e_waybill_company_gstin and e_waybill_company_gstin != doc.company_gstin:
-        doc.set_onload(
-            "e_waybill_generated_in_sandbox_mode",
-            True,
-        )
+    doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
 
 def get_dashboard_data(data):

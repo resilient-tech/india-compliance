@@ -323,12 +323,13 @@ def get_e_invoice_info(doc):
     e_invoice_info = frappe.db.get_value(
         "e-Invoice Log", doc.irn, ("invoice_data", "acknowledged_on"), as_dict=True
     )
-    invoice_data = e_invoice_info.pop("invoice_data")
-    if not invoice_data:
-        return e_invoice_info, None
+    if not (invoice_data := e_invoice_info.pop("invoice_data")):
+        return e_invoice_info
+    
     invoice_data = frappe.parse_json(invoice_data)
-    seller_gstin = invoice_data.SellerDtls.get("Gstin")
-    return e_invoice_info, seller_gstin
+    e_invoice_info.company_gstin = invoice_data.SellerDtls.get("Gstin")
+    
+    return e_invoice_info
 
 
 class EInvoiceData(GSTTransactionData):
