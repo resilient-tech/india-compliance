@@ -815,14 +815,15 @@ E_WAYBILL_SI_FIELDS = [
         "print_hide": 1,
     },
     {
-        "fieldname": "ewaybill_status",
-        "label": "e-Way Bill Status",
+        "fieldname": "e_waybill_status",
+        "label": "e-Waybill Status",
         "fieldtype": "Select",
         "insert_after": "ewaybill",
         "options": "\nPending\nGenerated\nCancelled\nNot Applicable",
-        "default": None,
         "print_hide": 1,
         "read_only": 1,
+        "no_copy": 1,
+        "translatable": 1,
     },
     *E_WAYBILL_DN_FIELDS,
 ]
