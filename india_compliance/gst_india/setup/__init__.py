@@ -62,7 +62,7 @@ def create_accounting_dimension_fields():
 
 def create_property_setters():
     for property_setter in get_property_setters():
-        frappe.make_property_setter(property_setter)
+        frappe.make_property_setter(property_setter, validate_fields_for_doctype=False)
 
 
 def create_address_template():

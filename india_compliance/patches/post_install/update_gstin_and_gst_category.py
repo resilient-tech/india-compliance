@@ -120,12 +120,11 @@ def update_gstin_and_gst_category():
     if print_warning:
         frappe.db.set_global("has_missing_gst_category", 1)
 
-        click.secho(
-            " Please check for parties"
-            " without GSTINs or addresses without GST Category and set approporiate"
-            " values.\n",
-            fg="yellow",
-        )
-
         if is_api_enabled():
             enqueue_update_gst_category()
+
+        else:
+            click.secho(
+                " Please check for addresses without GST Category and set approporiate values.\n",
+                fg="yellow",
+            )
