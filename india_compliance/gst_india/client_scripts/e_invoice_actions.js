@@ -89,17 +89,10 @@ frappe.ui.form.on("Sales Invoice", {
 });
 
 function show_e_invoice_sandbox_mode_desc(frm, force = false) {
-    const company_gstin = frm.doc.__onload?.e_invoice_info?.company_gstin;
+    const is_generated_in_sandbox_mode = frm.doc.__onload?.e_invoice_info?.is_generated_in_sandbox_mode;
 
-    if (
-        (gst_settings.sandbox_mode && force) ||
-        company_gstin != frm.doc.company_gstin
-    ) {
-        const IRN_DESCRIPTION = "Generated in Sandbox Mode";
-        frm.get_field("irn").set_description(
-            india_compliance.get_field_description("red", IRN_DESCRIPTION)
-        );
-    }
+    if ((gst_settings.sandbox_mode && force) || is_generated_in_sandbox_mode)
+        frm.get_field("irn").set_description("Generated in Sandbox Mode");
 }
 
 function is_irn_cancellable(frm) {

@@ -146,6 +146,7 @@ def generate_e_invoice(docname, throw=True):
         )
         invoice_data = frappe.as_json(decoded_invoice, indent=4)
 
+    sandbox_mode = frappe.get_cached_value("GST Settings", "GST Settings", "sandbox_mode")
     log_e_invoice(
         doc,
         {
@@ -156,6 +157,7 @@ def generate_e_invoice(docname, throw=True):
             "signed_invoice": result.SignedInvoice,
             "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
+            "is_generated_in_sandbox_mode": sandbox_mode,
         },
     )
 
@@ -320,16 +322,9 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
 
 def get_e_invoice_info(doc):
-    e_invoice_info = frappe.db.get_value(
-        "e-Invoice Log", doc.irn, ("invoice_data", "acknowledged_on"), as_dict=True
+    return frappe.db.get_value(
+        "e-Invoice Log", doc.irn, ("is_generated_in_sandbox_mode", "acknowledged_on"), as_dict=True
     )
-    if not (invoice_data := e_invoice_info.pop("invoice_data")):
-        return e_invoice_info
-    
-    invoice_data = frappe.parse_json(invoice_data)
-    e_invoice_info.company_gstin = invoice_data.SellerDtls.get("Gstin")
-    
-    return e_invoice_info
 
 
 class EInvoiceData(GSTTransactionData):

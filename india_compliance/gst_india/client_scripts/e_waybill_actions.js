@@ -179,20 +179,6 @@ function setup_e_waybill_actions(doctype) {
     });
 }
 
-function show_e_waybill_sandbox_mode_desc(frm, force = false) {
-    const company_gstin = frm.doc.__onload?.e_waybill_info?.company_gstin;
-
-    if (
-        (gst_settings.sandbox_mode && force) ||
-        company_gstin != frm.doc.company_gstin
-    ) {
-        const EWAYBILL_DESCRIPTION = "Generated in Sandbox Mode";
-        frm.get_field("ewaybill").set_description(
-            india_compliance.get_field_description("red", EWAYBILL_DESCRIPTION)
-        );
-    }
-}
-
 function fetch_e_waybill_data(frm, args, callback) {
     if (!args) args = {};
 
@@ -825,4 +811,33 @@ function get_e_waybill_file_name(docname) {
 
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
+}
+
+function show_e_waybill_sandbox_mode_desc(frm, force = false) {
+    const is_generated_in_sandbox_mode =
+        frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode;
+
+    if ((gst_settings.sandbox_mode && force) || is_generated_in_sandbox_mode)
+        frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
+}
+
+function show_sandbox_mode_indicator() {
+    $(document).find(".form-sidebar .ic-sandbox-mode").remove();
+
+    if (!gst_settings.sandbox_mode) return;
+
+    $(document)
+        .find(".form-sidebar .sidebar-image-section")
+        .after(
+            `
+        <div class="sidebar-menu ic-sandbox-mode">
+            <p><label class="indicator-pill yellow" title="${__(
+                "Your site has enabled Sandbox Mode in GST Settings."
+            )}">${__("GST Sandbox Mode")}</label></p>
+            <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
+                "Click here to go to GST Settings"
+            )}</a></p>
+        </div>
+        `
+        );
 }

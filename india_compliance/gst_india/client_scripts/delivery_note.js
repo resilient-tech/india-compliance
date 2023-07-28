@@ -2,6 +2,10 @@ const DOCTYPE = "Delivery Note";
 setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
+    refresh (frm) {
+        show_sandbox_mode_indicator();
+    },
+
     after_save(frm) {
         if (
             frm.doc.docstatus ||
