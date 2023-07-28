@@ -112,7 +112,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Other GST Reports",
-   "link_count": 5,
+   "link_count": 6,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -159,6 +159,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Audit Trail",
+   "link_count": 0,
+   "link_to": "Audit Trail",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "GSTR-3B Details",
    "link_count": 0,
    "link_to": "GSTR-3B Details",
@@ -167,7 +177,7 @@
    "type": "Link"
   }
  ],
- "modified": "2023-07-25 18:49:04.825039",
+ "modified": "2023-07-28 12:07:56.559569",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
