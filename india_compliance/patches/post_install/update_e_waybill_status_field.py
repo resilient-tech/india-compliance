@@ -24,7 +24,7 @@ def set_generated_status():
     frappe.db.set_value(
         "Sales Invoice",
         {"ewaybill": ["is", "set"]},
-        "ewaybill_status",
+        "e_waybill_status",
         "Generated",
     )
 
@@ -49,13 +49,14 @@ def set_pending_status(ewaybill_threshold):
     frappe.qb.update(sales_invoice).join(sales_invoice_item).on(
         sales_invoice.name == sales_invoice_item.parent
     ).set(sales_invoice.e_waybill_status, "Pending").where(
-        (sales_invoice.ewaybill == "")
+        ((sales_invoice.ewaybill == "") | (sales_invoice.ewaybill.isnull()))
+        & (sales_invoice.e_waybill_status.isnull())
         & (sales_invoice.docstatus == 1)
         & (sales_invoice.posting_date >= old_invoice_date)
         & (sales_invoice.base_grand_total >= ewaybill_threshold)
         & (
             (sales_invoice_item.gst_hsn_code != "")
-            | (sales_invoice_item.gst_hsn_code.isnull())
+            | (sales_invoice_item.gst_hsn_code.notnull())
             | (sales_invoice_item.gst_hsn_code.not_like("99%"))
         )
         & (sales_invoice.company_gstin != sales_invoice.billing_address_gstin)
