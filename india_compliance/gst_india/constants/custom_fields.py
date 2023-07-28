@@ -824,6 +824,7 @@ E_WAYBILL_SI_FIELDS = [
         "read_only": 1,
         "no_copy": 1,
         "translatable": 1,
+        "allow_on_submit": 1,
     },
     *E_WAYBILL_DN_FIELDS,
 ]

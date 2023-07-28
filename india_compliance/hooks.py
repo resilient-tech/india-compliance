@@ -132,6 +132,7 @@ doc_events = {
         "on_update_after_submit": (
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
         ),
+        "before_update_after_submit": "india_compliance.gst_india.overrides.sales_invoice.set_e_waybill_status",
     },
     "Sales Order": {
         "validate": (

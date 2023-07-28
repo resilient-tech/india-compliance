@@ -73,7 +73,7 @@ def validate(doc, method=None):
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
-    set_e_waybill_status(doc, gst_settings)
+    set_e_waybill_status(doc, method, gst_settings)
 
 
 def validate_invoice_number(doc):
@@ -247,11 +247,16 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
     return data
 
 
-def set_e_waybill_status(doc, gst_settings):
-    if doc.docstatus != 1 or doc.ewaybill:
+def set_e_waybill_status(doc, method=None, gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if doc.docstatus != 1:
         return
 
-    if is_e_waybill_applicable(doc, gst_settings):
+    if doc.ewaybill:
+        e_waybill_status = "Generated"
+    elif is_e_waybill_applicable(doc, gst_settings):
         e_waybill_status = "Pending"
     else:
         e_waybill_status = "Not Applicable"
