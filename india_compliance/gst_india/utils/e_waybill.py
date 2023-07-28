@@ -134,6 +134,9 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
 
     doc.db_set(data)
 
+    sandbox_mode, fetch = frappe.get_cached_value(
+        "GST Settings", "GST Settings", ["sandbox_mode", "fetch_e_waybill_data"]
+    )
     log_and_process_e_waybill(
         doc,
         {
@@ -148,10 +151,9 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
             ),
             "reference_doctype": doc.doctype,
             "reference_name": doc.name,
+            "is_generated_in_sandbox_mode": sandbox_mode,
         },
-        fetch=frappe.get_cached_value(
-            "GST Settings", "GST Settings", "fetch_e_waybill_data"
-        ),
+        fetch=fetch,
     )
 
 
@@ -517,6 +519,15 @@ def update_transaction(doc, values):
 
     if doc.doctype == "Delivery Note":
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+
+
+def get_e_waybill_info(doc):
+    return frappe.db.get_value(
+        "e-Waybill Log",
+        doc.ewaybill,
+        ("created_on", "valid_upto", "is_generated_in_sandbox_mode"),
+        as_dict=True,
+    )
 
 
 #######################################################################################
