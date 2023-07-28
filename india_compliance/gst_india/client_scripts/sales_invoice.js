@@ -24,10 +24,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    refresh(frm) {
-        show_sandbox_mode_indicator();
-    },
-
     before_submit(frm) {
         frm.doc._submitted_from_ui = 1;
     }
