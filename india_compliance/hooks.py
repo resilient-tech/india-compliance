@@ -8,13 +8,27 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "hello@indiacompliance.app"
 app_license = "GNU General Public License (v3)"
-required_apps = ["erpnext"]
+required_apps = ["frappe/erpnext"]
 
+before_install = "india_compliance.patches.check_version_compatibility.execute"
 after_install = "india_compliance.install.after_install"
+before_uninstall = "india_compliance.uninstall.before_uninstall"
+
+after_app_install = "india_compliance.install.after_app_install"
+before_app_uninstall = "india_compliance.uninstall.before_app_uninstall"
+
+before_migrate = "india_compliance.patches.check_version_compatibility.execute"
+after_migrate = "india_compliance.audit_trail.setup.after_migrate"
+
 before_tests = "india_compliance.tests.before_tests"
+
 boot_session = "india_compliance.boot.set_bootinfo"
 
-app_include_js = "gst_india.bundle.js"
+setup_wizard_requires = "assets/india_compliance/js/setup_wizard.js"
+setup_wizard_complete = "india_compliance.gst_india.setup.setup_wizard_complete"
+setup_wizard_stages = "india_compliance.setup_wizard.get_setup_wizard_stages"
+
+app_include_js = "india_compliance.bundle.js"
 
 doctype_js = {
     "Address": "gst_india/client_scripts/address.js",
@@ -25,18 +39,24 @@ doctype_js = {
         "gst_india/client_scripts/delivery_note.js",
     ],
     "Item": "gst_india/client_scripts/item.js",
+    "Expense Claim": [
+        "gst_india/client_scripts/journal_entry.js",
+        "gst_india/client_scripts/expense_claim.js",
+    ],
     "Journal Entry": "gst_india/client_scripts/journal_entry.js",
     "Payment Entry": "gst_india/client_scripts/payment_entry.js",
+    "Purchase Invoice": [
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/purchase_invoice.js",
+    ],
     "Sales Invoice": [
         "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
     "Supplier": "gst_india/client_scripts/supplier.js",
-    "Purchase Invoice": [
-        "gst_india/client_scripts/e_waybill_actions.js",
-        "gst_india/client_scripts/purchase_invoice.js",
-    ],
+    "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
+    "Customize Form": "audit_trail/client_scripts/customize_form.js",
 }
 
 doctype_list_js = {
@@ -57,7 +77,7 @@ doc_events = {
         "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
         "on_update": [
             "india_compliance.income_tax_india.overrides.company.make_company_fixtures",
-            "india_compliance.gst_india.overrides.company.create_default_tax_templates",
+            "india_compliance.gst_india.overrides.company.make_company_fixtures",
         ],
         "validate": "india_compliance.gst_india.overrides.party.validate_party",
     },
@@ -68,44 +88,53 @@ doc_events = {
         ),
     },
     "Delivery Note": {
-        "on_trash": (
-            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
-        ),
         "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
-    "Item": {"validate": "india_compliance.gst_india.overrides.item.validate_hsn_code"},
+    "GL Entry": {
+        "validate": "india_compliance.gst_india.overrides.gl_entry.validate",
+    },
+    "Item": {"validate": "india_compliance.gst_india.overrides.item.validate"},
+    "Journal Entry": {
+        "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
+    },
     "Payment Entry": {
         "validate": (
             "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
         )
     },
     "Purchase Invoice": {
-        "on_trash": (
-            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
-        ),
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
+        "before_validate": (
+            "india_compliance.gst_india.overrides.transaction.before_validate"
+        ),
     },
     "Purchase Order": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
+        "before_validate": (
+            "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
     },
     "Purchase Receipt": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_validate": (
+            "india_compliance.gst_india.overrides.transaction.before_validate"
+        ),
     },
     "Sales Invoice": {
-        "on_trash": (
-            "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
-        ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
+        "on_update_after_submit": (
+            "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
+        ),
     },
     "Sales Order": {
         "validate": (
@@ -114,7 +143,7 @@ doc_events = {
     },
     "Supplier": {
         "validate": [
-            "india_compliance.gst_india.overrides.supplier.update_transporter_gstin",
+            "india_compliance.gst_india.overrides.supplier.validate",
             "india_compliance.gst_india.overrides.party.validate_party",
         ],
         "after_insert": (
@@ -123,6 +152,9 @@ doc_events = {
     },
     "Tax Category": {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
+    },
+    "Tax Withholding Category": {
+        "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
     },
     "POS Invoice": {
         "validate": (
@@ -134,23 +166,30 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
+    "Accounts Settings": {
+        "validate": "india_compliance.audit_trail.overrides.accounts_settings.validate"
+    },
+    "Property Setter": {
+        "validate": "india_compliance.audit_trail.overrides.property_setter.validate",
+        "on_trash": "india_compliance.audit_trail.overrides.property_setter.on_trash",
+    },
+    "Version": {
+        "validate": "india_compliance.audit_trail.overrides.version.validate",
+        "on_trash": "india_compliance.audit_trail.overrides.version.on_trash",
+    },
 }
 
 
 regional_overrides = {
     "India": {
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header",
-        "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": (
-            "india_compliance.gst_india.utils.get_itemised_tax_breakup_data"
-        ),
+        "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
+        "erpnext.controllers.accounts_controller.update_gl_dict_with_regional_fields": "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields",
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
-        "erpnext.stock.doctype.item.item.set_item_tax_from_hsn_code": "india_compliance.gst_india.overrides.transaction.set_item_tax_from_hsn_code",
-        "erpnext.assets.doctype.asset.asset.get_depreciation_amount": (
-            "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount"
-        ),
+        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_depreciation_amount": "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_depreciation_amount",
     }
 }
 
@@ -165,7 +204,8 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_transport_type",
         "india_compliance.gst_india.utils.jinja.get_transport_mode",
         "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
-        "india_compliance.gst_india.utils.jinja.get_non_zero_fields",
+        "india_compliance.gst_india.utils.jinja.get_e_invoice_item_fields",
+        "india_compliance.gst_india.utils.jinja.get_e_invoice_amount_fields",
     ],
 }
 
@@ -179,11 +219,54 @@ override_doctype_dashboards = {
     "Delivery Note": (
         "india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"
     ),
+    "Purchase Invoice": (
+        "india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"
+    ),
+}
+
+override_doctype_class = {
+    "Customize Form": (
+        "india_compliance.audit_trail.overrides.customize_form.CustomizeForm"
+    ),
 }
 
 
-# DocTypes to be ignored while clearing transactions
+# DocTypes to be ignored while clearing transactions of a Company
 company_data_to_be_ignored = ["GST Account", "GST Credential"]
+
+# Links to these doctypes will be ignored when deleting a document
+ignore_links_on_delete = ["e-Waybill Log", "e-Invoice Log"]
+
+accounting_dimension_doctypes = ["Bill of Entry", "Bill of Entry Item"]
+
+# DocTypes for which Audit Trail must be maintained
+audit_trail_doctypes = [
+    # To track the "Enable Audit Trail" setting
+    "Accounts Settings",
+    # ERPNext DocTypes that make GL Entries
+    "Dunning",
+    "Invoice Discounting",
+    "Journal Entry",
+    "Payment Entry",
+    "Period Closing Voucher",
+    "Process Deferred Accounting",
+    "Purchase Invoice",
+    "Sales Invoice",
+    "Asset",
+    "Asset Capitalization",
+    "Asset Repair",
+    "Delivery Note",
+    "Landed Cost Voucher",
+    "Purchase Receipt",
+    "Stock Entry",
+    "Stock Reconciliation",
+    "Subcontracting Receipt",
+    # Additional ERPNext DocTypes that constitute "Books of Account"
+    "POS Invoice",
+    # India Compliance DocTypes that make GL Entries
+    "Bill of Entry",
+]
+
 
 # Includes in <head>
 # ------------------

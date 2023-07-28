@@ -138,6 +138,13 @@
             "customer_type": "Individual",
             "gstin": "",
             "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Foreign Customer",
+            "customer_name": "_Test Foreign Customer",
+            "customer_type": "Individual",
+            "gstin": "",
+            "gst_category": "Overseas"
         }
     ],
     "Supplier": [
@@ -168,6 +175,30 @@
             "supplier_type": "Individual",
             "gstin": "",
             "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Foreign Supplier",
+            "supplier_name": "_Test Foreign Supplier",
+            "supplier_type": "Individual",
+            "gstin": "",
+            "gst_category": "Overseas"
+        },
+        {
+            "name": "_Test Transporter with Enrolment No",
+            "supplier_name": "_Test Transporter with Enrolment No",
+            "supplier_type": "Individual",
+            "is_transporter": 1,
+            "gst_transporter_id": "88AAACD8017H1ZX",
+            "gstin": "",
+            "gst_category": "Unregistered"
+        },
+        {
+            "name": "_Test Common Supplier",
+            "supplier_name": "_Test Common Supplier",
+            "supplier_type": "Company",
+            "gstin": "05AAACG2140A1ZL",
+            "gst_category": "Registered Regular",
+            "is_transporter": 1
         }
     ],
     "Address": [
@@ -253,7 +284,7 @@
             "address_line1": "Test Address - 6",
             "city": "Test City",
             "state": "Karnataka",
-            "pincode": "560001",
+            "pincode": "572101",
             "country": "India",
             "gstin": "29AABCR1718E1ZL",
             "gst_category": "Registered Composition",
@@ -263,6 +294,23 @@
                 {
                     "link_doctype": "Customer",
                     "link_name": "_Test Registered Composition Customer"
+                }
+            ]
+        },
+        {
+            "name": "_Test Foreign Customer-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 9",
+            "city": "Test City",
+            "state": "Texas",
+            "pincode": "75001",
+            "country": "United States",
+            "gstin": "",
+            "gst_category": "Overseas",
+            "links": [
+                {
+                    "link_doctype": "Customer",
+                    "link_name": "_Test Foreign Customer"
                 }
             ]
         },
@@ -318,6 +366,24 @@
                 {
                     "link_doctype": "Supplier",
                     "link_name": "_Test Registered Composition Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Indian Registered Company-Shipping",
+            "address_type": "Shipping",
+            "address_line1": "Test Address - 5",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAQCA8719H1ZC",
+            "gst_category": "Registered Regular",
+            "is_company_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Company",
+                    "link_name": "_Test Indian Registered Company"
                 }
             ]
         }

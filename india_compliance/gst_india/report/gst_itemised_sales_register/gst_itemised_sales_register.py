@@ -1,41 +1,48 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
-import frappe
+
+from frappe import _
 from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register import (
     _execute,
 )
 
 from india_compliance.gst_india.report.gst_sales_register.gst_sales_register import (
-    ADDITIONAL_QUERY_COLUMNS,
-    ADDITIONAL_TABLE_COLUMNS,
-    EXPORT_TYPE_COLUMNS,
-    REVERSE_CHARGE_COLUMNS,
+    get_additional_table_columns as get_si_columns,
 )
 
 
 def execute(filters=None):
-    overseas_enabled, reverse_charge_enabled = frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        ("enable_overseas_transactions", "enable_reverse_charge_in_sales"),
+    return _execute(
+        filters,
+        get_additional_table_columns(),
+        get_additional_conditions(filters),
     )
 
-    additional_table_columns = [
-        *ADDITIONAL_TABLE_COLUMNS,
-        dict(fieldtype="Data", label="HSN Code", fieldname="gst_hsn_code", width=120),
-    ]
 
-    additional_query_columns = [
-        *ADDITIONAL_QUERY_COLUMNS,
-        "gst_hsn_code",
-    ]
+def get_additional_table_columns():
+    additional_table_columns = get_si_columns()
 
-    if reverse_charge_enabled:
-        additional_table_columns.insert(3, REVERSE_CHARGE_COLUMNS)
-        additional_query_columns.insert(3, "is_reverse_charge")
+    for row in additional_table_columns:
+        row["_doctype"] = "Sales Invoice"
 
-    if overseas_enabled:
-        additional_table_columns.insert(-3, EXPORT_TYPE_COLUMNS)
-        additional_query_columns.insert(-3, "is_export_with_gst")
+    additional_table_columns.append(
+        {
+            "fieldtype": "Data",
+            "label": _("HSN Code"),
+            "fieldname": "gst_hsn_code",
+            "width": 120,
+            "_doctype": "Sales Invoice Item",
+        }
+    )
 
-    return _execute(filters, additional_table_columns, additional_query_columns)
+    return additional_table_columns
+
+
+def get_additional_conditions(filters):
+    additional_conditions = ""
+    if filters.get("company_gstin"):
+        additional_conditions += (
+            " AND `tabSales Invoice`.company_gstin = %(company_gstin)s"
+        )
+
+    return additional_conditions

@@ -2,11 +2,18 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+
+from india_compliance.gst_india.utils import (
+    get_hsn_settings,
+    join_list_with_custom_separators,
+)
 
 
 class GSTHSNCode(Document):
-    pass
+    def validate(self):
+        validate_hsn_code(self.hsn_code)
 
 
 @frappe.whitelist()
@@ -33,3 +40,25 @@ def update_item_document(items, taxes):
                 },
             )
             item_to_be_updated.save()
+
+
+def validate_hsn_code(hsn_code):
+    validate_hsn_code, valid_hsn_length = get_hsn_settings()
+
+    if not validate_hsn_code:
+        return
+
+    if not hsn_code:
+        frappe.throw(
+            _("HSN/SAC Code is required. Please enter a valid HSN/SAC code."),
+            frappe.MandatoryError,
+        )
+
+    if len(hsn_code) not in valid_hsn_length:
+        frappe.throw(
+            _(
+                "HSN/SAC Code should be {0} digits long. Please enter a valid"
+                " HSN/SAC code."
+            ).format(join_list_with_custom_separators(valid_hsn_length)),
+            title=_("Invalid HSN/SAC"),
+        )

@@ -6,11 +6,11 @@ import {
     TDS_REGEX,
 } from "./regex_constants";
 
-frappe.provide("ic");
+frappe.provide("india_compliance");
 
 window.gst_settings = frappe.boot.gst_settings;
 
-Object.assign(ic, {
+Object.assign(india_compliance, {
     get_gstin_query(party, party_type = "Company") {
         if (!party) {
             frappe.show_alert({
@@ -27,7 +27,7 @@ Object.assign(ic, {
     },
 
     async get_gstin_options(party, party_type = "Company") {
-        const { query, params } = ic.get_gstin_query(party, party_type);
+        const { query, params } = india_compliance.get_gstin_query(party, party_type);
         const { message } = await frappe.call({
             method: query,
             args: params,
@@ -35,13 +35,20 @@ Object.assign(ic, {
         return message;
     },
 
-    get_party_type(doctype) {
-        return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
+    async get_account_options(company) {
+        if (!company) return;
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.utils.get_all_gst_accounts",
+            args: {
+                company,
+            },
+        });
+
+        return message || [];
     },
 
-    get_party_fieldname(doctype) {
-        if (doctype == "Quotation") return "party_name";
-        return ic.get_party_type(doctype).toLowerCase();
+    get_party_type(doctype) {
+        return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
     set_state_options(frm) {
@@ -61,11 +68,11 @@ Object.assign(ic, {
 
     is_api_enabled(settings) {
         if (!settings) settings = gst_settings;
-        return settings.enable_api && ic.can_enable_api(settings);
+        return settings.enable_api && india_compliance.can_enable_api(settings);
     },
 
     is_e_invoice_enabled() {
-        return ic.is_api_enabled() && gst_settings.enable_e_invoice;
+        return india_compliance.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
     validate_gstin(gstin) {
@@ -119,3 +126,7 @@ function is_gstin_check_digit_valid(gstin) {
     const checkCodePoint = (mod - (sum % mod)) % mod;
     return GSTIN_CODEPOINT_CHARS[checkCodePoint] === gstin[14];
 }
+
+// Will be deprecated after v15 release, kept only for compatibility
+// DO NOT USE IN CODE
+window.ic = window.india_compliance;

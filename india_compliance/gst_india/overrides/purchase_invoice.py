@@ -10,6 +10,17 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_en
 
 
 def onload(doc, method=None):
+    if doc.docstatus != 1 or doc.gst_category != "Overseas":
+        return
+
+    doc.set_onload(
+        "bill_of_entry_exists",
+        frappe.db.exists(
+            "Bill of Entry",
+            {"purchase_invoice": doc.name, "docstatus": 1},
+        ),
+    )
+
     if not doc.get("ewaybill"):
         return
 
@@ -39,7 +50,6 @@ def validate(doc, method=None):
         return
 
     update_itc_totals(doc)
-    validate_supplier_gstin(doc)
 
 
 def update_itc_totals(doc, method=None):
@@ -74,6 +84,19 @@ def validate_supplier_gstin(doc):
 
 
 def get_dashboard_data(data):
-    return update_dashboard_with_gst_logs(
+    transactions = data.setdefault("transactions", [])
+    reference_section = next(
+        (row for row in transactions if row.get("label") == "Reference"), None
+    )
+
+    if reference_section is None:
+        reference_section = {"label": "Reference", "items": []}
+        transactions.append(reference_section)
+
+    reference_section["items"].append("Bill of Entry")
+
+    update_dashboard_with_gst_logs(
         "Purchase Invoice", data, "e-Waybill Log", "Integration Request"
     )
+
+    return data

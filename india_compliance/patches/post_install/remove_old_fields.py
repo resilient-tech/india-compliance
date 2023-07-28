@@ -1,4 +1,4 @@
-from india_compliance.gst_india.utils import delete_old_fields
+from india_compliance.gst_india.utils.custom_fields import delete_old_fields
 
 
 def execute():
@@ -18,3 +18,4 @@ def execute():
     )
     delete_old_fields("pan_details", "Company")
     delete_old_fields("export_type", ("Customer", "Supplier"))
+    delete_old_fields("company_address", "Journal Entry")

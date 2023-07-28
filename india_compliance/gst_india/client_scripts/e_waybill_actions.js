@@ -11,7 +11,7 @@ function setup_e_waybill_actions(doctype) {
             frm.set_value("gst_vehicle_type", get_vehicle_type(frm.doc));
         },
         setup(frm) {
-            if (!ic.is_api_enabled()) return;
+            if (!india_compliance.is_api_enabled()) return;
 
             frappe.realtime.on("e_waybill_pdf_update", message => {
                 frappe.model.sync_docinfo(message);
@@ -40,6 +40,12 @@ function setup_e_waybill_actions(doctype) {
                         () => show_generate_e_waybill_dialog(frm),
                         "e-Waybill"
                     );
+
+                    frm.add_custom_button(
+                        __("Fetch if Generated"),
+                        () => show_fetch_if_generated_dialog(frm),
+                        "e-Waybill"
+                    );
                 }
 
                 if (
@@ -58,7 +64,10 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            if (!ic.is_api_enabled() || !is_e_waybill_generated_using_api(frm)) {
+            if (
+                !india_compliance.is_api_enabled() ||
+                !is_e_waybill_generated_using_api(frm)
+            ) {
                 return;
             }
 
@@ -109,13 +118,14 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
             }
+            show_e_waybill_sandbox_mode_desc(frm);
         },
         async on_submit(frm) {
             if (
                 frm.doctype != "Sales Invoice" ||
                 !has_e_waybill_threshold_met(frm) ||
                 frm.doc.ewaybill ||
-                !ic.is_api_enabled() ||
+                !india_compliance.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
                 is_e_invoice_applicable(frm) ||
                 !is_e_waybill_applicable(frm)
@@ -128,10 +138,12 @@ function setup_e_waybill_actions(doctype) {
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 { doctype: frm.doctype, docname: frm.doc.name }
             );
+            show_e_waybill_sandbox_mode_desc(frm, (force = true));
         },
         before_cancel(frm) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action
-            if (!ic.is_api_enabled() || frm.doc.irn || !frm.doc.ewaybill) return;
+            if (!india_compliance.is_api_enabled() || frm.doc.irn || !frm.doc.ewaybill)
+                return;
 
             frappe.validated = false;
 
@@ -163,6 +175,7 @@ function setup_e_waybill_actions(doctype) {
         },
     });
 }
+
 function fetch_e_waybill_data(frm, args, callback) {
     if (!args) args = {};
 
@@ -182,7 +195,10 @@ function show_generate_e_waybill_dialog(frm) {
                 docname: frm.doc.name,
                 values,
             },
-            callback: () => frm.refresh(),
+            callback: () => {
+                show_e_waybill_sandbox_mode_desc(frm, (force = true));
+                return frm.refresh();
+            },
         });
     };
 
@@ -329,7 +345,29 @@ function show_generate_e_waybill_dialog(frm) {
         });
     }
 
-    const api_enabled = ic.is_api_enabled();
+    const is_foreign_transaction =
+        frm.doc.gst_category === "Overseas" &&
+        frm.doc.place_of_supply === "96-Other Countries";
+
+    if (frm.doctype === "Sales Invoice" && is_foreign_transaction) {
+        fields.splice(5, 0, {
+            label: "Origin Port / Border Checkpost Address",
+            fieldname: "port_address",
+            fieldtype: "Link",
+            options: "Address",
+            default: frm.doc.port_address,
+            reqd: frm.doc?.__onload?.shipping_address_in_india != true,
+            get_query: () => {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
+            },
+        });
+    }
+
+    const api_enabled = india_compliance.is_api_enabled();
 
     const d = new frappe.ui.Dialog({
         title: __("Generate e-Waybill"),
@@ -374,6 +412,35 @@ function show_generate_e_waybill_dialog(frm) {
             </div>
         `).prependTo(d.wrapper);
     }
+}
+
+function show_fetch_if_generated_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Fetch e-Waybill"),
+        fields: [
+            {
+                label: "e-Waybill Date",
+                fieldname: "e_waybill_date",
+                fieldtype: "Date",
+                default: frappe.datetime.get_today(),
+            },
+        ],
+        primary_action_label: __("Fetch"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.find_matching_e_waybill",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    e_waybill_date: values.e_waybill_date,
+                },
+                callback: () => frm.refresh(),
+            });
+            d.hide();
+        },
+    });
+
+    d.show();
 }
 
 function show_cancel_e_waybill_dialog(frm, callback) {
@@ -614,12 +681,14 @@ function is_e_waybill_applicable(frm) {
     if (
         // means company is Indian and not Unregistered
         !frm.doc.company_gstin ||
-        !(is_e_waybill_applicable_on_sales_invoice(frm) ||
+        !(
+            is_e_waybill_applicable_on_sales_invoice(frm) ||
             is_e_waybill_applicable_on_purchase_invoice(frm) ||
-            is_e_waybill_applicable_on_delivery_note(frm))
+            is_e_waybill_applicable_on_delivery_note(frm)
+        )
     )
         return;
-    
+
     // at least one item is not a service
     for (const item of frm.doc.items) {
         if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0)
@@ -641,6 +710,7 @@ function is_e_waybill_cancellable(frm) {
 function is_e_waybill_applicable_on_sales_invoice(frm) {
     return (
         frm.doctype == "Sales Invoice" &&
+        frm.doc.company_gstin !== frm.doc.billing_address_gstin &&
         frm.doc.customer_address &&
         !frm.doc.is_return &&
         !frm.doc.is_debit_note
@@ -689,7 +759,9 @@ function update_generation_dialog(dialog) {
 }
 
 function get_primary_action_label_for_generation(doc) {
-    const label = ic.is_api_enabled() ? __("Generate") : __("Download JSON");
+    const label = india_compliance.is_api_enabled()
+        ? __("Generate")
+        : __("Download JSON");
 
     if (are_transport_details_available(doc)) {
         return label;
@@ -758,4 +830,12 @@ function get_e_waybill_file_name(docname) {
 
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
+}
+
+function show_e_waybill_sandbox_mode_desc(frm, force = false) {
+    const is_generated_in_sandbox_mode =
+        frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode;
+
+    if ((gst_settings.sandbox_mode && force) || is_generated_in_sandbox_mode)
+        frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 }

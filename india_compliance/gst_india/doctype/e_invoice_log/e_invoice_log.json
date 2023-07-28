@@ -8,6 +8,7 @@
  "field_order": [
   "irn",
   "sales_invoice",
+  "is_generated_in_sandbox_mode",
   "column_break_1",
   "acknowledgement_number",
   "acknowledged_on",
@@ -113,6 +114,12 @@
    "in_list_view": 1,
    "label": "Acknowledged On",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_generated_in_sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Is Generated in Sandbox Mode"
   }
  ],
  "in_create": 1,
@@ -122,7 +129,7 @@
    "link_fieldname": "irn"
   }
  ],
- "modified": "2022-09-08 11:51:24.704300",
+ "modified": "2023-07-27 15:04:26.931722",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Invoice Log",
