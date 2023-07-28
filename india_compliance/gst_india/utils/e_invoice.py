@@ -156,6 +156,7 @@ def generate_e_invoice(docname, throw=True):
             "signed_invoice": result.SignedInvoice,
             "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
+            "is_generated_in_sandbox_mode": api.sandbox_mode,
         },
     )
 
@@ -322,6 +323,15 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         frappe.throw(
             _("e-Invoice can only be cancelled upto 24 hours after it is generated")
         )
+
+
+def get_e_invoice_info(doc):
+    return frappe.db.get_value(
+        "e-Invoice Log",
+        doc.irn,
+        ("is_generated_in_sandbox_mode", "acknowledged_on"),
+        as_dict=True,
+    )
 
 
 class EInvoiceData(GSTTransactionData):

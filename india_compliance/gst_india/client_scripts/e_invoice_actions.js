@@ -12,7 +12,10 @@ frappe.ui.form.on("Sales Invoice", {
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name },
-                        callback: () => frm.refresh(),
+                        callback: () => {
+                            show_e_invoice_sandbox_mode_desc(frm, (force = true));
+                            return frm.refresh();
+                        },
                     });
                 },
                 "e-Invoice"
@@ -29,6 +32,7 @@ frappe.ui.form.on("Sales Invoice", {
                 "e-Invoice"
             );
         }
+        show_e_invoice_sandbox_mode_desc(frm);
     },
     async on_submit(frm) {
         if (
@@ -47,6 +51,7 @@ frappe.ui.form.on("Sales Invoice", {
                 throw: false,
             }
         );
+        show_e_invoice_sandbox_mode_desc(frm, (force = true));
     },
     before_cancel(frm) {
         if (!frm.doc.irn) return;
@@ -82,6 +87,13 @@ frappe.ui.form.on("Sales Invoice", {
         });
     },
 });
+
+function show_e_invoice_sandbox_mode_desc(frm, force = false) {
+    const is_generated_in_sandbox_mode = frm.doc.__onload?.e_invoice_info?.is_generated_in_sandbox_mode;
+
+    if ((gst_settings.sandbox_mode && force) || is_generated_in_sandbox_mode)
+        frm.get_field("irn").set_description("Generated in Sandbox Mode");
+}
 
 function is_irn_cancellable(frm) {
     const e_invoice_info = frm.doc.__onload && frm.doc.__onload.e_invoice_info;
@@ -163,7 +175,8 @@ function is_e_invoice_applicable(frm) {
         frm.doc.docstatus == 1 &&
         frm.doc.company_gstin &&
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
-        (frm.doc.place_of_supply === "96-Other Countries" || frm.doc.billing_address_gstin) &&
+        (frm.doc.place_of_supply === "96-Other Countries" ||
+            frm.doc.billing_address_gstin) &&
         !frm.doc.items[0].is_non_gst &&
         is_valid_e_invoice_applicability_date(frm)
     );

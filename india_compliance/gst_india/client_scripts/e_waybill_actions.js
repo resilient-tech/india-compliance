@@ -119,6 +119,7 @@ function setup_e_waybill_actions(doctype) {
                     "e-Waybill"
                 );
             }
+            show_e_waybill_sandbox_mode_desc(frm);
         },
         async on_submit(frm) {
             if (
@@ -140,6 +141,7 @@ function setup_e_waybill_actions(doctype) {
                 "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
                 { doctype: frm.doctype, docname: frm.doc.name }
             );
+            show_e_waybill_sandbox_mode_desc(frm, (force = true));
         },
         before_cancel(frm) {
             // if IRN is present, e-Waybill gets cancelled in e-Invoice action
@@ -176,6 +178,7 @@ function setup_e_waybill_actions(doctype) {
         },
     });
 }
+
 function fetch_e_waybill_data(frm, args, callback) {
     if (!args) args = {};
 
@@ -195,7 +198,10 @@ function show_generate_e_waybill_dialog(frm) {
                 docname: frm.doc.name,
                 values,
             },
-            callback: () => frm.refresh(),
+            callback: () => {
+                show_e_waybill_sandbox_mode_desc(frm, (force = true));
+                return frm.refresh();
+            },
         });
     };
 
@@ -805,4 +811,12 @@ function get_e_waybill_file_name(docname) {
 
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
+}
+
+function show_e_waybill_sandbox_mode_desc(frm, force = false) {
+    const is_generated_in_sandbox_mode =
+        frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode;
+
+    if ((gst_settings.sandbox_mode && force) || is_generated_in_sandbox_mode)
+        frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 }
