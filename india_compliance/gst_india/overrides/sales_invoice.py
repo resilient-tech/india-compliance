@@ -13,7 +13,11 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
     is_foreign_doc,
 )
-from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
+from india_compliance.gst_india.utils.e_invoice import (
+    get_e_invoice_info,
+    validate_e_invoice_applicability,
+)
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
 )
@@ -40,26 +44,10 @@ def onload(doc, method=None):
         return
 
     if gst_settings.enable_e_waybill and doc.ewaybill:
-        doc.set_onload(
-            "e_waybill_info",
-            frappe.get_value(
-                "e-Waybill Log",
-                doc.ewaybill,
-                ("created_on", "valid_upto"),
-                as_dict=True,
-            ),
-        )
+        doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
     if gst_settings.enable_e_invoice and doc.irn:
-        doc.set_onload(
-            "e_invoice_info",
-            frappe.get_value(
-                "e-Invoice Log",
-                doc.irn,
-                "acknowledged_on",
-                as_dict=True,
-            ),
-        )
+        doc.set_onload("e_invoice_info", get_e_invoice_info(doc))
 
 
 def validate(doc, method=None):
