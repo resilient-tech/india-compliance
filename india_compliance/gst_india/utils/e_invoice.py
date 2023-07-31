@@ -545,7 +545,7 @@ class EInvoiceData(GSTTransactionData):
                 if self.transaction_details.total_igst_amount > 0:
                     self.transaction_details.place_of_supply = "36"
                 else:
-                    self.transaction_details.place_of_supply = "01"
+                    self.transaction_details.place_of_supply = "02"
 
         if self.doc.is_return:
             self.dispatch_address, self.shipping_address = (
