@@ -821,10 +821,10 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "ewaybill",
         "options": "\nPending\nGenerated\nCancelled\nNot Applicable",
         "print_hide": 1,
-        "read_only": 1,
         "no_copy": 1,
         "translatable": 1,
         "allow_on_submit": 1,
+        "depends_on": "eval:doc.docstatus === 1",
     },
     *E_WAYBILL_DN_FIELDS,
 ]

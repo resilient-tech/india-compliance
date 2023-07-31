@@ -10,13 +10,9 @@ def execute():
     ):
         return
 
-    e_waybill_threshold = frappe.db.get_single_value(
-        "GST Settings", "e_waybill_threshold"
-    )
-
     set_generated_status()
     set_cancelled_status()
-    set_pending_status(e_waybill_threshold)
+    set_pending_status()
     set_not_applicable_status()
 
 
@@ -41,8 +37,12 @@ def set_cancelled_status():
     ).run()
 
 
-def set_pending_status(ewaybill_threshold):
+def set_pending_status():
     old_invoice_date = add_days(nowdate(), -30)
+    e_waybill_threshold = frappe.db.get_single_value(
+        "GST Settings", "e_waybill_threshold"
+    )
+
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 
@@ -53,7 +53,7 @@ def set_pending_status(ewaybill_threshold):
         & (sales_invoice.e_waybill_status.isnull())
         & (sales_invoice.docstatus == 1)
         & (sales_invoice.posting_date >= old_invoice_date)
-        & (sales_invoice.base_grand_total >= ewaybill_threshold)
+        & (sales_invoice.base_grand_total >= e_waybill_threshold)
         & (
             (sales_invoice_item.gst_hsn_code != "")
             | (sales_invoice_item.gst_hsn_code.notnull())

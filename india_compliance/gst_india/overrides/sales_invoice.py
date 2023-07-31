@@ -248,17 +248,22 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
 
 
 def set_e_waybill_status(doc, method=None, gst_settings=None):
-    if not gst_settings:
-        gst_settings = frappe.get_cached_doc("GST Settings")
-
     if doc.docstatus != 1:
         return
 
     if doc.ewaybill:
         e_waybill_status = "Generated"
-    elif is_e_waybill_applicable(doc, gst_settings):
+
+    elif is_e_waybill_applicable(doc, gst_settings) and doc.e_waybill_status not in (
+        "Cancelled",
+        "Not Applicable",
+    ):
         e_waybill_status = "Pending"
-    else:
+
+    elif doc.e_waybill_status not in ("Cancelled", "Pending"):
         e_waybill_status = "Not Applicable"
+
+    else:
+        return
 
     doc.update({"e_waybill_status": e_waybill_status})
