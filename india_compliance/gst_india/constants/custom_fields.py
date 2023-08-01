@@ -389,9 +389,17 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
         {
+            "fieldname": "ignore_reconciliation",
+            "label": "Ignore Reconciliation",
+            "fieldtype": "Check",
+            "insert_after": "eligibility_for_itc",
+            "print_hide": 1,
+            "translatable": 0,
+        },
+        {
             "fieldname": "gst_col_break",
             "fieldtype": "Column Break",
-            "insert_after": "eligibility_for_itc",
+            "insert_after": "ignore_reconciliation",
         },
         {
             "fieldname": "itc_integrated_tax",

@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2023-07-31 17:45:13.260041",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_number",
+  "taxable_value",
+  "rate",
+  "igst",
+  "cgst",
+  "sgst",
+  "cess"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_number",
+   "fieldtype": "Int",
+   "label": "Item Number"
+  },
+  {
+   "fieldname": "taxable_value",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Taxable Value"
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Rate"
+  },
+  {
+   "fieldname": "igst",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "IGST"
+  },
+  {
+   "fieldname": "cgst",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "CGST"
+  },
+  {
+   "fieldname": "sgst",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "SGST"
+  },
+  {
+   "fieldname": "cess",
+   "fieldtype": "Float",
+   "label": "CESS"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2023-07-31 17:45:13.260041",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GST Inward Supply Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
