@@ -23,10 +23,7 @@ def get_pending_e_invoices_count():
         "value": len(e_invoice_summary),
         "fieldtype": "Int",
         "route_options": filters,
-        "route": {
-            "name": "e-Invoice Summary",
-            "is_document_type": 0,
-        },
+        "route": ["query-report", "e-Invoice Summary"],
     }
 
 
