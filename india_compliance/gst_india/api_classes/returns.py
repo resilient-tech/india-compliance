@@ -30,40 +30,28 @@ class ReturnsAPI(BaseAPI):
         )
 
     def handle_failed_response(self, response_json):
-        error_code = response_json.get("errorCode")
-
-        if error_code in self.IGNORED_ERROR_CODES:
-            response_json.error_type = self.IGNORED_ERROR_CODES[error_code]
-            return True
+        for error_code, error_message in self.IGNORED_ERROR_CODES.items():
+            if response_json.get("errorCode") == error_code:
+                response_json.error_type = error_message
+                return True
 
     def get(self, action, return_period, otp=None, params=None, requestid=None):
-        self.requestid = requestid or self.generate_request_id()
+        request_id = requestid or self.generate_request_id()
         response = super().get(
             params={"action": action, "gstin": self.company_gstin, **(params or {})},
             headers={
-                "requestid": self.requestid,
+                "requestid": request_id,
                 "ret_period": return_period,
                 "otp": otp,
             },
         )
 
-        response.requestid = self.requestid
-
+        response.requestid = request_id
         return response
 
     def get_return_status(self, return_period, requestid, otp=None):
         return self.get(
             "RETSTATUS", return_period, otp, {"ret_period": return_period}, requestid
-        )
-
-
-class GSTR2bAPI(ReturnsAPI):
-    API_NAME = "GSTR-2B"
-    BASE_PATH = "returns/gstr2b"
-
-    def get_data(self, return_period, otp=None, file_num=None):
-        return self.get(
-            "GET2B", return_period, otp, {"rtnprd": return_period, "file_num": file_num}
         )
 
 
@@ -74,3 +62,13 @@ class GSTR2aAPI(ReturnsAPI):
     def get_data(self, action, return_period, otp=None):
         # TODO: Create further calls if more than one file to download
         return self.get(action, return_period, otp, {"ret_period": return_period})
+
+
+class GSTR2bAPI(ReturnsAPI):
+    API_NAME = "GSTR-2B"
+    BASE_PATH = "returns/gstr2b"
+
+    def get_data(self, return_period, otp=None, file_num=None):
+        return self.get(
+            "GET2B", return_period, otp, {"rtnprd": return_period, "file_num": file_num}
+        )
