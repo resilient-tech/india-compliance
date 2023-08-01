@@ -261,7 +261,6 @@ audit_trail_doctypes = [
     "Bill of Entry",
 ]
 
-
 # Includes in <head>
 # ------------------
 

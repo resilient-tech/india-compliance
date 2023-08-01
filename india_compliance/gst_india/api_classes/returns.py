@@ -3,6 +3,7 @@ from india_compliance.gst_india.api_classes.base import BaseAPI
 
 class ReturnsAPI(BaseAPI):
     API_NAME = "GST Returns"
+    BASE_PATH = "returns"
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
@@ -14,6 +15,7 @@ class ReturnsAPI(BaseAPI):
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
         "RET2B1018": "requested_before_cutoff_date",
+        "RETINPROGRESS": "queued",
     }
 
     def setup(self, company_gstin):
@@ -34,14 +36,24 @@ class ReturnsAPI(BaseAPI):
             response_json.error_type = self.IGNORED_ERROR_CODES[error_code]
             return True
 
-    def get(self, action, return_period, otp=None, params=None):
-        return super().get(
+    def get(self, action, return_period, otp=None, params=None, requestid=None):
+        self.requestid = requestid or self.generate_request_id()
+        response = super().get(
             params={"action": action, "gstin": self.company_gstin, **(params or {})},
             headers={
-                "requestid": self.generate_request_id(),
+                "requestid": self.requestid,
                 "ret_period": return_period,
                 "otp": otp,
             },
+        )
+
+        response.requestid = self.requestid
+
+        return response
+
+    def get_return_status(self, return_period, requestid, otp=None):
+        return self.get(
+            "RETSTATUS", return_period, otp, {"ret_period": return_period}, requestid
         )
 
 
@@ -49,9 +61,10 @@ class GSTR2bAPI(ReturnsAPI):
     API_NAME = "GSTR-2B"
     BASE_PATH = "returns/gstr2b"
 
-    def get_data(self, return_period, otp=None):
-        # TODO: Create further calls if more than one file to download
-        return self.get("GET2B", return_period, otp, {"rtnprd": return_period})
+    def get_data(self, return_period, otp=None, file_num=None):
+        return self.get(
+            "GET2B", return_period, otp, {"rtnprd": return_period, "file_num": file_num}
+        )
 
 
 class GSTR2aAPI(ReturnsAPI):
