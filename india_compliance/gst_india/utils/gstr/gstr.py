@@ -70,6 +70,7 @@ class GSTR:
             )
 
             if not current_transaction % 2000:
+                # nosemgrep
                 frappe.db.commit()
 
     def get_all_transactions(self, category, suppliers):
