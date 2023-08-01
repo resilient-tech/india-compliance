@@ -4,10 +4,18 @@ from frappe.utils import add_days, nowdate
 
 def execute():
     # check if e-waybill is enabled
-    if not frappe.db.get_value(
-        "Sales Invoice",
-        {"ewaybill": ["is", "set"]},
-    ):
+    if frappe.flags.in_install:
+        e_waybill_enabled = frappe.db.get_value(
+            "Sales Invoice", {"ewaybill": ["is", "set"]}
+        )
+
+    else:
+        e_waybill_enabled = frappe.db.get_single_value(
+            "GST Settings", "enable_e_waybill"
+        )
+
+    if not e_waybill_enabled:
+        set_not_applicable_status()
         return
 
     set_generated_status()
