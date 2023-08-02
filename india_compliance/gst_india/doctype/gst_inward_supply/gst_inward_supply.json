@@ -132,7 +132,7 @@
    "fieldname": "classification",
    "fieldtype": "Select",
    "label": "Classification",
-   "options": "B2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nI"
+   "options": "B2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nIMPG\nIMPGSEZ"
   },
   {
    "fieldname": "section_break_osim",
@@ -360,7 +360,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-08-01 09:17:07.946611",
+ "modified": "2023-08-02 12:36:46.118841",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

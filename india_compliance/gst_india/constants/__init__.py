@@ -1669,25 +1669,11 @@ SALES_DOCTYPES = set(sales_doctypes)
 BUG_REPORT_URL = "https://github.com/resilient-tech/india-compliance/issues/new"
 E_INVOICE_MASTER_CODES_URL = "https://einvoice1.gst.gov.in/Others/MasterCodes"
 
-ORIGINAL_VS_AMENDED = (
-    {
-        "original": "B2B",
-        "amended": "B2BA",
-    },
-    {
-        "original": "CDNR",
-        "amended": "CDNRA",
-    },
-    {
-        "original": "ISD",
-        "amended": "ISDA",
-    },
-    {
-        "original": "IMPG",
-        "amended": "",
-    },
-    {
-        "original": "IMPGSEZ",
-        "amended": "",
-    },
-)
+ORIGINAL_VS_AMENDED = {
+    # original: amended
+    "B2B": "B2BA",
+    "CDNR": "CDNRA",
+    "ISD": "ISDA",
+    "IMPG": "",
+    "IMPGSEZ": "",
+}
