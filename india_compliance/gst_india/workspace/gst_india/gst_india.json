@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"3-HlWqdkco\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Summary</b></span>\",\"col\":12}},{\"id\":\"5wHVnb2VB-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Invoices\",\"col\":3}},{\"id\":\"FT76_s4_M1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice Cancelled But Not e-Invoice\",\"col\":3}},{\"id\":\"ROouz1137a\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pSkSY7vg5b\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"kJscjOHSLN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"id\":\"BT3ZIyt2_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1\",\"col\":3}},{\"id\":\"fVgN1kK1r6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"id\":\"-G2gVutaOP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"id\":\"sEPHpNM3bl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"id\":\"bVd6Hbw3Yp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"oN0FbtHAdc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"id\":\"doCaNmtmY8\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"id\":\"Emy7VbsSYq\",\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"id\":\"2FUZmTJKVp\",\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}}]",
+ "content": "[{\"id\":\"3-HlWqdkco\",\"type\":\"header\",\"data\":{\"text\":\"<span style=\\\"font-size: 18px;\\\"><b>Exceptions</b></span>\",\"col\":12}},{\"id\":\"5wHVnb2VB-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Invoices\",\"col\":3}},{\"id\":\"FT76_s4_M1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice Cancelled, e-Invoice Active\",\"col\":3}},{\"id\":\"ROouz1137a\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pSkSY7vg5b\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"kJscjOHSLN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"id\":\"BT3ZIyt2_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1\",\"col\":3}},{\"id\":\"fVgN1kK1r6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"id\":\"-G2gVutaOP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"id\":\"sEPHpNM3bl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"id\":\"bVd6Hbw3Yp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"oN0FbtHAdc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"id\":\"doCaNmtmY8\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"id\":\"Emy7VbsSYq\",\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"id\":\"2FUZmTJKVp\",\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}}]",
  "creation": "2022-02-28 19:04:58.655348",
  "custom_blocks": [],
  "docstatus": 0,
@@ -112,7 +112,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Other GST Reports",
-   "link_count": 6,
+   "link_count": 5,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -122,6 +122,26 @@
    "label": "e-Invoice Summary",
    "link_count": 0,
    "link_to": "e-Invoice Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GSTR-3B Details",
+   "link_count": 0,
+   "link_to": "GSTR-3B Details",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Balance",
+   "link_count": 0,
+   "link_to": "GST Balance",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
@@ -139,51 +159,21 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "GST Balance",
-   "link_count": 0,
-   "link_to": "GST Balance",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GSTR-1",
-   "link_count": 0,
-   "link_to": "GSTR-1",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Audit Trail",
    "link_count": 0,
    "link_to": "Audit Trail",
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "GSTR-3B Details",
-   "link_count": 0,
-   "link_to": "GSTR-3B Details",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2023-07-28 12:07:56.559569",
+ "modified": "2023-08-01 15:59:18.705375",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
  "number_cards": [
   {
-   "label": "Invoice Cancelled But Not e-Invoice",
+   "label": "Invoice Cancelled, e-Invoice Active",
    "number_card_name": "Invoice Cancelled But Not e-Invoice"
   },
   {

@@ -1,4 +1,5 @@
 {
+ "color": "#ECAD4B",
  "creation": "2023-07-25 15:10:39.976867",
  "docstatus": 0,
  "doctype": "Number Card",
@@ -9,8 +10,8 @@
  "is_public": 1,
  "is_standard": 1,
  "label": "Pending e-Invoices",
- "method": "india_compliance.gst_india.utils.workspace_summary.get_pending_e_invoices_count",
- "modified": "2023-07-25 18:42:49.271286",
+ "method": "india_compliance.gst_india.number_card.number_card.get_pending_e_invoices_count",
+ "modified": "2023-08-01 15:58:18.662645",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Pending e-Invoices",
