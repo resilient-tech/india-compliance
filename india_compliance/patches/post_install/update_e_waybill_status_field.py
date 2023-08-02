@@ -1,18 +1,14 @@
 import frappe
 from frappe.utils import add_days, nowdate
 
+CHUNK_SIZE = 100000
+
 
 def execute():
     # check if e-waybill is enabled
-    if frappe.flags.in_install:
-        e_waybill_enabled = frappe.db.get_value(
-            "Sales Invoice", {"ewaybill": ["is", "set"]}
-        )
-
-    else:
-        e_waybill_enabled = frappe.db.get_single_value(
-            "GST Settings", "enable_e_waybill"
-        )
+    e_waybill_enabled = frappe.db.get_value(
+        "Sales Invoice", {"ewaybill": ["is", "set"]}
+    )
 
     if not e_waybill_enabled:
         set_not_applicable_status()
@@ -25,28 +21,53 @@ def execute():
 
 
 def set_generated_status():
-    frappe.db.set_value(
-        "Sales Invoice",
-        {"ewaybill": ["is", "set"]},
-        "e_waybill_status",
-        "Generated",
-    )
+    filters = {
+        "ewaybill": ["is", "set"],
+        "docstatus": 1,
+        "e_waybill_status": ["is", "not set"],
+    }
+    update_e_waybill_status(filters, "Generated")
 
 
 def set_cancelled_status():
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     e_waybill_log = frappe.qb.DocType("e-Waybill Log")
 
-    frappe.qb.update(sales_invoice).join(e_waybill_log).on(
-        sales_invoice.name == e_waybill_log.reference_name
-    ).set(sales_invoice.e_waybill_status, "Cancelled").where(
-        ((sales_invoice.ewaybill == "") | (sales_invoice.ewaybill.isnull()))
-        & (e_waybill_log.is_cancelled == 1)
-    ).run()
+    cancelled_invoice = (
+        frappe.qb.from_(sales_invoice)
+        .join(e_waybill_log)
+        .on(sales_invoice.name == e_waybill_log.reference_name)
+        .select(sales_invoice.name)
+        .where(
+            ((sales_invoice.ewaybill == "") | (sales_invoice.ewaybill.isnull()))
+            & (e_waybill_log.is_cancelled == 1)
+            & (sales_invoice.e_waybill_status.isnull())
+        )
+        .run()
+    )
+
+    cancelled_invoice = [item[0] for item in cancelled_invoice]
+
+    filters = {
+        "name": ["in", cancelled_invoice],
+        "e_waybill_status": ["is", "not set"],
+    }
+
+    update_e_waybill_status(filters, "Cancelled")
 
 
 def set_pending_status():
-    old_invoice_date = add_days(nowdate(), -30)
+    e_waybill_applicable = True
+
+    if not frappe.flags.in_install:
+        e_waybill_applicable = frappe.db.get_single_value(
+            "GST Settings", "enable_e_waybill"
+        )
+
+    if not e_waybill_applicable:
+        return
+
+    from_date = add_days(nowdate(), -30)
     e_waybill_threshold = frappe.db.get_single_value(
         "GST Settings", "e_waybill_threshold"
     )
@@ -60,7 +81,7 @@ def set_pending_status():
         ((sales_invoice.ewaybill == "") | (sales_invoice.ewaybill.isnull()))
         & (sales_invoice.e_waybill_status.isnull())
         & (sales_invoice.docstatus == 1)
-        & (sales_invoice.posting_date >= old_invoice_date)
+        & (sales_invoice.posting_date >= from_date)
         & (sales_invoice.base_grand_total >= e_waybill_threshold)
         & (
             (sales_invoice_item.gst_hsn_code != "")
@@ -74,13 +95,22 @@ def set_pending_status():
 
 
 def set_not_applicable_status():
-    frappe.db.set_value(
-        "Sales Invoice",
-        {
-            "e_waybill_status": ["is", "not set"],
-            "ewaybill": ["is", "not set"],
-            "docstatus": 1,
-        },
-        "e_waybill_status",
-        "Not Applicable",
-    )
+    filters = {
+        "ewaybill": ["is", "not set"],
+        "docstatus": ["!=", 0],
+        "e_waybill_status": ["is", "not set"],
+    }
+
+    update_e_waybill_status(filters, "Not Applicable")
+
+
+def update_e_waybill_status(filters, status):
+    doctype = "Sales Invoice"
+    query = frappe.qb.get_query(
+        "Sales Invoice", filters=filters, update=True, validate_filters=True
+    ).limit(CHUNK_SIZE)
+    query = query.set("e_waybill_status", status)
+
+    while frappe.db.exists(doctype, filters):
+        query.run()
+        frappe.db.commit()

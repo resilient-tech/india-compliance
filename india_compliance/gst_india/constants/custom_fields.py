@@ -824,7 +824,7 @@ E_WAYBILL_SI_FIELDS = [
         "no_copy": 1,
         "translatable": 1,
         "allow_on_submit": 1,
-        "depends_on": "eval:doc.docstatus === 1",
+        "depends_on": "eval:doc.docstatus == 1 && !doc.ewaybill || in_list(['','Pending', 'Not Applicable'], doc.e_waybill_status)",
     },
     *E_WAYBILL_DN_FIELDS,
 ]

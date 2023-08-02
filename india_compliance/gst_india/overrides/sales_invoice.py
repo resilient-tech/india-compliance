@@ -73,7 +73,7 @@ def validate(doc, method=None):
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
-    set_e_waybill_status(doc, method, gst_settings)
+    set_e_waybill_status(doc, gst_settings)
 
 
 def validate_invoice_number(doc):
@@ -247,23 +247,16 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
     return data
 
 
-def set_e_waybill_status(doc, method=None, gst_settings=None):
+def set_e_waybill_status(doc, gst_settings=None):
     if doc.docstatus != 1:
         return
 
-    if doc.ewaybill:
-        e_waybill_status = "Generated"
-
-    elif is_e_waybill_applicable(doc, gst_settings) and doc.e_waybill_status not in (
-        "Cancelled",
-        "Not Applicable",
-    ):
-        e_waybill_status = "Pending"
-
-    elif doc.e_waybill_status not in ("Cancelled", "Pending"):
-        e_waybill_status = "Not Applicable"
-
-    else:
+    if doc.e_waybill_status:
         return
+
+    e_waybill_status = "Not Applicable"
+
+    if is_e_waybill_applicable(doc, gst_settings):
+        e_waybill_status = "Pending"
 
     doc.update({"e_waybill_status": e_waybill_status})

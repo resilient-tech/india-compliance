@@ -30,6 +30,10 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         gst_invoice_warning(frm);
+
+        if (frm.doc.e_waybill_status === "Generated" && frm.doc.ewaybill) {
+            frm.set_df_property("e_waybill_status", "read_only", 1);
+        }
     },
 });
 
