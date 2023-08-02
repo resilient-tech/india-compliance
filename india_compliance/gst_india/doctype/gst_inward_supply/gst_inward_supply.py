@@ -26,12 +26,12 @@ class GSTInwardSupply(Document):
             return
 
         if self.is_amended:
-            update_amended_doc(self)
+            update_doc_as_amended(self)
         else:
             _update_doc_for_amendment(self)
 
 
-def update_amended_doc(doc):
+def update_doc_as_amended(doc):
     # Handle case where is_amended is True
     original_inward = get_gst_inward_supply(
         bill_no=doc.original_bill_no,
