@@ -4,8 +4,10 @@ from titlecase import titlecase as _titlecase
 
 import frappe
 from frappe import _
+from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_timezone
+from erpnext.accounts.party import get_default_contact
 
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
@@ -93,6 +95,36 @@ def get_gstin_list(party, party_type="Company"):
         gstin_list.insert(0, default_gstin)
 
     return gstin_list
+
+
+def get_party_by_gstin(gstin, party_type="Supplier"):
+    if not gstin:
+        return
+
+    if party := frappe.db.get_value(party_type, {"gstin": gstin}, "name"):
+        return party
+
+    address = frappe.qb.DocType("Address")
+    links = frappe.qb.DocType("Dynamic Link")
+    party = (
+        frappe.qb.from_(address)
+        .join(links)
+        .on(links.parent == address.name)
+        .select(links.link_name)
+        .where(links.link_doctype == party_type)
+        .where(address.gstin == gstin)
+        .limit(1)
+        .run(pluck=1)
+    )
+
+    if party:
+        return party[0]
+
+
+# ToDo: Currently no usage found. Remove if no usage in future
+def get_party_contact_details(party, party_type="Supplier"):
+    if party and (contact := get_default_contact(party_type, party)):
+        return get_contact_details(contact)
 
 
 def validate_gstin(

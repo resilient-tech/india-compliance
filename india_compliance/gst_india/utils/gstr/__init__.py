@@ -14,7 +14,7 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
     toggle_scheduled_jobs,
 )
-from india_compliance.gst_india.utils import get_party_for_gstin
+from india_compliance.gst_india.utils import get_party_by_gstin
 from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
 
 
@@ -266,7 +266,7 @@ def _save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
     :param gen_date_2b: str (Date when GSTR 2B was generated)
     """
 
-    company = get_party_for_gstin(gstin, "Company")
+    company = get_party_by_gstin(gstin, "Company")
     for category in GSTRCategory:
         gstr = get_data_handler(return_type, category)
         gstr(company, gstin, return_period, json_data, gen_date_2b).create_transactions(
