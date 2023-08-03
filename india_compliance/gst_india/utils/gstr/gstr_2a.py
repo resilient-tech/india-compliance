@@ -21,7 +21,7 @@ class GSTR2a(GSTR):
             "gstr_3b_filled": API_VALUES_MAP.Y_N_to_check.get(supplier.cfs3b),
             "gstr_1_filing_date": parse_datetime(supplier.fldtr1),
             "registration_cancel_date": parse_datetime(supplier.dtcancel),
-            "sup_return_period": map_date_format(supplier.flprdr1, "%b-%y", "%m%Y"),
+            "sup_return_period": map_date_format(supplier.flprdr1),
         }
 
     # item details are in item_det for GSTR2a
@@ -62,7 +62,7 @@ class GSTR2aB2B(GSTR2a):
             "bill_date": parse_datetime(invoice.idt, day_first=True),
             "document_value": invoice.val,
             "place_of_supply": API_VALUES_MAP.states.get(invoice.pos),
-            "other_return_period": map_date_format(invoice.aspd, "%b-%y", "%m%Y"),
+            "other_return_period": map_date_format(invoice.aspd),
             "amendment_type": API_VALUES_MAP.amend_type.get(invoice.atyp),
             "is_reverse_charge": API_VALUES_MAP.Y_N_to_check.get(invoice.rchrg),
             "diffpercent": API_VALUES_MAP.diff_percentage.get(invoice.diff_percent),
@@ -126,7 +126,7 @@ class GSTR2aISD(GSTR2a):
             "bill_no": invoice.docnum,
             "bill_date": parse_datetime(invoice.docdt, day_first=True),
             "itc_availability": API_VALUES_MAP.yes_no.get(invoice.itc_elg),
-            "other_return_period": map_date_format(invoice.aspd, "%b-%y", "%m%Y"),
+            "other_return_period": map_date_format(invoice.aspd),
             "is_amended": 1 if invoice.atyp else 0,
             "amendment_type": API_VALUES_MAP.amend_type.get(invoice.atyp),
             "document_value": invoice.iamt + invoice.camt + invoice.samt + invoice.cess,

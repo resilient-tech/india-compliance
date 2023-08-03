@@ -2,6 +2,15 @@ import frappe
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 
+ORIGINAL_VS_AMENDED = {
+    # original: amended
+    "B2B": "B2BA",
+    "CDNR": "CDNRA",
+    "ISD": "ISDA",
+    "IMPG": "",
+    "IMPGSEZ": "",
+}
+
 # Map of API values to doctype values
 API_VALUES_MAP = frappe._dict(
     {

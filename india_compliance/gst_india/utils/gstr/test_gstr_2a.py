@@ -25,10 +25,7 @@ class TestGSTRMixin:
         return frappe.get_doc(self.doctype, docname)
 
     def assertImportLog(self, category=None):
-        if category:
-            return_type = ReturnType.GSTR2A
-        else:
-            return_type = ReturnType.GSTR2B
+        return_type = ReturnType.GSTR2A if category else ReturnType.GSTR2B
 
         filters = {"gstin": self.gstin, "return_type": return_type}
         if category:
