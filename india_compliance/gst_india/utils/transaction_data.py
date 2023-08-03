@@ -26,7 +26,7 @@ from india_compliance.income_tax_india.overrides.tax_withholding_category import
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
     2: re.compile(r"[^A-Za-z0-9\-\/. ]"),
-    3: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
+    3: re.compile(r"[^A-Za-z0-9@#\-\/,&.(*) ]"),
 }
 
 
