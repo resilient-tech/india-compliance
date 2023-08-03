@@ -2,15 +2,12 @@ from datetime import datetime
 
 import frappe
 
+from india_compliance.gst_india.constants.gstr import API_VALUES_MAP
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr.gstr import (
-    API_VALUES_MAP,
-    GSTR,
-    get_mapped_value,
-)
+from india_compliance.gst_india.utils.gstr.gstr import GSTR
 
 
-def map_date_format(date_str, source_format, target_format):
+def map_date_format(date_str, source_format="%b-%y", target_format="%m%Y"):
     return date_str and datetime.strptime(date_str, source_format).strftime(
         target_format
     )
@@ -68,9 +65,7 @@ class GSTR2aB2B(GSTR2a):
             "other_return_period": map_date_format(invoice.aspd, "%b-%y", "%m%Y"),
             "amendment_type": API_VALUES_MAP.amend_type.get(invoice.atyp),
             "is_reverse_charge": API_VALUES_MAP.Y_N_to_check.get(invoice.rchrg),
-            "diffpercent": get_mapped_value(
-                invoice.diff_percent, {1: 1, 0.65: 0.65, None: 1}
-            ),
+            "diffpercent": API_VALUES_MAP.diff_percentage.get(invoice.diff_percent),
             "irn_source": invoice.srctyp,
             "irn_number": invoice.irn,
             "irn_gen_date": parse_datetime(invoice.irngendate, day_first=True),

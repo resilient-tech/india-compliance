@@ -1,32 +1,7 @@
 import frappe
 
-from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
-)
-
-# Map of API values to doctype values
-API_VALUES_MAP = frappe._dict(
-    {
-        "Y_N_to_check": {"Y": 1, "N": 0},
-        "yes_no": {"Y": "Yes", "N": "No"},
-        "gst_category": {
-            "R": "Regular",
-            "SEZWP": "SEZ supplies with payment of tax",
-            "SEZWOP": "SEZ supplies with out payment of tax",
-            "DE": "Deemed exports",
-            "CBW": "Intra-State Supplies attracting IGST",
-        },
-        "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
-        "note_type": {"C": "Credit Note", "D": "Debit Note"},
-        "isd_type_2a": {"ISDCN": "ISD Credit Note", "ISD": "ISD Invoice"},
-        "isd_type_2b": {"ISDC": "ISD Credit Note", "ISDI": "ISD Invoice"},
-        "amend_type": {
-            "R": "Receiver GSTIN Amended",
-            "N": "Invoice Number Amended",
-            "D": "Other Details Amended",
-        },
-    }
 )
 
 
@@ -62,6 +37,7 @@ class GSTR:
                     "current_progress": current_transaction * 100 / total_transactions,
                     "return_period": self.return_period,
                 },
+                user=frappe.session.user,
             )
 
             if not current_transaction % 2000:
@@ -108,7 +84,3 @@ class GSTR:
 
     def get_transaction_item(self, item):
         return frappe._dict()
-
-
-def get_mapped_value(value, map):
-    return map.get(value)

@@ -1,11 +1,8 @@
 import frappe
 
+from india_compliance.gst_india.constants.gstr import API_VALUES_MAP
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr.gstr import (
-    API_VALUES_MAP,
-    GSTR,
-    get_mapped_value,
-)
+from india_compliance.gst_india.utils.gstr.gstr import GSTR
 
 
 class GSTR2b(GSTR):
@@ -56,19 +53,10 @@ class GSTR2bB2B(GSTR2b):
             "itc_availability": {**API_VALUES_MAP.yes_no, "T": "Temporary"}.get(
                 invoice.itcavl
             ),
-            "reason_itc_unavailability": get_mapped_value(
-                invoice.rsn,
-                {
-                    "P": (
-                        "POS and supplier state are same but recipient state is"
-                        " different"
-                    ),
-                    "C": "Return filed post annual cut-off",
-                },
+            "reason_itc_unavailability": API_VALUES_MAP.itc_unavailability_reason.get(
+                invoice.rsn
             ),
-            "diffpercent": get_mapped_value(
-                invoice.diffpercent, {1: 1, 0.65: 0.65, None: 1}
-            ),
+            "diffpercent": API_VALUES_MAP.diff_percentage.get(invoice.diffpercent),
             "irn_source": invoice.srctyp,
             "irn_number": invoice.irn,
             "irn_gen_date": parse_datetime(invoice.irngendate, day_first=True),
