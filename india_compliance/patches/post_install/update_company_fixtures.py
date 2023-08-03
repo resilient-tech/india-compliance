@@ -14,7 +14,9 @@ This patch is used to create company fixtures for Indian Companies created befor
 
 
 def execute():
-    company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
+    company_list = frappe.get_all(
+        "Company", filters={"country": "India"}, pluck="name", order_by="lft asc"
+    )
     for company in company_list:
         # Income Tax fixtures
         if not frappe.db.exists(
