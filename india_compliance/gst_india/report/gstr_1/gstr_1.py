@@ -424,10 +424,10 @@ class Gstr1Report(object):
                 self.nil_exempt_non_gst[d.parent][2] += d.get("taxable_value", 0)
 
     def get_items_based_on_tax_rate(self):
-        self.tax_details = frappe.db.sql(
+        tax_details = frappe.db.sql(
             """
 			select
-				parent, account_head, item_wise_tax_detail, base_tax_amount_after_discount_amount
+				parent, account_head, item_wise_tax_detail
 			from `tab%s`
 			where
 				parenttype = %s and docstatus = 1
@@ -440,63 +440,49 @@ class Gstr1Report(object):
 
         self.items_based_on_tax_rate = {}
         self.invoice_cess = frappe._dict()
-        self.cgst_sgst_invoices = []
 
-        unidentified_gst_accounts = []
-        unidentified_gst_accounts_invoice = []
-        for parent, account, item_wise_tax_detail, tax_amount in self.tax_details:
-            if item_wise_tax_detail:
-                try:
-                    item_wise_tax_detail = json.loads(item_wise_tax_detail)
-                    cgst_or_sgst = False
-                    cess = False
-                    if (
-                        account == self.gst_accounts.cgst_account
-                        or account == self.gst_accounts.sgst_account
-                    ):
-                        cgst_or_sgst = True
+        unidentified_gst_accounts = set()
+        unidentified_gst_accounts_invoice = set()
+        for parent, account, item_wise_tax_detail in tax_details:
+            if not item_wise_tax_detail:
+                continue
 
-                    if account == self.gst_accounts.cess_account:
-                        cess = True
+            if account not in self.gst_accounts.values():
+                unidentified_gst_accounts.add(account)
+                unidentified_gst_accounts_invoice.add(parent)
+                continue
 
-                    if not (
-                        cgst_or_sgst
-                        or account == self.gst_accounts.igst_account
-                        or cess
-                    ):
-                        if (
-                            "gst" in account.lower()
-                            and account not in unidentified_gst_accounts
-                        ):
-                            unidentified_gst_accounts.append(account)
-                            unidentified_gst_accounts_invoice.append(parent)
-                        continue
+            try:
+                item_wise_tax_detail = json.loads(item_wise_tax_detail)
+            except ValueError:
+                continue
 
-                    for item_code, tax_amounts in item_wise_tax_detail.items():
-                        tax_rate = tax_amounts[0]
-                        tax_wise_amount = tax_amounts[1]
+            is_cess = account == self.gst_accounts.cess_account
+            is_cgst_or_sgst = (
+                account == self.gst_accounts.cgst_account
+                or account == self.gst_accounts.sgst_account
+            )
 
-                        if cess:
-                            self.invoice_cess.setdefault(parent, {})
-                            self.invoice_cess[parent].setdefault(item_code, 0.0)
-                            self.invoice_cess[parent][item_code] += tax_wise_amount
-                            continue
+            for item_code, tax_amounts in item_wise_tax_detail.items():
+                tax_rate = tax_amounts[0]
 
-                        if not tax_rate and parent not in self.nil_exempt_non_gst:
-                            continue
-
-                        if cgst_or_sgst:
-                            tax_rate *= 2
-                            if parent not in self.cgst_sgst_invoices:
-                                self.cgst_sgst_invoices.append(parent)
-
-                        rate_based_dict = self.items_based_on_tax_rate.setdefault(
-                            parent, {}
-                        ).setdefault(tax_rate, [])
-                        if item_code not in rate_based_dict:
-                            rate_based_dict.append(item_code)
-                except ValueError:
+                if not tax_rate and parent not in self.nil_exempt_non_gst:
                     continue
+
+                if is_cess:
+                    self.invoice_cess.setdefault(parent, {})
+                    self.invoice_cess[parent].setdefault(item_code, 0.0)
+                    self.invoice_cess[parent][item_code] += tax_amounts[1]
+                    continue
+
+                if is_cgst_or_sgst:
+                    tax_rate *= 2
+
+                (
+                    self.items_based_on_tax_rate.setdefault(parent, {})
+                    .setdefault(tax_rate, set())
+                    .add(item_code)
+                )
 
         if unidentified_gst_accounts:
             frappe.msgprint(
