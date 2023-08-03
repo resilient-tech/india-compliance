@@ -33,7 +33,7 @@ class GSTR2a(GSTR):
             self.get_transaction_item(
                 frappe._dict(item.get("itm_det", {})), item.get("num", 0)
             )
-            for item in invoice.get(self.get_key("items_key"))
+            for item in invoice.get(self.keys_map.get("items_key"))
         ]
 
     def get_transaction_item(self, item, item_number=None):
@@ -51,8 +51,12 @@ class GSTR2a(GSTR):
 class GSTR2aB2B(GSTR2a):
     def setup(self):
         super().setup()
-        self.set_key("invoice_key", "inv")
-        self.set_key("items_key", "itms")
+        self.keys_map.update(
+            {
+                "invoice_key": "inv",
+                "items_key": "itms",
+            }
+        )
 
     def get_invoice_details(self, invoice):
         return {
@@ -89,7 +93,7 @@ class GSTR2aB2BA(GSTR2aB2B):
 class GSTR2aCDNR(GSTR2aB2B):
     def setup(self):
         super().setup()
-        self.set_key("invoice_key", "nt")
+        self.keys_map["invoice_key"] = "nt"
 
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
@@ -119,7 +123,7 @@ class GSTR2aCDNRA(GSTR2aCDNR):
 class GSTR2aISD(GSTR2a):
     def setup(self):
         super().setup()
-        self.set_key("invoice_key", "doclist")
+        self.keys_map["invoice_key"] = "doclist"
 
     def get_invoice_details(self, invoice):
         return {

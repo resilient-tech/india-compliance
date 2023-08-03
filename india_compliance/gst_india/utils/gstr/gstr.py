@@ -31,15 +31,14 @@ API_VALUES_MAP = frappe._dict(
 
 
 class GSTR:
-    # Maps of API keys to doctype fields
-    KEY_MAPS = frappe._dict()
-
     def __init__(self, company, gstin, return_period, data, gen_date_2b):
         self.company = company
         self.gstin = gstin
         self.return_period = return_period
         self._data = data
         self.gen_date_2b = gen_date_2b
+        # Maps of API keys to doctype fields
+        self.keys_map = frappe._dict()
         self.setup()
 
     def setup(self):
@@ -81,7 +80,7 @@ class GSTR:
             self.get_transaction(
                 category, frappe._dict(supplier), frappe._dict(invoice)
             )
-            for invoice in supplier.get(self.get_key("invoice_key"))
+            for invoice in supplier.get(self.keys_map.get("invoice_key"))
         ]
 
     def get_transaction(self, category, supplier, invoice):
@@ -104,17 +103,11 @@ class GSTR:
     def get_transaction_items(self, invoice):
         return [
             self.get_transaction_item(frappe._dict(item))
-            for item in invoice.get(self.get_key("items_key"))
+            for item in invoice.get(self.keys_map.get("items_key"))
         ]
 
     def get_transaction_item(self, item):
         return frappe._dict()
-
-    def get_key(self, key):
-        return self.KEY_MAPS.get(key)
-
-    def set_key(self, key, value):
-        self.KEY_MAPS[key] = value
 
 
 def get_mapped_value(value, map):

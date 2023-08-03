@@ -38,8 +38,12 @@ class GSTR2b(GSTR):
 class GSTR2bB2B(GSTR2b):
     def setup(self):
         super().setup()
-        self.set_key("invoice_key", "inv")
-        self.set_key("items_key", "items")
+        self.keys_map.update(
+            {
+                "invoice_key": "inv",
+                "items_key": "items",
+            }
+        )
 
     def get_invoice_details(self, invoice):
         return {
@@ -87,7 +91,7 @@ class GSTR2bB2BA(GSTR2bB2B):
 class GSTR2bCDNR(GSTR2bB2B):
     def setup(self):
         super().setup()
-        self.set_key("invoice_key", "nt")
+        self.keys_map["invoice_key"] = "nt"
 
     def get_invoice_details(self, invoice):
         invoice_details = super().get_invoice_details(invoice)
@@ -117,7 +121,7 @@ class GSTR2bCDNRA(GSTR2bCDNR):
 class GSTR2bISD(GSTR2b):
     def setup(self):
         super().setup()
-        self.set_key("invoice_key", "doclist")
+        self.keys_map["invoice_key"] = "doclist"
 
     def get_invoice_details(self, invoice):
         return {
@@ -149,7 +153,7 @@ class GSTR2bISDA(GSTR2bISD):
 class GSTR2bIMPGSEZ(GSTR2b):
     def setup(self):
         super().setup()
-        self.set_key("invoice_key", "boe")
+        self.keys_map["invoice_key"] = "boe"
 
     def get_invoice_details(self, invoice):
         return {
