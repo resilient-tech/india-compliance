@@ -57,15 +57,13 @@ def set_cancelled_status():
 
 
 def set_pending_status():
-    e_waybill_applicable = True
-
     if not frappe.flags.in_install:
         e_waybill_applicable = frappe.db.get_single_value(
             "GST Settings", "enable_e_waybill"
         )
 
-    if not e_waybill_applicable:
-        return
+        if not e_waybill_applicable:
+            return
 
     from_date = add_days(nowdate(), -30)
     e_waybill_threshold = frappe.db.get_single_value(
@@ -106,10 +104,13 @@ def set_not_applicable_status():
 
 def update_e_waybill_status(filters, status):
     doctype = "Sales Invoice"
-    query = frappe.qb.get_query(
-        "Sales Invoice", filters=filters, update=True, validate_filters=True
-    ).limit(CHUNK_SIZE)
-    query = query.set("e_waybill_status", status)
+    query = (
+        frappe.qb.get_query(
+            doctype, filters=filters, update=True, validate_filters=True
+        )
+        .limit(CHUNK_SIZE)
+        .set("e_waybill_status", status)
+    )
 
     while frappe.db.exists(doctype, filters):
         query.run()

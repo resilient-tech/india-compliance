@@ -248,10 +248,7 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
 
 
 def set_e_waybill_status(doc, gst_settings=None):
-    if doc.docstatus != 1:
-        return
-
-    if doc.e_waybill_status:
+    if doc.docstatus != 1 or doc.e_waybill_status:
         return
 
     e_waybill_status = "Not Applicable"
