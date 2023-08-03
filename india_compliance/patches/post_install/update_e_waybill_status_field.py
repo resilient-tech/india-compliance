@@ -25,6 +25,7 @@ def set_generated_status():
         "ewaybill": ["is", "set"],
         "docstatus": 1,
         "e_waybill_status": ["is", "not set"],
+        "is_opening": ["!=", "Yes"],
     }
     update_e_waybill_status(filters, "Generated")
 
@@ -51,6 +52,7 @@ def set_cancelled_status():
     filters = {
         "name": ["in", cancelled_invoice],
         "e_waybill_status": ["is", "not set"],
+        "is_opening": ["!=", "Yes"],
     }
 
     update_e_waybill_status(filters, "Cancelled")
@@ -89,6 +91,7 @@ def set_pending_status():
         & (sales_invoice.company_gstin != sales_invoice.billing_address_gstin)
         & (sales_invoice.is_return == 0)
         & (sales_invoice.is_debit_note == 0)
+        & (sales_invoice.is_opening != "Yes")
     ).run()
 
 
