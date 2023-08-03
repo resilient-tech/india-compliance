@@ -51,11 +51,7 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (
-                    has_e_waybill_threshold_met(frm) &&
-                    !frm.doc.is_return &&
-                    !frm.doc.is_debit_note
-                ) {
+                if (frm.doc.e_waybill_status === "Pending") {
                     frm.dashboard.add_comment(
                         __(
                             "e-Waybill is applicable for this invoice, but not yet generated or updated."
