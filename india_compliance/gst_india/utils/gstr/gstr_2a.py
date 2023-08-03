@@ -70,7 +70,7 @@ class GSTR2aB2B(GSTR2a):
             "is_reverse_charge": get_mapped_value(
                 invoice.rchrg, self.VALUE_MAPS.Y_N_to_check
             ),
-            "diffprcnt": get_mapped_value(
+            "diffpercent": get_mapped_value(
                 invoice.diff_percent, {1: 1, 0.65: 0.65, None: 1}
             ),
             "irn_source": invoice.srctyp,

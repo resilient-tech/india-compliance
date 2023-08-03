@@ -60,8 +60,8 @@ class GSTR2bB2B(GSTR2b):
                     "C": "Return filed post annual cut-off",
                 },
             ),
-            "diffprcnt": get_mapped_value(
-                invoice.diffprcnt, {1: 1, 0.65: 0.65, None: 1}
+            "diffpercent": get_mapped_value(
+                invoice.diffpercent, {1: 1, 0.65: 0.65, None: 1}
             ),
             "irn_source": invoice.srctyp,
             "irn_number": invoice.irn,

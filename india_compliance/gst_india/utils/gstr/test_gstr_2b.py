@@ -51,7 +51,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "reason_itc_unavailability": (
                     "POS and supplier state are same but recipient state is different"
                 ),
-                "diffprcnt": "1",
+                "diffpercent": "1",
                 "irn_source": "e-Invoice",
                 "irn_number": (
                     "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
@@ -94,7 +94,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "reason_itc_unavailability": (
                     "POS and supplier state are same but recipient state is different"
                 ),
-                "diffprcnt": "1",
+                "diffpercent": "1",
                 "original_bill_no": "S008400",
                 "original_bill_date": date(2016, 11, 24),
                 "doc_type": "Invoice",
@@ -131,7 +131,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "is_reverse_charge": 0,
                 "itc_availability": "No",
                 "reason_itc_unavailability": "Return filed post annual cut-off",
-                "diffprcnt": "1",
+                "diffpercent": "1",
                 "irn_source": "e-Invoice",
                 "irn_number": (
                     "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
@@ -174,7 +174,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "is_reverse_charge": 0,
                 "itc_availability": "No",
                 "reason_itc_unavailability": "Return filed post annual cut-off",
-                "diffprcnt": "1",
+                "diffpercent": "1",
                 "doc_type": "Credit Note",
                 "items": [
                     {

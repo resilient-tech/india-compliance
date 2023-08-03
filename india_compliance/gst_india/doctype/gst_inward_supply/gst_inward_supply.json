@@ -10,7 +10,7 @@
  "field_order": [
   "company",
   "column_break_frhe",
-  "title",
+  "company_gstin",
   "supplier_details_section",
   "supplier_name",
   "column_break_rawl",
@@ -66,12 +66,6 @@
   "original_bill_date"
  ],
  "fields": [
-  {
-   "fieldname": "title",
-   "fieldtype": "Data",
-   "label": "Company GSTIN",
-   "read_only": 1
-  },
   {
    "fieldname": "company",
    "fieldtype": "Link",
@@ -316,7 +310,7 @@
   },
   {
    "fieldname": "return_period_2b",
-   "fieldtype": "Date",
+   "fieldtype": "Data",
    "label": "2B Return Period"
   },
   {
@@ -356,11 +350,17 @@
    "fieldname": "original_bill_date",
    "fieldtype": "Date",
    "label": "Original Document Date"
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Data",
+   "label": "Company GSTIN",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-08-02 12:36:46.118841",
+ "modified": "2023-08-03 10:19:28.554363",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
