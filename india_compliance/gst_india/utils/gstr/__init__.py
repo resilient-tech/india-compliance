@@ -70,6 +70,8 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                     "return_period": return_period,
                     "is_last_period": is_last_period,
                 },
+                # ToDo: check if user can be pass
+                user=frappe.session.user,
             )
 
             # call api only if data is available
@@ -120,7 +122,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                         "Data received seems to be invalid from the GST Portal. Please try"
                         " again or raise support ticket."
                     ),
-                    title="Invalid Response Received.",
+                    title=_("Invalid Response Received."),
                 )
 
             # making consistent with GSTR2a upload
@@ -148,6 +150,8 @@ def download_gstr_2b(gstin, return_periods, otp=None):
                 "return_period": return_period,
                 "is_last_period": is_last_period,
             },
+            # ToDo: check if user can be pass
+            user=frappe.session.user,
         )
 
         # TODO: skip if today is not greater than 14th return period's next months
@@ -201,7 +205,7 @@ def save_gstr_2a(gstin, return_period, json_data):
                 "Data received seems to be invalid from the GST Portal. Please try"
                 " again or raise support ticket."
             ),
-            title="Invalid Response Received.",
+            title=_("Invalid Response Received."),
         )
 
     for action, category in ACTIONS.items():
@@ -231,7 +235,7 @@ def save_gstr_2b(gstin, return_period, json_data):
                 "Data received seems to be invalid from the GST Portal. Please try"
                 " again or raise support ticket."
             ),
-            title="Invalid Response Received.",
+            title=_("Invalid Response Received."),
         )
 
     create_import_log(gstin, return_type.value, return_period)

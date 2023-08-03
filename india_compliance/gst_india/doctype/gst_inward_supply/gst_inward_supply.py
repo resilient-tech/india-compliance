@@ -163,7 +163,7 @@ def ensure_valid_match(doc, original):
                 get_link_to_form(original.link_doctype, original.link_name),
                 get_link_to_form("GST Inward Supply", original.name),
             ),
-            title="Invalid Match",
+            title=_("Invalid Match"),
         )
 
     doc.update(
