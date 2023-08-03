@@ -5,38 +5,34 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
     create_inward_supply,
 )
 
-
-def get_mapped_value(value, map):
-    return map.get(value)
+# Map of API values to doctype values
+API_VALUES_MAP = frappe._dict(
+    {
+        "Y_N_to_check": {"Y": 1, "N": 0},
+        "yes_no": {"Y": "Yes", "N": "No"},
+        "gst_category": {
+            "R": "Regular",
+            "SEZWP": "SEZ supplies with payment of tax",
+            "SEZWOP": "SEZ supplies with out payment of tax",
+            "DE": "Deemed exports",
+            "CBW": "Intra-State Supplies attracting IGST",
+        },
+        "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
+        "note_type": {"C": "Credit Note", "D": "Debit Note"},
+        "isd_type_2a": {"ISDCN": "ISD Credit Note", "ISD": "ISD Invoice"},
+        "isd_type_2b": {"ISDC": "ISD Credit Note", "ISDI": "ISD Invoice"},
+        "amend_type": {
+            "R": "Receiver GSTIN Amended",
+            "N": "Invoice Number Amended",
+            "D": "Other Details Amended",
+        },
+    }
+)
 
 
 class GSTR:
     # Maps of API keys to doctype fields
     KEY_MAPS = frappe._dict()
-
-    # Maps of API values to doctype values
-    VALUE_MAPS = frappe._dict(
-        {
-            "Y_N_to_check": {"Y": 1, "N": 0},
-            "yes_no": {"Y": "Yes", "N": "No"},
-            "gst_category": {
-                "R": "Regular",
-                "SEZWP": "SEZ supplies with payment of tax",
-                "SEZWOP": "SEZ supplies with out payment of tax",
-                "DE": "Deemed exports",
-                "CBW": "Intra-State Supplies attracting IGST",
-            },
-            "states": {value: f"{value}-{key}" for key, value in STATE_NUMBERS.items()},
-            "note_type": {"C": "Credit Note", "D": "Debit Note"},
-            "isd_type_2a": {"ISDCN": "ISD Credit Note", "ISD": "ISD Invoice"},
-            "isd_type_2b": {"ISDC": "ISD Credit Note", "ISDI": "ISD Invoice"},
-            "amend_type": {
-                "R": "Receiver GSTIN Amended",
-                "N": "Invoice Number Amended",
-                "D": "Other Details Amended",
-            },
-        }
-    )
 
     def __init__(self, company, gstin, return_period, data, gen_date_2b):
         self.company = company
@@ -119,3 +115,7 @@ class GSTR:
 
     def set_key(self, key, value):
         self.KEY_MAPS[key] = value
+
+
+def get_mapped_value(value, map):
+    return map.get(value)
