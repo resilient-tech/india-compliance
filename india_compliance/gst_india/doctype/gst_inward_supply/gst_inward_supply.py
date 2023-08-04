@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
 
-from india_compliance.gst_india.constants.gstr import ORIGINAL_VS_AMENDED
+from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 
 
 class GSTInwardSupply(Document):

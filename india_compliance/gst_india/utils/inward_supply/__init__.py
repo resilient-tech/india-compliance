@@ -15,7 +15,7 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     toggle_scheduled_jobs,
 )
 from india_compliance.gst_india.utils import get_party_by_gstin
-from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
+from india_compliance.gst_india.utils.inward_supply import gstr_2a, gstr_2b
 
 
 class ReturnType(Enum):

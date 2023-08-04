@@ -1,11 +1,10 @@
 import frappe
 
-from india_compliance.gst_india.constants.gstr import API_VALUES_MAP
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr.gstr import GSTR
+from india_compliance.gst_india.utils.inward_supply.inward_supply import InwardSupply
 
 
-class GSTR2b(GSTR):
+class GSTR2b(InwardSupply):
     def get_transaction(self, category, supplier, invoice):
         transaction = super().get_transaction(category, supplier, invoice)
         transaction.return_period_2b = self.return_period
@@ -45,18 +44,18 @@ class GSTR2bB2B(GSTR2b):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.inum,
-            "supply_type": API_VALUES_MAP.gst_category.get(invoice.typ),
+            "supply_type": self.API_VALUES_MAP.gst_category.get(invoice.typ),
             "bill_date": parse_datetime(invoice.dt, day_first=True),
             "document_value": invoice.val,
-            "place_of_supply": API_VALUES_MAP.states.get(invoice.pos),
-            "is_reverse_charge": API_VALUES_MAP.Y_N_to_check.get(invoice.rev),
-            "itc_availability": {**API_VALUES_MAP.yes_no, "T": "Temporary"}.get(
+            "place_of_supply": self.API_VALUES_MAP.states.get(invoice.pos),
+            "is_reverse_charge": self.API_VALUES_MAP.Y_N_to_check.get(invoice.rev),
+            "itc_availability": {**self.API_VALUES_MAP.yes_no, "T": "Temporary"}.get(
                 invoice.itcavl
             ),
-            "reason_itc_unavailability": API_VALUES_MAP.itc_unavailability_reason.get(
+            "reason_itc_unavailability": self.API_VALUES_MAP.itc_unavailability_reason.get(
                 invoice.rsn
             ),
-            "diffpercent": API_VALUES_MAP.diff_percentage.get(invoice.diffpercent),
+            "diffprcnt": self.API_VALUES_MAP.diff_percentage.get(invoice.diffprcnt),
             "irn_source": invoice.srctyp,
             "irn_number": invoice.irn,
             "irn_gen_date": parse_datetime(invoice.irngendate, day_first=True),
@@ -86,8 +85,8 @@ class GSTR2bCDNR(GSTR2bB2B):
         invoice_details.update(
             {
                 "bill_no": invoice.ntnum,
-                "doc_type": API_VALUES_MAP.note_type.get(invoice.typ),
-                "supply_type": API_VALUES_MAP.gst_category.get(invoice.suptyp),
+                "doc_type": self.API_VALUES_MAP.note_type.get(invoice.typ),
+                "supply_type": self.API_VALUES_MAP.gst_category.get(invoice.suptyp),
             }
         )
         return invoice_details
@@ -100,7 +99,7 @@ class GSTR2bCDNRA(GSTR2bCDNR):
             {
                 "original_bill_no": invoice.ontnum,
                 "original_bill_date": parse_datetime(invoice.ontdt, day_first=True),
-                "original_doc_type": API_VALUES_MAP.note_type.get(invoice.onttyp),
+                "original_doc_type": self.API_VALUES_MAP.note_type.get(invoice.onttyp),
             }
         )
         return invoice_details
@@ -113,10 +112,10 @@ class GSTR2bISD(GSTR2b):
 
     def get_invoice_details(self, invoice):
         return {
-            "doc_type": API_VALUES_MAP.isd_type_2b.get(invoice.doctyp),
+            "doc_type": self.API_VALUES_MAP.isd_type_2b.get(invoice.doctyp),
             "bill_no": invoice.docnum,
             "bill_date": parse_datetime(invoice.docdt, day_first=True),
-            "itc_availability": API_VALUES_MAP.yes_no.get(invoice.itcelg),
+            "itc_availability": self.API_VALUES_MAP.yes_no.get(invoice.itcelg),
             "document_value": invoice.igst + invoice.cgst + invoice.sgst + invoice.cess,
         }
 
@@ -132,7 +131,9 @@ class GSTR2bISDA(GSTR2bISD):
             {
                 "original_bill_no": invoice.odocnum,
                 "original_bill_date": parse_datetime(invoice.odocdt, day_first=True),
-                "original_doc_type": API_VALUES_MAP.isd_type_2b.get(invoice.odoctyp),
+                "original_doc_type": self.API_VALUES_MAP.isd_type_2b.get(
+                    invoice.odoctyp
+                ),
             }
         )
         return invoice_details
@@ -148,7 +149,7 @@ class GSTR2bIMPGSEZ(GSTR2b):
             "doc_type": "Bill of Entry",  # custom field
             "bill_no": invoice.boenum,
             "bill_date": parse_datetime(invoice.boedt, day_first=True),
-            "is_amended": API_VALUES_MAP.Y_N_to_check.get(invoice.isamd),
+            "is_amended": self.API_VALUES_MAP.Y_N_to_check.get(invoice.isamd),
             "port_code": invoice.portcode,
             "document_value": invoice.txval + invoice.igst + invoice.cess,
             "itc_availability": "Yes",  # always available

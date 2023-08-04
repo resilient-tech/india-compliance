@@ -2,9 +2,8 @@ from datetime import datetime
 
 import frappe
 
-from india_compliance.gst_india.constants.gstr import API_VALUES_MAP
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr.gstr import GSTR
+from india_compliance.gst_india.utils.inward_supply.inward_supply import InwardSupply
 
 
 def map_date_format(date_str, source_format="%b-%y", target_format="%m%Y"):
@@ -13,12 +12,12 @@ def map_date_format(date_str, source_format="%b-%y", target_format="%m%Y"):
     )
 
 
-class GSTR2a(GSTR):
+class GSTR2a(InwardSupply):
     def get_supplier_details(self, supplier):
         return {
             "supplier_gstin": supplier.ctin,
-            "gstr_1_filled": API_VALUES_MAP.Y_N_to_check.get(supplier.cfs),
-            "gstr_3b_filled": API_VALUES_MAP.Y_N_to_check.get(supplier.cfs3b),
+            "gstr_1_filled": self.API_VALUES_MAP.Y_N_to_check.get(supplier.cfs),
+            "gstr_3b_filled": self.API_VALUES_MAP.Y_N_to_check.get(supplier.cfs3b),
             "gstr_1_filing_date": parse_datetime(supplier.fldtr1),
             "registration_cancel_date": parse_datetime(supplier.dtcancel),
             "sup_return_period": map_date_format(supplier.flprdr1),
@@ -58,14 +57,14 @@ class GSTR2aB2B(GSTR2a):
     def get_invoice_details(self, invoice):
         return {
             "bill_no": invoice.inum,
-            "supply_type": API_VALUES_MAP.gst_category.get(invoice.inv_typ),
+            "supply_type": self.API_VALUES_MAP.gst_category.get(invoice.inv_typ),
             "bill_date": parse_datetime(invoice.idt, day_first=True),
             "document_value": invoice.val,
-            "place_of_supply": API_VALUES_MAP.states.get(invoice.pos),
+            "place_of_supply": self.API_VALUES_MAP.states.get(invoice.pos),
             "other_return_period": map_date_format(invoice.aspd),
-            "amendment_type": API_VALUES_MAP.amend_type.get(invoice.atyp),
-            "is_reverse_charge": API_VALUES_MAP.Y_N_to_check.get(invoice.rchrg),
-            "diffpercent": API_VALUES_MAP.diff_percentage.get(invoice.diff_percent),
+            "amendment_type": self.API_VALUES_MAP.amend_type.get(invoice.atyp),
+            "is_reverse_charge": self.API_VALUES_MAP.Y_N_to_check.get(invoice.rchrg),
+            "diffprcnt": self.API_VALUES_MAP.diff_percentage.get(invoice.diff_percent),
             "irn_source": invoice.srctyp,
             "irn_number": invoice.irn,
             "irn_gen_date": parse_datetime(invoice.irngendate, day_first=True),
@@ -95,7 +94,7 @@ class GSTR2aCDNR(GSTR2aB2B):
         invoice_details.update(
             {
                 "bill_no": invoice.nt_num,
-                "doc_type": API_VALUES_MAP.note_type.get(invoice.ntty),
+                "doc_type": self.API_VALUES_MAP.note_type.get(invoice.ntty),
                 "bill_date": parse_datetime(invoice.nt_dt, day_first=True),
             }
         )
@@ -109,7 +108,7 @@ class GSTR2aCDNRA(GSTR2aCDNR):
             {
                 "original_bill_no": invoice.ont_num,
                 "original_bill_date": parse_datetime(invoice.ont_dt, day_first=True),
-                "original_doc_type": API_VALUES_MAP.note_type.get(invoice.ntty),
+                "original_doc_type": self.API_VALUES_MAP.note_type.get(invoice.ntty),
             }
         )
         return invoice_details
@@ -122,13 +121,13 @@ class GSTR2aISD(GSTR2a):
 
     def get_invoice_details(self, invoice):
         return {
-            "doc_type": API_VALUES_MAP.isd_type_2a.get(invoice.isd_docty),
+            "doc_type": self.API_VALUES_MAP.isd_type_2a.get(invoice.isd_docty),
             "bill_no": invoice.docnum,
             "bill_date": parse_datetime(invoice.docdt, day_first=True),
-            "itc_availability": API_VALUES_MAP.yes_no.get(invoice.itc_elg),
+            "itc_availability": self.API_VALUES_MAP.yes_no.get(invoice.itc_elg),
             "other_return_period": map_date_format(invoice.aspd),
             "is_amended": 1 if invoice.atyp else 0,
-            "amendment_type": API_VALUES_MAP.amend_type.get(invoice.atyp),
+            "amendment_type": self.API_VALUES_MAP.amend_type.get(invoice.atyp),
             "document_value": invoice.iamt + invoice.camt + invoice.samt + invoice.cess,
         }
 
@@ -155,7 +154,7 @@ class GSTR2aIMPG(GSTR2a):
             "doc_type": "Bill of Entry",  # custom field
             "bill_no": invoice.benum,
             "bill_date": parse_datetime(invoice.bedt, day_first=True),
-            "is_amended": API_VALUES_MAP.Y_N_to_check.get(invoice.amd),
+            "is_amended": self.API_VALUES_MAP.Y_N_to_check.get(invoice.amd),
             "port_code": invoice.portcd,
             "document_value": invoice.txval + invoice.iamt + invoice.csamt,
         }

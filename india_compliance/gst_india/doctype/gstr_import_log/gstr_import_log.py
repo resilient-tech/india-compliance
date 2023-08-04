@@ -78,7 +78,7 @@ def toggle_scheduled_jobs(stopped):
     if scheduled_job := frappe.db.exists(
         "Scheduled Job Type",
         {
-            "method": "india_compliance.gst_india.utils.gstr.download_queued_request",
+            "method": "india_compliance.gst_india.utils.inward_supply.download_queued_request",
         },
     ):
         frappe.db.set_value("Scheduled Job Type", scheduled_job, "stopped", stopped)

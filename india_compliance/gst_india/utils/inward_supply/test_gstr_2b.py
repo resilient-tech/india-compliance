@@ -5,8 +5,8 @@ from frappe import parse_json, read_file
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils import get_data_file_path
-from india_compliance.gst_india.utils.gstr import GSTRCategory, save_gstr_2b
-from india_compliance.gst_india.utils.gstr.test_gstr_2a import TestGSTRMixin
+from india_compliance.gst_india.utils.inward_supply import GSTRCategory, save_gstr_2b
+from india_compliance.gst_india.utils.inward_supply.test_gstr_2a import TestGSTRMixin
 
 
 class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
@@ -51,7 +51,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "reason_itc_unavailability": (
                     "POS and supplier state are same but recipient state is different"
                 ),
-                "diffpercent": "1",
+                "diffprcnt": "1",
                 "irn_source": "e-Invoice",
                 "irn_number": (
                     "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
@@ -94,7 +94,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "reason_itc_unavailability": (
                     "POS and supplier state are same but recipient state is different"
                 ),
-                "diffpercent": "1",
+                "diffprcnt": "1",
                 "original_bill_no": "S008400",
                 "original_bill_date": date(2016, 11, 24),
                 "doc_type": "Invoice",
@@ -131,7 +131,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "is_reverse_charge": 0,
                 "itc_availability": "No",
                 "reason_itc_unavailability": "Return filed post annual cut-off",
-                "diffpercent": "1",
+                "diffprcnt": "1",
                 "irn_source": "e-Invoice",
                 "irn_number": (
                     "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
@@ -174,7 +174,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "is_reverse_charge": 0,
                 "itc_availability": "No",
                 "reason_itc_unavailability": "Return filed post annual cut-off",
-                "diffpercent": "1",
+                "diffprcnt": "1",
                 "doc_type": "Credit Note",
                 "items": [
                     {

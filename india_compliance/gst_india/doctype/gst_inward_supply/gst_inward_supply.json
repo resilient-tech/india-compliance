@@ -25,7 +25,7 @@
   "items",
   "document_value",
   "section_break_pxws",
-  "diffpercent",
+  "diffprcnt",
   "column_break_opbt",
   "port_code",
   "section_break_hzcc",
@@ -146,11 +146,6 @@
   {
    "fieldname": "section_break_pxws",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "diffpercent",
-   "fieldtype": "Data",
-   "label": "Applicable % of tax rate"
   },
   {
    "fieldname": "column_break_opbt",
@@ -356,11 +351,16 @@
    "fieldtype": "Data",
    "label": "Company GSTIN",
    "read_only": 1
+  },
+  {
+   "fieldname": "diffprcnt",
+   "fieldtype": "Data",
+   "label": "Applicable % of tax rate"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-08-03 10:41:27.575716",
+ "modified": "2023-08-04 11:03:08.092304",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

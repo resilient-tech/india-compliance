@@ -427,7 +427,7 @@
               "rev": "N",
               "itcavl": "N",
               "rsn": "P",
-              "diffpercent": 1,
+              "diffprcnt": 1,
               "srctyp": "e-Invoice",
               "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
               "irngendate": "24-12-2019",
@@ -464,7 +464,7 @@
               "rev": "N",
               "itcavl": "N",
               "rsn": "P",
-              "diffpercent": 1,
+              "diffprcnt": 1,
               "items": [
                 {
                   "num": 1,
@@ -497,7 +497,7 @@
               "rev": "N",
               "itcavl": "N",
               "rsn": "C",
-              "diffpercent": 1,
+              "diffprcnt": 1,
               "srctyp": "e-Invoice",
               "irn": "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR",
               "irngendate": "24-12-2019",
@@ -536,7 +536,7 @@
               "rev": "N",
               "itcavl": "N",
               "rsn": "C",
-              "diffpercent": 1,
+              "diffprcnt": 1,
               "items": [
                 {
                   "num": 1,
