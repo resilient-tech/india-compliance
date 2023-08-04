@@ -79,7 +79,7 @@
    "fieldname": "inward_supply_from_date",
    "fieldtype": "Date",
    "label": "From Date",
-   "mandatory_depends_on": "eval: doc.inward_supply_period != 'Custom'"
+   "read_only_depends_on": "eval: doc.inward_supply_period != 'Custom'"
   },
   {
    "depends_on": "eval: doc.inward_supply_period == 'Custom'",
@@ -132,7 +132,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-08-01 13:20:23.039183",
+ "modified": "2023-08-04 11:38:26.499906",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",

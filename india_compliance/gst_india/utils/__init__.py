@@ -7,6 +7,7 @@ from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
 from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_timezone
+from frappe.utils.file_manager import get_file_path
 from erpnext.accounts.party import get_default_contact
 
 from india_compliance.gst_india.constants import (
@@ -97,6 +98,7 @@ def get_gstin_list(party, party_type="Company"):
     return gstin_list
 
 
+@frappe.whitelist()
 def get_party_by_gstin(gstin, party_type="Supplier"):
     if not gstin:
         return
@@ -121,7 +123,7 @@ def get_party_by_gstin(gstin, party_type="Supplier"):
         return party[0]
 
 
-# ToDo: Currently no usage found. Remove if no usage in future
+@frappe.whitelist()
 def get_party_contact_details(party, party_type="Supplier"):
     if party and (contact := get_default_contact(party_type, party)):
         return get_contact_details(contact)
@@ -461,6 +463,10 @@ def as_ist(value=None):
         .astimezone(timezone(TIMEZONE))
         .replace(tzinfo=None)
     )
+
+
+def get_json_from_file(path):
+    return frappe._dict(frappe.get_file_json(get_file_path(path)))
 
 
 def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):

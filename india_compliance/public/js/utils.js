@@ -96,6 +96,25 @@ Object.assign(india_compliance, {
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
     },
+
+    get_gstin_otp() {
+        return new Promise(resolve => {
+            frappe.prompt(
+                {
+                    fieldtype: "Data",
+                    label: "One Time Password",
+                    fieldname: "otp",
+                    reqd: 1,
+                    description:
+                        "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.",
+                },
+                function ({ otp }) {
+                    resolve(otp);
+                },
+                "Enter OTP"
+            );
+        });
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {
