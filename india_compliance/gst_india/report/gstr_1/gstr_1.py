@@ -447,7 +447,7 @@ class Gstr1Report(object):
             if not item_wise_tax_detail:
                 continue
 
-            if account not in self.gst_accounts.values():
+            if "gst" in account.lower() and account not in self.gst_accounts.values():
                 unidentified_gst_accounts.add(account)
                 unidentified_gst_accounts_invoice.add(parent)
                 continue
