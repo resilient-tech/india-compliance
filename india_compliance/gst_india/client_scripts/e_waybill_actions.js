@@ -722,7 +722,8 @@ function is_e_waybill_applicable_on_purchase_invoice(frm) {
     return (
         frm.doctype == "Purchase Invoice" &&
         frm.doc.supplier_address &&
-        (frm.doc.is_return || frm.doc.gst_category === "Unregistered")
+        (frm.doc.is_return || frm.doc.gst_category === "Unregistered") &&
+        frm.doc.company_gstin !== frm.doc.supplier_gstin
     );
 }
 
@@ -828,4 +829,3 @@ function get_e_waybill_file_name(docname) {
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
 }
-
