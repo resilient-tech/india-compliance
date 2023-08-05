@@ -1,13 +1,15 @@
+import datetime
 import json
 import random
 import re
 
 import responses
+import time_machine
 from responses import matchers
 
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_to_date, get_datetime, getdate, now_datetime, today
+from frappe.utils import add_to_date, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
@@ -561,6 +563,67 @@ class TestEWaybill(FrappeTestCase):
             ),
         )
 
+    @responses.activate
+    def test_get_extend_validity_data(self):
+        """Test if extend e-waybill validity data is generated correctly"""
+        self._generate_e_waybill()
+        doc = load_doc("Sales Invoice", self.sales_invoice.name, "submit")
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(e-Waybill can be extended between.*)$"),
+            EWaybillData(doc).validate_if_e_waybill_can_be_extend,
+        )
+
+        add_to_date(
+            get_datetime(),
+            hours=8,
+            as_datetime=True,
+        )
+
+        extend_validity_data = self.e_waybill_test_data.get("extend_validity")
+        values = frappe._dict(extend_validity_data.get("values"))
+
+        values.remaining_distance = None
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Distance is mandatory to extend .*)$"),
+            EWaybillData(doc).validate_remaining_distance,
+            values,
+        )
+
+        values.remaining_distance = 15
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Remaining distance should be less than or equal to actual .*)$"
+            ),
+            EWaybillData(doc).validate_remaining_distance,
+            values,
+        )
+
+        values.remaining_distance = 5
+        values.consignment_status = "In Transit"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Transit Type is should be one of.*)$"),
+            EWaybillData(doc).validate_transit_type,
+            values,
+        )
+
+        values.consignment_status = "In Movement"
+
+        with time_machine.travel(get_datetime(), tick=False) as traveller:
+            traveller.shift(datetime.timedelta(hours=18))
+
+            self.assertDictEqual(
+                extend_validity_data.get("request_data"),
+                EWaybillData(doc).get_extend_validity_data(values),
+            )
+
     def test_validate_doctype_for_e_waybill(self):
         """Validate if doctype is supported for e-waybill"""
         purchase_invoice = create_purchase_invoice()
@@ -642,7 +705,7 @@ def update_dates_for_test_data(test_data):
 
     today_date = format_date(today(), DATE_FORMAT)
     current_datetime = now_datetime().strftime(DATETIME_FORMAT)
-    next_day_datetime = add_to_date(getdate(), days=1).strftime(DATETIME_FORMAT)
+    next_day_datetime = add_to_date(get_datetime(), days=1).strftime(DATETIME_FORMAT)
 
     # Iterate over dict like { 'goods_item_with_ewaybill' : {...}}
     for key, value in test_data.items():
@@ -665,6 +728,8 @@ def update_dates_for_test_data(test_data):
                 response_result.update({k: current_datetime})
             if k == "docDate":
                 response_result.update({k: today_date})
+            if k == "updatedDate":
+                response_result.update({k: current_datetime})
 
         if "docDate" in response_request:
             response_request.update({"docDate": today_date})
