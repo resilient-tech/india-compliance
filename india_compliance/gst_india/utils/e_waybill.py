@@ -697,7 +697,9 @@ class EWaybillData(GSTTransactionData):
         extension_details = {
             "ewbNo": int(self.doc.ewaybill),
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": self.sanitize_value(values.current_place, regex=3, max_len=50),
+            "fromPlace": self.sanitize_value(
+                values.current_place, regex=3, max_length=50
+            ),
             "fromState": STATE_NUMBERS[values.current_state],
             "fromPincode": int(values.current_pincode),
             "remainingDistance": int(values.remaining_distance),
