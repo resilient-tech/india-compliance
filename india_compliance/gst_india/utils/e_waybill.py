@@ -832,9 +832,14 @@ class EWaybillData(GSTTransactionData):
                 )
             )
 
-        if self.doc.gst_transporter_id != self.doc.company_gstin:
+        if (
+            self.doc.gst_transporter_id
+            and self.doc.gst_transporter_id == self.doc.company_gstin
+        ):
             frappe.throw(
-                _("e-Waybill cannot be extended you as GST Transporter ID is updated. Ask the transporter to extend the e-Waybill.")
+                _(
+                    "e-Waybill cannot be extended by you as GST Transporter ID is assigned. Ask the transporter to extend the e-Waybill."
+                )
             )
 
     def validate_remaining_distance(self, values):
