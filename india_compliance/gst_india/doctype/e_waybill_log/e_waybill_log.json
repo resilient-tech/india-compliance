@@ -13,6 +13,7 @@
   "column_break1",
   "reference_doctype",
   "reference_name",
+  "is_generated_in_sandbox_mode",
   "section_break1",
   "is_cancelled",
   "cancelled_on",
@@ -117,6 +118,12 @@
    "fieldtype": "Datetime",
    "label": "Cancelled On",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_generated_in_sandbox_mode",
+   "fieldtype": "Check",
+   "label": "Is Generated in Sandbox Mode"
   }
  ],
  "in_create": 1,
@@ -126,7 +133,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2023-07-24 15:30:28.432266",
+ "modified": "2023-07-27 15:06:06.480699",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

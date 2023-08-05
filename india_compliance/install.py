@@ -5,6 +5,7 @@ import frappe
 from india_compliance.audit_trail.setup import setup_fixtures as setup_audit_trail
 from india_compliance.gst_india.constants import BUG_REPORT_URL
 from india_compliance.gst_india.setup import after_install as setup_gst
+from india_compliance.gst_india.setup import create_hrms_custom_fields
 from india_compliance.income_tax_india.setup import after_install as setup_income_tax
 
 # list of filenames (without extension) in sequence of execution
@@ -31,6 +32,7 @@ POST_INSTALL_PATCHES = (
     "update_gstin_and_gst_category",
     "update_e_invoice_fields_and_logs",
     "set_default_gst_settings",
+    "update_e_waybill_status",
     "remove_deprecated_docs",
     "remove_old_fields",
     "update_custom_role_for_e_invoice_summary",
@@ -91,3 +93,8 @@ def disable_ic_account_page():
         return
 
     frappe.get_doc(doctype="Custom Role", page="india-compliance-account").insert()
+
+
+def after_app_install(app_name):
+    if app_name == "hrms":
+        create_hrms_custom_fields()

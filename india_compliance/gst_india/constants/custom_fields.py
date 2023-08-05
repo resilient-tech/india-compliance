@@ -623,6 +623,18 @@ CUSTOM_FIELDS = {
     ],
 }
 
+HRMS_CUSTOM_FIELDS = {
+    "Expense Claim": [
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Autocomplete",
+            "insert_after": "company",
+            "translatable": 0,
+        }
+    ],
+}
+
 reverse_charge_field = frappe._dict(
     fieldname="is_reverse_charge",
     label="Is Reverse Charge",
@@ -801,6 +813,19 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "driver_name",
         "default": "Today",
         "print_hide": 1,
+    },
+    {
+        "fieldname": "e_waybill_status",
+        "label": "e-Waybill Status",
+        "fieldtype": "Select",
+        "insert_after": "ewaybill",
+        "options": "\nPending\nGenerated\nCancelled\nNot Applicable",
+        "print_hide": 1,
+        "no_copy": 1,
+        "translatable": 1,
+        "allow_on_submit": 1,
+        "depends_on": "eval:doc.docstatus === 1 && (!doc.ewaybill || in_list(['','Pending', 'Not Applicable'], doc.e_waybill_status))",
+        "read_only_depends_on": "eval:doc.e_waybill_status === 'Generated' && doc.ewaybill",
     },
     *E_WAYBILL_DN_FIELDS,
 ]

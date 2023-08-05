@@ -25,6 +25,9 @@ function setup_e_waybill_actions(doctype) {
             });
         },
         refresh(frm) {
+            if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
+                frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
+
             if (
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
@@ -48,11 +51,7 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (
-                    has_e_waybill_threshold_met(frm) &&
-                    !frm.doc.is_return &&
-                    !frm.doc.is_debit_note
-                ) {
+                if (frm.doc.e_waybill_status === "Pending") {
                     frm.dashboard.add_comment(
                         __(
                             "e-Waybill is applicable for this invoice, but not yet generated or updated."
@@ -184,6 +183,7 @@ function setup_e_waybill_actions(doctype) {
         },
     });
 }
+
 function fetch_e_waybill_data(frm, args, callback) {
     if (!args) args = {};
 
@@ -203,7 +203,9 @@ function show_generate_e_waybill_dialog(frm) {
                 docname: frm.doc.name,
                 values,
             },
-            callback: () => frm.refresh(),
+            callback: () => {
+                return frm.refresh();
+            },
         });
     };
 
@@ -1071,3 +1073,4 @@ function get_address_details(address) {
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
 }
+
