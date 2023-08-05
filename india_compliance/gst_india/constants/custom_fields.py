@@ -804,6 +804,20 @@ E_WAYBILL_INV_FIELDS = [
         "default": "Today",
         "print_hide": 1,
     },
+    *E_WAYBILL_DN_FIELDS,
+]
+
+sales_e_waybill_field = [
+    {
+        "fieldname": "ewaybill",
+        "label": "e-Waybill No.",
+        "fieldtype": "Data",
+        "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
+        "allow_on_submit": 1,
+        "translatable": 0,
+        "no_copy": 1,
+        "insert_after": "customer_name",
+    },
     {
         "fieldname": "e_waybill_status",
         "label": "e-Waybill Status",
@@ -817,21 +831,9 @@ E_WAYBILL_INV_FIELDS = [
         "depends_on": "eval:doc.docstatus === 1 && (!doc.ewaybill || in_list(['','Pending', 'Not Applicable'], doc.e_waybill_status))",
         "read_only_depends_on": "eval:doc.e_waybill_status === 'Generated' && doc.ewaybill",
     },
-    *E_WAYBILL_DN_FIELDS,
 ]
 
-sales_e_waybill_field = {
-    "fieldname": "ewaybill",
-    "label": "e-Waybill No.",
-    "fieldtype": "Data",
-    "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
-    "allow_on_submit": 1,
-    "translatable": 0,
-    "no_copy": 1,
-    "insert_after": "customer_name",
-}
-
-purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
+purchase_e_waybill_field = {**sales_e_waybill_field[0], "insert_after": "supplier_name"}
 
 E_WAYBILL_FIELDS = {
     "Sales Invoice": E_WAYBILL_INV_FIELDS + [sales_e_waybill_field],
