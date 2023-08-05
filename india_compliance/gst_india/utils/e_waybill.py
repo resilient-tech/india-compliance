@@ -694,12 +694,10 @@ class EWaybillData(GSTTransactionData):
         self.validate_remaining_distance(values)
         self.set_transporter_details()
 
-        transit_type = TRANSIT_TYPES[values.transit_type] if values.transit_type else ""
-
         extension_details = {
             "ewbNo": int(self.doc.ewaybill),
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": values.current_place,
+            "fromPlace": self.sanitize_value(values.current_place, regex=3, max_len=50),
             "fromState": STATE_NUMBERS[values.current_state],
             "fromPincode": int(values.current_pincode),
             "remainingDistance": int(values.remaining_distance),
@@ -707,7 +705,9 @@ class EWaybillData(GSTTransactionData):
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
             "consignmentStatus": CONSIGNMENT_STATUS[values.consignment_status],
-            "transitType": transit_type,
+            "transitType": (
+                TRANSIT_TYPES[values.transit_type] if values.transit_type else ""
+            ),
             "extnRsnCode": EXTEND_VALIDITY_REASON_CODES[values.reason],
             "extnRemarks": self.sanitize_value(
                 values.remark if values.remark else values.reason, regex=3
@@ -717,9 +717,9 @@ class EWaybillData(GSTTransactionData):
         if values.consignment_status == "In Transit":
             extension_details.update(
                 {
-                    "addressLine1": values.address_line1,
-                    "addressLine2": values.address_line2,
-                    "addressLine3": values.address_line3,
+                    "addressLine1": self.sanitize_value(values.address_line1, regex=3),
+                    "addressLine2": self.sanitize_value(values.address_line2, regex=3),
+                    "addressLine3": self.sanitize_value(values.address_line3, regex=3),
                     "transMode": "In Transit",
                 }
             )
