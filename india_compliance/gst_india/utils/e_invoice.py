@@ -87,8 +87,7 @@ def generate_e_invoices(docnames):
 
         finally:
             # each e-Invoice needs to be committed individually
-            # nosemgrep
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
 
 
 @frappe.whitelist()
@@ -109,6 +108,8 @@ def generate_e_invoice(docname, throw=True):
             result = result.Desc if response.error_code == "2283" else response
 
     except frappe.ValidationError as e:
+        doc.db_set({"einvoice_status": "Failed"})
+
         if throw:
             raise e
 
@@ -121,7 +122,12 @@ def generate_e_invoice(docname, throw=True):
             _("Warning"),
             indicator="yellow",
         )
+
         return
+
+    except Exception as e:
+        doc.db_set({"einvoice_status": "Failed"})
+        raise e
 
     doc.db_set(
         {
@@ -149,6 +155,7 @@ def generate_e_invoice(docname, throw=True):
             "signed_invoice": result.SignedInvoice,
             "signed_qr_code": result.SignedQRCode,
             "invoice_data": invoice_data,
+            "is_generated_in_sandbox_mode": api.sandbox_mode,
         },
     )
 
@@ -264,12 +271,25 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    validate_e_invoice_applicability_date(doc, gst_settings)
+    applicability_date = get_e_invoice_applicability_date(doc, gst_settings, throw)
+
+    if not applicability_date:
+        return _throw(
+            _("e-Invoice is not applicable for company {0}").format(doc.company)
+        )
+
+    if getdate(applicability_date) > getdate(doc.posting_date):
+        return _throw(
+            _(
+                "e-Invoice is not applicable for invoices before {0} as per your"
+                " GST Settings"
+            ).format(frappe.bold(format_date(applicability_date)))
+        )
 
     return True
 
 
-def validate_e_invoice_applicability_date(doc, settings=None):
+def get_e_invoice_applicability_date(doc, settings=None, throw=True):
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 
@@ -282,17 +302,9 @@ def validate_e_invoice_applicability_date(doc, settings=None):
                 break
 
         else:
-            frappe.throw(
-                _("e-Invoice is not applicable for company {0}").format(doc.company)
-            )
+            return
 
-    if getdate(e_invoice_applicable_from) > getdate(doc.posting_date):
-        frappe.throw(
-            _(
-                "e-Invoice is not applicable for invoices before {0} as per your"
-                " GST Settings"
-            ).format(frappe.bold(format_date(e_invoice_applicable_from)))
-        )
+    return e_invoice_applicable_from
 
 
 def validate_if_e_invoice_can_be_cancelled(doc):
@@ -310,6 +322,15 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         frappe.throw(
             _("e-Invoice can only be cancelled upto 24 hours after it is generated")
         )
+
+
+def get_e_invoice_info(doc):
+    return frappe.db.get_value(
+        "e-Invoice Log",
+        doc.irn,
+        ("is_generated_in_sandbox_mode", "acknowledged_on"),
+        as_dict=True,
+    )
 
 
 class EInvoiceData(GSTTransactionData):
@@ -495,9 +516,9 @@ class EInvoiceData(GSTTransactionData):
     def get_invoice_data(self):
         if self.sandbox_mode:
             seller = {
-                "gstin": "01AMBPG7773M002",
-                "state_number": "01",
-                "pincode": 193501,
+                "gstin": "02AMBPG7773M002",
+                "state_number": "02",
+                "pincode": 171302,
             }
             self.company_address.update(seller)
             if self.dispatch_address:
@@ -523,7 +544,7 @@ class EInvoiceData(GSTTransactionData):
                 if self.transaction_details.total_igst_amount > 0:
                     self.transaction_details.place_of_supply = "36"
                 else:
-                    self.transaction_details.place_of_supply = "01"
+                    self.transaction_details.place_of_supply = "02"
 
         if self.doc.is_return:
             self.dispatch_address, self.shipping_address = (

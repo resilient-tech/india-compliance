@@ -243,6 +243,22 @@ CUSTOM_FIELDS = {
             "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
         },
     ],
+    ("Journal Entry", "GL Entry"): [
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Autocomplete",
+            "insert_after": "company",
+            "hidden": 0,
+            # clear original default values
+            "read_only": 0,
+            "print_hide": 0,
+            "fetch_from": "",
+            "depends_on": "",
+            "mandatory_depends_on": "",
+            "translatable": 0,
+        }
+    ],
     # Transaction Item Fields
     (
         "Material Request Item",
@@ -299,6 +315,7 @@ CUSTOM_FIELDS = {
             "hidden": 1,
             "options": "Company:company:default_currency",
             "print_hide": 1,
+            "no_copy": 1,
         },
     ],
     "Sales Invoice": [
@@ -419,7 +436,16 @@ CUSTOM_FIELDS = {
             # don't delete below line; required to unset existing value
             "read_only_depends_on": None,
             "translatable": 0,
-        }
+        },
+        {
+            "fieldname": "is_reverse_charge_applicable",
+            "label": "Reverse Charge Applicable",
+            "fieldtype": "Check",
+            "insert_after": "gst_transporter_id",
+            "print_hide": 1,
+            "translatable": 0,
+            "depends_on": 'eval:in_list(["Registered Regular", "Overseas", "Unregistered"], doc.gst_category)',
+        },
     ],
     "Address": [
         {
@@ -541,28 +567,6 @@ CUSTOM_FIELDS = {
             "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
             "translatable": 0,
         },
-        {
-            "fieldname": "company_address",
-            "label": "Company Address",
-            "fieldtype": "Link",
-            "options": "Address",
-            "insert_after": "reversal_type",
-            "print_hide": 1,
-            "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-        },
-        {
-            "fieldname": "company_gstin",
-            "label": "Company GSTIN",
-            "fieldtype": "Data",
-            "read_only": 1,
-            "insert_after": "company_address",
-            "print_hide": 1,
-            "fetch_from": "company_address.gstin",
-            "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "mandatory_depends_on": "eval:doc.voucher_type=='Reversal Of ITC'",
-            "translatable": 0,
-        },
     ],
     "Tax Category": [
         {
@@ -616,6 +620,18 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
             "insert_after": "is_nil_exempt",
         },
+    ],
+}
+
+HRMS_CUSTOM_FIELDS = {
+    "Expense Claim": [
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Autocomplete",
+            "insert_after": "company",
+            "translatable": 0,
+        }
     ],
 }
 
@@ -797,6 +813,19 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "driver_name",
         "default": "Today",
         "print_hide": 1,
+    },
+    {
+        "fieldname": "e_waybill_status",
+        "label": "e-Waybill Status",
+        "fieldtype": "Select",
+        "insert_after": "ewaybill",
+        "options": "\nPending\nGenerated\nCancelled\nNot Applicable",
+        "print_hide": 1,
+        "no_copy": 1,
+        "translatable": 1,
+        "allow_on_submit": 1,
+        "depends_on": "eval:doc.docstatus === 1 && (!doc.ewaybill || in_list(['','Pending', 'Not Applicable'], doc.e_waybill_status))",
+        "read_only_depends_on": "eval:doc.e_waybill_status === 'Generated' && doc.ewaybill",
     },
     *E_WAYBILL_DN_FIELDS,
 ]
