@@ -605,17 +605,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         values.remaining_distance = 5
-        values.transit_type = "Road"
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(Transit Type should be empty .*)$"),
-            EWaybillData(doc).validate_transit_type,
-            values,
-        )
-
-        values.consignment_status = "inTransit"
-        values.transit_type = ""
+        values.consignment_status = "In Transit"
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -624,7 +614,7 @@ class TestEWaybill(FrappeTestCase):
             values,
         )
 
-        values.consignment_status = "inMovement"
+        values.consignment_status = "In Movement"
 
         with time_machine.travel(get_datetime(), tick=False) as traveller:
             traveller.shift(datetime.timedelta(hours=18))

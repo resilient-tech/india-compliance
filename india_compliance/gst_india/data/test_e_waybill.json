@@ -124,7 +124,7 @@
             "ewaybill": "301002999920",
             "vehicle_no": "GJ07DL9009",
             "remaining_distance": 5,
-            "consignment_status": "inMovement",
+            "consignment_status": "In Movement",
             "mode_of_transport": "Road",
             "gst_vehicle_type": "Regular",
             "current_place": "Test",

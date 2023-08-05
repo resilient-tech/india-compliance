@@ -55,7 +55,7 @@ SUB_SUPPLY_TYPES = {
 }
 
 
-TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4, "inTransit": 5}
+TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4, "In Transit": 5}
 TRANSPORT_TYPES = {
     1: "Regular",
     2: "Bill To - Ship To",
@@ -65,6 +65,6 @@ TRANSPORT_TYPES = {
 VEHICLE_TYPES = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
 
 TRANSIT_TYPES = {"Road": "R", "Warehouse": "W", "Others": "O"}
-CONSIGNMENT_STATUS = {"inMovement": "M", "inTransit": "T"}
+CONSIGNMENT_STATUS = {"In Movement": "M", "In Transit": "T"}
 
 ITEM_LIMIT = 250

@@ -669,7 +669,8 @@ function show_update_transporter_dialog(frm) {
 }
 
 async function show_extend_validity_dialog(frm) {
-    const shipping_address_details = await get_address_details(
+    const shipping_address = await frappe.db.get_doc(
+        "Address",
         frm.doc.shipping_address_name
     );
 
@@ -705,55 +706,67 @@ async function show_extend_validity_dialog(frm) {
                 label: "Consignment Status",
                 fieldname: "consignment_status",
                 fieldtype: "Select",
-                options: `\inMovement\ninTransit`,
-                default: "inMovement",
+                options: `In Movement\nIn Transit`,
+                default: "In Movement",
                 reqd: 1,
-                onchange: () => {
-                    update_mode_of_transport(d);
-                    update_transit_type(d);
-                },
+                onchange: () => update_transit_type(d),
             },
             {
                 label: "Mode Of Transport",
                 fieldname: "mode_of_transport",
                 fieldtype: "Select",
-                options: `\nRoad\nAir\nRail\nShip\ninTransit`,
+                options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
-                depends_on: "eval: doc.consignment_status == 'inMovement'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'inMovement'",
-                onchange: () => {
-                    update_vehicle_type(d);
-                    update_transit_type(d);
-                },
-            },
-            {
-                label: "GST Vehicle Type",
-                fieldname: "gst_vehicle_type",
-                fieldtype: "Select",
-                options: `Regular\nOver Dimensional Cargo (ODC)`,
-                depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-                read_only: 1,
-                default: frm.doc.gst_vehicle_type,
+                depends_on: "eval: doc.consignment_status == 'In Movement'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'In Movement'",
+                onchange: () => update_transit_type(d),
             },
             {
                 label: "Transit Type",
                 fieldname: "transit_type",
                 fieldtype: "Select",
                 options: `\nRoad\nWarehouse\nOthers`,
-                depends_on: "eval:doc.consignment_status == 'inTransit'",
-                mandatory_depends_on: "eval:doc.consignment_status == 'inTransit'",
+                depends_on: "eval:doc.consignment_status == 'In Transit'",
+                mandatory_depends_on: "eval:doc.consignment_status == 'In Transit'",
             },
             {
                 label: "Transport Receipt No",
                 fieldname: "lr_no",
                 fieldtype: "Data",
                 default: frm.doc.lr_no,
-                depends_on: "eval: doc.consignment_status == 'inMovement'",
+                depends_on: "eval: doc.consignment_status == 'In Movement'",
                 mandatory_depends_on:
-                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport)",
+                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport) && doc.consignment_status == 'In Movement'",
             },
             {
                 fieldtype: "Section Break",
+            },
+            {
+                label: "Address Line1",
+                fieldname: "address_line1",
+                fieldtype: "Data",
+                default: shipping_address.address_line1,
+                depends_on: "eval: doc.consignment_status == 'In Transit'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'In Transit'",
+            },
+            {
+                label: "Address Line2",
+                fieldname: "address_line2",
+                fieldtype: "Data",
+                default: shipping_address.address_line2,
+                depends_on: "eval: doc.consignment_status == 'In Transit'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'In Transit'",
+            },
+            {
+                label: "Address Line3",
+                fieldname: "address_line3",
+                fieldtype: "Data",
+                default: shipping_address.city,
+                depends_on: "eval: doc.consignment_status == 'In Transit'",
+                mandatory_depends_on: "eval: doc.consignment_status == 'In Transit'",
+            },
+            {
+                fieldtype: "Column Break",
             },
             {
                 label: "Current Place",
@@ -766,15 +779,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "current_pincode",
                 fieldtype: "Data",
                 reqd: 1,
-                description: `Destinaion pincode ${
-                    (
-                        await frappe.db.get_value(
-                            "Address",
-                            frm.doc.shipping_address_name,
-                            "pincode"
-                        )
-                    ).message.pincode
-                }`,
+                description: `Destinaion pincode ${shipping_address.pincode}`,
             },
             {
                 label: "Current State",
@@ -782,40 +787,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldtype: "Autocomplete",
                 options: frappe.boot.india_state_options.join("\n"),
                 reqd: 1,
-                default: shipping_address_details.state,
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
-                label: "Address Line1",
-                fieldname: "address_line1",
-                fieldtype: "Data",
-                default: (
-                    await frappe.db.get_value(
-                        "Address",
-                        frm.doc.shipping_address_name,
-                        "address_line1"
-                    )
-                ).message.address_line1,
-                depends_on: "eval: doc.consignment_status == 'inTransit'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'inTransit'",
-            },
-            {
-                label: "Address Line2",
-                fieldname: "address_line2",
-                fieldtype: "Data",
-                default: shipping_address_details.address_line2,
-                depends_on: "eval: doc.consignment_status == 'inTransit'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'inTransit'",
-            },
-            {
-                label: "Address Line3",
-                fieldname: "address_line3",
-                fieldtype: "Data",
-                default: shipping_address_details.place_of_supply,
-                depends_on: "eval: doc.consignment_status == 'inTransit'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'inTransit'",
+                default: shipping_address.state,
             },
             {
                 fieldtype: "Section Break",
@@ -902,24 +874,21 @@ function is_e_waybill_applicable(frm) {
 }
 
 function can_extend_e_waybill(frm) {
-    if (is_valid_duration(frm) && frm.doc.gst_transporter_id != frm.doc.company_gstin)
-        return true;
-    return false;
-}
-
-function is_valid_duration(frm) {
     function get_hours(date, hours) {
         return moment(date).add(hours, "hours").format(frappe.defaultDatetimeFormat);
     }
 
-    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
-    const before_hours = get_hours(e_waybill_info.valid_upto, -8);
-    const after_hours = get_hours(e_waybill_info.valid_upto, 8);
+    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
+    const extend_after = get_hours(valid_upto, -8);
+    const extend_before = get_hours(valid_upto, 8);
 
-    return (
-        frappe.datetime.now_datetime > before_hours &&
-        frappe.datetime.now_datetime < after_hours
-    );
+    if (
+        frappe.datetime.now_datetime() < extend_before &&
+        frm.doc.gst_transporter_id != frm.doc.company_gstin
+    )
+        return true;
+
+    return false;
 }
 
 function is_e_waybill_cancellable(frm) {
@@ -996,23 +965,11 @@ function update_transit_type(dialog) {
     dialog.set_value("transit_type", get_transit_type(dialog.get_values(true)));
 }
 
-function update_mode_of_transport(dialog) {
-    const dialog_values = dialog.get_values(true);
-
-    dialog.set_value(
-        "mode_of_transport",
-        dialog_values.consignment_status == "inTransit"
-            ? "inTransit"
-            : frm.doc.mode_of_transport
-    );
-}
-
 function get_transit_type(dialog) {
-    if (dialog.consignment_status == "inMovement") return "";
-    if (dialog.consignment_status == "inTransit") {
-        if (["Road", "Rail", "Air", "Ship"].includes(dialog.mode_of_transport))
-            return "";
-        if (dialog.mode_of_transport == "inTransit") return "Road";
+    if (dialog.consignment_status == "In Movement") return "";
+    if (dialog.consignment_status == "In Transit") {
+        if (dialog.mode_of_transport == "Road") return "Road";
+        else return "Others";
     }
 }
 
@@ -1056,21 +1013,6 @@ function get_e_waybill_file_name(docname) {
     return `${prefix}_e-Waybill_Data_${frappe.utils.get_random(5)}.json`;
 }
 
-function get_address_details(address) {
-    const address_details = {};
-    frappe.db.get_doc("Address", address).then(address_doc => {
-        address_details.address_line1 = address_doc.address_line1;
-        address_details.address_line2 = address_doc.address_line2;
-        address_details.place_of_supply = `${address_doc.gst_state_number}-${address_doc.gst_state}`;
-        address_details.city = address_doc.city;
-        address_details.state = address_doc.state;
-        address_details.country = address_doc.country;
-        address_details.pincode = address_doc.pincode;
-    });
-    return address_details;
-}
-
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
 }
-

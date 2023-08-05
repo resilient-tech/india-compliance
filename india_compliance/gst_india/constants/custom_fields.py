@@ -708,7 +708,7 @@ E_WAYBILL_DN_FIELDS = [
         "fieldname": "mode_of_transport",
         "label": "Mode of Transport",
         "fieldtype": "Select",
-        "options": "\nRoad\nAir\nRail\nShip\ninTransit",
+        "options": "\nRoad\nAir\nRail\nShip",
         "default": "Road",
         "insert_after": "transporter_name",
         "print_hide": 1,

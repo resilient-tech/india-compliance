@@ -331,27 +331,30 @@ def extend_validity(*, doctype, docname, values):
             "vehicle_no": values.vehicle_no.replace(" ", ""),
             "lr_no": values.lr_no,
             "mode_of_transport": values.mode_of_transport,
-            "gst_vehicle_type": values.gst_vehicle_type,
         }
     )
     data = EWaybillData(doc).get_extend_validity_data(values)
     result = EWaybillAPI(doc).extend_validity(data)
 
+    doc.db_set("distance", values.remaining_distance)
     extended_validity_date = parse_datetime(result.validUpto, day_first=True)
-
-    comment = _(
-        "e-Waybill has been extended by {user}.<br><br> New details are: <br>"
-    ).format(user=frappe.bold(get_fullname()))
-
     values_in_comment = {
         "Transit Type": values.transit_type,
         "Vehicle No": values.vehicle_no,
         "LR No": values.lr_no,
-        "LR Date": values.lr_date,
         "Mode of Transport": values.mode_of_transport,
         "GST Vehicle Type": values.gst_vehicle_type,
         "Valid Upto": extended_validity_date,
+        "Remaining Distance": values.remaining_distance,
+        "Current Place": values.current_place,
+        "Current Pincode": values.current_pincode,
+        "Reason": values.reason,
+        "Remark": values.remark,
     }
+
+    comment = _(
+        "e-Waybill has been extended by {user}.<br><br> New details are: <br>"
+    ).format(user=frappe.bold(get_fullname()))
 
     for key, value in values_in_comment.items():
         if value:
@@ -685,19 +688,13 @@ class EWaybillData(GSTTransactionData):
 
     def get_extend_validity_data(self, values):
         self.validate_if_e_waybill_is_set()
-        self.check_e_waybill_validity()
         self.validate_if_e_waybill_can_be_extend()
         self.validate_mode_of_transport()
         self.validate_transit_type(values)
         self.validate_remaining_distance(values)
         self.set_transporter_details()
 
-        transit_type = (
-            TRANSIT_TYPES[values.transit_type]
-            if values.transit_type
-            and self.transaction_details.mode_of_transport != "inTransit"
-            else ""
-        )
+        transit_type = TRANSIT_TYPES[values.transit_type] if values.transit_type else ""
 
         extension_details = {
             "ewbNo": int(self.doc.ewaybill),
@@ -717,12 +714,13 @@ class EWaybillData(GSTTransactionData):
             ),
         }
 
-        if values.consignment_status == "inTransit":
+        if values.consignment_status == "In Transit":
             extension_details.update(
                 {
                     "addressLine1": values.address_line1,
                     "addressLine2": values.address_line2,
                     "addressLine3": values.address_line3,
+                    "transMode": "In Transit",
                 }
             )
 
@@ -823,10 +821,11 @@ class EWaybillData(GSTTransactionData):
             self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto")
         )
 
-        can_extend_before = add_to_date(valid_upto, hours=-8, as_datetime=True)
-        can_extend_after = add_to_date(valid_upto, hours=8, as_datetime=True)
+        now = get_datetime()
+        extend_after = add_to_date(valid_upto, hours=-8, as_datetime=True)
+        extend_before = add_to_date(valid_upto, hours=8, as_datetime=True)
 
-        if get_datetime() < can_extend_before or get_datetime() > can_extend_after:
+        if now < extend_after or now > extend_before:
             frappe.throw(
                 _(
                     "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time"
@@ -845,14 +844,10 @@ class EWaybillData(GSTTransactionData):
             )
 
     def validate_transit_type(self, values):
-        if values.consignment_status == "inMovement" and values.transit_type:
-            frappe.throw(
-                _("Transit Type should be empty for Mode of Transport {0}").format(
-                    frappe.bold(values.mode_of_transport)
-                )
-            )
+        if values.consignment_status == "In Movement":
+            values.transit_type = ""
 
-        if values.consignment_status == "inTransit" and not values.transit_type:
+        if values.consignment_status == "In Transit" and not values.transit_type:
             frappe.throw(
                 _("Transit Type is should be one of {0}").format(
                     frappe.bold(" ,".join(TRANSIT_TYPES))
