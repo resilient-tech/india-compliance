@@ -132,8 +132,11 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
 
     data = {
         "ewaybill": e_waybill_number,
-        "e_waybill_status": "Generated",
     }
+
+    if doc.doctype == "Sales Invoice":
+        data["e_waybill_status"] = "Generated"
+
     if distance := result.get("distance"):
         data["distance"] = distance
 
@@ -204,12 +207,14 @@ def _cancel_e_waybill(doc, values):
         },
     )
 
-    doc.db_set(
-        {
-            "ewaybill": "",
-            "e_waybill_status": "Cancelled",
-        }
-    )
+    data = {
+        "ewaybill": "",
+    }
+
+    if doc.doctype == "Sales Invoice":
+        data["e_waybill_status"] = "Cancelled"
+
+    doc.db_set(data)
 
     frappe.msgprint(
         _("e-Waybill cancelled successfully"),
@@ -707,19 +712,6 @@ class EWaybillData(GSTTransactionData):
         #         title=_("Incorrect Usage"),
         #     )
 
-        # No need to check threshold limit for Delivery Note.
-        # eg: e-Waybill for Job Work is required irrespective of the amount.
-        if (
-            self.doc.doctype in ("Sales Invoice", "Purchase Invoice")
-            and not self.has_e_waybill_threshold_met()
-        ):
-            frappe.throw(
-                _(
-                    "e-Waybill cannot be generated because the total amount is less than the threshold limit"
-                ),
-                title=_("Amount Threshold Not Met"),
-            )
-
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
@@ -736,9 +728,6 @@ class EWaybillData(GSTTransactionData):
                 ),
                 title=_("Invalid Data"),
             )
-
-    def has_e_waybill_threshold_met(self):
-        return abs(self.doc.base_grand_total) >= self.settings.e_waybill_threshold
 
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
@@ -915,8 +904,8 @@ class EWaybillData(GSTTransactionData):
 
         self.transaction_details.transaction_type = transaction_type
 
-        self.to_address.legal_name = self.transaction_details.customer_name
-        self.from_address.legal_name = self.transaction_details.company_name
+        self.bill_to.legal_name = self.transaction_details.party_name
+        self.bill_from.legal_name = self.transaction_details.company_name
 
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96

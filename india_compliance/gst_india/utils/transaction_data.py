@@ -50,16 +50,22 @@ class GSTTransactionData:
             v: k
             for k, v in get_gst_accounts_by_type(self.doc.company, gst_type).items()
         }
+        self.party_name = self.doc.get("customer_name") or self.doc.get("supplier_name")
+        self.party_name_field = (
+            "supplier_name"
+            if self.doc.doctype == "Purchase Invoice"
+            else "customer_name"
+        )
 
     def set_transaction_details(self):
         tds_amount = self.get_tds_amount()
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
-                "customer_name": self.sanitize_value(
-                    self.doc.customer_name
+                "party_name": self.sanitize_value(
+                    self.party_name
                     or frappe.db.get_value(
-                        "Customer", self.doc.customer, "customer_name"
+                        self.doc.doctype, self.party_name, self.party_name_field
                     )
                 ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
