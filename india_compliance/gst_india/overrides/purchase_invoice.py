@@ -7,19 +7,21 @@ from india_compliance.gst_india.overrides.sales_invoice import (
 )
 from india_compliance.gst_india.overrides.transaction import validate_transaction
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 
 
 def onload(doc, method=None):
-    if doc.docstatus != 1 or doc.gst_category != "Overseas":
+    if doc.docstatus != 1:
         return
 
-    doc.set_onload(
-        "bill_of_entry_exists",
-        frappe.db.exists(
-            "Bill of Entry",
-            {"purchase_invoice": doc.name, "docstatus": 1},
-        ),
-    )
+    if doc.gst_category == "Overseas":
+        doc.set_onload(
+            "bill_of_entry_exists",
+            frappe.db.exists(
+                "Bill of Entry",
+                {"purchase_invoice": doc.name, "docstatus": 1},
+            ),
+        )
 
     if not doc.get("ewaybill"):
         return
@@ -34,15 +36,7 @@ def onload(doc, method=None):
         and gst_settings.enable_e_waybill_from_pi
         and doc.ewaybill
     ):
-        doc.set_onload(
-            "e_waybill_info",
-            frappe.get_value(
-                "e-Waybill Log",
-                doc.ewaybill,
-                ("created_on", "valid_upto"),
-                as_dict=True,
-            ),
-        )
+        doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
 
 def validate(doc, method=None):
