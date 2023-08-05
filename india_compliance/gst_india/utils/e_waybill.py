@@ -90,10 +90,10 @@ def generate_e_waybills(doctype, docnames):
     for docname in docnames:
         try:
             doc = load_doc(doctype, docname, "submit")
-            _generate_e_waybill(doc, False)
+            _generate_e_waybill(doc)
         except Exception:
             frappe.log_error(
-                title=_("e-Invoice generation failed for {0} {1}").format(
+                title=_("e-Waybill generation failed for {0} {1}").format(
                     doctype, docname
                 ),
                 message=frappe.get_traceback(),
@@ -101,8 +101,7 @@ def generate_e_waybills(doctype, docnames):
 
         finally:
             # each e-Waybill needs to be committed individually
-            # nosemgrep
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
 
 
 @frappe.whitelist()

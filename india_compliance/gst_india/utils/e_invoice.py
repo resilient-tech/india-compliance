@@ -83,8 +83,7 @@ def generate_e_invoices(docnames):
 
         finally:
             # each e-Invoice needs to be committed individually
-            # nosemgrep
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
 
 
 @frappe.whitelist()
