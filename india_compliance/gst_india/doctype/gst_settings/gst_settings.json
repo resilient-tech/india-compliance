@@ -13,6 +13,8 @@
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
+  "enable_rcm_for_unregistered_supplier",
+  "rcm_threshold",
   "api_section",
   "enable_api",
   "column_break_rk3h",
@@ -28,12 +30,15 @@
   "e_invoice_section",
   "enable_e_invoice",
   "auto_generate_e_invoice",
+  "generate_e_waybill_with_e_invoice",
   "apply_e_invoice_only_for_selected_companies",
   "column_break_17",
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
+  "column_break_bydp",
+  "archive_party_info_days",
   "uom_mapping_section",
   "gst_uom_map",
   "accounts_tab",
@@ -75,7 +80,7 @@
   },
   {
    "default": "1",
-   "description": "As per <a href=\"https://www.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
+   "description": "As per <a href=\"https://old.cbic.gov.in/resources/htdocs-cbec/gst/notfctn-78-central-tax-english-2020.pdf\">Central Tax Notification No. 78/2020</a>, HSN/SAC code must be specified in Sales Invoice with atleast 4 or 6 digits (based on turnover)",
    "fieldname": "validate_hsn_code",
    "fieldtype": "Check",
    "label": "Validate HSN/SAC Code in Sales Items and Transactions"
@@ -174,7 +179,8 @@
    "description": "e-Waybill will be automatically generated after Sales Invoice submission if the invoice value threshold is met, and data is available and valid",
    "fieldname": "auto_generate_e_waybill",
    "fieldtype": "Check",
-   "label": "Automatically Generate e-Waybill on Invoice Submission"
+   "label": "Automatically Generate e-Waybill on Invoice Submission",
+   "read_only_depends_on": "eval: doc.enable_e_invoice"
   },
   {
    "default": "1",
@@ -274,12 +280,46 @@
    "fieldname": "gst_uom_map",
    "fieldtype": "Table",
    "options": "GST UOM Map"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "e-Waybill will be generated along with e-Invoice if the invoice value threshold is met, and data is available and valid",
+   "fieldname": "generate_e_waybill_with_e_invoice",
+   "fieldtype": "Check",
+   "label": "Generate e-Waybill with e-Invoice"
+  },
+  {
+   "fieldname": "column_break_bydp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "7",
+   "depends_on": "eval: doc.autofill_party_info",
+   "description": "Minimize API usage by reusing GSTIN party information retained from recent days",
+   "fieldname": "archive_party_info_days",
+   "fieldtype": "Int",
+   "label": "Archive Party Information (In Days)"
+  },
+  {
+   "default": "5000",
+   "depends_on": "eval: doc.enable_rcm_for_unregistered_supplier",
+   "fieldname": "rcm_threshold",
+   "fieldtype": "Currency",
+   "label": "Invoice Value Threshold for Reverse Charge"
+  },
+  {
+   "default": "0",
+   "description": "Reverse Charge will automatically be applied if the Supplier is Unregistered and Reverse Charge value threshold is met. ",
+   "fieldname": "enable_rcm_for_unregistered_supplier",
+   "fieldtype": "Check",
+   "label": "Enable Reverse Charge for Purchase from Unregistered Supplier"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-05-18 14:31:43.398745",
+ "modified": "2023-07-12 16:32:45.185690",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

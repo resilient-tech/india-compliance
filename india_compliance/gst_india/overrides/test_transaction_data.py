@@ -5,7 +5,11 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
 
-from india_compliance.gst_india.utils.tests import create_sales_invoice
+from india_compliance.gst_india.utils.tests import (
+    _append_taxes,
+    append_item,
+    create_sales_invoice,
+)
 from india_compliance.gst_india.utils.transaction_data import (
     GSTTransactionData,
     validate_non_gst_items,
@@ -83,7 +87,9 @@ class TestTransactionData(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(PIN Code.* a 6-digit number.*)$"),
+            re.compile(
+                r"^(Postal Code for Address.* must be a 6-digit number and cannot start with 0)$"
+            ),
             GSTTransactionData(doc).check_missing_address_fields,
             address,
         )
@@ -101,6 +107,7 @@ class TestTransactionData(FrappeTestCase):
                 "address_line2": None,
                 "city": "Test City",
                 "pincode": 380015,
+                "country_code": None,
             },
         )
 
@@ -209,4 +216,49 @@ class TestTransactionData(FrappeTestCase):
                     "total_value": 100.0,
                 }
             ],
+        )
+
+        # Test with grouping of same items
+        append_item(doc, frappe._dict(item_code="_Test Trading Goods 1"))
+        _append_taxes(doc, ("CGST", "SGST"))
+        doc.group_same_items = True
+        doc.save()
+
+        self.assertListEqual(
+            GSTTransactionData(doc).get_all_item_details(),
+            [
+                {
+                    "item_no": 1,
+                    "qty": 2.0,
+                    "taxable_value": 200.0,
+                    "hsn_code": "61149090",
+                    "item_name": "Test Trading Goods 1",
+                    "uom": "NOS",
+                    "cgst_amount": 18.0,
+                    "cgst_rate": 9.0,
+                    "sgst_amount": 18.0,
+                    "sgst_rate": 9.0,
+                    "igst_amount": 0,
+                    "igst_rate": 0,
+                    "cess_amount": 0,
+                    "cess_rate": 0,
+                    "cess_non_advol_amount": 0,
+                    "cess_non_advol_rate": 0,
+                    "tax_rate": 18.0,
+                    "total_value": 236.0,
+                }
+            ],
+        )
+
+    def test_validate_unique_hsn_and_uom(self):
+        doc = create_sales_invoice(do_not_submit=True)
+
+        append_item(doc, frappe._dict(item_code="_Test Trading Goods 1", uom="Box"))
+
+        doc.group_same_items = True
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Row #.*Grouping of items is not possible.)$"),
+            doc.submit,
         )

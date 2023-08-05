@@ -14,6 +14,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+    HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
 from india_compliance.gst_india.setup.property_setters import get_property_setters
@@ -39,6 +40,12 @@ def create_custom_fields():
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
     _create_custom_fields(get_all_custom_fields(), ignore_validate=True)
+    if "hrms" in frappe.get_installed_apps():
+        create_hrms_custom_fields()
+
+
+def create_hrms_custom_fields():
+    _create_custom_fields(HRMS_CUSTOM_FIELDS, ignore_validate=True)
 
 
 def create_accounting_dimension_fields():
@@ -55,7 +62,7 @@ def create_accounting_dimension_fields():
 
 def create_property_setters():
     for property_setter in get_property_setters():
-        frappe.make_property_setter(property_setter)
+        frappe.make_property_setter(property_setter, validate_fields_for_doctype=False)
 
 
 def create_address_template():
@@ -143,12 +150,15 @@ def set_default_gst_settings():
         "enable_e_waybill": 1,
         "e_waybill_threshold": 50000,
         # Default API Settings
+        "enable_api": 1,
         "fetch_e_waybill_data": 1,
         "attach_e_waybill_print": 1,
         "auto_generate_e_waybill": 1,
         "auto_generate_e_invoice": 1,
+        "generate_e_waybill_with_e_invoice": 1,
         "e_invoice_applicable_from": nowdate(),
-        "auto_fill_party_info": 1,
+        "autofill_party_info": 1,
+        "archive_party_info_days": 7,
     }
 
     if frappe.conf.developer_mode:
@@ -179,9 +189,8 @@ def set_default_accounts_settings():
 
     show_accounts_settings_override_warning()
 
-    frappe.db.set_value(
+    frappe.db.set_single_value(
         "Accounts Settings",
-        None,
         {
             "determine_address_tax_category_from": "Billing Address",
             "add_taxes_from_item_tax_template": 0,

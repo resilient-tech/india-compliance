@@ -23,12 +23,14 @@ frappe.ui.form.on("GST Settings", {
         });
     },
     onload: show_ic_api_promo,
+    refresh: show_update_gst_category_button,
     attach_e_waybill_print(frm) {
         if (!frm.doc.attach_e_waybill_print || frm.doc.fetch_e_waybill_data) return;
         frm.set_value("fetch_e_waybill_data", 1);
     },
     enable_e_invoice: set_auto_generate_e_waybill,
     auto_generate_e_invoice: set_auto_generate_e_waybill,
+    generate_e_waybill_with_e_invoice: set_auto_generate_e_waybill,
     after_save(frm) {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
@@ -91,8 +93,45 @@ function show_ic_api_promo(frm) {
     });
 }
 
+function show_update_gst_category_button(frm) {
+    if (
+        !frm.doc.__onload?.has_missing_gst_category ||
+        !india_compliance.is_api_enabled() ||
+        !frm.doc.autofill_party_info
+    )
+        return;
+
+    frm.add_custom_button(__("Update GST Category"), () => {
+        frappe.msgprint({
+            title: __("Update GST Category"),
+            message: __(
+                "Confirm to update GST Category for all Address where its missing using API. It is missing for these <a><span class='custom-link' data-fieldtype='Link' data-doctype='Address'>Addresses</span><a>."
+            ),
+            primary_action: {
+                label: __("Update"),
+                server_action:
+                    "india_compliance.gst_india.doctype.gst_settings.gst_settings.enqueue_update_gst_category",
+                hide_on_success: true,
+            },
+        });
+
+        $(document).on("click", ".custom-link", function () {
+            const doctype = $(this).attr("data-doctype");
+
+            frappe.route_options = {
+                gst_category: ["is", "not set"],
+            };
+
+            frappe.set_route("List", doctype);
+        });
+    });
+}
+
 function set_auto_generate_e_waybill(frm) {
     if (!frm.doc.enable_e_invoice) return;
 
-    frm.set_value("auto_generate_e_waybill", frm.doc.auto_generate_e_invoice);
+    frm.set_value(
+        "auto_generate_e_waybill",
+        frm.doc.auto_generate_e_invoice && frm.doc.generate_e_waybill_with_e_invoice
+    );
 }
