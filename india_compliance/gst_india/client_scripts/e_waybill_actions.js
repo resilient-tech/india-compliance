@@ -677,8 +677,8 @@ async function show_extend_validity_dialog(frm) {
         frm.doc.shipping_address_name || frm.doc.customer_address
     );
 
-    const is_in_movement = "eval: doc.consignment_status == 'In Movement'";
-    const is_in_transit = "eval: doc.consignment_status == 'In Transit'";
+    const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
+    const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
 
     const d = new frappe.ui.Dialog({
         title: __("Extend Validity"),
@@ -695,7 +695,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "vehicle_no",
                 fieldtype: "Data",
                 default: frm.doc.vehicle_no,
-                mandatory_depends_on: "eval: doc.mode_of_transport == 'Road'",
+                mandatory_depends_on: "eval: doc.mode_of_transport === 'Road'",
             },
             {
                 label: "Remaining Distance (in km)",
@@ -740,7 +740,7 @@ async function show_extend_validity_dialog(frm) {
                 default: frm.doc.lr_no,
                 depends_on: is_in_movement,
                 mandatory_depends_on:
-                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport) && doc.consignment_status == 'In Movement'",
+                    "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport) && doc.consignment_status === 'In Movement'",
             },
             {
                 fieldtype: "Section Break",
@@ -823,7 +823,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "remark",
                 label: "Remark",
                 fieldtype: "Data",
-                mandatory_depends_on: 'eval: doc.reason == "Others"',
+                mandatory_depends_on: 'eval: doc.reason === "Others"',
             },
         ],
         primary_action_label: __("Extend"),
@@ -971,9 +971,9 @@ function update_transit_type(dialog) {
 }
 
 function get_transit_type(dialog) {
-    if (dialog.consignment_status == "In Movement") return "";
-    if (dialog.consignment_status == "In Transit") {
-        if (dialog.mode_of_transport == "Road") return "Road";
+    if (dialog.consignment_status === "In Movement") return "";
+    if (dialog.consignment_status === "In Transit") {
+        if (dialog.mode_of_transport === "Road") return "Road";
         else return "Others";
     }
 }
