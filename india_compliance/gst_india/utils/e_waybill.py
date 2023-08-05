@@ -1107,6 +1107,10 @@ class EWaybillData(GSTTransactionData):
         self.bill_to.legal_name = self.transaction_details.party_name
         self.bill_from.legal_name = self.transaction_details.company_name
 
+        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
+            self.bill_to.legal_name = self.transaction_details.company_name
+            self.bill_from.legal_name = self.transaction_details.party_name
+
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96
 

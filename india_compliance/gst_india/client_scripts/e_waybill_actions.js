@@ -670,11 +670,7 @@ function show_update_transporter_dialog(frm) {
 }
 
 async function show_extend_validity_dialog(frm) {
-    const shipping_address = await frappe.db.get_doc(
-        "Address",
-        frm.doc.shipping_address_name || frm.doc.customer_address
-    );
-
+    const shipping_address = await frappe.db.get_doc("Address", get_address_name(frm));
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
 
@@ -1041,4 +1037,12 @@ function get_e_waybill_file_name(docname) {
 
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
+}
+
+function get_address_name(frm) {
+    if (frm.doc.doctype == "Purchase Invoice") {
+        if (frm.doc.is_return) return frm.doc.supplier_address;
+        return frm.doc.shipping_address_name || frm.doc.billing_address;
+    }
+    return frm.doc.shipping_address_name || frm.doc.customer_address;
 }
