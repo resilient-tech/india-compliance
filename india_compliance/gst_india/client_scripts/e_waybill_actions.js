@@ -88,14 +88,17 @@ function setup_e_waybill_actions(doctype) {
                     () => show_update_transporter_dialog(frm),
                     "e-Waybill"
                 );
+            }
 
-                if (can_extend_e_waybill(frm)) {
-                    frm.add_custom_button(
-                        __("Extend Validity"),
-                        () => show_extend_validity_dialog(frm),
-                        "e-Waybill"
-                    );
-                }
+            if (
+                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
+                can_extend_e_waybill(frm)
+            ) {
+                frm.add_custom_button(
+                    __("Extend Validity"),
+                    () => show_extend_validity_dialog(frm),
+                    "e-Waybill"
+                );
             }
 
             if (
@@ -671,8 +674,11 @@ function show_update_transporter_dialog(frm) {
 async function show_extend_validity_dialog(frm) {
     const shipping_address = await frappe.db.get_doc(
         "Address",
-        frm.doc.shipping_address_name
+        frm.doc.shipping_address_name || frm.doc.customer_address
     );
+
+    const is_in_movement = "eval: doc.consignment_status == 'In Movement'";
+    const is_in_transit = "eval: doc.consignment_status == 'In Transit'";
 
     const d = new frappe.ui.Dialog({
         title: __("Extend Validity"),
@@ -696,8 +702,6 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "remaining_distance",
                 fieldtype: "Float",
                 default: frm.doc.distance,
-                description:
-                    "Set remaining distance to tranvel from current place to destination",
             },
             {
                 fieldtype: "Column Break",
@@ -717,8 +721,8 @@ async function show_extend_validity_dialog(frm) {
                 fieldtype: "Select",
                 options: `\nRoad\nAir\nRail\nShip`,
                 default: frm.doc.mode_of_transport,
-                depends_on: "eval: doc.consignment_status == 'In Movement'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'In Movement'",
+                depends_on: is_in_movement,
+                mandatory_depends_on: is_in_movement,
                 onchange: () => update_transit_type(d),
             },
             {
@@ -726,15 +730,15 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "transit_type",
                 fieldtype: "Select",
                 options: `\nRoad\nWarehouse\nOthers`,
-                depends_on: "eval:doc.consignment_status == 'In Transit'",
-                mandatory_depends_on: "eval:doc.consignment_status == 'In Transit'",
+                depends_on: is_in_transit,
+                mandatory_depends_on: is_in_transit,
             },
             {
                 label: "Transport Receipt No",
                 fieldname: "lr_no",
                 fieldtype: "Data",
                 default: frm.doc.lr_no,
-                depends_on: "eval: doc.consignment_status == 'In Movement'",
+                depends_on: is_in_movement,
                 mandatory_depends_on:
                     "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport) && doc.consignment_status == 'In Movement'",
             },
@@ -746,24 +750,24 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "address_line1",
                 fieldtype: "Data",
                 default: shipping_address.address_line1,
-                depends_on: "eval: doc.consignment_status == 'In Transit'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'In Transit'",
+                depends_on: is_in_transit,
+                mandatory_depends_on: is_in_transit,
             },
             {
                 label: "Address Line2",
                 fieldname: "address_line2",
                 fieldtype: "Data",
                 default: shipping_address.address_line2,
-                depends_on: "eval: doc.consignment_status == 'In Transit'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'In Transit'",
+                depends_on: is_in_transit,
+                mandatory_depends_on: is_in_transit,
             },
             {
                 label: "Address Line3",
                 fieldname: "address_line3",
                 fieldtype: "Data",
                 default: shipping_address.city,
-                depends_on: "eval: doc.consignment_status == 'In Transit'",
-                mandatory_depends_on: "eval: doc.consignment_status == 'In Transit'",
+                depends_on: is_in_transit,
+                mandatory_depends_on: is_in_transit,
             },
             {
                 fieldtype: "Column Break",
@@ -773,13 +777,14 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "current_place",
                 fieldtype: "Data",
                 reqd: 1,
+                default: shipping_address.city,
             },
             {
                 label: "Current Pincode",
                 fieldname: "current_pincode",
                 fieldtype: "Data",
                 reqd: 1,
-                description: `Destinaion pincode ${shipping_address.pincode}`,
+                default: shipping_address.pincode,
             },
             {
                 label: "Current State",
