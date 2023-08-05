@@ -127,10 +127,11 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     """Separate function, since called in backend from e-invoice utils"""
     e_waybill_number = str(result["ewayBillNo" if not with_irn else "EwbNo"])
 
-    data = {
-        "ewaybill": e_waybill_number,
-        "e_waybill_status": "Generated",
-    }
+    data = {"ewaybill": e_waybill_number}
+
+    if doc.doctype == "Sales Invoice":
+        data["e_waybill_status"] = "Generated"
+
     if distance := result.get("distance"):
         data["distance"] = distance
 
@@ -201,12 +202,12 @@ def _cancel_e_waybill(doc, values):
         },
     )
 
-    doc.db_set(
-        {
-            "ewaybill": "",
-            "e_waybill_status": "Cancelled",
-        }
-    )
+    data = {"ewaybill": ""}
+
+    if doc.doctype == "Sales Invoice":
+        data["e_waybill_status"] = "Cancelled"
+
+    doc.db_set(data)
 
     frappe.msgprint(
         _("e-Waybill cancelled successfully"),
