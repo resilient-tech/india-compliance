@@ -7,12 +7,19 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
 
     if (!frappe.perm.has_perm(DOCTYPE, 0, "submit")) return;
 
-    if (gst_settings.enable_e_waybill)
+    if (gst_settings.enable_e_waybill) {
         add_bulk_action_for_submitted_invoices(
             list_view,
             __("Generate e-Waybill JSON"),
             generate_e_waybill_json
         );
+
+        add_bulk_action_for_submitted_invoices(
+            list_view,
+            __("Enqueue Bulk e-Waybill Generation"),
+            enqueue_bulk_e_waybill_generation
+        );
+    }
 
     if (india_compliance.is_e_invoice_enabled())
         add_bulk_action_for_submitted_invoices(
@@ -39,14 +46,24 @@ async function generate_e_waybill_json(docnames) {
     trigger_file_download(ewb_data, get_e_waybill_file_name());
 }
 
-async function enqueue_bulk_e_invoice_generation(docnames) {
-    const now = frappe.datetime.system_datetime();
+async function enqueue_bulk_e_waybill_generation(docnames) {
+    enqueue_bulk_generation(
+        "india_compliance.gst_india.utils.e_waybill.enqueue_bulk_e_waybill_generation",
+        { doctype: DOCTYPE, docnames }
+    );
+}
 
-    const job_id = await frappe.xcall(
+async function enqueue_bulk_e_invoice_generation(docnames) {
+    enqueue_bulk_generation(
         "india_compliance.gst_india.utils.e_invoice.enqueue_bulk_e_invoice_generation",
         { docnames }
     );
+}
 
+async function enqueue_bulk_generation(method, args) {
+    const job_id = await frappe.xcall(method, args);
+
+    const now = frappe.datetime.system_datetime();
     const creation_filter = `[">", "${now}"]`;
     const api_requests_link = frappe.utils.generate_route({
         type: "doctype",
@@ -66,7 +83,7 @@ async function enqueue_bulk_e_invoice_generation(docnames) {
 
     frappe.msgprint(
         __(
-            `Bulk e-Invoice Generation has been queued. You can track the
+            `Bulk Generation has been queued. You can track the
             <a href='{0}'>Background Job</a>,
             <a href='{1}'>API Request(s)</a>,
             and <a href='{2}'>Error Log(s)</a>.`,
