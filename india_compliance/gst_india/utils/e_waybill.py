@@ -64,6 +64,54 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 
 @frappe.whitelist()
+def enqueue_bulk_e_waybill_generation(doctype, docnames):
+    """
+    Enqueue bulk generation of e-Waybill for the given documents.
+    """
+
+    frappe.has_permission(doctype, "submit", throw=True)
+
+    from india_compliance.gst_india.utils import is_api_enabled
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
+        frappe.throw(_("Please enable e-Waybill in GST Settings first."))
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    rq_job = frappe.enqueue(
+        "india_compliance.gst_india.utils.e_waybill.generate_e_waybills",
+        queue="long",
+        timeout=len(docnames) * 240,  # 4 mins per e-Waybill
+        doctype=doctype,
+        docnames=docnames,
+    )
+
+    return rq_job.id
+
+
+def generate_e_waybills(doctype, docnames):
+    """
+    Bulk generate e-Waybill for the given documents.
+    """
+
+    for docname in docnames:
+        try:
+            doc = load_doc(doctype, docname, "submit")
+            _generate_e_waybill(doc)
+        except Exception:
+            frappe.log_error(
+                title=_("e-Waybill generation failed for {0} {1}").format(
+                    doctype, docname
+                ),
+                message=frappe.get_traceback(),
+            )
+
+        finally:
+            # each e-Waybill needs to be committed individually
+            frappe.db.commit()  # nosemgrep
+
+
+@frappe.whitelist()
 def generate_e_waybill(*, doctype, docname, values=None):
     doc = load_doc(doctype, docname, "submit")
     if values:
