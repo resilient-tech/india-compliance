@@ -1055,11 +1055,11 @@ class EWaybillData(GSTTransactionData):
             address.ship_from, address.ship_to = address.ship_to, address.ship_from
 
         has_different_to_address = (
-            address.bill_to and address.ship_to != address.bill_to
+            address.ship_to and address.ship_to != address.bill_to
         )
 
         has_different_from_address = (
-            address.bill_from and address.ship_from != address.bill_from
+            address.ship_from and address.ship_from != address.bill_from
         )
 
         self.bill_to = self.get_address_details(address.bill_to)
