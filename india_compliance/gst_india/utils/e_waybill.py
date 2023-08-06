@@ -183,13 +183,6 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     if doc.doctype == "Sales Invoice":
         data["e_waybill_status"] = "Generated"
 
-    data = {
-        "ewaybill": e_waybill_number,
-    }
-
-    if doc.doctype == "Sales Invoice":
-        data["e_waybill_status"] = "Generated"
-
     if distance := result.get("distance"):
         data["distance"] = distance
 
