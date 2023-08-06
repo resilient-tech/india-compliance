@@ -35,10 +35,6 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
-# SANDBOX_GSTINS
-REGISTERED_GSTIN = "05AAACG2115R1ZN"
-OTHER_GSTIN = "05AAACG2140A1ZL"
-
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
 #######################################################################################
@@ -801,34 +797,18 @@ class EWaybillData(GSTTransactionData):
                 )
             )
 
-        if self.doc.doctype == "Purchase Invoice":
-            self.validate_purchase_applicability()
-
         self.validate_applicability()
+        self.validate_bill_no_for_purchase()
 
     def validate_settings(self):
         if not self.settings.enable_e_waybill:
             frappe.throw(_("Please enable e-Waybill in GST Settings"))
-
-    def validate_purchase_applicability(self):
-        if self.doc.is_return or self.doc.gst_category == "Unregistered":
-            return
-
-        # Threshold Limit is checked in validate_applicability
-        frappe.throw(
-            msg=_(
-                "e-Waybill generation is only required for:<br><br>Purchase Returns(Debit Note)<br>Unregistered Purchases"
-            ),
-            title=_("Invalid Request"),
-        )
 
     def validate_applicability(self):
         """
         Validates:
         - Required fields
         - Atleast one item with HSN for goods is required
-        - Overseas Returns are not allowed
-        - Validate threshold limit
         - Basic transporter details must be present
         - Transaction does not have any non-GST items
         - Sales Invoice with same company and billing gstin
@@ -856,13 +836,6 @@ class EWaybillData(GSTTransactionData):
                 title=_("Invalid Data"),
             )
 
-        # TODO: check if this validation is required
-        # if self.doc.is_return and self.doc.gst_category == "Overseas":
-        #     frappe.throw(
-        #         msg=_("Return/Credit Note is not supported for Overseas e-Waybill"),
-        #         title=_("Incorrect Usage"),
-        #     )
-
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
@@ -877,6 +850,18 @@ class EWaybillData(GSTTransactionData):
                     "e-Waybill cannot be generated because billing GSTIN is same as"
                     " company GSTIN"
                 ),
+                title=_("Invalid Data"),
+            )
+
+    def validate_bill_no_for_purchase(self):
+        if (
+            self.doc.doctype == "Purchase Invoice"
+            and not self.doc.is_return
+            and not self.doc.bill_no
+            and self.doc.gst_category != "Unregistered"
+        ):
+            frappe.throw(
+                _("Bill No is mandatory to generate e-Waybill for Purchase Invoice"),
                 title=_("Invalid Data"),
             )
 
@@ -1059,19 +1044,22 @@ class EWaybillData(GSTTransactionData):
             if not doc.is_export_with_gst:
                 self.transaction_details.update(document_type="BIL")
 
+        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
+            self.transaction_details.name = self.doc.bill_no or self.doc.name
+
     def set_party_address_details(self):
         transaction_type = 1
         address = self.get_address_map()
-
-        if self.doc.is_return:
-            address.bill_from, address.bill_to = address.bill_to, address.bill_from
-            address.ship_from, address.ship_to = address.ship_to, address.ship_from
 
         address.ship_to = (
             self.doc.port_address
             if (is_foreign_doc(self.doc) and self.doc.port_address)
             else address.ship_to
         )
+
+        if self.doc.is_return:
+            address.bill_from, address.bill_to = address.bill_to, address.bill_from
+            address.ship_from, address.ship_to = address.ship_to, address.ship_from
 
         has_different_to_address = (
             address.bill_to and address.ship_to != address.bill_to
@@ -1104,12 +1092,17 @@ class EWaybillData(GSTTransactionData):
 
         self.transaction_details.transaction_type = transaction_type
 
-        self.bill_to.legal_name = self.transaction_details.party_name
-        self.bill_from.legal_name = self.transaction_details.company_name
+        to_party = self.transaction_details.party_name
+        from_party = self.transaction_details.company_name
 
-        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
-            self.bill_to.legal_name = self.transaction_details.company_name
-            self.bill_from.legal_name = self.transaction_details.party_name
+        if self.doc.doctype == "Purchase Invoice":
+            to_party, from_party = from_party, to_party
+
+        if self.doc.is_return:
+            to_party, from_party = from_party, to_party
+
+        self.bill_to.legal_name = to_party
+        self.bill_from.legal_name = from_party
 
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96
@@ -1157,6 +1150,9 @@ class EWaybillData(GSTTransactionData):
 
     def get_transaction_data(self):
         if self.sandbox_mode:
+            REGISTERED_GSTIN = "05AAACG2115R1ZN"
+            OTHER_GSTIN = "05AAACG2140A1ZL"
+
             self.transaction_details.update(
                 {
                     "company_gstin": REGISTERED_GSTIN,

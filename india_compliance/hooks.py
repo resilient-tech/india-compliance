@@ -210,14 +210,14 @@ jinja = {
 }
 
 override_doctype_dashboards = {
-    "Purchase Invoice": (
-        "india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"
-    ),
     "Sales Invoice": (
         "india_compliance.gst_india.overrides.sales_invoice.get_dashboard_data"
     ),
     "Delivery Note": (
         "india_compliance.gst_india.overrides.delivery_note.get_dashboard_data"
+    ),
+    "Purchase Invoice": (
+        "india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"
     ),
 }
 

@@ -6,8 +6,7 @@ frappe.ui.form.on(DOCTYPE, {
         if (
             frm.doc.docstatus ||
             frm.doc.supplier_address ||
-            !(gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi) ||
-            !(frm.doc.is_return || frm.doc.gst_category === "Unregistered")
+            !is_e_waybill_applicable(frm)
         )
             return;
 

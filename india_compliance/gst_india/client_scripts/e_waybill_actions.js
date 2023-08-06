@@ -1,10 +1,5 @@
 function setup_e_waybill_actions(doctype) {
-    if (
-        !gst_settings.enable_e_waybill ||
-        (doctype == "Delivery Note" && !gst_settings.enable_e_waybill_from_dn) ||
-        (doctype == "Purchase Invoice" && !gst_settings.enable_e_waybill_from_pi)
-    )
-        return;
+    if (!gst_settings.enable_e_waybill) return;
 
     frappe.ui.form.on(doctype, {
         mode_of_transport(frm) {
@@ -857,6 +852,7 @@ function is_e_waybill_applicable(frm) {
     if (
         // means company is Indian and not Unregistered
         !frm.doc.company_gstin ||
+        !gst_settings.enable_e_waybill ||
         !(
             is_e_waybill_applicable_on_sales_invoice(frm) ||
             is_e_waybill_applicable_on_purchase_invoice(frm) ||
@@ -912,15 +908,19 @@ function is_e_waybill_applicable_on_sales_invoice(frm) {
 }
 
 function is_e_waybill_applicable_on_delivery_note(frm) {
-    return frm.doctype == "Delivery Note" && frm.doc.customer_address;
+    return (
+        frm.doctype == "Delivery Note" &&
+        frm.doc.customer_address &&
+        gst_settings.enable_e_waybill_from_dn
+    );
 }
 
 function is_e_waybill_applicable_on_purchase_invoice(frm) {
     return (
         frm.doctype == "Purchase Invoice" &&
         frm.doc.supplier_address &&
-        (frm.doc.is_return || frm.doc.gst_category === "Unregistered") &&
-        frm.doc.company_gstin !== frm.doc.supplier_gstin
+        frm.doc.company_gstin !== frm.doc.supplier_gstin &&
+        gst_settings.enable_e_waybill_from_pi
     );
 }
 
