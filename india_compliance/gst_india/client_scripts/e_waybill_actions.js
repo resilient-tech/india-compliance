@@ -879,9 +879,11 @@ function can_extend_e_waybill(frm) {
     const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
     const extend_after = get_hours(valid_upto, -8);
     const extend_before = get_hours(valid_upto, 8);
+    const now = frappe.datetime.now_datetime();
 
     if (
-        extend_after < frappe.datetime.now_datetime() < extend_before &&
+        extend_after < now &&
+        now < extend_before &&
         frm.doc.gst_transporter_id != frm.doc.company_gstin
     )
         return true;
