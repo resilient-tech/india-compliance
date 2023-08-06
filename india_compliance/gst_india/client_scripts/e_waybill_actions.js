@@ -665,7 +665,10 @@ function show_update_transporter_dialog(frm) {
 }
 
 async function show_extend_validity_dialog(frm) {
-    const shipping_address = await frappe.db.get_doc("Address", get_address_name(frm));
+    const destination_address = await frappe.db.get_doc(
+        "Address",
+        get_destination_address_name(frm)
+    );
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
 
@@ -738,7 +741,7 @@ async function show_extend_validity_dialog(frm) {
                 label: "Address Line1",
                 fieldname: "address_line1",
                 fieldtype: "Data",
-                default: shipping_address.address_line1,
+                default: destination_address.address_line1,
                 depends_on: is_in_transit,
                 mandatory_depends_on: is_in_transit,
             },
@@ -746,7 +749,7 @@ async function show_extend_validity_dialog(frm) {
                 label: "Address Line2",
                 fieldname: "address_line2",
                 fieldtype: "Data",
-                default: shipping_address.address_line2,
+                default: destination_address.address_line2,
                 depends_on: is_in_transit,
                 mandatory_depends_on: is_in_transit,
             },
@@ -754,7 +757,7 @@ async function show_extend_validity_dialog(frm) {
                 label: "Address Line3",
                 fieldname: "address_line3",
                 fieldtype: "Data",
-                default: shipping_address.city,
+                default: destination_address.city,
                 depends_on: is_in_transit,
                 mandatory_depends_on: is_in_transit,
             },
@@ -766,14 +769,14 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "current_place",
                 fieldtype: "Data",
                 reqd: 1,
-                default: shipping_address.city,
+                default: destination_address.city,
             },
             {
                 label: "Current Pincode",
                 fieldname: "current_pincode",
                 fieldtype: "Data",
                 reqd: 1,
-                default: shipping_address.pincode,
+                default: destination_address.pincode,
             },
             {
                 label: "Current State",
@@ -781,7 +784,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldtype: "Autocomplete",
                 options: frappe.boot.india_state_options.join("\n"),
                 reqd: 1,
-                default: shipping_address.state,
+                default: destination_address.state,
             },
             {
                 fieldtype: "Section Break",
@@ -1039,10 +1042,13 @@ function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
 }
 
-function get_address_name(frm) {
+function get_destination_address_name(frm) {
     if (frm.doc.doctype == "Purchase Invoice") {
         if (frm.doc.is_return) return frm.doc.supplier_address;
         return frm.doc.shipping_address_name || frm.doc.billing_address;
+    } else {
+        if (frm.doc.is_return)
+            return frm.doc.dispatch_address_name || frm.doc.company_address;
+        return frm.doc.shipping_address_name || frm.doc.customer_address;
     }
-    return frm.doc.shipping_address_name || frm.doc.customer_address;
 }
