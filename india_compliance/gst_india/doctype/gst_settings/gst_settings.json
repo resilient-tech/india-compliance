@@ -22,6 +22,7 @@
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
+  "enable_e_waybill_from_pi",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "column_break_10",
@@ -237,6 +238,13 @@
    "fieldname": "autofill_party_info",
    "fieldtype": "Check",
    "label": "Autofill Party Information based on GSTIN"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "fieldname": "enable_e_waybill_from_pi",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Generation from Purchase Invoice"
   },
   {
    "collapsible": 1,

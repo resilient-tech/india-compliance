@@ -510,7 +510,7 @@ class EInvoiceData(GSTTransactionData):
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = self.transaction_details.customer_name
+        self.billing_address.legal_name = self.transaction_details.party_name
         self.company_address.legal_name = self.transaction_details.company_name
 
     def get_invoice_data(self):

@@ -26,8 +26,8 @@ from india_compliance.gst_india.utils.e_waybill import (
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
-    create_purchase_invoice,
     create_sales_invoice,
+    create_transaction,
 )
 
 DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
@@ -626,13 +626,15 @@ class TestEWaybill(FrappeTestCase):
 
     def test_validate_doctype_for_e_waybill(self):
         """Validate if doctype is supported for e-waybill"""
-        purchase_invoice = create_purchase_invoice()
+        purchase_order = create_transaction(doctype="Purchase Order")
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(Only Sales Invoice and Delivery Note are supported.*)$"),
+            re.compile(
+                r"^(Only Sales Invoice, Purchase Invoice, Delivery Note are supported.*)$"
+            ),
             EWaybillData,
-            purchase_invoice,
+            purchase_order,
         )
 
     @responses.activate
