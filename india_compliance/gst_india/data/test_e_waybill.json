@@ -576,7 +576,8 @@
     },
     "dn_with_same_gstin": {
         "kwargs": {
-            "qty": 1000
+            "qty": 1000,
+            "company_address": "_Test Registered Customer-Billing"
         },
         "values": {
             "distance": 100,
