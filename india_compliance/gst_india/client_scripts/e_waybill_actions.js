@@ -86,6 +86,17 @@ function setup_e_waybill_actions(doctype) {
             }
 
             if (
+                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
+                can_extend_e_waybill(frm)
+            ) {
+                frm.add_custom_button(
+                    __("Extend Validity"),
+                    () => show_extend_validity_dialog(frm),
+                    "e-Waybill"
+                );
+            }
+
+            if (
                 frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name) &&
                 is_e_waybill_cancellable(frm)
             ) {
@@ -975,6 +986,18 @@ function get_vehicle_type(doc) {
     if (doc.mode_of_transport == "Road") return "Regular";
     if (doc.mode_of_transport == "Ship") return "Over Dimensional Cargo (ODC)";
     return "";
+}
+
+function update_transit_type(dialog) {
+    dialog.set_value("transit_type", get_transit_type(dialog.get_values(true)));
+}
+
+function get_transit_type(dialog) {
+    if (dialog.consignment_status === "In Movement") return "";
+    if (dialog.consignment_status === "In Transit") {
+        if (dialog.mode_of_transport === "Road") return "Road";
+        else return "Others";
+    }
 }
 
 /********
