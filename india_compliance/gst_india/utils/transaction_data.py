@@ -39,10 +39,22 @@ class GSTTransactionData:
         self.sandbox_mode = self.settings.sandbox_mode
         self.transaction_details = frappe._dict()
 
+        gst_type = "Output"
+        self.party_name_field = "customer_name"
+
+        if self.doc.doctype == "Purchase Invoice":
+            self.party_name_field = "supplier_name"
+            if self.doc.is_reverse_charge != 1:
+                # for with reverse charge, gst_type is Output
+                # this will ensure zero taxes in transaction details
+                gst_type = "Input"
+
+        self.party_name = self.doc.get(self.party_name_field)
+
         # "CGST Account - TC": "cgst_account"
         self.gst_accounts = {
             v: k
-            for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
+            for k, v in get_gst_accounts_by_type(self.doc.company, gst_type).items()
         }
 
     def set_transaction_details(self):
@@ -50,10 +62,10 @@ class GSTTransactionData:
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
-                "customer_name": self.sanitize_value(
-                    self.doc.customer_name
+                "party_name": self.sanitize_value(
+                    self.party_name
                     or frappe.db.get_value(
-                        "Customer", self.doc.customer, "customer_name"
+                        self.doc.doctype, self.party_name, self.party_name_field
                     )
                 ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
@@ -266,6 +278,7 @@ class GSTTransactionData:
                 msg=_("Posting Date cannot be greater than Today's Date"),
                 title=_("Invalid Data"),
             )
+
         # compare posting date and lr date, only if lr no is set
         if (
             self.doc.lr_no

@@ -10,7 +10,26 @@
 # }
 #
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
+selling_address = {
+    "bill_from": "company_address",
+    "bill_to": "customer_address",
+    "ship_from": "dispatch_address_name",
+    "ship_to": "shipping_address_name",
+}
 
+buying_address = {
+    "bill_from": "supplier_address",
+    "bill_to": "billing_address",
+    "ship_from": "supplier_address",
+    "ship_to": "shipping_address",
+}
+
+ADDRESS_FIELDS = {
+    "Sales Invoice": selling_address,
+    "Purchase Invoice": buying_address,
+    "Delivery Note": selling_address,
+}
+PERMITTED_DOCTYPES = list(ADDRESS_FIELDS.keys())
 
 CANCEL_REASON_CODES = {
     "Duplicate": "1",

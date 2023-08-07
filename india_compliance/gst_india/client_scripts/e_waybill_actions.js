@@ -1,9 +1,5 @@
 function setup_e_waybill_actions(doctype) {
-    if (
-        !gst_settings.enable_e_waybill ||
-        (doctype == "Delivery Note" && !gst_settings.enable_e_waybill_from_dn)
-    )
-        return;
+    if (!gst_settings.enable_e_waybill) return;
 
     frappe.ui.form.on(doctype, {
         mode_of_transport(frm) {
@@ -31,8 +27,7 @@ function setup_e_waybill_actions(doctype) {
             if (
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
-                !is_e_waybill_applicable(frm) ||
-                (frm.doctype === "Delivery Note" && !frm.doc.customer_address)
+                !is_e_waybill_applicable(frm)
             )
                 return;
 
@@ -132,11 +127,9 @@ function setup_e_waybill_actions(doctype) {
         },
         async on_submit(frm) {
             if (
-                // threshold is only met for Sales Invoice
+                frm.doctype != "Sales Invoice" ||
                 !has_e_waybill_threshold_met(frm) ||
                 frm.doc.ewaybill ||
-                frm.doc.is_return ||
-                frm.doc.is_debit_note ||
                 !india_compliance.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
                 is_e_invoice_applicable(frm) ||
@@ -672,11 +665,10 @@ function show_update_transporter_dialog(frm) {
 }
 
 async function show_extend_validity_dialog(frm) {
-    const shipping_address = await frappe.db.get_doc(
+    const destination_address = await frappe.db.get_doc(
         "Address",
-        frm.doc.shipping_address_name || frm.doc.customer_address
+        get_destination_address_name(frm)
     );
-
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
 
@@ -749,7 +741,7 @@ async function show_extend_validity_dialog(frm) {
                 label: "Address Line1",
                 fieldname: "address_line1",
                 fieldtype: "Data",
-                default: shipping_address.address_line1,
+                default: destination_address.address_line1,
                 depends_on: is_in_transit,
                 mandatory_depends_on: is_in_transit,
             },
@@ -757,7 +749,7 @@ async function show_extend_validity_dialog(frm) {
                 label: "Address Line2",
                 fieldname: "address_line2",
                 fieldtype: "Data",
-                default: shipping_address.address_line2,
+                default: destination_address.address_line2,
                 depends_on: is_in_transit,
                 mandatory_depends_on: is_in_transit,
             },
@@ -765,7 +757,7 @@ async function show_extend_validity_dialog(frm) {
                 label: "Address Line3",
                 fieldname: "address_line3",
                 fieldtype: "Data",
-                default: shipping_address.city,
+                default: destination_address.city,
                 depends_on: is_in_transit,
                 mandatory_depends_on: is_in_transit,
             },
@@ -777,14 +769,14 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "current_place",
                 fieldtype: "Data",
                 reqd: 1,
-                default: shipping_address.city,
+                default: destination_address.city,
             },
             {
                 label: "Current Pincode",
                 fieldname: "current_pincode",
                 fieldtype: "Data",
                 reqd: 1,
-                default: shipping_address.pincode,
+                default: destination_address.pincode,
             },
             {
                 label: "Current State",
@@ -792,7 +784,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldtype: "Autocomplete",
                 options: frappe.boot.india_state_options.join("\n"),
                 reqd: 1,
-                default: shipping_address.state,
+                default: destination_address.state,
             },
             {
                 fieldtype: "Section Break",
@@ -855,19 +847,20 @@ function is_e_waybill_valid(frm) {
 }
 
 function has_e_waybill_threshold_met(frm) {
-    if (
-        frm.doc.doctype == "Sales Invoice" &&
-        Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold
-    )
+    if (Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold)
         return true;
 }
 
 function is_e_waybill_applicable(frm) {
-    // means company is Indian and not Unregistered
     if (
+        // means company is Indian and not Unregistered
         !frm.doc.company_gstin ||
-        (frm.doctype === "Sales Invoice" &&
-            frm.doc.company_gstin === frm.doc.billing_address_gstin)
+        !gst_settings.enable_e_waybill ||
+        !(
+            is_e_waybill_applicable_on_sales_invoice(frm) ||
+            is_e_waybill_applicable_on_purchase_invoice(frm) ||
+            is_e_waybill_applicable_on_delivery_note(frm)
+        )
     )
         return;
 
@@ -886,9 +879,11 @@ function can_extend_e_waybill(frm) {
     const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
     const extend_after = get_hours(valid_upto, -8);
     const extend_before = get_hours(valid_upto, 8);
+    const now = frappe.datetime.now_datetime();
 
     if (
-        extend_after < frappe.datetime.now_datetime() < extend_before &&
+        extend_after < now &&
+        now < extend_before &&
         frm.doc.gst_transporter_id != frm.doc.company_gstin
     )
         return true;
@@ -904,6 +899,33 @@ function is_e_waybill_cancellable(frm) {
             .convert_to_user_tz(e_waybill_info.created_on, false)
             .add("days", 1)
             .diff() > 0
+    );
+}
+
+function is_e_waybill_applicable_on_sales_invoice(frm) {
+    return (
+        frm.doctype == "Sales Invoice" &&
+        frm.doc.company_gstin !== frm.doc.billing_address_gstin &&
+        frm.doc.customer_address &&
+        !frm.doc.is_return &&
+        !frm.doc.is_debit_note
+    );
+}
+
+function is_e_waybill_applicable_on_delivery_note(frm) {
+    return (
+        frm.doctype == "Delivery Note" &&
+        frm.doc.customer_address &&
+        gst_settings.enable_e_waybill_from_dn
+    );
+}
+
+function is_e_waybill_applicable_on_purchase_invoice(frm) {
+    return (
+        frm.doctype == "Purchase Invoice" &&
+        frm.doc.supplier_address &&
+        frm.doc.company_gstin !== frm.doc.supplier_gstin &&
+        gst_settings.enable_e_waybill_from_pi
     );
 }
 
@@ -1020,4 +1042,15 @@ function get_e_waybill_file_name(docname) {
 
 function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
+}
+
+function get_destination_address_name(frm) {
+    if (frm.doc.doctype == "Purchase Invoice") {
+        if (frm.doc.is_return) return frm.doc.supplier_address;
+        return frm.doc.shipping_address_name || frm.doc.billing_address;
+    } else {
+        if (frm.doc.is_return)
+            return frm.doc.dispatch_address_name || frm.doc.company_address;
+        return frm.doc.shipping_address_name || frm.doc.customer_address;
+    }
 }
