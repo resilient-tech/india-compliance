@@ -653,8 +653,6 @@ function show_update_transporter_dialog(frm) {
     d.show();
 }
 
-<<<<<<< HEAD
-=======
 async function show_extend_validity_dialog(frm) {
     const destination_address = await frappe.db.get_doc(
         "Address",
@@ -826,7 +824,6 @@ async function show_extend_validity_dialog(frm) {
     d.show();
 }
 
->>>>>>> f941e233 (feat: e-Waybill for purchase invoice (#350))
 function is_e_waybill_valid(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     return (
@@ -863,8 +860,6 @@ function is_e_waybill_applicable(frm) {
     }
 }
 
-<<<<<<< HEAD
-=======
 function can_extend_e_waybill(frm) {
     function get_hours(date, hours) {
         return moment(date).add(hours, "hours").format(frappe.defaultDatetimeFormat);
@@ -885,7 +880,6 @@ function can_extend_e_waybill(frm) {
     return false;
 }
 
->>>>>>> f941e233 (feat: e-Waybill for purchase invoice (#350))
 function is_e_waybill_cancellable(frm) {
     const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
     return (
@@ -1027,8 +1021,6 @@ function set_primary_action_label(dialog, primary_action_label) {
     dialog.get_primary_btn().removeClass("hide").html(primary_action_label);
 }
 
-<<<<<<< HEAD
-=======
 function get_destination_address_name(frm) {
     if (frm.doc.doctype == "Purchase Invoice") {
         if (frm.doc.is_return) return frm.doc.supplier_address;
@@ -1039,4 +1031,3 @@ function get_destination_address_name(frm) {
         return frm.doc.shipping_address_name || frm.doc.customer_address;
     }
 }
->>>>>>> f941e233 (feat: e-Waybill for purchase invoice (#350))
