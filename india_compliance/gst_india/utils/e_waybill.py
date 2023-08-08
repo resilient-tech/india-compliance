@@ -1166,7 +1166,7 @@ class EWaybillData(GSTTransactionData):
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
             }
 
-            if frappe.flags.in_test and self.bill_from.gstin == self.bill_to.gstin:
+            if self.bill_from.gstin == self.bill_to.gstin:
                 sandbox_gstin.update(
                     {
                         ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),

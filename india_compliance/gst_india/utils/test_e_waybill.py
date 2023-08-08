@@ -26,6 +26,7 @@ from india_compliance.gst_india.utils.e_waybill import (
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
+    create_purchase_invoice,
     create_sales_invoice,
     create_transaction,
 )
@@ -637,6 +638,17 @@ class TestEWaybill(FrappeTestCase):
             purchase_order,
         )
 
+    def test_validate_bill_no_for_purchase(self):
+        purchase_invoice = create_purchase_invoice(
+            distance=10, mode_of_transport="Road", vehicle_no="GJ07DL9009"
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Bill No is mandatory.*)$"),
+            EWaybillData(purchase_invoice).validate_bill_no_for_purchase,
+        )
+
     @responses.activate
     def test_invoice_update_after_submit(self):
         self._generate_e_waybill()
@@ -729,6 +741,63 @@ class TestEWaybill(FrappeTestCase):
         self.assertDocumentEqual(
             {
                 "name": is_return_dn_with_same_gstin_data.get("response_data")
+                .get("result")
+                .get("ewayBillNo")
+            },
+            frappe.get_doc("e-Waybill Log", {"reference_name": return_note.name}),
+        )
+
+    @change_settings("GST Settings", {"enable_e_waybill_from_pi": 1})
+    @responses.activate
+    def test_e_waybill_for_pi_with_unregistered_supplier(self):
+        purchase_invoice_data = self.e_waybill_test_data.get(
+            "pi_data_for_unregistered_supplier"
+        )
+        purchase_invoice = create_purchase_invoice(
+            **purchase_invoice_data.get("kwargs")
+        )
+
+        self._generate_e_waybill(
+            "Purchase Invoice", purchase_invoice.name, purchase_invoice_data
+        )
+
+        self.assertDocumentEqual(
+            {
+                "name": purchase_invoice_data.get("response_data")
+                .get("result")
+                .get("ewayBillNo")
+            },
+            frappe.get_doc("e-Waybill Log", {"reference_name": purchase_invoice.name}),
+        )
+
+    @change_settings("GST Settings", {"enable_e_waybill_from_pi": 1})
+    @responses.activate
+    def test_e_waybill_for_purchase_return(self):
+        purchase_invoice_data = self.e_waybill_test_data.get(
+            "pi_data_for_registered_supplier"
+        )
+        purchase_invoice = create_purchase_invoice(
+            **purchase_invoice_data.get("kwargs")
+        )
+
+        self._generate_e_waybill(
+            "Purchase Invoice", purchase_invoice.name, purchase_invoice_data
+        )
+
+        # Return Note
+        return_note = make_return_doc(
+            "Purchase Invoice", purchase_invoice.name
+        ).submit()
+
+        return_pi_data = self.e_waybill_test_data.get(
+            "purchase_return_for_registered_supplier"
+        )
+
+        self._generate_e_waybill("Purchase Invoice", return_note.name, return_pi_data)
+
+        self.assertDocumentEqual(
+            {
+                "name": return_pi_data.get("response_data")
                 .get("result")
                 .get("ewayBillNo")
             },
