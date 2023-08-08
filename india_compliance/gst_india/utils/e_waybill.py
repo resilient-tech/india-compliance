@@ -1175,8 +1175,8 @@ class EWaybillData(GSTTransactionData):
                 )
 
             def _get_sandbox_gstin(address, key):
-                if address.gst_category == "Unregistered":
-                    return "URP"
+                if address.gstin == "URP":
+                    return address.gstin
 
                 return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
 

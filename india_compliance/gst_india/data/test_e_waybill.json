@@ -667,7 +667,7 @@
             "docNo": "test_invoice_no",
             "docType": "INV",
             "fromAddr1": "Test Address - 10",
-            "fromGstin": "05AAACG2140A1ZL",
+            "fromGstin": "URP",
             "fromPincode": 380015,
             "fromPlace": "Test City",
             "fromStateCode": 24,

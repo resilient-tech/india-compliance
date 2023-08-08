@@ -638,17 +638,6 @@ class TestEWaybill(FrappeTestCase):
             purchase_order,
         )
 
-    def test_validate_bill_no_for_purchase(self):
-        purchase_invoice = create_purchase_invoice(
-            distance=10, mode_of_transport="Road", vehicle_no="GJ07DL9009"
-        )
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(Bill No is mandatory.*)$"),
-            EWaybillData(purchase_invoice).validate_bill_no_for_purchase,
-        )
-
     @responses.activate
     def test_invoice_update_after_submit(self):
         self._generate_e_waybill()
@@ -772,12 +761,29 @@ class TestEWaybill(FrappeTestCase):
 
     @change_settings("GST Settings", {"enable_e_waybill_from_pi": 1})
     @responses.activate
-    def test_e_waybill_for_purchase_return(self):
+    def test_e_waybill_for_registered_purchase(self):
         purchase_invoice_data = self.e_waybill_test_data.get(
             "pi_data_for_registered_supplier"
         )
+
         purchase_invoice = create_purchase_invoice(
-            **purchase_invoice_data.get("kwargs")
+            **purchase_invoice_data.get("kwargs"), do_not_submit=True
+        )
+
+        # Bill No Validation
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Bill No is mandatory.*)$"),
+            EWaybillData(purchase_invoice).validate_bill_no_for_purchase,
+        )
+
+        purchase_invoice.bill_no = "1234"
+        purchase_invoice.submit()
+
+        #  Test get_data
+        self.assertDictContainsSubset(
+            EWaybillData(purchase_invoice).get_data(),
+            purchase_invoice_data.get("request_data"),
         )
 
         self._generate_e_waybill(
