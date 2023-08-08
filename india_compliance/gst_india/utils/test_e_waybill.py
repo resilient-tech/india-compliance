@@ -770,6 +770,8 @@ class TestEWaybill(FrappeTestCase):
             **purchase_invoice_data.get("kwargs"), do_not_submit=True
         )
 
+        purchase_invoice.bill_no = ""
+
         # Bill No Validation
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
