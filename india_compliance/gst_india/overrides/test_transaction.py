@@ -47,6 +47,9 @@ class TestTransaction(FrappeTestCase):
             # Hack. Avoid failing validations as quotation does not have customer field
             cls.transaction_details.customer = "_Test Registered Customer"
 
+        if cls.doctype == "Purchase Invoice":
+            cls.transaction_details.bill_no = frappe.generate_hash(length=5)
+
     def test_transaction_for_unregistered_company(self):
         if self.is_sales_doctype:
             self.transaction_details.customer = "_Test Registered Customer"
