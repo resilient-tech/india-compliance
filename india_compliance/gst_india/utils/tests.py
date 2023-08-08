@@ -11,6 +11,10 @@ def create_sales_invoice(**data):
 
 def create_purchase_invoice(**data):
     data["doctype"] = "Purchase Invoice"
+
+    if "bill_no" not in data:
+        data["bill_no"] = frappe.generate_hash(length=5)
+
     return create_transaction(**data)
 
 
@@ -48,9 +52,6 @@ def create_transaction(**data):
             and not transaction.eligibility_for_itc
         ):
             transaction.eligibility_for_itc = "All Other ITC"
-
-        if "bill_no" not in data:
-            transaction.bill_no = frappe.generate_hash(length=5)
 
     if transaction.doctype == "POS Invoice":
         transaction.append(
