@@ -87,8 +87,7 @@ def generate_e_invoices(docnames):
 
         finally:
             # each e-Invoice needs to be committed individually
-            # nosemgrep
-            frappe.db.commit()
+            frappe.db.commit()  # nosemgrep
 
 
 @frappe.whitelist()
@@ -511,7 +510,7 @@ class EInvoiceData(GSTTransactionData):
                 self.doc.dispatch_address_name
             )
 
-        self.billing_address.legal_name = self.transaction_details.customer_name
+        self.billing_address.legal_name = self.transaction_details.party_name
         self.company_address.legal_name = self.transaction_details.company_name
 
     def get_invoice_data(self):

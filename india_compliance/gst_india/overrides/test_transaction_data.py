@@ -149,7 +149,7 @@ class TestTransactionData(FrappeTestCase):
             gst_transaction_data.transaction_details,
             {
                 "company_name": "_Test Indian Registered Company",
-                "customer_name": "_Test Registered Customer",
+                "party_name": "_Test Registered Customer",
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
                 "total": 100.0,
                 "rounding_adjustment": 0.0,
