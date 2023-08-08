@@ -92,6 +92,7 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
     if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
         doc, gst_settings=gst_settings, throw=False
     ):
+        doc.einvoice_status = "Not Applicable"
         return
 
     validate_mandatory_fields(
