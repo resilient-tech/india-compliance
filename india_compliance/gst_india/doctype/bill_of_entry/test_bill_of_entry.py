@@ -10,7 +10,7 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_journal_entry_for_payment,
     make_landed_cost_voucher,
 )
-from india_compliance.gst_india.utils.tests import create_transaction
+from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 
 class TestBillofEntry(FrappeTestCase):
@@ -20,11 +20,7 @@ class TestBillofEntry(FrappeTestCase):
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
 
     def test_create_bill_of_entry(self):
-        pi = create_transaction(
-            doctype="Purchase Invoice",
-            supplier="_Test Foreign Supplier",
-            update_stock=1,
-        )
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
         # Create BOE
         boe = make_bill_of_entry(pi.name)
