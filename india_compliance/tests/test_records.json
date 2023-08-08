@@ -370,6 +370,25 @@
             ]
         },
         {
+            "name": "_Test Unregistered Supplier-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Address - 10",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "",
+            "gst_category": "Unregistered",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Unregistered Supplier"
+                }
+            ]
+        },
+        {
             "name": "_Test Indian Registered Company-Shipping",
             "address_type": "Shipping",
             "address_line1": "Test Address - 5",

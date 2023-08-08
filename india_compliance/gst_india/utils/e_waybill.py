@@ -1166,9 +1166,17 @@ class EWaybillData(GSTTransactionData):
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
             }
 
+            if self.bill_from.gstin == self.bill_to.gstin:
+                sandbox_gstin.update(
+                    {
+                        ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                    }
+                )
+
             def _get_sandbox_gstin(address, key):
-                if address.gst_category == "Unregistered":
-                    return "URP"
+                if address.gstin == "URP":
+                    return address.gstin
 
                 return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
 
