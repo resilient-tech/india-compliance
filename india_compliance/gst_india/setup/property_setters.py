@@ -31,6 +31,12 @@ def get_property_setters():
             prepend=False,
         ),
         {
+            "doctype": "Purchase Invoice",
+            "fieldname": "bill_no",
+            "property": "mandatory_depends_on",
+            "value": "eval: doc.gst_category !== 'Unregistered' & gst_settings.require_supplier_invoice_no === 1",
+        },
+        {
             "doctype": "Address",
             "fieldname": "state",
             "property": "fieldtype",

@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 from frappe.utils import flt
 
 from india_compliance.gst_india.overrides.sales_invoice import (
@@ -43,6 +44,7 @@ def validate(doc, method=None):
         return
 
     update_itc_totals(doc)
+    validate_supplier_invoice_number(doc)
 
 
 def update_itc_totals(doc, method=None):
@@ -66,6 +68,22 @@ def update_itc_totals(doc, method=None):
 
         if tax.account_head == gst_accounts.cess_account:
             doc.itc_cess_amount += flt(tax.base_tax_amount_after_discount_amount)
+
+
+def validate_supplier_invoice_number(doc):
+    if (
+        doc.bill_no
+        or doc.gst_category == "Unregistered"
+        or not frappe.get_cached_value(
+            "GST Settings", "GST Settings", "require_supplier_invoice_no"
+        )
+    ):
+        return
+
+    frappe.throw(
+        _("As per your GST Settings, Bill No is mandatory for Purchase Invoice."),
+        title=_("Missing Mandatory Field"),
+    )
 
 
 def get_dashboard_data(data):
