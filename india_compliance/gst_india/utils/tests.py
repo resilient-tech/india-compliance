@@ -11,6 +11,10 @@ def create_sales_invoice(**data):
 
 def create_purchase_invoice(**data):
     data["doctype"] = "Purchase Invoice"
+
+    if "bill_no" not in data:
+        data["bill_no"] = frappe.generate_hash(length=5)
+
     return create_transaction(**data)
 
 
