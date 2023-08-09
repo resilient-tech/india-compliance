@@ -63,7 +63,7 @@ def set_not_applicable_status():
     filters = {
         "docstatus": ["!=", 0],
         "einvoice_status": ["is", "not set"],
-        "einvoice": ["is", "not set"],
+        "irn": ["is", "not set"],
     }
     set_einvoice_status(filters, "Not Applicable")
 
