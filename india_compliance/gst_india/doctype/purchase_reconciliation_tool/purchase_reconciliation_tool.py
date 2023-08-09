@@ -31,11 +31,6 @@ from india_compliance.gst_india.utils.inward_supply import (
 )
 
 GSTR2B_GEN_DATE = 14
-GSTR2 = frappe.qb.DocType("GST Inward Supply")
-GSTR2_ITEM = frappe.qb.DocType("GST Inward Supply Item")
-PI = frappe.qb.DocType("Purchase Invoice")
-PI_TAX = frappe.qb.DocType("Purchase Taxes and Charges")
-PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
 
 
 class PurchaseReconciliationTool(Document):
@@ -77,6 +72,12 @@ class PurchaseReconciliationTool(Document):
         "Tax Deductor": "B2B",
     }
 
+    GSTR2 = frappe.qb.DocType("GST Inward Supply")
+    GSTR2_ITEM = frappe.qb.DocType("GST Inward Supply Item")
+    PI = frappe.qb.DocType("Purchase Invoice")
+    PI_TAX = frappe.qb.DocType("Purchase Taxes and Charges")
+    PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
+
     def onload(self):
         if hasattr(self, "reconciliation_data"):
             self.set_onload("reconciliation_data", self.reconciliation_data)
@@ -95,7 +96,7 @@ class PurchaseReconciliationTool(Document):
         for original, amended in ORIGINAL_VS_AMENDED.items():
             self.reconcile(original, amended)
 
-        self.reconciliation_data = self.get_reconciliation_data()
+        self.db_set("reconciliation_data", self.get_reconciliation_data())
 
     def reconcile(self, category, amended_category):
         """
@@ -273,11 +274,13 @@ class PurchaseReconciliationTool(Document):
 
         query = (
             self.query_purchase_invoice(is_return=is_return)
-            .where(PI.posting_date[self.purchase_from_date : self.purchase_to_date])
-            .where(PI.name.notin(self.query_matched_purchase_invoice()))
-            .where(PI.ignore_reconciliation == 0)
-            .where(PI.gst_category.isin(gst_category))
-            .where(PI.is_return == is_return)
+            .where(
+                self.PI.posting_date[self.purchase_from_date : self.purchase_to_date]
+            )
+            .where(self.PI.name.notin(self.query_matched_purchase_invoice()))
+            .where(self.PI.ignore_reconciliation == 0)
+            .where(self.PI.gst_category.isin(gst_category))
+            .where(self.PI.is_return == is_return)
         )
 
         data = query.run(as_dict=True)
@@ -306,7 +309,7 @@ class PurchaseReconciliationTool(Document):
 
         if is_return:
             # return is initiated by the customer. So bill date may not be available or known.
-            fields += [PI.posting_date.as_("bill_date")]
+            fields += [self.PI.posting_date.as_("bill_date")]
         else:
             fields += ["bill_date"]
 
@@ -314,34 +317,35 @@ class PurchaseReconciliationTool(Document):
             fields += additional_fields
 
         pi_item = (
-            frappe.qb.from_(PI_ITEM)
+            frappe.qb.from_(self.PI_ITEM)
             .select(
-                Abs(Sum(PI_ITEM.taxable_value)).as_("taxable_value"), PI_ITEM.parent
+                Abs(Sum(self.PI_ITEM.taxable_value)).as_("taxable_value"),
+                self.PI_ITEM.parent,
             )
-            .groupby(PI_ITEM.parent)
+            .groupby(self.PI_ITEM.parent)
         )
 
         return (
-            frappe.qb.from_(PI)
-            .left_join(PI_TAX)
-            .on(PI_TAX.parent == PI.name)
+            frappe.qb.from_(self.PI)
+            .left_join(self.PI_TAX)
+            .on(self.PI_TAX.parent == self.PI.name)
             .left_join(pi_item)
-            .on(pi_item.parent == PI.name)
-            .where(self.company_gstin == PI.company_gstin)
-            .where(PI.docstatus == 1)
+            .on(pi_item.parent == self.PI.name)
+            .where(self.company_gstin == self.PI.company_gstin)
+            .where(self.PI.docstatus == 1)
             # Filter for B2B transactions where match can be made
-            .where(PI.supplier_gstin != "")
-            .where(PI.gst_category != "Registered Composition")
-            .where(PI.supplier_gstin.isnotnull())
-            .groupby(PI.name)
+            .where(self.PI.supplier_gstin != "")
+            .where(self.PI.gst_category != "Registered Composition")
+            .where(self.PI.supplier_gstin.isnotnull())
+            .groupby(self.PI.name)
             .select(*tax_fields, *fields, pi_item.taxable_value)
         )
 
     def query_matched_purchase_invoice(self):
         return (
-            frappe.qb.from_(GSTR2)
+            frappe.qb.from_(self.GSTR2)
             .select("link_name")
-            .where(GSTR2.link_doctype == "Purchase Invoice")
+            .where(self.GSTR2.link_doctype == "Purchase Invoice")
         )
 
     def query_tax_amount(self, account):
@@ -349,8 +353,8 @@ class PurchaseReconciliationTool(Document):
             Sum(
                 Case()
                 .when(
-                    PI_TAX.account_head == account,
-                    PI_TAX.base_tax_amount_after_discount_amount,
+                    self.PI_TAX.account_head == account,
+                    self.PI_TAX.base_tax_amount_after_discount_amount,
                 )
                 .else_(0)
             )
@@ -360,9 +364,11 @@ class PurchaseReconciliationTool(Document):
         categories = [category, amended_category or None]
         query = self.query_inward_supply()
         data = (
-            query.where((GSTR2.match_status == "") | (GSTR2.match_status.isnull()))
-            .where(GSTR2.action != "Ignore")
-            .where(GSTR2.classification.isin(categories))
+            query.where(
+                (self.GSTR2.match_status == "") | (self.GSTR2.match_status.isnull())
+            )
+            .where(self.GSTR2.action != "Ignore")
+            .where(self.GSTR2.classification.isin(categories))
             .run(as_dict=True)
         )
 
@@ -381,12 +387,12 @@ class PurchaseReconciliationTool(Document):
         )
 
         query = (
-            frappe.qb.from_(GSTR2)
-            .left_join(GSTR2_ITEM)
-            .on(GSTR2_ITEM.parent == GSTR2.name)
-            .where(self.company_gstin == GSTR2.company_gstin)
-            .where(GSTR2.match_status != "Amended")
-            .groupby(GSTR2_ITEM.parent)
+            frappe.qb.from_(self.GSTR2)
+            .left_join(self.GSTR2_ITEM)
+            .on(self.GSTR2_ITEM.parent == self.GSTR2.name)
+            .where(self.company_gstin == self.GSTR2.company_gstin)
+            .where(self.GSTR2.match_status != "Amended")
+            .groupby(self.GSTR2_ITEM.parent)
             .select(*fields)
         )
 
@@ -394,12 +400,12 @@ class PurchaseReconciliationTool(Document):
             return query
 
         if self.gst_return == "GSTR 2B":
-            query = query.where((GSTR2.return_period_2b.isin(isup_periods)))
+            query = query.where((self.GSTR2.return_period_2b.isin(isup_periods)))
         else:
             query = query.where(
-                (GSTR2.return_period_2b.isin(isup_periods))
-                | (GSTR2.sup_return_period.isin(isup_periods))
-                | (GSTR2.other_return_period.isin(isup_periods))
+                (self.GSTR2.return_period_2b.isin(isup_periods))
+                | (self.GSTR2.sup_return_period.isin(isup_periods))
+                | (self.GSTR2.other_return_period.isin(isup_periods))
             )
 
         return query
@@ -413,7 +419,7 @@ class PurchaseReconciliationTool(Document):
         Returns column names with 'isup_' prefix for summary where different table is provided.
         """
         if not table:
-            table = GSTR2
+            table = self.GSTR2
 
         fields = [
             "bill_no",
@@ -442,9 +448,11 @@ class PurchaseReconciliationTool(Document):
         Where query is used as subquery, fields are fetch from table (subquery) instead of item table.
         """
         fields = GST_TAX_TYPES[:-1] + ("taxable_value",)
-        if table == GSTR2:
+        if table == self.GSTR2:
             tax_fields = [
-                Sum(GSTR2_ITEM[field]).as_(f"isup_{field}" if for_summary else field)
+                Sum(self.GSTR2_ITEM[field]).as_(
+                    f"isup_{field}" if for_summary else field
+                )
                 for field in fields
             ]
         else:
@@ -687,15 +695,17 @@ class PurchaseReconciliationTool(Document):
 
         # get selective data for manually linked invoices
         if inward_supply_names:
-            inward_supply = inward_supply.where(GSTR2.name.isin(inward_supply_names))
-            purchase = purchase.where(PI.name.isin(purchase_names))
+            inward_supply = inward_supply.where(
+                self.GSTR2.name.isin(inward_supply_names)
+            )
+            purchase = purchase.where(self.PI.name.isin(purchase_names))
 
         # this will not return missing in inward supply (if any)
         reconciliation_data = (
             purchase.join(inward_supply)
             .on(
                 (inward_supply.link_doctype == "Purchase Invoice")
-                & (inward_supply.link_name == PI.name)
+                & (inward_supply.link_name == self.PI.name)
             )
             .select(
                 *self.get_inward_supply_fields(
@@ -710,19 +720,21 @@ class PurchaseReconciliationTool(Document):
         # add missing in inward supply
         reconciliation_data = reconciliation_data + (
             purchase.where(
-                PI.posting_date[self.purchase_from_date : self.purchase_to_date]
+                self.PI.posting_date[self.purchase_from_date : self.purchase_to_date]
             )
-            .where(PI.name.notin(self.query_matched_purchase_invoice()))
+            .where(self.PI.name.notin(self.query_matched_purchase_invoice()))
             .run(as_dict=True)
         )
 
         # add missing in purchase invoice
         missing_in_pr = self.query_inward_supply(
             isup_additional_fields, for_summary=True
-        ).where((GSTR2.link_name == "") | (GSTR2.link_name.isnull()))
+        ).where((self.GSTR2.link_name == "") | (self.GSTR2.link_name.isnull()))
 
         if inward_supply_names:
-            missing_in_pr = missing_in_pr.where(GSTR2.name.isin(inward_supply_names))
+            missing_in_pr = missing_in_pr.where(
+                self.GSTR2.name.isin(inward_supply_names)
+            )
 
         reconciliation_data = reconciliation_data + missing_in_pr.run(as_dict=True)
 
@@ -850,10 +862,10 @@ class PurchaseReconciliationTool(Document):
             purchases.append(isup_linked_with)
 
         if (
-            pur_linked_with := frappe.qb.from_(GSTR2)
+            pur_linked_with := frappe.qb.from_(self.GSTR2)
             .select("name")
-            .where(GSTR2.link_doctype == "Purchase Invoice")
-            .where(GSTR2.link_name == pur_name)
+            .where(self.GSTR2.link_doctype == "Purchase Invoice")
+            .where(self.GSTR2.link_name == pur_name)
             .run()
         ):
             self._unlink_documents((pur_linked_with,))
@@ -892,19 +904,19 @@ class PurchaseReconciliationTool(Document):
     def _unlink_documents(self, isup_docs, isup_actions=None):
         if isup_docs:
             (
-                frappe.qb.update(GSTR2)
+                frappe.qb.update(self.GSTR2)
                 .set("link_doctype", "")
                 .set("link_name", "")
                 .set("match_status", "Unlinked")
-                .where(GSTR2.name.isin(isup_docs))
+                .where(self.GSTR2.name.isin(isup_docs))
                 .run()
             )
 
         if isup_actions:
             (
-                frappe.qb.update(GSTR2)
+                frappe.qb.update(self.GSTR2)
                 .set("action", "No Action")
-                .where(GSTR2.name.isin(isup_actions))
+                .where(self.GSTR2.name.isin(isup_actions))
                 .run()
             )
 
@@ -926,17 +938,17 @@ class PurchaseReconciliationTool(Document):
 
         if isup_docs:
             (
-                frappe.qb.update(GSTR2)
+                frappe.qb.update(self.GSTR2)
                 .set("action", action)
-                .where(GSTR2.name.isin(isup_docs))
+                .where(self.GSTR2.name.isin(isup_docs))
                 .run()
             )
 
         if pur_docs:
             (
-                frappe.qb.update(PI)
+                frappe.qb.update(self.PI)
                 .set("ignore_reconciliation", 1)
-                .where(PI.name.isin(pur_docs))
+                .where(self.PI.name.isin(pur_docs))
                 .run()
             )
 
@@ -947,12 +959,12 @@ class PurchaseReconciliationTool(Document):
 
         if doctype == "Purchase Invoice":
             query = self.query_purchase_invoice(["gst_category", "is_return"])
-            table = PI
+            table = self.PI
         elif doctype == "GST Inward Supply":
             query = self.query_inward_supply(
                 ["classification"], for_summary=True, filter_period=False
             )
-            table = GSTR2
+            table = self.GSTR2
 
         query = query.where(
             table.supplier_gstin.like(f"%{filters.supplier_gstin}%")

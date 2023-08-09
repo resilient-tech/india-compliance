@@ -52,7 +52,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => unlink_documents(frm),
                 __("Actions")
             );
-            frm.add_custom_button("dropdown-divider", () => {}, __("Actions"));
+            frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
         ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
             action =>
@@ -1375,7 +1375,9 @@ function unlink_documents(frm, selected_rows) {
     selected_rows.forEach(row => {
         if (row.isup_match_status.includes("Missing"))
             frappe.throw(
-                "You have selected rows where no match is available. Please remove them before unlinking."
+                __(
+                    "You have selected rows where no match is available. Please remove them before unlinking."
+                )
             );
     });
 
@@ -1453,7 +1455,9 @@ function apply_action(frm, action, selected_rows) {
 
         if (warn)
             frappe.msgprint(
-                "You can only Accept values where a match is available. Rows where match is missing will be ignored."
+                __(
+                    "You can only Accept values where a match is available. Rows where match is missing will be ignored."
+                )
             );
     } else if (action != "Ignore") {
         let warn = false;
@@ -1467,7 +1471,9 @@ function apply_action(frm, action, selected_rows) {
 
         if (warn)
             frappe.msgprint(
-                "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                __(
+                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                )
             );
     }
 
@@ -1529,43 +1535,46 @@ async function create_new_purchase_invoice(inward_supply, company, company_gstin
         r => (company_address = r.name)
     );
 
-    await frappe.new_doc("Purchase Invoice");
-    const pur_frm = cur_frm;
+    await frappe.new_doc(
+        "Purchase Invoice",
+        {
+            bill_no: inward_supply.isup_bill_no,
+        },
+        doc => {
+            _set_value(doc, {
+                company: company,
+                supplier: supplier,
+                shipping_address: company_address,
+                billing_address: company_address,
+                bill_date: inward_supply.isup_bill_date,
+                is_reverse_charge: inward_supply.isup_is_reverse_charge,
+            });
 
-    pur_frm.doc.bill_no = inward_supply.isup_bill_no;
-    pur_frm.doc.bill_date = inward_supply.isup_bill_date;
-    pur_frm.doc.is_reverse_charge = inward_supply.isup_is_reverse_charge;
+            // // validated this on save
+            doc._inward_supply = {
+                company: company,
+                company_gstin: company_gstin,
+                isup_name: inward_supply.isup_name,
+                supplier_gstin: inward_supply.supplier_gstin,
+                bill_no: inward_supply.isup_bill_no,
+                bill_date: inward_supply.isup_bill_date,
+                is_reverse_charge: inward_supply.isup_is_reverse_charge,
+                place_of_supply: inward_supply.isup_place_of_supply,
+                cgst: inward_supply.isup_cgst,
+                sgst: inward_supply.isup_sgst,
+                igst: inward_supply.isup_igst,
+                cess: inward_supply.isup_cess,
+                taxable_value: inward_supply.isup_taxable_value,
+            };
+        }
+    );
 
-    _set_value(pur_frm, {
-        company: company,
-        supplier: supplier,
-        shipping_address: company_address,
-        billing_address: company_address,
-    });
-
-    function _set_value(frm, values) {
+    function _set_value(doc, values) {
         for (const key in values) {
-            if (values[key] == frm.doc[key]) continue;
-            frm.set_value(key, values[key]);
+            if (values[key] == doc[key]) continue;
+            doc[key] = values[key];
         }
     }
-
-    // validated this on save
-    pur_frm._inward_supply = {
-        company: company,
-        company_gstin: company_gstin,
-        isup_name: inward_supply.isup_name,
-        supplier_gstin: inward_supply.supplier_gstin,
-        bill_no: inward_supply.isup_bill_no,
-        bill_date: inward_supply.isup_bill_date,
-        is_reverse_charge: inward_supply.isup_is_reverse_charge,
-        place_of_supply: inward_supply.isup_place_of_supply,
-        cgst: inward_supply.isup_cgst,
-        sgst: inward_supply.isup_sgst,
-        igst: inward_supply.isup_igst,
-        cess: inward_supply.isup_cess,
-        taxable_value: inward_supply.isup_taxable_value,
-    };
 }
 
 async function set_gstin_options(frm) {
