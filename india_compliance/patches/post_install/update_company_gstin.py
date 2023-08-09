@@ -8,11 +8,11 @@ from india_compliance.gst_india.utils import get_all_gst_accounts, get_gstin_lis
 # Steps to manually migrate:
 ##############################################################################################################################
 # Method 1:
-# 1. Update company gstin for Doctypes where its Missing.
+# 1. Update company gstin for DocTypes where its Missing.
 # 2. Execute the patch once again from GST Settings.
 ##############################################################################################################################
 # Method 2 (Where Method 1 is not possible):
-# 1. Update same company gstin for all Doctypes where its Missing.
+# 1. Update same company gstin for all DocTypes where its Missing.
 # 2. Execute the patch once again from GST Settings.
 # 3. Create adjustment Journal Entry to distribute the balance between other company gstins.
 ##############################################################################################################################
@@ -77,7 +77,9 @@ def update_gstin_for_je(company, gst_accounts):
     company_gstins = get_gstin_list(company)
     if len(company_gstins) > 1:
         click.secho(
-            "Multiple GSTINs found for company {0}. Please update Company GSTIN in Journal Entry manually to use GST Balance Report.",
+            "Multiple GSTINs found for company {0}. Please update Company GSTIN in Journal Entry manually to use GST Balance Report.".format(
+                company
+            ),
             fg="yellow",
         )
 

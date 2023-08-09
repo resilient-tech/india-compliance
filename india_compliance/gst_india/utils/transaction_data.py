@@ -26,7 +26,7 @@ from india_compliance.income_tax_india.overrides.tax_withholding_category import
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
     2: re.compile(r"[^A-Za-z0-9\-\/. ]"),
-    3: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
+    3: re.compile(r"[^A-Za-z0-9@#\-\/,&.(*) ]"),
 }
 
 
@@ -39,10 +39,22 @@ class GSTTransactionData:
         self.sandbox_mode = self.settings.sandbox_mode
         self.transaction_details = frappe._dict()
 
+        gst_type = "Output"
+        self.party_name_field = "customer_name"
+
+        if self.doc.doctype == "Purchase Invoice":
+            self.party_name_field = "supplier_name"
+            if self.doc.is_reverse_charge != 1:
+                # for with reverse charge, gst_type is Output
+                # this will ensure zero taxes in transaction details
+                gst_type = "Input"
+
+        self.party_name = self.doc.get(self.party_name_field)
+
         # "CGST Account - TC": "cgst_account"
         self.gst_accounts = {
             v: k
-            for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
+            for k, v in get_gst_accounts_by_type(self.doc.company, gst_type).items()
         }
 
     def set_transaction_details(self):
@@ -50,10 +62,10 @@ class GSTTransactionData:
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
-                "customer_name": self.sanitize_value(
-                    self.doc.customer_name
+                "party_name": self.sanitize_value(
+                    self.party_name
                     or frappe.db.get_value(
-                        "Customer", self.doc.customer, "customer_name"
+                        self.doc.doctype, self.party_name, self.party_name_field
                     )
                 ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
@@ -266,6 +278,7 @@ class GSTTransactionData:
                 msg=_("Posting Date cannot be greater than Today's Date"),
                 title=_("Invalid Data"),
             )
+
         # compare posting date and lr date, only if lr no is set
         if (
             self.doc.lr_no
@@ -554,7 +567,7 @@ class GSTTransactionData:
         @param max_length (default: 100): Maximum length of the value that is acceptable
         @param truncate (default: True): Truncate the value if it exceeds max_length
         @param fieldname: Fieldname for which the value is being sanitized
-        @param reference_doctype: Doctype of the document that contains the field
+        @param reference_doctype: DocType of the document that contains the field
         @param reference_name: Name of the document that contains the field
 
         Returns:
@@ -637,7 +650,8 @@ def validate_unique_hsn_and_uom(doc):
     def _throw(label, value):
         frappe.throw(
             _(
-                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is not possible."
+                "Row #{0}: {1}: {2} is different for Item: {3}. Grouping of items is"
+                " not possible."
             ).format(item.idx, label, value, frappe.bold(item.item_code))
         )
 
@@ -660,8 +674,9 @@ def validate_gst_tax_rate(tax_rate, item):
     if tax_rate not in GST_TAX_RATES:
         frappe.throw(
             _(
-                "Row #{0}: GST tax rate {1} for Item {2} is not permitted for generating e-Invoice as it"
-                " doesn't adhere to the e-Invoice Masters.<br><br> Check valid tax rates <a href='{3}'>here</a>."
+                "Row #{0}: GST tax rate {1} for Item {2} is not permitted for"
+                " generating e-Invoice as it doesn't adhere to the e-Invoice"
+                " Masters.<br><br> Check valid tax rates <a href='{3}'>here</a>."
             ).format(
                 item.idx,
                 frappe.bold(f"{tax_rate}%"),
