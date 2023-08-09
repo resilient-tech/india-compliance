@@ -580,7 +580,7 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     if comment:
         log.add_comment(text=comment)
 
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep # before delete
 
     if log.is_cancelled:
         delete_file(doc, get_pdf_filename(log.name))
@@ -592,7 +592,7 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         return
 
     _fetch_e_waybill_data(doc, log)
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep # after fetch
 
     ### Attach PDF
 
@@ -1166,9 +1166,17 @@ class EWaybillData(GSTTransactionData):
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
             }
 
+            if self.bill_from.gstin == self.bill_to.gstin:
+                sandbox_gstin.update(
+                    {
+                        ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                    }
+                )
+
             def _get_sandbox_gstin(address, key):
-                if address.gst_category == "Unregistered":
-                    return "URP"
+                if address.gstin == "URP":
+                    return address.gstin
 
                 return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
 
