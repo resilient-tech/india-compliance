@@ -38,6 +38,7 @@ class GSTSettings(Document):
         self.validate_e_invoice_applicability_date()
         self.validate_credentials()
         self.clear_api_auth_session()
+        self.update_retry_e_invoice_scheduled_job()
 
     def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
@@ -49,16 +50,19 @@ class GSTSettings(Document):
 
     def on_update(self):
         self.update_custom_fields()
-        self.update_e_invoice_retry_job()
         # clear session boot cache
         frappe.cache.delete_keys("bootinfo")
 
-    def update_e_invoice_retry_job(self):
-        scheduled_job_doc = frappe.get_doc(
-            "Scheduled Job Type", "e_invoice.retry_e_invoice_generation"
+    def update_retry_e_invoice_scheduled_job(self):
+        if not self.has_value_changed("retry_e_invoice_generation"):
+            return
+
+        frappe.db.set_value(
+            "Scheduled Job Type",
+            "e_invoice.retry_e_invoice_generation",
+            "stopped",
+            self.retry_e_invoice_generation,
         )
-        scheduled_job_doc.update({"stopped": self.retry_e_invoice_generation})
-        scheduled_job_doc.save()
 
     def validate_gst_accounts(self):
         account_list = []
