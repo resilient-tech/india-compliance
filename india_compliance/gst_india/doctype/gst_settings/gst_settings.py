@@ -61,7 +61,7 @@ class GSTSettings(Document):
             "Scheduled Job Type",
             "e_invoice.retry_e_invoice_generation",
             "stopped",
-            self.retry_e_invoice_generation,
+            not self.retry_e_invoice_generation,
         )
 
     def validate_gst_accounts(self):
