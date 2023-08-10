@@ -1,8 +1,6 @@
 import frappe
 from frappe.utils import sbool
 
-CHUNK_SIZE = 100000
-
 
 def execute():
     # Sales Invoice should have field signed_einvoice
@@ -35,7 +33,7 @@ def set_pending_status():
         ],
     }
 
-    set_einvoice_status(filters, "Pending")
+    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Pending")
 
 
 def set_generated_status():
@@ -46,7 +44,7 @@ def set_generated_status():
         "irn_cancelled": ["=", 0],
     }
 
-    set_einvoice_status(filters, "Generated")
+    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Generated")
 
 
 def set_cancelled_status():
@@ -56,7 +54,7 @@ def set_cancelled_status():
         "irn_cancelled": ["=", 1],
     }
 
-    set_einvoice_status(filters, "Cancelled")
+    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Cancelled")
 
 
 def set_not_applicable_status():
@@ -65,20 +63,5 @@ def set_not_applicable_status():
         "einvoice_status": ["is", "not set"],
         "irn": ["is", "not set"],
     }
-    set_einvoice_status(filters, "Not Applicable")
 
-
-def set_einvoice_status(filters, status):
-    doctype = "Sales Invoice"
-
-    query = (
-        frappe.qb.get_query(
-            doctype, filters=filters, update=True, validate_filters=True
-        )
-        .limit(CHUNK_SIZE)
-        .set("einvoice_status", status)
-    )
-
-    while frappe.db.exists(doctype, filters):
-        query.run()
-        frappe.db.commit()
+    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Not Applicable")
