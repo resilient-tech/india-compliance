@@ -193,8 +193,8 @@ regional_overrides = {
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
-        "erpnext.assets.doctype.asset.asset.get_depreciation_amount": (
-            "india_compliance.income_tax_india.overrides.asset.get_depreciation_amount"
+        "erpnext.assets.doctype.asset.asset.get_updated_rate_of_depreciation_for_wdv_and_dd": (
+            "india_compliance.income_tax_india.overrides.asset.get_updated_rate_of_depreciation_for_wdv_and_dd"
         ),
     }
 }
