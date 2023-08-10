@@ -215,7 +215,7 @@ class BaseAPI:
             )
 
         if status_code == 504:
-            raise GatewayTimeoutError()
+            raise GatewayTimeoutError
 
     def generate_request_id(self, length=12):
         return frappe.generate_hash(length=length)

@@ -1,5 +1,4 @@
 import json
-from datetime import timedelta
 
 import jwt
 
@@ -78,9 +77,16 @@ def generate_e_invoices(docnames):
 
     for docname in docnames:
         try:
-            if generate_e_invoice(docname) is False:
-                return
+            generate_e_invoice(docname, throw=False)
+        except GatewayTimeoutError:
+            retry_e_invoice_generation_after = add_to_date(now_datetime(), minutes=5)
 
+            frappe.db.set_single_value(
+                "GST Settings",
+                "retry_e_invoice_generation_after",
+                retry_e_invoice_generation_after,
+                update_modified=False,
+            )
         except Exception:
             frappe.log_error(
                 title=_("e-Invoice generation failed for Sales Invoice {0}").format(
@@ -99,24 +105,8 @@ def generate_e_invoice(docname, throw=True):
     doc = load_doc("Sales Invoice", docname, "submit")
 
     try:
-        retry_e_invoice_generation_after = get_datetime(
-            frappe.get_cached_value(
-                "GST Settings", None, "retry_e_invoice_generation_after"
-            )
-        )
-
-        if retry_e_invoice_generation_after > now_datetime():
-            doc.db_set({"einvoice_status": "Auto-Retry"})
-
-            frappe.msgprint(
-                _(
-                    "Government services are currently slow, resulting in a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried after {0} minutes."
-                ).format(str(retry_e_invoice_generation_after.replace(microsecond=0))),
-                _("Warning"),
-                indicator="yellow",
-            )
-
-            return
+        if not can_retry_e_invoice_generation():
+            raise GatewayTimeoutError
 
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
@@ -130,26 +120,27 @@ def generate_e_invoice(docname, throw=True):
             # IRN details cannot be provided as it is generated more than 2 days ago
             result = result.Desc if response.error_code == "2283" else response
 
-    except GatewayTimeoutError:
+    except GatewayTimeoutError as e:
         doc.db_set({"einvoice_status": "Auto-Retry"})
-        retry_e_invoice_generation_after = now_datetime() + timedelta(minutes=5)
+        retry_e_invoice_generation_after = add_to_date(now_datetime(), minutes=5)
 
-        frappe.db.set_single_value(
-            "GST Settings",
-            "retry_e_invoice_generation_after",
-            retry_e_invoice_generation_after,
-            update_modified=False,
-        )
+        if throw:
+            frappe.db.set_single_value(
+                "GST Settings",
+                "retry_e_invoice_generation_after",
+                retry_e_invoice_generation_after,
+                update_modified=False,
+            )
 
         frappe.msgprint(
             _(
-                "Government services are currently experiencing downtime, resulting in a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried after {0} minutes."
+                "Government services are currently slow, resulting in a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried after {0} minutes."
             ).format(str(retry_e_invoice_generation_after.replace(microsecond=0))),
             _("Warning"),
             indicator="yellow",
         )
 
-        return False
+        raise e
 
     except frappe.ValidationError as e:
         doc.db_set({"einvoice_status": "Failed"})
@@ -178,6 +169,13 @@ def generate_e_invoice(docname, throw=True):
             "irn": result.Irn,
             "einvoice_status": "Generated",
         }
+    )
+
+    frappe.db.set_single_value(
+        "GST Settings",
+        "retry_e_invoice_generation_after",
+        None,
+        update_modified=False,
     )
 
     invoice_data = None
@@ -369,22 +367,9 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
 
 def retry_e_invoice_generation():
-    retry_e_invoice_generation = frappe.get_cached_value(
-        "GST Settings", None, "retry_e_invoice_generation"
-    )
+    gst_settings = frappe.get_cached_doc("GST Settings")
 
-    if not retry_e_invoice_generation:
-        return
-
-    retry_e_invoice_generation_after = get_datetime(
-        frappe.get_cached_value(
-            "GST Settings", None, "retry_e_invoice_generation_after"
-        )
-    )
-    if (
-        retry_e_invoice_generation_after
-        and retry_e_invoice_generation_after > now_datetime()
-    ):
+    if not can_retry_e_invoice_generation(gst_settings):
         return
 
     queued_sales_invoices = frappe.db.get_all(
@@ -392,8 +377,7 @@ def retry_e_invoice_generation():
     )
 
     if not queued_sales_invoices:
-        frappe.db.set_single_value(
-            "GST Settings",
+        gst_settings.db_set(
             "retry_e_invoice_generation_after",
             None,
             update_modified=False,
@@ -402,20 +386,20 @@ def retry_e_invoice_generation():
 
     generate_e_invoices(queued_sales_invoices)
 
-    queued_sales_invoices = frappe.db.get_all(
-        "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
-    )
+    # queued_sales_invoices = frappe.db.get_all(
+    #     "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
+    # )
 
-    if not queued_sales_invoices:
-        frappe.db.set_single_value(
-            "GST Settings",
-            "retry_e_invoice_generation_after",
-            None,
-            update_modified=False,
-        )
-        return
+    # if not queued_sales_invoices:
+    #     frappe.db.set_single_value(
+    #         "GST Settings",
+    #         "retry_e_invoice_generation_after",
+    #         None,
+    #         update_modified=False,
+    #     )
+    #     return
 
-    return
+    # return
 
 
 def get_e_invoice_info(doc):
@@ -424,6 +408,26 @@ def get_e_invoice_info(doc):
         doc.irn,
         ("is_generated_in_sandbox_mode", "acknowledged_on"),
         as_dict=True,
+    )
+
+
+def can_retry_e_invoice_generation(settings=None):
+    if not settings:
+        settings = frappe.get_cached_value(
+            "GST Settings",
+            "GST Settings",
+            ("retry_e_invoice_generation", "retry_e_invoice_generation_after"),
+            as_dict=True,
+        )
+
+    retry_e_invoice_generation_after = get_datetime(
+        settings.retry_e_invoice_generation_after
+    )
+
+    return (
+        settings.retry_e_invoice_generation
+        and retry_e_invoice_generation_after
+        and now_datetime() >= retry_e_invoice_generation_after
     )
 
 
