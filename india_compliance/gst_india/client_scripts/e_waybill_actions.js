@@ -426,6 +426,9 @@ function show_fetch_if_generated_dialog(frm) {
                 fieldname: "e_waybill_date",
                 fieldtype: "Date",
                 default: frappe.datetime.get_today(),
+                description: __(
+                    "Retrieve the e-Waybill that was already generated for this invoice on the specified date."
+                ),
             },
         ],
         primary_action_label: __("Fetch"),
