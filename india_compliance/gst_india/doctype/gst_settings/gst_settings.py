@@ -54,14 +54,14 @@ class GSTSettings(Document):
         frappe.cache.delete_keys("bootinfo")
 
     def update_retry_e_invoice_scheduled_job(self):
-        if not self.has_value_changed("retry_e_invoice_generation"):
+        if not self.has_value_changed("enable_retry_e_invoice_generation"):
             return
 
         frappe.db.set_value(
             "Scheduled Job Type",
-            "e_invoice.retry_e_invoice_generation",
+            "e_invoice.enable_retry_e_invoice_generation",
             "stopped",
-            not self.retry_e_invoice_generation,
+            not self.enable_retry_e_invoice_generation,
         )
 
     def validate_gst_accounts(self):

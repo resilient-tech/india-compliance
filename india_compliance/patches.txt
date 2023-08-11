@@ -22,7 +22,7 @@ execute:from india_compliance.gst_india.setup import map_default_uoms; map_defau
 india_compliance.patches.v14.set_correct_root_account_for_rcm
 india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice
 execute:import frappe; frappe.db.set_value("GST Settings", None, "archive_party_info_days", 7)
-execute:import frappe; frappe.db.set_value("GST Settings", None, "retry_e_invoice_generation", 1)
+execute:import frappe; frappe.db.set_value("GST Settings", None, "enable_retry_e_invoice_generation", 1)
 india_compliance.patches.v14.set_reverse_charge_applicability_in_supplier
 india_compliance.patches.post_install.update_e_waybill_status
 india_compliance.patches.post_install.add_einvoice_status_field
