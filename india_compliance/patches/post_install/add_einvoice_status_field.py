@@ -1,5 +1,6 @@
 import frappe
 from frappe.utils import sbool
+from frappe.query_builder.functions import Coalesce
 
 
 def execute():
@@ -14,54 +15,40 @@ def execute():
         set_not_applicable_status()
         return
 
-    set_pending_status()
-    set_generated_status()
-    set_cancelled_status()
+    frappe.db.sql(
+        """
+        UPDATE `tabSales Invoice` SET einvoice_status = 'Pending'
+        WHERE
+            IFNULL(einvoice_status, '') = ''
+            AND posting_date >= '2021-04-01'
+            AND docstatus = 1
+            AND IFNULL(irn, '') = ''
+            AND IFNULL(billing_address_gstin, '') != IFNULL(company_gstin, '')
+            AND IFNULL(gst_category, '') in ('Registered Regular', 'SEZ', 'Overseas', 'Deemed Export')
+    """
+    )
+
+    frappe.db.sql(
+        """UPDATE `tabSales Invoice` SET einvoice_status = 'Generated'
+        WHERE
+            IFNULL(einvoice_status, '') = ''
+            AND IFNULL(irn, '') != ''
+            AND IFNULL(irn_cancelled, 0) = 0"""
+    )
+
+    frappe.db.sql(
+        """UPDATE `tabSales Invoice` SET einvoice_status = 'Cancelled'
+        WHERE IFNULL(einvoice_status, '') = '' AND IFNULL(irn_cancelled, 0) = 1"""
+    )
+
     set_not_applicable_status()
 
 
-def set_pending_status():
-    filters = {
-        "docstatus": ["=", 1],
-        "einvoice_status": ["is", "not set"],
-        "posting_date": [">=", "2021-04-01"],
-        "irn": ["is", "not set"],
-        "billing_address_gstin": ["!=", "company_gstin"],
-        "gst_category": [
-            "in",
-            ["Registered Regular", "SEZ", "Overseas", "Deemed Export"],
-        ],
-    }
-
-    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Pending")
-
-
-def set_generated_status():
-    filters = {
-        "docstatus": ["!=", 0],
-        "einvoice_status": ["is", "not set"],
-        "irn": ["is", "set"],
-        "irn_cancelled": ["=", 0],
-    }
-
-    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Generated")
-
-
-def set_cancelled_status():
-    filters = {
-        "docstatus": ["!=", 0],
-        "einvoice_status": ["is", "not set"],
-        "irn_cancelled": ["=", 1],
-    }
-
-    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Cancelled")
-
-
 def set_not_applicable_status():
-    filters = {
-        "docstatus": ["!=", 0],
-        "einvoice_status": ["is", "not set"],
-        "irn": ["is", "not set"],
-    }
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
 
-    frappe.db.set_value("Sales Invoice", filters, "einvoice_status", "Not Applicable")
+    frappe.qb.update(sales_invoice).set("einvoice_status", "Not Applicable").where(
+        (sales_invoice.docstatus != 0)
+        & (Coalesce(sales_invoice.einvoice_status, "") == "")
+        & (Coalesce(sales_invoice.irn, "") == "")
+    ).run()
