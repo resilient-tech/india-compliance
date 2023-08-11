@@ -387,6 +387,9 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "EXPORT":
             conditions += """ AND is_return !=1 and gst_category = 'Overseas' and place_of_supply = '96-Other Countries' """
 
+        elif self.filters.get("type_of_business") == "NIL Rated":
+            conditions += """ AND IFNULL(place_of_supply, '') != '96-Other Countries' and IFNULL(gst_category, '') != 'Overseas'"""
+
         conditions += " AND IFNULL(billing_address_gstin, '') != company_gstin"
 
         return conditions
