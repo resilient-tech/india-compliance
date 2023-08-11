@@ -149,6 +149,7 @@ def generate_e_invoice(docname, throw=True, settings=None):
 
             frappe.msgprint(
                 message
+                + " "
                 + _(
                     "Your e-invoice generation will be automatically retried after {0} minutes."
                 ).format(str(retry_e_invoice_generation_after.replace(microsecond=0))),
@@ -161,8 +162,9 @@ def generate_e_invoice(docname, throw=True, settings=None):
         else:
             frappe.msgprint(
                 message
+                + " "
                 + _(
-                    " Enable {0} from GST Settings to retry e-invoice generation automatically"
+                    "Enable {0} from GST Settings to retry e-invoice generation automatically."
                 ).format(frappe.bold("Retry e-Invoice generation")),
                 _("Warning"),
                 indicator="yellow",
