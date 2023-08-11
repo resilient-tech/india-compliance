@@ -1,6 +1,6 @@
 import frappe
-from frappe.utils import sbool
 from frappe.query_builder.functions import Coalesce
+from frappe.utils import sbool
 
 
 def execute():
