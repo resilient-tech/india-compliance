@@ -10,6 +10,7 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import cstr, flt, getdate
 import erpnext
 
+from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
@@ -19,12 +20,17 @@ def execute(filters=None):
         filters = {}
 
     columns = get_columns()
+    output_gst_accounts_dict = get_gst_accounts_by_type(filters.company, "Output")
 
-    output_gst_accounts = {
-        account
-        for account in get_gst_accounts_by_type(filters.company, "Output").values()
-        if account
-    }
+    output_gst_accounts = set()
+    non_cess_accounts = set()
+    for account_type, account_name in output_gst_accounts_dict.items():
+        if not account_name:
+            continue
+
+        output_gst_accounts.add(account_name)
+        if account_type in GST_ACCOUNT_FIELDS[:3]:
+            non_cess_accounts.add(account_name)
 
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
@@ -53,8 +59,9 @@ def execute(filters=None):
         item_tax = itemised_tax.get((d.parent, d.item_code), {})
         for tax in tax_columns:
             tax_data = item_tax.get(tax, {})
-            tax_rate += flt(tax_data.get("tax_rate", 0))
             total_tax += flt(tax_data.get("tax_amount", 0))
+            if tax in non_cess_accounts:
+                tax_rate += flt(tax_data.get("tax_rate", 0))
 
         row = [
             d.gst_hsn_code,
