@@ -177,11 +177,12 @@ def generate_e_invoice(docname, throw=True, retry=False):
         }
     )
 
-    settings.db_set(
-        "retry_e_invoice_generation",
-        0,
-        update_modified=False,
-    )
+    if settings.enable_retry_e_invoice_generation:
+        settings.db_set(
+            "retry_e_invoice_generation",
+            0,
+            update_modified=False,
+        )
 
     invoice_data = None
     if result.SignedInvoice:
@@ -405,7 +406,7 @@ def can_retry_e_invoice_generation(settings=None):
             as_dict=True,
         )
 
-    if settings.enable_retry_e_invoice_generation:
+    if not settings.enable_retry_e_invoice_generation:
         return False
 
     return True if retry_e_invoice_generation else False
