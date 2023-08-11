@@ -74,19 +74,21 @@ def generate_e_invoices(docnames):
     Bulk generate e-Invoices for the given Sales Invoices.
     Permission checks are done in the `generate_e_invoice` function.
     """
+    settings = frappe.get_cached_doc("GST Settings")
 
     for docname in docnames:
         try:
-            generate_e_invoice(docname, throw=False)
+            generate_e_invoice(docname, throw=False, settings=settings)
+
         except GatewayTimeoutError:
             retry_e_invoice_generation_after = add_to_date(now_datetime(), minutes=5)
-
-            frappe.db.set_single_value(
-                "GST Settings",
+            settings.db_set(
                 "retry_e_invoice_generation_after",
                 retry_e_invoice_generation_after,
                 update_modified=False,
+                commit=True,
             )
+
         except Exception:
             frappe.log_error(
                 title=_("e-Invoice generation failed for Sales Invoice {0}").format(
@@ -101,11 +103,16 @@ def generate_e_invoices(docnames):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, throw=True):
+def generate_e_invoice(docname, throw=True, settings=None):
     doc = load_doc("Sales Invoice", docname, "submit")
 
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
     try:
-        if not can_retry_e_invoice_generation():
+        if settings.retry_e_invoice_generation and not can_retry_e_invoice_generation(
+            settings
+        ):
             raise GatewayTimeoutError
 
         data = EInvoiceData(doc).get_data()
@@ -121,26 +128,47 @@ def generate_e_invoice(docname, throw=True):
             result = result.Desc if response.error_code == "2283" else response
 
     except GatewayTimeoutError as e:
-        doc.db_set({"einvoice_status": "Auto-Retry"})
+        doc.db_set({"einvoice_status": "Auto-Retry"}, commit=True)
         retry_e_invoice_generation_after = add_to_date(now_datetime(), minutes=5)
 
-        if throw:
+        message = _(
+            "Government services are currently slow, resulting in a Gateway Timeout error. We apologize for the inconvenience caused."
+        )
+
+        # To avoid set_value multiple times in bulk generate
+        if throw and settings.retry_e_invoice_generation:
+            print("in throw")
             frappe.db.set_single_value(
                 "GST Settings",
                 "retry_e_invoice_generation_after",
                 retry_e_invoice_generation_after,
                 update_modified=False,
             )
+            # nosempgrep
+            frappe.db.commit()
 
-        frappe.msgprint(
-            _(
-                "Government services are currently slow, resulting in a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried after {0} minutes."
-            ).format(str(retry_e_invoice_generation_after.replace(microsecond=0))),
-            _("Warning"),
-            indicator="yellow",
-        )
+            frappe.msgprint(
+                message
+                + _(
+                    "Your e-invoice generation will be automatically retried after {0} minutes."
+                ).format(str(retry_e_invoice_generation_after.replace(microsecond=0))),
+                _("Warning"),
+                indicator="yellow",
+            )
 
-        raise e
+            raise e
+
+        else:
+            frappe.msgprint(
+                message
+                + _(
+                    " Enable {0} from GST Settings to retry e-invoice generation automatically"
+                ).format(frappe.bold("Retry e-Invoice generation")),
+                _("Warning"),
+                indicator="yellow",
+            )
+
+            return
 
     except frappe.ValidationError as e:
         doc.db_set({"einvoice_status": "Failed"})
