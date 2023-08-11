@@ -811,7 +811,7 @@ sales_e_waybill_field = {
     "fieldname": "ewaybill",
     "label": "e-Waybill No.",
     "fieldtype": "Data",
-    "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
+    "depends_on": "eval: doc.docstatus === 1 && (doc.ewaybill || doc.e_waybill_status !== 'Not Applicable')",
     "allow_on_submit": 1,
     "translatable": 0,
     "no_copy": 1,
