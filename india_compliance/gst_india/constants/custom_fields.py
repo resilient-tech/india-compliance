@@ -673,13 +673,13 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nCancelled\nFailed",
+            "options": "\nPending\nGenerated\nCancelled\nFailed\nNot Applicable",
             "default": None,
             "hidden": 1,
             "no_copy": 1,
             "print_hide": 1,
             "read_only": 1,
-            "translatable": 0,
+            "translatable": 1,
         },
     ]
 }
