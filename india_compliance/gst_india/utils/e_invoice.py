@@ -69,7 +69,7 @@ def enqueue_bulk_e_invoice_generation(docnames):
     return rq_job.id
 
 
-def generate_e_invoices(docnames, retry=False):
+def generate_e_invoices(docnames, force=False):
     """
     Bulk generate e-Invoices for the given Sales Invoices.
     Permission checks are done in the `generate_e_invoice` function.
@@ -77,12 +77,12 @@ def generate_e_invoices(docnames, retry=False):
 
     for docname in docnames:
         try:
-            generate_e_invoice(docname, throw=False, retry=retry)
+            generate_e_invoice(docname, throw=False, force=force)
 
         except GatewayTimeoutError:
             frappe.db.set_value(
                 "Sales Invoice",
-                {"name": ("in", docnames)},
+                {"name": ("in", docnames), "irn": ("is", "not set")},
                 "einvoice_status",
                 "Auto-Retry",
             )
@@ -102,13 +102,13 @@ def generate_e_invoices(docnames, retry=False):
 
 
 @frappe.whitelist()
-def generate_e_invoice(docname, throw=True, retry=False):
+def generate_e_invoice(docname, throw=True, force=False):
     doc = load_doc("Sales Invoice", docname, "submit")
 
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
-        if not (retry or can_retry_e_invoice_generation(settings)):
+        if not (force or can_retry_e_invoice_generation(settings)):
             raise GatewayTimeoutError
 
         data = EInvoiceData(doc).get_data()
@@ -124,17 +124,15 @@ def generate_e_invoice(docname, throw=True, retry=False):
             result = result.Desc if response.error_code == "2283" else response
 
     except GatewayTimeoutError as e:
-        doc.db_set({"einvoice_status": "Auto-Retry"}, commit=True)
+        einvoice_status = "Failed"
 
         if settings.enable_retry_e_invoice_generation:
-            frappe.db.set_single_value(
-                "GST Settings",
-                "retry_e_invoice_generation",
-                1,
-                update_modified=False,
+            einvoice_status = "Auto-Retry"
+            settings.db_set(
+                "retry_e_invoice_generation", 1, update_modified=False, commit=True
             )
-            # nosempgrep
-            frappe.db.commit()
+
+        doc.db_set({"einvoice_status": einvoice_status}, commit=True)
 
         frappe.msgprint(
             _(
@@ -373,9 +371,7 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
 
 def retry_e_invoice_generation():
-    gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if not can_retry_e_invoice_generation(gst_settings):
+    if not can_retry_e_invoice_generation():
         return
 
     queued_sales_invoices = frappe.db.get_all(
@@ -385,7 +381,7 @@ def retry_e_invoice_generation():
     if not queued_sales_invoices:
         return
 
-    generate_e_invoices(queued_sales_invoices, retry=True)
+    generate_e_invoices(queued_sales_invoices, force=True)
 
 
 def get_e_invoice_info(doc):
@@ -409,7 +405,7 @@ def can_retry_e_invoice_generation(settings=None):
     if not settings.enable_retry_e_invoice_generation:
         return False
 
-    return True if retry_e_invoice_generation else False
+    return retry_e_invoice_generation
 
 
 class EInvoiceData(GSTTransactionData):

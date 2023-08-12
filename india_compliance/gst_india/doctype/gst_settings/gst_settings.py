@@ -59,7 +59,7 @@ class GSTSettings(Document):
 
         frappe.db.set_value(
             "Scheduled Job Type",
-            "e_invoice.enable_retry_e_invoice_generation",
+            "e_invoice.retry_e_invoice_generation",
             "stopped",
             not self.enable_retry_e_invoice_generation,
         )
