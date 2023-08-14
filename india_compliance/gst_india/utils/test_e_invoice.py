@@ -37,6 +37,7 @@ class TestEInvoice(FrappeTestCase):
                 "enable_e_waybill": 1,
                 "fetch_e_waybill_data": 0,
                 "apply_e_invoice_only_for_selected_companies": 0,
+                "enable_retry_e_invoice_generation": 1,
             },
         )
         cls.e_invoice_test_data = frappe._dict(
@@ -217,7 +218,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(si.name)
+        generate_e_invoice(si.name, force=True)
 
         # Assert if Integration Request Log generated
         self.assertDocumentEqual(
@@ -261,7 +262,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(si.name)
+        generate_e_invoice(si.name, force=True)
 
         # Assert if Integration Request Log generated
         self.assertDocumentEqual(
@@ -332,7 +333,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(credit_note.name)
+        generate_e_invoice(credit_note.name, force=True)
 
         # Assert if Integration Request Log generated
         self.assertDocumentEqual(
@@ -392,7 +393,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(debit_note.name)
+        generate_e_invoice(debit_note.name, force=True)
 
         # Assert if Integration Request Log generated
         self.assertDocumentEqual(
@@ -455,7 +456,7 @@ class TestEInvoice(FrappeTestCase):
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
 
-        generate_e_invoice(si.name)
+        generate_e_invoice(si.name, force=True)
 
         si_doc = load_doc("Sales Invoice", si.name, "cancel")
         si_doc.get_onload().get("e_invoice_info", {}).update({"acknowledged_on": None})
@@ -593,7 +594,7 @@ class TestEInvoice(FrappeTestCase):
 
         si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
         self._mock_e_invoice_response(data=test_data)
-        generate_e_invoice(si.name)
+        generate_e_invoice(si.name, force=True)
 
         doc = load_doc("Sales Invoice", si.name, "submit")
 

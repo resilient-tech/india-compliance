@@ -175,9 +175,7 @@ def generate_e_invoice(docname, throw=True, force=False):
 
     if settings.retry_e_invoice_generation:
         settings.db_set(
-            "retry_e_invoice_generation",
-            0,
-            update_modified=False,
+            "retry_e_invoice_generation", 0, update_modified=False, commit=True
         )
 
     invoice_data = None
