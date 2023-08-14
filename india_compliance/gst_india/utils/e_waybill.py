@@ -16,10 +16,12 @@ from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
+    ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
     CONSIGNMENT_STATUS,
     EXTEND_VALIDITY_REASON_CODES,
     ITEM_LIMIT,
+    PERMITTED_DOCTYPES,
     SUB_SUPPLY_TYPES,
     TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
@@ -32,9 +34,6 @@ from india_compliance.gst_india.utils import (
     update_onload,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
-
-PERMITTED_DOCTYPES = {"Sales Invoice", "Delivery Note"}
-
 
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
@@ -129,7 +128,7 @@ def _generate_e_waybill(doc, throw=True):
         # Via e-Invoice API if not Return or Debit Note
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
-        with_irn = doc.get("irn") and not (doc.is_return or doc.is_debit_note)
+        with_irn = doc.get("irn") and not (doc.is_return or doc.get("is_debit_note"))
         data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
@@ -232,7 +231,7 @@ def _cancel_e_waybill(doc, values):
         if (
             e_waybill_data.sandbox_mode
             and doc.get("irn")
-            and not (doc.is_return or doc.is_debit_note)
+            and not (doc.is_return or doc.get("is_debit_note"))
         )
         else EWaybillAPI
     )
@@ -581,7 +580,7 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     if comment:
         log.add_comment(text=comment)
 
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep # before delete
 
     if log.is_cancelled:
         delete_file(doc, get_pdf_filename(log.name))
@@ -593,7 +592,7 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         return
 
     _fetch_e_waybill_data(doc, log)
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep # after fetch
 
     ### Attach PDF
 
@@ -706,18 +705,20 @@ class EWaybillData(GSTTransactionData):
         self.validate_mode_of_transport()
         self.set_transporter_details()
 
-        dispatch_address_name = (
-            self.doc.dispatch_address_name
-            if self.doc.dispatch_address_name
-            else self.doc.company_address
+        addresses = ADDRESS_FIELDS.get(self.doc.doctype, {})
+
+        ship_from_address_name = (
+            addresses.get("ship_from")
+            if self.doc.get(addresses.get("ship_from"))
+            else addresses.get("bill_from")
         )
-        dispatch_address = self.get_address_details(dispatch_address_name)
+        ship_from = self.get_address_details(self.doc.get(ship_from_address_name))
 
         return {
             "ewbNo": self.doc.ewaybill,
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": dispatch_address.city,
-            "fromState": dispatch_address.state_number,
+            "fromPlace": ship_from.city,
+            "fromState": ship_from.state_number,
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
             "reasonRem": self.sanitize_value(values.remark, regex=3),
             "transDocNo": self.transaction_details.lr_no,
@@ -790,6 +791,7 @@ class EWaybillData(GSTTransactionData):
             )
 
         self.validate_applicability()
+        self.validate_bill_no_for_purchase()
 
     def validate_settings(self):
         if not self.settings.enable_e_waybill:
@@ -805,12 +807,11 @@ class EWaybillData(GSTTransactionData):
         - Sales Invoice with same company and billing gstin
         """
 
-        for fieldname in ("company_address", "customer_address"):
-            if not self.doc.get(fieldname):
+        address = ADDRESS_FIELDS.get(self.doc.doctype)
+        for key in ("bill_from", "bill_to"):
+            if not self.doc.get(address[key]):
                 frappe.throw(
-                    _("{0} is required to generate e-Waybill").format(
-                        _(self.doc.meta.get_label(fieldname))
-                    ),
+                    _("{0} is required to generate e-Waybill").format(_(address[key])),
                     exc=frappe.MandatoryError,
                 )
 
@@ -845,12 +846,23 @@ class EWaybillData(GSTTransactionData):
                 title=_("Invalid Data"),
             )
 
+    def validate_bill_no_for_purchase(self):
+        if (
+            self.doc.doctype == "Purchase Invoice"
+            and not self.doc.is_return
+            and not self.doc.bill_no
+            and self.doc.gst_category != "Unregistered"
+        ):
+            frappe.throw(
+                _("Bill No is mandatory to generate e-Waybill for Purchase Invoice"),
+                title=_("Invalid Data"),
+            )
+
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
-                _(
-                    "Only Sales Invoice and Delivery Note are supported for e-Waybill"
-                    " actions"
+                _("Only {0} are supported for e-Waybill actions").format(
+                    ", ".join(PERMITTED_DOCTYPES)
                 ),
                 title=_("Unsupported DocType"),
             )
@@ -969,93 +981,136 @@ class EWaybillData(GSTTransactionData):
 
     def update_transaction_details(self):
         # first HSN Code for goods
+        doc = self.doc
         main_hsn_code = next(
             row.gst_hsn_code
-            for row in self.doc.items
+            for row in doc.items
             if not row.gst_hsn_code.startswith("99")
         )
 
         self.transaction_details.update(
-            {
-                "supply_type": "O",
-                "sub_supply_type": 1,
-                "document_type": "INV",
-                "main_hsn_code": main_hsn_code,
-            }
+            sub_supply_desc="",
+            main_hsn_code=main_hsn_code,
         )
 
-        if self.doc.is_return:
-            self.transaction_details.update(
-                {
-                    "supply_type": "I",
-                    "sub_supply_type": 7,
-                    "document_type": "CHL",
-                }
-            )
+        default_supply_types = {
+            # Key: (doctype, is_return)
+            ("Sales Invoice", 0): {
+                "supply_type": "O",
+                "sub_supply_type": 1,  # Supply
+                "document_type": "INV",
+            },
+            ("Sales Invoice", 1): {
+                "supply_type": "I",
+                "sub_supply_type": 7,  # Sales Return
+                "document_type": "CHL",
+            },
+            ("Delivery Note", 0): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Delivery Note", 1): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Purchase Invoice", 0): {
+                "supply_type": "I",
+                "sub_supply_type": 1,  # Supply
+                "document_type": "INV",
+            },
+            ("Purchase Invoice", 1): {
+                "supply_type": "O",
+                "sub_supply_type": 8,  # Others
+                "document_type": "OTH",
+                "sub_supply_desc": "Purchase Return",
+            },
+        }
 
-        elif is_foreign_doc(self.doc):
-            self.transaction_details.sub_supply_type = 3
+        self.transaction_details.update(
+            default_supply_types.get((doc.doctype, doc.is_return), {})
+        )
 
-            if not self.doc.is_export_with_gst:
-                self.transaction_details.document_type = "BIL"
+        if is_foreign_doc(self.doc):
+            self.transaction_details.update(sub_supply_type=3)  # Export
+            if not doc.is_export_with_gst:
+                self.transaction_details.update(document_type="BIL")
 
-        if self.doc.doctype == "Delivery Note":
-            self.transaction_details.update(
-                {
-                    "sub_supply_type": self.doc._sub_supply_type,
-                    "document_type": "CHL",
-                }
-            )
+        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
+            self.transaction_details.name = self.doc.bill_no or self.doc.name
 
     def set_party_address_details(self):
         transaction_type = 1
-        ship_to_address = (
+        address = self.get_address_map()
+
+        address.ship_to = (
             self.doc.port_address
             if (is_foreign_doc(self.doc) and self.doc.port_address)
-            else self.doc.shipping_address_name
+            else address.ship_to
         )
 
-        has_different_shipping_address = (
-            ship_to_address and self.doc.customer_address != ship_to_address
+        if self.doc.is_return:
+            address.bill_from, address.bill_to = address.bill_to, address.bill_from
+            address.ship_from, address.ship_to = address.ship_to, address.ship_from
+
+        has_different_to_address = (
+            address.ship_to and address.ship_to != address.bill_to
         )
 
-        has_different_dispatch_address = (
-            self.doc.dispatch_address_name
-            and self.doc.company_address != self.doc.dispatch_address_name
+        has_different_from_address = (
+            address.ship_from and address.ship_from != address.bill_from
         )
 
-        self.to_address = self.get_address_details(self.doc.customer_address)
-        self.from_address = self.get_address_details(self.doc.company_address)
+        self.bill_to = self.get_address_details(address.bill_to)
+        self.bill_from = self.get_address_details(address.bill_from)
 
         # Defaults
-        # calling copy() since we're mutating from_address and to_address below
-        self.shipping_address = self.to_address.copy()
-        self.dispatch_address = self.from_address.copy()
+        # billing state is changed for SEZ, hence copy()
+        self.ship_to = self.bill_to.copy()
+        self.ship_from = self.bill_from.copy()
 
-        if has_different_shipping_address and has_different_dispatch_address:
+        if has_different_to_address and has_different_from_address:
             transaction_type = 4
-            self.shipping_address = self.get_address_details(ship_to_address)
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
+            self.ship_to = self.get_address_details(address.ship_to)
+            self.ship_from = self.get_address_details(address.ship_from)
 
-        elif has_different_dispatch_address:
+        elif has_different_from_address:
             transaction_type = 3
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
+            self.ship_from = self.get_address_details(address.ship_from)
 
-        elif has_different_shipping_address:
+        elif has_different_to_address:
             transaction_type = 2
-            self.shipping_address = self.get_address_details(ship_to_address)
+            self.ship_to = self.get_address_details(address.ship_to)
 
         self.transaction_details.transaction_type = transaction_type
 
-        self.to_address.legal_name = self.transaction_details.customer_name
-        self.from_address.legal_name = self.transaction_details.company_name
+        to_party = self.transaction_details.party_name
+        from_party = self.transaction_details.company_name
+
+        if self.doc.doctype == "Purchase Invoice":
+            to_party, from_party = from_party, to_party
+
+        if self.doc.is_return:
+            to_party, from_party = from_party, to_party
+
+        self.bill_to.legal_name = to_party
+        self.bill_from.legal_name = from_party
 
         if self.doc.gst_category == "SEZ":
-            self.to_address.state_number = 96
+            self.bill_to.state_number = 96
+
+    def get_address_map(self):
+        """
+        Return address names for bill_to, bill_from, ship_to, ship_from
+        """
+        address_fields = ADDRESS_FIELDS.get(self.doc.doctype, {})
+        out = frappe._dict()
+
+        for key, field in address_fields.items():
+            out[key] = self.doc.get(field)
+
+        return out
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -1072,7 +1127,7 @@ class EWaybillData(GSTTransactionData):
         Accuracy of distance is immaterial and used only for e-Waybill validity determination.
         """
 
-        if self.dispatch_address.pincode != self.shipping_address.pincode:
+        if self.ship_from.pincode != self.ship_to.pincode:
             return
 
         if self.transaction_details.distance > 100:
@@ -1088,52 +1143,71 @@ class EWaybillData(GSTTransactionData):
 
     def get_transaction_data(self):
         if self.sandbox_mode:
-            self.transaction_details.company_gstin = "05AAACG2115R1ZN"
-            self.transaction_details.name = (
-                random_string(6).lstrip("0")
-                if not frappe.flags.in_test
-                else "test_invoice_no"
+            REGISTERED_GSTIN = "05AAACG2115R1ZN"
+            OTHER_GSTIN = "05AAACG2140A1ZL"
+
+            self.transaction_details.update(
+                {
+                    "company_gstin": REGISTERED_GSTIN,
+                    "name": random_string(6).lstrip("0")
+                    if not frappe.flags.in_test
+                    else "test_invoice_no",
+                }
             )
 
-            self.from_address.gstin = "05AAACG2115R1ZN"
-            self.to_address.gstin = (
-                "05AAACG2140A1ZL"
-                if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
-                else "05AAACG2115R1ZN"
-            )
+            # to ensure company_gstin is inline with company address gstin
+            sandbox_gstin = {
+                # (doctype, is_return): (bill_from, bill_to)
+                ("Sales Invoice", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Sales Invoice", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Purchase Invoice", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Purchase Invoice", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+            }
 
-        if self.doc.is_return:
-            self.from_address, self.to_address = self.to_address, self.from_address
-            self.dispatch_address, self.shipping_address = (
-                self.shipping_address,
-                self.dispatch_address,
-            )
+            if self.bill_from.gstin == self.bill_to.gstin:
+                sandbox_gstin.update(
+                    {
+                        ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                    }
+                )
+
+            def _get_sandbox_gstin(address, key):
+                if address.gstin == "URP":
+                    return address.gstin
+
+                return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
+
+            self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
+            self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
 
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
             "subSupplyType": self.transaction_details.sub_supply_type,
-            "subSupplyDesc": "",
+            "subSupplyDesc": self.transaction_details.sub_supply_desc,
             "docType": self.transaction_details.document_type,
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.from_address.legal_name,
-            "fromGstin": self.from_address.gstin,
-            "fromAddr1": self.dispatch_address.address_line1,
-            "fromAddr2": self.dispatch_address.address_line2,
-            "fromPlace": self.dispatch_address.city,
-            "fromPincode": self.dispatch_address.pincode,
-            "fromStateCode": self.from_address.state_number,
-            "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.to_address.legal_name,
-            "toGstin": self.to_address.gstin,
-            "toAddr1": self.shipping_address.address_line1,
-            "toAddr2": self.shipping_address.address_line2,
-            "toPlace": self.shipping_address.city,
-            "toPincode": self.shipping_address.pincode,
-            "toStateCode": self.to_address.state_number,
-            "actToStateCode": self.shipping_address.state_number,
+            "fromTrdName": self.bill_from.legal_name,
+            "fromGstin": self.bill_from.gstin,
+            "fromAddr1": self.ship_from.address_line1,
+            "fromAddr2": self.ship_from.address_line2,
+            "fromPlace": self.ship_from.city,
+            "fromPincode": self.ship_from.pincode,
+            "fromStateCode": self.bill_from.state_number,
+            "actFromStateCode": self.ship_from.state_number,
+            "toTrdName": self.bill_to.legal_name,
+            "toGstin": self.bill_to.gstin,
+            "toAddr1": self.ship_to.address_line1,
+            "toAddr2": self.ship_to.address_line2,
+            "toPlace": self.ship_to.city,
+            "toPincode": self.ship_to.pincode,
+            "toStateCode": self.bill_to.state_number,
+            "actToStateCode": self.ship_to.state_number,
             "totalValue": self.transaction_details.total,
             "cgstValue": self.transaction_details.total_cgst_amount,
             "sgstValue": self.transaction_details.total_sgst_amount,

@@ -149,7 +149,7 @@ class TestTransactionData(FrappeTestCase):
             gst_transaction_data.transaction_details,
             {
                 "company_name": "_Test Indian Registered Company",
-                "customer_name": "_Test Registered Customer",
+                "party_name": "_Test Registered Customer",
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
                 "total": 100.0,
                 "rounding_adjustment": 0.0,
@@ -164,6 +164,47 @@ class TestTransactionData(FrappeTestCase):
                 "total_cess_amount": 0,
                 "total_cess_non_advol_amount": 0,
                 "other_charges": 0.0,
+            },
+        )
+
+    def test_set_transaction_details_with_other_charges(self):
+        doc = create_sales_invoice(do_not_submit=True)
+        _append_taxes(doc, ("CGST", "SGST"))
+
+        tds = {
+            "charge_type": "On Previous Row Total",
+            "row_id": "2",
+            "account_head": "TDS Payable - _TIRC",
+            "description": "TDS ON SALES",
+            "rate": "1",
+            "cost_center": "Main - _TIRC",
+        }
+
+        doc.append("taxes", tds)
+        doc.save()
+
+        gst_transaction_data = GSTTransactionData(doc)
+        gst_transaction_data.set_transaction_details()
+
+        self.assertDictEqual(
+            gst_transaction_data.transaction_details,
+            {
+                "company_name": "_Test Indian Registered Company",
+                "party_name": "_Test Registered Customer",
+                "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
+                "total": 100.0,
+                "rounding_adjustment": -0.18,
+                "grand_total": 119.0,
+                "grand_total_in_foreign_currency": "",
+                "discount_amount": 0,
+                "company_gstin": "24AAQCA8719H1ZC",
+                "name": doc.name,
+                "other_charges": 1.18,
+                "total_cgst_amount": 9.0,
+                "total_sgst_amount": 9.0,
+                "total_igst_amount": 0,
+                "total_cess_amount": 0,
+                "total_cess_non_advol_amount": 0,
             },
         )
 

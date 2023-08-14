@@ -387,6 +387,9 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "EXPORT":
             conditions += """ AND is_return !=1 and gst_category = 'Overseas' and place_of_supply = '96-Other Countries' """
 
+        elif self.filters.get("type_of_business") == "NIL Rated":
+            conditions += """ AND IFNULL(place_of_supply, '') != '96-Other Countries' and IFNULL(gst_category, '') != 'Overseas'"""
+
         conditions += " AND IFNULL(billing_address_gstin, '') != company_gstin"
 
         return conditions
@@ -447,9 +450,11 @@ class Gstr1Report(object):
             if not item_wise_tax_detail:
                 continue
 
-            if "gst" in account.lower() and account not in self.gst_accounts.values():
-                unidentified_gst_accounts.add(account)
-                unidentified_gst_accounts_invoice.add(parent)
+            if account not in self.gst_accounts.values():
+                if "gst" in account.lower():
+                    unidentified_gst_accounts.add(account)
+                    unidentified_gst_accounts_invoice.add(parent)
+
                 continue
 
             try:
