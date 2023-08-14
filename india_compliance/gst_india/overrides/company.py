@@ -6,7 +6,7 @@ from india_compliance.gst_india.utils import get_data_file_path
 
 
 def delete_gst_settings_for_company(doc, method=None):
-    if not frappe.flags.country_change or doc.country != "India":
+    if doc.country != "India":
         return
 
     gst_settings = frappe.get_doc("GST Settings")
