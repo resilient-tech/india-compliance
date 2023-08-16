@@ -23,26 +23,27 @@ GSTIN_BLOCK_STATUS = {"U": 0, "B": 1}
 class GSTIN(Document):
     def before_save(self):
         self.status = GSTIN_STATUS.get(self.status, self.status)
-        self.is_blocked = GSTIN_BLOCK_STATUS.get(self.is_blocked, self.is_blocked)
-
-        try:
-            self.registration_date = parse_datetime(
-                self.registration_date, day_first=True
-            )
-
-        except Exception:
-            # Mandatory field error for registration date
-            pass
-
-        try:
-            self.cancelled_date = parse_datetime(self.cancelled_date, day_first=True)
-
-        except Exception:
-            self.cancelled_date = (
-                self.registration_date if self.status == "Cancelled" else None
-            )
-
+        self.is_blocked = GSTIN_BLOCK_STATUS.get(self.is_blocked, 0)
         self.last_updated_on = get_datetime()
+
+        if self.registration_date and len(self.registration_date) >= 10:
+            try:
+                self.registration_date = parse_datetime(
+                    self.registration_date, day_first=True
+                )
+            except Exception:
+                self.registration_date = None
+
+        if self.cancelled_date and len(self.cancelled_date) >= 10:
+            try:
+                self.cancelled_date = parse_datetime(
+                    self.cancelled_date, day_first=True
+                )
+
+            except Exception:
+                self.cancelled_date = (
+                    self.registration_date if self.status == "Cancelled" else None
+                )
 
     @frappe.whitelist()
     def update_gstin_status(self):

@@ -316,7 +316,7 @@
    "description": "Ensures valid GSTIN in transactions by refreshing status periodically",
    "fieldname": "gstin_status_refresh_interval",
    "fieldtype": "Int",
-   "label": "GSTIN Status Refresh Interval"
+   "label": "GSTIN Status Refresh Interval (In Days)"
   },
   {
    "default": "5000",
@@ -343,7 +343,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-08-08 12:52:48.713020",
+ "modified": "2023-08-16 16:41:09.477426",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
