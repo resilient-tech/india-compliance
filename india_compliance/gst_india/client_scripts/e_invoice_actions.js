@@ -14,7 +14,7 @@ frappe.ui.form.on("Sales Invoice", {
                 () => {
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
-                        args: { docname: frm.doc.name },
+                        args: { docname: frm.doc.name, force: true },
                         callback: () => {
                             return frm.refresh();
                         },
@@ -87,7 +87,6 @@ frappe.ui.form.on("Sales Invoice", {
         });
     },
 });
-
 
 function is_irn_cancellable(frm) {
     const e_invoice_info = frm.doc.__onload && frm.doc.__onload.e_invoice_info;
