@@ -111,7 +111,7 @@ def generate_e_invoice(docname, throw=True, force=False):
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
-        if not force or settings.retry_e_invoice_generation:
+        if not force or settings.is_retry_e_invoice_generation_pending:
             raise GatewayTimeoutError
 
         data = EInvoiceData(doc).get_data()
@@ -131,7 +131,7 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         if settings.enable_retry_e_invoice_generation:
             einvoice_status = "Auto-Retry"
-            settings.db_set("retry_e_invoice_generation", 1, update_modified=False)
+            settings.db_set("is_retry_e_invoice_generation_pending", 1, update_modified=False)
 
         doc.db_set({"einvoice_status": einvoice_status}, commit=True)
 
@@ -366,11 +366,11 @@ def retry_e_invoice_generation():
     settings = frappe.get_cached_doc("GST Settings")
     if (
         not settings.enable_retry_e_invoice_generation
-        or not settings.retry_e_invoice_generation
+        or not settings.is_retry_e_invoice_generation_pending
     ):
         return
 
-    settings.db_set("retry_e_invoice_generation", 0, update_modified=False)
+    settings.db_set("is_retry_e_invoice_generation_pending", 0, update_modified=False)
 
     queued_sales_invoices = frappe.db.get_all(
         "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
