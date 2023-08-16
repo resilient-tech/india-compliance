@@ -391,12 +391,7 @@ def get_e_invoice_info(doc):
 
 def is_e_invoice_generation_on_hold(settings=None):
     if not settings:
-        settings = frappe.get_cached_value(
-            "GST Settings",
-            "GST Settings",
-            ("enable_retry_e_invoice_generation", "retry_e_invoice_generation"),
-            as_dict=True,
-        )
+        settings = frappe.get_cached_doc("GST Settings")
 
     if not settings.enable_retry_e_invoice_generation:
         return False

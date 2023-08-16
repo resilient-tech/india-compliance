@@ -266,7 +266,7 @@ audit_trail_doctypes = [
 
 scheduler_events = {
     "cron": {
-        "*/4 * * * *": [
+        "*/5 * * * *": [
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_generation",
         ],
     }
