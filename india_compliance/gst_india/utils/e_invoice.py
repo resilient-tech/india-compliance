@@ -10,7 +10,6 @@ from frappe.utils import (
     format_date,
     get_datetime,
     getdate,
-    now_datetime,
     random_string,
 )
 
@@ -75,6 +74,14 @@ def generate_e_invoices(docnames, force=False):
     Permission checks are done in the `generate_e_invoice` function.
     """
 
+    def log_error():
+        frappe.log_error(
+            title=_("e-Invoice generation failed for Sales Invoice {0}").format(
+                docname
+            ),
+            message=frappe.get_traceback(),
+        )
+
     for docname in docnames:
         try:
             generate_e_invoice(docname, throw=False, force=force)
@@ -87,14 +94,10 @@ def generate_e_invoices(docnames, force=False):
                 "Auto-Retry",
             )
 
-            return
+            log_error()
+
         except Exception:
-            frappe.log_error(
-                title=_("e-Invoice generation failed for Sales Invoice {0}").format(
-                    docname
-                ),
-                message=frappe.get_traceback(),
-            )
+            log_error()
 
         finally:
             # each e-Invoice needs to be committed individually
@@ -108,7 +111,7 @@ def generate_e_invoice(docname, throw=True, force=False):
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
-        if not force and is_e_invoice_generation_on_hold(settings):
+        if not force or settings.retry_e_invoice_generation:
             raise GatewayTimeoutError
 
         data = EInvoiceData(doc).get_data()
@@ -134,9 +137,7 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         frappe.msgprint(
             _(
-                "Government services are currently slow, resulting in a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried after {0} minutes."
-            ).format(
-                str(add_to_date(now_datetime(), minutes=5).replace(microsecond=0))
+                "Government services are currently slow, resulting in a Gateway Timeout error. We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried every 5 minutes."
             ),
             _("Warning"),
             indicator="yellow",
@@ -172,11 +173,6 @@ def generate_e_invoice(docname, throw=True, force=False):
             "einvoice_status": "Generated",
         }
     )
-
-    if settings.retry_e_invoice_generation:
-        settings.db_set(
-            "retry_e_invoice_generation", 0, update_modified=False, commit=True
-        )
 
     invoice_data = None
     if result.SignedInvoice:
@@ -367,13 +363,18 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
 
 def retry_e_invoice_generation():
-    if is_e_invoice_generation_on_hold():
+    settings = frappe.get_cached_doc("GST Settings")
+    if (
+        not settings.enable_retry_e_invoice_generation
+        or not settings.retry_e_invoice_generation
+    ):
         return
+
+    settings.db_set("retry_e_invoice_generation", 0, update_modified=False)
 
     queued_sales_invoices = frappe.db.get_all(
         "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
     )
-
     if not queued_sales_invoices:
         return
 
@@ -387,16 +388,6 @@ def get_e_invoice_info(doc):
         ("is_generated_in_sandbox_mode", "acknowledged_on"),
         as_dict=True,
     )
-
-
-def is_e_invoice_generation_on_hold(settings=None):
-    if not settings:
-        settings = frappe.get_cached_doc("GST Settings")
-
-    if not settings.enable_retry_e_invoice_generation:
-        return False
-
-    return retry_e_invoice_generation
 
 
 class EInvoiceData(GSTTransactionData):
