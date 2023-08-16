@@ -104,7 +104,7 @@ def get_updated_gstin(
                 gstin=gstin,
                 doc=gstin_doc,
                 transaction_date=transaction_date,
-                callback=_validate_gstin_callback,
+                callback=_validate_gstin_info,
             )
         )
 
@@ -114,20 +114,17 @@ def get_updated_gstin(
 def create_or_update_gstin_status(
     gstin=None, response=None, doc=None, transaction_date=None, callback=None
 ):
-    if not response:
-        response = _get_gstin_status(gstin=gstin, company_gstin=get_company_gstin())
-    else:
-        response = get_formatted_response(response)
+    doctype = "GSTIN"
+    response = _get_gstin_info(gstin=gstin, response=response)
 
     if not response:
         return
 
     if not doc:
-        gstin_exists = frappe.db.exists("GSTIN", response.get("gstin"))
-        if gstin_exists:
-            doc = frappe.get_doc("GSTIN", response.pop("gstin"))
+        if frappe.db.exists(doctype, response.get("gstin")):
+            doc = frappe.get_doc(doctype, response.pop("gstin"))
         else:
-            doc = frappe.new_doc("GSTIN")
+            doc = frappe.new_doc(doctype)
 
     doc.update(response)
     doc.save(ignore_permissions=True)
@@ -138,44 +135,21 @@ def create_or_update_gstin_status(
     return doc
 
 
-def _validate_gstin_callback(gstin_doc, transaction_date=None):
-    if not gstin_doc or not transaction_date:
-        return
-
-    if (
-        not gstin_doc.registration_date
-        or date_diff(transaction_date, gstin_doc.registration_date) < 0
-    ):
-        frappe.log_error(
-            title=_("Invalid Party GSTIN"),
-            message=_(
-                "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
-            ).format(format_date(gstin_doc.registration_date)),
-        )
-
-    if (
-        gstin_doc.status == "Cancelled"
-        and date_diff(transaction_date, gstin_doc.cancelled_date) >= 0
-    ):
-        frappe.log_error(
-            title=_("Invalid Party GSTIN"),
-            message=_(
-                "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
-            ).format(format_date(gstin_doc.cancelled_date)),
-        )
-
-    if gstin_doc.status not in ("Active", "Cancelled"):
-        frappe.log_error(
-            title=_("Invalid Party GSTIN Status"),
-            message=_("Status of Party GSTIN is {0}").format(gstin_doc.status),
-        )
-
-
-def _get_gstin_status(*, gstin, company_gstin=None):
+def _get_gstin_info(*, gstin, response=None):
     try:
-        if not company_gstin:
+        company_gstin = get_company_gstin()
+        if not response and not company_gstin:
             response = PublicAPI().get_gstin_info(gstin)
-            return get_formatted_response(response)
+
+        if response:
+            return frappe._dict(
+                {
+                    "gstin": response.gstin,
+                    "registration_date": response.rgdt,
+                    "cancelled_date": response.cxdt,
+                    "status": response.sts,
+                }
+            )
 
         response = EInvoiceAPI(company_gstin=company_gstin).get_gstin_info(gstin)
         return frappe._dict(
@@ -195,18 +169,44 @@ def _get_gstin_status(*, gstin, company_gstin=None):
         )
 
 
-def get_formatted_response(response):
-    """
-    Format response from Public API
-    """
-    return frappe._dict(
-        {
-            "gstin": response.gstin,
-            "registration_date": response.rgdt,
-            "cancelled_date": response.cxdt,
-            "status": response.sts,
-        }
-    )
+def _validate_gstin_info(gstin_doc, transaction_date=None):
+    if not (gstin_doc and transaction_date):
+        return
+
+    error_title = _("Invalid Party GSTIN")
+
+    registration_date = gstin_doc.registration_date
+    if not registration_date:
+        frappe.log_error(
+            title=error_title,
+            message="Registration date not found for Party GSTIN. Please make sure that if GSTIN is registered.",
+        )
+
+    if date_diff(transaction_date, registration_date) < 0:
+        frappe.log_error(
+            title=error_title,
+            message=_(
+                "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
+            ).format(format_date(registration_date)),
+        )
+
+    cancelled_date = gstin_doc.cancelled_date
+    if (
+        gstin_doc.status == "Cancelled"
+        and date_diff(transaction_date, cancelled_date) >= 0
+    ):
+        frappe.log_error(
+            title=error_title,
+            message=_(
+                "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
+            ).format(format_date(cancelled_date)),
+        )
+
+    if gstin_doc.status not in ("Active", "Cancelled"):
+        frappe.log_error(
+            title=_("Invalid Party GSTIN Status"),
+            message=f"Status of Party GSTIN is {gstin_doc.status}",
+        )
 
 
 def get_company_gstin():
