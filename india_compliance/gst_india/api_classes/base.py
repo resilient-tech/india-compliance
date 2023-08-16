@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import sbool
 
+from india_compliance.exceptions import GatewayTimeoutError
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
@@ -212,6 +213,9 @@ class BaseAPI:
                 _("Your India Compliance API key is invalid"),
                 title=_("Invalid API Key"),
             )
+
+        if status_code == 504:
+            raise GatewayTimeoutError
 
     def generate_request_id(self, length=12):
         return frappe.generate_hash(length=length)
