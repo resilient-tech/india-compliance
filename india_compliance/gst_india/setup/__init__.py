@@ -160,6 +160,7 @@ def set_default_gst_settings():
         "e_invoice_applicable_from": nowdate(),
         "autofill_party_info": 1,
         "archive_party_info_days": 7,
+        "enable_retry_e_invoice_generation": 1,
     }
 
     if frappe.conf.developer_mode:
