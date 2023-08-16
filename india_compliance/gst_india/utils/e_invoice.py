@@ -59,7 +59,7 @@ def enqueue_bulk_e_invoice_generation(docnames):
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
     rq_job = frappe.enqueue(
         "india_compliance.gst_india.utils.e_invoice.generate_e_invoices",
-        queue="long",
+        queue="short" if len(docnames) < 5 else "long",
         timeout=len(docnames) * 240,  # 4 mins per e-Invoice
         docnames=docnames,
     )
@@ -248,7 +248,8 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(
             _(
-                "e-Invoice is not applicable for invoices with same company and billing GSTIN"
+                "e-Invoice is not applicable for invoices with same company and billing"
+                " GSTIN"
             )
         )
 
