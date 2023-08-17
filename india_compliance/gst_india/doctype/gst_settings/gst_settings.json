@@ -34,6 +34,8 @@
   "auto_generate_e_invoice",
   "generate_e_waybill_with_e_invoice",
   "apply_e_invoice_only_for_selected_companies",
+  "enable_retry_e_invoice_generation",
+  "is_retry_e_invoice_generation_pending",
   "column_break_17",
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
@@ -330,21 +332,32 @@
    "fieldname": "require_supplier_invoice_no",
    "fieldtype": "Check",
    "label": "Require Supplier Invoice Number for GST Purchases"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "Automatically Retry e-Invoice Generation for Gateway Timeout Errors",
+   "fieldname": "enable_retry_e_invoice_generation",
+   "fieldtype": "Check",
+   "label": "Enable Retry e-Invoice Generation"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_retry_e_invoice_generation_pending",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Retry e-Invoice Generation Pending"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-08-08 12:52:48.713020",
+ "modified": "2023-08-17 03:38:40.107904",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
  "owner": "Administrator",
  "permissions": [
-  {
-   "read": 1,
-   "role": "All"
-  },
   {
    "create": 1,
    "read": 1,

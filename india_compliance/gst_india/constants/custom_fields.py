@@ -673,7 +673,7 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nCancelled\nFailed\nNot Applicable",
+            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nFailed\nNot Applicable",
             "default": None,
             "hidden": 1,
             "no_copy": 1,
