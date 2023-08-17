@@ -6,6 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import date_diff, format_date, get_datetime
 
+from india_compliance.exceptions import GatewayTimeoutError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import is_api_enabled, parse_datetime
@@ -130,6 +131,10 @@ def create_or_update_gstin_status(
 
 def _get_gstin_info(*, gstin, response=None):
     try:
+        gstin_cache = frappe.cache.get_value(gstin)
+        if gstin_cache and not gstin_cache.get("can_request"):
+            return
+
         company_gstin = get_company_gstin()
         if not response and not company_gstin:
             response = PublicAPI().get_gstin_info(gstin)
@@ -155,17 +160,29 @@ def _get_gstin_info(*, gstin, response=None):
             }
         )
 
-    except Exception:
-        # ToDo: add usage
+    except GatewayTimeoutError:
         frappe.cache.set_value(
             gstin,
-            {"success": False},
+            {"can_request": False},
             expires_in_sec=180,
         )
+        frappe.log_error(
+            title=_("Gateway Timeout"),
+            message=_(
+                "Government services are currently slow, resulting in a Gateway Timeout error while fetching GSTIN Status."
+            )
+            + frappe.get_traceback(),
+        )
+
+    except Exception:
         frappe.log_error(
             title=_("Error fetching GSTIN status"),
             message=frappe.get_traceback(),
         )
+
+    finally:
+        if response:
+            frappe.cache.delete_key(gstin)
 
 
 def _validate_gstin_info(gstin_doc, transaction_date=None):
