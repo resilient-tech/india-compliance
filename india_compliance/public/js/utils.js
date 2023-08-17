@@ -54,25 +54,26 @@ Object.assign(india_compliance, {
     async set_gstin_status(field) {
         if (!field.value) return field.set_description("");
 
-        const {message} = await frappe.call({
+        const { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
             args: {
                 gstin: field.value,
                 is_request_from_ui: 1,
-            }});
+            },
+        });
 
-        field.set_description(
-            india_compliance.get_gstin_status_desc(message?.status));
+        field.set_description(india_compliance.get_gstin_status_desc(message?.status));
 
         return message;
-
     },
 
     get_gstin_status_desc(status) {
+        if (!status) return "Invalid GSTIN";
+
         const STATUS_COLORS = { Active: "green", Cancelled: "red" };
         return `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
                     Status:&nbsp;<strong>${status}</strong>
-                </div>`
+                </div>`;
     },
 
     set_state_options(frm) {
