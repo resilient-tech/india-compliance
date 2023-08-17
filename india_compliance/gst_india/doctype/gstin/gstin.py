@@ -26,24 +26,16 @@ class GSTIN(Document):
         self.is_blocked = GSTIN_BLOCK_STATUS.get(self.is_blocked, 0)
         self.last_updated_on = get_datetime()
 
-        if self.registration_date and len(self.registration_date) >= 10:
-            try:
-                self.registration_date = parse_datetime(
-                    self.registration_date, day_first=True
-                )
-            except Exception:
-                self.registration_date = None
+        self.registration_date = parse_datetime(
+            self.registration_date, day_first=True, throw=False
+        )
 
-        if self.cancelled_date and len(self.cancelled_date) >= 10:
-            try:
-                self.cancelled_date = parse_datetime(
-                    self.cancelled_date, day_first=True
-                )
+        self.cancelled_date = parse_datetime(
+            self.cancelled_date, day_first=True, throw=False
+        )
 
-            except Exception:
-                self.cancelled_date = (
-                    self.registration_date if self.status == "Cancelled" else None
-                )
+        if not self.cancelled_date and self.status == "Cancelled":
+            self.cancelled_date = self.registration_date
 
     @frappe.whitelist()
     def update_gstin_status(self):
@@ -164,6 +156,12 @@ def _get_gstin_info(*, gstin, response=None):
         )
 
     except Exception:
+        # ToDo: add usage
+        frappe.cache.set_value(
+            gstin,
+            {"success": False},
+            expires_in_sec=180,
+        )
         frappe.log_error(
             title=_("Error fetching GSTIN status"),
             message=frappe.get_traceback(),
