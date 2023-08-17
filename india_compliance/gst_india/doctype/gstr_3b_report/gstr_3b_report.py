@@ -187,7 +187,7 @@ class GSTR3BReport(Document):
         inward_nil_exempt = frappe.db.sql(
             """
             SELECT p.place_of_supply, p.supplier_address,
-            i.base_amount,IFNULL(i.taxable_value, "0") as taxable_value, i.is_nil_exempt, i.is_non_gst
+            i.base_amount, i.taxable_value, i.is_nil_exempt, i.is_non_gst
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
             and p.is_opening = 'No'
@@ -211,7 +211,7 @@ class GSTR3BReport(Document):
                 d.place_of_supply = "00-" + cstr(state)
 
             supplier_state = address_state_map.get(d.supplier_address) or state
-            amount = flt(d.taxable_value if d.taxable_value != 0 else d.base_amount)
+            amount = flt(d.taxable_value if d.taxable_value else d.base_amount)
 
             if (
                 d.is_nil_exempt == 1
