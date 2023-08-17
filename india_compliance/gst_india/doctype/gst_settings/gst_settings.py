@@ -190,7 +190,8 @@ class GSTSettings(Document):
         ):
             frappe.msgprint(
                 _(
-                    "Autofill Party Information based on GSTIN is not supported in sandbox mode"
+                    "Autofill Party Information based on GSTIN is not supported in"
+                    " sandbox mode"
                 ),
             )
 
@@ -198,7 +199,8 @@ class GSTSettings(Document):
         if not self.e_invoice_applicable_companies:
             frappe.throw(
                 _(
-                    "You must select at least one company to which e-Invoice is Applicable"
+                    "You must select at least one company to which e-Invoice is"
+                    " Applicable"
                 )
             )
 
@@ -238,12 +240,12 @@ def disable_api_promo():
 
 @frappe.whitelist()
 def enqueue_update_gst_category():
+    frappe.has_permission("GST Settings", "write", throw=True)
+    frappe.enqueue(update_gst_category, queue="long", timeout=6000)
     frappe.msgprint(
         _("Updating GST Category in background"),
         alert=True,
     )
-
-    frappe.enqueue(update_gst_category, queue="long", timeout=6000)
 
 
 def update_gst_category():
