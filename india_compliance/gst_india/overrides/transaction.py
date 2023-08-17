@@ -219,7 +219,8 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     ):
         _throw(
             _(
-                "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are same"
+                "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are"
+                " same"
             ).format(idx)
         )
 
@@ -324,7 +325,8 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
             _throw(
                 _(
-                    "Cannot use only one of CGST or SGST account for intra-state supplies"
+                    "Cannot use only one of CGST or SGST account for intra-state"
+                    " supplies"
                 ),
                 title=_("Invalid GST Accounts"),
             )
@@ -436,7 +438,8 @@ def validate_place_of_supply(doc):
         frappe.throw(
             _(
                 "GST Category is set to <strong>Overseas</strong> but Place of Supply"
-                " is within India. Shipping Address in India is required for classifing this as B2C."
+                " is within India. Shipping Address in India is required for classifing"
+                " this as B2C."
             ),
             title=_("Invalid Shipping Address"),
         )
@@ -680,7 +683,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         is_reverse_charge = frappe.db.get_value(
             "Supplier",
             party_details.supplier,
-            ("is_reverse_charge_applicable as is_reverse_charge"),
+            "is_reverse_charge_applicable as is_reverse_charge",
             as_dict=True,
         )
 
@@ -759,7 +762,9 @@ def get_party_gst_details(party_details, is_sales_transaction):
         "billing_address_gstin" if is_sales_transaction else "supplier_gstin"
     )
 
-    if not (party := party_details.get(party_type.lower())):
+    if not (party := party_details.get(party_type.lower())) or not isinstance(
+        party, str
+    ):
         return
 
     return frappe.db.get_value(

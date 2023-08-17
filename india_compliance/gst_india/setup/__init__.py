@@ -161,6 +161,7 @@ def set_default_gst_settings():
         "autofill_party_info": 1,
         "gstin_status_refresh_interval": 60,
         "archive_party_info_days": 7,
+        "enable_retry_e_invoice_generation": 1,
     }
 
     if frappe.conf.developer_mode:
