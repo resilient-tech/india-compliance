@@ -9,6 +9,9 @@ from india_compliance.gst_india.report.e_invoice_summary.e_invoice_summary impor
 
 @frappe.whitelist()
 def get_pending_e_invoices_count():
+    if not frappe.has_permission("Sales Invoice"):
+        return 0
+
     last_quarter_date = add_months(getdate(), -3)
     filters = {
         "company": erpnext.get_default_company(),
@@ -22,6 +25,9 @@ def get_pending_e_invoices_count():
 
 @frappe.whitelist()
 def get_active_e_invoice_count_for_cancelled_invoices():
+    if not frappe.has_permission("Sales Invoice"):
+        return 0
+
     last_quarter_date = add_months(getdate(), -3)
     filters = {
         "company": erpnext.get_default_company(),
