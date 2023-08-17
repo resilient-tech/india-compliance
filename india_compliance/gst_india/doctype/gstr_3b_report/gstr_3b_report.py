@@ -187,7 +187,7 @@ class GSTR3BReport(Document):
         inward_nil_exempt = frappe.db.sql(
             """
             SELECT p.place_of_supply, p.supplier_address,
-            i.base_amount, i.is_nil_exempt, i.is_non_gst
+            i.base_amount, i.taxable_value, i.is_nil_exempt, i.is_non_gst
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
             and p.is_opening = 'No'
@@ -211,25 +211,26 @@ class GSTR3BReport(Document):
                 d.place_of_supply = "00-" + cstr(state)
 
             supplier_state = address_state_map.get(d.supplier_address) or state
+            amount = flt(d.taxable_value if d.taxable_value else d.base_amount)
 
             if (
                 d.is_nil_exempt == 1
                 or d.get("gst_category") == "Registered Composition"
             ) and cstr(supplier_state) == cstr(d.place_of_supply.split("-")[1]):
-                inward_nil_exempt_details["gst"]["intra"] += d.base_amount
+                inward_nil_exempt_details["gst"]["intra"] += amount
             elif (
                 d.is_nil_exempt == 1
                 or d.get("gst_category") == "Registered Composition"
             ) and cstr(supplier_state) != cstr(d.place_of_supply.split("-")[1]):
-                inward_nil_exempt_details["gst"]["inter"] += d.base_amount
+                inward_nil_exempt_details["gst"]["inter"] += amount
             elif d.is_non_gst == 1 and cstr(supplier_state) == cstr(
                 d.place_of_supply.split("-")[1]
             ):
-                inward_nil_exempt_details["non_gst"]["intra"] += d.base_amount
+                inward_nil_exempt_details["non_gst"]["intra"] += amount
             elif d.is_non_gst == 1 and cstr(supplier_state) != cstr(
                 d.place_of_supply.split("-")[1]
             ):
-                inward_nil_exempt_details["non_gst"]["inter"] += d.base_amount
+                inward_nil_exempt_details["non_gst"]["inter"] += amount
 
         return inward_nil_exempt_details
 
