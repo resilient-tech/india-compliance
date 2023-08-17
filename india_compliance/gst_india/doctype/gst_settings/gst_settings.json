@@ -352,16 +352,12 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-08-16 12:48:03.749139",
+ "modified": "2023-08-17 03:38:40.107904",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
  "owner": "Administrator",
  "permissions": [
-  {
-   "read": 1,
-   "role": "All"
-  },
   {
    "create": 1,
    "read": 1,
