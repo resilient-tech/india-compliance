@@ -3,8 +3,9 @@
 
 frappe.ui.form.on("GSTIN", {
     refresh(frm) {
+        frm.disable_form();
+
         frm.add_custom_button(__("Refresh Now"), () => {
-            frm.disable_form();
             frm.call("update_gstin_status");
         });
     },
