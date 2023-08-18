@@ -14,10 +14,7 @@ const TRANSACTION_DOCTYPES = [
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
-
-    if (frappe.boot.sales_doctypes.includes(doctype))
-        set_and_validate_gstin_status(doctype, "billing_address_gstin");
-    else set_and_validate_gstin_status(doctype, "supplier_gstin");
+    set_and_validate_gstin_status(doctype);
 }
 
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
@@ -25,14 +22,16 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
 }
 
 function fetch_gst_details(doctype) {
-    const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
+    const event_fields = [
+        "tax_category",
+        "company_gstin",
+        "place_of_supply",
+        "is_reverse_charge",
+    ];
 
     // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
-        event_fields.push(
-            "customer_address",
-            "is_export_with_gst",
-        );
+        event_fields.push("customer_address", "is_export_with_gst");
     } else {
         event_fields.push("supplier_address");
     }
@@ -99,7 +98,7 @@ async function update_gst_details(frm, event) {
         fieldnames_to_set.push(
             "customer_address",
             "billing_address_gstin",
-            "is_export_with_gst",
+            "is_export_with_gst"
         );
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
@@ -160,7 +159,11 @@ function is_foreign_transaction(frm) {
     );
 }
 
-function set_and_validate_gstin_status(doctype, gstin_field_name) {
+function set_and_validate_gstin_status(doctype) {
+    const gstin_field_name = frappe.boot.sales_doctypes.includes(doctype)
+        ? "billing_address_gstin"
+        : "supplier_gstin";
+
     frappe.ui.form.on(doctype, {
         refresh(frm) {
             _set_and_validate_gstin_status(frm, gstin_field_name);
@@ -189,14 +192,13 @@ async function _set_and_validate_gstin_status(frm, gstin_field_name) {
     const gstin_field = frm.get_field(gstin_field_name);
     const gstin = gstin_field.value;
 
-    let gstin_doc;
-    if (!frm._gstin_doc?.[gstin]) {
+    let gstin_doc = frm._gstin_doc?.[gstin];
+    if (!gstin_doc) {
         gstin_doc = await india_compliance.set_gstin_status(gstin_field);
 
         frm._gstin_doc = frm._gstin_doc || {};
         frm._gstin_doc[gstin] = gstin_doc;
     } else {
-        gstin_doc = frm._gstin_doc[gstin];
         gstin_field.set_description(
             india_compliance.get_gstin_status_desc(gstin_doc?.status)
         );
