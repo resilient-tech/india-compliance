@@ -76,37 +76,33 @@ def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
 def get_updated_gstin(
     gstin, refresh_interval, transaction_date=None, is_request_from_ui=0
 ):
-    if not frappe.db.exists("GSTIN", gstin):
-        return create_or_update_gstin_status(gstin)
-
-    gstin_doc = frappe.get_doc("GSTIN", gstin)
-
-    # If request is from ui, api call is not made
     if is_request_from_ui:
+        gstin_doc = create_or_update_gstin_status(gstin=gstin, throw=True)
         return gstin_doc
 
     # If request is not made from ui, enqueing the GST api call
     # Validating the gstin in the callback and log errors
-    if needs_status_update(refresh_interval, gstin_doc):
-        return (
-            create_or_update_gstin_status(gstin, doc=gstin_doc)
-            if is_request_from_ui
-            else frappe.enqueue(
-                create_or_update_gstin_status,
-                enqueue_after_commit=True,
-                queue="short",
-                gstin=gstin,
-                doc=gstin_doc,
-                transaction_date=transaction_date,
-                callback=_validate_gstin_info,
-            )
-        )
+    if not needs_status_update(refresh_interval, gstin_doc):
+        return
 
-    return gstin_doc
+    return frappe.enqueue(
+        create_or_update_gstin_status,
+        enqueue_after_commit=True,
+        queue="short",
+        gstin=gstin,
+        transaction_date=transaction_date,
+        callback=_validate_gstin_info,
+        throw=is_request_from_ui,
+    )
 
 
 def create_or_update_gstin_status(
-    gstin=None, response=None, doc=None, transaction_date=None, callback=None
+    gstin=None,
+    response=None,
+    doc=None,
+    transaction_date=None,
+    callback=None,
+    throw=False,
 ):
     doctype = "GSTIN"
     response = _get_gstin_info(gstin=gstin, response=response)
@@ -124,30 +120,25 @@ def create_or_update_gstin_status(
     doc.save(ignore_permissions=True)
 
     if callback:
-        callback(doc, transaction_date)
+        callback(doc, transaction_date, throw)
 
     return doc
 
 
-def _get_gstin_info(*, gstin, response=None):
-    try:
-        gstin_cache = frappe.cache.get_value(gstin)
-        if gstin_cache and not gstin_cache.get("can_request"):
-            return
+def _get_gstin_info(*, gstin=None, response=None):
+    if response:
+        return get_formatted_response(response)
 
+    gstin_cache = frappe.cache.get_value(gstin)
+    if gstin_cache and not gstin_cache.get("can_request"):
+        return
+
+    try:
         company_gstin = get_company_gstin()
+
         if not response and not company_gstin:
             response = PublicAPI().get_gstin_info(gstin)
-
-        if response:
-            return frappe._dict(
-                {
-                    "gstin": response.gstin,
-                    "registration_date": response.rgdt,
-                    "cancelled_date": response.cxdt,
-                    "status": response.sts,
-                }
-            )
+            return get_formatted_response(response)
 
         response = EInvoiceAPI(company_gstin=company_gstin).get_gstin_info(gstin)
         return frappe._dict(
@@ -185,7 +176,7 @@ def _get_gstin_info(*, gstin, response=None):
             frappe.cache.delete_key(gstin)
 
 
-def _validate_gstin_info(gstin_doc, transaction_date=None):
+def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
     if not (gstin_doc and transaction_date):
         return
 
@@ -193,17 +184,29 @@ def _validate_gstin_info(gstin_doc, transaction_date=None):
 
     registration_date = gstin_doc.registration_date
     if not registration_date:
+        message = _(
+            "Registration date not found for Party GSTIN. Please make sure that if GSTIN is registered."
+        )
+
+        if throw:
+            frappe.throw(message)
+
         frappe.log_error(
             title=error_title,
-            message="Registration date not found for Party GSTIN. Please make sure that if GSTIN is registered.",
+            message=message,
         )
 
     if date_diff(transaction_date, registration_date) < 0:
+        message = _(
+            "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
+        ).format(format_date(registration_date))
+
+        if throw:
+            frappe.throw(message)
+
         frappe.log_error(
             title=error_title,
-            message=_(
-                "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
-            ).format(format_date(registration_date)),
+            message=message,
         )
 
     cancelled_date = gstin_doc.cancelled_date
@@ -211,17 +214,27 @@ def _validate_gstin_info(gstin_doc, transaction_date=None):
         gstin_doc.status == "Cancelled"
         and date_diff(transaction_date, cancelled_date) >= 0
     ):
+        message = _(
+            "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
+        ).format(format_date(cancelled_date))
+
+        if throw:
+            frappe.throw(message)
+
         frappe.log_error(
             title=error_title,
-            message=_(
-                "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
-            ).format(format_date(cancelled_date)),
+            message=message,
         )
 
     if gstin_doc.status not in ("Active", "Cancelled"):
+        message = _("Status of Party GSTIN is {0}").format(gstin_doc.status)
+
+        if throw:
+            frappe.throw(message)
+
         frappe.log_error(
             title=_("Invalid Party GSTIN Status"),
-            message=f"Status of Party GSTIN is {gstin_doc.status}",
+            message=message,
         )
 
 
@@ -241,4 +254,18 @@ def needs_status_update(refresh_interval, gstin_doc):
     return days_since_last_update >= refresh_interval or gstin_doc.status not in (
         "Active",
         "Cancelled",
+    )
+
+
+def get_formatted_response(response):
+    """
+    Format response from Public API
+    """
+    return frappe._dict(
+        {
+            "gstin": response.gstin,
+            "registration_date": response.rgdt,
+            "cancelled_date": response.cxdt,
+            "status": response.sts,
+        }
     )

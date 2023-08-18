@@ -2,7 +2,7 @@ import json
 
 import frappe
 from frappe import _, bold
-from frappe.utils import cint, date_diff, flt, format_date
+from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -10,7 +10,10 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
-from india_compliance.gst_india.doctype.gstin.gstin import get_gstin_status
+from india_compliance.gst_india.doctype.gstin.gstin import (
+    _validate_gstin_info,
+    get_gstin_status,
+)
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
@@ -901,44 +904,19 @@ def set_reverse_charge(doc):
         doc.set("taxes", template)
 
 
-def validate_gstin(gstin, transaction_date, party):
+def validate_gstin(gstin, transaction_date):
     gstin_doc = get_gstin_status(gstin, transaction_date)
 
     if not gstin_doc:
         return
 
-    if (
-        not gstin_doc.registration_date
-        or date_diff(transaction_date, gstin_doc.registration_date) < 0
-    ):
-        frappe.throw(
-            _(
-                "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
-            ).format(format_date(gstin_doc.registration_date)),
-            title=_("Invalid Party GSTIN"),
-        )
-
-    if (
-        gstin_doc.status == "Cancelled"
-        and date_diff(transaction_date, gstin_doc.cancelled_date) >= 0
-    ):
-        frappe.throw(
-            _(
-                "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
-            ).format(format_date(gstin_doc.cancelled_date)),
-            title=_("Invalid Party GSTIN"),
-        )
-
-    if gstin_doc.status not in ("Active", "Cancelled"):
-        frappe.throw(
-            _("Status of Party GSTIN is {0}").format(gstin_doc.status),
-            title=_("Invalid Party GSTIN Status"),
-        )
+    _validate_gstin_info(gstin_doc, transaction_date, throw=True)
 
 
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
+
     if doc.place_of_supply:
         validate_place_of_supply(doc)
     else:
@@ -946,6 +924,7 @@ def validate_transaction(doc, method=None):
 
     if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
         return False
+
     # Ignore validation for Quotation not to Customer
     if doc.doctype != "Quotation" or doc.quotation_to == "Customer":
         if (
@@ -969,15 +948,11 @@ def validate_transaction(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
         gstin = doc.billing_address_gstin
-        party_type = "Customer"
     else:
         validate_reverse_charge_transaction(doc)
         gstin = doc.supplier_gstin
-        party_type = "Supplier"
 
-    validate_gstin(
-        gstin, doc.get("posting_date", doc.get("transaction_date")), party_type
-    )
+    validate_gstin(gstin, doc.get("posting_date") or doc.get("transaction_date"))
 
     validate_gst_category(doc.gst_category, gstin)
 
