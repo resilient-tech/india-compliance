@@ -87,5 +87,5 @@ def set_not_applicable_status(sales_invoice):
     ).where(
         (sales_invoice.e_waybill_status.isnull())
         & (sales_invoice.docstatus == 1)
-        & (sales_invoice.irn.isnull())
+        & (sales_invoice.ewaybill.isnull())
     ).run()
