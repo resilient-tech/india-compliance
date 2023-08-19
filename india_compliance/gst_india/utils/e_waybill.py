@@ -436,6 +436,7 @@ def _update_transporter(doc, values):
             "lr_date": values.lr_date,
             "mode_of_transport": values.mode_of_transport,
             "gst_vehicle_type": values.gst_vehicle_type,
+            "distance": values.distance,
         },
         commit=True,
     )
