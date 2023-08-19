@@ -151,7 +151,8 @@ function show_bulk_update_transporter_dialog(docnames) {
                     doctype: DOCTYPE,
                     docnames,
                     values,
-                }
+                },
+                false
             );
         },
     });
@@ -173,19 +174,11 @@ async function enqueue_bulk_e_invoice_generation(docnames) {
     );
 }
 
-async function enqueue_bulk_generation(method, args) {
+async function enqueue_bulk_generation(method, args, api_requests = true) {
     const job_id = await frappe.xcall(method, args);
 
     const now = frappe.datetime.system_datetime();
     const creation_filter = `[">", "${now}"]`;
-    const api_requests_link = frappe.utils.generate_route({
-        type: "doctype",
-        name: "Integration Request",
-        route_options: {
-            integration_request_service: "India Compliance API",
-            creation: creation_filter,
-        },
-    });
     const error_logs_link = frappe.utils.generate_route({
         type: "doctype",
         name: "Error Log",
@@ -194,19 +187,27 @@ async function enqueue_bulk_generation(method, args) {
         },
     });
 
-    frappe.msgprint(
-        __(
-            `Bulk Generation has been queued. You can track the
+    let message = __(
+        `Bulk Generation has been queued. You can track the
             <a href='{0}'>Background Job</a>,
-            <a href='{1}'>API Request(s)</a>,
-            and <a href='{2}'>Error Log(s)</a>.`,
-            [
-                frappe.utils.get_form_link("RQ Job", job_id),
-                api_requests_link,
-                error_logs_link,
-            ]
-        )
+            <a href='{1}'>Error Log(s)</a>`,
+        [frappe.utils.get_form_link("RQ Job", job_id), error_logs_link]
     );
+
+    if (api_requests) {
+        const api_requests_link = frappe.utils.generate_route({
+            type: "doctype",
+            name: "Integration Request",
+            route_options: {
+                integration_request_service: "India Compliance API",
+                creation: creation_filter,
+            },
+        });
+
+        message += __(`and <a href='{0}'>API Request(s)</a>`, [api_requests_link]);
+    }
+
+    frappe.msgprint(message);
 }
 
 async function validate_if_submitted(selected_docs) {
