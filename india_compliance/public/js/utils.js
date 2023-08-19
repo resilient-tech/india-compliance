@@ -75,6 +75,10 @@ Object.assign(india_compliance, {
         return india_compliance.is_api_enabled() && gst_settings.enable_e_invoice;
     },
 
+    is_e_waybill_enabled() {
+        return india_compliance.is_api_enabled() && gst_settings.enable_e_waybill;
+    },
+
     validate_gstin(gstin) {
         if (!gstin || gstin.length !== 15) return;
 

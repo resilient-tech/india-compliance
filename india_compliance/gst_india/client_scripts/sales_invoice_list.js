@@ -1,4 +1,6 @@
 const DOCTYPE = "Sales Invoice";
+setup_e_waybill_actions(DOCTYPE);
+
 const erpnext_onload = frappe.listview_settings[DOCTYPE].onload;
 frappe.listview_settings[DOCTYPE].onload = function (list_view) {
     if (erpnext_onload) {
@@ -12,6 +14,12 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
             list_view,
             __("Generate e-Waybill JSON"),
             generate_e_waybill_json
+        );
+
+        add_bulk_action_for_submitted_invoices(
+            list_view,
+            __("Bulk Update Transporter Detail"),
+            show_bulk_update_transporter_dialog
         );
 
         add_bulk_action_for_submitted_invoices(
@@ -44,6 +52,111 @@ async function generate_e_waybill_json(docnames) {
     );
 
     trigger_file_download(ewb_data, get_e_waybill_file_name());
+}
+
+function show_bulk_update_transporter_dialog(docnames) {
+    const fields = [
+        {
+            label: "Part A",
+            fieldname: "section_part_a",
+            fieldtype: "Section Break",
+        },
+        {
+            label: "Transporter",
+            fieldname: "transporter",
+            fieldtype: "Link",
+            options: "Supplier",
+            reqd: 1,
+            get_query: () => {
+                return {
+                    filters: {
+                        is_transporter: 1,
+                    },
+                };
+            },
+            onchange: () => update_gst_tranporter_id(d),
+        },
+        {
+            label: "Distance (in km)",
+            fieldname: "distance",
+            fieldtype: "Float",
+            description:
+                "Set as zero to update distance as per the e-Waybill portal (if available)",
+        },
+        {
+            fieldtype: "Column Break",
+        },
+        {
+            label: "GST Transporter ID",
+            fieldname: "gst_transporter_id",
+            fieldtype: "Data",
+        },
+        {
+            label: "Part B",
+            fieldname: "section_part_b",
+            fieldtype: "Section Break",
+        },
+
+        {
+            label: "Vehicle No",
+            fieldname: "vehicle_no",
+            fieldtype: "Data",
+        },
+        {
+            label: "Transport Receipt No",
+            fieldname: "lr_no",
+            fieldtype: "Data",
+        },
+        {
+            label: "Transport Receipt Date",
+            fieldname: "lr_date",
+            fieldtype: "Date",
+            mandatory_depends_on: "eval:doc.lr_no",
+        },
+        {
+            fieldtype: "Column Break",
+        },
+
+        {
+            label: "Mode Of Transport",
+            fieldname: "mode_of_transport",
+            fieldtype: "Select",
+            options: `\nRoad\nAir\nRail\nShip`,
+            default: "Road",
+            onchange: () => {
+                update_vehicle_type(d);
+            },
+        },
+        {
+            label: "GST Vehicle Type",
+            fieldname: "gst_vehicle_type",
+            fieldtype: "Select",
+            options: `Regular\nOver Dimensional Cargo (ODC)`,
+            depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
+            read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
+        },
+    ];
+
+    const d = new frappe.ui.Dialog({
+        title: __("Update Transporter Detail"),
+        fields,
+        primary_action_label: __("Update"),
+        primary_action(values) {
+            d.hide();
+
+            if (!india_compliance.is_e_waybill_enabled()) return;
+            enqueue_bulk_generation(
+                "india_compliance.gst_india.utils.e_waybill.enqueue_bulk_update_transporter",
+                {
+                    doctype: DOCTYPE,
+                    docnames,
+                    values,
+                }
+            );
+        },
+    });
+
+    d.show();
 }
 
 async function enqueue_bulk_e_waybill_generation(docnames) {

@@ -67,6 +67,27 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 
 @frappe.whitelist()
+def enqueue_bulk_update_transporter(doctype, docnames, values):
+    """
+    Enqueue bulk update the transporter details to the given documents.
+    """
+
+    frappe.has_permission(doctype, "submit", throw=True)
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    rq_job = frappe.enqueue(
+        "india_compliance.gst_india.utils.e_waybill.bulk_update_transporter_details",
+        queue="long",
+        timeout=len(docnames) * 60,  # 1 mins per Invoice
+        doctype=doctype,
+        docnames=docnames,
+        values=values,
+    )
+
+    return rq_job.id
+
+
+@frappe.whitelist()
 def enqueue_bulk_e_waybill_generation(doctype, docnames):
     """
     Enqueue bulk generation of e-Waybill for the given documents.
@@ -320,6 +341,29 @@ def update_vehicle_info(*, doctype, docname, values):
     return send_updated_doc(doc)
 
 
+def bulk_update_transporter_details(doctype, docnames, values):
+    """
+    Bulk update transporter details in the given documents.
+    """
+
+    for docname in docnames:
+        try:
+            doc = load_doc(doctype, docname, "submit")
+            _update_transporter(doc, values)
+
+        except Exception:
+            frappe.log_error(
+                title=_("Update transporter detail failed for {0} {1}").format(
+                    doctype, docname
+                ),
+                message=frappe.get_traceback(),
+            )
+
+        finally:
+            # each e-Waybill needs to be committed individually
+            frappe.db.commit()  # nosemgrep
+
+
 @frappe.whitelist()
 def update_transporter(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
@@ -364,6 +408,36 @@ def update_transporter(*, doctype, docname, values):
         },
         fetch=values.update_e_waybill_data,
         comment=comment,
+    )
+
+    return send_updated_doc(doc)
+
+
+def _update_transporter(doc, values):
+    if doc.irn or doc.ewaybill:
+        return
+
+    values = frappe.parse_json(values)
+
+    # Transporter Name can be different from Transporter
+    transporter_name = (
+        frappe.db.get_value("Supplier", values.transporter, "supplier_name")
+        if values.transporter
+        else None
+    )
+
+    doc.db_set(
+        {
+            "transporter": values.transporter,
+            "transporter_name": transporter_name,
+            "gst_transporter_id": values.gst_transporter_id,
+            "vehicle_no": values.vehicle_no,
+            "lr_no": values.lr_no,
+            "lr_date": values.lr_date,
+            "mode_of_transport": values.mode_of_transport,
+            "gst_vehicle_type": values.gst_vehicle_type,
+        },
+        commit=True,
     )
 
     return send_updated_doc(doc)
