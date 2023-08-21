@@ -144,7 +144,10 @@ function show_bulk_update_transporter_dialog(docnames) {
         primary_action(values) {
             d.hide();
 
-            if (!india_compliance.is_e_waybill_enabled()) return;
+            if (!india_compliance.is_e_waybill_enabled()) {
+                frappe.throw(__("Enable e-Waybill from GST Settings"));
+            }
+
             enqueue_bulk_generation(
                 "india_compliance.gst_india.utils.e_waybill.enqueue_bulk_update_transporter",
                 {

@@ -77,7 +77,7 @@ def enqueue_bulk_update_transporter(doctype, docnames, values):
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
     rq_job = frappe.enqueue(
         "india_compliance.gst_india.utils.e_waybill.bulk_update_transporter_details",
-        queue="long",
+        queue="short",
         timeout=len(docnames) * 60,  # 1 mins per Invoice
         doctype=doctype,
         docnames=docnames,
@@ -360,7 +360,6 @@ def bulk_update_transporter_details(doctype, docnames, values):
             )
 
         finally:
-            # each e-Waybill needs to be committed individually
             frappe.db.commit()  # nosemgrep
 
 
@@ -438,7 +437,6 @@ def _update_transporter(doc, values):
             "gst_vehicle_type": values.gst_vehicle_type,
             "distance": values.distance,
         },
-        commit=True,
     )
 
     return send_updated_doc(doc)
