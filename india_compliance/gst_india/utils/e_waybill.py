@@ -8,6 +8,7 @@ from frappe.utils import (
     format_date,
     get_datetime,
     get_fullname,
+    get_link_to_form,
     random_string,
 )
 from frappe.utils.file_manager import save_file
@@ -67,7 +68,7 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 
 @frappe.whitelist()
-def enqueue_bulk_update_transporter(doctype, docnames, values):
+def bulk_update_transporter_in_docs(doctype, docnames, values):
     """
     Enqueue bulk update the transporter details to the given documents.
     """
@@ -75,16 +76,7 @@ def enqueue_bulk_update_transporter(doctype, docnames, values):
     frappe.has_permission(doctype, "submit", throw=True)
 
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
-    rq_job = frappe.enqueue(
-        "india_compliance.gst_india.utils.e_waybill.bulk_update_transporter_details",
-        queue="short",
-        timeout=len(docnames) * 60,  # 1 mins per Invoice
-        doctype=doctype,
-        docnames=docnames,
-        values=values,
-    )
-
-    return rq_job.id
+    bulk_update_transporter_details(doctype, docnames, values)
 
 
 @frappe.whitelist()
@@ -346,21 +338,56 @@ def bulk_update_transporter_details(doctype, docnames, values):
     Bulk update transporter details in the given documents.
     """
 
-    for docname in docnames:
-        try:
-            doc = load_doc(doctype, docname, "submit")
-            _update_transporter(doc, values)
+    invoice_list = frappe.get_all(
+        doctype,
+        {
+            "name": ("in", docnames),
+        },
+        ["*"],
+    )
 
-        except Exception:
-            frappe.log_error(
-                title=_("Update transporter detail failed for {0} {1}").format(
-                    doctype, docname
-                ),
-                message=frappe.get_traceback(),
-            )
+    invoices_with_irn_ewaybill = [
+        get_link_to_form(doctype, inv.name)
+        for inv in invoice_list
+        if inv.ewaybill != "" or inv.irn != ""
+    ]
+    invoices_to_update = [
+        inv.name for inv in invoice_list if inv.ewaybill == "" or inv.irn == ""
+    ]
 
-        finally:
-            frappe.db.commit()  # nosemgrep
+    values = frappe.parse_json(values)
+
+    # Transporter Name can be different from Transporter
+    transporter_name = (
+        frappe.db.get_value("Supplier", values.transporter, "supplier_name")
+        if values.transporter
+        else None
+    )
+
+    frappe.db.set_value(
+        "Sales Invoice",
+        {"name": ("in", invoices_to_update)},
+        {
+            "transporter": values.transporter,
+            "transporter_name": transporter_name,
+            "gst_transporter_id": values.gst_transporter_id,
+            "vehicle_no": values.vehicle_no,
+            "lr_no": values.lr_no,
+            "lr_date": values.lr_date,
+            "mode_of_transport": values.mode_of_transport,
+            "gst_vehicle_type": values.gst_vehicle_type,
+            "distance": values.distance,
+        },
+    )
+
+    if invoices_with_irn_ewaybill:
+        frappe.msgprint(
+            _(
+                "Transporter details cannot be updated in already generated e-Wsybills or e-Invoice. Find the following documents: {0}"
+            ).format("\n".join(invoices_with_irn_ewaybill)),
+        )
+
+    frappe.msgprint(_("Transporter Details updated in invoices"), alert=True)
 
 
 @frappe.whitelist()
@@ -407,36 +434,6 @@ def update_transporter(*, doctype, docname, values):
         },
         fetch=values.update_e_waybill_data,
         comment=comment,
-    )
-
-    return send_updated_doc(doc)
-
-
-def _update_transporter(doc, values):
-    if doc.irn or doc.ewaybill:
-        return
-
-    values = frappe.parse_json(values)
-
-    # Transporter Name can be different from Transporter
-    transporter_name = (
-        frappe.db.get_value("Supplier", values.transporter, "supplier_name")
-        if values.transporter
-        else None
-    )
-
-    doc.db_set(
-        {
-            "transporter": values.transporter,
-            "transporter_name": transporter_name,
-            "gst_transporter_id": values.gst_transporter_id,
-            "vehicle_no": values.vehicle_no,
-            "lr_no": values.lr_no,
-            "lr_date": values.lr_date,
-            "mode_of_transport": values.mode_of_transport,
-            "gst_vehicle_type": values.gst_vehicle_type,
-            "distance": values.distance,
-        },
     )
 
     return send_updated_doc(doc)
