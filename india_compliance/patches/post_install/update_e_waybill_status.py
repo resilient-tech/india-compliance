@@ -95,7 +95,7 @@ def set_not_applicable_status(sales_invoice):
         frappe.qb.update(sales_invoice)
         .set(sales_invoice.e_waybill_status, "Not Applicable")
         .where(
-            (sales_invoice.docstatus == 1)
+            (sales_invoice.docstatus != 0)
             & (IfNull(sales_invoice.e_waybill_status, "") == "")
             & (IfNull(sales_invoice.ewaybill, "") == "")
         )
