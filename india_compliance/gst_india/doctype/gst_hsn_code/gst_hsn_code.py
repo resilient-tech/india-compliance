@@ -3,7 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.model.document import Document
+from frappe.model.document import Document, bulk_insert
 
 from india_compliance.gst_india.utils import (
     get_hsn_settings,
@@ -18,7 +18,7 @@ class GSTHSNCode(Document):
 
 @frappe.whitelist()
 def update_taxes_in_item_master(taxes, hsn_code):
-    frappe.enqueue(update_item_document, taxes=taxes, hsn_code=hsn_code)
+    frappe.enqueue(update_item_document, taxes=taxes, hsn_code=hsn_code, queue="long")
     return 1
 
 
@@ -26,24 +26,32 @@ def update_item_document(taxes, hsn_code):
     taxes = frappe.parse_json(taxes)
     items = frappe.get_list("Item", filters={"gst_hsn_code": hsn_code})
 
-    for index, item in enumerate(items):
-        item_to_be_updated = frappe.get_doc("Item", item.name)
-        item_to_be_updated.taxes = []
-        for tax in taxes:
-            tax = frappe._dict(tax)
-            item_to_be_updated.append(
-                "taxes",
+    while items:
+        items_to_update = items[:10_000]
+
+        frappe.db.delete(
+            "Item Tax", {"parenttype": "Item", "parent": ("in", items_to_update)}
+        )
+        bulk_insert("Item Tax", _get_taxes_to_insert(items_to_update, taxes))
+        frappe.db.commit()
+
+        items = items[10_000:]
+
+
+def _get_taxes_to_insert(items, taxes):
+    for item in items:
+        for index, tax in enumerate(taxes, 1):
+            yield frappe.get_doc(
                 {
+                    "doctype": "Item Tax",
+                    "parenttype": "Item",
+                    "parent": item.name,
                     "item_tax_template": tax.item_tax_template,
                     "tax_category": tax.tax_category,
                     "valid_from": tax.valid_from,
-                },
+                    "idx": index,
+                }
             )
-
-        item_to_be_updated.save()
-
-        if index % 10000 == 0:
-            frappe.db.commit()  # nosemgrep
 
 
 def validate_hsn_code(hsn_code):
