@@ -349,10 +349,10 @@ def bulk_update_transporter_details(doctype, docnames, values):
     invoices_with_irn_ewaybill = [
         get_link_to_form(doctype, inv.name)
         for inv in invoice_list
-        if inv.ewaybill != "" or inv.irn != ""
+        if inv.ewaybill or inv.irn
     ]
     invoices_to_update = [
-        inv.name for inv in invoice_list if inv.ewaybill == "" or inv.irn == ""
+        inv.name for inv in invoice_list if not inv.ewaybill or not inv.irn
     ]
 
     values = frappe.parse_json(values)
