@@ -5,11 +5,11 @@ from frappe.utils import add_days, nowdate
 
 def execute():
     # check if e-waybill is enabled
-    sales_invoice = frappe.qb.DocType("Sales Invoice")
     e_waybill_enabled = frappe.db.get_value(
         "Sales Invoice", {"ewaybill": ["is", "set"]}
     )
 
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
     if not e_waybill_enabled:
         set_not_applicable_status(sales_invoice)
         return
@@ -21,27 +21,32 @@ def execute():
 
 
 def set_generated_status(sales_invoice):
-    frappe.qb.update(sales_invoice).set(
-        sales_invoice.e_waybill_status, "Generated"
-    ).where(
-        (sales_invoice.docstatus == 1)
-        & (IfNull(sales_invoice.ewaybill, "") != "")
-        & (sales_invoice.e_waybill_status.isnull())
-        & (sales_invoice.is_opening != "Yes")
+    (
+        frappe.qb.update(sales_invoice)
+        .set(sales_invoice.e_waybill_status, "Generated")
+        .where(
+            (sales_invoice.docstatus == 1)
+            & (IfNull(sales_invoice.ewaybill, "") != "")
+            & (IfNull(sales_invoice.e_waybill_status, "") == "")
+            & (sales_invoice.is_opening != "Yes")
+        )
     ).run()
 
 
 def set_cancelled_status(sales_invoice):
     e_waybill_log = frappe.qb.DocType("e-Waybill Log")
 
-    frappe.qb.update(sales_invoice).join(e_waybill_log).on(
-        sales_invoice.name == e_waybill_log.reference_name
-    ).set(sales_invoice.e_waybill_status, "Cancelled").where(
-        (sales_invoice.docstatus != 0)
-        & (e_waybill_log.is_cancelled == 1)
-        & (sales_invoice.e_waybill_status.isnull())
-        & (IfNull(sales_invoice.ewaybill, "") != "")
-        & (sales_invoice.is_opening != "Yes")
+    (
+        frappe.qb.update(sales_invoice)
+        .join(e_waybill_log)
+        .on(sales_invoice.name == e_waybill_log.reference_name)
+        .set(sales_invoice.e_waybill_status, "Cancelled")
+        .where(
+            (e_waybill_log.is_cancelled == 1)
+            & (IfNull(sales_invoice.e_waybill_status, "") == "")
+            & (IfNull(sales_invoice.ewaybill, "") == "")
+            & (sales_invoice.is_opening != "Yes")
+        )
     ).run()
 
 
@@ -61,31 +66,37 @@ def set_pending_status(sales_invoice):
 
     sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 
-    frappe.qb.update(sales_invoice).join(sales_invoice_item).on(
-        sales_invoice.name == sales_invoice_item.parent
-    ).set(sales_invoice.e_waybill_status, "Pending").where(
-        (IfNull(sales_invoice.ewaybill, "") == "")
-        & (sales_invoice.e_waybill_status.isnull())
-        & (sales_invoice.docstatus == 1)
-        & (sales_invoice.posting_date >= from_date)
-        & (sales_invoice.base_grand_total >= e_waybill_threshold)
-        & (
-            (sales_invoice_item.gst_hsn_code != "")
-            | (sales_invoice_item.gst_hsn_code.notnull())
-            | (sales_invoice_item.gst_hsn_code.not_like("99%"))
+    (
+        frappe.qb.update(sales_invoice)
+        .join(sales_invoice_item)
+        .on(sales_invoice.name == sales_invoice_item.parent)
+        .set(sales_invoice.e_waybill_status, "Pending")
+        .where(
+            (IfNull(sales_invoice.ewaybill, "") == "")
+            & (IfNull(sales_invoice.e_waybill_status, "") == "")
+            & (sales_invoice.docstatus == 1)
+            & (sales_invoice.posting_date >= from_date)
+            & (sales_invoice.base_grand_total >= e_waybill_threshold)
+            & (
+                (sales_invoice_item.gst_hsn_code != "")
+                | (sales_invoice_item.gst_hsn_code.notnull())
+                | (sales_invoice_item.gst_hsn_code.not_like("99%"))
+            )
+            & (sales_invoice.company_gstin != sales_invoice.billing_address_gstin)
+            & (sales_invoice.is_return == 0)
+            & (sales_invoice.is_debit_note == 0)
+            & (sales_invoice.is_opening != "Yes")
         )
-        & (sales_invoice.company_gstin != sales_invoice.billing_address_gstin)
-        & (sales_invoice.is_return == 0)
-        & (sales_invoice.is_debit_note == 0)
-        & (sales_invoice.is_opening != "Yes")
     ).run()
 
 
 def set_not_applicable_status(sales_invoice):
-    frappe.qb.update(sales_invoice).set(
-        sales_invoice.e_waybill_status, "Not Applicable"
-    ).where(
-        (sales_invoice.e_waybill_status.isnull())
-        & (sales_invoice.docstatus == 1)
-        & (sales_invoice.ewaybill.isnull())
+    (
+        frappe.qb.update(sales_invoice)
+        .set(sales_invoice.e_waybill_status, "Not Applicable")
+        .where(
+            (sales_invoice.docstatus == 1)
+            & (IfNull(sales_invoice.e_waybill_status, "") == "")
+            & (IfNull(sales_invoice.ewaybill, "") == "")
+        )
     ).run()
