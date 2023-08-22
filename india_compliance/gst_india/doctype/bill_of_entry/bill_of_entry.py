@@ -18,6 +18,9 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 class BillofEntry(Document):
     get_gl_dict = AccountsController.get_gl_dict
+    get_value_in_transaction_currency = (
+        AccountsController.get_value_in_transaction_currency
+    )
 
     def onload(self):
         if self.docstatus != 1:
