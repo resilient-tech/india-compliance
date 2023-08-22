@@ -33,6 +33,14 @@ def validate_filters(filters=None):
             title=_("Invalid Filter"),
         )
 
+    settings = frappe.get_cached_doc("GST Settings")
+
+    if not settings.enable_e_invoice:
+        frappe.throw(
+            _("e-Invoice is not enabled for {}").format(filters.company),
+            title=_("Invalid Filter"),
+        )
+
     if not filters.from_date or not filters.to_date:
         frappe.throw(
             _(
@@ -44,7 +52,9 @@ def validate_filters(filters=None):
     if filters.from_date > filters.to_date:
         frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
-    e_invoice_applicability_date = get_e_invoice_applicability_date(filters.company)
+    e_invoice_applicability_date = get_e_invoice_applicability_date(
+        filters.company, settings
+    )
 
     if not e_invoice_applicability_date:
         frappe.throw(
@@ -66,11 +76,12 @@ def validate_filters(filters=None):
 def get_data(filters=None):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     e_invoice_log = frappe.qb.DocType("e-Invoice Log")
+    settings = frappe.get_cached_doc("GST Settings")
     e_invoice_applicability_date = get_e_invoice_applicability_date(
-        filters.get("company")
+        filters.get("company"), settings
     )
 
-    if not e_invoice_applicability_date:
+    if not settings.enable_e_invoice or not e_invoice_applicability_date:
         return []
 
     conditions = e_invoice_conditions(filters, e_invoice_applicability_date)
