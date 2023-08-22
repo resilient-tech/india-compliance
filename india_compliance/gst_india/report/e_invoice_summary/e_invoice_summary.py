@@ -44,12 +44,37 @@ def validate_filters(filters=None):
     if filters.from_date > filters.to_date:
         frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
+    e_invoice_applicability_date = get_e_invoice_applicability_date(filters.company)
+
+    if not e_invoice_applicability_date:
+        frappe.throw(
+            _("As per your GST Settings, e-Invoice is not applicable for {}.").format(
+                filters.company
+            ),
+            title=_("Invalid Filter"),
+        )
+
+    if filters.from_date < e_invoice_applicability_date:
+        frappe.msgprint(
+            _("As per your GST Settings, e-Invoice is applicable from {}.").format(
+                e_invoice_applicability_date
+            ),
+            alert=True,
+        )
+
 
 def get_data(filters=None):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     e_invoice_log = frappe.qb.DocType("e-Invoice Log")
+    e_invoice_applicability_date = get_e_invoice_applicability_date(
+        filters.get("company")
+    )
 
-    conditions = e_invoice_conditions(filters)
+    if not e_invoice_applicability_date:
+        return []
+
+    conditions = e_invoice_conditions(filters, e_invoice_applicability_date)
+
     query = (
         frappe.qb.from_(sales_invoice)
         .left_join(e_invoice_log)
@@ -112,28 +137,20 @@ def get_data(filters=None):
     return query.run(as_dict=True)
 
 
-def e_invoice_conditions(filters):
+def e_invoice_conditions(filters, e_invoice_applicability_date):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     sub_query = validate_sales_invoice_item()
     conditions = []
-    e_invoice_applicability_date = get_e_invoice_applicability_date(filters.company)
-    if filters.from_date < e_invoice_applicability_date:
-        conditions.append(sales_invoice.posting_date >= e_invoice_applicability_date)
-        frappe.msgprint(
-            _("As per your GST Settings, e-Invoice is applicable from {}.").format(
-                e_invoice_applicability_date
-            ),
-            alert=True,
-        )
 
+    conditions.append(sales_invoice.posting_date >= e_invoice_applicability_date)
     conditions.append(
         sales_invoice.company_gstin != sales_invoice.billing_address_gstin
     )
     conditions.append(
         (
-            (Coalesce(sales_invoice.billing_address_gstin, "") == "")
-            | (Coalesce(sales_invoice.place_of_supply, "") == "96-Other Countries")
-        ).negate()
+            (Coalesce(sales_invoice.place_of_supply, "") == "96-Other Countries")
+            | (Coalesce(sales_invoice.billing_address_gstin, "") != "")
+        )
     )
     conditions.append(sales_invoice.name.notin(sub_query))
 
