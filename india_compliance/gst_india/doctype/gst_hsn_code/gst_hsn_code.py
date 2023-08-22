@@ -18,7 +18,7 @@ class GSTHSNCode(Document):
 
 @frappe.whitelist()
 def update_taxes_in_item_master(taxes, hsn_code):
-    frappe.enqueue(update_item_document, taxes=taxes, hsn_code=hsn_code)
+    frappe.enqueue(update_item_document, taxes=taxes, hsn_code=hsn_code, queue="long")
     return 1
 
 
