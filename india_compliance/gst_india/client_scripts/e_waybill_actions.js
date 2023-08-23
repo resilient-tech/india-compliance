@@ -532,7 +532,7 @@ function show_mark_e_waybill_as_cancelled_dialog(frm) {
     });
 
     const d = new frappe.ui.Dialog({
-        title: __("Update Cancel Details"),
+        title: __("Update e-Waybill Cancel Details"),
         fields: fields,
         primary_action_label: __("Update"),
         primary_action(values) {
