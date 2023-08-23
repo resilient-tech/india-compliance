@@ -267,18 +267,18 @@ class DetailedReport(BaseAuditTrail):
             row["doctype"] = doctype
             row["creation_date"] = getdate(row["date_time"])
 
-            if doctype in FIELDS["supplier_name_field_doctypes"]:
-                row["party_type"] = "Supplier"
-
-            elif doctype in FIELDS["customer_name_field_doctypes"]:
-                row["party_type"] = "Customer"
-
-            elif doctype == "Bill of Entry":
+            if doctype == "Bill of Entry":
                 row["party_name"] = ""
 
             elif doctype in FIELDS["no_name_field_doctypes"]:
                 row["party_name"] = ""
                 row["amount"] = ""
+
+            elif doctype in FIELDS["supplier_name_field_doctypes"]:
+                row["party_type"] = "Supplier"
+
+            elif doctype in FIELDS["customer_name_field_doctypes"]:
+                row["party_type"] = "Customer"
 
             self.data.append(row)
 
