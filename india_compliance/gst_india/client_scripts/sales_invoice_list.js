@@ -129,6 +129,11 @@ async function enqueue_bulk_generation(method, args) {
 async function validate_doc_status(selected_docs, allowed_status) {
     const valid_docs = [];
     const invalid_docs = [];
+    const status_map = {
+        0: "draft",
+        1: "submitted",
+        2: "cancelled",
+    };
 
     for (const doc of selected_docs) {
         if (!allowed_status.includes(doc.docstatus)) {
@@ -140,15 +145,23 @@ async function validate_doc_status(selected_docs, allowed_status) {
 
     if (!invalid_docs.length) return valid_docs;
 
+    const allowed_status_str = allowed_status
+        .map(status => status_map[status])
+        .join(" or ");
+
     if (!valid_docs.length) {
-        frappe.throw(__("This action can only be performed on submitted documents"));
+        frappe.throw(
+            __("This action can only be performed on {0} documents", [
+                allowed_status_str,
+            ])
+        );
     }
 
     const confirmed = await new Promise(resolve => {
         frappe.confirm(
             __(
-                "This action can only be performed on submitted documents. Do you want to continue without the following documents?<br><br><strong>{0}</strong>",
-                [invalid_docs.join("<br>")]
+                "This action can only be performed on {0} documents. Do you want to continue without the following documents?<br><br><strong>{1}</strong>",
+                [allowed_status_str, invalid_docs.join("<br>")]
             ),
             () => resolve(true)
         );
