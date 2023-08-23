@@ -45,8 +45,8 @@ function setup_e_waybill_actions(doctype) {
                         "e-Waybill"
                     );
                     frm.add_custom_button(
-                        __("Update Manually Generated"),
-                        () => show_update_manually_generated_dialog(frm),
+                        __("Mark as Generated"),
+                        () => show_mark_e_waybill_as_generated_dialog(frm),
                         "e-Waybill"
                     );
                 }
@@ -98,8 +98,8 @@ function setup_e_waybill_actions(doctype) {
 
             if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
                 frm.add_custom_button(
-                    __("Update Manually Cancelled"),
-                    () => show_update_manually_cancelled_dialog(frm),
+                    __("Mark as Cancelled"),
+                    () => show_mark_e_waybill_as_cancelled_dialog(frm),
                     "e-Waybill"
                 );
 
@@ -453,15 +453,16 @@ function show_fetch_if_generated_dialog(frm) {
 
     d.show();
 }
-function show_update_manually_generated_dialog(frm) {
+function show_mark_e_waybill_as_generated_dialog(frm) {
     const d = new frappe.ui.Dialog({
-        title: __("Update Manually Generated e-Waybill"),
+        title: __("Update e-Waybill Details"),
         fields: [
             {
                 label: "e-Waybill Number",
                 fieldname: "ewaybill",
-                fieldtype: "Int",
+                fieldtype: "Data",
                 reqd: 1,
+                onchange: () => validate_e_waybill_number(d.get_value("ewaybill")),
             },
             {
                 label: "e-Waybill Date",
@@ -476,11 +477,10 @@ function show_update_manually_generated_dialog(frm) {
                 reqd: 1,
             },
         ],
-
         primary_action_label: __("Update"),
         primary_action(values) {
             frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.update_manually_generated_e_waybill",
+                method: "india_compliance.gst_india.utils.e_waybill.mark_e_waybill_as_generated",
                 args: {
                     doctype: frm.doctype,
                     docname: frm.doc.name,
@@ -520,7 +520,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
     d.show();
 }
 
-function show_update_manually_cancelled_dialog(frm) {
+function show_mark_e_waybill_as_cancelled_dialog(frm) {
     fields = get_cancel_e_waybill_dialog_fields(frm);
     fields.push({
         label: "Cancelled On",
@@ -531,17 +531,16 @@ function show_update_manually_cancelled_dialog(frm) {
     });
 
     const d = new frappe.ui.Dialog({
-        title: __("Update Manually Cancelled e-Waybill"),
+        title: __("Update Cancel Details"),
         fields: fields,
-        primary_action_label: __("Mark as Cancelled"),
-
+        primary_action_label: __("Update"),
         primary_action(values) {
             d.hide();
             frappe.confirm(
                 __("Are you sure you want to mark this e-Waybill as cancelled?"),
                 () => {
                     frappe.call({
-                        method: "india_compliance.gst_india.utils.e_waybill.update_manually_cancelled_e_waybill",
+                        method: "india_compliance.gst_india.utils.e_waybill.mark_e_waybill_as_cancelled",
                         args: {
                             doctype: frm.doctype,
                             docname: frm.doc.name,
@@ -557,6 +556,32 @@ function show_update_manually_cancelled_dialog(frm) {
     });
 
     d.show();
+}
+
+function get_cancel_e_waybill_dialog_fields(frm) {
+    return [
+        {
+            label: "e-Waybill",
+            fieldname: "ewaybill",
+            fieldtype: "Data",
+            read_only: 1,
+            default: frm.doc.ewaybill,
+        },
+        {
+            label: "Reason",
+            fieldname: "reason",
+            fieldtype: "Select",
+            reqd: 1,
+            default: "Data Entry Mistake",
+            options: ["Duplicate", "Order Cancelled", "Data Entry Mistake", "Others"],
+        },
+        {
+            label: "Remark",
+            fieldname: "remark",
+            fieldtype: "Data",
+            mandatory_depends_on: "eval: doc.reason == 'Others'",
+        },
+    ];
 }
 
 function show_update_vehicle_info_dialog(frm) {
@@ -1111,28 +1136,14 @@ function get_destination_address_name(frm) {
     }
 }
 
-function get_cancel_e_waybill_dialog_fields(frm) {
-    return [
-        {
-            label: "e-Waybill",
-            fieldname: "ewaybill",
-            fieldtype: "Data",
-            read_only: 1,
-            default: frm.doc.ewaybill,
-        },
-        {
-            label: "Reason",
-            fieldname: "reason",
-            fieldtype: "Select",
-            reqd: 1,
-            default: "Data Entry Mistake",
-            options: ["Duplicate", "Order Cancelled", "Data Entry Mistake", "Others"],
-        },
-        {
-            label: "Remark",
-            fieldname: "remark",
-            fieldtype: "Data",
-            mandatory_depends_on: "eval: doc.reason == 'Others'",
-        },
-    ];
+function validate_e_waybill_number(ewaybill) {
+    ewaybill = ewaybill.replace(" ", "");
+
+    if (ewaybill.length != 12) {
+        frappe.throw(__("e-Waybill number should be 12 characters long"));
+    }
+
+    if (!/^\d+$/.test(ewaybill)) {
+        frappe.throw(__("e-Waybill number should contain only numbers"));
+    }
 }

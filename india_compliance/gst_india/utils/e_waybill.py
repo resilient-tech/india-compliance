@@ -179,9 +179,10 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     e_waybill_number = str(result["ewayBillNo" if not with_irn else "EwbNo"])
 
     data = {"ewaybill": e_waybill_number}
+    status = result.get("e_waybill_status") or "Generated"
 
     if doc.doctype == "Sales Invoice":
-        data["e_waybill_status"] = result.get("e_waybill_status") or "Generated"
+        data["e_waybill_status"] = status
 
     if distance := result.get("distance"):
         data["distance"] = distance
@@ -207,7 +208,7 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
             "reference_name": doc.name,
             "is_generated_in_sandbox_mode": sandbox_mode,
         },
-        fetch=fetch,
+        fetch=fetch and status != "Manually Generated",
     )
 
 
@@ -238,7 +239,7 @@ def _cancel_e_waybill(doc, values):
 
     result = api(doc).cancel_e_waybill(e_waybill_data.get_data_for_cancellation(values))
 
-    log_and_process_cancelled_e_waybill(doc, values, result)
+    log_and_process_e_waybill_cancellation(doc, values, result)
 
     frappe.msgprint(
         _("e-Waybill cancelled successfully"),
@@ -247,7 +248,7 @@ def _cancel_e_waybill(doc, values):
     )
 
 
-def log_and_process_cancelled_e_waybill(doc, values, result):
+def log_and_process_e_waybill_cancellation(doc, values, result):
     log_and_process_e_waybill(
         doc,
         {
@@ -495,11 +496,11 @@ def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
 
 
 @frappe.whitelist()
-def update_manually_generated_e_waybill(doctype, docname, values):
+def mark_e_waybill_as_generated(doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     result = {
-        "ewayBillNo": values.ewaybill,
+        "ewayBillNo": get_validated_e_waybill_number(values.ewaybill),
         "ewayBillDate": values.e_waybill_date,
         "validUpto": values.valid_upto,
         "e_waybill_status": "Manually Generated",
@@ -511,7 +512,7 @@ def update_manually_generated_e_waybill(doctype, docname, values):
 
 
 @frappe.whitelist()
-def update_manually_cancelled_e_waybill(doctype, docname, values):
+def mark_e_waybill_as_cancelled(doctype, docname, values):
     doc = load_doc(doctype, docname, "cancel")
     values = frappe.parse_json(values)
     result = frappe._dict(
@@ -520,7 +521,7 @@ def update_manually_cancelled_e_waybill(doctype, docname, values):
             "e_waybill_status": "Manually Cancelled",
         }
     )
-    log_and_process_cancelled_e_waybill(doc, values, result)
+    log_and_process_e_waybill_cancellation(doc, values, result)
 
     return send_updated_doc(doc)
 
@@ -676,6 +677,18 @@ def get_e_waybill_info(doc):
         ("created_on", "valid_upto", "is_generated_in_sandbox_mode"),
         as_dict=True,
     )
+
+
+def get_validated_e_waybill_number(ewaybill: str):
+    ewaybill = ewaybill.replace(" ", "")
+
+    if ewaybill.length != 12:
+        frappe.throw(_("e-Waybill Number should be 12 characters long"))
+
+    if not ewaybill.isdigit():
+        frappe.throw(_("e-Waybill Number should be numeric"))
+
+    return ewaybill
 
 
 #######################################################################################

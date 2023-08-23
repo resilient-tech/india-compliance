@@ -829,8 +829,8 @@ e_waybill_status_field = {
     "no_copy": 1,
     "translatable": 1,
     "allow_on_submit": 1,
-    "depends_on": "eval:doc.docstatus === 1 && (!doc.ewaybill || !doc.e_waybill_status.includes('Generated'))",
-    "read_only_depends_on": "eval:doc.e_waybill_status.includes('Generated') && doc.ewaybill",
+    "depends_on": "eval:!doc.ewaybill",
+    "read_only_depends_on": "eval:doc.ewaybill",
 }
 
 purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
