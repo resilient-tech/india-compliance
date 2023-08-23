@@ -30,7 +30,8 @@ def set_generated_status(sales_invoice):
             & (IfNull(sales_invoice.e_waybill_status, "") == "")
             & (sales_invoice.is_opening != "Yes")
         )
-    ).run()
+        .run()
+    )
 
 
 def set_cancelled_status(sales_invoice):
@@ -47,7 +48,8 @@ def set_cancelled_status(sales_invoice):
             & (IfNull(sales_invoice.ewaybill, "") == "")
             & (sales_invoice.is_opening != "Yes")
         )
-    ).run()
+        .run()
+    )
 
 
 def set_pending_status(sales_invoice):
@@ -78,8 +80,7 @@ def set_pending_status(sales_invoice):
             & (sales_invoice.posting_date >= from_date)
             & (sales_invoice.base_grand_total >= e_waybill_threshold)
             & (
-                (sales_invoice_item.gst_hsn_code != "")
-                | (sales_invoice_item.gst_hsn_code.notnull())
+                (IfNull(sales_invoice_item.gst_hsn_code, "") != "")
                 | (sales_invoice_item.gst_hsn_code.not_like("99%"))
             )
             & (sales_invoice.company_gstin != sales_invoice.billing_address_gstin)
@@ -87,7 +88,8 @@ def set_pending_status(sales_invoice):
             & (sales_invoice.is_debit_note == 0)
             & (sales_invoice.is_opening != "Yes")
         )
-    ).run()
+        .run()
+    )
 
 
 def set_not_applicable_status(sales_invoice):
@@ -99,4 +101,5 @@ def set_not_applicable_status(sales_invoice):
             & (IfNull(sales_invoice.e_waybill_status, "") == "")
             & (IfNull(sales_invoice.ewaybill, "") == "")
         )
-    ).run()
+        .run()
+    )
