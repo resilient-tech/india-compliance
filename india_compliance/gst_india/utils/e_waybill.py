@@ -207,6 +207,7 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
             "reference_doctype": doc.doctype,
             "reference_name": doc.name,
             "is_generated_in_sandbox_mode": sandbox_mode,
+            "is_cancelled": 0,
         },
         fetch=fetch and status != "Manually Generated",
     )
