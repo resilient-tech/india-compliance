@@ -219,6 +219,53 @@ function show_generate_e_waybill_dialog(frm) {
         trigger_file_download(ewb_data, get_e_waybill_file_name(frm.doc.name));
     };
 
+    const api_enabled = india_compliance.is_api_enabled();
+
+    const d = get_generate_e_waybill_dialog({
+        title: __("Generate e-Waybill"),
+        primary_action_label: get_primary_action_label_for_generation(frm.doc),
+        primary_action(values) {
+            d.hide();
+            if (api_enabled) {
+                generate_action(values);
+            } else {
+                json_action(values);
+            }
+        },
+        secondary_action_label: api_enabled && frm.doc.doctype ? __("Download JSON") : null,
+        secondary_action: api_enabled
+            ? () => {
+                d.hide();
+                json_action(d.get_values());
+            }
+            : null,
+    }, frm);
+
+    d.show();
+
+    // Alert if e-Invoice hasn't been generated
+    if (
+        frm.doctype === "Sales Invoice" &&
+        is_e_invoice_applicable(frm) &&
+        !frm.doc.irn
+    ) {
+        $(`
+            <div class="alert alert-warning" role="alert">
+                e-Invoice hasn't been generated for this Sales Invoice.
+                <a
+                    href="https://docs.erpnext.com/docs/v14/user/manual/en/regional/india/generating_e_invoice#what-if-we-generate-e-waybill-before-the-e-invoice"
+                    class="alert-link"
+                    target="_blank"
+                >
+                    Learn more
+                </a>
+            </div>
+        `).prependTo(d.wrapper);
+    }
+}
+
+function get_generate_e_waybill_dialog(opts, frm) {
+    if (!frm) frm = { doc: {} };
     const fields = [
         {
             label: "Part A",
@@ -238,13 +285,13 @@ function show_generate_e_waybill_dialog(frm) {
                     },
                 };
             },
-            onchange: () => update_gst_tranporter_id(d),
+            onchange: () => update_gst_tranporter_id(d, frm.doc),
         },
         {
             label: "Distance (in km)",
             fieldname: "distance",
             fieldtype: "Float",
-            default: frm.doc.distance,
+            default: frm.doc.distance || 0,
             description:
                 "Set as zero to update distance as per the e-Waybill portal (if available)",
         },
@@ -256,7 +303,7 @@ function show_generate_e_waybill_dialog(frm) {
             fieldname: "gst_transporter_id",
             fieldtype: "Data",
             default:
-                frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length == 15
+                frm.doc.gst_transporter_id?.length == 15
                     ? frm.doc.gst_transporter_id
                     : "",
         },
@@ -272,20 +319,20 @@ function show_generate_e_waybill_dialog(frm) {
             fieldname: "vehicle_no",
             fieldtype: "Data",
             default: frm.doc.vehicle_no,
-            onchange: () => update_generation_dialog(d),
+            onchange: () => update_generation_dialog(d, frm.doc),
         },
         {
             label: "Transport Receipt No",
             fieldname: "lr_no",
             fieldtype: "Data",
             default: frm.doc.lr_no,
-            onchange: () => update_generation_dialog(d),
+            onchange: () => update_generation_dialog(d, frm.doc),
         },
         {
             label: "Transport Receipt Date",
             fieldname: "lr_date",
             fieldtype: "Date",
-            default: frm.doc.lr_date,
+            default: frm.doc.lr_date || "Today",
             mandatory_depends_on: "eval:doc.lr_no",
         },
         {
@@ -297,9 +344,9 @@ function show_generate_e_waybill_dialog(frm) {
             fieldname: "mode_of_transport",
             fieldtype: "Select",
             options: `\nRoad\nAir\nRail\nShip`,
-            default: frm.doc.mode_of_transport,
+            default: frm.doc.mode_of_transport || "Road",
             onchange: () => {
-                update_generation_dialog(d);
+                update_generation_dialog(d, frm.doc);
                 update_vehicle_type(d);
             },
         },
@@ -310,7 +357,7 @@ function show_generate_e_waybill_dialog(frm) {
             options: `Regular\nOver Dimensional Cargo (ODC)`,
             depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
-            default: frm.doc.gst_vehicle_type,
+            default: frm.doc.gst_vehicle_type || "Regular",
         },
     ];
 
@@ -370,51 +417,10 @@ function show_generate_e_waybill_dialog(frm) {
         });
     }
 
-    const api_enabled = india_compliance.is_api_enabled();
+    opts.fields = fields;
+    const d = new frappe.ui.Dialog(opts);
 
-    const d = new frappe.ui.Dialog({
-        title: __("Generate e-Waybill"),
-        fields,
-        primary_action_label: get_primary_action_label_for_generation(frm.doc),
-        primary_action(values) {
-            d.hide();
-
-            if (api_enabled) {
-                generate_action(values);
-            } else {
-                json_action(values);
-            }
-        },
-        secondary_action_label: api_enabled ? __("Download JSON") : null,
-        secondary_action: api_enabled
-            ? () => {
-                  d.hide();
-                  json_action(d.get_values());
-              }
-            : null,
-    });
-
-    d.show();
-
-    // Alert if e-Invoice hasn't been generated
-    if (
-        frm.doctype === "Sales Invoice" &&
-        is_e_invoice_applicable(frm) &&
-        !frm.doc.irn
-    ) {
-        $(`
-            <div class="alert alert-warning" role="alert">
-                e-Invoice hasn't been generated for this Sales Invoice.
-                <a
-                    href="https://docs.erpnext.com/docs/v14/user/manual/en/regional/india/generating_e_invoice#what-if-we-generate-e-waybill-before-the-e-invoice"
-                    class="alert-link"
-                    target="_blank"
-                >
-                    Learn more
-                </a>
-            </div>
-        `).prependTo(d.wrapper);
-    }
+    return d;
 }
 
 function show_fetch_if_generated_dialog(frm) {
@@ -948,7 +954,7 @@ async function update_gst_tranporter_id(dialog) {
     dialog.set_value("gst_transporter_id", response.gst_transporter_id);
 }
 
-function update_generation_dialog(dialog) {
+function update_generation_dialog(dialog, doc) {
     const dialog_values = dialog.get_values(true);
     const primary_action_label = get_primary_action_label_for_generation(dialog_values);
 
@@ -957,6 +963,8 @@ function update_generation_dialog(dialog) {
         "reqd",
         primary_action_label.includes("Part A") ? 1 : 0
     );
+
+    if (is_empty(doc)) return;
 
     set_primary_action_label(dialog, primary_action_label);
 }
@@ -971,6 +979,15 @@ function get_primary_action_label_for_generation(doc) {
     }
 
     return label + " (Part A)";
+}
+
+function is_empty(obj) {
+    for (let prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function are_transport_details_available(doc) {

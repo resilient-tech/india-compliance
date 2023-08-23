@@ -9,19 +9,20 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
     if (!frappe.perm.has_perm(DOCTYPE, 0, "submit")) return;
 
     if (gst_settings.enable_e_waybill) {
-        add_bulk_action_for_submitted_invoices(
+        add_bulk_action_for_invoices(
             list_view,
             __("Generate e-Waybill JSON"),
             generate_e_waybill_json
         );
 
-        add_bulk_action_for_submitted_invoices(
+        add_bulk_action_for_invoices(
             list_view,
             __("Bulk Update Transporter Detail"),
-            show_bulk_update_transporter_dialog
+            show_bulk_update_transporter_dialog,
+            [0, 1]
         );
 
-        add_bulk_action_for_submitted_invoices(
+        add_bulk_action_for_invoices(
             list_view,
             __("Enqueue Bulk e-Waybill Generation"),
             enqueue_bulk_e_waybill_generation
@@ -29,17 +30,18 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
     }
 
     if (india_compliance.is_e_invoice_enabled())
-        add_bulk_action_for_submitted_invoices(
+        add_bulk_action_for_invoices(
             list_view,
             __("Enqueue Bulk e-Invoice Generation"),
             enqueue_bulk_e_invoice_generation
         );
 };
 
-function add_bulk_action_for_submitted_invoices(list_view, label, callback) {
+function add_bulk_action_for_invoices(list_view, label, callback, allowed_status) {
+    if (!allowed_status) allowed_status = [1];
     list_view.page.add_actions_menu_item(label, async () => {
         const selected_docs = list_view.get_checked_items();
-        const submitted_docs = await validate_if_submitted(selected_docs);
+        const submitted_docs = await validate_doc_status(selected_docs, allowed_status);
         if (submitted_docs) callback(submitted_docs);
     });
 }
@@ -54,95 +56,9 @@ async function generate_e_waybill_json(docnames) {
 }
 
 function show_bulk_update_transporter_dialog(docnames) {
-    const fields = [
-        {
-            label: "Part A",
-            fieldname: "section_part_a",
-            fieldtype: "Section Break",
-        },
-        {
-            label: "Transporter",
-            fieldname: "transporter",
-            fieldtype: "Link",
-            options: "Supplier",
-            reqd: 1,
-            get_query: () => {
-                return {
-                    filters: {
-                        is_transporter: 1,
-                    },
-                };
-            },
-            onchange: () => update_gst_tranporter_id(d),
-        },
-        {
-            label: "Distance (in km)",
-            fieldname: "distance",
-            fieldtype: "Float",
-            default: 0,
-            description:
-                "Set as zero to update distance as per the e-Waybill portal (if available)",
-        },
-        {
-            fieldtype: "Column Break",
-        },
-        {
-            label: "GST Transporter ID",
-            fieldname: "gst_transporter_id",
-            fieldtype: "Data",
-        },
-        {
-            label: "Part B",
-            fieldname: "section_part_b",
-            fieldtype: "Section Break",
-        },
-
-        {
-            label: "Vehicle No",
-            fieldname: "vehicle_no",
-            fieldtype: "Data",
-        },
-        {
-            label: "Transport Receipt No",
-            fieldname: "lr_no",
-            fieldtype: "Data",
-        },
-        {
-            label: "Transport Receipt Date",
-            fieldname: "lr_date",
-            fieldtype: "Date",
-            default: "Today",
-            mandatory_depends_on: "eval:doc.lr_no",
-        },
-        {
-            fieldtype: "Column Break",
-        },
-
-        {
-            label: "Mode Of Transport",
-            fieldname: "mode_of_transport",
-            fieldtype: "Select",
-            options: `\nRoad\nAir\nRail\nShip`,
-            default: "Road",
-            onchange: () => {
-                update_vehicle_type(d);
-            },
-        },
-        {
-            label: "GST Vehicle Type",
-            fieldname: "gst_vehicle_type",
-            fieldtype: "Select",
-            options: `Regular\nOver Dimensional Cargo (ODC)`,
-            depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
-            read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
-            default: "Regular",
-        },
-    ];
-
-    const d = new frappe.ui.Dialog({
+    const d = get_generate_e_waybill_dialog({
         title: __("Update Transporter Detail"),
-        fields,
-        primary_action_label: __("Update"),
+        primary_action_label: __("Update Invoices"),
         primary_action(values) {
             d.hide();
 
@@ -198,9 +114,9 @@ async function enqueue_bulk_generation(method, args) {
     frappe.msgprint(
         __(
             `Bulk Generation has been queued. You can track the
-                <a href='{0}'>Background Job</a>,
-                <a href='{1}'>API Request(s)</a>,
-                and <a href='{2}'>Error Log(s)</a>.`,
+            <a href='{0}'>Background Job</a>,
+            <a href='{1}'>API Request(s)</a>,
+            and <a href='{2}'>Error Log(s)</a>.`,
             [
                 frappe.utils.get_form_link("RQ Job", job_id),
                 api_requests_link,
@@ -210,12 +126,12 @@ async function enqueue_bulk_generation(method, args) {
     );
 }
 
-async function validate_if_submitted(selected_docs) {
+async function validate_doc_status(selected_docs, allowed_status) {
     const valid_docs = [];
     const invalid_docs = [];
 
     for (const doc of selected_docs) {
-        if (doc.docstatus != 1) {
+        if (!allowed_status.includes(doc.docstatus)) {
             invalid_docs.push(doc.name);
         } else {
             valid_docs.push(doc.name);

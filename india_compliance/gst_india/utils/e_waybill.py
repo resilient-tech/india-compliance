@@ -340,18 +340,14 @@ def _bulk_update_transporter_in_docs(doctype, docnames, values):
         doctype,
         filters={
             "name": ("in", docnames),
+            "docstatus": ("!=", 2),
             "ewaybill": ("is", "not set"),
-            "irn": ("is", "not set"),
         },
+        pluck="name",
     )
 
     if not docs_to_update:
-        frappe.msgprint(
-            _("No Invoice found to Update"), title=_("Not Found"), indicator="orange"
-        )
-        return
-
-    docs_to_update = set(doc.name for doc in docs_to_update)
+        docs_to_update = []
 
     # Transporter Name can be different from Transporter
     transporter_name = (
@@ -376,23 +372,22 @@ def _bulk_update_transporter_in_docs(doctype, docnames, values):
         },
     )
 
-    if docs_with_irn_ewaybill := set(docnames).difference(docs_to_update):
-        docs_with_irn_ewaybill = [
-            get_link_to_form(doctype, doc) for doc in docs_with_irn_ewaybill
-        ]
+    if docs_with_ewaybill := set(docnames).difference(set(docs_to_update)):
+        doc_links = [get_link_to_form(doctype, doc) for doc in docs_with_ewaybill]
         frappe.msgprint(
             _(
-                "Transporter details cannot be updated in already generated e-Waybills or e-Invoice. Find the following documents: {0}"
-            ).format("\n".join(docs_with_irn_ewaybill)),
+                "Transporter details cannot be updated where e-Waybill is already generated:<br><br> {0}"
+            ).format("<br>".join(doc_links)),
             title=_("Cannot Update"),
+            indicator="orange",
         )
 
-    frappe.msgprint(
-        _("Transporter details Updated"),
-        title=_("Success"),
-        alert=True,
-        indicator="green",
-    )
+    if docs_to_update:
+        frappe.msgprint(
+            _("Transporter details updated successfully"),
+            indicator="green",
+            alert=True,
+        )
 
 
 @frappe.whitelist()
