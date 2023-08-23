@@ -240,4 +240,7 @@ def set_e_waybill_status(doc, gst_settings=None):
     if is_e_waybill_applicable(doc, gst_settings):
         e_waybill_status = "Pending"
 
+    if doc.ewaybill:
+        e_waybill_status = "Manually Generated"
+
     doc.update({"e_waybill_status": e_waybill_status})
