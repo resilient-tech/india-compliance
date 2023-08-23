@@ -5,6 +5,14 @@
 frappe.query_reports["Audit Trail"] = {
     filters: [
         {
+            fieldname: "company",
+            label: __("Company"),
+            fieldtype: "Link",
+            options: "Company",
+            default: frappe.defaults.get_user_default("Company"),
+            reqd: 1,
+        },
+        {
             fieldname: "report",
             label: __("Report"),
             fieldtype: "Select",
@@ -53,7 +61,7 @@ frappe.query_reports["Audit Trail"] = {
             default: "",
             get_query: function () {
                 return {
-                    query: "india_compliance.audit_trail.utils.get_audit_trail_doctypes",
+                    query: "india_compliance.audit_trail.report.audit_trail.audit_trail.get_relavant_doctypes",
                 };
             },
         },
