@@ -1,5 +1,4 @@
 const DOCTYPE = "Sales Invoice";
-setup_e_waybill_actions(DOCTYPE);
 
 const erpnext_onload = frappe.listview_settings[DOCTYPE].onload;
 frappe.listview_settings[DOCTYPE].onload = function (list_view) {
@@ -80,6 +79,7 @@ function show_bulk_update_transporter_dialog(docnames) {
             label: "Distance (in km)",
             fieldname: "distance",
             fieldtype: "Float",
+            default: 0,
             description:
                 "Set as zero to update distance as per the e-Waybill portal (if available)",
         },
@@ -111,6 +111,7 @@ function show_bulk_update_transporter_dialog(docnames) {
             label: "Transport Receipt Date",
             fieldname: "lr_date",
             fieldtype: "Date",
+            default: "Today",
             mandatory_depends_on: "eval:doc.lr_no",
         },
         {
@@ -134,6 +135,7 @@ function show_bulk_update_transporter_dialog(docnames) {
             options: `Regular\nOver Dimensional Cargo (ODC)`,
             depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
+            default: "Regular",
         },
     ];
 
@@ -143,10 +145,6 @@ function show_bulk_update_transporter_dialog(docnames) {
         primary_action_label: __("Update"),
         primary_action(values) {
             d.hide();
-
-            if (!india_compliance.is_e_waybill_enabled()) {
-                frappe.throw(__("Enable e-Waybill from GST Settings"));
-            }
 
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_waybill.bulk_update_transporter_in_docs",

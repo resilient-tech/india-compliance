@@ -69,14 +69,12 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 @frappe.whitelist()
 def bulk_update_transporter_in_docs(doctype, docnames, values):
-    """
-    Enqueue bulk update the transporter details to the given documents.
-    """
-
     frappe.has_permission(doctype, "submit", throw=True)
 
     docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
-    bulk_update_transporter_details(doctype, docnames, values)
+    values = frappe.parse_json(values)
+
+    _bulk_update_transporter_in_docs(doctype, docnames, values)
 
 
 @frappe.whitelist()
@@ -333,29 +331,27 @@ def update_vehicle_info(*, doctype, docname, values):
     return send_updated_doc(doc)
 
 
-def bulk_update_transporter_details(doctype, docnames, values):
+def _bulk_update_transporter_in_docs(doctype, docnames, values):
     """
     Bulk update transporter details in the given documents.
     """
 
-    invoice_list = frappe.get_all(
+    docs_to_update = frappe.get_all(
         doctype,
-        {
+        filters={
             "name": ("in", docnames),
+            "ewaybill": ("is", "not set"),
+            "irn": ("is", "not set"),
         },
-        ["*"],
     )
 
-    invoices_with_irn_ewaybill = [
-        get_link_to_form(doctype, inv.name)
-        for inv in invoice_list
-        if inv.ewaybill or inv.irn
-    ]
-    invoices_to_update = [
-        inv.name for inv in invoice_list if not inv.ewaybill or not inv.irn
-    ]
+    if not docs_to_update:
+        frappe.msgprint(
+            _("No Invoice found to Update"), title=_("Not Found"), indicator="orange"
+        )
+        return
 
-    values = frappe.parse_json(values)
+    docs_to_update = set(doc.name for doc in docs_to_update)
 
     # Transporter Name can be different from Transporter
     transporter_name = (
@@ -365,8 +361,8 @@ def bulk_update_transporter_details(doctype, docnames, values):
     )
 
     frappe.db.set_value(
-        "Sales Invoice",
-        {"name": ("in", invoices_to_update)},
+        doctype,
+        {"name": ("in", docs_to_update)},
         {
             "transporter": values.transporter,
             "transporter_name": transporter_name,
@@ -380,14 +376,23 @@ def bulk_update_transporter_details(doctype, docnames, values):
         },
     )
 
-    if invoices_with_irn_ewaybill:
+    if docs_with_irn_ewaybill := set(docnames).difference(docs_to_update):
+        docs_with_irn_ewaybill = [
+            get_link_to_form(doctype, doc) for doc in docs_with_irn_ewaybill
+        ]
         frappe.msgprint(
             _(
-                "Transporter details cannot be updated in already generated e-Wsybills or e-Invoice. Find the following documents: {0}"
-            ).format("\n".join(invoices_with_irn_ewaybill)),
+                "Transporter details cannot be updated in already generated e-Waybills or e-Invoice. Find the following documents: {0}"
+            ).format("\n".join(docs_with_irn_ewaybill)),
+            title=_("Cannot Update"),
         )
 
-    frappe.msgprint(_("Transporter Details updated in invoices"), alert=True)
+    frappe.msgprint(
+        _("Transporter details Updated"),
+        title=_("Success"),
+        alert=True,
+        indicator="green",
+    )
 
 
 @frappe.whitelist()
