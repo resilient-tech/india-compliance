@@ -41,6 +41,16 @@ FIELDS = {
         "Invoice Discounting",
         "Journal Entry",
     ],
+    "remarks_field_doctypes": [
+        "Purchase Invoice",
+        "Purchase Receipt",
+        "Stock Entry",
+        "Subcontracting Receipt",
+        "Payment Entry",
+        "Sales Invoice",
+        "POS Invoice",
+        "Period Closing Voucher",
+    ],
 }
 
 
@@ -228,36 +238,32 @@ class DetailedReport(BaseAuditTrail):
                 ["party_type", "party_name", "total_allocated_amount as amount"]
             )
 
+        # Amount
         if doctype == "Subcontracting Receipt":
             fields.append("total as amount")
 
-        if doctype == "Bill of Entry":
+        elif doctype == "Bill of Entry":
             fields.append("total_amount_payable as amount")
 
+        elif doctype in FIELDS["grand_total_field_doctypes"]:
+            fields.append("grand_total as amount")
+
+        elif doctype in FIELDS["total_amount_field_doctypes"]:
+            fields.append("total_amount as amount")
+
+        # Party Name
         if doctype in FIELDS["supplier_name_field_doctypes"]:
             fields.append("supplier_name as party_name")
 
-        if doctype in FIELDS["customer_name_field_doctypes"]:
+        elif doctype in FIELDS["customer_name_field_doctypes"]:
             fields.append("customer_name as party_name")
 
-        if doctype in FIELDS["no_name_field_doctypes"]:
-            return fields
-
-        if doctype in FIELDS["grand_total_field_doctypes"]:
-            fields.append("grand_total as amount")
-
-        if doctype in FIELDS["total_amount_field_doctypes"]:
-            fields.append("total_amount as amount")
-
-        if doctype in FIELDS["supplier_name_field_doctypes"] + [
-            "Sales Invoice",
-            "POS Invoice",
-            "Period Closing Voucher",
-        ]:
-            fields.append("remarks as remarks")
-
+        # Remarks
         if doctype == "Journal Entry":
             fields.append("user_remark as remarks")
+
+        elif doctype in FIELDS["remarks_field_doctypes"]:
+            fields.append("remarks")
 
         return fields
 
