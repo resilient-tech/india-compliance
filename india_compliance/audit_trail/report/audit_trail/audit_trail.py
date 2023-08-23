@@ -41,6 +41,16 @@ FIELDS = {
         "Invoice Discounting",
         "Journal Entry",
     ],
+    "remarks_field_doctypes": [
+        "Purchase Invoice",
+        "Purchase Receipt",
+        "Stock Entry",
+        "Subcontracting Receipt",
+        "Payment Entry",
+        "Sales Invoice",
+        "POS Invoice",
+        "Period Closing Voucher",
+    ],
 }
 
 
@@ -66,6 +76,7 @@ class BaseAuditTrail:
         conditions = {}
         conditions["modified"] = self.get_date()
         conditions["owner"] = self.get_user()
+        conditions["company"] = self.filters.get("company")
 
         return conditions
 
@@ -87,12 +98,8 @@ class BaseAuditTrail:
             return ["in", users]
 
     def get_doctypes(self):
-        doctypes = list(self.get_audit_trail_doctypes())
-        doctypes.remove("Accounts Settings")
+        doctypes = list(get_relavant_doctypes())
         return doctypes
-
-    def get_audit_trail_doctypes(self):
-        return get_audit_trail_doctypes()
 
     def update_count(self):
         fields = ["owner as user_name", "count(name) as count"]
@@ -106,6 +113,10 @@ class BaseAuditTrail:
         if user := self.filters.pop("user", None):
             self.filters["owner"] = user
 
+        # Removed Company Filter for 'modified_count' Due to Versioning Not Being Maintained on a Company Basis
+        filters = self.filters.copy()
+        del filters["company"]
+
         for doctype in doctypes:
             new_count = frappe.get_all(
                 doctype,
@@ -116,7 +127,7 @@ class BaseAuditTrail:
 
             modified_count = frappe.get_all(
                 "Version",
-                filters={**self.filters, "ref_doctype": doctype},
+                filters={**filters, "ref_doctype": doctype},
                 fields=fields,
                 group_by=self.group_by,
             )
@@ -131,39 +142,41 @@ class DetailedReport(BaseAuditTrail):
                 "label": _("Date and Time"),
                 "fieldtype": "DateTime",
                 "fieldname": "date_time",
-                "width": 200,
-            },
-            {
-                "label": _("Company"),
-                "fieldtype": "Link",
-                "fieldname": "company",
-                "options": "Company",
-                "width": 150,
+                "width": 160,
             },
             {
                 "label": _("DocType"),
                 "fieldtype": "Link",
                 "fieldname": "doctype",
                 "options": "DocType",
-                "width": 150,
+                "width": 120,
             },
             {
                 "label": _("Document Name"),
-                "fieldtype": "Data",
+                "fieldtype": "Dynamic Link",
                 "fieldname": "document_name",
                 "width": 150,
+                "options": "doctype",
             },
             {
                 "label": _("Creation Date"),
                 "fieldtype": "Date",
                 "fieldname": "creation_date",
-                "width": 150,
+                "width": 120,
             },
             {
-                "label": _("Party Name/Remarks"),
-                "fieldtype": "Data",
+                "label": _("Party Type"),
+                "fieldtype": "Link",
+                "fieldname": "party_type",
+                "width": 100,
+                "options": "DocType",
+            },
+            {
+                "label": _("Party Name"),
+                "fieldtype": "Dynamic Link",
                 "fieldname": "party_name",
-                "width": 180,
+                "width": 150,
+                "options": "party_type",
             },
             {
                 "label": _("Amount"),
@@ -173,15 +186,23 @@ class DetailedReport(BaseAuditTrail):
             },
             {
                 "label": _("Created By"),
-                "fieldtype": "Data",
+                "fieldtype": "Link",
                 "fieldname": "created_by",
-                "width": 200,
+                "options": "User",
+                "width": 150,
             },
             {
                 "label": _("Modified By"),
-                "fieldtype": "Data",
+                "fieldtype": "Link",
                 "fieldname": "modified_by",
-                "width": 200,
+                "options": "User",
+                "width": 150,
+            },
+            {
+                "label": _("Remarks"),
+                "fieldtype": "Data",
+                "fieldname": "remarks",
+                "width": 180,
             },
         ]
 
@@ -213,28 +234,36 @@ class DetailedReport(BaseAuditTrail):
         ]
 
         if doctype == "Payment Entry":
-            fields.extend(["party_name", "total_allocated_amount as amount"])
+            fields.extend(
+                ["party_type", "party_name", "total_allocated_amount as amount"]
+            )
 
+        # Amount
         if doctype == "Subcontracting Receipt":
             fields.append("total as amount")
 
-        if doctype == "Bill of Entry":
+        elif doctype == "Bill of Entry":
             fields.append("total_amount_payable as amount")
 
+        elif doctype in FIELDS["grand_total_field_doctypes"]:
+            fields.append("grand_total as amount")
+
+        elif doctype in FIELDS["total_amount_field_doctypes"]:
+            fields.append("total_amount as amount")
+
+        # Party Name
         if doctype in FIELDS["supplier_name_field_doctypes"]:
             fields.append("supplier_name as party_name")
 
-        if doctype in FIELDS["customer_name_field_doctypes"]:
+        elif doctype in FIELDS["customer_name_field_doctypes"]:
             fields.append("customer_name as party_name")
 
-        if doctype in FIELDS["no_name_field_doctypes"]:
-            return fields
+        # Remarks
+        if doctype == "Journal Entry":
+            fields.append("user_remark as remarks")
 
-        if doctype in FIELDS["grand_total_field_doctypes"]:
-            fields.append("grand_total as amount")
-
-        if doctype in FIELDS["total_amount_field_doctypes"]:
-            fields.append("total_amount as amount")
+        elif doctype in FIELDS["remarks_field_doctypes"]:
+            fields.append("remarks")
 
         return fields
 
@@ -246,9 +275,16 @@ class DetailedReport(BaseAuditTrail):
 
             if doctype == "Bill of Entry":
                 row["party_name"] = ""
+
             elif doctype in FIELDS["no_name_field_doctypes"]:
                 row["party_name"] = ""
-                row["party_amount"] = ""
+                row["amount"] = ""
+
+            elif doctype in FIELDS["supplier_name_field_doctypes"]:
+                row["party_type"] = "Supplier"
+
+            elif doctype in FIELDS["customer_name_field_doctypes"]:
+                row["party_type"] = "Customer"
 
             self.data.append(row)
 
@@ -360,6 +396,21 @@ class UserReport(BaseAuditTrail):
             )
 
             user_count["modify_count"] += row["count"]
+
+
+@frappe.whitelist()
+def get_relavant_doctypes():
+    doctypes = get_audit_trail_doctypes()
+    doctypes.remove("Accounts Settings")
+
+    if frappe.get_cached_value(
+        "Accounts Settings",
+        "Accounts Settings",
+        "automatically_process_deferred_accounting_entry",
+    ):
+        doctypes.remove("Process Deferred Accounting")
+
+    return doctypes
 
 
 REPORT_MAP = {
