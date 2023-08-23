@@ -816,6 +816,7 @@ sales_e_waybill_field = {
     "translatable": 0,
     "no_copy": 1,
     "insert_after": "customer_name",
+    "read_only": 1,
 }
 
 e_waybill_status_field = {
@@ -823,13 +824,13 @@ e_waybill_status_field = {
     "label": "e-Waybill Status",
     "fieldtype": "Select",
     "insert_after": "ewaybill",
-    "options": "\nPending\nGenerated\nCancelled\nNot Applicable",
+    "options": "\nPending\nGenerated\nCancelled\nNot Applicable\nManually Generated\nManually Cancelled",
     "print_hide": 1,
     "no_copy": 1,
     "translatable": 1,
     "allow_on_submit": 1,
-    "depends_on": "eval:doc.docstatus === 1 && (!doc.ewaybill || in_list(['','Pending', 'Not Applicable'], doc.e_waybill_status))",
-    "read_only_depends_on": "eval:doc.e_waybill_status === 'Generated' && doc.ewaybill",
+    "depends_on": "eval:doc.docstatus === 1 && (!doc.ewaybill || !doc.e_waybill_status.includes('Generated'))",
+    "read_only_depends_on": "eval:doc.e_waybill_status.includes('Generated') && doc.ewaybill",
 }
 
 purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}

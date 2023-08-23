@@ -181,7 +181,7 @@ def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     data = {"ewaybill": e_waybill_number}
 
     if doc.doctype == "Sales Invoice":
-        data["e_waybill_status"] = "Generated"
+        data["e_waybill_status"] = result.get("e_waybill_status") or "Generated"
 
     if distance := result.get("distance"):
         data["distance"] = distance
@@ -238,6 +238,16 @@ def _cancel_e_waybill(doc, values):
 
     result = api(doc).cancel_e_waybill(e_waybill_data.get_data_for_cancellation(values))
 
+    log_and_process_cancelled_e_waybill(doc, values, result)
+
+    frappe.msgprint(
+        _("e-Waybill cancelled successfully"),
+        indicator="green",
+        alert=True,
+    )
+
+
+def log_and_process_cancelled_e_waybill(doc, values, result):
     log_and_process_e_waybill(
         doc,
         {
@@ -256,15 +266,9 @@ def _cancel_e_waybill(doc, values):
     data = {"ewaybill": ""}
 
     if doc.doctype == "Sales Invoice":
-        data["e_waybill_status"] = "Cancelled"
+        data["e_waybill_status"] = result.get("e_waybill_status") or "Cancelled"
 
     doc.db_set(data)
-
-    frappe.msgprint(
-        _("e-Waybill cancelled successfully"),
-        indicator="green",
-        alert=True,
-    )
 
 
 @frappe.whitelist()
@@ -487,6 +491,37 @@ def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
     result["ewayBillDate"] = result["ewbDate"]
 
     log_and_process_e_waybill_generation(doc, result)
+    return send_updated_doc(doc)
+
+
+@frappe.whitelist()
+def update_manually_generated_e_waybill(doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
+    values = frappe.parse_json(values)
+    result = {
+        "ewayBillNo": values.ewaybill,
+        "ewayBillDate": values.e_waybill_date,
+        "validUpto": values.valid_upto,
+        "e_waybill_status": "Manually Generated",
+    }
+
+    log_and_process_e_waybill_generation(doc, result)
+
+    return send_updated_doc(doc)
+
+
+@frappe.whitelist()
+def update_manually_cancelled_e_waybill(doctype, docname, values):
+    doc = load_doc(doctype, docname, "cancel")
+    values = frappe.parse_json(values)
+    result = frappe._dict(
+        {
+            "cancelDate": values.cancelled_on,
+            "e_waybill_status": "Manually Cancelled",
+        }
+    )
+    log_and_process_cancelled_e_waybill(doc, values, result)
+
     return send_updated_doc(doc)
 
 
