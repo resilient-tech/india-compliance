@@ -462,7 +462,6 @@ function show_mark_e_waybill_as_generated_dialog(frm) {
                 fieldname: "ewaybill",
                 fieldtype: "Data",
                 reqd: 1,
-                onchange: () => validate_e_waybill_number(d.get_value("ewaybill")),
             },
             {
                 label: "e-Waybill Date",
@@ -486,9 +485,11 @@ function show_mark_e_waybill_as_generated_dialog(frm) {
                     docname: frm.doc.name,
                     values,
                 },
-                callback: () => frm.refresh(),
+                callback: () => {
+                    d.hide();
+                    frm.refresh();
+                },
             });
-            d.hide();
         },
     });
 
@@ -535,23 +536,18 @@ function show_mark_e_waybill_as_cancelled_dialog(frm) {
         fields: fields,
         primary_action_label: __("Update"),
         primary_action(values) {
-            d.hide();
-            frappe.confirm(
-                __("Are you sure you want to mark this e-Waybill as cancelled?"),
-                () => {
-                    frappe.call({
-                        method: "india_compliance.gst_india.utils.e_waybill.mark_e_waybill_as_cancelled",
-                        args: {
-                            doctype: frm.doctype,
-                            docname: frm.doc.name,
-                            values,
-                        },
-                        callback: () => {
-                            frm.refresh();
-                        },
-                    });
-                }
-            );
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.mark_e_waybill_as_cancelled",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    values,
+                },
+                callback: () => {
+                    d.hide();
+                    frm.refresh();
+                },
+            });
         },
     });
 
@@ -1133,17 +1129,5 @@ function get_destination_address_name(frm) {
         if (frm.doc.is_return)
             return frm.doc.dispatch_address_name || frm.doc.company_address;
         return frm.doc.shipping_address_name || frm.doc.customer_address;
-    }
-}
-
-function validate_e_waybill_number(ewaybill) {
-    ewaybill = ewaybill.replace(" ", "");
-
-    if (ewaybill.length != 12) {
-        frappe.throw(__("e-Waybill number should be 12 characters long"));
-    }
-
-    if (!/^\d+$/.test(ewaybill)) {
-        frappe.throw(__("e-Waybill number should contain only numbers"));
     }
 }

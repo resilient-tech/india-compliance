@@ -683,7 +683,7 @@ def get_e_waybill_info(doc):
 def get_validated_e_waybill_number(ewaybill: str):
     ewaybill = ewaybill.replace(" ", "")
 
-    if ewaybill.length != 12:
+    if len(ewaybill) != 12:
         frappe.throw(_("e-Waybill Number should be 12 characters long"))
 
     if not ewaybill.isdigit():
