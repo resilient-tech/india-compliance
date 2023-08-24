@@ -8,7 +8,11 @@ from frappe.utils import date_diff, format_date, get_datetime
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
-from india_compliance.gst_india.utils import is_api_enabled, parse_datetime
+from india_compliance.gst_india.utils import (
+    is_api_enabled,
+    parse_datetime,
+    validate_gstin,
+)
 
 GSTIN_STATUS = {
     "ACT": "Active",
@@ -44,6 +48,8 @@ class GSTIN(Document):
 
 @frappe.whitelist()
 def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
+    validate_gstin(gstin)
+
     if not is_status_refresh_required(gstin):
         if not frappe.db.exists("GSTIN", gstin):
             return
