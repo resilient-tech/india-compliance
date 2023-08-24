@@ -48,8 +48,6 @@ class GSTIN(Document):
 
 @frappe.whitelist()
 def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
-    validate_gstin(gstin)
-
     if not is_status_refresh_required(gstin):
         if not frappe.db.exists("GSTIN", gstin):
             return
@@ -102,6 +100,8 @@ def create_or_update_gstin_status(
 def _get_gstin_info(*, gstin=None, response=None):
     if response:
         return get_formatted_response(response)
+
+    validate_gstin(gstin)
 
     try:
         company_gstin = get_company_gstin()
