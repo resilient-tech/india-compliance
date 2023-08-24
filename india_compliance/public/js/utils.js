@@ -62,17 +62,22 @@ Object.assign(india_compliance, {
             },
         });
 
-        field.set_description(india_compliance.get_gstin_status_desc(message?.status));
+        field.set_description(india_compliance.get_gstin_status_desc(message?.status, message?.last_updated_on));
 
         return message;
     },
 
-    get_gstin_status_desc(status) {
-        if (!status) return "Invalid GSTIN";
+    get_gstin_status_desc(status, datetime) {
+        if (!status) return;
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
 
         const STATUS_COLORS = { Active: "green", Cancelled: "red" };
         return `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
                     Status:&nbsp;<strong>${status}</strong>
+                    <span class="text-right ml-auto" title="${user_date}">
+                        ${datetime ? "updated " + pretty_date : ""}
+                    </span>
                 </div>`;
     },
 

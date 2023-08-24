@@ -6,7 +6,6 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import date_diff, format_date, get_datetime
 
-from india_compliance.exceptions import GatewayTimeoutError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import is_api_enabled, parse_datetime
@@ -45,45 +44,18 @@ class GSTIN(Document):
 
 @frappe.whitelist()
 def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
-    settings = frappe.get_cached_doc("GST Settings")
+    if not is_status_refresh_required(gstin):
+        if not frappe.db.exists("GSTIN", gstin):
+            return
 
-    if (
-        not settings.gstin_status_refresh_interval
-        or not is_api_enabled(settings)
-        or settings.sandbox_mode
-    ):
-        return
+        return frappe.get_doc("GSTIN", gstin)
 
-    gstin_doc = get_updated_gstin(
-        gstin,
-        settings.gstin_status_refresh_interval,
-        transaction_date,
-        is_request_from_ui,
-    )
-
-    if not gstin_doc:
-        return
-
-    return frappe._dict(
-        {
-            "status": gstin_doc.get("status"),
-            "registration_date": gstin_doc.get("registration_date"),
-            "cancelled_date": gstin_doc.get("cancelled_date"),
-        }
-    )
+    return get_updated_gstin(gstin, transaction_date, is_request_from_ui)
 
 
-def get_updated_gstin(
-    gstin, refresh_interval, transaction_date=None, is_request_from_ui=0
-):
+def get_updated_gstin(gstin, transaction_date=None, is_request_from_ui=0):
     if is_request_from_ui:
-        gstin_doc = create_or_update_gstin_status(gstin=gstin, throw=True)
-        return gstin_doc
-
-    # If request is not made from ui, enqueing the GST api call
-    # Validating the gstin in the callback and log errors
-    if not needs_status_update(refresh_interval, gstin_doc):
-        return
+        return create_or_update_gstin_status(gstin)
 
     return frappe.enqueue(
         create_or_update_gstin_status,
@@ -92,17 +64,14 @@ def get_updated_gstin(
         gstin=gstin,
         transaction_date=transaction_date,
         callback=_validate_gstin_info,
-        throw=is_request_from_ui,
     )
 
 
 def create_or_update_gstin_status(
     gstin=None,
     response=None,
-    doc=None,
     transaction_date=None,
     callback=None,
-    throw=False,
 ):
     doctype = "GSTIN"
     response = _get_gstin_info(gstin=gstin, response=response)
@@ -110,17 +79,16 @@ def create_or_update_gstin_status(
     if not response:
         return
 
-    if not doc:
-        if frappe.db.exists(doctype, response.get("gstin")):
-            doc = frappe.get_doc(doctype, response.pop("gstin"))
-        else:
-            doc = frappe.new_doc(doctype)
+    if frappe.db.exists(doctype, response.get("gstin")):
+        doc = frappe.get_doc(doctype, response.pop("gstin"))
+    else:
+        doc = frappe.new_doc(doctype)
 
     doc.update(response)
     doc.save(ignore_permissions=True)
 
     if callback:
-        callback(doc, transaction_date, throw)
+        callback(doc, transaction_date)
 
     return doc
 
@@ -129,14 +97,10 @@ def _get_gstin_info(*, gstin=None, response=None):
     if response:
         return get_formatted_response(response)
 
-    gstin_cache = frappe.cache.get_value(gstin)
-    if gstin_cache and not gstin_cache.get("can_request"):
-        return
-
     try:
         company_gstin = get_company_gstin()
 
-        if not response and not company_gstin:
+        if not company_gstin:
             response = PublicAPI().get_gstin_info(gstin)
             return get_formatted_response(response)
 
@@ -151,20 +115,6 @@ def _get_gstin_info(*, gstin=None, response=None):
             }
         )
 
-    except GatewayTimeoutError:
-        frappe.cache.set_value(
-            gstin,
-            {"can_request": False},
-            expires_in_sec=180,
-        )
-        frappe.log_error(
-            title=_("Gateway Timeout"),
-            message=_(
-                "Government services are currently slow, resulting in a Gateway Timeout error while fetching GSTIN Status."
-            )
-            + frappe.get_traceback(),
-        )
-
     except Exception:
         frappe.log_error(
             title=_("Error fetching GSTIN status"),
@@ -172,70 +122,53 @@ def _get_gstin_info(*, gstin=None, response=None):
         )
 
     finally:
-        if response:
-            frappe.cache.delete_key(gstin)
+        frappe.cache.set_value(gstin, True, expires_in_sec=180)
 
 
 def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
     if not (gstin_doc and transaction_date):
         return
 
-    error_title = _("Invalid Party GSTIN")
-
-    registration_date = gstin_doc.registration_date
-    if not registration_date:
-        message = _(
-            "Registration date not found for Party GSTIN. Please make sure that if GSTIN is registered."
-        )
-
+    def _throw(message):
+        # TODO: Is throw required for all errors? Improve error messages
         if throw:
             frappe.throw(message)
 
-        frappe.log_error(
-            title=error_title,
-            message=message,
+        else:
+            frappe.log_error(
+                title=_("Invalid Party GSTIN"),
+                message=message,
+            )
+
+    registration_date = gstin_doc.registration_date
+    cancelled_date = gstin_doc.cancelled_date
+
+    if not registration_date:
+        return _throw(
+            _(
+                "Registration date not found for Party GSTIN. Please make sure that if GSTIN is registered."
+            )
         )
 
     if date_diff(transaction_date, registration_date) < 0:
-        message = _(
-            "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
-        ).format(format_date(registration_date))
-
-        if throw:
-            frappe.throw(message)
-
-        frappe.log_error(
-            title=error_title,
-            message=message,
+        return _throw(
+            _(
+                "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
+            ).format(format_date(registration_date))
         )
 
-    cancelled_date = gstin_doc.cancelled_date
     if (
         gstin_doc.status == "Cancelled"
         and date_diff(transaction_date, cancelled_date) >= 0
     ):
-        message = _(
-            "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
-        ).format(format_date(cancelled_date))
-
-        if throw:
-            frappe.throw(message)
-
-        frappe.log_error(
-            title=error_title,
-            message=message,
+        return _throw(
+            _(
+                "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
+            ).format(format_date(cancelled_date))
         )
 
     if gstin_doc.status not in ("Active", "Cancelled"):
-        message = _("Status of Party GSTIN is {0}").format(gstin_doc.status)
-
-        if throw:
-            frappe.throw(message)
-
-        frappe.log_error(
-            title=_("Invalid Party GSTIN Status"),
-            message=message,
-        )
+        return _throw(_("Status of Party GSTIN is {0}").format(gstin_doc.status))
 
 
 def get_company_gstin():
@@ -249,12 +182,26 @@ def get_company_gstin():
             return row.gstin
 
 
-def needs_status_update(refresh_interval, gstin_doc):
-    days_since_last_update = date_diff(get_datetime(), gstin_doc.get("last_updated_on"))
-    return days_since_last_update >= refresh_interval or gstin_doc.status not in (
-        "Active",
-        "Cancelled",
+def is_status_refresh_required(gstin):
+    settings = frappe.get_cached_doc("GST Settings")
+
+    if (
+        not settings.gstin_status_refresh_interval
+        or not is_api_enabled(settings)
+        or settings.sandbox_mode
+        or frappe.cache.get_value(gstin)
+    ):
+        return
+
+    doc = frappe.db.get_value(
+        "GSTIN", gstin, ["last_updated_on", "status"], as_dict=True
     )
+
+    if not doc or doc.status not in ("Active", "Cancelled"):
+        return True
+
+    days_since_last_update = date_diff(get_datetime(), doc.get("last_updated_on"))
+    return days_since_last_update >= settings.gstin_status_refresh_interval
 
 
 def get_formatted_response(response):

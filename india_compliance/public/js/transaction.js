@@ -166,7 +166,8 @@ function set_and_validate_gstin_status(doctype) {
 
     frappe.ui.form.on(doctype, {
         refresh(frm) {
-            _set_and_validate_gstin_status(frm, gstin_field_name);
+            if (frm.doc[gstin_field_name])
+                _set_gstin_status(frm, gstin_field_name);
         },
 
         [gstin_field_name](frm) {
@@ -186,9 +187,13 @@ function set_and_validate_gstin_status(doctype) {
 }
 
 async function _set_and_validate_gstin_status(frm, gstin_field_name) {
-    const date_field =
-        frm.get_field("posting_date") || frm.get_field("transaction_date");
+    const gstin_doc = await _set_gstin_status(frm, gstin_field_name);
+    if (!gstin_doc) return;
 
+    validate_gstin_status(gstin_doc, frm, gstin_field_name);
+}
+
+async function _set_gstin_status(frm, gstin_field_name) {
     const gstin_field = frm.get_field(gstin_field_name);
     const gstin = gstin_field.value;
 
@@ -200,17 +205,19 @@ async function _set_and_validate_gstin_status(frm, gstin_field_name) {
         frm._gstin_doc[gstin] = gstin_doc;
     } else {
         gstin_field.set_description(
-            india_compliance.get_gstin_status_desc(gstin_doc?.status)
+            india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on)
         );
     }
 
-    if (!gstin_doc) return;
-
-    validate_gstin_status(gstin_doc, date_field, gstin_field);
+    return gstin_doc;
 }
 
-function validate_gstin_status(gstin_doc, date_field, gstin_field) {
-    transaction_date = frappe.datetime.str_to_obj(date_field.value);
+function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
+    const date_field =
+        frm.get_field("posting_date") || frm.get_field("transaction_date");
+
+    const gstin_field = frm.get_field(gstin_field_name);
+    const transaction_date = frappe.datetime.str_to_obj(date_field.value);
     const registration_date = frappe.datetime.str_to_obj(gstin_doc.registration_date);
     const cancelled_date = frappe.datetime.str_to_obj(gstin_doc.cancelled_date);
 
