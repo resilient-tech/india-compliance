@@ -1,3 +1,4 @@
+import functools
 from urllib.parse import urljoin
 
 import requests
@@ -37,6 +38,14 @@ class BaseAPI:
         self.default_log_values = {}
 
         self.setup(*args, **kwargs)
+
+    @functools.cached_property
+    def session(self):
+        session = getattr(frappe.local, "gst_api_session", None)
+        if not session:
+            frappe.local.gst_api_session = session = requests.Session()
+
+        return session
 
     def setup(*args, **kwargs):
         # Override in subclass
@@ -128,7 +137,7 @@ class BaseAPI:
         response_json = None
 
         try:
-            response = requests.request(method, **request_args)
+            response = self.session.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
                 log.request_id = api_request_id
 
