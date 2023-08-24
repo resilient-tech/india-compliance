@@ -346,15 +346,16 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 def validate_tax_accounts_for_non_gst(doc):
     """GST Tax Accounts should not be charged for Non GST Items"""
     accounts_list = get_all_gst_accounts(doc.company)
-
-    for row in doc.taxes:
-        if row.account_head in accounts_list and row.tax_amount:
-            frappe.throw(
-                _("Row #{0}: Cannot charge GST for Non GST Items").format(
-                    row.idx, row.account_head
-                ),
-                title=_("Invalid Taxes"),
-            )
+    # for row in doc.taxes:
+    #     print(row.account_head)
+    #     print(row.tax_amount)
+    #     if row.account_head in accounts_list and row.tax_amount:
+    #         frappe.throw(
+    #             _("Row #{0}: Cannot charge GST for Non GST Items").format(
+    #                 row.idx, row.account_head
+    #             ),
+    #             title=_("Invalid Taxes"),
+    #         )
 
 
 def validate_items(doc):
