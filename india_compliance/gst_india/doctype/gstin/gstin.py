@@ -126,6 +126,7 @@ def _get_gstin_info(*, gstin=None, response=None):
             title=_("Error fetching GSTIN status"),
             message=frappe.get_traceback(),
         )
+        frappe.clear_last_message()
 
     finally:
         frappe.cache.set_value(gstin, True, expires_in_sec=180)
