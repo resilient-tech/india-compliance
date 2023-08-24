@@ -39,7 +39,7 @@ class GSTIN(Document):
 
     @frappe.whitelist()
     def update_gstin_status(self):
-        create_or_update_gstin_status(self.gstin, doc=self)
+        create_or_update_gstin_status(self.gstin)
 
 
 @frappe.whitelist()
@@ -186,7 +186,7 @@ def is_status_refresh_required(gstin):
     settings = frappe.get_cached_doc("GST Settings")
 
     if (
-        not settings.gstin_status_refresh_interval
+        not settings.validate_gstin_status
         or not is_api_enabled(settings)
         or settings.sandbox_mode
         or frappe.cache.get_value(gstin)
