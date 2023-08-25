@@ -26,3 +26,4 @@ execute:import frappe; frappe.db.set_value("GST Settings", None, "enable_retry_e
 india_compliance.patches.v14.set_reverse_charge_applicability_in_supplier
 india_compliance.patches.post_install.update_e_waybill_status
 india_compliance.patches.post_install.add_einvoice_status_field
+execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_refresh_interval", 30)

@@ -10,6 +10,10 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
+from india_compliance.gst_india.doctype.gstin.gstin import (
+    _validate_gstin_info,
+    get_gstin_status,
+)
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
     get_gst_accounts_by_type,
@@ -900,6 +904,15 @@ def set_reverse_charge(doc):
         doc.set("taxes", template)
 
 
+def validate_gstin(gstin, transaction_date):
+    gstin_doc = get_gstin_status(gstin, transaction_date)
+
+    if not gstin_doc:
+        return
+
+    _validate_gstin_info(gstin_doc, transaction_date, throw=True)
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -934,13 +947,14 @@ def validate_transaction(doc, method=None):
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
+        gstin = doc.billing_address_gstin
     else:
         validate_reverse_charge_transaction(doc)
+        gstin = doc.supplier_gstin
 
-    validate_gst_category(
-        doc.gst_category,
-        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin,
-    )
+    validate_gstin(gstin, doc.get("posting_date") or doc.get("transaction_date"))
+
+    validate_gst_category(doc.gst_category, gstin)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
