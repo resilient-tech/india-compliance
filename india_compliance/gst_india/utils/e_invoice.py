@@ -95,9 +95,11 @@ def generate_e_invoices(docnames, force=False):
             )
 
             log_error()
+            frappe.clear_last_message()
 
         except Exception:
             log_error()
+            frappe.clear_last_message()
 
         finally:
             # each e-Invoice needs to be committed individually

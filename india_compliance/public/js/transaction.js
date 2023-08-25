@@ -14,6 +14,7 @@ const TRANSACTION_DOCTYPES = [
 for (const doctype of TRANSACTION_DOCTYPES) {
     fetch_gst_details(doctype);
     validate_overseas_gst_category(doctype);
+    set_and_validate_gstin_status(doctype);
 }
 
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
@@ -21,14 +22,16 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
 }
 
 function fetch_gst_details(doctype) {
-    const event_fields = ["tax_category", "company_gstin", "place_of_supply", "is_reverse_charge"];
+    const event_fields = [
+        "tax_category",
+        "company_gstin",
+        "place_of_supply",
+        "is_reverse_charge",
+    ];
 
     // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
-        event_fields.push(
-            "customer_address",
-            "is_export_with_gst",
-        );
+        event_fields.push("customer_address", "is_export_with_gst");
     } else {
         event_fields.push("supplier_address");
     }
@@ -95,7 +98,7 @@ async function update_gst_details(frm, event) {
         fieldnames_to_set.push(
             "customer_address",
             "billing_address_gstin",
-            "is_export_with_gst",
+            "is_export_with_gst"
         );
     } else {
         fieldnames_to_set.push("supplier_address", "supplier_gstin");
@@ -154,4 +157,105 @@ function is_foreign_transaction(frm) {
         frm.doc.gst_category === "Overseas" &&
         frm.doc.place_of_supply === "96-Other Countries"
     );
+}
+
+function set_and_validate_gstin_status(doctype) {
+    const gstin_field_name = frappe.boot.sales_doctypes.includes(doctype)
+        ? "billing_address_gstin"
+        : "supplier_gstin";
+
+    frappe.ui.form.on(doctype, {
+        refresh(frm) {
+            if (frm.doc[gstin_field_name])
+                _set_gstin_status(frm, gstin_field_name);
+        },
+
+        [gstin_field_name](frm) {
+            _set_and_validate_gstin_status(frm, gstin_field_name);
+        },
+
+        posting_date(frm) {
+            if (frm.get_field("posting_date"))
+                _set_and_validate_gstin_status(frm, gstin_field_name);
+        },
+
+        transaction_date(frm) {
+            if (frm.get_field("transaction_date"))
+                _set_and_validate_gstin_status(frm, gstin_field_name);
+        },
+    });
+}
+
+async function _set_and_validate_gstin_status(frm, gstin_field_name) {
+    const gstin_doc = await _set_gstin_status(frm, gstin_field_name);
+    if (!gstin_doc) return;
+
+    validate_gstin_status(gstin_doc, frm, gstin_field_name);
+}
+
+async function _set_gstin_status(frm, gstin_field_name) {
+    const gstin_field = frm.get_field(gstin_field_name);
+    const gstin = gstin_field.value;
+    const date_field =
+        frm.get_field("posting_date") || frm.get_field("transaction_date");
+
+
+    let gstin_doc = frm._gstin_doc?.[gstin];
+    if (!gstin_doc) {
+        gstin_doc = await india_compliance.set_gstin_status(gstin_field, date_field.value);
+
+        frm._gstin_doc = frm._gstin_doc || {};
+        frm._gstin_doc[gstin] = gstin_doc;
+    } else {
+        gstin_field.set_description(
+            india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on)
+        );
+    }
+
+    return gstin_doc;
+}
+
+function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
+    const date_field =
+        frm.get_field("posting_date") || frm.get_field("transaction_date");
+
+    const gstin_field = frm.get_field(gstin_field_name);
+    const transaction_date = frappe.datetime.str_to_obj(date_field.value);
+    const registration_date = frappe.datetime.str_to_obj(gstin_doc.registration_date);
+    const cancelled_date = frappe.datetime.str_to_obj(gstin_doc.cancelled_date);
+
+    if (!registration_date || transaction_date < registration_date)
+        frappe.throw({
+            message: __(
+                "{0} is Registered on {1}. Please make sure that the {2} is on or after {1}",
+                [
+                    gstin_field.df.label,
+                    frappe.datetime.str_to_user(gstin_doc.registration_date),
+                    date_field.df.label,
+                ]
+            ),
+            title: __("Invalid Party GSTIN"),
+        });
+
+    if (gstin_doc.status === "Cancelled" && transaction_date >= cancelled_date)
+        frappe.throw({
+            message: __(
+                "{0} is Cancelled from {1}. Please make sure that the {2} is before {1}",
+                [
+                    gstin_field.df.label,
+                    frappe.datetime.str_to_user(gstin_doc.cancelled_date),
+                    date_field.df.label,
+                ]
+            ),
+            title: __("Invalid Party GSTIN"),
+        });
+
+    if (!["Active", "Cancelled"].includes(gstin_doc.status))
+        frappe.throw({
+            message: __("Status of {0} is {1}", [
+                gstin_field.df.label,
+                gstin_doc.status,
+            ]),
+            title: __("Invalid GSTIN Status"),
+        });
 }

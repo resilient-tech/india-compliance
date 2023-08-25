@@ -51,6 +51,38 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
+    async set_gstin_status(field, transaction_date) {
+        const gstin = field.value;
+        if (!gstin || gstin.length != 15) return field.set_description("");
+
+        const { message } = await frappe.call({
+            method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
+            args: {
+                gstin,
+                transaction_date,
+                is_request_from_ui: 1,
+            },
+        });
+
+        field.set_description(india_compliance.get_gstin_status_desc(message?.status, message?.last_updated_on));
+
+        return message;
+    },
+
+    get_gstin_status_desc(status, datetime) {
+        if (!status) return;
+        const user_date = frappe.datetime.str_to_user(datetime);
+        const pretty_date = frappe.datetime.prettyDate(datetime);
+
+        const STATUS_COLORS = { Active: "green", Cancelled: "red" };
+        return `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
+                    Status:&nbsp;<strong>${status}</strong>
+                    <span class="text-right ml-auto" title="${user_date}">
+                        ${datetime ? "updated " + pretty_date : ""}
+                    </span>
+                </div>`;
+    },
+
     set_state_options(frm) {
         const state_field = frm.get_field("state");
         const country = frm.get_field("country").value;
