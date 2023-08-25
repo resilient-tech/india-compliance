@@ -295,6 +295,15 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
 frappe.ui.form.AddressQuickEntryForm = AddressQuickEntryForm;
 
+class ItemQuickEntryForm extends frappe.ui.form.QuickEntryForm {
+    render_dialog() {
+        super.render_dialog();
+        india_compliance.set_hsn_code_query(this.dialog.get_field("gst_hsn_code"));
+    }
+}
+
+frappe.ui.form.ItemQuickEntryForm = ItemQuickEntryForm;
+
 async function autofill_fields(dialog) {
     const gstin = dialog.doc._gstin;
     const gstin_field = dialog.get_field("_gstin");
