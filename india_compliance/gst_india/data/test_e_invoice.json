@@ -275,7 +275,7 @@
 			"PayDtls": {
 				"CrDay": 0,
 				"PaidAmt": 0,
-				"PaymtDue": 17.0
+				"PaymtDue": 0.0
 			},
 			"RefDtls": {
 				"PrecDocDtls": [

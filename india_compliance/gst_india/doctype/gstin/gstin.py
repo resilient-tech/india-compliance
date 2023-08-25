@@ -135,7 +135,7 @@ def _get_gstin_info(*, gstin=None, response=None):
         frappe.clear_last_message()
 
     finally:
-        frappe.cache.set_value(gstin, True, expires_in_sec=180)
+        frappe.cache().set_value(gstin, True, expires_in_sec=180)
 
 
 def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
@@ -205,7 +205,7 @@ def is_status_refresh_required(gstin, transaction_date):
         or not is_api_enabled(settings)
         or settings.sandbox_mode
         or not transaction_date  # not from transactions
-        or frappe.cache.get_value(gstin)
+        or frappe.cache().get_value(gstin)
     ):
         return
 
