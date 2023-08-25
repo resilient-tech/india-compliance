@@ -137,7 +137,6 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
         return
 
     def _throw(message):
-        # TODO: Is throw required for all errors? Improve error messages
         if throw:
             frappe.throw(message)
 
@@ -153,15 +152,15 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
     if not registration_date:
         return _throw(
             _(
-                "Registration date not found for Party GSTIN. Please make sure that if GSTIN is registered."
-            )
+                "Registration date not found for party GSTIN {0}. Please make sure GSTIN is registered."
+            ).format(gstin_doc.gstin)
         )
 
     if date_diff(transaction_date, registration_date) < 0:
         return _throw(
             _(
-                "Party GSTIN is Registered on {0}. Please make sure that document date is on or after {0}"
-            ).format(format_date(registration_date))
+                "Party GSTIN {1} is registered on {0}. Please make sure that document date is on or after {0}."
+            ).format(format_date(registration_date), gstin_doc.gstin)
         )
 
     if (
@@ -170,12 +169,15 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
     ):
         return _throw(
             _(
-                "Party GSTIN is Cancelled on {0}. Please make sure that document date is before {0}"
-            ).format(format_date(cancelled_date))
+                "Party GSTIN {1} is cancelled on {0}. Please make sure that document date is before {0}."
+            ).format(format_date(cancelled_date), gstin_doc.gstin)
         )
 
     if gstin_doc.status not in ("Active", "Cancelled"):
-        return _throw(_("Status of Party GSTIN is {0}").format(gstin_doc.status))
+        return _throw(
+            _("Status of Party GSTIN {1} is {0}").format(gstin_doc.status),
+            gstin_doc.gstin,
+        )
 
 
 def get_company_gstin():
