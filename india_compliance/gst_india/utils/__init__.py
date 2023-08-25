@@ -402,13 +402,20 @@ def get_all_gst_accounts(company):
     return accounts_list
 
 
-def parse_datetime(value, day_first=False):
+def parse_datetime(value, day_first=False, throw=True):
     """Convert IST string to offset-naive system time"""
 
     if not value:
         return
 
-    parsed = parser.parse(value, dayfirst=day_first)
+    try:
+        parsed = parser.parse(value, dayfirst=day_first)
+    except Exception as e:
+        if not throw:
+            return
+
+        raise e
+
     system_tz = get_system_timezone()
 
     if system_tz == TIMEZONE:
