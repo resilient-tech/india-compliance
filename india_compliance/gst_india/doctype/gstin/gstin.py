@@ -43,11 +43,17 @@ class GSTIN(Document):
 
     @frappe.whitelist()
     def update_gstin_status(self):
+        """
+        Permission check not required as GSTIN details are public and user has access to doc.
+        """
         create_or_update_gstin_status(self.gstin)
 
 
 @frappe.whitelist()
 def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
+    """
+    Permission check not required as GSTIN details are public where GSTIN is known.
+    """
     if not is_status_refresh_required(gstin, transaction_date):
         if not frappe.db.exists("GSTIN", gstin):
             return
