@@ -48,7 +48,7 @@ class GSTIN(Document):
 
 @frappe.whitelist()
 def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
-    if not is_status_refresh_required(gstin):
+    if not is_status_refresh_required(gstin, transaction_date):
         if not frappe.db.exists("GSTIN", gstin):
             return
 
@@ -191,13 +191,14 @@ def get_company_gstin():
             return row.gstin
 
 
-def is_status_refresh_required(gstin):
+def is_status_refresh_required(gstin, transaction_date):
     settings = frappe.get_cached_doc("GST Settings")
 
     if (
         not settings.validate_gstin_status
         or not is_api_enabled(settings)
         or settings.sandbox_mode
+        or not transaction_date  # not from transactions
         or frappe.cache.get_value(gstin)
     ):
         return

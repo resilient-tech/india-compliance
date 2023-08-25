@@ -196,10 +196,13 @@ async function _set_and_validate_gstin_status(frm, gstin_field_name) {
 async function _set_gstin_status(frm, gstin_field_name) {
     const gstin_field = frm.get_field(gstin_field_name);
     const gstin = gstin_field.value;
+    const date_field =
+        frm.get_field("posting_date") || frm.get_field("transaction_date");
+
 
     let gstin_doc = frm._gstin_doc?.[gstin];
     if (!gstin_doc) {
-        gstin_doc = await india_compliance.set_gstin_status(gstin_field);
+        gstin_doc = await india_compliance.set_gstin_status(gstin_field, date_field.value);
 
         frm._gstin_doc = frm._gstin_doc || {};
         frm._gstin_doc[gstin] = gstin_doc;
