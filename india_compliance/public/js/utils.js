@@ -128,6 +128,18 @@ Object.assign(india_compliance, {
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
     },
+
+    set_hsn_code_query(field) {
+        if (!field || !gst_settings.validate_hsn_code) return;
+        field.get_query = function () {
+            const wildcard = '_'.repeat(gst_settings.min_hsn_digits) + '%';
+            return {
+                filters: {
+                    'name': ['like', wildcard]
+                }
+            };
+        }
+    }
 });
 
 function is_gstin_check_digit_valid(gstin) {
