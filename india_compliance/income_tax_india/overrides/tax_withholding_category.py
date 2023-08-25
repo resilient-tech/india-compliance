@@ -2,7 +2,7 @@ import frappe
 
 
 def on_change(doc, method=None):
-    frappe.cache().delete_value("tax_withholding_accounts")
+    frappe.cache.delete_value("tax_withholding_accounts")
 
 
 def get_tax_withholding_accounts(company):
@@ -13,6 +13,6 @@ def get_tax_withholding_accounts(company):
             )
         )
 
-    return frappe.cache().hget(
+    return frappe.cache.hget(
         "tax_withholding_accounts", company, generator=_get_tax_withholding_accounts
     )
