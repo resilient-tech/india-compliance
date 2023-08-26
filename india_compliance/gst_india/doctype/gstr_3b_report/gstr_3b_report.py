@@ -419,22 +419,22 @@ class GSTR3BReport(Document):
                         else:
                             if inv in self.cgst_sgst_invoices:
                                 tax_rate = rate / 2
-                                self.report_dict["sup_details"]["osup_det"]["camt"] += (
-                                    taxable_value * tax_rate / 100
-                                )
-                                self.report_dict["sup_details"]["osup_det"]["samt"] += (
-                                    taxable_value * tax_rate / 100
-                                )
+                                self.report_dict["sup_details"]["osup_det"][
+                                    "camt"
+                                ] += flt(taxable_value * tax_rate / 100, 2)
+                                self.report_dict["sup_details"]["osup_det"][
+                                    "samt"
+                                ] += flt(taxable_value * tax_rate / 100, 2)
                                 self.report_dict["sup_details"]["osup_det"][
                                     "txval"
-                                ] += taxable_value
+                                ] += flt(taxable_value, 2)
                             else:
-                                self.report_dict["sup_details"]["osup_det"]["iamt"] += (
-                                    taxable_value * rate / 100
-                                )
+                                self.report_dict["sup_details"]["osup_det"][
+                                    "iamt"
+                                ] += flt(taxable_value * rate / 100, 2)
                                 self.report_dict["sup_details"]["osup_det"][
                                     "txval"
-                                ] += taxable_value
+                                ] += flt(taxable_value, 2)
 
                                 if (
                                     gst_category
@@ -456,10 +456,10 @@ class GSTR3BReport(Document):
                                     )
                                     inter_state_supply_details[
                                         (gst_category, place_of_supply)
-                                    ]["txval"] += taxable_value
+                                    ]["txval"] += flt(taxable_value, 2)
                                     inter_state_supply_details[
                                         (gst_category, place_of_supply)
-                                    ]["iamt"] += (taxable_value * rate / 100)
+                                    ]["iamt"] += flt(taxable_value * rate / 100, 2)
 
             if self.invoice_cess.get(inv):
                 self.report_dict["sup_details"]["osup_det"]["csamt"] += flt(
@@ -475,22 +475,22 @@ class GSTR3BReport(Document):
                     if item_code in items:
                         if inv in self.cgst_sgst_invoices:
                             tax_rate = rate / 2
-                            self.report_dict["sup_details"]["isup_rev"]["camt"] += (
-                                taxable_value * tax_rate / 100
+                            self.report_dict["sup_details"]["isup_rev"]["camt"] += flt(
+                                taxable_value * tax_rate / 100, 2
                             )
-                            self.report_dict["sup_details"]["isup_rev"]["samt"] += (
-                                taxable_value * tax_rate / 100
+                            self.report_dict["sup_details"]["isup_rev"]["samt"] += flt(
+                                taxable_value * tax_rate / 100, 2
                             )
-                            self.report_dict["sup_details"]["isup_rev"][
-                                "txval"
-                            ] += taxable_value
+                            self.report_dict["sup_details"]["isup_rev"]["txval"] += flt(
+                                taxable_value, 2
+                            )
                         else:
-                            self.report_dict["sup_details"]["isup_rev"]["iamt"] += (
-                                taxable_value * rate / 100
+                            self.report_dict["sup_details"]["isup_rev"]["iamt"] += flt(
+                                taxable_value * rate / 100, 2
                             )
-                            self.report_dict["sup_details"]["isup_rev"][
-                                "txval"
-                            ] += taxable_value
+                            self.report_dict["sup_details"]["isup_rev"]["txval"] += flt(
+                                taxable_value, 2
+                            )
 
     def set_inter_state_supply(self, inter_state_supply):
         for key, value in inter_state_supply.items():
