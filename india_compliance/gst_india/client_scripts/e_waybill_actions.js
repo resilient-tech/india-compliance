@@ -44,6 +44,11 @@ function setup_e_waybill_actions(doctype) {
                         () => show_fetch_if_generated_dialog(frm),
                         "e-Waybill"
                     );
+                    frm.add_custom_button(
+                        __("Mark as Generated"),
+                        () => show_mark_e_waybill_as_generated_dialog(frm),
+                        "e-Waybill"
+                    );
                 }
 
                 if (frm.doc.e_waybill_status === "Pending") {
@@ -59,14 +64,9 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            if (
-                !india_compliance.is_api_enabled() ||
-                !is_e_waybill_generated_using_api(frm)
-            ) {
+            if (!india_compliance.is_api_enabled()) {
                 return;
             }
-
-            frm.set_df_property("ewaybill", "allow_on_submit", 0);
 
             if (
                 frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
@@ -96,15 +96,20 @@ function setup_e_waybill_actions(doctype) {
                 );
             }
 
-            if (
-                frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name) &&
-                is_e_waybill_cancellable(frm)
-            ) {
+            if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
                 frm.add_custom_button(
-                    __("Cancel"),
-                    () => show_cancel_e_waybill_dialog(frm),
+                    __("Mark as Cancelled"),
+                    () => show_mark_e_waybill_as_cancelled_dialog(frm),
                     "e-Waybill"
                 );
+
+                if (is_e_waybill_cancellable(frm)) {
+                    frm.add_custom_button(
+                        __("Cancel"),
+                        () => show_cancel_e_waybill_dialog(frm),
+                        "e-Waybill"
+                    );
+                }
             }
 
             if (frappe.model.can_print("e-Waybill Log")) {
@@ -219,6 +224,53 @@ function show_generate_e_waybill_dialog(frm) {
         trigger_file_download(ewb_data, get_e_waybill_file_name(frm.doc.name));
     };
 
+    const api_enabled = india_compliance.is_api_enabled();
+
+    const d = get_generate_e_waybill_dialog({
+        title: __("Generate e-Waybill"),
+        primary_action_label: get_primary_action_label_for_generation(frm.doc),
+        primary_action(values) {
+            d.hide();
+            if (api_enabled) {
+                generate_action(values);
+            } else {
+                json_action(values);
+            }
+        },
+        secondary_action_label: api_enabled && frm.doc.doctype ? __("Download JSON") : null,
+        secondary_action: api_enabled
+            ? () => {
+                d.hide();
+                json_action(d.get_values());
+            }
+            : null,
+    }, frm);
+
+    d.show();
+
+    // Alert if e-Invoice hasn't been generated
+    if (
+        frm.doctype === "Sales Invoice" &&
+        is_e_invoice_applicable(frm) &&
+        !frm.doc.irn
+    ) {
+        $(`
+            <div class="alert alert-warning" role="alert">
+                e-Invoice hasn't been generated for this Sales Invoice.
+                <a
+                    href="https://docs.erpnext.com/docs/v14/user/manual/en/regional/india/generating_e_invoice#what-if-we-generate-e-waybill-before-the-e-invoice"
+                    class="alert-link"
+                    target="_blank"
+                >
+                    Learn more
+                </a>
+            </div>
+        `).prependTo(d.wrapper);
+    }
+}
+
+function get_generate_e_waybill_dialog(opts, frm) {
+    if (!frm) frm = { doc: {} };
     const fields = [
         {
             label: "Part A",
@@ -238,13 +290,13 @@ function show_generate_e_waybill_dialog(frm) {
                     },
                 };
             },
-            onchange: () => update_gst_tranporter_id(d),
+            onchange: () => update_gst_tranporter_id(d, frm.doc),
         },
         {
             label: "Distance (in km)",
             fieldname: "distance",
             fieldtype: "Float",
-            default: frm.doc.distance,
+            default: frm.doc.distance || 0,
             description:
                 "Set as zero to update distance as per the e-Waybill portal (if available)",
         },
@@ -256,7 +308,7 @@ function show_generate_e_waybill_dialog(frm) {
             fieldname: "gst_transporter_id",
             fieldtype: "Data",
             default:
-                frm.doc.gst_transporter_id && frm.doc.gst_transporter_id.length == 15
+                frm.doc.gst_transporter_id?.length == 15
                     ? frm.doc.gst_transporter_id
                     : "",
         },
@@ -272,20 +324,20 @@ function show_generate_e_waybill_dialog(frm) {
             fieldname: "vehicle_no",
             fieldtype: "Data",
             default: frm.doc.vehicle_no,
-            onchange: () => update_generation_dialog(d),
+            onchange: () => update_generation_dialog(d, frm.doc),
         },
         {
             label: "Transport Receipt No",
             fieldname: "lr_no",
             fieldtype: "Data",
             default: frm.doc.lr_no,
-            onchange: () => update_generation_dialog(d),
+            onchange: () => update_generation_dialog(d, frm.doc),
         },
         {
             label: "Transport Receipt Date",
             fieldname: "lr_date",
             fieldtype: "Date",
-            default: frm.doc.lr_date,
+            default: frm.doc.lr_date || "Today",
             mandatory_depends_on: "eval:doc.lr_no",
         },
         {
@@ -297,9 +349,9 @@ function show_generate_e_waybill_dialog(frm) {
             fieldname: "mode_of_transport",
             fieldtype: "Select",
             options: `\nRoad\nAir\nRail\nShip`,
-            default: frm.doc.mode_of_transport,
+            default: frm.doc.mode_of_transport || "Road",
             onchange: () => {
-                update_generation_dialog(d);
+                update_generation_dialog(d, frm.doc);
                 update_vehicle_type(d);
             },
         },
@@ -310,7 +362,7 @@ function show_generate_e_waybill_dialog(frm) {
             options: `Regular\nOver Dimensional Cargo (ODC)`,
             depends_on: 'eval:["Road", "Ship"].includes(doc.mode_of_transport)',
             read_only_depends_on: "eval: doc.mode_of_transport == 'Ship'",
-            default: frm.doc.gst_vehicle_type,
+            default: frm.doc.gst_vehicle_type || "Regular",
         },
     ];
 
@@ -370,51 +422,10 @@ function show_generate_e_waybill_dialog(frm) {
         });
     }
 
-    const api_enabled = india_compliance.is_api_enabled();
+    opts.fields = fields;
+    const d = new frappe.ui.Dialog(opts);
 
-    const d = new frappe.ui.Dialog({
-        title: __("Generate e-Waybill"),
-        fields,
-        primary_action_label: get_primary_action_label_for_generation(frm.doc),
-        primary_action(values) {
-            d.hide();
-
-            if (api_enabled) {
-                generate_action(values);
-            } else {
-                json_action(values);
-            }
-        },
-        secondary_action_label: api_enabled ? __("Download JSON") : null,
-        secondary_action: api_enabled
-            ? () => {
-                  d.hide();
-                  json_action(d.get_values());
-              }
-            : null,
-    });
-
-    d.show();
-
-    // Alert if e-Invoice hasn't been generated
-    if (
-        frm.doctype === "Sales Invoice" &&
-        is_e_invoice_applicable(frm) &&
-        !frm.doc.irn
-    ) {
-        $(`
-            <div class="alert alert-warning" role="alert">
-                e-Invoice hasn't been generated for this Sales Invoice.
-                <a
-                    href="https://docs.erpnext.com/docs/v14/user/manual/en/regional/india/generating_e_invoice#what-if-we-generate-e-waybill-before-the-e-invoice"
-                    class="alert-link"
-                    target="_blank"
-                >
-                    Learn more
-                </a>
-            </div>
-        `).prependTo(d.wrapper);
-    }
+    return d;
 }
 
 function show_fetch_if_generated_dialog(frm) {
@@ -448,38 +459,53 @@ function show_fetch_if_generated_dialog(frm) {
 
     d.show();
 }
+function show_mark_e_waybill_as_generated_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Update e-Waybill Details"),
+        fields: [
+            {
+                label: "e-Waybill Number",
+                fieldname: "ewaybill",
+                fieldtype: "Data",
+                reqd: 1,
+            },
+            {
+                label: "e-Waybill Date",
+                fieldname: "e_waybill_date",
+                fieldtype: "Datetime",
+                reqd: 1,
+            },
+            {
+                label: "Valid Upto",
+                fieldname: "valid_upto",
+                fieldtype: "Datetime",
+                reqd: 1,
+            },
+        ],
+        primary_action_label: __("Update"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.mark_e_waybill_as_generated",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    values,
+                },
+                callback: () => {
+                    d.hide();
+                    frm.refresh();
+                },
+            });
+        },
+    });
+
+    d.show();
+}
 
 function show_cancel_e_waybill_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
         title: __("Cancel e-Waybill"),
-        fields: [
-            {
-                label: "e-Waybill",
-                fieldname: "ewaybill",
-                fieldtype: "Data",
-                read_only: 1,
-                default: frm.doc.ewaybill,
-            },
-            {
-                label: "Reason",
-                fieldname: "reason",
-                fieldtype: "Select",
-                reqd: 1,
-                default: "Data Entry Mistake",
-                options: [
-                    "Duplicate",
-                    "Order Cancelled",
-                    "Data Entry Mistake",
-                    "Others",
-                ],
-            },
-            {
-                label: "Remark",
-                fieldname: "remark",
-                fieldtype: "Data",
-                mandatory_depends_on: "eval: doc.reason == 'Others'",
-            },
-        ],
+        fields: get_cancel_e_waybill_dialog_fields(frm),
         primary_action_label: __("Cancel"),
         primary_action(values) {
             frappe.call({
@@ -499,6 +525,65 @@ function show_cancel_e_waybill_dialog(frm, callback) {
     });
 
     d.show();
+}
+
+function show_mark_e_waybill_as_cancelled_dialog(frm) {
+    fields = get_cancel_e_waybill_dialog_fields(frm);
+    fields.push({
+        label: "Cancelled On",
+        fieldname: "cancelled_on",
+        fieldtype: "Datetime",
+        reqd: 1,
+        default: frappe.datetime.now_datetime(),
+    });
+
+    const d = new frappe.ui.Dialog({
+        title: __("Update Cancelled e-Waybill Details"),
+        fields: fields,
+        primary_action_label: __("Update"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.mark_e_waybill_as_cancelled",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    values,
+                },
+                callback: () => {
+                    d.hide();
+                    frm.refresh();
+                },
+            });
+        },
+    });
+
+    d.show();
+}
+
+function get_cancel_e_waybill_dialog_fields(frm) {
+    return [
+        {
+            label: "e-Waybill",
+            fieldname: "ewaybill",
+            fieldtype: "Data",
+            read_only: 1,
+            default: frm.doc.ewaybill,
+        },
+        {
+            label: "Reason",
+            fieldname: "reason",
+            fieldtype: "Select",
+            reqd: 1,
+            default: "Data Entry Mistake",
+            options: ["Duplicate", "Order Cancelled", "Data Entry Mistake", "Others"],
+        },
+        {
+            label: "Remark",
+            fieldname: "remark",
+            fieldtype: "Data",
+            mandatory_depends_on: "eval: doc.reason == 'Others'",
+        },
+    ];
 }
 
 function show_update_vehicle_info_dialog(frm) {
@@ -932,11 +1017,6 @@ function is_e_waybill_applicable_on_purchase_invoice(frm) {
     );
 }
 
-function is_e_waybill_generated_using_api(frm) {
-    const e_waybill_info = frm.doc.__onload && frm.doc.__onload.e_waybill_info;
-    return e_waybill_info && e_waybill_info.created_on;
-}
-
 async function update_gst_tranporter_id(dialog) {
     const transporter = dialog.get_value("transporter");
     const { message: response } = await frappe.db.get_value(
@@ -948,7 +1028,7 @@ async function update_gst_tranporter_id(dialog) {
     dialog.set_value("gst_transporter_id", response.gst_transporter_id);
 }
 
-function update_generation_dialog(dialog) {
+function update_generation_dialog(dialog, doc) {
     const dialog_values = dialog.get_values(true);
     const primary_action_label = get_primary_action_label_for_generation(dialog_values);
 
@@ -957,6 +1037,8 @@ function update_generation_dialog(dialog) {
         "reqd",
         primary_action_label.includes("Part A") ? 1 : 0
     );
+
+    if (is_empty(doc)) return;
 
     set_primary_action_label(dialog, primary_action_label);
 }
@@ -971,6 +1053,15 @@ function get_primary_action_label_for_generation(doc) {
     }
 
     return label + " (Part A)";
+}
+
+function is_empty(obj) {
+    for (let prop in obj) {
+        if (obj.hasOwnProperty(prop)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function are_transport_details_available(doc) {

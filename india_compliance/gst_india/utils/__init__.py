@@ -9,7 +9,6 @@ from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_
 
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
-    COUNTRY_CODES,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
     GSTIN_FORMATS,
@@ -402,13 +401,20 @@ def get_all_gst_accounts(company):
     return accounts_list
 
 
-def parse_datetime(value, day_first=False):
+def parse_datetime(value, day_first=False, throw=True):
     """Convert IST string to offset-naive system time"""
 
     if not value:
         return
 
-    parsed = parser.parse(value, dayfirst=day_first)
+    try:
+        parsed = parser.parse(value, dayfirst=day_first)
+    except Exception as e:
+        if not throw:
+            return
+
+        raise e
+
     system_tz = get_system_timezone()
 
     if system_tz == TIMEZONE:
@@ -552,11 +558,11 @@ def get_validated_country_code(country):
 
     code = code.upper()
 
-    if code not in COUNTRY_CODES:
+    if len(code) != 2:
         frappe.throw(
             _(
-                "Country Code for {0} ({1}) does not match with the <a"
-                " href='{2}'>e-Invoice Master Codes</a>"
+                "Country Code for {0} ({1}) must be a 2-letter code. Please set it as per"
+                " the <a href='{2}'>e-Invoice Master Codes</a>"
             ).format(
                 frappe.bold(get_link_to_form("Country", country, country)),
                 frappe.bold(code),
