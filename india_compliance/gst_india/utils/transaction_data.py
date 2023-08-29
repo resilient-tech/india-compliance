@@ -234,6 +234,7 @@ class GSTTransactionData:
                 msg=_("Posting Date cannot be greater than Today's Date"),
                 title=_("Invalid Data"),
             )
+
         # compare posting date and lr date, only if lr no is set
         if (
             self.doc.lr_no

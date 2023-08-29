@@ -9,8 +9,6 @@ import {
 frappe.provide("india_compliance");
 
 window.gst_settings = frappe.boot.gst_settings;
-const GSTIN_REGEX =
-    /^([0-2][0-9]|[3][0-8])[A-Z]{3}[ABCFGHLJPTK][A-Z]\d{4}[A-Z][A-Z0-9][Z][A-Z0-9]$/;
 
 Object.assign(india_compliance, {
     get_gstin_query(party, party_type = "Company") {

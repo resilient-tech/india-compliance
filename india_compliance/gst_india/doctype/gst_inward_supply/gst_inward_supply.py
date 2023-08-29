@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form
 
@@ -168,12 +169,14 @@ def ensure_valid_match(doc, original):
 
     if original.link_doctype:
         frappe.msgprint(
-            "You have claimend credit for {0} {1}  against GST Inward Supply {2} where receiver GSTIN is amended. The same has been reversed.".format(
+            _(
+                "You have claimend credit for {0} {1}  against GST Inward Supply {2} where receiver GSTIN is amended. The same has been reversed."
+            ).format(
                 original.link_doctype,
                 get_link_to_form(original.link_doctype, original.link_name),
                 get_link_to_form("GST Inward Supply", original.name),
             ),
-            title="Invalid Match",
+            title=_("Invalid Match"),
         )
 
     doc.update(

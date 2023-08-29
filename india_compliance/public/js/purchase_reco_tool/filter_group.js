@@ -1,6 +1,6 @@
-frappe.provide("ic");
+frappe.provide("india_compliance");
 
-ic.FILTER_OPERATORS = {
+india_compliance.FILTER_OPERATORS = {
     "=": (expected_value, value) => value == expected_value,
     "!=": (expected_value, value) => value != expected_value,
     ">": (expected_value, value) => value > expected_value,
@@ -27,12 +27,12 @@ class _Filter extends frappe.ui.Filter {
         }
 
         this.conditions = this.conditions.filter(
-            condition => ic.FILTER_OPERATORS[condition && condition[0]]
+            condition => india_compliance.FILTER_OPERATORS[condition && condition[0]]
         );
     }
 }
 
-ic.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
+india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
     _push_new_filter(...args) {
         const Filter = frappe.ui.Filter;
         try {

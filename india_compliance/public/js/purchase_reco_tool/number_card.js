@@ -1,6 +1,6 @@
-frappe.provide("ic");
+frappe.provide("india_compliance");
 
-ic.NumberCardManager = class NumberCardManager {
+india_compliance.NumberCardManager = class NumberCardManager {
     constructor(opts) {
         Object.assign(this, opts);
         this.make_cards();

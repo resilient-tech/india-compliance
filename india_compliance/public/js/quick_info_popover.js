@@ -1,6 +1,6 @@
-frappe.provide("ic");
+frappe.provide("india_compliance");
 
-ic.quick_info_popover = class QuickInfoPopover {
+india_compliance.quick_info_popover = class QuickInfoPopover {
 	constructor(frm, field_dict) {
 		/**
 		 * Setup tooltip for fields to show details

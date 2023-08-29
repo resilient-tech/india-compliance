@@ -1,6 +1,6 @@
-frappe.provide("ic");
+frappe.provide("india_compliance");
 
-ic.DataTableManager = class DataTableManager {
+india_compliance.DataTableManager = class DataTableManager {
     constructor(options) {
         Object.assign(this, options);
         this.data = this.data || [];

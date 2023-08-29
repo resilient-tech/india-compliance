@@ -67,10 +67,9 @@ class GSTR:
                     "current_progress": current_transaction * 100 / total_transactions,
                     "return_period": self.return_period,
                 },
+                user=frappe.session.user,
+                doctype="Purchase Reconciliation Tool",
             )
-
-            if not current_transaction % 2000:
-                frappe.db.commit()
 
     def get_all_transactions(self, category, suppliers):
         transactions = []
@@ -80,7 +79,6 @@ class GSTR:
         return transactions
 
     def get_supplier_transactions(self, category, supplier):
-
         return [
             self.get_transaction(
                 category, frappe._dict(supplier), frappe._dict(invoice)

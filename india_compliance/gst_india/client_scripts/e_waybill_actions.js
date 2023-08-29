@@ -184,6 +184,7 @@ function setup_e_waybill_actions(doctype) {
         },
     });
 }
+
 function fetch_e_waybill_data(frm, args, callback) {
     if (!args) args = {};
 

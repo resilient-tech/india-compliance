@@ -11,7 +11,7 @@ const tooltip_info = {
         "Returns all documents from GSTR 2A/2B during this return period.",
 };
 
-const api_enabled = ic.is_api_enabled();
+const api_enabled = india_compliance.is_api_enabled();
 
 const ReturnType = {
     GSTR2A: "GSTR2a",
@@ -21,7 +21,7 @@ const ReturnType = {
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     async setup(frm) {
         patch_set_active_tab(frm);
-        new ic.quick_info_popover(frm, tooltip_info);
+        new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reco_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
@@ -54,7 +54,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => unlink_documents(frm),
                 __("Actions")
             );
-            frm.add_custom_button("dropdown-divider", () => {}, __("Actions"));
+            frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
         }
         ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
             action =>
@@ -245,7 +245,7 @@ class PurchaseReconciliationTool {
 			</button>
 		</div>`).appendTo(this.$wrapper.find(".form-tabs-list"));
 
-        this.filter_group = new ic.FilterGroup({
+        this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
             filter_button: this.filter_button,
             filter_options: {
@@ -350,14 +350,14 @@ class PurchaseReconciliationTool {
         this.filters = filters;
         this.filtered_data = this.data.filter(row => {
             return filters.every(filter =>
-                ic.FILTER_OPERATORS[filter[2]](filter[3] || "", row[filter[1]] || "")
+                india_compliance.FILTER_OPERATORS[filter[2]](filter[3] || "", row[filter[1]] || "")
             );
         });
     }
 
     render_data_tables() {
         this._tabs.forEach(tab => {
-            this.tabs[`${tab}_tab`] = new ic.DataTableManager({
+            this.tabs[`${tab}_tab`] = new india_compliance.DataTableManager({
                 $wrapper: this.tab_group.get_field(`${tab}_data`).$wrapper,
                 columns: this[`get_${tab}_columns`](),
                 data: this[`get_${tab}_data`](),
@@ -984,7 +984,7 @@ class DetailViewDialog {
 
         if (!this._data.name || !this._data.isup_name) cards = [];
 
-        new ic.NumberCardManager({
+        new india_compliance.NumberCardManager({
             $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
             cards: cards,
         });
@@ -1162,7 +1162,7 @@ class ImportDialog {
         this.frm.events.show_progress(this.frm, "download");
         const { message } = await this.frm.call(method, args);
         if (message && message.errorCode == "RETOTPREQUEST") {
-            const otp = await ic.get_gstin_otp();
+            const otp = await india_compliance.get_gstin_otp();
             if (otp) this.download_gstr(only_missing, otp);
             return;
         }
@@ -1377,7 +1377,9 @@ function unlink_documents(frm, selected_rows) {
     selected_rows.forEach(row => {
         if (row.isup_match_status.includes("Missing"))
             frappe.throw(
-                "You have selected rows where no match is available. Please remove them before unlinking."
+                __(
+                    "You have selected rows where no match is available. Please remove them before unlinking."
+                )
             );
     });
 
@@ -1455,7 +1457,9 @@ function apply_action(frm, action, selected_rows) {
 
         if (warn)
             frappe.msgprint(
-                "You can only Accept values where a match is available. Rows where match is missing will be ignored."
+                __(
+                    "You can only Accept values where a match is available. Rows where match is missing will be ignored."
+                )
             );
     } else if (action != "Ignore") {
         let warn = false;
@@ -1469,7 +1473,9 @@ function apply_action(frm, action, selected_rows) {
 
         if (warn)
             frappe.msgprint(
-                "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                __(
+                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                )
             );
     }
 
@@ -1531,47 +1537,48 @@ async function create_new_purchase_invoice(inward_supply, company, company_gstin
         r => (company_address = r.name)
     );
 
-    await frappe.new_doc("Purchase Invoice");
-    const pur_frm = cur_frm;
-
-    pur_frm.doc.bill_no = inward_supply.isup_bill_no;
-    pur_frm.doc.bill_date = inward_supply.isup_bill_date;
-    pur_frm.doc.is_reverse_charge = inward_supply.isup_is_reverse_charge;
-
-    _set_value(pur_frm, {
-        company: company,
-        supplier: supplier,
-        shipping_address: company_address,
-        billing_address: company_address,
-    });
-
-    function _set_value(frm, values) {
-        for (const key in values) {
-            if (values[key] == frm.doc[key]) continue;
-            frm.set_value(key, values[key]);
+    frappe.route_hooks.after_load = frm => {
+        function _set_value(values) {
+            for (const key in values) {
+                if (values[key] == frm.doc[key]) continue;
+                frm.set_value(key, values[key]);
+            }
         }
-    }
 
-    // validated this on save
-    pur_frm._inward_supply = {
-        company: company,
-        company_gstin: company_gstin,
-        isup_name: inward_supply.isup_name,
-        supplier_gstin: inward_supply.supplier_gstin,
-        bill_no: inward_supply.isup_bill_no,
-        bill_date: inward_supply.isup_bill_date,
-        is_reverse_charge: inward_supply.isup_is_reverse_charge,
-        place_of_supply: inward_supply.isup_place_of_supply,
-        cgst: inward_supply.isup_cgst,
-        sgst: inward_supply.isup_sgst,
-        igst: inward_supply.isup_igst,
-        cess: inward_supply.isup_cess,
-        taxable_value: inward_supply.isup_taxable_value,
+        const values = {
+            company: company,
+            bill_no: inward_supply.isup_bill_no,
+            bill_date: inward_supply.isup_bill_date,
+            is_reverse_charge: inward_supply.isup_is_reverse_charge,
+        };
+
+        _set_value(frm, {
+            ...values,
+            supplier: supplier,
+            shipping_address: company_address,
+            billing_address: company_address,
+        });
+
+        // validated this on save
+        frm._inward_supply = {
+            ...values,
+            company_gstin: company_gstin,
+            isup_name: inward_supply.isup_name,
+            supplier_gstin: inward_supply.supplier_gstin,
+            place_of_supply: inward_supply.isup_place_of_supply,
+            cgst: inward_supply.isup_cgst,
+            sgst: inward_supply.isup_sgst,
+            igst: inward_supply.isup_igst,
+            cess: inward_supply.isup_cess,
+            taxable_value: inward_supply.isup_taxable_value,
+        };
     };
+
+    frappe.new_doc("Purchase Invoice");
 }
 
 async function set_gstin_options(frm) {
-    const { query, params } = ic.get_gstin_query(frm.doc.company);
+    const { query, params } = india_compliance.get_gstin_query(frm.doc.company);
     const { message } = await frappe.call({
         method: query,
         args: params,
