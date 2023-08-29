@@ -278,7 +278,8 @@
    "fieldname": "link_name",
    "fieldtype": "Dynamic Link",
    "label": "Link Name",
-   "options": "link_doctype"
+   "options": "link_doctype",
+   "search_index": 1
   },
   {
    "fieldname": "section_break_43",
@@ -357,7 +358,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-08-20 13:12:37.797876",
+ "modified": "2023-08-29 17:18:25.443508",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",

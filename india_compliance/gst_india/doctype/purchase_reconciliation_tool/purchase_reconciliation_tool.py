@@ -144,11 +144,11 @@ class PurchaseReconciliationTool(Document):
                     purchases[supplier_gstin], inward_supplies[supplier_gstin]
                 )
 
-            for pur in purchases[supplier_gstin][:]:
+            for pur in purchases[supplier_gstin].copy():
                 if summary_diff and not (abs(summary_diff[pur.bill_date.month]) < 2):
                     continue
 
-                for isup in inward_supplies[supplier_gstin][:]:
+                for isup in inward_supplies[supplier_gstin].copy():
                     if summary_diff and pur.bill_date.month != isup.bill_date.month:
                         continue
 
@@ -275,7 +275,7 @@ class PurchaseReconciliationTool(Document):
     def get_purchase(self, category):
         gst_category = (
             ("Registered Regular", "Tax Deductor")
-            if category in ["B2B", "CDNR", "ISD"]
+            if category in ("B2B", "CDNR", "ISD")
             else ("SEZ", "Overseas", "UIN Holders")
         )
         is_return = 1 if category == "CDNR" else 0
@@ -515,10 +515,8 @@ class PurchaseReconciliationTool(Document):
     def get_dict_for_key(self, key, list):
         new_dict = frappe._dict()
         for data in list:
-            if data[key] in new_dict:
-                new_dict[data[key]].append(data)
-            else:
-                new_dict[data[key]] = [data]
+            data.setdefault(key, set()).add(data)
+
         return new_dict
 
     @frappe.whitelist()
@@ -575,6 +573,8 @@ class PurchaseReconciliationTool(Document):
             f"{'Downloaded' if for_download else 'Uploaded'} On",
         ]
 
+        settings = frappe.get_cached_doc("GST Settings")
+
         data = {}
         for period in periods:
             # TODO: skip if today is not greater than 14th return period's next months
@@ -582,6 +582,12 @@ class PurchaseReconciliationTool(Document):
             status = "🟢 &nbsp; Downloaded"
             for category in GSTRCategory:
                 if category.value == "ISDA" and return_type == ReturnType.GSTR2A:
+                    continue
+
+                if not settings.enable_overseas_transactions and category.value in (
+                    "IMPG",
+                    "IMPGSEZ",
+                ):
                     continue
 
                 download = next(
@@ -822,7 +828,7 @@ class PurchaseReconciliationTool(Document):
                 _update_doc(doc, differences)
                 continue
 
-            if doc.isup_match_status not in ["Mismatch", "Manual Match"]:
+            if doc.isup_match_status not in ("Mismatch", "Manual Match"):
                 if abs(doc.tax_diff) > 0.01 or abs(doc.taxable_value_diff) > 0.01:
                     differences.append("Rounding Difference")
 
@@ -906,7 +912,7 @@ class PurchaseReconciliationTool(Document):
         isup_actions = []
         for doc in data:
             isup_docs.append(doc.get("isup_name"))
-            if doc.get("isup_action") not in ["Ignore", "Pending"]:
+            if doc.get("isup_action") not in ("Ignore", "Pending"):
                 isup_actions.append(doc.get("isup_name"))
 
         self._unlink_documents(isup_docs, isup_actions)

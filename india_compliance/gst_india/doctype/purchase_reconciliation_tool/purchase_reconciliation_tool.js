@@ -47,7 +47,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
             : frm.add_custom_button(__("Upload"), () => new ImportDialog(frm, false));
 
         // add custom buttons
-        if (!frm.purchase_reconciliation_tool?.data) return;
+        if (!frm.purchase_reconciliation_tool?.data?.length) return;
         if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             frm.add_custom_button(
                 __("Unlink"),

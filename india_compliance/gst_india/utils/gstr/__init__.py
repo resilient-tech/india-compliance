@@ -54,6 +54,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
     requests_made = 0
     queued_message = False
+    settings = frappe.get_cached_doc("GST Settings")
 
     return_type = ReturnType.GSTR2A
     api = GSTR2aAPI(gstin)
@@ -63,6 +64,13 @@ def download_gstr_2a(gstin, return_periods, otp=None):
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
         for action, category in ACTIONS.items():
             requests_made += 1
+
+            if not settings.enable_overseas_transactions and category.value in (
+                "IMPG",
+                "IMPGSEZ",
+            ):
+                continue
+
             frappe.publish_realtime(
                 "update_api_progress",
                 {
