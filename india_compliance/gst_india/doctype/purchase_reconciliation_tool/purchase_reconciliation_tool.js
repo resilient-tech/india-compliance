@@ -1552,7 +1552,7 @@ async function create_new_purchase_invoice(inward_supply, company, company_gstin
             is_reverse_charge: inward_supply.isup_is_reverse_charge,
         };
 
-        _set_value(frm, {
+        _set_value({
             ...values,
             supplier: supplier,
             shipping_address: company_address,

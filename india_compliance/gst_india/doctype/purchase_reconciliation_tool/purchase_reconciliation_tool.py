@@ -144,11 +144,11 @@ class PurchaseReconciliationTool(Document):
                     purchases[supplier_gstin], inward_supplies[supplier_gstin]
                 )
 
-            for pur in purchases[supplier_gstin].copy():
+            for pur_name, pur in purchases[supplier_gstin].copy().items():
                 if summary_diff and not (abs(summary_diff[pur.bill_date.month]) < 2):
                     continue
 
-                for isup in inward_supplies[supplier_gstin].copy():
+                for isup_name, isup in inward_supplies[supplier_gstin].copy().items():
                     if summary_diff and pur.bill_date.month != isup.bill_date.month:
                         continue
 
@@ -158,8 +158,8 @@ class PurchaseReconciliationTool(Document):
                     self.update_matching_doc(match_status, pur.name, isup.name)
 
                     # Remove from current data to ensure matching is done only once.
-                    purchases[supplier_gstin].remove(pur)
-                    inward_supplies[supplier_gstin].remove(isup)
+                    purchases[supplier_gstin].pop(pur_name)
+                    inward_supplies[supplier_gstin].pop(isup_name)
                     break
 
     def get_summary_difference(self, data1, data2):
@@ -473,8 +473,8 @@ class PurchaseReconciliationTool(Document):
         out = {}
         for gstin, invoices in data.items():
             pan = gstin[2:-3]
-            out.setdefault(pan, [])
-            out[pan].extend(invoices)
+            out.setdefault(pan, {})
+            out[pan].update(invoices)
 
         return out
 
@@ -515,7 +515,7 @@ class PurchaseReconciliationTool(Document):
     def get_dict_for_key(self, key, list):
         new_dict = frappe._dict()
         for data in list:
-            data.setdefault(key, set()).add(data)
+            new_dict.setdefault(data[key], {})[data.name] = data
 
         return new_dict
 
@@ -970,7 +970,6 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_link_options(self, doctype, filters):
-
         if isinstance(filters, dict):
             filters = frappe._dict(filters)
 

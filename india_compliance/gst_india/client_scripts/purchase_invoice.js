@@ -48,7 +48,6 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm._inward_supply.name = frm.doc.name;
         // go back to previous page and match the invoice with the inward supply
-        // TODO: test this
         setTimeout(() => {
             frappe.route_hooks.after_load = (reco_frm) => {
                 if (!reco_frm.purchase_reconciliation_tool) return;
