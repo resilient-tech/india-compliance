@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import sbool
 
+from india_compliance.exceptions import GatewayTimeoutError
 from india_compliance.gst_india.utils import is_api_enabled
 from india_compliance.gst_india.utils.api import enqueue_integration_request
 
@@ -13,24 +14,27 @@ BASE_URL = "https://asp.resilient.tech"
 
 
 class BaseAPI:
+    API_NAME = "GST"
+    BASE_PATH = ""
+    SENSITIVE_HEADERS = ("x-api-key",)
+
     def __init__(self, *args, **kwargs):
-        self.api_name = "GST"
-        self.base_path = ""
-        self.sandbox_mode = frappe.conf.ic_api_sandbox_mode
         self.settings = frappe.get_cached_doc("GST Settings")
         if not is_api_enabled(self.settings):
             frappe.throw(
                 _("Please enable API in GST Settings to use the {0} API").format(
-                    self.api_name
+                    self.API_NAME
                 )
             )
 
+        self.sandbox_mode = self.settings.sandbox_mode
         self.default_headers = {
             "x-api-key": (
                 (self.settings.api_secret and self.settings.get_password("api_secret"))
                 or frappe.conf.ic_api_secret
             )
         }
+        self.default_log_values = {}
 
         self.setup(*args, **kwargs)
 
@@ -47,7 +51,7 @@ class BaseAPI:
                 _(
                     "Please set the relevant credentials in GST Settings to use the"
                     " {0} API"
-                ).format(self.api_name),
+                ).format(self.API_NAME),
                 frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
             )
@@ -59,8 +63,8 @@ class BaseAPI:
     def get_url(self, *parts):
         parts = list(parts)
 
-        if self.base_path:
-            parts.insert(0, self.base_path)
+        if self.BASE_PATH:
+            parts.insert(0, self.BASE_PATH)
 
         if self.sandbox_mode:
             parts.insert(0, "test")
@@ -96,14 +100,19 @@ class BaseAPI:
             },
         )
 
+        log_headers = request_args.headers.copy()
+
+        # Mask sensitive headers
+        for header in self.SENSITIVE_HEADERS:
+            if header in log_headers:
+                log_headers[header] = "*****"
+
         log = frappe._dict(
+            **self.default_log_values,
             url=request_args.url,
             data=request_args.params,
-            request_headers=request_args.headers.copy(),
+            request_headers=log_headers,
         )
-
-        # Don't log API secret
-        log.request_headers.pop("x-api-key", None)
 
         if method == "POST" and json:
             request_args.json = json
@@ -163,6 +172,13 @@ class BaseAPI:
             log.output = response_json
             enqueue_integration_request(**log)
 
+            if self.sandbox_mode and not frappe.flags.ic_sandbox_message_shown:
+                frappe.msgprint(
+                    _("GST API request was made in Sandbox Mode"),
+                    alert=True,
+                )
+                frappe.flags.ic_sandbox_message_shown = True
+
     def handle_failed_response(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
         pass
@@ -197,6 +213,9 @@ class BaseAPI:
                 _("Your India Compliance API key is invalid"),
                 title=_("Invalid API Key"),
             )
+
+        if status_code == 504:
+            raise GatewayTimeoutError
 
     def generate_request_id(self, length=12):
         return frappe.generate_hash(length=length)

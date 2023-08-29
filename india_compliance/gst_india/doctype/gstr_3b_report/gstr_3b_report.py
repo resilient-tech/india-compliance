@@ -9,10 +9,14 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import DatePart
-from frappe.query_builder.functions import Extract
-from frappe.utils import cstr, flt
+from frappe.query_builder.functions import Extract, Sum
+from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+from india_compliance.gst_india.utils import (
+    get_gst_accounts_by_type,
+    is_overseas_transaction,
+)
 
 
 class GSTR3BReport(Document):
@@ -61,7 +65,7 @@ class GSTR3BReport(Document):
 
     def set_itc_details(self, itc_details):
         itc_eligible_type_map = {
-            "IMPG": "Import Of Capital Goods",
+            "IMPG": "Import Of Goods",
             "IMPS": "Import Of Service",
             "ISRC": "ITC on Reverse Charge",
             "ISD": "Input Service Distributor",
@@ -147,13 +151,42 @@ class GSTR3BReport(Document):
                 },
             )
 
+        self.update_imports_from_bill_of_entry(itc_details)
+
         return itc_details
+
+    def update_imports_from_bill_of_entry(self, itc_details):
+        boe = frappe.qb.DocType("Bill of Entry")
+        boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
+        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
+
+        def _get_tax_amount(account_type):
+            return (
+                frappe.qb.from_(boe)
+                .select(Sum(boe_taxes.tax_amount))
+                .join(boe_taxes)
+                .on(boe_taxes.parent == boe.name)
+                .where(
+                    boe.posting_date.between(
+                        get_date_str(get_first_day(f"{self.year}-{self.month_no}-01")),
+                        get_date_str(get_last_day(f"{self.year}-{self.month_no}-01")),
+                    )
+                    & boe.company_gstin.eq(self.gst_details.get("gstin"))
+                    & boe.docstatus.eq(1)
+                    & boe_taxes.account_head.eq(gst_accounts[account_type])
+                )
+                .run()
+            )[0][0] or 0
+
+        igst, cess = _get_tax_amount("igst_account"), _get_tax_amount("cess_account")
+        itc_details.setdefault("Import Of Goods", {"iamt": 0, "csamt": 0})
+        itc_details["Import Of Goods"]["iamt"] += igst
+        itc_details["Import Of Goods"]["csamt"] += cess
 
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(
             """
-            SELECT p.place_of_supply, p.supplier_address,
-            i.base_amount, i.is_nil_exempt, i.is_non_gst
+            SELECT p.place_of_supply, p.supplier_address,i.taxable_value, i.is_nil_exempt, i.is_non_gst
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
             and p.is_opening = 'No'
@@ -177,25 +210,26 @@ class GSTR3BReport(Document):
                 d.place_of_supply = "00-" + cstr(state)
 
             supplier_state = address_state_map.get(d.supplier_address) or state
+            amount = flt(d.taxable_value, 2)
 
             if (
                 d.is_nil_exempt == 1
                 or d.get("gst_category") == "Registered Composition"
             ) and cstr(supplier_state) == cstr(d.place_of_supply.split("-")[1]):
-                inward_nil_exempt_details["gst"]["intra"] += d.base_amount
+                inward_nil_exempt_details["gst"]["intra"] += amount
             elif (
                 d.is_nil_exempt == 1
                 or d.get("gst_category") == "Registered Composition"
             ) and cstr(supplier_state) != cstr(d.place_of_supply.split("-")[1]):
-                inward_nil_exempt_details["gst"]["inter"] += d.base_amount
+                inward_nil_exempt_details["gst"]["inter"] += amount
             elif d.is_non_gst == 1 and cstr(supplier_state) == cstr(
                 d.place_of_supply.split("-")[1]
             ):
-                inward_nil_exempt_details["non_gst"]["intra"] += d.base_amount
+                inward_nil_exempt_details["non_gst"]["intra"] += amount
             elif d.is_non_gst == 1 and cstr(supplier_state) != cstr(
                 d.place_of_supply.split("-")[1]
             ):
-                inward_nil_exempt_details["non_gst"]["inter"] += d.base_amount
+                inward_nil_exempt_details["non_gst"]["inter"] += amount
 
         return inward_nil_exempt_details
 
@@ -241,7 +275,7 @@ class GSTR3BReport(Document):
         item_details = frappe.db.sql(
             f"""
             SELECT
-                item_code, parent, taxable_value, base_net_amount, item_tax_rate,
+                item_code, parent, taxable_value, item_tax_rate,
                 is_nil_exempt, is_non_gst
             FROM
                 `tab{doctype} Item`
@@ -253,9 +287,7 @@ class GSTR3BReport(Document):
 
         for d in item_details:
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
-            self.invoice_items[d.parent][d.item_code] += d.get(
-                "taxable_value", 0
-            ) or d.get("base_net_amount", 0)
+            self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
 
             if d.is_nil_exempt and d.item_code not in self.is_nil_exempt:
                 self.is_nil_exempt.append(d.item_code)
@@ -333,7 +365,11 @@ class GSTR3BReport(Document):
             if (
                 invoice not in self.items_based_on_tax_rate
                 and not invoice_details.get("is_export_with_gst")
-                and invoice_details.get("gst_category") == "Overseas"
+                and is_overseas_transaction(
+                    "Sales Invoice",
+                    invoice_details.get("gst_category"),
+                    invoice_details.get("place_of_supply"),
+                )
             ):
                 self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
                     0, items.keys()
@@ -372,7 +408,9 @@ class GSTR3BReport(Document):
                                 "txval"
                             ] += taxable_value
                         elif rate == 0 or (
-                            gst_category == "Overseas"
+                            is_overseas_transaction(
+                                "Sales Invoice", gst_category, place_of_supply
+                            )
                             and not invoice_details.get("is_export_with_gst")
                         ):
                             self.report_dict["sup_details"]["osup_zero"][
@@ -381,22 +419,22 @@ class GSTR3BReport(Document):
                         else:
                             if inv in self.cgst_sgst_invoices:
                                 tax_rate = rate / 2
-                                self.report_dict["sup_details"]["osup_det"]["camt"] += (
-                                    taxable_value * tax_rate / 100
-                                )
-                                self.report_dict["sup_details"]["osup_det"]["samt"] += (
-                                    taxable_value * tax_rate / 100
-                                )
+                                self.report_dict["sup_details"]["osup_det"][
+                                    "camt"
+                                ] += flt(taxable_value * tax_rate / 100, 2)
+                                self.report_dict["sup_details"]["osup_det"][
+                                    "samt"
+                                ] += flt(taxable_value * tax_rate / 100, 2)
                                 self.report_dict["sup_details"]["osup_det"][
                                     "txval"
-                                ] += taxable_value
+                                ] += flt(taxable_value, 2)
                             else:
-                                self.report_dict["sup_details"]["osup_det"]["iamt"] += (
-                                    taxable_value * rate / 100
-                                )
+                                self.report_dict["sup_details"]["osup_det"][
+                                    "iamt"
+                                ] += flt(taxable_value * rate / 100, 2)
                                 self.report_dict["sup_details"]["osup_det"][
                                     "txval"
-                                ] += taxable_value
+                                ] += flt(taxable_value, 2)
 
                                 if (
                                     gst_category
@@ -418,10 +456,10 @@ class GSTR3BReport(Document):
                                     )
                                     inter_state_supply_details[
                                         (gst_category, place_of_supply)
-                                    ]["txval"] += taxable_value
+                                    ]["txval"] += flt(taxable_value, 2)
                                     inter_state_supply_details[
                                         (gst_category, place_of_supply)
-                                    ]["iamt"] += (taxable_value * rate / 100)
+                                    ]["iamt"] += flt(taxable_value * rate / 100, 2)
 
             if self.invoice_cess.get(inv):
                 self.report_dict["sup_details"]["osup_det"]["csamt"] += flt(
@@ -437,22 +475,22 @@ class GSTR3BReport(Document):
                     if item_code in items:
                         if inv in self.cgst_sgst_invoices:
                             tax_rate = rate / 2
-                            self.report_dict["sup_details"]["isup_rev"]["camt"] += (
-                                taxable_value * tax_rate / 100
+                            self.report_dict["sup_details"]["isup_rev"]["camt"] += flt(
+                                taxable_value * tax_rate / 100, 2
                             )
-                            self.report_dict["sup_details"]["isup_rev"]["samt"] += (
-                                taxable_value * tax_rate / 100
+                            self.report_dict["sup_details"]["isup_rev"]["samt"] += flt(
+                                taxable_value * tax_rate / 100, 2
                             )
-                            self.report_dict["sup_details"]["isup_rev"][
-                                "txval"
-                            ] += taxable_value
+                            self.report_dict["sup_details"]["isup_rev"]["txval"] += flt(
+                                taxable_value, 2
+                            )
                         else:
-                            self.report_dict["sup_details"]["isup_rev"]["iamt"] += (
-                                taxable_value * rate / 100
+                            self.report_dict["sup_details"]["isup_rev"]["iamt"] += flt(
+                                taxable_value * rate / 100, 2
                             )
-                            self.report_dict["sup_details"]["isup_rev"][
-                                "txval"
-                            ] += taxable_value
+                            self.report_dict["sup_details"]["isup_rev"]["txval"] += flt(
+                                taxable_value, 2
+                            )
 
     def set_inter_state_supply(self, inter_state_supply):
         for key, value in inter_state_supply.items():

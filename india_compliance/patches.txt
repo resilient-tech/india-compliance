@@ -1,6 +1,29 @@
 [pre_model_sync]
-
+execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields()
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #26
+execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #3
+india_compliance.patches.post_install.remove_old_fields
+india_compliance.patches.post_install.update_company_gstin
+india_compliance.patches.post_install.update_custom_role_for_e_invoice_summary
+india_compliance.patches.v14.remove_ecommerce_gstin_from_purchase_invoice
+india_compliance.patches.v14.set_sandbox_mode_in_gst_settings
+execute:from india_compliance.gst_india.setup import add_fields_to_item_variant_settings; add_fields_to_item_variant_settings()
+execute:from india_compliance.gst_india.setup import create_accounting_dimension_fields; create_accounting_dimension_fields()
+execute:from india_compliance.audit_trail.setup import setup_fixtures; setup_fixtures()
+india_compliance.patches.v14.set_default_for_audit_trail_notification
+india_compliance.patches.post_install.update_state_name_to_puducherry
+india_compliance.patches.post_install.rename_import_of_capital_goods
+execute:from india_compliance.audit_trail.setup import create_custom_fields, CUSTOM_FIELDS; create_custom_fields(CUSTOM_FIELDS)
+india_compliance.patches.post_install.update_hsn_code
+execute:from india_compliance.gst_india.setup import map_default_uoms; map_default_uoms()
+india_compliance.patches.v14.set_correct_root_account_for_rcm
+india_compliance.patches.v14.set_autogenerate_e_waybill_with_e_invoice
+execute:import frappe; frappe.db.set_value("GST Settings", None, "archive_party_info_days", 7)
+execute:import frappe; frappe.db.set_value("GST Settings", None, "enable_retry_e_invoice_generation", 1)
+india_compliance.patches.v14.set_reverse_charge_applicability_in_supplier
+india_compliance.patches.post_install.update_e_waybill_status
+india_compliance.patches.post_install.add_einvoice_status_field
+execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_refresh_interval", 30)

@@ -2,6 +2,7 @@ from india_compliance.gst_india.api_classes.base import BaseAPI
 
 
 class ReturnsAPI(BaseAPI):
+    API_NAME = "GST Returns"
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
@@ -17,7 +18,6 @@ class ReturnsAPI(BaseAPI):
     }
 
     def setup(self, company_gstin):
-        self.api_name = "GST Returns"
         self.company_gstin = company_gstin
         self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
         self.default_headers.update(
@@ -27,10 +27,12 @@ class ReturnsAPI(BaseAPI):
                 "username": self.username,
             }
         )
-        self.base_path = "returns"
 
     def handle_failed_response(self, response_json):
-        if response_json.get("errorCode") in self.IGNORED_ERROR_CODES:
+        error_code = response_json.get("errorCode")
+
+        if error_code in self.IGNORED_ERROR_CODES:
+            response_json.error_type = self.IGNORED_ERROR_CODES[error_code]
             return True
 
     def get(self, action, return_period, otp=None, params=None, requestid=None):
@@ -57,22 +59,17 @@ class ReturnsAPI(BaseAPI):
 
 
 class GSTR2bAPI(ReturnsAPI):
-    def setup(self, company_gstin):
-        super().setup(company_gstin)
-        self.api_name = "GSTR-2B"
-        self.base_path = "returns/gstr2b"
+    API_NAME = "GSTR-2B"
+    BASE_PATH = "returns/gstr2b"
 
-    def get_data(self, return_period, otp=None, file_num=None):
-        return self.get(
-            "GET2B", return_period, otp, {"rtnprd": return_period, "file_num": file_num}
-        )
+    def get_data(self, return_period, otp=None):
+        # TODO: Create further calls if more than one file to download
+        return self.get("GET2B", return_period, otp, {"rtnprd": return_period})
 
 
 class GSTR2aAPI(ReturnsAPI):
-    def setup(self, company_gstin):
-        super().setup(company_gstin)
-        self.api_name = "GSTR-2A"
-        self.base_path = "returns/gstr2a"
+    API_NAME = "GSTR-2A"
+    BASE_PATH = "returns/gstr2a"
 
     def get_data(self, action, return_period, otp=None):
         # TODO: Create further calls if more than one file to download

@@ -2,8 +2,41 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from india_compliance.gst_india.overrides.sales_invoice import (
+    update_dashboard_with_gst_logs,
+)
 from india_compliance.gst_india.overrides.transaction import validate_transaction
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_gst_accounts_by_type, is_api_enabled
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+
+
+def onload(doc, method=None):
+    if doc.docstatus != 1:
+        return
+
+    if doc.gst_category == "Overseas":
+        doc.set_onload(
+            "bill_of_entry_exists",
+            frappe.db.exists(
+                "Bill of Entry",
+                {"purchase_invoice": doc.name, "docstatus": 1},
+            ),
+        )
+
+    if not doc.get("ewaybill"):
+        return
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if not is_api_enabled(gst_settings):
+        return
+
+    if (
+        gst_settings.enable_e_waybill
+        and gst_settings.enable_e_waybill_from_pi
+        and doc.ewaybill
+    ):
+        doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
 
 def validate(doc, method=None):
@@ -11,7 +44,7 @@ def validate(doc, method=None):
         return
 
     update_itc_totals(doc)
-    validate_supplier_gstin(doc)
+    validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
 
 
@@ -38,12 +71,39 @@ def update_itc_totals(doc, method=None):
             doc.itc_cess_amount += flt(tax.base_tax_amount_after_discount_amount)
 
 
-def validate_supplier_gstin(doc):
-    if doc.company_gstin == doc.supplier_gstin:
-        frappe.throw(
-            _("Supplier GSTIN and Company GSTIN cannot be the same"),
-            title=_("Invalid Supplier GSTIN"),
+def validate_supplier_invoice_number(doc):
+    if (
+        doc.bill_no
+        or doc.gst_category == "Unregistered"
+        or not frappe.get_cached_value(
+            "GST Settings", "GST Settings", "require_supplier_invoice_no"
         )
+    ):
+        return
+
+    frappe.throw(
+        _("As per your GST Settings, Bill No is mandatory for Purchase Invoice."),
+        title=_("Missing Mandatory Field"),
+    )
+
+
+def get_dashboard_data(data):
+    transactions = data.setdefault("transactions", [])
+    reference_section = next(
+        (row for row in transactions if row.get("label") == "Reference"), None
+    )
+
+    if reference_section is None:
+        reference_section = {"label": "Reference", "items": []}
+        transactions.append(reference_section)
+
+    reference_section["items"].append("Bill of Entry")
+
+    update_dashboard_with_gst_logs(
+        "Purchase Invoice", data, "e-Waybill Log", "Integration Request"
+    )
+
+    return data
 
 
 def validate_with_inward_supply(doc):

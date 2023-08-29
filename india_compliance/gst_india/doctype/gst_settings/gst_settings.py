@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import getdate
 
-from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
+from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
 from india_compliance.gst_india.constants.custom_fields import (
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
@@ -16,15 +16,20 @@ from india_compliance.gst_india.page.india_compliance_account import (
     _disable_api_promo,
     post_login,
 )
-from india_compliance.gst_india.utils import can_enable_api, toggle_custom_fields
+from india_compliance.gst_india.utils import can_enable_api, is_api_enabled
+from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
+from india_compliance.gst_india.utils.gstin_info import get_gstin_info
+
+E_INVOICE_START_DATE = "2021-01-01"
 
 
 class GSTSettings(Document):
     def onload(self):
-        if can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed"):
-            return
+        if is_api_enabled(self) and frappe.db.get_global("has_missing_gst_category"):
+            self.set_onload("has_missing_gst_category", True)
 
-        self.set_onload("can_show_promo", True)
+        if not (can_enable_api(self) or frappe.db.get_global("ic_api_promo_dismissed")):
+            self.set_onload("can_show_promo", True)
 
     def validate(self):
         self.update_dependant_fields()
@@ -33,6 +38,7 @@ class GSTSettings(Document):
         self.validate_e_invoice_applicability_date()
         self.validate_credentials()
         self.clear_api_auth_session()
+        self.update_retry_e_invoice_scheduled_job()
 
     def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
@@ -42,21 +48,27 @@ class GSTSettings(Document):
         if self.attach_e_waybill_print:
             self.fetch_e_waybill_data = 1
 
-        if self.enable_e_invoice and self.auto_generate_e_invoice:
-            self.auto_generate_e_waybill = 1
-
     def on_update(self):
         self.update_custom_fields()
-
         # clear session boot cache
-        frappe.cache().delete_keys("bootinfo")
+        frappe.cache.delete_keys("bootinfo")
+
+    def update_retry_e_invoice_scheduled_job(self):
+        if not self.has_value_changed("enable_retry_e_invoice_generation"):
+            return
+
+        frappe.db.set_value(
+            "Scheduled Job Type",
+            "e_invoice.retry_e_invoice_generation",
+            "stopped",
+            not self.enable_retry_e_invoice_generation,
+        )
 
     def validate_gst_accounts(self):
         account_list = []
         company_wise_account_types = {}
 
         for row in self.gst_accounts:
-
             # Validate Duplicate Accounts
             for fieldname in GST_ACCOUNT_FIELDS:
                 account = row.get(fieldname)
@@ -104,19 +116,28 @@ class GSTSettings(Document):
         if not self.enable_api or not self.enable_e_invoice:
             return
 
-        if not self.e_invoice_applicable_from:
+        if (
+            not self.e_invoice_applicable_from
+            and not self.apply_e_invoice_only_for_selected_companies
+        ):
             frappe.throw(
                 _("{0} is mandatory for enabling e-Invoice").format(
                     frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
                 )
             )
 
-        if getdate(self.e_invoice_applicable_from) < getdate("2021-01-01"):
+        if self.e_invoice_applicable_from and (
+            getdate(self.e_invoice_applicable_from) < getdate(E_INVOICE_START_DATE)
+        ):
             frappe.throw(
-                _("{0} cannot be before 2021-01-01").format(
-                    frappe.bold(self.meta.get_label("e_invoice_applicable_from"))
+                _("{0} date cannot be before {1}").format(
+                    frappe.bold(self.meta.get_label("e_invoice_applicable_from")),
+                    E_INVOICE_START_DATE,
                 )
             )
+
+        if self.apply_e_invoice_only_for_selected_companies:
+            self.validate_e_invoice_applicable_companies()
 
     def validate_credentials(self):
         if not self.enable_api:
@@ -162,8 +183,97 @@ class GSTSettings(Document):
                 )
             )
 
+        if (
+            self.sandbox_mode
+            and self.autofill_party_info
+            and self.has_value_changed("sandbox_mode")
+        ):
+            frappe.msgprint(
+                _(
+                    "Autofill Party Information based on GSTIN is not supported in"
+                    " sandbox mode"
+                ),
+            )
+
+    def validate_e_invoice_applicable_companies(self):
+        if not self.e_invoice_applicable_companies:
+            frappe.throw(
+                _(
+                    "You must select at least one company to which e-Invoice is"
+                    " Applicable"
+                )
+            )
+
+        company_list = []
+        for row in self.e_invoice_applicable_companies:
+            if not row.applicable_from:
+                frappe.throw(
+                    _("Row #{0}: {1} is mandatory for enabling e-Invoice").format(
+                        row.idx, frappe.bold(row.meta.get_label("applicable_from"))
+                    )
+                )
+
+            if getdate(row.applicable_from) < getdate(E_INVOICE_START_DATE):
+                frappe.throw(
+                    _("Row #{0}: {1} date cannot be before {2}").format(
+                        row.idx,
+                        frappe.bold(row.meta.get_label("applicable_from")),
+                        E_INVOICE_START_DATE,
+                    )
+                )
+
+            if row.company in company_list:
+                frappe.throw(
+                    _("Row #{0}: {1} {2} appears multiple times").format(
+                        row.idx, row.meta.get_label("company"), frappe.bold(row.company)
+                    )
+                )
+
+            company_list.append(row.company)
+
 
 @frappe.whitelist()
 def disable_api_promo():
     if frappe.has_permission("GST Settings", "write"):
         _disable_api_promo()
+
+
+@frappe.whitelist()
+def enqueue_update_gst_category():
+    frappe.has_permission("GST Settings", "write", throw=True)
+    frappe.enqueue(update_gst_category, queue="long", timeout=6000)
+    frappe.msgprint(
+        _("Updating GST Category in background"),
+        alert=True,
+    )
+
+
+def update_gst_category():
+    if not is_api_enabled():
+        return
+
+    # get all Addresses with linked party
+    address_without_category = frappe.get_all(
+        "Address",
+        fields=("name", "gstin"),
+        filters={
+            "link_doctype": ("in", GST_PARTY_TYPES),
+            "link_name": ("!=", ""),
+            "gst_category": ("in", ("", None)),
+        },
+    )
+
+    # party-wise addresses
+    category_map = {}
+    for address in address_without_category:
+        gstin_info = get_gstin_info(address.gstin)
+        gst_category = gstin_info.gst_category
+
+        category_map.setdefault(gst_category, []).append(address.name)
+
+    for gst_category, addresses in category_map.items():
+        frappe.db.set_value(
+            "Address", {"name": ("in", addresses)}, "gst_category", gst_category
+        )
+
+    frappe.db.set_global("has_missing_gst_category", None)

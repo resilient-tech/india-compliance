@@ -10,7 +10,26 @@
 # }
 #
 # DATETIME_FORMAT = "%d/%m/%Y %I:%M:%S %p"
+selling_address = {
+    "bill_from": "company_address",
+    "bill_to": "customer_address",
+    "ship_from": "dispatch_address_name",
+    "ship_to": "shipping_address_name",
+}
 
+buying_address = {
+    "bill_from": "supplier_address",
+    "bill_to": "billing_address",
+    "ship_from": "supplier_address",
+    "ship_to": "shipping_address",
+}
+
+ADDRESS_FIELDS = {
+    "Sales Invoice": selling_address,
+    "Purchase Invoice": buying_address,
+    "Delivery Note": selling_address,
+}
+PERMITTED_DOCTYPES = list(ADDRESS_FIELDS.keys())
 
 CANCEL_REASON_CODES = {
     "Duplicate": "1",
@@ -24,6 +43,19 @@ UPDATE_VEHICLE_REASON_CODES = {
     "Due to Trans Shipment": "2",
     "First Time": "4",
     "Others": "3",
+}
+
+EXTEND_VALIDITY_REASON_CODES = {
+    "Natural Calamity": 1,
+    "Law and Order Situation": 2,
+    "Transshipment": 4,
+    "Accident": 5,
+    "Others": 99,
+}
+
+SUPPLY_TYPES = {
+    "I": "Inward",
+    "O": "Outward",
 }
 
 SUB_SUPPLY_TYPES = {
@@ -42,7 +74,7 @@ SUB_SUPPLY_TYPES = {
 }
 
 
-TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4}
+TRANSPORT_MODES = {"Road": 1, "Rail": 2, "Air": 3, "Ship": 4, "In Transit": 5}
 TRANSPORT_TYPES = {
     1: "Regular",
     2: "Bill To - Ship To",
@@ -51,50 +83,7 @@ TRANSPORT_TYPES = {
 }
 VEHICLE_TYPES = {"Regular": "R", "Over Dimensional Cargo (ODC)": "O"}
 
-UOMS = {
-    "BAG": "BAGS",
-    "BAL": "BALE",
-    "BDL": "BUNDLES",
-    "BKL": "BUCKLES",
-    "BOU": "BILLION OF UNITS",
-    "BOX": "BOX",
-    "BTL": "BOTTLES",
-    "BUN": "BUNCHES",
-    "CAN": "CANS",
-    "CBM": "CUBIC METERS",
-    "CCM": "CUBIC CENTIMETERS",
-    "CMS": "CENTIMETERS",
-    "CTN": "CARTONS",
-    "DOZ": "DOZENS",
-    "DRM": "DRUMS",
-    "GGK": "GREAT GROSS",
-    "GMS": "GRAMMES",
-    "GRS": "GROSS",
-    "GYD": "GROSS YARDS",
-    "KGS": "KILOGRAMS",
-    "KLR": "KILOLITRE",
-    "KME": "KILOMETRE",
-    "LTR": "LITRES",
-    "MLT": "MILILITRE",
-    "MTR": "METERS",
-    "MTS": "METRIC TON",
-    "NOS": "NUMBERS",
-    "OTH": "OTHERS",
-    "PAC": "PACKS",
-    "PCS": "PIECES",
-    "PRS": "PAIRS",
-    "QTL": "QUINTAL",
-    "ROL": "ROLLS",
-    "SET": "SETS",
-    "SQF": "SQUARE FEET",
-    "SQM": "SQUARE METERS",
-    "SQY": "SQUARE YARDS",
-    "TBS": "TABLETS",
-    "TGM": "TEN GROSS",
-    "THD": "THOUSANDS",
-    "TON": "TONNES",
-    "TUB": "TUBES",
-    "UGS": "US GALLONS",
-    "UNT": "UNITS",
-    "YDS": "YARDS",
-}
+TRANSIT_TYPES = {"Road": "R", "Warehouse": "W", "Others": "O"}
+CONSIGNMENT_STATUS = {"In Movement": "M", "In Transit": "T"}
+
+ITEM_LIMIT = 250

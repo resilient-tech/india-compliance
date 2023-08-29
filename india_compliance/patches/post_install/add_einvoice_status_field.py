@@ -1,41 +1,20 @@
-import json
-
 import frappe
+from frappe.query_builder.functions import Coalesce
 from frappe.utils import sbool
 
 
 def execute():
-    if not frappe.db.has_column("Sales Invoice", "signed_einvoice"):
+    # Sales Invoice should have field signed_einvoice
+    # and E Invoice Settings should be enabled
+
+    if not frappe.db.has_column("Sales Invoice", "signed_einvoice") or not sbool(
+        frappe.db.get_value(
+            "E Invoice Settings", "E Invoice Settings", "enable", ignore=True
+        )
+    ):
+        set_not_applicable_status()
         return
 
-    if not sbool(
-        frappe.db.get_value("E Invoice Settings", None, "enable", ignore=True)
-    ):
-        set_e_invoice_statuses()
-
-    # set correct acknowledgement in e-invoices
-    for name, signed_einvoice in frappe.get_all(
-        "Sales Invoice",
-        {
-            "ack_no": ("is", "not set"),
-            "irn": ("is", "set"),
-            "signed_einvoice": ("is", "set"),
-        },
-        ("name", "signed_einvoice"),
-    ):
-        signed_einvoice = json.loads(signed_einvoice)
-        frappe.db.set_value(
-            "Sales Invoice",
-            name,
-            {
-                "ack_no": signed_einvoice.get("AckNo"),
-                "ack_date": signed_einvoice.get("AckDt"),
-            },
-            update_modified=False,
-        )
-
-
-def set_e_invoice_statuses():
     frappe.db.sql(
         """
         UPDATE `tabSales Invoice` SET einvoice_status = 'Pending'
@@ -61,3 +40,15 @@ def set_e_invoice_statuses():
         """UPDATE `tabSales Invoice` SET einvoice_status = 'Cancelled'
         WHERE IFNULL(einvoice_status, '') = '' AND IFNULL(irn_cancelled, 0) = 1"""
     )
+
+    set_not_applicable_status()
+
+
+def set_not_applicable_status():
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+
+    frappe.qb.update(sales_invoice).set("einvoice_status", "Not Applicable").where(
+        (sales_invoice.docstatus != 0)
+        & (Coalesce(sales_invoice.einvoice_status, "") == "")
+        & (Coalesce(sales_invoice.irn, "") == "")
+    ).run()

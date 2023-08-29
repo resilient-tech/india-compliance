@@ -2,26 +2,39 @@ import os
 
 import frappe
 from frappe import _
-from frappe.utils import add_to_date, get_datetime, get_fullname, random_string
+from frappe.desk.form.load import get_docinfo
+from frappe.utils import (
+    add_to_date,
+    format_date,
+    get_datetime,
+    get_fullname,
+    get_link_to_form,
+    random_string,
+)
 from frappe.utils.file_manager import save_file
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
+from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.constants.e_waybill import (
+    ADDRESS_FIELDS,
     CANCEL_REASON_CODES,
+    CONSIGNMENT_STATUS,
+    EXTEND_VALIDITY_REASON_CODES,
+    ITEM_LIMIT,
+    PERMITTED_DOCTYPES,
     SUB_SUPPLY_TYPES,
+    TRANSIT_TYPES,
     UPDATE_VEHICLE_REASON_CODES,
 )
 from india_compliance.gst_india.utils import (
+    is_foreign_doc,
     load_doc,
     parse_datetime,
     send_updated_doc,
     update_onload,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
-
-PERMITTED_DOCTYPES = {"Sales Invoice", "Delivery Note"}
-
 
 #######################################################################################
 ### Manual JSON Generation for e-Waybill ##############################################
@@ -55,6 +68,64 @@ def generate_e_waybill_json(doctype: str, docnames, values=None):
 
 
 @frappe.whitelist()
+def bulk_update_transporter_in_docs(doctype, docnames, values):
+    frappe.has_permission(doctype, "submit", throw=True)
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    values = frappe.parse_json(values)
+
+    _bulk_update_transporter_in_docs(doctype, docnames, values)
+
+
+@frappe.whitelist()
+def enqueue_bulk_e_waybill_generation(doctype, docnames):
+    """
+    Enqueue bulk generation of e-Waybill for the given documents.
+    """
+
+    frappe.has_permission(doctype, "submit", throw=True)
+
+    from india_compliance.gst_india.utils import is_api_enabled
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not is_api_enabled(gst_settings) or not gst_settings.enable_e_waybill:
+        frappe.throw(_("Please enable e-Waybill in GST Settings first."))
+
+    docnames = frappe.parse_json(docnames) if docnames.startswith("[") else [docnames]
+    rq_job = frappe.enqueue(
+        "india_compliance.gst_india.utils.e_waybill.generate_e_waybills",
+        queue="long",
+        timeout=len(docnames) * 240,  # 4 mins per e-Waybill
+        doctype=doctype,
+        docnames=docnames,
+    )
+
+    return rq_job.id
+
+
+def generate_e_waybills(doctype, docnames):
+    """
+    Bulk generate e-Waybill for the given documents.
+    """
+
+    for docname in docnames:
+        try:
+            doc = load_doc(doctype, docname, "submit")
+            _generate_e_waybill(doc)
+        except Exception:
+            frappe.log_error(
+                title=_("e-Waybill generation failed for {0} {1}").format(
+                    doctype, docname
+                ),
+                message=frappe.get_traceback(),
+            )
+
+        finally:
+            # each e-Waybill needs to be committed individually
+            frappe.db.commit()  # nosemgrep
+
+
+@frappe.whitelist()
 def generate_e_waybill(*, doctype, docname, values=None):
     doc = load_doc(doctype, docname, "submit")
     if values:
@@ -65,7 +136,11 @@ def generate_e_waybill(*, doctype, docname, values=None):
 
 def _generate_e_waybill(doc, throw=True):
     try:
-        data = EWaybillData(doc).get_data()
+        # Via e-Invoice API if not Return or Debit Note
+        # Handles following error when generating e-Waybill using IRN:
+        # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
+        with_irn = doc.get("irn") and not (doc.is_return or doc.get("is_debit_note"))
+        data = EWaybillData(doc).get_data(with_irn=with_irn)
 
     except frappe.ValidationError as e:
         if throw:
@@ -82,9 +157,23 @@ def _generate_e_waybill(doc, throw=True):
         )
         return
 
-    api = EWaybillAPI if not doc.get("irn") else EInvoiceAPI
-    result = api(doc.company_gstin).generate_e_waybill(data)
-    log_and_process_e_waybill_generation(doc, result)
+    api = EWaybillAPI if not with_irn else EInvoiceAPI
+    result = api(doc).generate_e_waybill(data)
+
+    if result.error_code == "604":
+        error_message = (
+            result.message
+            + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
+        )
+        frappe.throw(error_message, title=_("API Request Failed"))
+
+    if result.error_code == "4002":
+        result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+
+    log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
+
+    if not frappe.request:
+        return
 
     frappe.msgprint(
         _("e-Waybill generated successfully")
@@ -93,40 +182,45 @@ def _generate_e_waybill(doc, throw=True):
         indicator="green",
         alert=True,
     )
-
     return send_updated_doc(doc)
 
 
-def log_and_process_e_waybill_generation(doc, result):
+def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
     """Separate function, since called in backend from e-invoice utils"""
-
-    irn = doc.get("irn")
-    e_waybill_number = str(result["ewayBillNo" if not irn else "EwbNo"])
+    e_waybill_number = str(result["ewayBillNo" if not with_irn else "EwbNo"])
 
     data = {"ewaybill": e_waybill_number}
+    status = result.get("e_waybill_status") or "Generated"
+
+    if doc.doctype == "Sales Invoice":
+        data["e_waybill_status"] = status
+
     if distance := result.get("distance"):
         data["distance"] = distance
 
     doc.db_set(data)
 
+    sandbox_mode, fetch = frappe.get_cached_value(
+        "GST Settings", "GST Settings", ["sandbox_mode", "fetch_e_waybill_data"]
+    )
     log_and_process_e_waybill(
         doc,
         {
             "e_waybill_number": e_waybill_number,
             "created_on": parse_datetime(
-                result.get("ewayBillDate" if not irn else "EwbDt"),
-                day_first=not irn,
+                result.get("ewayBillDate" if not with_irn else "EwbDt"),
+                day_first=not with_irn,
             ),
             "valid_upto": parse_datetime(
-                result.get("validUpto" if not irn else "EwbValidTill"),
-                day_first=not irn,
+                result.get("validUpto" if not with_irn else "EwbValidTill"),
+                day_first=not with_irn,
             ),
             "reference_doctype": doc.doctype,
             "reference_name": doc.name,
+            "is_generated_in_sandbox_mode": sandbox_mode,
+            "is_cancelled": 0,
         },
-        fetch=frappe.get_cached_value(
-            "GST Settings", "GST Settings", "fetch_e_waybill_data"
-        ),
+        fetch=fetch and status != "Manually Generated",
     )
 
 
@@ -142,16 +236,31 @@ def cancel_e_waybill(*, doctype, docname, values):
 def _cancel_e_waybill(doc, values):
     """Separate function, since called in backend from e-invoice utils"""
 
-    data = EWaybillData(doc).get_e_waybill_cancel_data(values)
+    e_waybill_data = EWaybillData(doc)
     api = (
         EInvoiceAPI
-        # Use e-invoice endpoint only for sandbox environment
-        if doc.get("irn") and frappe.conf.ic_api_sandbox_mode
+        # Use EInvoiceAPI only for sandbox environment
+        # if e-Waybill has been created using IRN
+        if (
+            e_waybill_data.sandbox_mode
+            and doc.get("irn")
+            and not (doc.is_return or doc.get("is_debit_note"))
+        )
         else EWaybillAPI
     )
 
-    result = api(doc.company_gstin).cancel_e_waybill(data)
+    result = api(doc).cancel_e_waybill(e_waybill_data.get_data_for_cancellation(values))
 
+    log_and_process_e_waybill_cancellation(doc, values, result)
+
+    frappe.msgprint(
+        _("e-Waybill cancelled successfully"),
+        indicator="green",
+        alert=True,
+    )
+
+
+def log_and_process_e_waybill_cancellation(doc, values, result):
     log_and_process_e_waybill(
         doc,
         {
@@ -159,17 +268,20 @@ def _cancel_e_waybill(doc, values):
             "is_cancelled": 1,
             "cancel_reason_code": CANCEL_REASON_CODES[values.reason],
             "cancel_remark": values.remark if values.remark else values.reason,
-            "cancelled_on": parse_datetime(result.cancelDate, day_first=True),
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled e-Waybill
+                if result.error_code == "312"
+                else parse_datetime(result.cancelDate, day_first=True)
+            ),
         },
     )
 
-    doc.db_set("ewaybill", "")
+    data = {"ewaybill": ""}
 
-    frappe.msgprint(
-        _("e-Waybill cancelled successfully"),
-        indicator="green",
-        alert=True,
-    )
+    if doc.doctype == "Sales Invoice":
+        data["e_waybill_status"] = result.get("e_waybill_status") or "Cancelled"
+
+    doc.db_set(data)
 
 
 @frappe.whitelist()
@@ -187,7 +299,7 @@ def update_vehicle_info(*, doctype, docname, values):
     )
 
     data = EWaybillData(doc).get_update_vehicle_data(values)
-    result = EWaybillAPI(doc.company_gstin).update_vehicle_info(data)
+    result = EWaybillAPI(doc).update_vehicle_info(data)
 
     frappe.msgprint(
         _("Vehicle Info updated successfully"),
@@ -225,12 +337,71 @@ def update_vehicle_info(*, doctype, docname, values):
     return send_updated_doc(doc)
 
 
+def _bulk_update_transporter_in_docs(doctype, docnames, values):
+    """
+    Bulk update transporter details in the given documents.
+    """
+
+    docs_to_update = frappe.get_all(
+        doctype,
+        filters={
+            "name": ("in", docnames),
+            "docstatus": ("!=", 2),
+            "ewaybill": ("is", "not set"),
+        },
+        pluck="name",
+    )
+
+    if not docs_to_update:
+        docs_to_update = []
+
+    # Transporter Name can be different from Transporter
+    transporter_name = (
+        frappe.db.get_value("Supplier", values.transporter, "supplier_name")
+        if values.transporter
+        else None
+    )
+
+    frappe.db.set_value(
+        doctype,
+        {"name": ("in", docs_to_update)},
+        {
+            "transporter": values.transporter,
+            "transporter_name": transporter_name,
+            "gst_transporter_id": values.gst_transporter_id,
+            "vehicle_no": values.vehicle_no,
+            "lr_no": values.lr_no,
+            "lr_date": values.lr_date,
+            "mode_of_transport": values.mode_of_transport,
+            "gst_vehicle_type": values.gst_vehicle_type,
+            "distance": values.distance,
+        },
+    )
+
+    if docs_with_ewaybill := set(docnames).difference(set(docs_to_update)):
+        doc_links = [get_link_to_form(doctype, doc) for doc in docs_with_ewaybill]
+        frappe.msgprint(
+            _(
+                "Transporter details cannot be updated where e-Waybill is already generated:<br><br> {0}"
+            ).format("<br>".join(doc_links)),
+            title=_("Cannot Update"),
+            indicator="orange",
+        )
+
+    if docs_to_update:
+        frappe.msgprint(
+            _("Transporter details updated successfully"),
+            indicator="green",
+            alert=True,
+        )
+
+
 @frappe.whitelist()
 def update_transporter(*, doctype, docname, values):
     doc = load_doc(doctype, docname, "submit")
     values = frappe.parse_json(values)
     data = EWaybillData(doc).get_update_transporter_data(values)
-    EWaybillAPI(doc.company_gstin).update_transporter(data)
+    EWaybillAPI(doc).update_transporter(data)
 
     frappe.msgprint(
         _("Transporter Info updated successfully"),
@@ -274,8 +445,62 @@ def update_transporter(*, doctype, docname, values):
     return send_updated_doc(doc)
 
 
+@frappe.whitelist()
+def extend_validity(*, doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
+    values = frappe.parse_json(values)
+
+    doc.db_set(
+        {
+            "vehicle_no": values.vehicle_no.replace(" ", ""),
+            "lr_no": values.lr_no,
+            "mode_of_transport": values.mode_of_transport,
+        }
+    )
+    data = EWaybillData(doc).get_extend_validity_data(values)
+    result = EWaybillAPI(doc).extend_validity(data)
+
+    doc.db_set("distance", values.remaining_distance)
+    extended_validity_date = parse_datetime(result.validUpto, day_first=True)
+    values_in_comment = {
+        "Transit Type": values.transit_type,
+        "Vehicle No": values.vehicle_no,
+        "LR No": values.lr_no,
+        "Mode of Transport": values.mode_of_transport,
+        "GST Vehicle Type": values.gst_vehicle_type,
+        "Valid Upto": extended_validity_date,
+        "Remaining Distance": values.remaining_distance,
+        "Current Place": values.current_place,
+        "Current Pincode": values.current_pincode,
+        "Reason": values.reason,
+        "Remark": values.remark,
+    }
+
+    comment = _(
+        "e-Waybill has been extended by {user}.<br><br> New details are: <br>"
+    ).format(user=frappe.bold(get_fullname()))
+
+    for key, value in values_in_comment.items():
+        if value:
+            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+
+    log_and_process_e_waybill(
+        doc,
+        {
+            "name": doc.ewaybill,
+            "updated_on": parse_datetime(result.updatedDate, day_first=True),
+            "valid_upto": extended_validity_date,
+            "is_latest_data": 0,
+        },
+        fetch=values.update_e_waybill_data,
+        comment=comment,
+    )
+
+    return send_updated_doc(doc)
+
+
 #######################################################################################
-### e-Waybill Print and Attach Functions ##############################################
+### e-Waybill Fetch, Print and Attach Functions ##############################################
 #######################################################################################
 
 
@@ -297,17 +522,79 @@ def fetch_e_waybill_data(*, doctype, docname, attach=False):
         alert=True,
     )
 
-    return send_updated_doc(doc, set_docinfo=True)
-
 
 def _fetch_e_waybill_data(doc, log):
-    result = EWaybillAPI(doc.company_gstin).get_e_waybill(log.e_waybill_number)
+    result = EWaybillAPI(doc).get_e_waybill(log.e_waybill_number)
     log.db_set(
         {
             "data": frappe.as_json(result, indent=4),
             "is_latest_data": 1,
         }
     )
+
+
+@frappe.whitelist()
+def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
+    doc = load_doc(doctype, docname, "submit")
+
+    response = EWaybillAPI(doc).get_e_waybills_by_date(
+        format_date(e_waybill_date, "dd/mm/yyyy")
+    )
+
+    result = {
+        k: v
+        for e_waybill in response
+        for k, v in e_waybill.items()
+        if e_waybill.get("docNo") == doc.name and e_waybill.get("status") == "ACT"
+    }
+
+    if not result:
+        frappe.msgprint(
+            _(
+                "We couldn't find a matching e-Waybill for the date {0}. Please verify the date and try again."
+            ).format(frappe.bold(format_date(e_waybill_date))),
+            _("Warning"),
+            indicator="yellow",
+        )
+        return
+
+    # To log and process e_waybill generation Without IRN
+    result["ewayBillNo"] = result["ewbNo"]
+    result["ewayBillDate"] = result["ewbDate"]
+
+    log_and_process_e_waybill_generation(doc, result)
+    return send_updated_doc(doc)
+
+
+@frappe.whitelist()
+def mark_e_waybill_as_generated(doctype, docname, values):
+    doc = load_doc(doctype, docname, "submit")
+    values = frappe.parse_json(values)
+    result = {
+        "ewayBillNo": get_validated_e_waybill_number(values.ewaybill),
+        "ewayBillDate": values.e_waybill_date,
+        "validUpto": values.valid_upto,
+        "e_waybill_status": "Manually Generated",
+    }
+
+    log_and_process_e_waybill_generation(doc, result)
+
+    return send_updated_doc(doc)
+
+
+@frappe.whitelist()
+def mark_e_waybill_as_cancelled(doctype, docname, values):
+    doc = load_doc(doctype, docname, "cancel")
+    values = frappe.parse_json(values)
+    result = frappe._dict(
+        {
+            "cancelDate": values.cancelled_on,
+            "e_waybill_status": "Manually Cancelled",
+        }
+    )
+    log_and_process_e_waybill_cancellation(doc, values, result)
+
+    return send_updated_doc(doc)
 
 
 def attach_e_waybill_pdf(doc, log=None):
@@ -320,17 +607,10 @@ def attach_e_waybill_pdf(doc, log=None):
         as_pdf=True,
     )
 
-    pdf_filename = f"e-Waybill_{doc.ewaybill}.pdf"
+    pdf_filename = get_pdf_filename(doc.ewaybill)
     delete_file(doc, pdf_filename)
     save_file(pdf_filename, pdf_content, doc.doctype, doc.name, is_private=1)
-
-    if not frappe.request:
-        # trigger reload_doc if called in background
-        frappe.publish_realtime(
-            "e_waybill_pdf_attached",
-            doctype=doc.doctype,
-            docname=doc.name,
-        )
+    publish_pdf_update(doc)
 
 
 def delete_file(doc, filename):
@@ -347,6 +627,28 @@ def delete_file(doc, filename):
         pluck="name",
     ):
         frappe.delete_doc("File", file, force=True, ignore_permissions=True)
+
+
+def publish_pdf_update(doc, pdf_deleted=False):
+    get_docinfo(doc)
+
+    # if it's a request, frappe.response["docinfo"] will get synced automatically
+    if frappe.request:
+        return
+
+    frappe.publish_realtime(
+        "e_waybill_pdf_update",
+        {
+            "docinfo": frappe.response["docinfo"],
+            "pdf_deleted": pdf_deleted,
+        },
+        doctype=doc.doctype,
+        docname=doc.name,
+    )
+
+
+def get_pdf_filename(e_waybill_number):
+    return f"e-Waybill_{e_waybill_number}.pdf"
 
 
 #######################################################################################
@@ -385,7 +687,11 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
     if comment:
         log.add_comment(text=comment)
 
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep # before delete
+
+    if log.is_cancelled:
+        delete_file(doc, get_pdf_filename(log.name))
+        publish_pdf_update(doc, pdf_deleted=True)
 
     ### Fetch Data
 
@@ -393,7 +699,7 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         return
 
     _fetch_e_waybill_data(doc, log)
-    frappe.db.commit()
+    frappe.db.commit()  # nosemgrep # after fetch
 
     ### Attach PDF
 
@@ -426,10 +732,34 @@ def update_transaction(doc, values):
         "gst_vehicle_type": values.gst_vehicle_type,
     }
 
+    if doc.doctype == "Sales Invoice":
+        data["port_address"] = values.port_address
+
     doc.db_set(data)
 
     if doc.doctype == "Delivery Note":
         doc._sub_supply_type = SUB_SUPPLY_TYPES[values.sub_supply_type]
+
+
+def get_e_waybill_info(doc):
+    return frappe.db.get_value(
+        "e-Waybill Log",
+        doc.ewaybill,
+        ("created_on", "valid_upto", "is_generated_in_sandbox_mode"),
+        as_dict=True,
+    )
+
+
+def get_validated_e_waybill_number(ewaybill: str):
+    ewaybill = ewaybill.replace(" ", "")
+
+    if len(ewaybill) != 12:
+        frappe.throw(_("e-Waybill Number should be 12 characters long"))
+
+    if not ewaybill.isdigit():
+        frappe.throw(_("e-Waybill Number should be numeric"))
+
+    return ewaybill
 
 
 #######################################################################################
@@ -445,33 +775,40 @@ class EWaybillData(GSTTransactionData):
         self.validate_settings()
         self.validate_doctype_for_e_waybill()
 
-    def get_data(self):
+    def get_data(self, *, with_irn=False):
         self.validate_transaction()
-        self.get_transporter_details()
 
-        if irn := self.doc.get("irn"):
-            # Via e-Invoice
-            return self.sanitize_data(
-                {
-                    "Irn": irn,
-                    "Distance": self.transaction_details.distance,
-                    "TransMode": str(self.transaction_details.mode_of_transport),
-                    "TransId": self.transaction_details.gst_transporter_id,
-                    "TransName": self.transaction_details.transporter_name,
-                    "TransDocDt": self.transaction_details.lr_date,
-                    "TransDocNo": self.transaction_details.lr_no,
-                    "VehNo": self.transaction_details.vehicle_no,
-                    "VehType": self.transaction_details.vehicle_type,
-                }
-            )
+        if with_irn:
+            return self.get_data_with_irn()
 
-        self.get_transaction_details()
-        self.get_item_list()
-        self.get_party_address_details()
+        self.set_transaction_details()
+        self.set_item_list()
+        self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance_for_same_pincode()
 
         return self.get_transaction_data()
 
-    def get_e_waybill_cancel_data(self, values):
+    def get_data_with_irn(self):
+        self.set_transporter_details()
+        self.set_party_address_details()
+        self.validate_distance_for_same_pincode()
+
+        return self.sanitize_data(
+            {
+                "Irn": self.doc.irn,
+                "Distance": self.transaction_details.distance,
+                "TransMode": str(self.transaction_details.mode_of_transport),
+                "TransId": self.transaction_details.gst_transporter_id,
+                "TransName": self.transaction_details.transporter_name,
+                "TransDocDt": self.transaction_details.lr_date,
+                "TransDocNo": self.transaction_details.lr_no,
+                "VehNo": self.transaction_details.vehicle_no,
+                "VehType": self.transaction_details.vehicle_type,
+            }
+        )
+
+    def get_data_for_cancellation(self, values):
         self.validate_if_e_waybill_is_set()
         self.validate_if_ewaybill_can_be_cancelled()
 
@@ -485,22 +822,24 @@ class EWaybillData(GSTTransactionData):
         self.validate_if_e_waybill_is_set()
         self.check_e_waybill_validity()
         self.validate_mode_of_transport()
-        self.get_transporter_details()
+        self.set_transporter_details()
 
-        dispatch_address_name = (
-            self.doc.dispatch_address_name
-            if self.doc.dispatch_address_name
-            else self.doc.company_address
+        addresses = ADDRESS_FIELDS.get(self.doc.doctype, {})
+
+        ship_from_address_name = (
+            addresses.get("ship_from")
+            if self.doc.get(addresses.get("ship_from"))
+            else addresses.get("bill_from")
         )
-        dispatch_address = self.get_address_details(dispatch_address_name)
+        ship_from = self.get_address_details(self.doc.get(ship_from_address_name))
 
         return {
             "ewbNo": self.doc.ewaybill,
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": dispatch_address.city,
-            "fromState": dispatch_address.state_number,
+            "fromPlace": ship_from.city,
+            "fromState": ship_from.state_number,
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
-            "reasonRem": self.sanitize_value(values.remark, 3),
+            "reasonRem": self.sanitize_value(values.remark, regex=3),
             "transDocNo": self.transaction_details.lr_no,
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
@@ -516,15 +855,62 @@ class EWaybillData(GSTTransactionData):
             "transporterId": values.gst_transporter_id,
         }
 
+    def get_extend_validity_data(self, values):
+        self.validate_if_e_waybill_is_set()
+        self.validate_if_e_waybill_can_be_extend()
+        self.validate_mode_of_transport()
+        self.validate_transit_type(values)
+        self.validate_remaining_distance(values)
+        self.set_transporter_details()
+
+        extension_details = {
+            "ewbNo": int(self.doc.ewaybill),
+            "vehicleNo": self.transaction_details.vehicle_no,
+            "fromPlace": self.sanitize_value(
+                values.current_place, regex=3, max_length=50
+            ),
+            "fromState": STATE_NUMBERS[values.current_state],
+            "fromPincode": int(values.current_pincode),
+            "remainingDistance": int(values.remaining_distance),
+            "transDocNo": self.transaction_details.lr_no,
+            "transDocDate": self.transaction_details.lr_date,
+            "transMode": self.transaction_details.mode_of_transport,
+            "consignmentStatus": CONSIGNMENT_STATUS[values.consignment_status],
+            "transitType": (
+                TRANSIT_TYPES[values.transit_type] if values.transit_type else ""
+            ),
+            "extnRsnCode": EXTEND_VALIDITY_REASON_CODES[values.reason],
+            "extnRemarks": self.sanitize_value(
+                values.remark if values.remark else values.reason, regex=3
+            ),
+        }
+
+        if values.consignment_status == "In Transit":
+            extension_details.update(
+                {
+                    "addressLine1": self.sanitize_value(values.address_line1, regex=3),
+                    "addressLine2": self.sanitize_value(values.address_line2, regex=3),
+                    "addressLine3": self.sanitize_value(values.address_line3, regex=3),
+                    "transMode": "In Transit",
+                }
+            )
+
+        return extension_details
+
     def validate_transaction(self):
         # TODO: Add Support for Delivery Note
 
         super().validate_transaction()
 
         if self.doc.ewaybill:
-            frappe.throw(_("e-Waybill already generated for this document"))
+            frappe.throw(
+                _("e-Waybill already generated for {0} {1}").format(
+                    _(self.doc.doctype), frappe.bold(self.doc.name)
+                )
+            )
 
         self.validate_applicability()
+        self.validate_bill_no_for_purchase()
 
     def validate_settings(self):
         if not self.settings.enable_e_waybill:
@@ -535,18 +921,16 @@ class EWaybillData(GSTTransactionData):
         Validates:
         - Required fields
         - Atleast one item with HSN for goods is required
-        - Overseas Returns are not allowed
         - Basic transporter details must be present
-        - Grand Total Amount must be greater than Criteria
-        - Max 250 Items
+        - Transaction does not have any non-GST items
+        - Sales Invoice with same company and billing gstin
         """
 
-        for fieldname in ("company_address", "customer_address"):
-            if not self.doc.get(fieldname):
+        address = ADDRESS_FIELDS.get(self.doc.doctype)
+        for key in ("bill_from", "bill_to"):
+            if not self.doc.get(address[key]):
                 frappe.throw(
-                    _("{0} is required to generate e-Waybill").format(
-                        _(self.doc.meta.get_label(fieldname))
-                    ),
+                    _("{0} is required to generate e-Waybill").format(_(address[key])),
                     exc=frappe.MandatoryError,
                 )
 
@@ -564,34 +948,40 @@ class EWaybillData(GSTTransactionData):
                 title=_("Invalid Data"),
             )
 
-        # TODO: check if this validation is required
-        # if self.doc.is_return and self.doc.gst_category == "Overseas":
-        #     frappe.throw(
-        #         msg=_("Return/Credit Note is not supported for Overseas e-Waybill"),
-        #         title=_("Incorrect Usage"),
-        #     )
-
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
 
-        # TODO: Add support for HSN Summary
-        item_limit = 1000 if self.doc.get("irn") else 250
-        if len(self.doc.items) > item_limit:
+        self.validate_non_gst_items()
+
+        if (
+            self.doc.doctype == "Sales Invoice"
+            and self.doc.company_gstin == self.doc.billing_address_gstin
+        ):
             frappe.throw(
-                _("e-Waybill cannot be generated for more than {0} items").format(
-                    item_limit
+                _(
+                    "e-Waybill cannot be generated because billing GSTIN is same as"
+                    " company GSTIN"
                 ),
                 title=_("Invalid Data"),
             )
 
-        self.validate_non_gst_items()
+    def validate_bill_no_for_purchase(self):
+        if (
+            self.doc.doctype == "Purchase Invoice"
+            and not self.doc.is_return
+            and not self.doc.bill_no
+            and self.doc.gst_category != "Unregistered"
+        ):
+            frappe.throw(
+                _("Bill No is mandatory to generate e-Waybill for Purchase Invoice"),
+                title=_("Invalid Data"),
+            )
 
     def validate_doctype_for_e_waybill(self):
         if self.doc.doctype not in PERMITTED_DOCTYPES:
             frappe.throw(
-                _(
-                    "Only Sales Invoice and Delivery Note are supported for e-Waybill"
-                    " actions"
+                _("Only {0} are supported for e-Waybill actions").format(
+                    ", ".join(PERMITTED_DOCTYPES)
                 ),
                 title=_("Unsupported DocType"),
             )
@@ -606,6 +996,55 @@ class EWaybillData(GSTTransactionData):
 
         if valid_upto and get_datetime(valid_upto) < get_datetime():
             frappe.throw(_("e-Waybill cannot be modified after its validity is over"))
+
+    def validate_if_e_waybill_can_be_extend(self):
+        # this works because we do run_onload in load_doc above
+        valid_upto = get_datetime(
+            self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto")
+        )
+
+        now = get_datetime()
+        extend_after = add_to_date(valid_upto, hours=-8, as_datetime=True)
+        extend_before = add_to_date(valid_upto, hours=8, as_datetime=True)
+
+        if now < extend_after or now > extend_before:
+            frappe.throw(
+                _(
+                    "e-Waybill can be extended between 8 hours before expiry time and 8 hours after expiry time"
+                )
+            )
+
+        if (
+            self.doc.gst_transporter_id
+            and self.doc.gst_transporter_id == self.doc.company_gstin
+        ):
+            frappe.throw(
+                _(
+                    "e-Waybill cannot be extended by you as GST Transporter ID is assigned. Ask the transporter to extend the e-Waybill."
+                )
+            )
+
+    def validate_remaining_distance(self, values):
+        if not values.remaining_distance:
+            frappe.throw(_("Distance is mandatory to extend the validity of e-Waybill"))
+
+        if self.doc.distance and values.remaining_distance > self.doc.distance:
+            frappe.throw(
+                _(
+                    "Remaining distance should be less than or equal to actual distance mentioned during the generation of e-Waybill"
+                )
+            )
+
+    def validate_transit_type(self, values):
+        if values.consignment_status == "In Movement":
+            values.transit_type = ""
+
+        if values.consignment_status == "In Transit" and not values.transit_type:
+            frappe.throw(
+                _("Transit Type is should be one of {0}").format(
+                    frappe.bold(" ,".join(TRANSIT_TYPES))
+                )
+            )
 
     def validate_if_ewaybill_can_be_cancelled(self):
         cancel_upto = add_to_date(
@@ -622,91 +1061,175 @@ class EWaybillData(GSTTransactionData):
                 _("e-Waybill can be cancelled only within 24 Hours of its generation")
             )
 
+    def get_all_item_details(self):
+        if len(self.doc.items) <= ITEM_LIMIT:
+            return super().get_all_item_details()
+
+        hsn_wise_items = {}
+
+        for item in super().get_all_item_details():
+            hsn_wise_details = hsn_wise_items.setdefault(
+                (item.hsn_code, item.uom, item.tax_rate),
+                frappe._dict(
+                    hsn_code=item.hsn_code,
+                    uom=item.uom,
+                    item_name="",
+                    cgst_rate=item.cgst_rate,
+                    sgst_rate=item.sgst_rate,
+                    igst_rate=item.igst_rate,
+                    cess_rate=item.cess_rate,
+                    cess_non_advol_rate=item.cess_non_advol_rate,
+                    item_no=item.item_no,
+                    qty=0,
+                    taxable_value=0,
+                ),
+            )
+
+            hsn_wise_details.qty += item.qty
+            hsn_wise_details.taxable_value += item.taxable_value
+
+        if len(hsn_wise_items) > ITEM_LIMIT:
+            frappe.throw(
+                _("e-Waybill can only be generated for upto {0} HSN/SAC Codes").format(
+                    ITEM_LIMIT
+                ),
+                title=_("HSN/SAC Limit Exceeded"),
+            )
+
+        return hsn_wise_items.values()
+
     def update_transaction_details(self):
         # first HSN Code for goods
+        doc = self.doc
         main_hsn_code = next(
             row.gst_hsn_code
-            for row in self.doc.items
+            for row in doc.items
             if not row.gst_hsn_code.startswith("99")
         )
 
         self.transaction_details.update(
-            {
+            sub_supply_desc="",
+            main_hsn_code=main_hsn_code,
+        )
+
+        default_supply_types = {
+            # Key: (doctype, is_return)
+            ("Sales Invoice", 0): {
                 "supply_type": "O",
-                "sub_supply_type": 1,
+                "sub_supply_type": 1,  # Supply
                 "document_type": "INV",
-                "main_hsn_code": main_hsn_code,
-            }
+            },
+            ("Sales Invoice", 1): {
+                "supply_type": "I",
+                "sub_supply_type": 7,  # Sales Return
+                "document_type": "CHL",
+            },
+            ("Delivery Note", 0): {
+                "supply_type": "O",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Delivery Note", 1): {
+                "supply_type": "I",
+                "sub_supply_type": doc.get("_sub_supply_type", ""),
+                "document_type": "CHL",
+            },
+            ("Purchase Invoice", 0): {
+                "supply_type": "I",
+                "sub_supply_type": 1,  # Supply
+                "document_type": "INV",
+            },
+            ("Purchase Invoice", 1): {
+                "supply_type": "O",
+                "sub_supply_type": 8,  # Others
+                "document_type": "OTH",
+                "sub_supply_desc": "Purchase Return",
+            },
+        }
+
+        self.transaction_details.update(
+            default_supply_types.get((doc.doctype, doc.is_return), {})
+        )
+
+        if is_foreign_doc(self.doc):
+            self.transaction_details.update(sub_supply_type=3)  # Export
+            if not doc.is_export_with_gst:
+                self.transaction_details.update(document_type="BIL")
+
+        if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
+            self.transaction_details.name = self.doc.bill_no or self.doc.name
+
+    def set_party_address_details(self):
+        transaction_type = 1
+        address = self.get_address_map()
+
+        address.ship_to = (
+            self.doc.port_address
+            if (is_foreign_doc(self.doc) and self.doc.port_address)
+            else address.ship_to
         )
 
         if self.doc.is_return:
-            self.transaction_details.update(
-                {
-                    "supply_type": "I",
-                    "sub_supply_type": 7,
-                    "document_type": "CHL",
-                }
-            )
+            address.bill_from, address.bill_to = address.bill_to, address.bill_from
+            address.ship_from, address.ship_to = address.ship_to, address.ship_from
 
-        elif self.doc.gst_category == "Overseas":
-            self.transaction_details.sub_supply_type = 3
-
-            if not self.doc.is_export_with_gst:
-                self.transaction_details.document_type = "BIL"
-
-        if self.doc.doctype == "Delivery Note":
-            self.transaction_details.update(
-                {
-                    "sub_supply_type": self.doc._sub_supply_type,
-                    "document_type": "CHL",
-                }
-            )
-
-    def get_party_address_details(self):
-        transaction_type = 1
-        has_different_shipping_address = (
-            self.doc.shipping_address_name
-            and self.doc.customer_address != self.doc.shipping_address_name
+        has_different_to_address = (
+            address.ship_to and address.ship_to != address.bill_to
         )
 
-        has_different_dispatch_address = (
-            self.doc.dispatch_address_name
-            and self.doc.company_address != self.doc.dispatch_address_name
+        has_different_from_address = (
+            address.ship_from and address.ship_from != address.bill_from
         )
 
-        self.billing_address = self.get_address_details(self.doc.customer_address)
-        self.company_address = self.get_address_details(self.doc.company_address)
+        self.bill_to = self.get_address_details(address.bill_to)
+        self.bill_from = self.get_address_details(address.bill_from)
 
         # Defaults
         # billing state is changed for SEZ, hence copy()
-        self.shipping_address = self.billing_address.copy()
-        self.dispatch_address = self.company_address
+        self.ship_to = self.bill_to.copy()
+        self.ship_from = self.bill_from.copy()
 
-        if has_different_shipping_address and has_different_dispatch_address:
+        if has_different_to_address and has_different_from_address:
             transaction_type = 4
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
+            self.ship_to = self.get_address_details(address.ship_to)
+            self.ship_from = self.get_address_details(address.ship_from)
 
-        elif has_different_dispatch_address:
+        elif has_different_from_address:
             transaction_type = 3
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
+            self.ship_from = self.get_address_details(address.ship_from)
 
-        elif has_different_shipping_address:
+        elif has_different_to_address:
             transaction_type = 2
-            self.shipping_address = self.get_address_details(
-                self.doc.shipping_address_name
-            )
+            self.ship_to = self.get_address_details(address.ship_to)
 
         self.transaction_details.transaction_type = transaction_type
 
+        to_party = self.transaction_details.party_name
+        from_party = self.transaction_details.company_name
+
+        if self.doc.doctype == "Purchase Invoice":
+            to_party, from_party = from_party, to_party
+
+        if self.doc.is_return:
+            to_party, from_party = from_party, to_party
+
+        self.bill_to.legal_name = to_party
+        self.bill_from.legal_name = from_party
+
         if self.doc.gst_category == "SEZ":
-            self.billing_address.state_number = 96
+            self.bill_to.state_number = 96
+
+    def get_address_map(self):
+        """
+        Return address names for bill_to, bill_from, ship_to, ship_from
+        """
+        address_fields = ADDRESS_FIELDS.get(self.doc.doctype, {})
+        out = frappe._dict()
+
+        for key, field in address_fields.items():
+            out[key] = self.doc.get(field)
+
+        return out
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
@@ -714,55 +1237,108 @@ class EWaybillData(GSTTransactionData):
 
         return address_details
 
+    def validate_distance_for_same_pincode(self):
+        """
+        1. For same pincode, distance should be between 1 and 100 km.
+
+        2. e-Waybill portal doesn't return distance where from and to pincode is same.
+        Hardcode distance to 1 km to simplify and automate this.
+        Accuracy of distance is immaterial and used only for e-Waybill validity determination.
+        """
+
+        if self.ship_from.pincode != self.ship_to.pincode:
+            return
+
+        if self.transaction_details.distance > 100:
+            frappe.throw(
+                _(
+                    "Distance should be less than 100km when the PIN Code is same"
+                    " for Dispatch and Shipping Address"
+                )
+            )
+
+        if self.transaction_details.distance == 0:
+            self.transaction_details.distance = 1
+
     def get_transaction_data(self):
         if self.sandbox_mode:
+            REGISTERED_GSTIN = "05AAACG2115R1ZN"
+            OTHER_GSTIN = "05AAACG2140A1ZL"
+
             self.transaction_details.update(
                 {
-                    "company_gstin": "05AAACG2115R1ZN",
-                    "name": random_string(6).lstrip("0"),
+                    "company_gstin": REGISTERED_GSTIN,
+                    "name": random_string(6).lstrip("0")
+                    if not frappe.flags.in_test
+                    else "test_invoice_no",
                 }
             )
-            self.company_address.gstin = "05AAACG2115R1ZN"
-            self.billing_address.gstin = (
-                "05AAACG2140A1ZL"
-                if self.transaction_details.sub_supply_type not in (5, 10, 11, 12)
-                else "05AAACG2115R1ZN"
-            )
+
+            # to ensure company_gstin is inline with company address gstin
+            sandbox_gstin = {
+                # (doctype, is_return): (bill_from, bill_to)
+                ("Sales Invoice", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Sales Invoice", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Purchase Invoice", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Purchase Invoice", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
+            }
+
+            if self.bill_from.gstin == self.bill_to.gstin:
+                sandbox_gstin.update(
+                    {
+                        ("Delivery Note", 0): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                        ("Delivery Note", 1): (REGISTERED_GSTIN, REGISTERED_GSTIN),
+                    }
+                )
+
+            def _get_sandbox_gstin(address, key):
+                if address.gstin == "URP":
+                    return address.gstin
+
+                return sandbox_gstin.get((self.doc.doctype, self.doc.is_return))[key]
+
+            self.bill_from.gstin = _get_sandbox_gstin(self.bill_from, 0)
+            self.bill_to.gstin = _get_sandbox_gstin(self.bill_to, 1)
 
         data = {
             "userGstin": self.transaction_details.company_gstin,
             "supplyType": self.transaction_details.supply_type,
             "subSupplyType": self.transaction_details.sub_supply_type,
-            "subSupplyDesc": "",
+            "subSupplyDesc": self.transaction_details.sub_supply_desc,
             "docType": self.transaction_details.document_type,
             "docNo": self.transaction_details.name,
             "docDate": self.transaction_details.date,
             "transactionType": self.transaction_details.transaction_type,
-            "fromTrdName": self.company_address.address_title,
-            "fromGstin": self.company_address.gstin,
-            "fromAddr1": self.dispatch_address.address_line1,
-            "fromAddr2": self.dispatch_address.address_line2,
-            "fromPlace": self.dispatch_address.city,
-            "fromPincode": self.dispatch_address.pincode,
-            "fromStateCode": self.company_address.state_number,
-            "actFromStateCode": self.dispatch_address.state_number,
-            "toTrdName": self.billing_address.address_title,
-            "toGstin": self.billing_address.gstin,
-            "toAddr1": self.shipping_address.address_line1,
-            "toAddr2": self.shipping_address.address_line2,
-            "toPlace": self.shipping_address.city,
-            "toPincode": self.shipping_address.pincode,
-            "toStateCode": self.billing_address.state_number,
-            "actToStateCode": self.shipping_address.state_number,
-            "totalValue": self.transaction_details.base_total,
+            "fromTrdName": self.bill_from.legal_name,
+            "fromGstin": self.bill_from.gstin,
+            "fromAddr1": self.ship_from.address_line1,
+            "fromAddr2": self.ship_from.address_line2,
+            "fromPlace": self.ship_from.city,
+            "fromPincode": self.ship_from.pincode,
+            "fromStateCode": self.bill_from.state_number,
+            "actFromStateCode": self.ship_from.state_number,
+            "toTrdName": self.bill_to.legal_name,
+            "toGstin": self.bill_to.gstin,
+            "toAddr1": self.ship_to.address_line1,
+            "toAddr2": self.ship_to.address_line2,
+            "toPlace": self.ship_to.city,
+            "toPincode": self.ship_to.pincode,
+            "toStateCode": self.bill_to.state_number,
+            "actToStateCode": self.ship_to.state_number,
+            "totalValue": self.transaction_details.total,
             "cgstValue": self.transaction_details.total_cgst_amount,
             "sgstValue": self.transaction_details.total_sgst_amount,
             "igstValue": self.transaction_details.total_igst_amount,
             "cessValue": self.transaction_details.total_cess_amount,
             "TotNonAdvolVal": self.transaction_details.total_cess_non_advol_amount,
-            "OthValue": self.transaction_details.rounding_adjustment
-            + self.transaction_details.other_charges,
-            "totInvValue": self.transaction_details.base_grand_total,
+            "OthValue": (
+                self.transaction_details.rounding_adjustment
+                + self.transaction_details.other_charges
+                - self.transaction_details.discount_amount
+            ),
+            "totInvValue": self.transaction_details.grand_total,
             "transMode": self.transaction_details.mode_of_transport,
             "transDistance": self.transaction_details.distance,
             "transporterName": self.transaction_details.transporter_name,
@@ -786,10 +1362,9 @@ class EWaybillData(GSTTransactionData):
             ).items():
                 data[value] = data.pop(key)
 
-        else:
-            self.sanitize_data(data)
+            return data
 
-        return data
+        return self.sanitize_data(data)
 
     def get_item_data(self, item_details):
         return {

@@ -49,23 +49,7 @@ export default {
   methods: {
     toggleAuthView() {
       this.isAccountRegistered = !this.isAccountRegistered;
-    },
-
-    async checkAccountRegisted(value) {
-      this.isAccountRegistered = await _isEmailRegistered(value);
-    },
-  },
-
-  beforeRouteEnter(to, from, next) {
-    next((vm) => {
-      if (vm.$store.getters.isLoggedIn)
-        return next({ name: "home", replace: true });
-
-      if (vm.$store.getters.hasSession)
-        return next({ name: "mailSent", replace: true });
-
-      next();
-    });
+    }
   },
 };
 </script>
