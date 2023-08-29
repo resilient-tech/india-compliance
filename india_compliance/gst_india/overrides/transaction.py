@@ -129,6 +129,8 @@ def is_indian_registered_company(doc):
 
 def validate_mandatory_fields(doc, fields, error_message=None):
     ignore_mandatory = not doc.docstatus and doc.flags.ignore_mandatory
+    if doc.doctype in SALES_DOCTYPES and doc.gst_category == "Overseas":
+        fields = (field for field in fields if field != "company_gstin")
 
     if isinstance(fields, str):
         fields = (fields,)
