@@ -54,6 +54,9 @@ def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
     """
     Permission check not required as GSTIN details are public where GSTIN is known.
     """
+    if not gstin:
+        return
+
     if not is_status_refresh_required(gstin, transaction_date):
         if not frappe.db.exists("GSTIN", gstin):
             return
@@ -67,7 +70,7 @@ def get_updated_gstin(gstin, transaction_date=None, is_request_from_ui=0):
     if is_request_from_ui:
         return create_or_update_gstin_status(gstin)
 
-    return frappe.enqueue(
+    frappe.enqueue(
         create_or_update_gstin_status,
         enqueue_after_commit=True,
         queue="short",
