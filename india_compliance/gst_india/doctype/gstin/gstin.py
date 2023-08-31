@@ -70,7 +70,7 @@ def get_updated_gstin(gstin, transaction_date=None, is_request_from_ui=0):
     if is_request_from_ui:
         return create_or_update_gstin_status(gstin)
 
-    return frappe.enqueue(
+    frappe.enqueue(
         create_or_update_gstin_status,
         enqueue_after_commit=True,
         queue="short",
