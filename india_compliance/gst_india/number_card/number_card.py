@@ -11,24 +11,8 @@ def get_pending_e_invoices_count(filters=None):
     if not frappe.has_permission("Sales Invoice"):
         return 0
 
-    if not filters:
-        filters = {}
-
-    if isinstance(filters, str):
-        filters = frappe.parse_json(filters)
-
-    last_quarter_date = add_months(getdate(), -3)
-
-    default_filters = frappe._dict(
-        {
-            "exceptions": "e-Invoice Not Generated",
-            "from_date": last_quarter_date,
-            "to_date": getdate(),
-        }
-    )
-
-    if filters.get("company"):
-        default_filters["company"] = filters.get("company")
+    default_filters = get_default_filters(filters)
+    default_filters["exceptions"] = "e-Invoice Not Generated"
 
     return get_e_invoice_summary_count(default_filters)
 
@@ -38,6 +22,13 @@ def get_active_e_invoice_count_for_cancelled_invoices(filters=None):
     if not frappe.has_permission("Sales Invoice"):
         return 0
 
+    default_filters = get_default_filters(filters)
+    default_filters["exceptions"] = "Invoice Cancelled but e-Invoice Active"
+
+    return get_e_invoice_summary_count(default_filters)
+
+
+def get_default_filters(filters=None):
     if not filters:
         filters = {}
 
@@ -47,7 +38,6 @@ def get_active_e_invoice_count_for_cancelled_invoices(filters=None):
     last_quarter_date = add_months(getdate(), -3)
     default_filters = frappe._dict(
         {
-            "exceptions": "Invoice Cancelled but not e-Invoice",
             "from_date": last_quarter_date,
             "to_date": getdate(),
         }
@@ -55,7 +45,7 @@ def get_active_e_invoice_count_for_cancelled_invoices(filters=None):
     if filters.get("company"):
         default_filters["company"] = filters.get("company")
 
-    return get_e_invoice_summary_count(default_filters)
+    return default_filters
 
 
 def get_e_invoice_summary_count(filters):

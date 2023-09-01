@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.functions import Coalesce
+from frappe.utils.data import get_datetime
 
 from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
 
@@ -14,7 +15,7 @@ from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicabili
 def execute(filters=None):
     validate_filters(filters)
 
-    columns = get_columns()
+    columns = get_columns(filters)
     data = get_data_for_all_companies(filters)
 
     return columns, data
@@ -24,21 +25,25 @@ def get_data_for_all_companies(filters):
     data = []
 
     if filters.get("company"):
-        companies = [filters.get("company")]
-    else:
-        companies = frappe.get_all("Company", pluck="name")
+        return sorted(get_data(filters), key=lambda x: x.posting_date, reverse=True)
 
-    for company in companies:
+    else:
+        indian_companies = frappe.get_all(
+            "Company", filters={"country": "India"}, pluck="name"
+        )
+
+    for company in indian_companies:
         filters.company = company
 
         data.extend(get_data(filters))
 
-    return sorted(data, key=lambda x: x.posting_date)
+    return sorted(data, key=lambda x: x.posting_date, reverse=True)
 
 
 def validate_filters(filters=None):
     if filters is None:
         filters = {}
+
     filters = frappe._dict(filters)
 
     settings = frappe.get_cached_doc("GST Settings")
@@ -60,6 +65,27 @@ def validate_filters(filters=None):
     if filters.from_date > filters.to_date:
         frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
+    if not filters.get("company"):
+        return
+
+    e_invoice_applicability_date = get_e_invoice_applicability_date(filters, settings)
+
+    if not e_invoice_applicability_date:
+        frappe.throw(
+            _("As per your GST Settings, e-Invoice is not applicable for {}.").format(
+                filters.company
+            ),
+            title=_("Invalid Filter"),
+        )
+
+    if get_datetime(filters.from_date) < get_datetime(e_invoice_applicability_date):
+        frappe.throw(
+            _("As per your GST Settings, e-Invoice is applicable from {}.").format(
+                e_invoice_applicability_date
+            ),
+            title=_("Invalid Filter"),
+        )
+
 
 def get_data(filters=None):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
@@ -69,6 +95,9 @@ def get_data(filters=None):
 
     if not settings.enable_e_invoice or not e_invoice_applicability_date:
         return []
+
+    if get_datetime(filters.from_date) < get_datetime(e_invoice_applicability_date):
+        filters.from_date = e_invoice_applicability_date
 
     conditions = e_invoice_conditions(filters, e_invoice_applicability_date)
 
@@ -166,8 +195,8 @@ def validate_sales_invoice_item():
     return sub_query
 
 
-def get_columns():
-    return [
+def get_columns(filters=None):
+    columns = [
         {
             "fieldtype": "Date",
             "fieldname": "posting_date",
@@ -180,13 +209,6 @@ def get_columns():
             "label": _("Sales Invoice"),
             "options": "Sales Invoice",
             "width": 140,
-        },
-        {
-            "fieldtype": "Link",
-            "fieldname": "company",
-            "label": _("Company"),
-            "options": "Company",
-            "width": 100,
         },
         {
             "fieldtype": "Data",
@@ -227,3 +249,17 @@ def get_columns():
             "width": 120,
         },
     ]
+
+    if not filters.get("company"):
+        columns.insert(
+            0,
+            {
+                "fieldtype": "Link",
+                "fieldname": "company",
+                "options": "Company",
+                "label": _("Company"),
+                "width": 120,
+            },
+        )
+
+    return columns

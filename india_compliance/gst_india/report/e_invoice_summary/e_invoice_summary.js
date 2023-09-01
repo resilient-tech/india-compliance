@@ -8,7 +8,13 @@ frappe.query_reports["e-Invoice Summary"] = {
             options: "Company",
             fieldname: "company",
             label: __("Company"),
-            default: frappe.defaults.get_user_default("Company"),
+            get_query: function () {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
+            },
         },
         {
             fieldtype: "Link",
