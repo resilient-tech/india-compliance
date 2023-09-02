@@ -93,6 +93,7 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "supplier_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "company_gstin",
@@ -186,6 +187,7 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "customer_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "place_of_supply",
