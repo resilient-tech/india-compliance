@@ -58,7 +58,7 @@ frappe.ui.form.on(DOCTYPE, {
                     false
                 )
             }
-            frappe.set_route("Form", "Purchase Reconcialiation Tool")
+            frappe.set_route("Form", "Purchase Reconciliation Tool")
         }, 2000);
     },
 });

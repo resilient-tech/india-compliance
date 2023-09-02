@@ -25,8 +25,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
         await frappe.require("purchase_reco_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
-
-        frm.trigger("set_default_financial_year");
     },
 
     async company(frm) {
@@ -37,11 +35,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     refresh(frm) {
-        // allow save for even  for no changes to the form
-
-        fetch_date_range(frm, "purchase");
-        fetch_date_range(frm, "inward_supply");
-
         api_enabled
             ? frm.add_custom_button(__("Download"), () => new ImportDialog(frm))
             : frm.add_custom_button(__("Upload"), () => new ImportDialog(frm, false));
@@ -84,23 +77,12 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     inward_supply_period(frm) {
         fetch_date_range(frm, "inward_supply");
-        frm.trigger("set_default_financial_year");
     },
 
     after_save(frm) {
         frm.purchase_reconciliation_tool.refresh(
             frm.doc.__onload?.reconciliation_data?.data
         );
-    },
-
-    async set_default_financial_year(frm) {
-        const { message: date_range } = await frm.call("get_date_range", {
-            period:
-                frm.doc.inward_supply_period == "Previous Financial Year"
-                    ? "Previous Financial Year"
-                    : "Current Finanical Year",
-        });
-        frm.current_financial_year = date_range;
     },
 
     show_progress(frm, type) {
@@ -1037,7 +1019,7 @@ class ImportDialog {
         else this._init_upload_dialog();
 
         this.return_type = this.dialog.get_value("return_type");
-        this.fiscal_year = this.dialog.get_value("fiscal_year");
+        this.date_range = this.dialog.get_value("date_range");
         this.setup_dialog_actions();
         this.fetch_import_history();
     }
@@ -1120,7 +1102,7 @@ class ImportDialog {
     async fetch_import_history() {
         const { message } = await this.frm.call("get_import_history", {
             return_type: this.return_type,
-            fiscal_year: this.fiscal_year,
+            date_range: this.date_range,
             for_download: this.for_download,
         });
 
@@ -1151,7 +1133,7 @@ class ImportDialog {
 
     async download_gstr(only_missing = true, otp = null) {
         let method;
-        const args = { fiscal_year: this.fiscal_year, otp };
+        const args = { date_range: this.date_range, otp };
         if (this.return_type === ReturnType.GSTR2A) {
             method = "download_gstr_2a";
             args.force = !only_missing;
@@ -1198,22 +1180,29 @@ class ImportDialog {
                 fieldtype: "Column Break",
             },
             {
-                label: "Fiscal Year",
-                fieldname: "fiscal_year",
-                fieldtype: "Link",
-                options: "Fiscal Year",
-                default: frappe.defaults.get_default("fiscal_year"),
-                get_query() {
-                    return {
-                        filters: {
-                            year_end_date: [">", "2017-06-30"],
-                        },
-                    };
-                },
+                label: "Period",
+                fieldname: "period",
+                fieldtype: "Select",
+                options: this.frm.get_field("inward_supply_period").df.options,
+                default: this.frm.doc.inward_supply_period,
                 onchange: () => {
-                    this.fetch_import_history();
-                    this.fiscal_year = this.dialog.get_value("fiscal_year");
+                    const period = this.dialog.get_value("period");
+                    this.frm.call("get_date_range", { period }).then(({ message }) => {
+                        this.date_range = message || this.dialog.get_value("date_range");
+                        this.fetch_import_history();
+                    })
                 },
+            },
+            {
+                label: "Date Range",
+                fieldname: "date_range",
+                fieldtype: "DateRange",
+                default: [this.frm.doc.inward_supply_from_date, this.frm.doc.inward_supply_to_date],
+                depends_on: "eval:doc.period == 'Custom'",
+                onchange: () => {
+                    this.date_range = this.dialog.get_value("date_range");
+                    this.fetch_import_history();
+                }
             },
         ];
     }
@@ -1299,16 +1288,6 @@ class EmailDialog {
 
         return message.contact_email;
     }
-}
-
-async function set_default_financial_year(frm) {
-    const { message: date_range } = await frm.call("get_date_range", {
-        period:
-            frm.doc.inward_supply_period == "Previous Financial Year"
-                ? "Previous Financial Year"
-                : "Current Finanical Year",
-    });
-    frm.current_financial_year = date_range;
 }
 
 async function fetch_date_range(frm, field_prefix) {

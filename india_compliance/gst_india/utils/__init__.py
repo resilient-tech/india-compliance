@@ -6,9 +6,19 @@ import frappe
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_timezone
+from frappe.utils import (
+    add_to_date,
+    cint,
+    cstr,
+    get_datetime,
+    get_link_to_form,
+    get_system_timezone,
+    getdate,
+)
+from frappe.utils.data import get_timespan_date_range as _get_timespan_date_range
 from frappe.utils.file_manager import get_file_path
 from erpnext.accounts.party import get_default_contact
+from erpnext.accounts.utils import get_fiscal_year
 
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
@@ -610,3 +620,26 @@ def get_validated_country_code(country):
         )
 
     return code
+
+
+def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple | None:
+    date_range = _get_timespan_date_range(timespan)
+
+    if date_range:
+        return date_range
+
+    company = company or frappe.defaults.get_user_default("Company")
+
+    match timespan:
+        case "this fiscal year":
+            date = getdate()
+            fiscal_year = get_fiscal_year(date, company=company)
+            return (fiscal_year[1], fiscal_year[2])
+
+        case "last fiscal year":
+            date = add_to_date(getdate(), years=-1)
+            fiscal_year = get_fiscal_year(date, company=company)
+            return (fiscal_year[1], fiscal_year[2])
+
+        case _:
+            return
