@@ -831,7 +831,7 @@ e_waybill_status_field = {
     "no_copy": 1,
     "translatable": 1,
     "allow_on_submit": 1,
-    "depends_on": "eval:!doc.ewaybill",
+    "depends_on": "eval:doc.docstatus === 1 && !doc.ewaybill",
     "read_only_depends_on": "eval:doc.ewaybill",
 }
 
