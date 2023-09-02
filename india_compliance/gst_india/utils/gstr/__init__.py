@@ -233,11 +233,7 @@ def save_gstr_2a(gstin, return_period, json_data):
 def save_gstr_2b(gstin, return_period, json_data):
     json_data = json_data.data
     return_type = ReturnType.GSTR2B
-    if (
-        not json_data
-        or json_data.get("gstin") != gstin
-        or json_data.get("rtnprd") != return_period
-    ):
+    if not json_data or json_data.get("gstin") != gstin:
         frappe.throw(
             _(
                 "Data received seems to be invalid from the GST Portal. Please try"

@@ -1037,8 +1037,8 @@ class ImportDialog {
             fields: [
                 ...this.get_gstr_fields(),
                 {
-                    label: "Period",
-                    fieldname: "period",
+                    label: "Upload Period",
+                    fieldname: "upload_period",
                     fieldtype: "Data",
                     read_only: 1,
                 },
@@ -1060,6 +1060,8 @@ class ImportDialog {
                 ...this.get_history_fields(),
             ],
         });
+
+        this.dialog.get_field("period").toggle(false);
     }
 
     setup_dialog_actions() {
@@ -1127,7 +1129,7 @@ class ImportDialog {
             );
         }
 
-        await this.dialog.set_value("period", message);
+        await this.dialog.set_value("upload_period", message);
         this.dialog.refresh();
     }
 
