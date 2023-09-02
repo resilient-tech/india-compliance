@@ -79,11 +79,11 @@ def validate_filters(filters=None):
         )
 
     if get_datetime(filters.from_date) < get_datetime(e_invoice_applicability_date):
-        frappe.throw(
+        frappe.msgprint(
             _("As per your GST Settings, e-Invoice is applicable from {}.").format(
                 e_invoice_applicability_date
             ),
-            title=_("Invalid Filter"),
+            alert=True,
         )
 
 
@@ -95,9 +95,6 @@ def get_data(filters=None):
 
     if not settings.enable_e_invoice or not e_invoice_applicability_date:
         return []
-
-    if get_datetime(filters.from_date) < get_datetime(e_invoice_applicability_date):
-        filters.from_date = e_invoice_applicability_date
 
     conditions = e_invoice_conditions(filters, e_invoice_applicability_date)
 
@@ -251,8 +248,7 @@ def get_columns(filters=None):
     ]
 
     if not filters.get("company"):
-        columns.insert(
-            0,
+        columns.append(
             {
                 "fieldtype": "Link",
                 "fieldname": "company",
