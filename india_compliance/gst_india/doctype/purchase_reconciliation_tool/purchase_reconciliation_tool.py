@@ -33,27 +33,27 @@ GSTR2B_GEN_DATE = 14
 
 
 class ReconciliationQueryBuilder:
-    def __init__(self, doc):
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
         self.GSTR2 = frappe.qb.DocType("GST Inward Supply")
         self.GSTR2_ITEM = frappe.qb.DocType("GST Inward Supply Item")
         self.PI = frappe.qb.DocType("Purchase Invoice")
         self.PI_TAX = frappe.qb.DocType("Purchase Taxes and Charges")
         self.PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
-        self.doc = doc
 
     def query_inward_supply(
         self, additional_fields=None, for_summary=False, filter_period=True
     ):
         fields = self.get_inward_supply_fields(additional_fields, for_summary)
         isup_periods = _get_periods(
-            self.doc.inward_supply_from_date, self.doc.inward_supply_to_date
+            self.inward_supply_from_date, self.inward_supply_to_date
         )
 
         query = (
             frappe.qb.from_(self.GSTR2)
             .left_join(self.GSTR2_ITEM)
             .on(self.GSTR2_ITEM.parent == self.GSTR2.name)
-            .where(self.doc.company_gstin == self.GSTR2.company_gstin)
+            .where(self.company_gstin == self.GSTR2.company_gstin)
             .where(self.GSTR2.match_status != "Amended")
             .groupby(self.GSTR2_ITEM.parent)
             .select(*fields)
@@ -62,7 +62,7 @@ class ReconciliationQueryBuilder:
         if not filter_period:
             return query
 
-        if self.doc.gst_return == "GSTR 2B":
+        if self.gst_return == "GSTR 2B":
             query = query.where((self.GSTR2.return_period_2b.isin(isup_periods)))
         else:
             query = query.where(
@@ -125,7 +125,7 @@ class ReconciliationQueryBuilder:
         return tax_fields
 
     def query_purchase_invoice(self, additional_fields=None, is_return=False):
-        gst_accounts = get_gst_accounts_by_type(self.doc.company, "Input")
+        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
         tax_fields = [
             self.query_tax_amount(account).as_(tax[:-8])
             for tax, account in gst_accounts.items()
@@ -164,7 +164,7 @@ class ReconciliationQueryBuilder:
             .on(self.PI_TAX.parent == self.PI.name)
             .left_join(pi_item)
             .on(pi_item.parent == self.PI.name)
-            .where(self.doc.company_gstin == self.PI.company_gstin)
+            .where(self.company_gstin == self.PI.company_gstin)
             .where(self.PI.docstatus == 1)
             # Filter for B2B transactions where match can be made
             .where(self.PI.supplier_gstin != "")
@@ -389,9 +389,7 @@ class ReconciliationTool(ReconciliationQueryBuilder):
         query = (
             self.query_purchase_invoice(is_return=is_return)
             .where(
-                self.PI.posting_date[
-                    self.doc.purchase_from_date : self.doc.purchase_to_date
-                ]
+                self.PI.posting_date[self.purchase_from_date : self.purchase_to_date]
             )
             .where(self.PI.name.notin(self.query_matched_purchase_invoice()))
             .where(self.PI.ignore_reconciliation == 0)
@@ -505,8 +503,8 @@ class ReconciliationData(ReconciliationQueryBuilder):
         "Tax Deductor": "B2B",
     }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.gstin_party_map = frappe._dict()
 
     def get(self, purchase_names=None, inward_supply_names=None):
@@ -567,9 +565,7 @@ class ReconciliationData(ReconciliationQueryBuilder):
         # add missing in inward supply
         reconciliation_data = reconciliation_data + (
             purchase.where(
-                self.PI.posting_date[
-                    self.doc.purchase_from_date : self.doc.purchase_to_date
-                ]
+                self.PI.posting_date[self.purchase_from_date : self.purchase_to_date]
             )
             .where(self.PI.name.notin(self.query_matched_purchase_invoice()))
             .run(as_dict=True)
@@ -699,7 +695,19 @@ class ReconciliationData(ReconciliationQueryBuilder):
 class PurchaseReconciliationTool(Document):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.data_class = ReconciliationData(self)
+        self.data_class = ReconciliationData(**self.get_reco_doc())
+
+    def get_reco_doc(self):
+        fields = (
+            "company",
+            "company_gstin",
+            "gst_return",
+            "purchase_from_date",
+            "purchase_to_date",
+            "inward_supply_from_date",
+            "inward_supply_to_date",
+        )
+        return {field: self.get(field) for field in fields}
 
     def onload(self):
         if hasattr(self, "reconciliation_data"):
@@ -710,11 +718,11 @@ class PurchaseReconciliationTool(Document):
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
 
-        reconciler = ReconciliationTool(self)
+        reconciler = ReconciliationTool(**self.get_reco_doc())
         for row in ORIGINAL_VS_AMENDED:
             reconciler.reconcile(row["original"], row["amended"])
 
-        self.data_class = ReconciliationData(self)
+        self.data_class = ReconciliationData(**self.get_reco_doc())
         self.reconciliation_data = self.data_class.get()
 
     @frappe.whitelist()
@@ -1184,15 +1192,13 @@ class BuildExcel:
     def set_filters(self):
         """Add filters to the sheet"""
 
-        label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
-        self.period = (
-            f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
-        )
+        label = "2B" if self.gst_return == "GSTR 2B" else "2A/2B"
+        self.period = f"{self.inward_supply_from_date} to {self.inward_supply_to_date}"
 
         self.filters = frappe._dict(
             {
-                "Company Name": self.doc.company,
-                "GSTIN": self.doc.company_gstin,
+                "Company Name": self.company,
+                "GSTIN": self.company_gstin,
                 f"Return Period ({label})": self.period,
             }
         )
@@ -1258,7 +1264,7 @@ class BuildExcel:
     def get_file_name(self):
         """Returns file name for the excel file"""
         if not self.is_supplier_specific:
-            return f"{self.doc.company_gstin}_{self.period}_report"
+            return f"{self.company_gstin}_{self.period}_report"
 
         invoice = self.data.get("invoice_summary")[0]
         file_name = f"{invoice.get('supplier_name')}_{invoice.get('supplier_gstin')}"
