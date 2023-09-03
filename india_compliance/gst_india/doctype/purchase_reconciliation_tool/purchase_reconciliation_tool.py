@@ -633,7 +633,7 @@ class ReconciliationData(ReconciliationQueryBuilder):
 
             # update missing values
             if not doc.name:
-                doc.isup_match_status = "Missing in PR"
+                doc.isup_match_status = "Missing in PI"
                 for field in fields_to_update:
                     doc[field] = doc.get(f"isup_{field}", "")
 
@@ -971,13 +971,15 @@ class PurchaseReconciliationTool(Document):
             filters = frappe._dict(filters)
 
         if doctype == "Purchase Invoice":
-            query = self.query_purchase_invoice(["gst_category", "is_return"])
-            table = self.PI
+            query = self.data_class.query_purchase_invoice(
+                ["gst_category", "is_return"]
+            )
+            table = self.data_class.PI
         elif doctype == "GST Inward Supply":
-            query = self.query_inward_supply(
+            query = self.data_class.query_inward_supply(
                 ["classification"], for_summary=True, filter_period=False
             )
-            table = self.GSTR2
+            table = self.data_class.GSTR2
 
         query = query.where(
             table.supplier_gstin.like(f"%{filters.supplier_gstin}%")
@@ -1240,7 +1242,7 @@ class BuildExcel:
                 if field not in row:
                     row[field] = None
 
-                # pur data in row (for invoice_summary) is polluted for Missing in PR
+                # pur data in row (for invoice_summary) is polluted for Missing in PI
                 if field in purchase_fields and not row.get("name"):
                     row[field] = None
 

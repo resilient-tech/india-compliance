@@ -264,7 +264,7 @@ class PurchaseReconciliationTool {
                     "Mismatch",
                     "Manual Match",
                     "Missing in 2A/2B",
-                    "Missing in PR",
+                    "Missing in PI",
                 ],
             },
             {
@@ -779,7 +779,7 @@ class DetailViewDialog {
     _get_document_link_fields() {
         if (this.data.isup_match_status == "Missing in 2A/2B")
             this.missing_doctype = "GST Inward Supply";
-        else if (this.data.isup_match_status == "Missing in PR")
+        else if (this.data.isup_match_status == "Missing in PI")
             this.missing_doctype = "Purchase Invoice";
         else return [];
 
@@ -804,7 +804,7 @@ class DetailViewDialog {
                 label: "Date Range",
                 fieldtype: "DateRange",
                 fieldname: "date_range",
-                default: this.frm.current_financial_year,
+                default: [this.frm.doc.purchase_from_date, this.frm.doc.purchase_to_date],
                 onchange: () => this.set_link_options(),
             },
             {
@@ -848,7 +848,7 @@ class DetailViewDialog {
         // determine actions
         let actions = [];
         if (this.data.isup_match_status == "Missing in 2A/2B") actions.push("Link");
-        else if (this.data.isup_match_status == "Missing in PR")
+        else if (this.data.isup_match_status == "Missing in PI")
             actions.push("Create", "Link", "Pending");
         else
             actions.push(
@@ -1404,7 +1404,7 @@ function get_unlinked_docs(selected_rows, isup = false) {
             row.isup_action = "No Action";
 
         if (!isup) row.isup_match_status = "Missing in 2A/2B";
-        else row.isup_match_status = "Missing in PR";
+        else row.isup_match_status = "Missing in PI";
 
         return row;
     });
@@ -1501,7 +1501,7 @@ function get_affected_rows(tab, selection, data) {
 }
 
 async function create_new_purchase_invoice(inward_supply, company, company_gstin) {
-    if (inward_supply.isup_match_status != "Missing in PR") return;
+    if (inward_supply.isup_match_status != "Missing in PI") return;
 
     const { message: supplier } = await frappe.call({
         method: "india_compliance.gst_india.utils.get_party_for_gstin",
