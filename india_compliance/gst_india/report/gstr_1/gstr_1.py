@@ -1072,7 +1072,7 @@ def format_data_to_dict(data, type_of_business):
     if not data_rows:
         return []
 
-    if type_of_business == "B2C Small":
+    if type_of_business == "B2C Small" or type_of_business == "B2C Large":
         for row in data_rows:
             row["posting_date"] = row["posting_date"].strftime("%d-%m-%Y")
 
