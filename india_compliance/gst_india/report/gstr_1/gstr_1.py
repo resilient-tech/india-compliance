@@ -1043,7 +1043,9 @@ def get_all_json(filters, report_name):
     for type_of_business in TYPES_OF_BUSINESS:
         filters["type_of_business"] = type_of_business
         data = execute(filters)
-        data = format_data_to_dict(data)
+
+        # adding extra empty row as get_json function discards last rows
+        data = format_data_to_dict(data, type_of_business) + [{}]
         report = get_json(json.dumps(filters), report_name, json.dumps(data))
 
         if not is_defaults_set:
@@ -1064,17 +1066,21 @@ def get_all_json(filters, report_name):
     }
 
 
-def format_data_to_dict(data):
+def format_data_to_dict(data, type_of_business):
     data_rows = data[1]
 
     if not data_rows:
         return []
 
+    if type_of_business == "B2C Small":
+        for row in data_rows:
+            row["posting_date"] = row["posting_date"].strftime("%d-%m-%Y")
+
     if type(data_rows[0]) == dict:
-        return data[1]
+        return data_rows
 
     column = [column["fieldname"] for column in data[0]]
-    report_data = [dict(zip(column, row)) for row in data_rows] + [{}]
+    report_data = [dict(zip(column, row)) for row in data_rows]
     return report_data
 
 
