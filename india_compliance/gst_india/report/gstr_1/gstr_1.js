@@ -69,6 +69,26 @@ frappe.query_reports["GSTR-1"] = {
 		}
 	],
 	onload: function (report) {
+		report.page.add_inner_button(__("Download all as JSON"), function () {
+			frappe.call({
+				method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_all_json',
+				args: {
+					report_name: report.report_name,
+					filters: report.get_values()
+				},
+				callback: function (r) {
+					if (r.message) {
+						const args = {
+							cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
+							data: r.message.data,
+							report_name: r.message.report_name,
+							report_type: r.message.report_type
+						};
+						open_url_post(frappe.request.url, args);
+					}
+				}
+			});
+		});
 		report.page.add_inner_button(__("Download as JSON"), function () {
 			frappe.call({
 				method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_json',
@@ -77,7 +97,7 @@ frappe.query_reports["GSTR-1"] = {
 					report_name: report.report_name,
 					filters: report.get_values()
 				},
-				callback: function(r) {
+				callback: function (r) {
 					if (r.message) {
 						const args = {
 							cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',

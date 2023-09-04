@@ -16,6 +16,17 @@ from india_compliance.gst_india.utils import (
 
 B2C_LIMIT = 2_50_000
 
+TYPES_OF_BUSINESS = {
+    "B2B": "b2b",
+    "B2C Large": "b2cl",
+    "B2C Small": "b2cs",
+    "CDNR-REG": "cdnr",
+    "CDNR-UNREG": "cdnur",
+    "EXPORT": "exp",
+    "Advances": "at",
+    "NIL Rated": "nil",
+}
+
 
 def execute(filters=None):
     return Gstr1Report(filters).run()
@@ -1021,6 +1032,50 @@ def get_json(filters, report_name, data):
         "report_type": filters["type_of_business"],
         "data": gst_json,
     }
+
+
+@frappe.whitelist()
+def get_all_json(filters, report_name):
+    all_reports = {}
+    filters = json.loads(filters)
+    is_defaults_set = False
+
+    for type_of_business in TYPES_OF_BUSINESS:
+        filters["type_of_business"] = type_of_business
+        data = execute(filters)
+        data = format_data_to_dict(data)
+        report = get_json(json.dumps(filters), report_name, json.dumps(data))
+
+        if not is_defaults_set:
+            all_reports["version"] = report["data"]["version"]
+            all_reports["hash"] = report["data"]["hash"]
+            all_reports["gstn"] = report["data"]["gstin"]
+            all_reports["fp"] = report["data"]["fp"]
+            is_defaults_set = True
+
+        all_reports[TYPES_OF_BUSINESS[type_of_business]] = report["data"][
+            TYPES_OF_BUSINESS[type_of_business]
+        ]
+
+    return {
+        "report_name": report_name,
+        "report_type": "all",
+        "data": all_reports,
+    }
+
+
+def format_data_to_dict(data):
+    data_rows = data[1]
+
+    if not data_rows:
+        return []
+
+    if type(data_rows[0]) == dict:
+        return data[1]
+
+    column = [column["fieldname"] for column in data[0]]
+    report_data = [dict(zip(column, row)) for row in data_rows] + [{}]
+    return report_data
 
 
 def get_b2b_json(res, gstin):
