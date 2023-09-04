@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 
+import calendar
 import json
 from datetime import date
 
@@ -1051,7 +1052,7 @@ def get_all_json(filters, report_name):
         if not is_defaults_set:
             all_reports["version"] = report["data"]["version"]
             all_reports["hash"] = report["data"]["hash"]
-            all_reports["gstn"] = report["data"]["gstin"]
+            all_reports["gstin"] = report["data"]["gstin"]
             all_reports["fp"] = report["data"]["fp"]
             is_defaults_set = True
 
@@ -1442,8 +1443,18 @@ def get_company_gstin_number(company, address=None, all_gstins=False):
 def download_json_file():
     """download json content in a file"""
     data = frappe._dict(frappe.local.form_dict)
+    report_data = json.loads(data["data"])
+
     frappe.response["filename"] = (
-        frappe.scrub("{0} {1}".format(data["report_name"], data["report_type"]))
+        frappe.scrub(
+            "{0} {1} {2} {3} {4}".format(
+                data["report_name"],
+                data["report_type"],
+                report_data["gstin"],
+                calendar.month_abbr[int(report_data["fp"][0:2])],
+                report_data["fp"][2:],
+            )
+        )
         + ".json"
     )
     frappe.response["filecontent"] = data["data"]
