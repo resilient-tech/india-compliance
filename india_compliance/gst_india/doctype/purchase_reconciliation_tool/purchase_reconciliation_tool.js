@@ -35,11 +35,15 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     refresh(frm) {
+        // Primary Action
+        frm.disable_save();
+        frm.page.set_primary_action(__("Reconcile"), () => frm.save());
+
+        // add custom buttons
         api_enabled
             ? frm.add_custom_button(__("Download"), () => new ImportDialog(frm))
             : frm.add_custom_button(__("Upload"), () => new ImportDialog(frm, false));
 
-        // add custom buttons
         if (!frm.purchase_reconciliation_tool?.data?.length) return;
         if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
             frm.add_custom_button(
@@ -80,9 +84,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     after_save(frm) {
-        frm.purchase_reconciliation_tool.refresh(
-            frm.doc.__onload?.reconciliation_data?.data
-        );
+        reco_tool._reconciliation_data = frappe.last_response?.reconciliation_data;
+        frm.purchase_reconciliation_tool.refresh(reco_tool._reconciliation_data);
     },
 
     show_progress(frm, type) {
@@ -256,7 +259,7 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Match Status",
-                fieldname: "isup_match_status",
+                fieldname: "match_status",
                 fieldtype: "Select",
                 options: [
                     "Exact Match",
@@ -269,7 +272,7 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Action",
-                fieldname: "isup_action",
+                fieldname: "action",
                 fieldtype: "Select",
                 options: [
                     "No Action",
@@ -281,7 +284,7 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Classification",
-                fieldname: "isup_classification",
+                fieldname: "classification",
                 fieldtype: "Select",
                 options: [
                     "B2B",
@@ -332,7 +335,10 @@ class PurchaseReconciliationTool {
         this.filters = filters;
         this.filtered_data = this.data.filter(row => {
             return filters.every(filter =>
-                india_compliance.FILTER_OPERATORS[filter[2]](filter[3] || "", row[filter[1]] || "")
+                india_compliance.FILTER_OPERATORS[filter[2]](
+                    filter[3] || "",
+                    row[filter[1]] || ""
+                )
             );
         });
     }
@@ -354,40 +360,40 @@ class PurchaseReconciliationTool {
     set_listeners() {
         const me = this;
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
-            const data = me.mapped_invoice_data[$(this).attr("data-name")];
-            me.dm = new DetailViewDialog(me.frm, data);
+            const row = me.mapped_invoice_data[$(this).attr("data-name")];
+            // me.dm = new DetailViewDialog(me.frm, Object.assign({}, row));
+            me.dm = new DetailViewDialog(me.frm, row);
         });
+
         this.tabs.supplier_tab.$datatable.on("click", ".btn.download", function (e) {
-            const selected_row = me.tabs.supplier_tab.data.find(
+            const row = me.tabs.supplier_tab.data.find(
                 r => r.supplier_gstin === $(this).attr("data-name")
             );
-            me.export_data(selected_row);
+            me.export_data(row);
         });
 
         this.tabs.supplier_tab.$datatable.on("click", ".btn.envelope", function (e) {
-            const data = me.tabs.supplier_tab.data.find(
+            const row = me.tabs.supplier_tab.data.find(
                 r => r.supplier_gstin === $(this).attr("data-name")
             );
-            me.dm = new EmailDialog(me.frm, data);
+            me.dm = new EmailDialog(me.frm, row);
         });
 
         // TODO: add filters on click
-        this.tabs.summary_tab.$datatable.on(
-            "click",
-            ".match-status",
-            async function (e) {
-                const match_status = $(this).text();
-                console.log(match_status);
-            }
-        );
+        // this.tabs.summary_tab.$datatable.on(
+        //     "click",
+        //     ".match-status",
+        //     async function (e) {
+        //         const match_status = $(this).text();
+        //         console.log(match_status);
+        //     }
+        // );
     }
 
     export_data(selected_row) {
         this.data_to_export = this.get_filtered_data(selected_row);
         if (selected_row) delete this.data_to_export.supplier_summary;
 
-        // removed onload data to avoid RequestURI too long error
-        delete this.frm.doc["__onload"];
         const url =
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.download_excel_report";
 
@@ -399,45 +405,57 @@ class PurchaseReconciliationTool {
     }
 
     get_filtered_data(selected_row = null) {
+        let supplier_filter = null;
+
         if (selected_row) {
-            const supplier_filter = [
+            supplier_filter = [
                 this.frm.doctype,
                 "supplier_gstin",
                 "=",
                 selected_row.supplier_gstin,
                 false,
             ];
-            this.apply_filters(true, supplier_filter);
         }
+
+        this.apply_filters(true, supplier_filter);
+
+        const purchases = [];
+        const inward_supplies = [];
+
+        this.filtered_data.forEach(row => {
+            if (row.inward_supply) inward_supplies.push(row.inward_supply);
+            if (row.purchase_invoice) purchases.push(row.purchase_invoice);
+        });
 
         return {
             match_summary: this.get_summary_data(),
             supplier_summary: this.get_supplier_data(),
-            invoice_summary: this.filtered_data,
+            purchases: purchases,
+            inward_supplies: inward_supplies,
         };
     }
 
     get_summary_data() {
         const data = {};
         this.filtered_data.forEach(row => {
-            let new_row = data[row.isup_match_status];
+            let new_row = data[row.match_status];
             if (!new_row) {
-                new_row = data[row.isup_match_status] = {
-                    isup_match_status: row.isup_match_status,
+                new_row = data[row.match_status] = {
+                    match_status: row.match_status,
                     count_isup_docs: 0,
                     count_pur_docs: 0,
                     count_action_taken: 0,
                     total_docs: 0,
-                    tax_diff: 0,
-                    taxable_value_diff: 0,
+                    tax_difference: 0,
+                    taxable_value_difference: 0,
                 };
             }
-            if (row.isup_name) new_row.count_isup_docs += 1;
-            if (row.name) new_row.count_pur_docs += 1;
-            if (row.isup_action != "No Action") new_row.count_action_taken += 1;
+            if (row.inward_supply) new_row.count_isup_docs += 1;
+            if (row.purchase_invoice) new_row.count_pur_docs += 1;
+            if (row.action != "No Action") new_row.count_action_taken += 1;
             new_row.total_docs += 1;
-            new_row.tax_diff += row.tax_diff || 0;
-            new_row.taxable_value_diff += row.taxable_value_diff || 0;
+            new_row.tax_difference += row.tax_difference || 0;
+            new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
         return Object.values(data);
     }
@@ -446,7 +464,7 @@ class PurchaseReconciliationTool {
         return [
             {
                 label: "Match Status",
-                fieldname: "isup_match_status",
+                fieldname: "match_status",
                 width: 200,
                 _value: (...args) => `<span class='match-status'>${args[0]}</span>`,
             },
@@ -464,14 +482,14 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Taxable Amount Diff <br>2A/2B - Purchase",
-                fieldname: "taxable_value_diff",
+                fieldname: "taxable_value_difference",
                 width: 180,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
-                fieldname: "tax_diff",
+                fieldname: "tax_difference",
                 width: 180,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
@@ -505,16 +523,16 @@ class PurchaseReconciliationTool {
                     count_pur_docs: 0,
                     count_action_taken: 0,
                     total_docs: 0,
-                    tax_diff: 0,
-                    taxable_value_diff: 0,
+                    tax_difference: 0,
+                    taxable_value_difference: 0,
                 };
             }
-            if (row.isup_name) new_row.count_isup_docs += 1;
-            if (row.name) new_row.count_pur_docs += 1;
-            if (row.isup_action != "No Action") new_row.count_action_taken += 1;
+            if (row.inward_supply) new_row.count_isup_docs += 1;
+            if (row.purchase_invoice) new_row.count_pur_docs += 1;
+            if (row.action != "No Action") new_row.count_action_taken += 1;
             new_row.total_docs += 1;
-            new_row.tax_diff += row.tax_diff || 0;
-            new_row.taxable_value_diff += row.taxable_value_diff || 0;
+            new_row.tax_difference += row.tax_difference || 0;
+            new_row.taxable_value_difference += row.taxable_value_difference || 0;
         });
         return Object.values(data);
     }
@@ -561,14 +579,14 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Taxable Amount Diff <br>2A/2B - Purchase",
-                fieldname: "taxable_value_diff",
+                fieldname: "taxable_value_difference",
                 align: "center",
                 width: 150,
                 _value: (...args) => format_number(args[0]),
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
-                fieldname: "tax_diff",
+                fieldname: "tax_difference",
                 align: "center",
                 width: 150,
                 _value: (...args) => format_number(args[0]),
@@ -641,12 +659,12 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Match Status",
-                fieldname: "isup_match_status",
+                fieldname: "match_status",
                 width: 120,
             },
             {
                 label: "Purchase <br>Invoice",
-                fieldname: "name",
+                fieldname: "purchase_invoice",
                 fieldtype: "Link",
                 doctype: "Purchase Invoice",
                 align: "center",
@@ -654,14 +672,14 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "GST Inward <br>Supply",
-                fieldname: "isup_name",
+                fieldname: "inward_supply",
                 fieldtype: "Link",
                 doctype: "GST Inward Supply",
                 align: "center",
                 width: 120,
             },
             {
-                fieldname: "taxable_value_diff",
+                fieldname: "taxable_value_difference",
                 label: "Taxable Amount Diff <br>2A/2B - Purchase",
                 width: 150,
                 align: "center",
@@ -671,7 +689,7 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Tax Difference <br>2A/2B - Purchase",
-                fieldname: "tax_diff",
+                fieldname: "tax_difference",
                 width: 120,
                 align: "center",
                 _value: (...args) => {
@@ -686,14 +704,14 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Action",
-                fieldname: "isup_action",
+                fieldname: "action",
             },
         ];
     }
 }
 
 class DetailViewDialog {
-    html_fields = [
+    table_fields = [
         "name",
         "bill_no",
         "bill_date",
@@ -706,11 +724,14 @@ class DetailViewDialog {
         "place_of_supply",
     ];
 
-    constructor(frm, data) {
+    constructor(frm, row) {
         this.frm = frm;
-        this.data = data;
-        this.prefix = "isup_";
+        this.row = row;
+        this.render_dialog();
+    }
 
+    async render_dialog() {
+        await this.get_invoice_details();
         this.process_data();
         this.init_dialog();
         this.setup_actions();
@@ -718,50 +739,36 @@ class DetailViewDialog {
         this.dialog.show();
     }
 
-    process_data() {
-        this._data = {};
-        if (this.data["name"]) this._process_data("");
-        if (this.data["isup_name"]) this._process_data("isup_");
-
-        ["tax_diff", "taxable_value_diff", "supplier_name", "supplier_gstin"].forEach(
-            field => this._assign_value(field, this.data, "")
-        );
-    }
-
-    _process_data(prefix, data) {
-        if (!data) data = this.data;
-
-        this.html_fields.forEach(field => {
-            this._data[prefix + field] = null;
-            if (field == "name")
-                this._data[prefix + "link"] = this._get_link(data, prefix);
-
-            if (field == "is_reverse_charge" && data[prefix + "name"]) {
-                this._assign_value(field, data, prefix, true);
-                return;
-            }
-
-            if (data[prefix + "name"]) this._assign_value(field, data, prefix);
+    async get_invoice_details() {
+        const { message } = await this.frm.call("get_invoice_details", {
+            purchase_name: this.row.purchase_invoice,
+            inward_supply_name: this.row.inward_supply,
         });
+
+        this.data = message;
     }
 
-    _assign_value(field, source_data, prefix, bool = false) {
-        field = prefix + field;
-        if (source_data[field] != null) {
-            if (bool) this._data[field] = source_data[field] ? "Yes" : "No";
-            else this._data[field] = source_data[field];
+    process_data() {
+        for (let key of ["_purchase_invoice", "_inward_supply"]) {
+            const doc = this.data[key];
+            if (!doc) continue;
+
+            this.table_fields.forEach(field => {
+                if (field == "is_reverse_charge" && doc[field] != undefined)
+                    doc[field] = doc[field] ? "Yes" : "No";
+            });
         }
     }
 
     init_dialog() {
         this.dialog = new frappe.ui.Dialog({
-            title: `Detail View (${this.data.isup_classification})`,
+            title: `Detail View (${this.row.classification})`,
             fields: [
                 ...this._get_document_link_fields(),
                 {
                     fieldtype: "HTML",
                     fieldname: "supplier_details",
-                    options: `<h5>${this._data.supplier_name} (${this._data.supplier_gstin})</h5>`,
+                    options: `<h5>${this.row.supplier_name} (${this.row.supplier_gstin})</h5>`,
                 },
                 {
                     fieldtype: "HTML",
@@ -777,9 +784,9 @@ class DetailViewDialog {
     }
 
     _get_document_link_fields() {
-        if (this.data.isup_match_status == "Missing in 2A/2B")
+        if (this.row.match_status == "Missing in 2A/2B")
             this.missing_doctype = "GST Inward Supply";
-        else if (this.data.isup_match_status == "Missing in PI")
+        else if (this.row.match_status == "Missing in PI")
             this.missing_doctype = "Purchase Invoice";
         else return [];
 
@@ -788,7 +795,7 @@ class DetailViewDialog {
                 label: "GSTIN",
                 fieldtype: "Data",
                 fieldname: "supplier_gstin",
-                default: this.data.supplier_gstin,
+                default: this.row.supplier_gstin,
                 onchange: () => this.set_link_options(),
             },
             {
@@ -804,7 +811,10 @@ class DetailViewDialog {
                 label: "Date Range",
                 fieldtype: "DateRange",
                 fieldname: "date_range",
-                default: [this.frm.doc.purchase_from_date, this.frm.doc.purchase_to_date],
+                default: [
+                    this.frm.doc.purchase_from_date,
+                    this.frm.doc.purchase_to_date,
+                ],
                 onchange: () => this.set_link_options(),
             },
             {
@@ -817,13 +827,6 @@ class DetailViewDialog {
                 fieldtype: "Section Break",
             },
         ];
-    }
-
-    _get_date_range(field_prefix) {
-        const from_date_field = field_prefix + "_from_date";
-        const to_date_field = field_prefix + "_to_date";
-
-        return [this.frm.doc[from_date_field], this.frm.doc[to_date_field]];
     }
 
     async set_link_options() {
@@ -847,8 +850,8 @@ class DetailViewDialog {
     setup_actions() {
         // determine actions
         let actions = [];
-        if (this.data.isup_match_status == "Missing in 2A/2B") actions.push("Link");
-        else if (this.data.isup_match_status == "Missing in PI")
+        if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
+        else if (this.row.match_status == "Missing in PI")
             actions.push("Create", "Link", "Pending");
         else
             actions.push(
@@ -880,22 +883,22 @@ class DetailViewDialog {
 
     _apply_custom_action(action) {
         if (action == "Unlink") {
-            unlink_documents(this.frm, [this.data]);
+            unlink_documents(this.frm, [this.row]);
         } else if (action == "Link") {
             reco_tool.link_documents(
                 this.frm,
-                this._data.name,
-                this._data.isup_name,
+                this._data.purchase_invoice,
+                this._data.inward_supply,
                 true
             );
         } else if (action == "Create") {
             create_new_purchase_invoice(
-                this.data,
+                this.row,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin
             );
         } else {
-            apply_action(this.frm, action, [this.data]);
+            apply_action(this.frm, action, [this.row]);
         }
     }
 
@@ -915,28 +918,19 @@ class DetailViewDialog {
         else btn.removeClass("disabled");
     }
 
-    refresh_data() {
-        const field = this.dialog.get_field("link_with");
-        let row_data = [];
+    async refresh_data() {
         this.toggle_link_btn(true);
-        if (field.value) {
-            row_data = field._data.filter(row => row.value == field.value)[0];
-            this.toggle_link_btn(false);
-        }
+        const field = this.dialog.get_field("link_with");
+        if (field.value) this.toggle_link_btn(false);
 
-        if (this.data.isup_match_status == "Missing in 2A/2B")
-            this._process_data("isup_", row_data);
-        else this._process_data("", row_data);
+        if (this.missing_doctype == "GST Inward Supply")
+            this.row.inward_supply = field.value;
+        else this.row.purchase_invoice = field.value;
 
-        this._data.taxable_value_diff =
-            this._data.taxable_value - this._data.isup_taxable_value;
+        await this.get_invoice_details();
+        this.process_data();
 
-        const taxes = [];
-        ["cgst", "sgst", "igst", "cess"].forEach(tax => {
-            taxes.push(this._data[tax]);
-            if (this._data[`isup_${tax}`]) taxes.push(this._data[`isup_${tax}`] * -1);
-        });
-        this._data.tax_diff = taxes.reduce((a, b) => a + b, 0);
+        this.row = this.data;
         this.render_html();
     }
 
@@ -948,23 +942,26 @@ class DetailViewDialog {
     render_cards() {
         let cards = [
             {
-                value: this._data.tax_diff,
+                value: this.row.tax_difference,
                 label: "Tax Difference",
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
-                indicator: this._data.tax_diff == 0 ? "text-success" : "text-danger",
+                indicator:
+                    this.row.tax_difference == 0 ? "text-success" : "text-danger",
             },
             {
-                value: this._data.taxable_value_diff,
+                value: this.row.taxable_value_difference,
                 label: "Taxable Amount Difference",
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
                 indicator:
-                    this._data.taxable_value_diff == 0 ? "text-success" : "text-danger",
+                    this.row.taxable_value_difference == 0
+                        ? "text-success"
+                        : "text-danger",
             },
         ];
 
-        if (!this._data.name || !this._data.isup_name) cards = [];
+        if (!this.row.purchase_invoice || !this.row.inward_supply) cards = [];
 
         new india_compliance.NumberCardManager({
             $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
@@ -974,9 +971,11 @@ class DetailViewDialog {
 
     render_table() {
         const detail_table = this.dialog.fields_dict.detail_table;
+
         detail_table.html(
             frappe.render_template("detail_view_table", {
-                data: this._data,
+                purchase: this.data._purchase_invoice,
+                inward_supply: this.data._inward_supply,
             })
         );
         detail_table.$wrapper.removeClass("not-matched");
@@ -984,25 +983,16 @@ class DetailViewDialog {
     }
 
     _set_value_color(wrapper) {
-        if (!this._data.name || !this._data.isup_name) return;
+        if (!this.row.purchase_invoice || !this.row.inward_supply) return;
 
         ["place_of_supply", "is_reverse_charge"].forEach(field => {
-            if (this._data[field] == this._data[this.prefix + field]) return;
+            if (this.data._purchase_invoice[field] == this.data._inward_supply[field])
+                return;
+
             wrapper
-                .find(`[data-label='${field}'], [data-label='${this.prefix}${field}']`)
+                .find(`[data-label='${field}'], [data-label='${field}']`)
                 .addClass("not-matched");
         });
-    }
-
-    _get_link(data, prefix) {
-        if (!prefix && data.name)
-            return frappe.utils.get_form_link("Purchase Invoice", data.name, true);
-        else if (prefix && data.isup_name)
-            return frappe.utils.get_form_link(
-                "GST Inward Supply",
-                data.isup_name,
-                true
-            );
     }
 }
 
@@ -1190,21 +1180,25 @@ class ImportDialog {
                 onchange: () => {
                     const period = this.dialog.get_value("period");
                     this.frm.call("get_date_range", { period }).then(({ message }) => {
-                        this.date_range = message || this.dialog.get_value("date_range");
+                        this.date_range =
+                            message || this.dialog.get_value("date_range");
                         this.fetch_import_history();
-                    })
+                    });
                 },
             },
             {
                 label: "Date Range",
                 fieldname: "date_range",
                 fieldtype: "DateRange",
-                default: [this.frm.doc.inward_supply_from_date, this.frm.doc.inward_supply_to_date],
+                default: [
+                    this.frm.doc.inward_supply_from_date,
+                    this.frm.doc.inward_supply_to_date,
+                ],
                 depends_on: "eval:doc.period == 'Custom'",
                 onchange: () => {
                     this.date_range = this.dialog.get_value("date_range");
                     this.fetch_import_history();
-                }
+                },
             },
         ];
     }
@@ -1288,7 +1282,7 @@ class EmailDialog {
             },
         });
 
-        return message.contact_email;
+        return message?.contact_email;
     }
 }
 
@@ -1321,7 +1315,8 @@ function get_icon(value, column, data, icon) {
 }
 
 function get_hash(data) {
-    if (data.name || data.isup_name) return data.name + "~" + data.isup_name;
+    if (data.purchase_invoice || data.inward_supply)
+        return data.purchase_invoice + "~" + data.inward_supply;
     if (data.supplier_gstin) return data.supplier_gstin;
 }
 
@@ -1333,14 +1328,17 @@ function patch_set_active_tab(frm) {
     };
 }
 
-reco_tool.link_documents = async function (frm, pur_name, isup_name, alert = true) {
+reco_tool.link_documents = async function (frm, pur_name, inward_supply, alert = true) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
     // link documents & update data.
-    const { message: r } = await frm.call("link_documents", { pur_name, isup_name });
+    const { message: r } = await frm.call("link_documents", {
+        pur_name,
+        inward_supply,
+    });
     const reco_tool = frm.purchase_reconciliation_tool;
     const new_data = reco_tool.data.filter(
-        row => !(row.name == pur_name || row.isup_name == isup_name)
+        row => !(row.purchase_invoice == pur_name || row.inward_supply == inward_supply)
     );
     new_data.push(...r);
 
@@ -1356,7 +1354,7 @@ function unlink_documents(frm, selected_rows) {
 
     // validate selected rows
     selected_rows.forEach(row => {
-        if (row.isup_match_status.includes("Missing"))
+        if (row.match_status.includes("Missing"))
             frappe.throw(
                 __(
                     "You have selected rows where no match is available. Please remove them before unlinking."
@@ -1388,23 +1386,23 @@ function get_unlinked_docs(selected_rows, isup = false) {
     ];
 
     return deepcopy(selected_rows).map(row => {
-        if (isup) row.name = null;
-        else row.isup_name = null;
+        if (isup) row.purchase_invoice = null;
+        else row.inward_supply = null;
 
         if (isup)
             fields_to_update.forEach(field => {
                 row[field] = row[`isup_${field}`];
             });
 
-        row.tax_diff = "";
-        row.taxable_value_diff = "";
+        row.tax_difference = "";
+        row.taxable_value_difference = "";
         row.differences = "";
 
-        if (!(row.isup_action == "Ignore" || (isup && row.isup_action == "Pending")))
-            row.isup_action = "No Action";
+        if (!(row.action == "Ignore" || (isup && row.action == "Pending")))
+            row.action = "No Action";
 
-        if (!isup) row.isup_match_status = "Missing in 2A/2B";
-        else row.isup_match_status = "Missing in PI";
+        if (!isup) row.match_status = "Missing in 2A/2B";
+        else row.match_status = "Missing in PI";
 
         return row;
     });
@@ -1429,7 +1427,7 @@ function apply_action(frm, action, selected_rows) {
     if (action.includes("Accept")) {
         let warn = false;
         affected_rows = affected_rows.filter(row => {
-            if (row.isup_match_status.includes("Missing")) {
+            if (row.match_status.includes("Missing")) {
                 warn = true;
                 return false;
             }
@@ -1445,7 +1443,7 @@ function apply_action(frm, action, selected_rows) {
     } else if (action != "Ignore") {
         let warn = false;
         affected_rows = affected_rows.filter(row => {
-            if (row.isup_match_status == "Missing in 2A/2B") {
+            if (row.match_status == "Missing in 2A/2B") {
                 warn = true;
                 return false;
             }
@@ -1463,7 +1461,7 @@ function apply_action(frm, action, selected_rows) {
     // update affected rows to backend and frontend
     frm.call("apply_action", { data: affected_rows, action });
     const new_data = data.filter(row => {
-        if (has_matching_row(row, affected_rows)) row.isup_action = action;
+        if (has_matching_row(row, affected_rows)) row.action = action;
         return true;
     });
 
@@ -1494,14 +1492,12 @@ function get_affected_rows(tab, selection, data) {
 
     if (tab == "summary_tab")
         return data.filter(
-            inv =>
-                selection.filter(row => row.isup_match_status == inv.isup_match_status)
-                    .length
+            inv => selection.filter(row => row.match_status == inv.match_status).length
         );
 }
 
 async function create_new_purchase_invoice(inward_supply, company, company_gstin) {
-    if (inward_supply.isup_match_status != "Missing in PI") return;
+    if (inward_supply.match_status != "Missing in PI") return;
 
     const { message: supplier } = await frappe.call({
         method: "india_compliance.gst_india.utils.get_party_for_gstin",
@@ -1544,7 +1540,7 @@ async function create_new_purchase_invoice(inward_supply, company, company_gstin
         frm._inward_supply = {
             ...values,
             company_gstin: company_gstin,
-            isup_name: inward_supply.isup_name,
+            inward_supply: inward_supply.inward_supply,
             supplier_gstin: inward_supply.supplier_gstin,
             place_of_supply: inward_supply.isup_place_of_supply,
             cgst: inward_supply.isup_cgst,
