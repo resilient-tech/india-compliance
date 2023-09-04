@@ -1079,8 +1079,8 @@ def format_data_to_dict(data, type_of_business):
     if type(data_rows[0]) == dict:
         return data_rows
 
-    column = [column["fieldname"] for column in data[0]]
-    report_data = [dict(zip(column, row)) for row in data_rows]
+    columns = [column["fieldname"] for column in data[0]]
+    report_data = [dict(zip(columns, row)) for row in data_rows]
     return report_data
 
 
