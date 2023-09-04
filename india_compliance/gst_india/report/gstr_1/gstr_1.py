@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 
-import calendar
 import json
 from datetime import date
 
@@ -1447,12 +1446,11 @@ def download_json_file():
 
     frappe.response["filename"] = (
         frappe.scrub(
-            "{0} {1} {2} {3} {4}".format(
+            "{0} {1} {2} {3}".format(
                 data["report_name"],
                 data["report_type"],
                 report_data["gstin"],
-                calendar.month_abbr[int(report_data["fp"][0:2])],
-                report_data["fp"][2:],
+                report_data["fp"],
             )
         )
         + ".json"
