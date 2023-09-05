@@ -279,24 +279,27 @@ class PurchaseReconciliationTool(Document):
         pur_docs = []
 
         for doc in data:
-            isup_docs.append(doc.get("isup_name"))
+            isup_docs.append(doc.get("inward_supply_name"))
 
-            if is_ignore_action and not doc.get("isup_name"):
-                pur_docs.append(doc.get("name"))
+            if is_ignore_action and not doc.get("purchase_invoice_name"):
+                pur_docs.append(doc.get("purchase_invoice_name"))
+
+        PI = frappe.qb.DocType("Purchase Invoice")
+        GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
         if isup_docs:
             (
-                frappe.qb.update(self.GSTR2)
+                frappe.qb.update(GSTR2)
                 .set("action", action)
-                .where(self.GSTR2.name.isin(isup_docs))
+                .where(GSTR2.name.isin(isup_docs))
                 .run()
             )
 
         if pur_docs:
             (
-                frappe.qb.update(self.PI)
+                frappe.qb.update(PI)
                 .set("ignore_reconciliation", 1)
-                .where(self.PI.name.isin(pur_docs))
+                .where(PI.name.isin(pur_docs))
                 .run()
             )
 

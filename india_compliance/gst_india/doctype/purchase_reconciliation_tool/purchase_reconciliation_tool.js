@@ -423,8 +423,8 @@ class PurchaseReconciliationTool {
         const inward_supplies = [];
 
         this.filtered_data.forEach(row => {
-            if (row.inward_supply) inward_supplies.push(row.inward_supply);
-            if (row.purchase_invoice) purchases.push(row.purchase_invoice);
+            if (row.inward_supply_name) inward_supplies.push(row.inward_supply_name);
+            if (row.purchase_invoice_name) purchases.push(row.purchase_invoice_name);
         });
 
         return {
@@ -450,8 +450,8 @@ class PurchaseReconciliationTool {
                     taxable_value_difference: 0,
                 };
             }
-            if (row.inward_supply) new_row.count_isup_docs += 1;
-            if (row.purchase_invoice) new_row.count_pur_docs += 1;
+            if (row.inward_supply_name) new_row.count_isup_docs += 1;
+            if (row.purchase_invoice_name) new_row.count_pur_docs += 1;
             if (row.action != "No Action") new_row.count_action_taken += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
@@ -527,8 +527,8 @@ class PurchaseReconciliationTool {
                     taxable_value_difference: 0,
                 };
             }
-            if (row.inward_supply) new_row.count_isup_docs += 1;
-            if (row.purchase_invoice) new_row.count_pur_docs += 1;
+            if (row.inward_supply_name) new_row.count_isup_docs += 1;
+            if (row.purchase_invoice_name) new_row.count_pur_docs += 1;
             if (row.action != "No Action") new_row.count_action_taken += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
@@ -664,7 +664,7 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Purchase <br>Invoice",
-                fieldname: "purchase_invoice",
+                fieldname: "purchase_invoice_name",
                 fieldtype: "Link",
                 doctype: "Purchase Invoice",
                 align: "center",
@@ -672,7 +672,7 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "GST Inward <br>Supply",
-                fieldname: "inward_supply",
+                fieldname: "inward_supply_name",
                 fieldtype: "Link",
                 doctype: "GST Inward Supply",
                 align: "center",
@@ -741,8 +741,8 @@ class DetailViewDialog {
 
     async get_invoice_details() {
         const { message } = await this.frm.call("get_invoice_details", {
-            purchase_name: this.row.purchase_invoice,
-            inward_supply_name: this.row.inward_supply,
+            purchase_name: this.row.purchase_invoice_name,
+            inward_supply_name: this.row.inward_supply_name,
         });
 
         this.data = message;
@@ -924,8 +924,8 @@ class DetailViewDialog {
         if (field.value) this.toggle_link_btn(false);
 
         if (this.missing_doctype == "GST Inward Supply")
-            this.row.inward_supply = field.value;
-        else this.row.purchase_invoice = field.value;
+            this.row.inward_supply_name = field.value;
+        else this.row.purchase_invoice_name = field.value;
 
         await this.get_invoice_details();
         this.process_data();
@@ -961,7 +961,7 @@ class DetailViewDialog {
             },
         ];
 
-        if (!this.row.purchase_invoice || !this.row.inward_supply) cards = [];
+        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) cards = [];
 
         new india_compliance.NumberCardManager({
             $wrapper: this.dialog.fields_dict.diff_cards.$wrapper,
@@ -983,7 +983,7 @@ class DetailViewDialog {
     }
 
     _set_value_color(wrapper) {
-        if (!this.row.purchase_invoice || !this.row.inward_supply) return;
+        if (!this.row.purchase_invoice_name || !this.row.inward_supply_name) return;
 
         ["place_of_supply", "is_reverse_charge"].forEach(field => {
             if (this.data._purchase_invoice[field] == this.data._inward_supply[field])
@@ -1328,17 +1328,17 @@ function patch_set_active_tab(frm) {
     };
 }
 
-reco_tool.link_documents = async function (frm, pur_name, inward_supply, alert = true) {
+reco_tool.link_documents = async function (frm, pur_name, inward_supply_name, alert = true) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
     // link documents & update data.
     const { message: r } = await frm.call("link_documents", {
         pur_name,
-        inward_supply,
+        inward_supply_name,
     });
     const reco_tool = frm.purchase_reconciliation_tool;
     const new_data = reco_tool.data.filter(
-        row => !(row.purchase_invoice == pur_name || row.inward_supply == inward_supply)
+        row => !(row.purchase_invoice_name == pur_name || row.inward_supply_name == inward_supply_name)
     );
     new_data.push(...r);
 
@@ -1386,8 +1386,8 @@ function get_unlinked_docs(selected_rows, isup = false) {
     ];
 
     return deepcopy(selected_rows).map(row => {
-        if (isup) row.purchase_invoice = null;
-        else row.inward_supply = null;
+        if (isup) row.purchase_invoice_name = null;
+        else row.inward_supply_name = null;
 
         if (isup)
             fields_to_update.forEach(field => {
