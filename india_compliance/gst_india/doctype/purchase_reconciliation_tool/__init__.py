@@ -255,10 +255,12 @@ class InwardSupply:
         self.GSTR2 = frappe.qb.DocType("GST Inward Supply")
         self.GSTR2_ITEM = frappe.qb.DocType("GST Inward Supply Item")
 
-    def get_all(self, additional_fields=None, names=None):
+    def get_all(self, additional_fields=None, names=None, only_names=False):
         query = self.with_period_filter(additional_fields)
+        if only_names and not names:
+            return
 
-        if names:
+        elif names:
             query = query.where(self.GSTR2.name.isin(names))
 
         return query.run(as_dict=True)
@@ -434,7 +436,6 @@ class PurchaseInvoice:
         tax_fields = [
             self.query_tax_amount(account).as_(tax[:-8])
             for tax, account in gst_accounts.items()
-            if account
         ]
 
         fields = [
@@ -492,24 +493,15 @@ class BaseReconciliation:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-    def get_all_inward_supply(self, additional_fields=None, names=None):
+    def get_all_inward_supply(
+        self, additional_fields=None, names=None, only_names=False
+    ):
         return InwardSupply(
             company_gstin=self.company_gstin,
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
             gst_return=self.gst_return,
-        ).get_all(additional_fields, names)
-
-    def get_single_inward_supply(self, additional_fields=None, names=None):
-        if not names:
-            return
-
-        return InwardSupply(
-            company_gstin=self.company_gstin,
-            from_date=self.inward_supply_from_date,
-            to_date=self.inward_supply_to_date,
-            gst_return=self.gst_return,
-        ).get_all(additional_fields, names)
+        ).get_all(additional_fields, names, only_names)
 
     def get_unmatched_inward_supply(self, category, amended_category):
         return InwardSupply(
@@ -538,14 +530,6 @@ class BaseReconciliation:
             from_date=self.purchase_from_date,
             to_date=self.purchase_to_date,
         ).get_all(additional_fields, names, only_names)
-
-    def get_single_purchase_invoice(self, additional_fields=None, names=None):
-        return PurchaseInvoice(
-            company=self.company,
-            company_gstin=self.company_gstin,
-            from_date=self.purchase_from_date,
-            to_date=self.purchase_to_date,
-        ).get_all(additional_fields, names, only_names=True)
 
     def get_unmatched_purchase(self, category):
         return PurchaseInvoice(
@@ -726,23 +710,6 @@ class Reconciler(BaseReconciliation):
 
 
 class ReconciledData(BaseReconciliation):
-    inward_supply_fields = [
-        "supplier_name",
-        "classification",
-        "match_status",
-        "action",
-        "link_doctype",
-        "link_name",
-    ]
-
-    purchase_fields = [
-        "supplier",
-        "supplier_name",
-        "is_return",
-        "gst_category",
-        "ignore_reconciliation",
-    ]
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.gstin_party_map = frappe._dict()
@@ -770,15 +737,10 @@ class ReconciledData(BaseReconciliation):
         Get manually matched data for given purchase invoice and inward supply.
         This can be used to show comparision of matched values.
         """
-        inward_supplies = self.get_single_inward_supply(
-            self.inward_supply_fields, [inward_supply_name]
+        inward_supplies = self.get_all_inward_supply(
+            [inward_supply_name], only_names=True
         )
-
-        purchases = self.get_single_purchase_invoice(
-            self.purchase_fields, [purchase_name]
-        )
-
-        purchases = {doc.name: doc for doc in purchases}
+        purchases = self.get_all_purchase_invoice("", [purchase_name], only_names=True)
 
         reconciliation_data = [
             frappe._dict(
@@ -808,9 +770,7 @@ class ReconciledData(BaseReconciliation):
         if inward_supply_names or purchase_names:
             retain_doc = only_names = True
 
-        inward_supplies = self.get_all_inward_supply(
-            self.inward_supply_fields, inward_supply_names
-        )
+        inward_supplies = self.get_all_inward_supply(inward_supply_names)
         purchases = self.get_all_purchase_invoice(
             inward_supplies, purchase_names, only_names
         )
@@ -834,7 +794,31 @@ class ReconciledData(BaseReconciliation):
         self.process_data(reconciliation_data, retain_doc=retain_doc)
         return reconciliation_data
 
-    def get_all_purchase_invoice(self, inward_supplies, purchase_names, only_names):
+    def get_all_inward_supply(self, inward_supply_names=None, only_names=False):
+        inward_supply_fields = [
+            "supplier_name",
+            "classification",
+            "match_status",
+            "action",
+            "link_doctype",
+            "link_name",
+        ]
+
+        return super().get_all_inward_supply(
+            inward_supply_fields, inward_supply_names, only_names
+        )
+
+    def get_all_purchase_invoice(
+        self, inward_supplies, purchase_names, only_names=False
+    ):
+        purchase_fields = [
+            "supplier",
+            "supplier_name",
+            "is_return",
+            "gst_category",
+            "ignore_reconciliation",
+        ]
+
         if not only_names:
             purchase_names = set()
             for doc in inward_supplies:
@@ -842,7 +826,7 @@ class ReconciledData(BaseReconciliation):
                     purchase_names.add(doc.link_name)
 
         purchases = super().get_all_purchase_invoice(
-            self.purchase_fields, purchase_names, only_names
+            purchase_fields, purchase_names, only_names
         )
 
         if not purchases:
@@ -908,6 +892,7 @@ class ReconciledData(BaseReconciliation):
                 or self.guess_supplier_name(data.supplier_gstin),
                 "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
+                "match_status": inward_supply.get("match_status"),
                 "action": inward_supply.get("action"),
                 "classification": inward_supply.get("classification")
                 or self.guess_classification(purchase),

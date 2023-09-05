@@ -195,25 +195,27 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def link_documents(self, pur_name, isup_name):
-        if not pur_name or not isup_name:
+    def link_documents(self, purchase_invoice_name, inward_supply_name):
+        if not purchase_invoice_name or not inward_supply_name:
             return
+
+        GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
         purchases = []
         inward_supplies = []
 
         # silently handle existing links
         if isup_linked_with := frappe.db.get_value(
-            "GST Inward Supply", isup_name, "link_name"
+            "GST Inward Supply", inward_supply_name, "link_name"
         ):
-            self._unlink_documents((isup_name,))
+            self._unlink_documents((inward_supply_name,))
             purchases.append(isup_linked_with)
 
         if (
-            pur_linked_with := frappe.qb.from_(self.GSTR2)
+            pur_linked_with := frappe.qb.from_(GSTR2)
             .select("name")
-            .where(self.GSTR2.link_doctype == "Purchase Invoice")
-            .where(self.GSTR2.link_name == pur_name)
+            .where(GSTR2.link_doctype == "Purchase Invoice")
+            .where(GSTR2.link_name == purchase_invoice_name)
             .run()
         ):
             self._unlink_documents((pur_linked_with,))
@@ -222,49 +224,57 @@ class PurchaseReconciliationTool(Document):
         # link documents
         frappe.db.set_value(
             "GST Inward Supply",
-            isup_name,
+            inward_supply_name,
             {
                 "link_doctype": "Purchase Invoice",
-                "link_name": pur_name,
+                "link_name": purchase_invoice_name,
                 "match_status": "Manual Match",
             },
         )
-        purchases.append(pur_name)
-        inward_supplies.append(isup_name)
+        purchases.append(purchase_invoice_name)
+        inward_supplies.append(inward_supply_name)
 
-        # get updated data
-        return self.get_reconciliation_data(purchases, inward_supplies).get("data")
+        return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
     def unlink_documents(self, data):
         if isinstance(data, str):
             data = frappe.parse_json(data)
 
-        isup_docs = []
-        isup_actions = []
+        pur_docs = set()
+        isup_docs = set()
+        isup_actions = set()
+
         for doc in data:
-            isup_docs.append(doc.get("isup_name"))
+            isup_docs.add(doc.get("inward_supply_name"))
+            pur_docs.add(doc.get("purchase_invoice_name"))
+
+            # Revert action performed
             if doc.get("action") not in ("Ignore", "Pending"):
-                isup_actions.append(doc.get("isup_name"))
+                isup_actions.add(doc.get("inward_supply_name"))
 
         self._unlink_documents(isup_docs, isup_actions)
 
+        return self.ReconciledData.get(pur_docs, isup_docs)
+
     def _unlink_documents(self, isup_docs, isup_actions=None):
+        GSTR2 = frappe.qb.DocType("GST Inward Supply")
+
         if isup_docs:
             (
-                frappe.qb.update(self.GSTR2)
+                frappe.qb.update(GSTR2)
                 .set("link_doctype", "")
                 .set("link_name", "")
                 .set("match_status", "Unlinked")
-                .where(self.GSTR2.name.isin(isup_docs))
+                .where(GSTR2.name.isin(isup_docs))
                 .run()
             )
 
         if isup_actions:
             (
-                frappe.qb.update(self.GSTR2)
+                frappe.qb.update(GSTR2)
                 .set("action", "No Action")
-                .where(self.GSTR2.name.isin(isup_actions))
+                .where(GSTR2.name.isin(isup_actions))
                 .run()
             )
 
@@ -315,9 +325,8 @@ class PurchaseReconciliationTool(Document):
             table = frappe.qb.DocType("Purchase Invoice")
 
         elif doctype == "GST Inward Supply":
-            query = self.ReconciledData.query_inward_supply(
-                ["classification"], filter_period=False
-            )
+            # TODO: without filter period
+            query = self.ReconciledData.query_inward_supply(["classification"])
             table = frappe.qb.DocType("GST Inward Supply")
 
         query = query.where(

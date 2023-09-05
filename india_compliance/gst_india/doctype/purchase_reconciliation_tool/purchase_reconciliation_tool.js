@@ -361,7 +361,6 @@ class PurchaseReconciliationTool {
         const me = this;
         this.tabs.invoice_tab.$datatable.on("click", ".btn.eye", function (e) {
             const row = me.mapped_invoice_data[$(this).attr("data-name")];
-            // me.dm = new DetailViewDialog(me.frm, Object.assign({}, row));
             me.dm = new DetailViewDialog(me.frm, row);
         });
 
@@ -517,6 +516,7 @@ class PurchaseReconciliationTool {
             let new_row = data[row.supplier_gstin];
             if (!new_row) {
                 new_row = data[row.supplier_gstin] = {
+                    supplier_name_gstin: this.get_supplier_name_gstin(row),
                     supplier_name: row.supplier_name,
                     supplier_gstin: row.supplier_gstin,
                     count_isup_docs: 0,
@@ -541,29 +541,9 @@ class PurchaseReconciliationTool {
         return [
             {
                 label: "Supplier Name",
-                fieldname: "supplier_name",
+                fieldname: "supplier_name_gstin",
                 fieldtype: "Link",
                 width: 200,
-                _value: (value, column, data) => {
-                    // if (data && column.field === "supplier_name") {
-                    //     column.docfield.link_onclick = `reco_tool.apply_filters(${JSON.stringify(
-                    //         {
-                    //             tab: "invoice_tab",
-                    //             filters: {
-                    //                 supplier_name: data.supplier_gstin,
-                    //             },
-                    //         }
-                    //     )})`;
-                    // }
-
-                    return `
-                            ${data.supplier_name}
-                            <br />
-                            <span style="font-size: 0.9em">
-                                ${data.supplier_gstin || ""}
-                            </span>
-                        `;
-                },
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -624,6 +604,7 @@ class PurchaseReconciliationTool {
         this.mapped_invoice_data = {};
         this.filtered_data.forEach(row => {
             this.mapped_invoice_data[get_hash(row)] = row;
+            row.supplier_name_gstin = this.get_supplier_name_gstin(row);
         });
         return this.filtered_data;
     }
@@ -639,15 +620,8 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Supplier Name",
-                fieldname: "supplier_name",
+                fieldname: "supplier_name_gstin",
                 width: 150,
-                _value: (...args) => {
-                    return `${args[2].supplier_name}
-                            <br />
-                            <span style="font-size: 0.9em">
-                                ${args[2].supplier_gstin || ""}
-                            </span>`;
-                },
             },
             {
                 label: "Bill No.",
@@ -707,6 +681,16 @@ class PurchaseReconciliationTool {
                 fieldname: "action",
             },
         ];
+    }
+
+    get_supplier_name_gstin(row) {
+        return `
+        ${row.supplier_name}
+        <br />
+        <span style="font-size: 0.9em">
+            ${row.supplier_gstin || ""}
+        </span>
+        `
     }
 }
 
@@ -887,13 +871,13 @@ class DetailViewDialog {
         } else if (action == "Link") {
             reco_tool.link_documents(
                 this.frm,
-                this._data.purchase_invoice,
-                this._data.inward_supply,
+                this.data.purchase_invoice_name,
+                this.data.inward_supply_name,
                 true
             );
         } else if (action == "Create") {
             create_new_purchase_invoice(
-                this.row,
+                this.data,
                 this.frm.doc.company,
                 this.frm.doc.company_gstin
             );
@@ -1315,8 +1299,8 @@ function get_icon(value, column, data, icon) {
 }
 
 function get_hash(data) {
-    if (data.purchase_invoice || data.inward_supply)
-        return data.purchase_invoice + "~" + data.inward_supply;
+    if (data.purchase_invoice_name || data.inward_supply_name)
+        return data.purchase_invoice_name + "~" + data.inward_supply_name;
     if (data.supplier_gstin) return data.supplier_gstin;
 }
 
@@ -1328,17 +1312,26 @@ function patch_set_active_tab(frm) {
     };
 }
 
-reco_tool.link_documents = async function (frm, pur_name, inward_supply_name, alert = true) {
+reco_tool.link_documents = async function (
+    frm,
+    purchase_invoice_name,
+    inward_supply_name,
+    alert = true
+) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
 
     // link documents & update data.
     const { message: r } = await frm.call("link_documents", {
-        pur_name,
+        purchase_invoice_name,
         inward_supply_name,
     });
     const reco_tool = frm.purchase_reconciliation_tool;
     const new_data = reco_tool.data.filter(
-        row => !(row.purchase_invoice_name == pur_name || row.inward_supply_name == inward_supply_name)
+        row =>
+            !(
+                row.purchase_invoice_name == purchase_invoice_name ||
+                row.inward_supply_name == inward_supply_name
+            )
     );
     new_data.push(...r);
 
@@ -1347,7 +1340,7 @@ reco_tool.link_documents = async function (frm, pur_name, inward_supply_name, al
         after_successful_action(frm.purchase_reconciliation_tool.tabs.invoice_tab);
 };
 
-function unlink_documents(frm, selected_rows) {
+async function unlink_documents(frm, selected_rows) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
     const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
     if (!selected_rows) selected_rows = invoice_tab.get_checked_items();
@@ -1363,49 +1356,30 @@ function unlink_documents(frm, selected_rows) {
     });
 
     // unlink documents & update table
-    frm.call("unlink_documents", selected_rows);
-    const unlinked_docs = [
-        ...get_unlinked_docs(selected_rows),
-        ...get_unlinked_docs(selected_rows, true),
-    ];
+    const { message: r } = await frm.call("unlink_documents", selected_rows);
+    const unlinked_docs = get_unlinked_docs(selected_rows);
+
     const reco_tool = frm.purchase_reconciliation_tool;
     const new_data = reco_tool.data.filter(
-        row => !has_matching_row(row, selected_rows)
+        row =>
+            !(
+                unlinked_docs.has(row.purchase_invoice_name) ||
+                unlinked_docs.has(row.inward_supply_name)
+            )
     );
-    new_data.push(...unlinked_docs);
+    new_data.push(...r);
     reco_tool.refresh(new_data);
     after_successful_action(invoice_tab);
 }
 
-function get_unlinked_docs(selected_rows, isup = false) {
-    const fields_to_update = [
-        "bill_no",
-        "bill_date",
-        "place_of_supply",
-        "is_reverse_charge",
-    ];
-
-    return deepcopy(selected_rows).map(row => {
-        if (isup) row.purchase_invoice_name = null;
-        else row.inward_supply_name = null;
-
-        if (isup)
-            fields_to_update.forEach(field => {
-                row[field] = row[`isup_${field}`];
-            });
-
-        row.tax_difference = "";
-        row.taxable_value_difference = "";
-        row.differences = "";
-
-        if (!(row.action == "Ignore" || (isup && row.action == "Pending")))
-            row.action = "No Action";
-
-        if (!isup) row.match_status = "Missing in 2A/2B";
-        else row.match_status = "Missing in PI";
-
-        return row;
+function get_unlinked_docs(selected_rows) {
+    const unlinked_docs = new Set();
+    selected_rows.forEach(row => {
+        unlinked_docs.add(row.purchase_invoice_name);
+        unlinked_docs.add(row.inward_supply_name);
     });
+
+    return unlinked_docs;
 }
 
 function deepcopy(array) {
@@ -1496,13 +1470,14 @@ function get_affected_rows(tab, selection, data) {
         );
 }
 
-async function create_new_purchase_invoice(inward_supply, company, company_gstin) {
-    if (inward_supply.match_status != "Missing in PI") return;
+async function create_new_purchase_invoice(row, company, company_gstin) {
+    if (row.match_status != "Missing in PI") return;
+    const doc = row._inward_supply;
 
     const { message: supplier } = await frappe.call({
         method: "india_compliance.gst_india.utils.get_party_for_gstin",
         args: {
-            gstin: inward_supply.supplier_gstin,
+            gstin: row.supplier_gstin,
         },
     });
 
@@ -1524,9 +1499,9 @@ async function create_new_purchase_invoice(inward_supply, company, company_gstin
 
         const values = {
             company: company,
-            bill_no: inward_supply.isup_bill_no,
-            bill_date: inward_supply.isup_bill_date,
-            is_reverse_charge: inward_supply.isup_is_reverse_charge,
+            bill_no: doc.bill_no,
+            bill_date: doc.bill_date,
+            is_reverse_charge: ["Yes", 1].includes(doc.is_reverse_charge) ? 1 : 0,
         };
 
         _set_value({
@@ -1540,14 +1515,14 @@ async function create_new_purchase_invoice(inward_supply, company, company_gstin
         frm._inward_supply = {
             ...values,
             company_gstin: company_gstin,
-            inward_supply: inward_supply.inward_supply,
-            supplier_gstin: inward_supply.supplier_gstin,
-            place_of_supply: inward_supply.isup_place_of_supply,
-            cgst: inward_supply.isup_cgst,
-            sgst: inward_supply.isup_sgst,
-            igst: inward_supply.isup_igst,
-            cess: inward_supply.isup_cess,
-            taxable_value: inward_supply.isup_taxable_value,
+            inward_supply: row.inward_supply,
+            supplier_gstin: row.supplier_gstin,
+            place_of_supply: doc.place_of_supply,
+            cgst: doc.cgst,
+            sgst: doc.sgst,
+            igst: doc.igst,
+            cess: doc.cess,
+            taxable_value: doc.taxable_value,
         };
     };
 
