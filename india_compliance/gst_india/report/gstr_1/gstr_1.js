@@ -82,13 +82,13 @@ frappe.query_reports["GSTR-1"] = {
 
 function create_download_buttons(report) {
 	report.page.add_inner_button(
-		__(`${report.get_values().type_of_business}`),
+		__("{0}", [report.get_values().type_of_business]),
 		() => download_current_report(report),
-		`Download as JSON`
+		"Download as JSON"
 	);
 
 	report.page.add_inner_button(
-		__(`Complete Report`),
+		__("Complete Report"),
 		() => download_complete_report(report),
 		"Download as JSON"
 	);
