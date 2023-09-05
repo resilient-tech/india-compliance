@@ -48,8 +48,7 @@ function _like(expected_value, value) {
     expected_value = expected_value.toLowerCase();
     value = value.toLowerCase();
 
-    if (!expected_value.endsWith("%"))
-        return value.endsWith(expected_value.slice(1));
+    if (!expected_value.endsWith("%")) return value.endsWith(expected_value.slice(1));
 
     if (!expected_value.startsWith("%"))
         return value.startsWith(expected_value.slice(0, -1));

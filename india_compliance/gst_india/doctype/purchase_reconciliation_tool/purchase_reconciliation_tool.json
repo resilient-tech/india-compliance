@@ -95,12 +95,12 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval: reco_tool._reconciliation_data?.length",
+   "depends_on": "eval: purchase_reconciliation_tool._reconciliation_data?.length",
    "fieldname": "reconciliation_html",
    "fieldtype": "HTML"
   },
   {
-   "depends_on": "eval: reco_tool._reconciliation_data && !reco_tool._reconciliation_data.length",
+   "depends_on": "eval: purchase_reconciliation_tool._reconciliation_data && !purchase_reconciliation_tool._reconciliation_data.length",
    "fieldname": "no_reconciliation_data",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
@@ -116,7 +116,7 @@
    "options": "GSTR 2B\nBoth GSTR 2A & 2B"
   },
   {
-   "depends_on": "eval: !reco_tool._reconciliation_data",
+   "depends_on": "eval: !purchase_reconciliation_tool._reconciliation_data",
    "fieldname": "not_reconciled",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Reconcile to view the data\") }}</p>"
@@ -126,7 +126,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-09-02 19:48:40.347779",
+ "modified": "2023-09-05 22:23:30.355139",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",
@@ -134,12 +134,31 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
    "email": 1,
+   "export": 1,
    "print": 1,
    "read": 1,
    "role": "System Manager",
    "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts User",
    "write": 1
   }
  ],

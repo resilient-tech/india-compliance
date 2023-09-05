@@ -279,7 +279,6 @@ class InwardSupply:
 
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date)
-            doc._bill_no = BaseUtil.get_cleaner_bill_no(doc.bill_no, doc.fy)
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
@@ -398,7 +397,6 @@ class PurchaseInvoice:
 
         for doc in data:
             doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
-            doc._bill_no = BaseUtil.get_cleaner_bill_no(doc.bill_no, doc.fy)
 
         return BaseUtil.get_dict_for_key("supplier_gstin", data)
 
@@ -593,22 +591,33 @@ class Reconciler(BaseReconciliation):
                     purchases[supplier_gstin], inward_supplies[supplier_gstin]
                 )
 
-            for pur_name, pur in purchases[supplier_gstin].copy().items():
-                if summary_diff and not (abs(summary_diff[pur.bill_date.month]) < 2):
+            for purchase_invoice_name, purchase in (
+                purchases[supplier_gstin].copy().items()
+            ):
+                if summary_diff and not (
+                    abs(summary_diff[purchase.bill_date.month]) < 2
+                ):
                     continue
 
-                for isup_name, isup in inward_supplies[supplier_gstin].copy().items():
-                    if summary_diff and pur.bill_date.month != isup.bill_date.month:
+                for inward_supply_name, inward_supply in (
+                    inward_supplies[supplier_gstin].copy().items()
+                ):
+                    if (
+                        summary_diff
+                        and purchase.bill_date.month != inward_supply.bill_date.month
+                    ):
                         continue
 
-                    if not self.is_doc_matching(pur, isup, rules):
+                    if not self.is_doc_matching(purchase, inward_supply, rules):
                         continue
 
-                    self.update_matching_doc(match_status, pur.name, isup.name)
+                    self.update_matching_doc(
+                        match_status, purchase.name, inward_supply.name
+                    )
 
                     # Remove from current data to ensure matching is done only once.
-                    purchases[supplier_gstin].pop(pur_name)
-                    inward_supplies[supplier_gstin].pop(isup_name)
+                    purchases[supplier_gstin].pop(purchase_invoice_name)
+                    inward_supplies[supplier_gstin].pop(inward_supply_name)
                     break
 
     def get_summary_difference(self, data1, data2):
@@ -631,73 +640,90 @@ class Reconciler(BaseReconciliation):
 
         return summary
 
-    def is_doc_matching(self, pur, isup, rules):
+    def is_doc_matching(self, purchase, inward_supply, rules):
         """
         Returns true if all fields match from purchase and inward supply as per rules.
 
-        param pur: purchase doc
-        param isup: inward supply doc
+        param purchase: purchase doc
+        param inward_supply: inward supply doc
         param rules: dict of rule against field to match
         """
 
         for field, rule in rules.items():
-            if not self.is_field_matching(pur, isup, field.value, rule):
+            if not self.is_field_matching(purchase, inward_supply, field.value, rule):
                 return False
 
         return True
 
-    def is_field_matching(self, pur, isup, field, rule):
+    def is_field_matching(self, purchase, inward_supply, field, rule):
         """
         Returns true if the field matches from purchase and inward supply as per the rule.
 
-        param pur: purchase doc
-        param isup: inward supply doc
+        param purchase: purchase doc
+        param inward_supply: inward supply doc
         param field: field to match
         param rule: rule applied to match
         """
 
         if rule == Rule.EXACT_MATCH:
-            return pur[field] == isup[field]
+            return purchase[field] == inward_supply[field]
         elif rule == Rule.FUZZY_MATCH:
-            return self.fuzzy_match(pur, isup)
+            return self.fuzzy_match(purchase, inward_supply)
         elif rule == Rule.ROUNDING_DIFFERENCE:
-            return self.get_amount_difference(pur, isup, field) <= 1
+            return self.get_amount_difference(purchase, inward_supply, field) <= 1
 
-    def fuzzy_match(self, pur, isup):
+    def fuzzy_match(self, purchase, inward_supply):
         """
         Returns true if the (cleaned) bill_no approximately match.
         - For a fuzzy match, month of invoice and inward supply should be same.
         - First check for partial ratio, with 100% confidence
         - Next check for approximate match, with 90% confidence
         """
-        if abs(pur.bill_date - isup.bill_date).days > 10:
+        if abs(purchase.bill_date - inward_supply.bill_date).days > 10:
             return False
 
-        partial_ratio = fuzz.partial_ratio(pur._bill_no, isup._bill_no)
+        if not purchase._bill_no:
+            purchase._bill_no = BaseUtil.get_cleaner_bill_no(
+                purchase.bill_no, purchase.fy
+            )
+
+        if not inward_supply._bill_no:
+            inward_supply._bill_no = BaseUtil.get_cleaner_bill_no(
+                inward_supply.bill_no, inward_supply.fy
+            )
+
+        partial_ratio = fuzz.partial_ratio(purchase._bill_no, inward_supply._bill_no)
         if float(partial_ratio) == 100:
             return True
 
-        return float(process.extractOne(pur._bill_no, [isup._bill_no])[1]) >= 90.0
+        return (
+            float(process.extractOne(purchase._bill_no, [inward_supply._bill_no])[1])
+            >= 90.0
+        )
 
-    def get_amount_difference(self, pur, isup, field):
+    def get_amount_difference(self, purchase, inward_supply, field):
         if field == "cess":
-            BaseUtil.update_cess_amount(pur)
+            BaseUtil.update_cess_amount(purchase)
 
-        return abs(pur.get(field, 0) - isup.get(field, 0))
+        return abs(purchase.get(field, 0) - inward_supply.get(field, 0))
 
-    def update_matching_doc(self, match_status, pur_name, isup_name):
+    def update_matching_doc(
+        self, match_status, purchase_invoice_name, inward_supply_name
+    ):
         """Update matching doc for records."""
 
         if match_status == "Residual Match":
             match_status = "Mismatch"
 
-        isup_fields = {
+        inward_supply_fields = {
             "match_status": match_status,
             "link_doctype": "Purchase Invoice",
-            "link_name": pur_name,
+            "link_name": purchase_invoice_name,
         }
 
-        frappe.db.set_value("GST Inward Supply", isup_name, isup_fields)
+        frappe.db.set_value(
+            "GST Inward Supply", inward_supply_name, inward_supply_fields
+        )
 
     def get_pan_level_data(self, data):
         out = {}
@@ -729,6 +755,7 @@ class ReconciledData(BaseReconciliation):
             doc.update(
                 {f"{prefix}_{key}": value for key, value in inward_supply.items()}
             )
+            doc.pan = doc.supplier_gstin[2:-3]
 
         return data
 
@@ -881,6 +908,9 @@ class ReconciledData(BaseReconciliation):
             self.update_fields(data, purchase, inward_supply)
             self.update_amount_difference(data, purchase, inward_supply)
             self.update_differences(data, purchase, inward_supply)
+
+            if retain_doc and purchase:
+                BaseUtil.update_cess_amount(purchase)
 
     def update_fields(self, data, purchase, inward_supply):
         for field in ("supplier_name", "supplier_gstin", "bill_no", "bill_date"):

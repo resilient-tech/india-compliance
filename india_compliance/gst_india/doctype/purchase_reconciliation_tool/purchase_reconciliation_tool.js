@@ -1,9 +1,7 @@
 // Copyright (c) 2022, Resilient Tech and contributors
 // For license information, please see license.txt
 
-// TODO: change the namespace
-// TODO: replace the demo data
-frappe.provide("reco_tool");
+frappe.provide("purchase_reconciliation_tool");
 
 const tooltip_info = {
     purchase_period: "Returns purchases during this period where no match is found.",
@@ -23,7 +21,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         patch_set_active_tab(frm);
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
-        await frappe.require("purchase_reco_tool.bundle.js");
+        await frappe.require("purchase_reconciliation_tool.bundle.js");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
 
@@ -84,8 +82,11 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     after_save(frm) {
-        reco_tool._reconciliation_data = frappe.last_response?.reconciliation_data;
-        frm.purchase_reconciliation_tool.refresh(reco_tool._reconciliation_data);
+        purchase_reconciliation_tool._reconciliation_data =
+            frappe.last_response?.reconciliation_data;
+        frm.purchase_reconciliation_tool.refresh(
+            purchase_reconciliation_tool._reconciliation_data
+        );
     },
 
     show_progress(frm, type) {
@@ -690,7 +691,7 @@ class PurchaseReconciliationTool {
         <span style="font-size: 0.9em">
             ${row.supplier_gstin || ""}
         </span>
-        `
+        `;
     }
 }
 
@@ -869,7 +870,7 @@ class DetailViewDialog {
         if (action == "Unlink") {
             unlink_documents(this.frm, [this.row]);
         } else if (action == "Link") {
-            reco_tool.link_documents(
+            purchase_reconciliation_tool.link_documents(
                 this.frm,
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
@@ -1312,7 +1313,7 @@ function patch_set_active_tab(frm) {
     };
 }
 
-reco_tool.link_documents = async function (
+purchase_reconciliation_tool.link_documents = async function (
     frm,
     purchase_invoice_name,
     inward_supply_name,

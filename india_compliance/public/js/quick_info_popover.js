@@ -2,11 +2,11 @@ frappe.provide("india_compliance");
 
 india_compliance.quick_info_popover = class QuickInfoPopover {
 	constructor(frm, field_dict) {
-		/**
-		 * Setup tooltip for fields to show details
-		 * @param {Object} frm          Form object
-		 * @param {Object} field_dict   Dictionary of fields with info to show
-		*/
+        /**
+	 * Setup tooltip for fields to show details
+	 * @param {Object} frm          Form object
+	 * @param {Object} field_dict   Dictionary of fields with info to show
+	 */
 
 		this.frm = frm;
 		this.field_dict = field_dict;
@@ -24,10 +24,10 @@ india_compliance.quick_info_popover = class QuickInfoPopover {
 			if (!this.info_btn) return;
 
 			this.info_btn.popover({
-				trigger: 'hover',
-				placement: 'top',
+				trigger: "hover",
+				placement: "top",
 				content: () => this.get_content_html(field, info),
-				html: true
+				html: true,
 			});
 		}
 	}
@@ -47,4 +47,4 @@ india_compliance.quick_info_popover = class QuickInfoPopover {
 				</div>
 			`;
 	}
-}
+};

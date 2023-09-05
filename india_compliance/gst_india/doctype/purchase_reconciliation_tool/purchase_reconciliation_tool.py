@@ -56,6 +56,8 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def upload_gstr(self, return_type, period, file_path):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         return_type = ReturnType(return_type)
         json_data = get_json_from_file(file_path)
         if return_type == ReturnType.GSTR2A:
@@ -66,6 +68,8 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def download_gstr_2a(self, date_range, force=False, otp=None):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         return_type = ReturnType.GSTR2A
         periods = BaseUtil.get_periods(date_range, return_type)
         if not force:
@@ -75,6 +79,8 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def download_gstr_2b(self, date_range, otp=None):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         return_type = ReturnType.GSTR2B
         periods = self.get_periods_to_download(
             return_type, BaseUtil.get_periods(date_range, return_type)
@@ -93,7 +99,8 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_import_history(self, return_type, date_range, for_download=True):
-        # TODO: refactor this method
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         if not return_type:
             return
 
@@ -166,6 +173,9 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_return_period_from_file(self, return_type, file_path):
+        """
+        Permissions check not necessary as response is not sensitive
+        """
         if not file_path:
             return
 
@@ -183,6 +193,9 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_date_range(self, period):
+        """
+        Permissions check not necessary as response is not sensitive
+        """
         if not period or period == "Custom":
             return
 
@@ -190,12 +203,16 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name, inward_supply_name):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         return self.ReconciledData.get_manually_matched_data(
             purchase_name, inward_supply_name
         )
 
     @frappe.whitelist()
     def link_documents(self, purchase_invoice_name, inward_supply_name):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         if not purchase_invoice_name or not inward_supply_name:
             return
 
@@ -238,83 +255,85 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def unlink_documents(self, data):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         if isinstance(data, str):
             data = frappe.parse_json(data)
 
-        pur_docs = set()
-        isup_docs = set()
-        isup_actions = set()
+        purchases = set()
+        inward_supplies = set()
 
         for doc in data:
-            isup_docs.add(doc.get("inward_supply_name"))
-            pur_docs.add(doc.get("purchase_invoice_name"))
+            inward_supplies.add(doc.get("inward_supply_name"))
+            purchases.add(doc.get("purchase_invoice_name"))
 
-            # Revert action performed
-            if doc.get("action") not in ("Ignore", "Pending"):
-                isup_actions.add(doc.get("inward_supply_name"))
+        self._unlink_documents(inward_supplies)
+        return self.ReconciledData.get(purchases, inward_supplies)
 
-        self._unlink_documents(isup_docs, isup_actions)
+    def _unlink_documents(self, inward_supplies):
+        if not inward_supplies:
+            return
 
-        return self.ReconciledData.get(pur_docs, isup_docs)
-
-    def _unlink_documents(self, isup_docs, isup_actions=None):
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
+        (
+            frappe.qb.update(GSTR2)
+            .set("link_doctype", "")
+            .set("link_name", "")
+            .set("match_status", "Unlinked")
+            .where(GSTR2.name.isin(inward_supplies))
+            .run()
+        )
 
-        if isup_docs:
-            (
-                frappe.qb.update(GSTR2)
-                .set("link_doctype", "")
-                .set("link_name", "")
-                .set("match_status", "Unlinked")
-                .where(GSTR2.name.isin(isup_docs))
-                .run()
-            )
-
-        if isup_actions:
-            (
-                frappe.qb.update(GSTR2)
-                .set("action", "No Action")
-                .where(GSTR2.name.isin(isup_actions))
-                .run()
-            )
+        # Revert action performed
+        (
+            frappe.qb.update(GSTR2)
+            .set("action", "No Action")
+            .where(GSTR2.name.isin(inward_supplies))
+            .where(GSTR2.action.notin(("Ignore", "Pending")))
+            .run()
+        )
 
     @frappe.whitelist()
     def apply_action(self, data, action):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         if isinstance(data, str):
             data = frappe.parse_json(data)
 
         is_ignore_action = action == "Ignore"
 
-        isup_docs = []
-        pur_docs = []
+        inward_supplies = []
+        purchases = []
 
         for doc in data:
-            isup_docs.append(doc.get("inward_supply_name"))
+            inward_supplies.append(doc.get("inward_supply_name"))
 
-            if is_ignore_action and not doc.get("purchase_invoice_name"):
-                pur_docs.append(doc.get("purchase_invoice_name"))
+            if is_ignore_action and not doc.get("inward_supply_name"):
+                purchases.append(doc.get("purchase_invoice_name"))
 
         PI = frappe.qb.DocType("Purchase Invoice")
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
-        if isup_docs:
+        if inward_supplies:
             (
                 frappe.qb.update(GSTR2)
                 .set("action", action)
-                .where(GSTR2.name.isin(isup_docs))
+                .where(GSTR2.name.isin(inward_supplies))
                 .run()
             )
 
-        if pur_docs:
+        if purchases:
             (
                 frappe.qb.update(PI)
                 .set("ignore_reconciliation", 1)
-                .where(PI.name.isin(pur_docs))
+                .where(PI.name.isin(purchases))
                 .run()
             )
 
     @frappe.whitelist()
     def get_link_options(self, doctype, filters):
+        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
         if isinstance(filters, dict):
             filters = frappe._dict(filters)
 
@@ -325,7 +344,6 @@ class PurchaseReconciliationTool(Document):
             table = frappe.qb.DocType("Purchase Invoice")
 
         elif doctype == "GST Inward Supply":
-            # TODO: without filter period
             query = self.ReconciledData.query_inward_supply(["classification"])
             table = frappe.qb.DocType("GST Inward Supply")
 
@@ -389,6 +407,8 @@ def get_import_history(
 
 @frappe.whitelist()
 def generate_excel_attachment(data, doc):
+    frappe.has_permission("Purchase Reconciliation Tool", "email", throw=True)
+
     build_data = BuildExcel(doc, data, is_supplier_specific=True, email=True)
 
     xlsx_file, filename = build_data.export_data()
@@ -416,6 +436,8 @@ def generate_excel_attachment(data, doc):
 
 @frappe.whitelist()
 def download_excel_report(data, doc, is_supplier_specific=False):
+    frappe.has_permission("Purchase Reconciliation Tool", "export", throw=True)
+
     build_data = BuildExcel(doc, data, is_supplier_specific)
     build_data.export_data()
 
