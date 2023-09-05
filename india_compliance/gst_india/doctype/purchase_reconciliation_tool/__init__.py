@@ -497,6 +497,17 @@ class BaseReconciliation:
             gst_return=self.gst_return,
         ).get_all(additional_fields, names)
 
+    def get_single_inward_supply(self, additional_fields=None, names=None):
+        if not names:
+            return
+
+        return InwardSupply(
+            company_gstin=self.company_gstin,
+            from_date=self.inward_supply_from_date,
+            to_date=self.inward_supply_to_date,
+            gst_return=self.gst_return,
+        ).get_all(additional_fields, names)
+
     def get_unmatched_inward_supply(self, category, amended_category):
         return InwardSupply(
             company_gstin=self.company_gstin,
@@ -757,7 +768,7 @@ class ReconciledData(BaseReconciliation):
         Get manually matched data for given purchase invoice and inward supply.
         This can be used to show comparision of matched values.
         """
-        inward_supplies = self.get_all_inward_supply(
+        inward_supplies = self.get_single_inward_supply(
             self.inward_supply_fields, [inward_supply_name]
         )
 
