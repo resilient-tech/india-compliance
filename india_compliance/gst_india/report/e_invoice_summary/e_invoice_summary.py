@@ -24,17 +24,14 @@ def execute(filters=None):
 def get_data_for_all_companies(filters):
     data = []
 
-    if filters.get("company"):
-        return sorted(get_data(filters), key=lambda x: x.posting_date, reverse=True)
-
-    else:
+    indian_companies = [filters.get("company")]
+    if not indian_companies:
         indian_companies = frappe.get_all(
             "Company", filters={"country": "India"}, pluck="name"
         )
 
     for company in indian_companies:
         filters.company = company
-
         data.extend(get_data(filters))
 
     return sorted(data, key=lambda x: x.posting_date, reverse=True)
