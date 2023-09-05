@@ -93,6 +93,7 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "supplier_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "company_gstin",
@@ -186,6 +187,7 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "customer_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "place_of_supply",
@@ -829,7 +831,7 @@ e_waybill_status_field = {
     "no_copy": 1,
     "translatable": 1,
     "allow_on_submit": 1,
-    "depends_on": "eval:!doc.ewaybill",
+    "depends_on": "eval:doc.docstatus === 1 && !doc.ewaybill",
     "read_only_depends_on": "eval:doc.ewaybill",
 }
 
