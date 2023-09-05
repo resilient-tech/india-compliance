@@ -65,50 +65,75 @@ frappe.query_reports["GSTR-1"] = {
 				{ "value": "Advances", "label": __("Tax Liability (Advances Received) - 11A(1), 11A(2)") },
 				{ "value": "NIL Rated", "label": __("NIL RATED/EXEMPTED Invoices") }
 			],
-			"default": "B2B"
+			"default": "B2B",
+			"on_change": (report) => {
+				var $inner_group = report.page.get_inner_group_button("Download as JSON");
+				var $drop_down_items = $inner_group.find(".dropdown-item");
+				$drop_down_items.remove();
+				create_download_buttons(report);
+				report.refresh();
+			},
 		}
 	],
-	onload: function (report) {
-		report.page.add_inner_button(__("Download all as JSON"), function () {
-			frappe.call({
-				method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_all_json',
-				args: {
-					report_name: report.report_name,
-					filters: report.get_values()
-				},
-				callback: function (r) {
-					if (r.message) {
-						const args = {
-							cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
-							data: r.message.data,
-							report_name: r.message.report_name,
-							report_type: r.message.report_type
-						};
-						open_url_post(frappe.request.url, args);
-					}
-				}
-			});
-		});
-		report.page.add_inner_button(__("Download as JSON"), function () {
-			frappe.call({
-				method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_json',
-				args: {
-					data: report.data,
-					report_name: report.report_name,
-					filters: report.get_values()
-				},
-				callback: function (r) {
-					if (r.message) {
-						const args = {
-							cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
-							data: r.message.data,
-							report_name: r.message.report_name,
-							report_type: r.message.report_type
-						};
-						open_url_post(frappe.request.url, args);
-					}
-				}
-			});
-		});
-	}
+	onload: (report) => {
+		create_download_buttons(report);
+	},
+}
+
+function create_download_buttons(report) {
+	report.page.add_inner_button(
+		__(`${report.get_values().type_of_business}`),
+		() => download_current_report(report),
+		`Download as JSON`
+	);
+
+	report.page.add_inner_button(
+		__(`Complete Report`),
+		() => download_complete_report(report),
+		"Download as JSON"
+	);
+}
+
+
+function download_current_report(report) {
+	frappe.call({
+		method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_json',
+		args: {
+			data: report.data,
+			report_name: report.report_name,
+			filters: report.get_values()
+		},
+		callback: function (r) {
+			if (r.message) {
+				const args = {
+					cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
+					data: r.message.data,
+					report_name: r.message.report_name,
+					report_type: r.message.report_type
+				};
+				open_url_post(frappe.request.url, args);
+			}
+		}
+	});
+}
+
+function download_complete_report(report) {
+	frappe.call({
+		method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_json_all_reports',
+		args: {
+			report_name: report.report_name,
+			filters: report.get_values()
+		},
+		callback: function (r) {
+			if (r.message) {
+				const args = {
+					cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
+					data: r.message.data,
+					report_name: r.message.report_name,
+					report_type: r.message.report_type
+				};
+				open_url_post(frappe.request.url, args);
+			}
+		}
+	});
 }

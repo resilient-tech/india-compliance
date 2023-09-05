@@ -1035,7 +1035,7 @@ def get_json(filters, report_name, data):
 
 
 @frappe.whitelist()
-def get_all_json(filters, report_name):
+def get_json_all_reports(filters, report_name):
     all_reports = {}
     filters = json.loads(filters)
     is_defaults_set = False
@@ -1055,13 +1055,14 @@ def get_all_json(filters, report_name):
             all_reports["fp"] = report["data"]["fp"]
             is_defaults_set = True
 
-        all_reports[TYPES_OF_BUSINESS[type_of_business]] = report["data"][
-            TYPES_OF_BUSINESS[type_of_business]
-        ]
+        report_data = report["data"][TYPES_OF_BUSINESS[type_of_business]]
+
+        if report_data:
+            all_reports[TYPES_OF_BUSINESS[type_of_business]] = report_data
 
     return {
         "report_name": report_name,
-        "report_type": "all",
+        "report_type": "complete",
         "data": all_reports,
     }
 
