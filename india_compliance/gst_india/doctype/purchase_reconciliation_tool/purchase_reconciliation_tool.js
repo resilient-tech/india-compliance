@@ -67,6 +67,13 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.add_custom_button(__("Export"), () =>
             frm.purchase_reconciliation_tool.export_data()
         );
+
+        // move actions button next to filters
+        for (let button of $(".custom-actions .inner-group-button")) {
+            if (button.innerText != "Actions ") continue;
+            $(".custom-button-group .inner-group-button").remove();
+            $(button).appendTo($(".custom-button-group"));
+        }
     },
 
     before_save(frm) {
@@ -220,17 +227,24 @@ class PurchaseReconciliationTool {
     }
 
     setup_filter_button() {
-        this.filter_button = $(`<div class="filter-selector">
-			<button class="btn btn-default btn-sm filter-button">
-				<span class="filter-icon">
-					${frappe.utils.icon("filter")}
-				</span>
-				<span class="button-label hidden-xs">
-					${__("Filter")}
-				<span>
-			</button>
-		</div>`).appendTo(this.$wrapper.find(".form-tabs-list"));
+        this.filter_button = $(
+            `
+        <div class="custom-button-group">
+            <div class="filter-selector">
+                <button class="btn btn-default btn-sm filter-button">
+                    <span class="filter-icon">
+                        ${frappe.utils.icon("filter")}
+                    </span>
+                    <span class="button-label hidden-xs">
+                        ${__("Filter")}
+                    <span>
+                </button>
+            </div>
+        </div>
+        `
+        ).appendTo(this.$wrapper.find(".form-tabs-list"));
 
+        this.filter_button = this.filter_button.find(".filter-button");
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
             filter_button: this.filter_button,
@@ -442,17 +456,17 @@ class PurchaseReconciliationTool {
             if (!new_row) {
                 new_row = data[row.match_status] = {
                     match_status: row.match_status,
-                    count_isup_docs: 0,
-                    count_pur_docs: 0,
-                    count_action_taken: 0,
+                    inward_supply_count: 0,
+                    purchase_count: 0,
+                    action_taken_count: 0,
                     total_docs: 0,
                     tax_difference: 0,
                     taxable_value_difference: 0,
                 };
             }
-            if (row.inward_supply_name) new_row.count_isup_docs += 1;
-            if (row.purchase_invoice_name) new_row.count_pur_docs += 1;
-            if (row.action != "No Action") new_row.count_action_taken += 1;
+            if (row.inward_supply_name) new_row.inward_supply_count += 1;
+            if (row.purchase_invoice_name) new_row.purchase_count += 1;
+            if (row.action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
@@ -470,13 +484,13 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Count <br>2A/2B Docs",
-                fieldname: "count_isup_docs",
+                fieldname: "inward_supply_count",
                 width: 120,
                 align: "center",
             },
             {
                 label: "Count <br>Purchase Docs",
-                fieldname: "count_pur_docs",
+                fieldname: "purchase_count",
                 width: 120,
                 align: "center",
             },
@@ -502,7 +516,7 @@ class PurchaseReconciliationTool {
                 _value: (...args) => {
                     return (
                         roundNumber(
-                            (args[2].count_action_taken / args[2].total_docs) * 100,
+                            (args[2].action_taken_count / args[2].total_docs) * 100,
                             2
                         ) + " %"
                     );
@@ -520,17 +534,17 @@ class PurchaseReconciliationTool {
                     supplier_name_gstin: this.get_supplier_name_gstin(row),
                     supplier_name: row.supplier_name,
                     supplier_gstin: row.supplier_gstin,
-                    count_isup_docs: 0,
-                    count_pur_docs: 0,
-                    count_action_taken: 0,
+                    inward_supply_count: 0,
+                    purchase_count: 0,
+                    action_taken_count: 0,
                     total_docs: 0,
                     tax_difference: 0,
                     taxable_value_difference: 0,
                 };
             }
-            if (row.inward_supply_name) new_row.count_isup_docs += 1;
-            if (row.purchase_invoice_name) new_row.count_pur_docs += 1;
-            if (row.action != "No Action") new_row.count_action_taken += 1;
+            if (row.inward_supply_name) new_row.inward_supply_count += 1;
+            if (row.purchase_invoice_name) new_row.purchase_count += 1;
+            if (row.action != "No Action") new_row.action_taken_count += 1;
             new_row.total_docs += 1;
             new_row.tax_difference += row.tax_difference || 0;
             new_row.taxable_value_difference += row.taxable_value_difference || 0;
@@ -548,13 +562,13 @@ class PurchaseReconciliationTool {
             },
             {
                 label: "Count <br>2A/2B Docs",
-                fieldname: "count_isup_docs",
+                fieldname: "inward_supply_count",
                 align: "center",
                 width: 120,
             },
             {
                 label: "Count <br>Purchase Docs",
-                fieldname: "count_pur_docs",
+                fieldname: "purchase_count",
                 align: "center",
                 width: 120,
             },
@@ -580,7 +594,7 @@ class PurchaseReconciliationTool {
                 _value: (...args) => {
                     return (
                         roundNumber(
-                            (args[2].count_action_taken / args[2].total_docs) * 100,
+                            (args[2].action_taken_count / args[2].total_docs) * 100,
                             2
                         ) + " %"
                     );
@@ -784,15 +798,6 @@ class DetailViewDialog {
                 onchange: () => this.set_link_options(),
             },
             {
-                label: `Link with (${this.missing_doctype}):`,
-                fieldtype: "Autocomplete",
-                fieldname: "link_with",
-                onchange: () => this.refresh_data(),
-            },
-            {
-                fieldtype: "Column Break",
-            },
-            {
                 label: "Date Range",
                 fieldtype: "DateRange",
                 fieldname: "date_range",
@@ -803,7 +808,16 @@ class DetailViewDialog {
                 onchange: () => this.set_link_options(),
             },
             {
-                label: "Show matched options",
+                fieldtype: "Column Break",
+            },
+            {
+                label: `Link with (${this.missing_doctype}):`,
+                fieldtype: "Autocomplete",
+                fieldname: "link_with",
+                onchange: () => this.refresh_data(),
+            },
+            {
+                label: `Show matched options for linking ${this.missing_doctype}`,
                 fieldtype: "Check",
                 fieldname: "show_matched",
                 onchange: () => this.set_link_options(),
@@ -1083,7 +1097,6 @@ class ImportDialog {
             for_download: this.for_download,
         });
 
-        console.log(message);
         if (!message) return;
         this.dialog.fields_dict.history.html(
             frappe.render_template("gstr_download_history", message)
@@ -1518,6 +1531,7 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
         // validated this on save
         frm._inward_supply = {
             ...values,
+            name: row.inward_supply_name,
             company_gstin: company_gstin,
             inward_supply: row.inward_supply,
             supplier_gstin: row.supplier_gstin,
@@ -1529,6 +1543,7 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
             taxable_value: doc.taxable_value,
         };
     };
+
 
     frappe.new_doc("Purchase Invoice");
 }

@@ -539,7 +539,7 @@ class BuildExcel:
         """Returns merged_headers for the excel file"""
         return frappe._dict(
             {
-                "2A / 2B": ["isup_bill_no", "isup_cess"],
+                "2A / 2B": ["inward_supply_bill_no", "inward_supply_cess"],
                 "Purchase Data": ["bill_no", "cess"],
             }
         )
@@ -557,7 +557,9 @@ class BuildExcel:
 
     def get_invoice_data(self):
         data = ReconciledData(**self.doc).get_consolidated_data(
-            self.data.get("purchases"), self.data.get("inward_supplies"), prefix="isup"
+            self.data.get("purchases"),
+            self.data.get("inward_supplies"),
+            prefix="inward_supply",
         )
 
         # TODO: Sanitize supplier name and gstin
@@ -628,13 +630,13 @@ class BuildExcel:
             },
             {
                 "label": "Count \n 2A/2B Docs",
-                "fieldname": "count_isup_docs",
+                "fieldname": "inward_supply_count",
                 "fieldtype": "Int",
                 "data_format": {"number_format": "#,##0"},
             },
             {
                 "label": "Count \n Purchase Docs",
-                "fieldname": "count_pur_docs",
+                "fieldname": "purchase_count",
                 "fieldtype": "Int",
                 "data_format": {"number_format": "#,##0"},
             },
@@ -664,7 +666,7 @@ class BuildExcel:
             },
             {
                 "label": "%Action Taken",
-                "fieldname": "count_action_taken",
+                "fieldname": "action_taken_count",
                 "data_format": {"number_format": "0.00%"},
                 "width": 12,
             },
@@ -684,13 +686,13 @@ class BuildExcel:
             },
             {
                 "label": "Count \n 2A/2B Docs",
-                "fieldname": "count_isup_docs",
+                "fieldname": "inward_supply_count",
                 "fieldtype": "Int",
                 "data_format": {"number_format": "#,##0"},
             },
             {
                 "label": "Count \n Purchase Docs",
-                "fieldname": "count_pur_docs",
+                "fieldname": "purchase_count",
                 "fieldtype": "Int",
                 "data_format": {
                     "number_format": "#,##0",
@@ -722,7 +724,7 @@ class BuildExcel:
             },
             {
                 "label": "%Action Taken",
-                "fieldname": "count_action_taken",
+                "fieldname": "action_taken_count",
                 "data_format": {"number_format": "0.00%"},
                 "header_format": {
                     "width": 12,
@@ -735,7 +737,7 @@ class BuildExcel:
             {
                 "label": "Bill No",
                 "fieldname": "bill_no",
-                "compare_with": "isup_bill_no",
+                "compare_with": "inward_supply_bill_no",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -748,7 +750,7 @@ class BuildExcel:
             {
                 "label": "Bill Date",
                 "fieldname": "bill_date",
-                "compare_with": "isup_bill_date",
+                "compare_with": "inward_supply_bill_date",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -761,7 +763,7 @@ class BuildExcel:
             {
                 "label": "GSTIN",
                 "fieldname": "supplier_gstin",
-                "compare_with": "isup_supplier_gstin",
+                "compare_with": "inward_supply_supplier_gstin",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -774,7 +776,7 @@ class BuildExcel:
             {
                 "label": "Place of Supply",
                 "fieldname": "place_of_supply",
-                "compare_with": "isup_place_of_supply",
+                "compare_with": "inward_supply_place_of_supply",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -787,7 +789,7 @@ class BuildExcel:
             {
                 "label": "Reverse Charge",
                 "fieldname": "is_reverse_charge",
-                "compare_with": "isup_is_reverse_charge",
+                "compare_with": "inward_supply_is_reverse_charge",
                 "data_format": {
                     "horizontal": "left",
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -800,7 +802,7 @@ class BuildExcel:
             {
                 "label": "Taxable Value",
                 "fieldname": "taxable_value",
-                "compare_with": "isup_taxable_value",
+                "compare_with": "inward_supply_taxable_value",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -814,7 +816,7 @@ class BuildExcel:
             {
                 "label": "CGST",
                 "fieldname": "cgst",
-                "compare_with": "isup_cgst",
+                "compare_with": "inward_supply_cgst",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -828,7 +830,7 @@ class BuildExcel:
             {
                 "label": "SGST",
                 "fieldname": "sgst",
-                "compare_with": "isup_sgst",
+                "compare_with": "inward_supply_sgst",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -842,7 +844,7 @@ class BuildExcel:
             {
                 "label": "IGST",
                 "fieldname": "igst",
-                "compare_with": "isup_igst",
+                "compare_with": "inward_supply_igst",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -856,7 +858,7 @@ class BuildExcel:
             {
                 "label": "CESS",
                 "fieldname": "cess",
-                "compare_with": "isup_cess",
+                "compare_with": "inward_supply_cess",
                 "fieldtype": "Float",
                 "data_format": {
                     "bg_color": self.COLOR_PALLATE.light_green,
@@ -868,10 +870,10 @@ class BuildExcel:
                 },
             },
         ]
-        self.isup_columns = [
+        self.inward_supply_columns = [
             {
                 "label": "Bill No",
-                "fieldname": "isup_bill_no",
+                "fieldname": "inward_supply_bill_no",
                 "compare_with": "bill_no",
                 "data_format": {
                     "horizontal": "left",
@@ -884,7 +886,7 @@ class BuildExcel:
             },
             {
                 "label": "Bill Date",
-                "fieldname": "isup_bill_date",
+                "fieldname": "inward_supply_bill_date",
                 "compare_with": "bill_date",
                 "data_format": {
                     "horizontal": "left",
@@ -897,7 +899,7 @@ class BuildExcel:
             },
             {
                 "label": "GSTIN",
-                "fieldname": "isup_supplier_gstin",
+                "fieldname": "inward_supply_supplier_gstin",
                 "compare_with": "supplier_gstin",
                 "data_format": {
                     "horizontal": "left",
@@ -910,7 +912,7 @@ class BuildExcel:
             },
             {
                 "label": "Place of Supply",
-                "fieldname": "isup_place_of_supply",
+                "fieldname": "inward_supply_place_of_supply",
                 "compare_with": "place_of_supply",
                 "data_format": {
                     "horizontal": "left",
@@ -923,7 +925,7 @@ class BuildExcel:
             },
             {
                 "label": "Reverse Charge",
-                "fieldname": "isup_is_reverse_charge",
+                "fieldname": "inward_supply_is_reverse_charge",
                 "compare_with": "is_reverse_charge",
                 "data_format": {
                     "horizontal": "left",
@@ -936,7 +938,7 @@ class BuildExcel:
             },
             {
                 "label": "Taxable Value",
-                "fieldname": "isup_taxable_value",
+                "fieldname": "inward_supply_taxable_value",
                 "compare_with": "taxable_value",
                 "fieldtype": "Float",
                 "data_format": {
@@ -950,7 +952,7 @@ class BuildExcel:
             },
             {
                 "label": "CGST",
-                "fieldname": "isup_cgst",
+                "fieldname": "inward_supply_cgst",
                 "compare_with": "cgst",
                 "fieldtype": "Float",
                 "data_format": {
@@ -964,7 +966,7 @@ class BuildExcel:
             },
             {
                 "label": "SGST",
-                "fieldname": "isup_sgst",
+                "fieldname": "inward_supply_sgst",
                 "compare_with": "sgst",
                 "fieldtype": "Float",
                 "data_format": {
@@ -978,7 +980,7 @@ class BuildExcel:
             },
             {
                 "label": "IGST",
-                "fieldname": "isup_igst",
+                "fieldname": "inward_supply_igst",
                 "compare_with": "igst",
                 "fieldtype": "Float",
                 "data_format": {
@@ -992,7 +994,7 @@ class BuildExcel:
             },
             {
                 "label": "CESS",
-                "fieldname": "isup_cess",
+                "fieldname": "inward_supply_cess",
                 "compare_with": "cess",
                 "fieldtype": "Float",
                 "data_format": {
@@ -1064,6 +1066,6 @@ class BuildExcel:
                 },
             },
         ]
-        inv_columns.extend(self.isup_columns)
+        inv_columns.extend(self.inward_supply_columns)
         inv_columns.extend(self.pr_columns)
         return inv_columns

@@ -21,8 +21,24 @@ div[data-page-route="Purchase Reconciliation Tool"]
 div[data-page-route="Purchase Reconciliation Tool"]
     [data-fieldname="reconciliation_html"]
     .form-tabs-list
-    .filter-selector {
+    .custom-button-group {
+    display: flex;
+}
+
+div[data-page-route="Purchase Reconciliation Tool"]
+    [data-fieldname="reconciliation_html"]
+    .form-tabs-list
+    .inner-group-button, .filter-selector {
     margin-bottom: 8px;
+    margin-left: 8px;
+}
+
+div[data-page-route="Purchase Reconciliation Tool"]
+    [data-fieldname="reconciliation_html"]
+    .form-tabs-list
+    .custom-button-group
+    .btn {
+    padding: 5px 10px;
 }
 
 div[data-page-route="Purchase Reconciliation Tool"] .title-area .indicator-pill {
