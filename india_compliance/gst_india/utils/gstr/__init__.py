@@ -49,6 +49,8 @@ GSTR_MODULES = {
     ReturnType.GSTR2B: gstr_2b,
 }
 
+IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
+
 
 def download_gstr_2a(gstin, return_periods, otp=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
@@ -65,9 +67,9 @@ def download_gstr_2a(gstin, return_periods, otp=None):
         for action, category in ACTIONS.items():
             requests_made += 1
 
-            if not settings.enable_overseas_transactions and category.value in (
-                "IMPG",
-                "IMPGSEZ",
+            if (
+                not settings.enable_overseas_transactions
+                and category.value in IMPORT_CATEGORY
             ):
                 continue
 

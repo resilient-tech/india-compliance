@@ -8,6 +8,7 @@ from rapidfuzz import fuzz, process
 
 import frappe
 from frappe.query_builder import Case
+from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, Sum
 from frappe.utils import add_months, getdate, rounded
 
@@ -16,7 +17,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_party_for_gstin,
 )
-from india_compliance.gst_india.utils.gstr import ReturnType
+from india_compliance.gst_india.utils.gstr import IMPORT_CATEGORY, ReturnType
 
 
 class Fields(Enum):
@@ -301,7 +302,7 @@ class InwardSupply:
             .where(self.company_gstin == self.GSTR2.company_gstin)
             .where(self.GSTR2.match_status != "Amended")
             .groupby(self.GSTR2_ITEM.parent)
-            .select(*fields)
+            .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
         return query
 
@@ -418,7 +419,11 @@ class PurchaseInvoice:
             .where(self.PI.gst_category != "Registered Composition")
             .where(self.PI.supplier_gstin.isnotnull())
             .groupby(self.PI.name)
-            .select(*fields, pi_item.taxable_value)
+            .select(
+                *fields,
+                pi_item.taxable_value,
+                ConstantColumn("Purchase Invoice").as_("doctype"),
+            )
         )
 
     def get_fields(self, additional_fields=None, is_return=False):
@@ -479,6 +484,147 @@ class PurchaseInvoice:
         return query
 
 
+class BillOfEntry:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+        self.BOE = frappe.qb.DocType("Bill of Entry")
+        self.BOE_TAX = frappe.qb.DocType("Bill of Entry Taxes")
+        self.PI = frappe.qb.DocType("Purchase Invoice")
+
+    def get_all(self, additional_fields=None, names=None, only_names=False):
+        query = self.get_query(additional_fields)
+
+        if only_names and not names:
+            return
+
+        elif only_names:
+            query = query.where(self.BOE.name.isin(names))
+
+        elif names:
+            query = query.where(
+                (self.BOE.posting_date[self.from_date : self.to_date])
+                | (self.BOE.name.isin(names))
+            )
+
+        else:
+            query = query.where(self.BOE.posting_date[self.from_date : self.to_date])
+
+        return query.run(as_dict=True)
+
+    def get_unmatched(self, category):
+        gst_category = "SEZ" if category == "IMPGSEZ" else "Overseas"
+
+        query = (
+            self.get_query()
+            .where(self.PI.gst_category == gst_category)
+            .where(self.BOE.posting_date[self.from_date : self.to_date])
+            .where(
+                self.BOE.name.notin(
+                    BillOfEntry.query_matched_bill_of_entry(
+                        self.from_date, self.to_date
+                    )
+                )
+            )
+            .where(self.BOE.ignore_reconciliation == 0)
+        )
+
+        data = query.run(as_dict=True)
+
+        for doc in data:
+            doc.fy = BaseUtil.get_fy(doc.bill_date or doc.posting_date)
+
+        return BaseUtil.get_dict_for_key("supplier_gstin", data)
+
+    def get_query(self, additional_fields=None):
+        fields = self.get_fields(additional_fields)
+
+        return (
+            frappe.qb.from_(self.BOE)
+            .left_join(self.BOE_TAX)
+            .on(self.BOE_TAX.parent == self.BOE.name)
+            .join(self.PI)
+            .on(self.BOE.purchase_invoice == self.PI.name)
+            .where(self.company_gstin == self.BOE.company_gstin)
+            .where(self.BOE.docstatus == 1)
+            .groupby(self.BOE.name)
+            .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
+        )
+
+    def get_fields(self, additional_fields=None):
+        gst_accounts = get_gst_accounts_by_type(self.company, "Input")
+        tax_fields = [
+            self.query_tax_amount(account).as_(tax[:-8])
+            for tax, account in gst_accounts.items()
+            if account
+        ]
+
+        fields = [
+            self.BOE.name,
+            self.BOE.bill_of_entry_no.as_("bill_no"),
+            self.BOE.total_taxable_value.as_("taxable_value"),
+            self.BOE.bill_of_entry_date.as_("bill_date"),
+            self.BOE.posting_date,
+            self.PI.supplier_name,
+            *tax_fields,
+        ]
+
+        # In IMPGSEZ supplier details are avaialble in 2A
+        purchase_fields = [
+            "supplier_gstin",
+            "place_of_supply",
+            "is_reverse_charge",
+            "gst_category",
+        ]
+
+        for field in purchase_fields:
+            fields.append(
+                Case()
+                .when(self.PI.gst_category == "SEZ", getattr(self.PI, field))
+                .else_("")
+                .as_(field)
+            )
+
+        # Add only boe fields
+        if additional_fields:
+            boe_fields = frappe.db.get_table_columns("Bill of Entry")
+            for field in additional_fields:
+                if field in boe_fields:
+                    fields.append(getattr(self.BOE, field))
+
+        return fields
+
+    def query_tax_amount(self, account):
+        return Abs(
+            Sum(
+                Case()
+                .when(
+                    self.BOE_TAX.account_head == account,
+                    self.BOE_TAX.tax_amount,
+                )
+                .else_(0)
+            )
+        )
+
+    @staticmethod
+    def query_matched_bill_of_entry(from_date=None, to_date=None):
+        GSTR2 = frappe.qb.DocType("GST Inward Supply")
+        BOE = frappe.qb.DocType("Bill of Entry")
+
+        query = (
+            frappe.qb.from_(GSTR2)
+            .select("link_name")
+            .where(GSTR2.link_doctype == "Bill of Entry")
+            .join(BOE)
+            .on(BOE.name == GSTR2.link_name)
+        )
+
+        if from_date and to_date:
+            query = query.where(BOE.posting_date[from_date:to_date])
+
+        return query
+
+
 class BaseReconciliation:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -534,6 +680,38 @@ class BaseReconciliation:
             company=self.company, company_gstin=self.company_gstin
         ).get_query(additional_fields)
 
+    def get_all_bill_of_entry(
+        self, additional_fields=None, names=None, only_names=False
+    ):
+        return BillOfEntry(
+            company=self.company,
+            company_gstin=self.company_gstin,
+            from_date=self.purchase_from_date,
+            to_date=self.purchase_to_date,
+        ).get_all(additional_fields, names, only_names)
+
+    def get_unmatched_bill_of_entry(self, category):
+        return BillOfEntry(
+            company=self.company,
+            company_gstin=self.company_gstin,
+            from_date=self.purchase_from_date,
+            to_date=self.purchase_to_date,
+        ).get_unmatched(category)
+
+    def query_bill_of_entry(self, additional_fields=None):
+        return BillOfEntry(
+            company=self.company, company_gstin=self.company_gstin
+        ).get_query(additional_fields)
+
+    def get_unmatched_purchase_or_bill_of_entry(self, category):
+        """
+        Returns dict of unmatched purchase and bill of entry data.
+        """
+        if category in IMPORT_CATEGORY:
+            return self.get_unmatched_bill_of_entry(category)
+
+        return self.get_unmatched_purchase(category)
+
 
 class Reconciler(BaseReconciliation):
     def reconcile(self, category, amended_category):
@@ -541,9 +719,13 @@ class Reconciler(BaseReconciliation):
         Reconcile purchases and inward supplies for given category.
         """
         # GSTIN Level matching
-        purchases = self.get_unmatched_purchase(category)
+        purchases = self.get_unmatched_purchase_or_bill_of_entry(category)
         inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
         self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies, category)
+
+        # In case of IMPG GST in not available in 2A. So skip PAN level matching.
+        if category == "IMPG":
+            return
 
         # PAN Level matching
         purchases = self.get_pan_level_data(purchases)
@@ -573,7 +755,7 @@ class Reconciler(BaseReconciliation):
         """
 
         for supplier_gstin in purchases:
-            if not inward_supplies.get(supplier_gstin):
+            if not inward_supplies.get(supplier_gstin) and category != "IMPG":
                 continue
 
             summary_diff = {}
@@ -603,7 +785,10 @@ class Reconciler(BaseReconciliation):
                         continue
 
                     self.update_matching_doc(
-                        match_status, purchase.name, inward_supply.name
+                        match_status,
+                        purchase.name,
+                        inward_supply.name,
+                        purchase.doctype,
                     )
 
                     # Remove from current data to ensure matching is done only once.
@@ -699,7 +884,7 @@ class Reconciler(BaseReconciliation):
         return abs(purchase.get(field, 0) - inward_supply.get(field, 0))
 
     def update_matching_doc(
-        self, match_status, purchase_invoice_name, inward_supply_name
+        self, match_status, purchase_invoice_name, inward_supply_name, link_doctype
     ):
         """Update matching doc for records."""
 
@@ -708,7 +893,7 @@ class Reconciler(BaseReconciliation):
 
         inward_supply_fields = {
             "match_status": match_status,
-            "link_doctype": "Purchase Invoice",
+            "link_doctype": link_doctype,
             "link_name": purchase_invoice_name,
         }
 
@@ -758,7 +943,9 @@ class ReconciledData(BaseReconciliation):
         inward_supplies = self.get_all_inward_supply(
             [inward_supply_name], only_names=True
         )
-        purchases = self.get_all_purchase_invoice("", [purchase_name], only_names=True)
+        purchases = self.get_all_purchase_invoice_and_bill_of_entry(
+            "", [purchase_name], only_names=True
+        )
 
         reconciliation_data = [
             frappe._dict(
@@ -789,7 +976,7 @@ class ReconciledData(BaseReconciliation):
             retain_doc = only_names = True
 
         inward_supplies = self.get_all_inward_supply(inward_supply_names)
-        purchases = self.get_all_purchase_invoice(
+        purchases_and_bill_of_entry = self.get_all_purchase_invoice_and_bill_of_entry(
             inward_supplies, purchase_names, only_names
         )
 
@@ -799,14 +986,14 @@ class ReconciledData(BaseReconciliation):
                 frappe._dict(
                     {
                         "_inward_supply": doc,
-                        "_purchase_invoice": purchases.pop(
+                        "_purchase_invoice": purchases_and_bill_of_entry.pop(
                             doc.link_name, frappe._dict()
                         ),
                     }
                 )
             )
 
-        for doc in purchases.values():
+        for doc in purchases_and_bill_of_entry.values():
             reconciliation_data.append(frappe._dict({"_purchase_invoice": doc}))
 
         self.process_data(reconciliation_data, retain_doc=retain_doc)
@@ -826,7 +1013,7 @@ class ReconciledData(BaseReconciliation):
             inward_supply_fields, inward_supply_names, only_names
         )
 
-    def get_all_purchase_invoice(
+    def get_all_purchase_invoice_and_bill_of_entry(
         self, inward_supplies, purchase_names, only_names=False
     ):
         purchase_fields = [
@@ -837,18 +1024,33 @@ class ReconciledData(BaseReconciliation):
             "ignore_reconciliation",
         ]
 
+        boe_names = purchase_names
+
         if not only_names:
             purchase_names = set()
+            boe_names = set()
             for doc in inward_supplies:
                 if doc.link_doctype == "Purchase Invoice":
                     purchase_names.add(doc.link_name)
 
-        purchases = super().get_all_purchase_invoice(
-            purchase_fields, purchase_names, only_names
+                elif doc.link_doctype == "Bill of Entry":
+                    boe_names.add(doc.link_name)
+
+        purchases = (
+            super().get_all_purchase_invoice(
+                purchase_fields, purchase_names, only_names
+            )
+            or []
         )
 
-        if not purchases:
+        bill_of_entries = (
+            super().get_all_bill_of_entry(purchase_fields, boe_names, only_names) or []
+        )
+
+        if not purchases and not bill_of_entries:
             return {}
+
+        purchases.extend(bill_of_entries)
 
         return {doc.name: doc for doc in purchases}
 
@@ -911,6 +1113,7 @@ class ReconciledData(BaseReconciliation):
             {
                 "supplier_name": data.supplier_name
                 or self.guess_supplier_name(data.supplier_gstin),
+                "purchase_doctype": purchase.get("doctype"),
                 "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
                 "match_status": inward_supply.get("match_status"),
@@ -981,6 +1184,9 @@ class ReconciledData(BaseReconciliation):
         classification = GST_CATEGORIES.get(doc.gst_category)
         if doc.is_return and classification == "B2B":
             classification = "CDNR"
+
+        if not classification and doc.get("doctype") == "Bill of Entry":
+            classification = "IMPG"
 
         return classification
 

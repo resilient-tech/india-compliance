@@ -18,7 +18,7 @@
 				{% endif %}
 
 				{% if purchase.name %}
-				<td data-label="name">{{ frappe.utils.get_form_link("Purchase Invoice",
+				<td data-label="name">{{ frappe.utils.get_form_link(purchase.doctype,
 					purchase.name, true)}}</td>
 				{% else %}
 				<td data-label="name">-</td>

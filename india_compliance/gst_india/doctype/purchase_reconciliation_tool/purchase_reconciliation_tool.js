@@ -651,18 +651,18 @@ class PurchaseReconciliationTool {
                 width: 120,
             },
             {
-                label: "Purchase <br>Invoice",
-                fieldname: "purchase_invoice_name",
-                fieldtype: "Link",
-                doctype: "Purchase Invoice",
-                align: "center",
-                width: 120,
-            },
-            {
                 label: "GST Inward <br>Supply",
                 fieldname: "inward_supply_name",
                 fieldtype: "Link",
                 doctype: "GST Inward Supply",
+                align: "center",
+                width: 120,
+            },
+            {
+                label: "Purchase <br>Invoice",
+                fieldname: "purchase_invoice_name",
+                fieldtype: "Link",
+                doctype: "Purchase Invoice",
                 align: "center",
                 width: 120,
             },
@@ -759,6 +759,12 @@ class DetailViewDialog {
     }
 
     init_dialog() {
+        const supplier_details = `
+        <h5>${this.row.supplier_name}
+        ${this.row.supplier_gstin ? ` (${this.row.supplier_gstin})` : ""}
+        </h5>
+        `;
+
         this.dialog = new frappe.ui.Dialog({
             title: `Detail View (${this.row.classification})`,
             fields: [
@@ -766,7 +772,7 @@ class DetailViewDialog {
                 {
                     fieldtype: "HTML",
                     fieldname: "supplier_details",
-                    options: `<h5>${this.row.supplier_name} (${this.row.supplier_gstin})</h5>`,
+                    options: supplier_details,
                 },
                 {
                     fieldtype: "HTML",
@@ -785,7 +791,9 @@ class DetailViewDialog {
         if (this.row.match_status == "Missing in 2A/2B")
             this.missing_doctype = "GST Inward Supply";
         else if (this.row.match_status == "Missing in PI")
-            this.missing_doctype = "Purchase Invoice";
+            if (["IMPG", "IMPGSEZ"].includes(this.row.classification))
+                this.missing_doctype = "Bill of Entry";
+            else this.missing_doctype = "Purchase Invoice";
         else return [];
 
         return [
@@ -810,7 +818,27 @@ class DetailViewDialog {
                 fieldtype: "Column Break",
             },
             {
-                label: `Link with (${this.missing_doctype}):`,
+                label: "Document Type",
+                fieldtype: "Autocomplete",
+                fieldname: "doctype",
+                default: this.missing_doctype,
+                options:
+                    this.missing_doctype == "GST Inward Supply"
+                        ? ["GST Inward Supply"]
+                        : ["Purchase Invoice", "Bill of Entry"],
+
+                read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
+                    }`,
+
+                onchange: () => {
+                    const doctype = this.dialog.get_value("doctype");
+                    this.dialog
+                        .get_field("show_matched")
+                        .set_label(`Show matched options for linking ${doctype}`);
+                },
+            },
+            {
+                label: `Document Name`,
                 fieldtype: "Autocomplete",
                 fieldname: "link_with",
                 onchange: () => this.refresh_data(),
@@ -828,17 +856,18 @@ class DetailViewDialog {
     }
 
     async set_link_options() {
-        if (!this.missing_doctype) return;
+        if (!this.dialog.get_value("doctype")) return;
 
         this.filters = {
             supplier_gstin: this.dialog.get_value("supplier_gstin"),
             bill_from_date: this.dialog.get_value("date_range")[0],
             bill_to_date: this.dialog.get_value("date_range")[1],
             show_matched: this.dialog.get_value("show_matched"),
+            purchase_doctype: this.data.purchase_doctype,
         };
 
         const { message } = await this.frm.call("get_link_options", {
-            doctype: this.missing_doctype,
+            doctype: this.dialog.get_value("doctype"),
             filters: this.filters,
         });
 
@@ -848,9 +877,12 @@ class DetailViewDialog {
     setup_actions() {
         // determine actions
         let actions = [];
+        const doctype = this.dialog.get_value("doctype");
         if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
         else if (this.row.match_status == "Missing in PI")
-            actions.push("Create", "Link", "Pending");
+            if (doctype == "Purchase Invoice")
+                actions.push("Create", "Link", "Pending");
+            else actions.push("Link", "Pending");
         else
             actions.push(
                 "Unlink",
@@ -887,6 +919,7 @@ class DetailViewDialog {
                 this.frm,
                 this.data.purchase_invoice_name,
                 this.data.inward_supply_name,
+                this.dialog.get_value("doctype"),
                 true
             );
         } else if (action == "Create") {
@@ -1332,6 +1365,7 @@ purchase_reconciliation_tool.link_documents = async function (
     frm,
     purchase_invoice_name,
     inward_supply_name,
+    link_doctype,
     alert = true
 ) {
     if (frm.get_active_tab()?.df.fieldname != "invoice_tab") return;
@@ -1340,6 +1374,7 @@ purchase_reconciliation_tool.link_documents = async function (
     const { message: r } = await frm.call("link_documents", {
         purchase_invoice_name,
         inward_supply_name,
+        link_doctype,
     });
     const reco_tool = frm.purchase_reconciliation_tool;
     const new_data = reco_tool.data.filter(
@@ -1542,7 +1577,6 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
             taxable_value: doc.taxable_value,
         };
     };
-
 
     frappe.new_doc("Purchase Invoice");
 }
