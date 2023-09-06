@@ -1,0 +1,402 @@
+{
+ "actions": [],
+ "autoname": "format:GST-IS-{######}",
+ "creation": "2022-04-12 17:45:44.603856",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_1",
+  "company",
+  "column_break_3",
+  "company_gstin",
+  "section_break_4",
+  "supplier_name",
+  "column_break_8",
+  "supplier_gstin",
+  "section_break_8",
+  "bill_no",
+  "doc_type",
+  "place_of_supply",
+  "column_break_13",
+  "bill_date",
+  "supply_type",
+  "classification",
+  "is_reverse_charge",
+  "section_break_16",
+  "items",
+  "document_value",
+  "section_break_18",
+  "diffprcnt",
+  "column_break_15",
+  "port_code",
+  "section_break_27",
+  "irn_source",
+  "irn_number",
+  "column_break_30",
+  "irn_gen_date",
+  "section_break_25",
+  "itc_availability",
+  "return_period_2b",
+  "column_break_28",
+  "reason_itc_unavailability",
+  "gen_date_2b",
+  "section_break_32",
+  "other_return_period",
+  "original_bill_no",
+  "is_amended",
+  "column_break_36",
+  "amendment_type",
+  "original_bill_date",
+  "original_doc_type",
+  "section_break_22",
+  "action",
+  "link_doctype",
+  "column_break_27",
+  "match_status",
+  "link_name",
+  "section_break_43",
+  "sup_return_period",
+  "gstr_1_filled",
+  "gstr_3b_filled",
+  "column_break_47",
+  "gstr_1_filing_date",
+  "registration_cancel_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Data",
+   "label": "Company GSTIN"
+  },
+  {
+   "fieldname": "section_break_4",
+   "fieldtype": "Section Break",
+   "label": "Supplier Details"
+  },
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "label": "Supplier Name"
+  },
+  {
+   "fieldname": "column_break_8",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "supplier_gstin",
+   "fieldtype": "Data",
+   "label": "Supplier GSTIN"
+  },
+  {
+   "fieldname": "section_break_8",
+   "fieldtype": "Section Break",
+   "label": "Document Details"
+  },
+  {
+   "fieldname": "doc_type",
+   "fieldtype": "Select",
+   "label": "Document Type",
+   "options": "\nInvoice\nCredit Note\nDebit Note\nISD Invoice\nISD Credit Note\nBill of Entry"
+  },
+  {
+   "fieldname": "place_of_supply",
+   "fieldtype": "Data",
+   "label": "Place of Supply"
+  },
+  {
+   "fieldname": "column_break_13",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "supply_type",
+   "fieldtype": "Select",
+   "label": "Supply Type",
+   "options": "\nRegular\nSEZ Without Payment of Tax\nSEZ With Payment of Tax\nDeemend Exports"
+  },
+  {
+   "fieldname": "classification",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Classification",
+   "options": "\nB2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nIMPG\nIMPGSEZ"
+  },
+  {
+   "fieldname": "section_break_16",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "GST Inward Supply Item"
+  },
+  {
+   "fieldname": "document_value",
+   "fieldtype": "Float",
+   "label": "Document Value"
+  },
+  {
+   "fieldname": "section_break_18",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "diffprcnt",
+   "fieldtype": "Data",
+   "label": "Applicable % of tax rate"
+  },
+  {
+   "fieldname": "column_break_15",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "port_code",
+   "fieldtype": "Data",
+   "label": "Port Code"
+  },
+  {
+   "fieldname": "section_break_27",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "irn_source",
+   "fieldtype": "Data",
+   "label": "IRN Source"
+  },
+  {
+   "fieldname": "irn_number",
+   "fieldtype": "Data",
+   "label": "IRN Number"
+  },
+  {
+   "fieldname": "column_break_30",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "irn_gen_date",
+   "fieldtype": "Date",
+   "label": "IRN Generation Date"
+  },
+  {
+   "fieldname": "section_break_25",
+   "fieldtype": "Section Break",
+   "label": "GSTR 2B Details"
+  },
+  {
+   "fieldname": "itc_availability",
+   "fieldtype": "Select",
+   "label": "ITC Availability",
+   "options": "\nYes\nNo\nTemporary"
+  },
+  {
+   "fieldname": "column_break_28",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reason_itc_unavailability",
+   "fieldtype": "Data",
+   "label": "Reason for ITC Unavailability"
+  },
+  {
+   "fieldname": "section_break_32",
+   "fieldtype": "Section Break",
+   "label": "Amendment Details"
+  },
+  {
+   "fieldname": "other_return_period",
+   "fieldtype": "Data",
+   "label": "Amendment/Original Period"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_amended",
+   "fieldtype": "Check",
+   "label": "Is Amended"
+  },
+  {
+   "fieldname": "column_break_36",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amendment_type",
+   "fieldtype": "Data",
+   "label": "Amendment Type"
+  },
+  {
+   "fieldname": "original_doc_type",
+   "fieldtype": "Select",
+   "label": "Original Document Type",
+   "options": "\nCredit Note\nDebit Note\nISD Invoice\nISD Credit Note"
+  },
+  {
+   "fieldname": "section_break_22",
+   "fieldtype": "Section Break",
+   "label": "Links"
+  },
+  {
+   "default": "No Action",
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Action",
+   "options": "No Action\nAccept My Values\nAccept Supplier Values\nIgnore\nPending"
+  },
+  {
+   "fieldname": "link_doctype",
+   "fieldtype": "Link",
+   "label": "Link Document Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "column_break_27",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "match_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Match Status",
+   "options": "\nExact Match\nSuggested Match\nMismatch\nManual Match\nUnlinked\nAmended"
+  },
+  {
+   "fieldname": "link_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Link Name",
+   "options": "link_doctype",
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_43",
+   "fieldtype": "Section Break",
+   "label": "Supplier Filing Status"
+  },
+  {
+   "fieldname": "sup_return_period",
+   "fieldtype": "Data",
+   "label": "Return Period"
+  },
+  {
+   "default": "0",
+   "fieldname": "gstr_1_filled",
+   "fieldtype": "Check",
+   "label": "GSTR 1 Filled"
+  },
+  {
+   "default": "0",
+   "fieldname": "gstr_3b_filled",
+   "fieldtype": "Check",
+   "label": "GSTR 3B Filled"
+  },
+  {
+   "fieldname": "column_break_47",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gstr_1_filing_date",
+   "fieldtype": "Date",
+   "label": "GSTR 1 Filing Date"
+  },
+  {
+   "fieldname": "registration_cancel_date",
+   "fieldtype": "Date",
+   "label": "Registration Cancel Date"
+  },
+  {
+   "fieldname": "return_period_2b",
+   "fieldtype": "Data",
+   "label": "2B Return Period"
+  },
+  {
+   "fieldname": "gen_date_2b",
+   "fieldtype": "Date",
+   "label": "2B Generation Date"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_reverse_charge",
+   "fieldtype": "Check",
+   "label": "Reverse Charge"
+  },
+  {
+   "fieldname": "bill_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Document Number"
+  },
+  {
+   "fieldname": "bill_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Document Date"
+  },
+  {
+   "fieldname": "original_bill_no",
+   "fieldtype": "Data",
+   "label": "Original Document Number"
+  },
+  {
+   "fieldname": "original_bill_date",
+   "fieldtype": "Date",
+   "label": "Original Document Date"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2023-09-06 21:35:11.153554",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GST Inward Supply",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User"
+  }
+ ],
+ "search_fields": "bill_date, supplier_name, bill_no, document_value",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "supplier_name",
+ "track_changes": 1
+}

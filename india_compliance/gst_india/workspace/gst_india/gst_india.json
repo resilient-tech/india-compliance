@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"Xz6h3FH8sZ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Waybills\",\"col\":4}},{\"id\":\"5wHVnb2VB-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Invoices\",\"col\":4}},{\"id\":\"FT76_s4_M1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice Cancelled, e-Invoice Active\",\"col\":4}},{\"id\":\"ROouz1137a\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pSkSY7vg5b\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"kJscjOHSLN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"id\":\"BT3ZIyt2_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1\",\"col\":3}},{\"id\":\"fVgN1kK1r6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"id\":\"-G2gVutaOP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"id\":\"sEPHpNM3bl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"id\":\"bVd6Hbw3Yp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"oN0FbtHAdc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"id\":\"doCaNmtmY8\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"id\":\"Emy7VbsSYq\",\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"id\":\"2FUZmTJKVp\",\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}}]",
+ "content": "[{\"id\":\"Xz6h3FH8sZ\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Waybills\",\"col\":4}},{\"id\":\"5wHVnb2VB-\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Pending e-Invoices\",\"col\":4}},{\"id\":\"FT76_s4_M1\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Invoice Cancelled, e-Invoice Active\",\"col\":4}},{\"id\":\"ROouz1137a\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"pSkSY7vg5b\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Shortcuts</b></span>\",\"col\":12}},{\"id\":\"kJscjOHSLN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GST Settings\",\"col\":3}},{\"id\":\"BT3ZIyt2_1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-1\",\"col\":3}},{\"id\":\"fVgN1kK1r6\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"GSTR-3B\",\"col\":3}},{\"id\":\"kxE1gBYYUW\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Reconciliation Tool\",\"col\":3}},{\"id\":\"-G2gVutaOP\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HSN Code\",\"col\":3}},{\"id\":\"sEPHpNM3bl\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"India Compliance Account\",\"col\":3}},{\"id\":\"bVd6Hbw3Yp\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"oN0FbtHAdc\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports and Masters</b></span>\",\"col\":12}},{\"id\":\"doCaNmtmY8\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales and Purchase Reports\",\"col\":4}},{\"id\":\"Emy7VbsSYq\",\"type\":\"card\",\"data\":{\"card_name\":\"Logs\",\"col\":4}},{\"id\":\"2FUZmTJKVp\",\"type\":\"card\",\"data\":{\"card_name\":\"Other GST Reports\",\"col\":4}}]",
  "creation": "2022-02-28 19:04:58.655348",
  "custom_blocks": [],
  "docstatus": 0,
@@ -12,44 +12,6 @@
  "is_hidden": 0,
  "label": "GST India",
  "links": [
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Logs",
-   "link_count": 3,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "e-Waybill Log",
-   "link_count": 0,
-   "link_to": "e-Waybill Log",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "e-Invoice Log",
-   "link_count": 0,
-   "link_to": "e-Invoice Log",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Integration Request",
-   "link_count": 0,
-   "link_to": "Integration Request",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
   {
    "hidden": 0,
    "is_query_report": 0,
@@ -165,9 +127,57 @@
    "link_type": "Report",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Logs",
+   "link_count": 4,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "e-Waybill Log",
+   "link_count": 0,
+   "link_to": "e-Waybill Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "e-Invoice Log",
+   "link_count": 0,
+   "link_to": "e-Invoice Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "GST Inward Supply",
+   "link_count": 0,
+   "link_to": "GST Inward Supply",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Integration Request",
+   "link_count": 0,
+   "link_to": "Integration Request",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2023-08-04 11:36:58.261982",
+ "modified": "2023-09-06 12:35:16.364094",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST India",
@@ -203,6 +213,13 @@
    "label": "GSTR-1",
    "link_to": "GSTR-1",
    "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Purchase Reconciliation Tool",
+   "link_to": "Purchase Reconciliation Tool",
+   "type": "DocType"
   },
   {
    "color": "Grey",
