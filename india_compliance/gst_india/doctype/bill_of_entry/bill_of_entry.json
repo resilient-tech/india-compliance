@@ -31,6 +31,7 @@
   "column_break_xjvk",
   "customs_expense_account",
   "column_break_zsed",
+  "ignore_reconciliation",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -269,13 +270,21 @@
    "fieldname": "bill_of_lading_no",
    "fieldtype": "Data",
    "label": "Bill of Lading No."
+  },
+  {
+   "default": "0",
+   "fieldname": "ignore_reconciliation",
+   "fieldtype": "Check",
+   "label": "Ignore Reconciliation",
+   "no_copy": 1,
+   "print_hide": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-04-28 07:26:31.704232",
+ "modified": "2023-09-06 21:43:12.372700",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

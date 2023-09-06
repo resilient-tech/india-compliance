@@ -4,8 +4,21 @@ from titlecase import titlecase as _titlecase
 
 import frappe
 from frappe import _
+from frappe.contacts.doctype.contact.contact import get_contact_details
 from frappe.desk.form.load import get_docinfo, run_onload
-from frappe.utils import cint, cstr, get_datetime, get_link_to_form, get_system_timezone
+from frappe.utils import (
+    add_to_date,
+    cint,
+    cstr,
+    get_datetime,
+    get_link_to_form,
+    get_system_timezone,
+    getdate,
+)
+from frappe.utils.data import get_timespan_date_range as _get_timespan_date_range
+from frappe.utils.file_manager import get_file_path
+from erpnext.accounts.party import get_default_contact
+from erpnext.accounts.utils import get_fiscal_year
 
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
@@ -94,6 +107,38 @@ def get_gstin_list(party, party_type="Company"):
         gstin_list.insert(0, default_gstin)
 
     return gstin_list
+
+
+@frappe.whitelist()
+def get_party_for_gstin(gstin, party_type="Supplier"):
+    if not gstin:
+        return
+
+    if party := frappe.db.get_value(
+        party_type, filters={"gstin": gstin}, fieldname="name"
+    ):
+        return party
+
+    address = frappe.qb.DocType("Address")
+    links = frappe.qb.DocType("Dynamic Link")
+    party = (
+        frappe.qb.from_(address)
+        .join(links)
+        .on(links.parent == address.name)
+        .select(links.link_name)
+        .where(links.link_doctype == party_type)
+        .where(address.gstin == gstin)
+        .limit(1)
+        .run()
+    )
+    if party:
+        return party[0][0]
+
+
+@frappe.whitelist()
+def get_party_contact_details(party, party_type="Supplier"):
+    if party and (contact := get_default_contact(party_type, party)):
+        return get_contact_details(contact)
 
 
 def validate_gstin(
@@ -447,6 +492,10 @@ def as_ist(value=None):
     )
 
 
+def get_json_from_file(path):
+    return frappe._dict(frappe.get_file_json(get_file_path(path)))
+
+
 def join_list_with_custom_separators(input, separator=", ", last_separator=" or "):
     if type(input) not in (list, tuple):
         return
@@ -571,3 +620,26 @@ def get_validated_country_code(country):
         )
 
     return code
+
+
+def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple | None:
+    date_range = _get_timespan_date_range(timespan)
+
+    if date_range:
+        return date_range
+
+    company = company or frappe.defaults.get_user_default("Company")
+
+    match timespan:
+        case "this fiscal year":
+            date = getdate()
+            fiscal_year = get_fiscal_year(date, company=company)
+            return (fiscal_year[1], fiscal_year[2])
+
+        case "last fiscal year":
+            date = add_to_date(getdate(), years=-1)
+            fiscal_year = get_fiscal_year(date, company=company)
+            return (fiscal_year[1], fiscal_year[2])
+
+        case _:
+            return
