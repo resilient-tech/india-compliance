@@ -268,6 +268,7 @@ scheduler_events = {
     "cron": {
         "*/5 * * * *": [
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_generation",
+            "india_compliance.gst_india.utils.gstr.download_queued_request",
         ],
     }
 }
