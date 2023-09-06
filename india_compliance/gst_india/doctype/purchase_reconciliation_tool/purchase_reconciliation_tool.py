@@ -1,10 +1,12 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import json
 from typing import List
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
@@ -42,7 +44,7 @@ class PurchaseReconciliationTool(Document):
         )
         return {field: self.get(field) for field in fields}
 
-    def on_update(self):
+    def validate(self):
         # reconcile purchases and inward supplies
         if frappe.flags.in_install or frappe.flags.in_migrate:
             return
@@ -52,7 +54,9 @@ class PurchaseReconciliationTool(Document):
             _Reconciler.reconcile(row["original"], row["amended"])
 
         self.ReconciledData = ReconciledData(**self.get_reco_doc())
-        frappe.response.reconciliation_data = self.ReconciledData.get()
+        self.reconciliation_data = json.dumps(
+            self.ReconciledData.get(), default=json_handler
+        )
 
     @frappe.whitelist()
     def upload_gstr(self, return_type, period, file_path):

@@ -78,6 +78,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     before_save(frm) {
         frm.doc.__unsaved = true;
+        frm.doc.reconciliation_data = null;
     },
 
     purchase_period(frm) {
@@ -89,10 +90,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     after_save(frm) {
-        purchase_reconciliation_tool._reconciliation_data =
-            frappe.last_response?.reconciliation_data;
         frm.purchase_reconciliation_tool.refresh(
-            purchase_reconciliation_tool._reconciliation_data
+            JSON.parse(frm.doc.reconciliation_data)
         );
     },
 
@@ -154,7 +153,7 @@ class PurchaseReconciliationTool {
 
     init(frm) {
         this.frm = frm;
-        this.data = [];
+        this.data = JSON.parse(frm.doc.reconciliation_data) || [];
         this.filtered_data = this.data;
         this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
         this._tabs = ["invoice", "supplier", "summary"];
