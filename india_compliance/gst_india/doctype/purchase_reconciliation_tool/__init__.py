@@ -67,9 +67,8 @@ class MatchStatus(Enum):
 #     {"Residual Match": ["E", "N", "N", "E", "E", 1, 1, 1, 1, 2]},
 # ]
 
-
-class GSTINRules(Enum):
-    RULE1 = {
+GSTIN_RULES = (
+    {
         "match_status": MatchStatus.EXACT_MATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -83,9 +82,8 @@ class GSTINRules(Enum):
             Fields.IGST: Rule.EXACT_MATCH,
             Fields.CESS: Rule.EXACT_MATCH,
         },
-    }
-
-    RULE2 = {
+    },
+    {
         "match_status": MatchStatus.SUGGESTED_MATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -99,9 +97,8 @@ class GSTINRules(Enum):
             Fields.IGST: Rule.EXACT_MATCH,
             Fields.CESS: Rule.EXACT_MATCH,
         },
-    }
-
-    RULE3 = {
+    },
+    {
         "match_status": MatchStatus.SUGGESTED_MATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -115,9 +112,8 @@ class GSTINRules(Enum):
             Fields.IGST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
-    }
-
-    RULE4 = {
+    },
+    {
         "match_status": MatchStatus.SUGGESTED_MATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -131,9 +127,8 @@ class GSTINRules(Enum):
             Fields.IGST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
-    }
-
-    RULE5 = {
+    },
+    {
         "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -147,9 +142,8 @@ class GSTINRules(Enum):
             # Fields.IGST: Rule.MISMATCH,
             # Fields.CESS: Rule.MISMATCH,
         },
-    }
-
-    RULE6 = {
+    },
+    {
         "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -163,9 +157,8 @@ class GSTINRules(Enum):
             # Fields.IGST: Rule.MISMATCH,
             # Fields.CESS: Rule.MISMATCH,
         },
-    }
-
-    RULE7 = {
+    },
+    {
         "match_status": MatchStatus.RESIDUAL_MATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -179,11 +172,12 @@ class GSTINRules(Enum):
             Fields.IGST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
-    }
+    },
+)
 
 
-class PANRules(Enum):
-    RULE1 = {
+PAN_RULES = (
+    {
         "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -197,9 +191,8 @@ class PANRules(Enum):
             Fields.IGST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
-    }
-
-    RULE2 = {
+    },
+    {
         "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -213,9 +206,8 @@ class PANRules(Enum):
             Fields.IGST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
-    }
-
-    RULE3 = {
+    },
+    {
         "match_status": MatchStatus.MISMATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -229,9 +221,8 @@ class PANRules(Enum):
             # Fields.IGST: Rule.MISMATCH,
             # Fields.CESS: Rule.MISMATCH,
         },
-    }
-
-    RULE4 = {
+    },
+    {
         "match_status": MatchStatus.RESIDUAL_MATCH,
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
@@ -245,7 +236,8 @@ class PANRules(Enum):
             Fields.IGST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
-    }
+    },
+)
 
 
 class InwardSupply:
@@ -551,19 +543,18 @@ class Reconciler(BaseReconciliation):
         # GSTIN Level matching
         purchases = self.get_unmatched_purchase(category)
         inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
-        self.reconcile_for_rules(GSTINRules, purchases, inward_supplies, category)
+        self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies, category)
 
         # PAN Level matching
         purchases = self.get_pan_level_data(purchases)
         inward_supplies = self.get_pan_level_data(inward_supplies)
-        self.reconcile_for_rules(PANRules, purchases, inward_supplies, category)
+        self.reconcile_for_rules(PAN_RULES, purchases, inward_supplies, category)
 
     def reconcile_for_rules(self, rules, purchases, inward_supplies, category):
         if not (purchases and inward_supplies):
             return
 
         for rule in rules:
-            rule = rule.value
             self.reconcile_for_rule(
                 purchases,
                 inward_supplies,

@@ -958,7 +958,7 @@ class DetailViewDialog {
         const detail_table = this.dialog.fields_dict.detail_table;
 
         detail_table.html(
-            frappe.render_template("detail_view_table", {
+            frappe.render_template("purchase_detail_comparision", {
                 purchase: this.data._purchase_invoice,
                 inward_supply: this.data._inward_supply,
             })
@@ -1083,8 +1083,11 @@ class ImportDialog {
             for_download: this.for_download,
         });
 
+        console.log(message);
         if (!message) return;
-        this.dialog.fields_dict.history.set_value(message);
+        this.dialog.fields_dict.history.html(
+            frappe.render_template("gstr_download_history", message)
+        );
     }
 
     async update_return_period() {

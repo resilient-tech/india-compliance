@@ -68,7 +68,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-08-20 14:08:41.765558",
+ "modified": "2023-09-06 09:18:47.885426",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR Import Log",
@@ -85,6 +85,18 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager"
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User"
   }
  ],
  "sort_field": "modified",

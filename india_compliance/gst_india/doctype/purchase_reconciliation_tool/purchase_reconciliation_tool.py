@@ -166,10 +166,7 @@ class PurchaseReconciliationTool(Document):
                 if _dict not in data[period]:
                     data[period].append(_dict)
 
-        return frappe.render_template(
-            "gst_india/doctype/purchase_reconciliation_tool/download_history.html",
-            {"columns": columns, "data": data},
-        )
+        return {"columns": columns, "data": data}
 
     @frappe.whitelist()
     def get_return_period_from_file(self, return_type, file_path):
