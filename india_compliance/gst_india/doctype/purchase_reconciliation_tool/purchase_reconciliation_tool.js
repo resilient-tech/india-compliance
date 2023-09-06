@@ -25,6 +25,10 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
 
+    onload(frm) {
+        frm.trigger("company");
+    },
+
     async company(frm) {
         if (frm.doc.company) {
             const options = await set_gstin_options(frm);

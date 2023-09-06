@@ -9,7 +9,7 @@ from rapidfuzz import fuzz, process
 import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Abs, Sum
+from frappe.query_builder.functions import Abs, IfNull, Sum
 from frappe.utils import add_months, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
@@ -262,9 +262,7 @@ class InwardSupply:
         categories = [category, amended_category or None]
         query = self.with_period_filter()
         data = (
-            query.where(
-                (self.GSTR2.match_status == "") | (self.GSTR2.match_status.isnull())
-            )
+            query.where(IfNull(self.GSTR2.match_status, "") == "")
             .where(self.GSTR2.action != "Ignore")
             .where(self.GSTR2.classification.isin(categories))
             .run(as_dict=True)
@@ -300,7 +298,7 @@ class InwardSupply:
             .left_join(self.GSTR2_ITEM)
             .on(self.GSTR2_ITEM.parent == self.GSTR2.name)
             .where(self.company_gstin == self.GSTR2.company_gstin)
-            .where(self.GSTR2.match_status != "Amended")
+            .where(IfNull(self.GSTR2.match_status, "") != "Amended")
             .groupby(self.GSTR2_ITEM.parent)
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
@@ -740,7 +738,7 @@ class Reconciler(BaseReconciliation):
             self.reconcile_for_rule(
                 purchases,
                 inward_supplies,
-                rule.get("match_status"),
+                rule.get("match_status").value,
                 rule.get("rule"),
                 category,
             )
@@ -808,11 +806,11 @@ class Reconciler(BaseReconciliation):
         summary = {}
         for doc in data1.values():
             summary.setdefault(doc.bill_date.month, 0)
-            summary[doc.bill_date.month] += self.get_total_tax(doc)
+            summary[doc.bill_date.month] += BaseUtil.get_total_tax(doc)
 
         for doc in data2.values():
             summary.setdefault(doc.bill_date.month, 0)
-            summary[doc.bill_date.month] -= self.get_total_tax(doc)
+            summary[doc.bill_date.month] -= BaseUtil.get_total_tax(doc)
 
         return summary
 

@@ -6,6 +6,7 @@ from typing import List
 
 import frappe
 from frappe.model.document import Document
+from frappe.query_builder.functions import IfNull
 from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
@@ -381,7 +382,7 @@ class PurchaseReconciliationTool(Document):
             query = query.where(GSTR2.classification.isin(IMPORT_CATEGORY))
 
         if not filters.show_matched:
-            query = query.where((GSTR2.link_name == "") | (GSTR2.link_name.isnull()))
+            query = query.where(IfNull(GSTR2.link_name, "") == "")
 
         return self._get_link_options(query.run(as_dict=True))
 
