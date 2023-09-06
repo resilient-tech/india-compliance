@@ -10,7 +10,7 @@ import frappe
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Abs, IfNull, Sum
-from frappe.utils import add_months, getdate, rounded
+from frappe.utils import add_months, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
@@ -924,6 +924,9 @@ class ReconciledData(BaseReconciliation):
         for doc in data:
             purchase = doc.pop("_purchase_invoice", frappe._dict())
             inward_supply = doc.pop("_inward_supply", frappe._dict())
+
+            purchase.bill_date = format_date(purchase.bill_date)
+            inward_supply.bill_date = format_date(inward_supply.bill_date)
 
             doc.update(purchase)
             doc.update(

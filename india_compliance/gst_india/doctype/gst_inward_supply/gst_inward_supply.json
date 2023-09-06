@@ -358,7 +358,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-08-29 17:18:25.443508",
+ "modified": "2023-09-06 21:35:11.153554",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
@@ -376,6 +376,21 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User"
   }
  ],
  "search_fields": "bill_date, supplier_name, bill_no, document_value",

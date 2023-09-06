@@ -648,6 +648,7 @@ class PurchaseReconciliationTool {
             {
                 label: "Date",
                 fieldname: "bill_date",
+                _value: (...args) => frappe.datetime.str_to_user(args[0]),
             },
             {
                 label: "Match Status",
