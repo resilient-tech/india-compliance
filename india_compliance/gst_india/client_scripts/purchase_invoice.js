@@ -54,6 +54,7 @@ frappe.ui.form.on(DOCTYPE, {
                     reco_frm,
                     frm.doc.name,
                     frm._inward_supply.name,
+                    "Purchase Invoice",
                     false
                 );
             };
