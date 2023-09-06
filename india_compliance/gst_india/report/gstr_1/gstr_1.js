@@ -1,5 +1,16 @@
 // Copyright (c) 2018, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
+const TYPES_OF_BUSINESS = {
+	"B2B": __("B2B Invoices - 4A, 4B, 4C, 6B, 6C"),
+	"B2C Large": __("B2C(Large) Invoices - 5A, 5B"),
+	"B2C Small": __("B2C(Small) Invoices - 7"),
+	"CDNR-REG": __("Credit/Debit Notes (Registered) - 9B"),
+	"CDNR-UNREG": __("Credit/Debit Notes (Unregistered) - 9B"),
+	"EXPORT": __("Export Invoice - 6A"),
+	"Advances": __("Tax Liability (Advances Received) - 11A(1), 11A(2)"),
+	"NIL Rated": __("NIL RATED/EXEMPTED Invoices")
+};
+
 
 frappe.query_reports["GSTR-1"] = {
 	"filters": [
@@ -55,45 +66,35 @@ frappe.query_reports["GSTR-1"] = {
 			"label": __("Type of Business"),
 			"fieldtype": "Select",
 			"reqd": 1,
-			"options": [
-				{ "value": "B2B", "label": __("B2B Invoices - 4A, 4B, 4C, 6B, 6C") },
-				{ "value": "B2C Large", "label": __("B2C(Large) Invoices - 5A, 5B") },
-				{ "value": "B2C Small", "label": __("B2C(Small) Invoices - 7") },
-				{ "value": "CDNR-REG", "label": __("Credit/Debit Notes (Registered) - 9B") },
-				{ "value": "CDNR-UNREG", "label": __("Credit/Debit Notes (Unregistered) - 9B") },
-				{ "value": "EXPORT", "label": __("Export Invoice - 6A") },
-				{ "value": "Advances", "label": __("Tax Liability (Advances Received) - 11A(1), 11A(2)") },
-				{ "value": "NIL Rated", "label": __("NIL RATED/EXEMPTED Invoices") }
-			],
+			"options": Object.entries(TYPES_OF_BUSINESS).map(([key, value]) => ({
+				value: key,
+				label: value
+			})),
 			"default": "B2B",
 			"on_change": (report) => {
-				var $inner_group = report.page.get_inner_group_button("Download as JSON");
-				var $drop_down_items = $inner_group.find(".dropdown-item");
-				$drop_down_items.remove();
+				report.page.get_inner_group_button("Download as JSON")
+					.find(".dropdown-item").remove();
 				create_download_buttons(report);
 				report.refresh();
 			},
 		}
 	],
-	onload: (report) => {
-		create_download_buttons(report);
-	},
+	onload: create_download_buttons,
 }
 
 function create_download_buttons(report) {
 	report.page.add_inner_button(
-		__("{0}", [report.get_values().type_of_business]),
+		TYPES_OF_BUSINESS[report.get_values().type_of_business],
 		() => download_current_report(report),
-		"Download as JSON"
+		__("Download as JSON")
 	);
 
 	report.page.add_inner_button(
-		__("Complete Report"),
-		() => download_complete_report(report),
-		"Download as JSON"
+		__("Full Report"),
+		() => download_full_report(report),
+		__("Download as JSON")
 	);
 }
-
 
 function download_current_report(report) {
 	frappe.call({
@@ -105,34 +106,22 @@ function download_current_report(report) {
 		},
 		callback: function (r) {
 			if (r.message) {
-				const args = {
-					cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
-					data: r.message.data,
-					report_name: r.message.report_name,
-					report_type: r.message.report_type
-				};
-				open_url_post(frappe.request.url, args);
+				india_compliance.trigger_file_download(JSON.stringify(r.message.data), r.message.file_name);
 			}
 		}
 	});
 }
 
-function download_complete_report(report) {
+function download_full_report(report) {
 	frappe.call({
-		method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_json_all_reports',
+		method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_full_json',
 		args: {
 			report_name: report.report_name,
 			filters: report.get_values()
 		},
 		callback: function (r) {
 			if (r.message) {
-				const args = {
-					cmd: 'india_compliance.gst_india.report.gstr_1.gstr_1.download_json_file',
-					data: r.message.data,
-					report_name: r.message.report_name,
-					report_type: r.message.report_type
-				};
-				open_url_post(frappe.request.url, args);
+				india_compliance.trigger_file_download(JSON.stringify(r.message.data), r.message.file_name);
 			}
 		}
 	});
