@@ -905,6 +905,10 @@ def set_reverse_charge(doc):
 
 
 def validate_gstin(gstin, transaction_date):
+    settings = frappe.get_cached_doc("GST Settings")
+    if not settings.validate_gstin_status:
+        return
+
     gstin_doc = get_gstin_status(gstin, transaction_date)
 
     if not gstin_doc:
