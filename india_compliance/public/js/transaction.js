@@ -216,6 +216,8 @@ async function _set_gstin_status(frm, gstin_field_name) {
 }
 
 function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
+    if (!gst_settings.validate_gstin_status) return;
+
     const date_field =
         frm.get_field("posting_date") || frm.get_field("transaction_date");
 
