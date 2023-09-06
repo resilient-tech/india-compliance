@@ -66,9 +66,9 @@ frappe.query_reports["GSTR-1"] = {
 			"label": __("Type of Business"),
 			"fieldtype": "Select",
 			"reqd": 1,
-			"options": Object.entries(TYPES_OF_BUSINESS).map(([key, value]) => ({
-				value: key,
-				label: value
+			"options": Object.entries(TYPES_OF_BUSINESS).map(([value, label]) => ({
+				value,
+				label
 			})),
 			"default": "B2B",
 			"on_change": (report) => {
