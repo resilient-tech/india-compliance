@@ -157,7 +157,7 @@ class PurchaseReconciliationTool {
 
     init(frm) {
         this.frm = frm;
-        this.data = JSON.parse(frm.doc.reconciliation_data) || [];
+        this.data = frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : [];
         this.filtered_data = this.data;
         this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
         this._tabs = ["invoice", "supplier", "summary"];
