@@ -53,7 +53,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => unlink_documents(frm),
                 __("Actions")
             );
-            frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
+            frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
         ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
             action =>
@@ -95,7 +95,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     after_save(frm) {
         frm.purchase_reconciliation_tool.refresh(
-            JSON.parse(frm.doc.reconciliation_data)
+            frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : []
         );
     },
 
@@ -157,7 +157,9 @@ class PurchaseReconciliationTool {
 
     init(frm) {
         this.frm = frm;
-        this.data = frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : [];
+        this.data = frm.doc.reconciliation_data
+            ? JSON.parse(frm.doc.reconciliation_data)
+            : [];
         this.filtered_data = this.data;
         this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
         this._tabs = ["invoice", "supplier", "summary"];
@@ -872,8 +874,9 @@ class DetailViewDialog {
                         ? ["GST Inward Supply"]
                         : ["Purchase Invoice", "Bill of Entry"],
 
-                read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
-                    }`,
+                read_only_depends_on: `eval: ${
+                    this.missing_doctype == "GST Inward Supply"
+                }`,
 
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
