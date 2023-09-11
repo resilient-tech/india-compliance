@@ -100,7 +100,11 @@ def get_dashboard_data(data):
     reference_section["items"].append("Bill of Entry")
 
     update_dashboard_with_gst_logs(
-        "Purchase Invoice", data, "e-Waybill Log", "Integration Request"
+        "Purchase Invoice",
+        data,
+        "e-Waybill Log",
+        "Integration Request",
+        "GST Inward Supply",
     )
 
     return data
