@@ -400,6 +400,8 @@ class PurchaseReconciliationTool {
             "click",
             ".supplier-gstin",
             async function (e) {
+                e.preventDefault();
+
                 const supplier_gstin = $(this).text().trim();
                 await me.filter_group.push_new_filter([
                     "Purchase Reconciliation Tool",
@@ -712,9 +714,9 @@ class PurchaseReconciliationTool {
         return `
         ${row.supplier_name}
         <br />
-        <span style="font-size: 0.9em" class="supplier-gstin">
+        <a href="#" style="font-size: 0.9em;" class="supplier-gstin">
             ${row.supplier_gstin || ""}
-        </span>
+        </a>
         `;
     }
 }

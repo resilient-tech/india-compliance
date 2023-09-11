@@ -91,6 +91,8 @@ india_compliance.DataTableManager = class DataTableManager {
             field: column.fieldname,
             name: column.label,
             content: column.label,
+            editable: false,
+            focusable: false,
             format,
             docfield,
             ...column,
