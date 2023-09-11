@@ -117,8 +117,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 method == "update_api_progress"
                     ? __("Fetching data from GSTN")
                     : __("Updating Inward Supply for Return Period {0}", [
-                          data.return_period,
-                      ]);
+                        data.return_period,
+                    ]);
 
             frm.dashboard.show_progress(
                 "Import GSTR Progress",
@@ -396,15 +396,21 @@ class PurchaseReconciliationTool {
             me.dm = new EmailDialog(me.frm, row);
         });
 
-        // TODO: add filters on click
-        // this.tabs.summary_tab.$datatable.on(
-        //     "click",
-        //     ".match-status",
-        //     async function (e) {
-        //         const match_status = $(this).text();
-        //         console.log(match_status);
-        //     }
-        // );
+        this.tabs.supplier_tab.$datatable.on(
+            "click",
+            ".supplier-gstin",
+            async function (e) {
+                const supplier_gstin = $(this).text().trim();
+                await me.filter_group.push_new_filter([
+                    "Purchase Reconciliation Tool",
+                    "supplier_gstin",
+                    "=",
+                    supplier_gstin
+                ]);
+                me.filter_group.apply();
+            }
+        )
+
     }
 
     export_data(selected_row) {
@@ -706,7 +712,7 @@ class PurchaseReconciliationTool {
         return `
         ${row.supplier_name}
         <br />
-        <span style="font-size: 0.9em">
+        <span style="font-size: 0.9em" class="supplier-gstin">
             ${row.supplier_gstin || ""}
         </span>
         `;
