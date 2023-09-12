@@ -1471,10 +1471,10 @@ function apply_action(frm, action, selected_rows) {
                     "You can only Accept values where a match is available. Rows where match is missing will be ignored."
                 )
             );
-    } else if (action != "Ignore") {
+    } else if (action == "Ignore") {
         let warn = false;
         affected_rows = affected_rows.filter(row => {
-            if (row.match_status == "Missing in 2A/2B") {
+            if (row.match_status.includes("match")) {
                 warn = true;
                 return false;
             }
@@ -1484,7 +1484,7 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored."
                 )
             );
     }
