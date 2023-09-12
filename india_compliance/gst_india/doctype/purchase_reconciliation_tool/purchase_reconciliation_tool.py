@@ -260,15 +260,44 @@ class PurchaseReconciliationTool(Document):
         if isinstance(data, str):
             data = frappe.parse_json(data)
 
-        purchases = set()
+        all_purchase_doc = set()
         inward_supplies = set()
+        purchases = set()
+        boe = set()
 
         for doc in data:
+            purchase_doctype = doc.get("purchase_doctype")
             inward_supplies.add(doc.get("inward_supply_name"))
-            purchases.add(doc.get("purchase_invoice_name"))
+            all_purchase_doc.add(doc.get("purchase_invoice_name"))
+            if purchase_doctype == "Purchase Invoice":
+                purchases.add(doc.get("purchase_invoice_name"))
+            if purchase_doctype == "Bill of Entry":
+                boe.add(doc.get("purchase_invoice_name"))
+
+        if purchases:
+            self.set_reconciliation_status(
+                "Purchase Invoice", purchases, "Unreconciled"
+            )
+
+        if boe:
+            self.set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
 
         self._unlink_documents(inward_supplies)
-        return self.ReconciledData.get(purchases, inward_supplies)
+
+        return self.ReconciledData.get(all_purchase_doc, inward_supplies)
+
+    def set_reconciliation_status(
+        self,
+        doctype,
+        names,
+        status,
+    ):
+        frappe.db.set_value(
+            doctype,
+            {"name": ("in", names)},
+            "reconciliation_status",
+            status,
+        )
 
     def _unlink_documents(self, inward_supplies):
         if not inward_supplies:
@@ -300,19 +329,33 @@ class PurchaseReconciliationTool(Document):
         if isinstance(data, str):
             data = frappe.parse_json(data)
 
-        is_ignore_action = action == "Ignore"
+        STATUS_MAP = {
+            "Accept My Values": "Reconciled",
+            "Accept Supplier Values": "Reconciled",
+            "Pending": "Unreconciled",
+            "Ignore:": "Ignored",
+        }
+
+        status = STATUS_MAP.get(action)
 
         inward_supplies = []
         purchases = []
+        boe = []
 
         for doc in data:
+            if action == "Ignore:" and doc.get("match_status") not in (
+                "Missing in PI",
+                "Missing in 2A/2B",
+            ):
+                continue
+
+            purchase_doctype = doc.get("purchase_doctype")
             inward_supplies.append(doc.get("inward_supply_name"))
-
-            if is_ignore_action and not doc.get("inward_supply_name"):
+            if purchase_doctype == "Purchase Invoice":
                 purchases.append(doc.get("purchase_invoice_name"))
+            if purchase_doctype == "Bill of Entry":
+                boe.append(doc.get("purchase_invoice_name"))
 
-        PI = frappe.qb.DocType("Purchase Invoice")
-        BOE = frappe.qb.DocType("Bill of Entry")
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
 
         if inward_supplies:
@@ -324,18 +367,10 @@ class PurchaseReconciliationTool(Document):
             )
 
         if purchases:
-            (
-                frappe.qb.update(PI)
-                .set("ignore_reconciliation", 1)
-                .where(PI.name.isin(purchases))
-                .run()
-            )
-            (
-                frappe.qb.update(BOE)
-                .set("ignore_reconciliation", 1)
-                .where(BOE.name.isin(purchases))
-                .run()
-            )
+            self.set_reconciliation_status("Purchase Invoice", purchases, status)
+
+        if boe:
+            self.set_reconciliation_status("Bill of Entry", boe, status)
 
     @frappe.whitelist()
     def get_link_options(self, doctype, filters):

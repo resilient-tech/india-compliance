@@ -926,11 +926,11 @@ class DetailViewDialog {
         // determine actions
         let actions = [];
         const doctype = this.dialog.get_value("doctype");
-        if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
+        if (this.row.match_status == "Missing in 2A/2B") actions.push("Link", "Ignore");
         else if (this.row.match_status == "Missing in PI")
             if (doctype == "Purchase Invoice")
-                actions.push("Create", "Link", "Pending");
-            else actions.push("Link", "Pending");
+                actions.push("Create", "Link", "Pending", "Ignore");
+            else actions.push("Link", "Pending", "Ignore");
         else
             actions.push(
                 "Unlink",
@@ -938,8 +938,6 @@ class DetailViewDialog {
                 "Accept Supplier Values",
                 "Pending"
             );
-
-        actions.push("Ignore");
 
         // setup actions
         actions.forEach(action => {

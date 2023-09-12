@@ -379,7 +379,11 @@ class PurchaseInvoice:
                     )
                 )
             )
-            .where(self.PI.ignore_reconciliation == 0)
+            .where(
+                IfNull(self.PI.reconciliation_status, "").notin(
+                    ["Ignored", "Not Applicable"]
+                )
+            )
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.is_return == is_return)
         )
@@ -412,10 +416,7 @@ class PurchaseInvoice:
             .on(pi_item.parent == self.PI.name)
             .where(self.company_gstin == self.PI.company_gstin)
             .where(self.PI.docstatus == 1)
-            # Filter for B2B transactions where match can be made
-            .where(self.PI.supplier_gstin != "")
-            .where(self.PI.gst_category != "Registered Composition")
-            .where(self.PI.supplier_gstin.isnotnull())
+            .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
             .groupby(self.PI.name)
             .select(
                 *fields,
@@ -524,7 +525,11 @@ class BillOfEntry:
                     )
                 )
             )
-            .where(self.BOE.ignore_reconciliation == 0)
+            .where(
+                IfNull(self.PI.reconciliation_status, "").notin(
+                    ["Ignored", "Not Applicable"]
+                )
+            )
         )
 
         data = query.run(as_dict=True)
@@ -1022,7 +1027,7 @@ class ReconciledData(BaseReconciliation):
             "supplier_name",
             "is_return",
             "gst_category",
-            "ignore_reconciliation",
+            "reconciliation_status",
         ]
 
         boe_names = purchase_names
@@ -1132,7 +1137,9 @@ class ReconciledData(BaseReconciliation):
         elif not inward_supply:
             data.match_status = MatchStatus.MISSING_IN_2A_2B.value
             data.action = (
-                "Ignore" if purchase.get("ignore_reconciliation") else "No Action"
+                "Ignore"
+                if purchase.get("reconciliation_status") == "Ignored"
+                else "No Action"
             )
 
     def update_amount_difference(self, data, purchase, inward_supply):
