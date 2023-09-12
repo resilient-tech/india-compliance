@@ -276,7 +276,7 @@
    "fieldtype": "Select",
    "label": "Reconciliation Status",
    "no_copy": 1,
-   "options": "Not Applicable\nReconciled\nUnreconciled\nIgnored",
+   "options": "\nNot Applicable\nReconciled\nUnreconciled\nIgnored",
    "print_hide": 1,
    "read_only": 1
   }
@@ -285,7 +285,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-09-12 11:55:58.571317",
+ "modified": "2023-09-12 15:27:26.329524",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
