@@ -254,12 +254,10 @@ class PurchaseReconciliationTool {
         `
         ).appendTo(this.$wrapper.find(".form-tabs-list"));
 
-        this.filter_button = this.filter_button_group.find(".filter-button");
-        this.filter_x_button = this.filter_button_group.find(".filter-x-button");
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
-            filter_button: this.filter_button,
-            filter_x_button: this.filter_x_button,
+            filter_button: this.filter_button_group.find(".filter-button"),
+            filter_x_button: this.filter_button_group.find(".filter-x-button"),
             filter_options: {
                 fieldname: "supplier_name",
                 filter_fields: this.get_filter_fields(),
