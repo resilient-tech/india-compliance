@@ -343,7 +343,7 @@ class PurchaseReconciliationTool(Document):
         boe = []
 
         for doc in data:
-            if action == "Ignore:" and doc.get("match_status") not in (
+            if action != "Ignore:" and doc.get("match_status") in (
                 "Missing in PI",
                 "Missing in 2A/2B",
             ):
