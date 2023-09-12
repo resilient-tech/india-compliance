@@ -230,7 +230,7 @@ class PurchaseReconciliationTool {
     }
 
     setup_filter_button() {
-        this.filter_button_group = $(
+        const filter_button_group = $(
             `
         <div class="custom-button-group">
             <div class="filter-selector">
@@ -256,8 +256,8 @@ class PurchaseReconciliationTool {
 
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
-            filter_button: this.filter_button_group.find(".filter-button"),
-            filter_x_button: this.filter_button_group.find(".filter-x-button"),
+            filter_button: filter_button_group.find(".filter-button"),
+            filter_x_button: filter_button_group.find(".filter-x-button"),
             filter_options: {
                 fieldname: "supplier_name",
                 filter_fields: this.get_filter_fields(),
