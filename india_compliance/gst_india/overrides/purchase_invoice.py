@@ -46,6 +46,26 @@ def validate(doc, method=None):
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
+    set_reconciliation_status(doc)
+
+
+def set_reconciliation_status(doc):
+    reconciliation_status = "Not Applicable"
+
+    if is_b2b_invoice(doc):
+        reconciliation_status = "Unreconciled"
+
+    doc.reconciliation_status = reconciliation_status
+
+
+def is_b2b_invoice(doc):
+    return (
+        doc.supplier_gstin not in ["", None]
+        and doc.gst_category not in ["Registered Composition", "Overseas"]
+        and doc.supplier_gstin != doc.company_gstin
+        and doc.is_opening != "Yes"
+        and any(row for row in doc.items if row.is_non_gst != 1)
+    )
 
 
 def update_itc_totals(doc, method=None):

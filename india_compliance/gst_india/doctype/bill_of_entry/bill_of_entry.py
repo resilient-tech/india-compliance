@@ -44,6 +44,7 @@ class BillofEntry(Document):
     def validate(self):
         self.validate_purchase_invoice()
         self.validate_taxes()
+        self.reconciliation_status = "Unreconciled"
 
     def on_submit(self):
         make_gl_entries(self.get_gl_entries())
