@@ -1316,40 +1316,41 @@ class EmailDialog {
         });
     }
 
-    prepare_email_args(attachment) {
-        this.subject = `Reconciliation for ${this.data.supplier_name}-${this.data.supplier_gstin}`;
-        this.message = this.get_email_message();
+    async prepare_email_args(attachment) {
         this.attachment = attachment;
-
-        this.get_recipients()
-            .then(recipients => {
-                this.recipients = recipients;
-            })
-            .then(() => {
-                this.show_email_dialog();
-            });
+        let message = await this.get_template();
+        this.message = message.message;
+        this.subject = message.subject;
+        let recipients = await this.get_recipients();
+        this.recipients = recipients || [];
+        this.show_email_dialog();
     }
 
     show_email_dialog() {
         const args = {
             subject: this.subject,
-            recipients: this.recipients || [],
+            recipients: this.recipients,
             attach_document_print: false,
             message: this.message,
             attachments: this.attachment,
         };
         new frappe.views.CommunicationComposer(args);
     }
+    async get_template() {
+        if (!this.frm.meta.default_email_template) return {};
+        let doc = {
+            ...this.frm.doc,
+            ...this.data,
+        };
 
-    get_email_message() {
-        const from_date = frappe.datetime.str_to_user(
-            this.frm.doc.inward_supply_from_date
-        );
-        const to_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_to_date);
+        const { message } = await frappe.call({
+            method: "frappe.email.doctype.email_template.email_template.get_email_template",
+            args: {
+                template_name: this.frm.meta.default_email_template,
+                doc: doc,
+            },
+        });
 
-        let message = "Hello,<br><br>";
-        message += `We have made purchase reconciliation for the period ${from_date} to ${to_date} for purchases made by ${this.frm.doc.company} from you.<br><br>`;
-        message += `You are reqested to kindly make necessary corrections to GST Portal your end if required. Attached is the sheet for your reference.<br><br>`;
         return message;
     }
 
