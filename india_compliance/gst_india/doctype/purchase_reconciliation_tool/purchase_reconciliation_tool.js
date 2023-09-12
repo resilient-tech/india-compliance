@@ -117,8 +117,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 method == "update_api_progress"
                     ? __("Fetching data from GSTN")
                     : __("Updating Inward Supply for Return Period {0}", [
-                          data.return_period,
-                      ]);
+                        data.return_period,
+                    ]);
 
             frm.dashboard.show_progress(
                 "Import GSTR Progress",
@@ -230,27 +230,34 @@ class PurchaseReconciliationTool {
     }
 
     setup_filter_button() {
-        this.filter_button = $(
+        const filter_button_group = $(
             `
         <div class="custom-button-group">
             <div class="filter-selector">
-                <button class="btn btn-default btn-sm filter-button">
-                    <span class="filter-icon">
-                        ${frappe.utils.icon("filter")}
-                    </span>
-                    <span class="button-label hidden-xs">
-                        ${__("Filter")}
-                    <span>
-                </button>
+                <div class="btn-group">
+                    <button class="btn btn-default btn-sm filter-button">
+                        <span class="filter-icon">
+                            ${frappe.utils.icon("filter")}
+                        </span>
+                        <span class="button-label hidden-xs">
+                            ${__("Filter")}
+                        <span>
+                    </button>
+                    <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
+                        <span class="filter-icon">
+                            ${frappe.utils.icon("filter-x")}
+                        </span>
+                    </button>
+                </div>
             </div>
         </div>
         `
         ).appendTo(this.$wrapper.find(".form-tabs-list"));
 
-        this.filter_button = this.filter_button.find(".filter-button");
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
-            filter_button: this.filter_button,
+            filter_button: filter_button_group.find(".filter-button"),
+            filter_x_button: filter_button_group.find(".filter-x-button"),
             filter_options: {
                 fieldname: "supplier_name",
                 filter_fields: this.get_filter_fields(),
@@ -396,15 +403,48 @@ class PurchaseReconciliationTool {
             me.dm = new EmailDialog(me.frm, row);
         });
 
-        // TODO: add filters on click
-        // this.tabs.summary_tab.$datatable.on(
-        //     "click",
-        //     ".match-status",
-        //     async function (e) {
-        //         const match_status = $(this).text();
-        //         console.log(match_status);
-        //     }
-        // );
+        this.tabs.summary_tab.$datatable.on(
+            "click",
+            ".match-status",
+            async function (e) {
+                e.preventDefault();
+
+                const match_status = $(this).text();
+                await me.filter_group.push_new_filter([
+                    "Purchase Reconciliation Tool",
+                    "match_status",
+                    "=",
+                    match_status,
+                ]);
+                me.filter_group.apply();
+            }
+        );
+
+        this.tabs.supplier_tab.$datatable.on(
+            "click",
+            ".supplier-gstin",
+            add_supplier_gstin_filter
+        )
+
+        this.tabs.invoice_tab.$datatable.on(
+            "click",
+            ".supplier-gstin",
+            add_supplier_gstin_filter
+        )
+
+
+        async function add_supplier_gstin_filter(e) {
+            e.preventDefault();
+
+            const supplier_gstin = $(this).text().trim();
+            await me.filter_group.push_new_filter([
+                "Purchase Reconciliation Tool",
+                "supplier_gstin",
+                "=",
+                supplier_gstin
+            ]);
+            me.filter_group.apply();
+        }
     }
 
     export_data(selected_row) {
@@ -483,7 +523,7 @@ class PurchaseReconciliationTool {
                 label: "Match Status",
                 fieldname: "match_status",
                 width: 200,
-                _value: (...args) => `<span class='match-status'>${args[0]}</span>`,
+                _value: (...args) => `<a href="#" class='match-status'>${args[0]}</a>`,
             },
             {
                 label: "Count <br>2A/2B Docs",
@@ -706,9 +746,9 @@ class PurchaseReconciliationTool {
         return `
         ${row.supplier_name}
         <br />
-        <span style="font-size: 0.9em">
+        <a href="#" style="font-size: 0.9em;" class="supplier-gstin">
             ${row.supplier_gstin || ""}
-        </span>
+        </a>
         `;
     }
 }
