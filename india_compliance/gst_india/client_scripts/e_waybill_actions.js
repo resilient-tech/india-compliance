@@ -138,7 +138,9 @@ function setup_e_waybill_actions(doctype) {
                 !india_compliance.is_api_enabled() ||
                 !gst_settings.auto_generate_e_waybill ||
                 is_e_invoice_applicable(frm) ||
-                !is_e_waybill_applicable(frm)
+                !is_e_waybill_applicable(frm) ||
+                frm.doc.is_return ||
+                frm.doc.is_debit_note
             )
                 return;
 
@@ -994,9 +996,7 @@ function is_e_waybill_applicable_on_sales_invoice(frm) {
     return (
         frm.doctype == "Sales Invoice" &&
         frm.doc.company_gstin !== frm.doc.billing_address_gstin &&
-        frm.doc.customer_address &&
-        !frm.doc.is_return &&
-        !frm.doc.is_debit_note
+        frm.doc.customer_address
     );
 }
 

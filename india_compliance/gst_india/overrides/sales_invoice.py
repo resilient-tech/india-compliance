@@ -159,8 +159,11 @@ def on_submit(doc, method=None):
 
         return
 
-    if gst_settings.auto_generate_e_waybill and is_e_waybill_applicable(
-        doc, gst_settings
+    if (
+        gst_settings.auto_generate_e_waybill
+        and is_e_waybill_applicable(doc, gst_settings)
+        and not doc.is_debit_note
+        and not doc.is_return
     ):
         frappe.enqueue(
             "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
@@ -179,8 +182,6 @@ def is_e_waybill_applicable(doc, gst_settings=None):
         gst_settings.enable_e_waybill
         and doc.company_gstin != doc.billing_address_gstin
         and not doc.ewaybill
-        and not doc.is_return
-        and not doc.is_debit_note
         and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
         and are_goods_supplied(doc)
     )
