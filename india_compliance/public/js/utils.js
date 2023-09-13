@@ -64,7 +64,12 @@ Object.assign(india_compliance, {
             },
         });
 
-        field.set_description(india_compliance.get_gstin_status_desc(message?.status, message?.last_updated_on));
+        field.set_description(
+            india_compliance.get_gstin_status_desc(
+                message?.status,
+                message?.last_updated_on
+            )
+        );
 
         return message;
     },
@@ -117,6 +122,25 @@ Object.assign(india_compliance, {
         }
     },
 
+    get_gstin_otp() {
+        return new Promise(resolve => {
+            frappe.prompt(
+                {
+                    fieldtype: "Data",
+                    label: "One Time Password",
+                    fieldname: "otp",
+                    reqd: 1,
+                    description:
+                        "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.",
+                },
+                function ({ otp }) {
+                    resolve(otp);
+                },
+                "Enter OTP"
+            );
+        });
+    },
+
     guess_gst_category(gstin, country) {
         if (!gstin) {
             if (country && country !== "India") return "Overseas";
@@ -132,14 +156,14 @@ Object.assign(india_compliance, {
     set_hsn_code_query(field) {
         if (!field || !gst_settings.validate_hsn_code) return;
         field.get_query = function () {
-            const wildcard = '_'.repeat(gst_settings.min_hsn_digits) + '%';
+            const wildcard = "_".repeat(gst_settings.min_hsn_digits) + "%";
             return {
                 filters: {
-                    'name': ['like', wildcard]
-                }
+                    name: ["like", wildcard],
+                },
             };
-        }
-    }
+        };
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {
