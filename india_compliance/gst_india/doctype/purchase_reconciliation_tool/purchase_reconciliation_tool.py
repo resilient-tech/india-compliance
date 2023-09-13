@@ -343,12 +343,6 @@ class PurchaseReconciliationTool(Document):
         boe = []
 
         for doc in data:
-            if action != "Ignore:" and doc.get("match_status") in (
-                "Missing in PI",
-                "Missing in 2A/2B",
-            ):
-                continue
-
             purchase_doctype = doc.get("purchase_doctype")
             inward_supplies.append(doc.get("inward_supply_name"))
             if purchase_doctype == "Purchase Invoice":
