@@ -44,6 +44,7 @@ class PurchaseReconciliationTool(Document):
             "purchase_to_date",
             "inward_supply_from_date",
             "inward_supply_to_date",
+            "include_ignored",
         )
         return {field: self.get(field) for field in fields}
 
