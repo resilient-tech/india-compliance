@@ -103,7 +103,9 @@ doc_events = {
     "Payment Entry": {
         "validate": (
             "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
-        )
+        ),
+        "on_submit": "india_compliance.gst_india.overrides.payment_entry.make_gst_revesal_entry_from_advance_payment",
+        "on_update_after_submit": "india_compliance.gst_india.overrides.payment_entry.make_gst_revesal_entry_from_advance_payment",
     },
     "Purchase Invoice": {
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
