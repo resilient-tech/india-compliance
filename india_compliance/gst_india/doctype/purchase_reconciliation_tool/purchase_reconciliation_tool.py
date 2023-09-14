@@ -333,7 +333,7 @@ class PurchaseReconciliationTool(Document):
             "Accept My Values": "Reconciled",
             "Accept Supplier Values": "Reconciled",
             "Pending": "Unreconciled",
-            "Ignore:": "Ignored",
+            "Ignore": "Ignored",
         }
 
         status = STATUS_MAP.get(action)
@@ -343,21 +343,23 @@ class PurchaseReconciliationTool(Document):
         boe = []
 
         for doc in data:
+            if action == "Ignore" and "Missing" not in doc.get("match_status"):
+                continue
+
+            elif "Accept" in action and "Missing" in doc.get("match_status"):
+                continue
+
+            if inward_supply_name := doc.get("inward_supply_name"):
+                inward_supplies.append(inward_supply_name)
             purchase_doctype = doc.get("purchase_doctype")
-            inward_supplies.append(doc.get("inward_supply_name"))
             if purchase_doctype == "Purchase Invoice":
                 purchases.append(doc.get("purchase_invoice_name"))
             if purchase_doctype == "Bill of Entry":
                 boe.append(doc.get("purchase_invoice_name"))
 
-        GSTR2 = frappe.qb.DocType("GST Inward Supply")
-
         if inward_supplies:
-            (
-                frappe.qb.update(GSTR2)
-                .set("action", action)
-                .where(GSTR2.name.isin(inward_supplies))
-                .run()
+            frappe.db.set_value(
+                "GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action
             )
 
         if purchases:

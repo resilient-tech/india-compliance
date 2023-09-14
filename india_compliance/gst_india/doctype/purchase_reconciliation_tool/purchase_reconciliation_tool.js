@@ -1475,7 +1475,7 @@ function apply_action(frm, action, selected_rows) {
     } else if (action == "Ignore") {
         let warn = false;
         affected_rows = affected_rows.filter(row => {
-            if (row.match_status.includes("match")) {
+            if (row.match_status.includes("match", "Match")) {
                 warn = true;
                 return false;
             }
