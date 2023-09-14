@@ -23,6 +23,7 @@
   "reconciliation_html",
   "not_reconciled",
   "no_reconciliation_data",
+  "is_modified",
   "section_break_cmfa",
   "reconciliation_data"
  ],
@@ -132,6 +133,13 @@
    "fieldname": "reconciliation_data",
    "fieldtype": "JSON",
    "label": "Reconciliation Data"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_modified",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Modified"
   },
   {
    "default": "0",

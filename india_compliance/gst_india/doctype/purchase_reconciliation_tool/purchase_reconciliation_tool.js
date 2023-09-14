@@ -26,6 +26,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     onload(frm) {
+        if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         frm.trigger("company");
     },
 

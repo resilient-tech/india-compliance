@@ -62,6 +62,8 @@ class PurchaseReconciliationTool(Document):
             self.ReconciledData.get(), default=json_handler
         )
 
+        self.db_set("is_modified", 0)
+
     @frappe.whitelist()
     def upload_gstr(self, return_type, period, file_path):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
@@ -252,6 +254,8 @@ class PurchaseReconciliationTool(Document):
         purchases.append(purchase_invoice_name)
         inward_supplies.append(inward_supply_name)
 
+        self.db_set("is_modified", 1)
+
         return self.ReconciledData.get(purchases, inward_supplies)
 
     @frappe.whitelist()
@@ -284,6 +288,8 @@ class PurchaseReconciliationTool(Document):
             self.set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
 
         self._unlink_documents(inward_supplies)
+
+        self.db_set("is_modified", 1)
 
         return self.ReconciledData.get(all_purchase_doc, inward_supplies)
 
@@ -368,6 +374,8 @@ class PurchaseReconciliationTool(Document):
 
         if boe:
             self.set_reconciliation_status("Bill of Entry", boe, status)
+
+        self.db_set("is_modified", 1)
 
     @frappe.whitelist()
     def get_link_options(self, doctype, filters):
