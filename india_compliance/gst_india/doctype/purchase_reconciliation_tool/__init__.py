@@ -263,7 +263,6 @@ class InwardSupply:
         query = self.with_period_filter()
         data = (
             query.where(IfNull(self.GSTR2.match_status, "") == "")
-            .where(self.GSTR2.action != "Ignore")
             .where(self.GSTR2.classification.isin(categories))
             .run(as_dict=True)
         )
@@ -302,6 +301,9 @@ class InwardSupply:
             .groupby(self.GSTR2_ITEM.parent)
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
+        if self.include_ignored == 0:
+            query = query.where(IfNull(self.GSTR2.action, "") != "Ignore")
+
         return query
 
     def get_fields(self, additional_fields=None, table=None):
@@ -379,11 +381,6 @@ class PurchaseInvoice:
                     )
                 )
             )
-            .where(
-                IfNull(self.PI.reconciliation_status, "").notin(
-                    ["Ignored", "Not Applicable"]
-                )
-            )
             .where(self.PI.gst_category.isin(gst_category))
             .where(self.PI.is_return == is_return)
         )
@@ -408,7 +405,7 @@ class PurchaseInvoice:
             .groupby(PI_ITEM.parent)
         )
 
-        return (
+        query = (
             frappe.qb.from_(self.PI)
             .left_join(self.PI_TAX)
             .on(self.PI_TAX.parent == self.PI.name)
@@ -424,6 +421,11 @@ class PurchaseInvoice:
                 ConstantColumn("Purchase Invoice").as_("doctype"),
             )
         )
+
+        if self.include_ignored == 0:
+            query = query.where(IfNull(self.PI.reconciliation_status, "") != "Ignored")
+
+        return query
 
     def get_fields(self, additional_fields=None, is_return=False):
         gst_accounts = get_gst_accounts_by_type(self.company, "Input")
@@ -525,11 +527,6 @@ class BillOfEntry:
                     )
                 )
             )
-            .where(
-                IfNull(self.PI.reconciliation_status, "").notin(
-                    ["Ignored", "Not Applicable"]
-                )
-            )
         )
 
         data = query.run(as_dict=True)
@@ -542,17 +539,21 @@ class BillOfEntry:
     def get_query(self, additional_fields=None):
         fields = self.get_fields(additional_fields)
 
-        return (
+        query = (
             frappe.qb.from_(self.BOE)
             .left_join(self.BOE_TAX)
             .on(self.BOE_TAX.parent == self.BOE.name)
             .join(self.PI)
             .on(self.BOE.purchase_invoice == self.PI.name)
-            .where(self.company_gstin == self.BOE.company_gstin)
             .where(self.BOE.docstatus == 1)
             .groupby(self.BOE.name)
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
+
+        if self.include_ignored == 0:
+            query = query.where(IfNull(self.BOE.reconciliation_status, "") != "Ignored")
+
+        return query
 
     def get_fields(self, additional_fields=None):
         gst_accounts = get_gst_accounts_by_type(self.company, "Input")
@@ -640,6 +641,7 @@ class BaseReconciliation:
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
             gst_return=self.gst_return,
+            include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
     def get_unmatched_inward_supply(self, category, amended_category):
@@ -648,6 +650,7 @@ class BaseReconciliation:
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
             gst_return=self.gst_return,
+            include_ignored=self.include_ignored,
         ).get_unmatched(category, amended_category)
 
     def query_inward_supply(self, additional_fields=None):
@@ -656,6 +659,7 @@ class BaseReconciliation:
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
             gst_return=self.gst_return,
+            include_ignored=self.include_ignored,
         )
 
         return query.with_period_filter(additional_fields)
@@ -668,6 +672,7 @@ class BaseReconciliation:
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
             to_date=self.purchase_to_date,
+            include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
     def get_unmatched_purchase(self, category):
@@ -676,11 +681,14 @@ class BaseReconciliation:
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
             to_date=self.purchase_to_date,
+            include_ignored=self.include_ignored,
         ).get_unmatched(category)
 
     def query_purchase_invoice(self, additional_fields=None):
         return PurchaseInvoice(
-            company=self.company, company_gstin=self.company_gstin
+            company=self.company,
+            company_gstin=self.company_gstin,
+            include_ignored=self.include_ignored,
         ).get_query(additional_fields)
 
     def get_all_bill_of_entry(
@@ -691,6 +699,7 @@ class BaseReconciliation:
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
             to_date=self.purchase_to_date,
+            include_ignored=self.include_ignored,
         ).get_all(additional_fields, names, only_names)
 
     def get_unmatched_bill_of_entry(self, category):
@@ -699,11 +708,14 @@ class BaseReconciliation:
             company_gstin=self.company_gstin,
             from_date=self.purchase_from_date,
             to_date=self.purchase_to_date,
+            include_ignored=self.include_ignored,
         ).get_unmatched(category)
 
     def query_bill_of_entry(self, additional_fields=None):
         return BillOfEntry(
-            company=self.company, company_gstin=self.company_gstin
+            company=self.company,
+            company_gstin=self.company_gstin,
+            include_ignored=self.include_ignored,
         ).get_query(additional_fields)
 
     def get_unmatched_purchase_or_bill_of_entry(self, category):
