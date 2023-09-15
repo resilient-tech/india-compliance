@@ -1319,11 +1319,8 @@ class EmailDialog {
 
     async prepare_email_args(attachment) {
         this.attachment = attachment;
-        let message = await this.get_template();
-        this.message = message.message;
-        this.subject = message.subject;
-        let recipients = await this.get_recipients();
-        this.recipients = recipients || [];
+        Object.assign(this, await this.get_template());
+        this.recipients = await this.get_recipients();
         this.show_email_dialog();
     }
 
@@ -1363,7 +1360,7 @@ class EmailDialog {
             },
         });
 
-        return message?.contact_email;
+        return message?.contact_email || [];
     }
 }
 
@@ -1528,7 +1525,7 @@ function apply_action(frm, action, selected_rows) {
     } else if (action == "Ignore") {
         let warn = false;
         affected_rows = affected_rows.filter(row => {
-            if (row.match_status.includes("match", "Match")) {
+            if (!row.match_status.includes("Missing")) {
                 warn = true;
                 return false;
             }

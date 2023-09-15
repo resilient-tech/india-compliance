@@ -59,12 +59,12 @@ def set_reconciliation_status(doc):
 
 
 def is_b2b_invoice(doc):
-    return (
-        doc.supplier_gstin not in ["", None]
-        and doc.gst_category not in ["Registered Composition", "Overseas"]
-        and doc.supplier_gstin != doc.company_gstin
-        and doc.is_opening != "Yes"
-        and any(row for row in doc.items if row.is_non_gst != 1)
+    return not (
+        doc.supplier_gstin in ["", None]
+        or doc.gst_category in ["Registered Composition", "Unregistered", "Overseas"]
+        or doc.supplier_gstin == doc.company_gstin
+        or doc.is_opening == "Yes"
+        or any(row for row in doc.items if row.is_non_gst == 1)
     )
 
 
