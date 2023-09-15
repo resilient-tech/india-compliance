@@ -168,12 +168,15 @@ def get_proportionate_taxes_for_reversal(payment_entry, reference_row):
     """
     This function calculates proportionate taxes for reversal of GST paid in advance
     """
+    # Compile taxes
     gst_accounts = get_all_gst_accounts(payment_entry.company)
-    taxes = {
-        row.account_head: row.base_tax_amount
-        for row in payment_entry.taxes
-        if row.account_head in gst_accounts
-    }
+    taxes = {}
+    for row in payment_entry.taxes:
+        if row.account_head not in gst_accounts:
+            continue
+
+        taxes.setdefault(row.account_head, 0)
+        taxes[row.account_head] += row.base_tax_amount
 
     if not taxes:
         return
