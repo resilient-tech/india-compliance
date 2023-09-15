@@ -12,11 +12,13 @@ def execute():
         .set(PI.reconciliation_status, "Not Applicable")
         .join(PI_ITEM)
         .on(PI.name == PI_ITEM.parent)
-        .where(IfNull(PI.supplier_gstin, "") == "")
-        .where(IfNull(PI.gst_category, "").isin(["Unregistered", "Overseas"]))
-        .where(IfNull(PI.supplier_gstin, "") == PI.company_gstin)
-        .where(IfNull(PI.is_opening, "") != "No")
-        .where(PI_ITEM.is_non_gst == 1)
+        .where(
+            (IfNull(PI.supplier_gstin, "") == "")
+            | (IfNull(PI.gst_category, "").isin(["Unregistered", "Overseas"]))
+            | (IfNull(PI.supplier_gstin, "") == PI.company_gstin)
+            | (IfNull(PI.is_opening, "") != "No")
+            | (PI_ITEM.is_non_gst == 1)
+        )
         .run()
     )
 
