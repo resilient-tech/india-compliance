@@ -179,15 +179,19 @@ class GSTBalanceReport:
                     "opening_credit": _process_opening_balance(account, is_debit=False),
                     "debit": transaction.get("debit", 0),
                     "credit": transaction.get("credit", 0),
+                    "closing_debit": 0,
+                    "closing_credit": 0,
                 }
             )
 
-            data[account]["closing_debit"] = (
+            closing_balance = (
                 data[account]["opening_debit"] + data[account]["debit"]
-            )
-            data[account]["closing_credit"] = (
-                data[account]["opening_credit"] + data[account]["credit"]
-            )
+            ) - (data[account]["opening_credit"] + data[account]["credit"])
+
+            if closing_balance > 0:
+                data[account]["closing_debit"] = closing_balance
+            else:
+                data[account]["closing_credit"] = abs(closing_balance)
 
         return list(data.values())
 
