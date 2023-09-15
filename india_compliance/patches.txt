@@ -28,3 +28,4 @@ india_compliance.patches.post_install.update_e_waybill_status
 india_compliance.patches.post_install.add_einvoice_status_field
 execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_refresh_interval", 30)
 execute:from india_compliance.gst_india.setup import create_email_template; create_email_template()
+india_compliance.patches.post_install.update_reconciliation_status

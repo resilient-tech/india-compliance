@@ -1,0 +1,30 @@
+import frappe
+from frappe.query_builder.functions import IfNull
+
+
+def execute():
+    PI = frappe.qb.DocType("Purchase Invoice")
+    PI_ITEM = frappe.qb.DocType("Purchase Invoice Item")
+    BOE = frappe.qb.DocType("Bill of Entry")
+
+    (
+        frappe.qb.update(PI)
+        .set(PI.reconciliation_status, "Not Applicable")
+        .join(PI_ITEM)
+        .on(PI.name == PI_ITEM.parent)
+        .where(IfNull(PI.supplier_gstin, "") == "")
+        .where(IfNull(PI.gst_category, "").isin(["Unregistered", "Overseas"]))
+        .where(IfNull(PI.supplier_gstin, "") == PI.company_gstin)
+        .where(IfNull(PI.is_opening, "") != "No")
+        .where(PI_ITEM.is_non_gst == 1)
+        .run()
+    )
+
+    (
+        frappe.qb.update(PI)
+        .set(PI.reconciliation_status, "Unreconciled")
+        .where(IfNull(PI.reconciliation_status, "") == "")
+        .run()
+    )
+
+    (frappe.qb.update(BOE).set(PI.reconciliation_status, "Unreconciled").run())
