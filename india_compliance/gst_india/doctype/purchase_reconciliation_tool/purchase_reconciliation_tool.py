@@ -395,11 +395,13 @@ class PurchaseReconciliationTool(Document):
 
     def get_purchase_invoice_options(self, filters):
         PI = frappe.qb.DocType("Purchase Invoice")
-        query = (
-            self.ReconciledData.query_purchase_invoice(["gst_category", "is_return"])
-            .where(PI.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
-            .where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
-        )
+        query = self.ReconciledData.query_purchase_invoice(
+            ["gst_category", "is_return"]
+        ).where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
+
+        if filters.get("supplier_gstin"):
+            pan = filters.get("supplier_gstin")[2:-3]
+            query = query.where(PI.supplier_gstin.like(f"%{pan}%"))
 
         if not filters.show_matched:
             query = query.where(
@@ -410,11 +412,13 @@ class PurchaseReconciliationTool(Document):
 
     def get_inward_supply_options(self, filters):
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
-        query = (
-            self.ReconciledData.query_inward_supply(["classification"])
-            .where(GSTR2.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
-            .where(GSTR2.bill_date[filters.bill_from_date : filters.bill_to_date])
+        query = self.ReconciledData.query_inward_supply(["classification"]).where(
+            GSTR2.bill_date[filters.bill_from_date : filters.bill_to_date]
         )
+
+        if filters.get("supplier_gstin"):
+            pan = filters.get("supplier_gstin")[2:-3]
+            query = query.where(GSTR2.supplier_gstin.like(f"%{pan}%"))
 
         if filters.get("purchase_doctype") == "Purchase Invoice":
             query = query.where(GSTR2.classification.notin(IMPORT_CATEGORY))
