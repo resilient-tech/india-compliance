@@ -29,6 +29,7 @@ def after_install():
     create_accounting_dimension_fields()
     create_property_setters()
     create_address_template()
+    create_email_template()
     set_default_gst_settings()
     set_default_accounts_settings()
     create_hsn_codes()
@@ -79,6 +80,26 @@ def create_address_template():
             "country": "India",
             "is_default": 1,
             "template": address_html,
+        }
+    ).insert(ignore_permissions=True)
+
+
+def create_email_template():
+    if frappe.db.exists("Email Template", "Purchase Reconciliation"):
+        return
+
+    frappe.get_doc(
+        {
+            "doctype": "Email Template",
+            "name": "Purchase Reconciliation",
+            "subject": "2A/2B Reconciliation for {{ supplier_name }}-{{ supplier_gstin }}",
+            "response": (
+                "Hello,<br><br>We have made a purchase reconciliation"
+                "for the period {{ inward_supply_from_date }} to {{ inward_supply_to_date }}"
+                " for purchases made by {{ company }} from you.<br>You are requested to kindly"
+                "make necessary corrections to the GST Portal on your end if required."
+                "Attached is the sheet for your reference."
+            ),
         }
     ).insert(ignore_permissions=True)
 
