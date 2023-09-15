@@ -101,11 +101,9 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
     },
     "Payment Entry": {
-        "validate": (
-            "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
-        ),
-        "on_submit": "india_compliance.gst_india.overrides.payment_entry.make_gst_revesal_entry_from_advance_payment",
-        "on_update_after_submit": "india_compliance.gst_india.overrides.payment_entry.make_gst_revesal_entry_from_advance_payment",
+        "validate": "india_compliance.gst_india.overrides.payment_entry.validate",
+        "on_submit": "india_compliance.gst_india.overrides.payment_entry.on_submit",
+        "on_update_after_submit": "india_compliance.gst_india.overrides.payment_entry.on_update_after_submit",
     },
     "Purchase Invoice": {
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",

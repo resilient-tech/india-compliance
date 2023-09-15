@@ -1,19 +1,61 @@
 import frappe
+from frappe import _
+from frappe.contacts.doctype.address.address import get_default_address
 from frappe.utils import cstr, flt, getdate
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.accounts.utils import create_payment_ledger_entry
 
+from india_compliance.gst_india.overrides.transaction import get_gst_details
+from india_compliance.gst_india.overrides.transaction import (
+    validate_transaction as validate_transaction_for_advance_payment,
+)
 from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 def validate(doc, method=None):
-    # GST taxes should only be necessary when receiving amount. Not when paying.
-    # Address, GSTIN, POS, Taxes validation if taxes are collected.
-    # Only allow GST accounts in taxes?
-    pass
+    if not doc.taxes:
+        return
+
+    if doc.party_type == "Customer":
+        # Presume is export with GST if GST accounts are present
+        doc.is_export_with_gst = 1
+        validate_transaction_for_advance_payment(doc, method)
+
+    else:
+        gst_accounts = get_all_gst_accounts(doc.company)
+        for row in doc.taxes:
+            if row.account_head in gst_accounts and row.tax_amount != 0:
+                frappe.throw(
+                    _("GST Taxes are not allowed for Supplier Advance Payment Entry")
+                )
 
 
-def update_place_of_supply(doc, method):
+def on_submit(doc, method=None):
+    make_gst_revesal_entry_from_advance_payment(doc)
+
+
+def on_update_after_submit(doc, method=None):
+    make_gst_revesal_entry_from_advance_payment(doc)
+
+
+@frappe.whitelist()
+def update_party_details(party_details, doctype, company):
+    if isinstance(party_details, str):
+        party_details = frappe.parse_json(party_details)
+
+    address = get_default_address("Customer", party_details.get("customer"))
+    party_details.update(customer_address=address)
+
+    # Update address for update
+    response = {
+        "customer_address": address,  # should be set first as gst_category and gstin is fetched from address
+        **get_gst_details(party_details, doctype, company, update_place_of_supply=True),
+    }
+
+    return response
+
+
+def update_place_of_supply(doc):
     country = frappe.get_cached_value("Company", doc.company, "country")
     if country != "India":
         return
@@ -30,7 +72,7 @@ def update_place_of_supply(doc, method):
         )
 
 
-def make_gst_revesal_entry_from_advance_payment(doc, method=None):
+def make_gst_revesal_entry_from_advance_payment(doc):
     """
     This functionality aims to create a GST reversal entry where GST was paid in advance
 
