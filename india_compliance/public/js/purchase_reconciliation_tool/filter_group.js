@@ -22,8 +22,13 @@ india_compliance.FILTER_OPERATORS = {
 
 class _Filter extends frappe.ui.Filter {
     set_conditions_from_config() {
-        if (this.filter_list.filter_options) {
-            Object.assign(this, this.filter_list.filter_options);
+        let filter_options = this.filter_list.filter_options;
+        if (filter_options) {
+            filter_options = { ...filter_options };
+            if (this.fieldname && this.fieldname !== "name")
+                delete filter_options.fieldname;
+
+            Object.assign(this, filter_options);
         }
 
         this.conditions = this.conditions.filter(
