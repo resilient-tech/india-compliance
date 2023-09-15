@@ -1404,6 +1404,12 @@ async function unlink_documents(frm, selected_rows) {
     const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
     if (!selected_rows) selected_rows = invoice_tab.get_checked_items();
 
+    if (!selected_rows.length)
+        return frappe.show_alert({
+            message: __("Please select rows to unlink"),
+            indicator: "red",
+        });
+
     // validate selected rows
     selected_rows.forEach(row => {
         if (row.match_status.includes("Missing"))
@@ -1455,6 +1461,12 @@ function apply_action(frm, action, selected_rows) {
     // get affected rows
     const { filtered_data, data } = frm.purchase_reconciliation_tool;
     let affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
+
+    if (!affected_rows.length)
+        return frappe.show_alert({
+            message: __("Please select rows to apply action"),
+            indicator: "red",
+        });
 
     // validate affected rows
     if (action.includes("Accept")) {
