@@ -3,8 +3,6 @@
 
 frappe.ui.form.on("GST Settings", {
     setup(frm) {
-        frm.get_field("credentials").grid.get_docfield("password").reqd = 1;
-
         ["cgst_account", "sgst_account", "igst_account", "cess_account"].forEach(
             field => filter_accounts(frm, field)
         );
@@ -35,15 +33,6 @@ frappe.ui.form.on("GST Settings", {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
         Object.assign(gst_settings, frm.doc);
-    },
-});
-
-frappe.ui.form.on("GST Credential", {
-    service(frm, cdt, cdn) {
-        const doc = frappe.get_doc(cdt, cdn);
-        const row = frm.get_field("credentials").grid.grid_rows_by_docname[doc.name];
-
-        row.toggle_reqd("password", doc.service !== "Returns");
     },
 });
 
