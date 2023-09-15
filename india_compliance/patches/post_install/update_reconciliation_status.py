@@ -12,11 +12,16 @@ def execute():
         .set(PI.reconciliation_status, "Not Applicable")
         .join(PI_ITEM)
         .on(PI.name == PI_ITEM.parent)
+        .where(PI.docstatus == 1)
         .where(
             (IfNull(PI.supplier_gstin, "") == "")
-            | (IfNull(PI.gst_category, "").isin(["Unregistered", "Overseas"]))
+            | (
+                IfNull(PI.gst_category, "").isin(
+                    ["Registered Composition", "Unregistered", "Overseas"]
+                )
+            )
             | (IfNull(PI.supplier_gstin, "") == PI.company_gstin)
-            | (IfNull(PI.is_opening, "") != "No")
+            | (IfNull(PI.is_opening, "") == "Yes")
             | (PI_ITEM.is_non_gst == 1)
         )
         .run()
@@ -25,8 +30,14 @@ def execute():
     (
         frappe.qb.update(PI)
         .set(PI.reconciliation_status, "Unreconciled")
+        .where(PI.docstatus == 1)
         .where(IfNull(PI.reconciliation_status, "") == "")
         .run()
     )
 
-    (frappe.qb.update(BOE).set(PI.reconciliation_status, "Unreconciled").run())
+    (
+        frappe.qb.update(BOE)
+        .set(PI.reconciliation_status, "Unreconciled")
+        .where(PI.docstatus == 1)
+        .run()
+    )

@@ -265,45 +265,34 @@ class PurchaseReconciliationTool(Document):
         if isinstance(data, str):
             data = frappe.parse_json(data)
 
-        all_purchase_doc = set()
         inward_supplies = set()
         purchases = set()
         boe = set()
 
         for doc in data:
-            purchase_doctype = doc.get("purchase_doctype")
             inward_supplies.add(doc.get("inward_supply_name"))
-            all_purchase_doc.add(doc.get("purchase_invoice_name"))
+
+            purchase_doctype = doc.get("purchase_doctype")
             if purchase_doctype == "Purchase Invoice":
                 purchases.add(doc.get("purchase_invoice_name"))
-            if purchase_doctype == "Bill of Entry":
+
+            elif purchase_doctype == "Bill of Entry":
                 boe.add(doc.get("purchase_invoice_name"))
 
-        if purchases:
-            self.set_reconciliation_status(
-                "Purchase Invoice", purchases, "Unreconciled"
-            )
-
-        if boe:
-            self.set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
-
+        self.set_reconciliation_status("Purchase Invoice", purchases, "Unreconciled")
+        self.set_reconciliation_status("Bill of Entry", boe, "Unreconciled")
         self._unlink_documents(inward_supplies)
 
         self.db_set("is_modified", 1)
 
-        return self.ReconciledData.get(all_purchase_doc, inward_supplies)
+        return self.ReconciledData.get(purchases.union(boe), inward_supplies)
 
-    def set_reconciliation_status(
-        self,
-        doctype,
-        names,
-        status,
-    ):
+    def set_reconciliation_status(self, doctype, names, status):
+        if not names:
+            return
+
         frappe.db.set_value(
-            doctype,
-            {"name": ("in", names)},
-            "reconciliation_status",
-            status,
+            doctype, {"name": ("in", names)}, "reconciliation_status", status
         )
 
     def _unlink_documents(self, inward_supplies):
@@ -358,10 +347,12 @@ class PurchaseReconciliationTool(Document):
 
             if inward_supply_name := doc.get("inward_supply_name"):
                 inward_supplies.append(inward_supply_name)
+
             purchase_doctype = doc.get("purchase_doctype")
             if purchase_doctype == "Purchase Invoice":
                 purchases.append(doc.get("purchase_invoice_name"))
-            if purchase_doctype == "Bill of Entry":
+
+            elif purchase_doctype == "Bill of Entry":
                 boe.append(doc.get("purchase_invoice_name"))
 
         if inward_supplies:
@@ -369,11 +360,8 @@ class PurchaseReconciliationTool(Document):
                 "GST Inward Supply", {"name": ("in", inward_supplies)}, "action", action
             )
 
-        if purchases:
-            self.set_reconciliation_status("Purchase Invoice", purchases, status)
-
-        if boe:
-            self.set_reconciliation_status("Bill of Entry", boe, status)
+        self.set_reconciliation_status("Purchase Invoice", purchases, status)
+        self.set_reconciliation_status("Bill of Entry", boe, status)
 
         self.db_set("is_modified", 1)
 
@@ -395,13 +383,11 @@ class PurchaseReconciliationTool(Document):
 
     def get_purchase_invoice_options(self, filters):
         PI = frappe.qb.DocType("Purchase Invoice")
-        query = self.ReconciledData.query_purchase_invoice(
-            ["gst_category", "is_return"]
-        ).where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
-
-        if filters.get("supplier_gstin"):
-            pan = filters.get("supplier_gstin")[2:-3]
-            query = query.where(PI.supplier_gstin.like(f"%{pan}%"))
+        query = (
+            self.ReconciledData.query_purchase_invoice(["gst_category", "is_return"])
+            .where(PI.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
+            .where(PI.bill_date[filters.bill_from_date : filters.bill_to_date])
+        )
 
         if not filters.show_matched:
             query = query.where(
@@ -412,13 +398,11 @@ class PurchaseReconciliationTool(Document):
 
     def get_inward_supply_options(self, filters):
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
-        query = self.ReconciledData.query_inward_supply(["classification"]).where(
-            GSTR2.bill_date[filters.bill_from_date : filters.bill_to_date]
+        query = (
+            self.ReconciledData.query_inward_supply(["classification"])
+            .where(GSTR2.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
+            .where(GSTR2.bill_date[filters.bill_from_date : filters.bill_to_date])
         )
-
-        if filters.get("supplier_gstin"):
-            pan = filters.get("supplier_gstin")[2:-3]
-            query = query.where(GSTR2.supplier_gstin.like(f"%{pan}%"))
 
         if filters.get("purchase_doctype") == "Purchase Invoice":
             query = query.where(GSTR2.classification.notin(IMPORT_CATEGORY))
