@@ -1,9 +1,11 @@
 import frappe
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
+from frappe.query_builder.functions import Sum
 from frappe.utils import cstr, flt, getdate
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.accounts.utils import create_payment_ledger_entry
+from erpnext.controllers.accounts_controller import get_advance_payment_entries
 
 from india_compliance.gst_india.overrides.transaction import get_gst_details
 from india_compliance.gst_india.overrides.transaction import (
@@ -114,8 +116,6 @@ def get_gl_for_advance_gst_reversal(payment_entry, reference_row):
     gl_dicts = []
     args = {
         "posting_date": posting_date,
-        "party_type": payment_entry.party_type,
-        "party": payment_entry.party,
         "voucher_detail_no": reference_row.name,
         "remarks": f"Reversal for GST on Advance Payment Entry"
         f" {payment_entry.name} against {reference_row.reference_doctype} {reference_row.reference_name}",
@@ -127,6 +127,8 @@ def get_gl_for_advance_gst_reversal(payment_entry, reference_row):
             "account": reference_row.account,
             "credit": total_amount,
             "credit_in_account_currency": total_amount,
+            "party_type": payment_entry.party_type,
+            "party": payment_entry.party,
             "against_voucher_type": reference_row.reference_doctype,
             "against_voucher": reference_row.reference_name,
             **args,
@@ -217,5 +219,99 @@ def balance_taxes(payment_entry, reference_row, taxes):
                 / payment_entry.base_paid_amount,
                 2,
             )
+
+    return taxes
+
+
+def get_advance_payment_entries_for_regional(
+    party_type,
+    party,
+    party_account,
+    order_doctype,
+    order_list=None,
+    include_unallocated=True,
+    against_all_orders=False,
+    limit=None,
+    condition=None,
+):
+    """
+    Get Advance Payment Entries with GST Taxes
+    """
+
+    payment_entries = get_advance_payment_entries(
+        party_type=party_type,
+        party=party,
+        party_account=party_account,
+        order_doctype=order_doctype,
+        order_list=order_list,
+        include_unallocated=include_unallocated,
+        against_all_orders=against_all_orders,
+        limit=limit,
+        condition=condition,
+    )
+
+    # if not Sales Invoice and is Payment Reconciliation
+    if not condition or not payment_entries:
+        return payment_entries
+
+    company = frappe.db.get_value("Account", party_account, "company")
+    taxes = get_taxes_summary(company, payment_entries)
+
+    for pe in payment_entries:
+        tax_row = taxes.get(
+            pe.reference_name,
+            frappe._dict(paid_amount=1, tax_amount=0, tax_amount_reversed=0),
+        )
+        pe.amount += tax_row.tax_amount - tax_row.tax_amount_reversed
+
+    return payment_entries
+
+
+def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
+    if not doc.allocation:
+        return
+
+    taxes = get_taxes_summary(doc.company, doc.allocation)
+    taxes = {
+        tax.payment_entry: tax.paid_amount / (tax.paid_amount + tax.tax_amount)
+        for tax in taxes.values()
+    }
+
+    for row in doc.allocation:
+        paid_proportion = taxes.get(row.reference_name, 1)
+        for field in ("amount", "allocated_amount", "unreconciled_amount"):
+            row.set(field, flt(row.get(field, 0) * paid_proportion, 2))
+
+
+def get_taxes_summary(company, payment_entries):
+    gst_accounts = get_all_gst_accounts(company)
+    references = [
+        advance.reference_name
+        for advance in payment_entries
+        if advance.reference_type == "Payment Entry"
+    ]
+
+    gl_entry = frappe.qb.DocType("GL Entry")
+    pe = frappe.qb.DocType("Payment Entry")
+    taxes = (
+        frappe.qb.from_(gl_entry)
+        .join(pe)
+        .on(pe.name == gl_entry.voucher_no)
+        .select(
+            Sum(gl_entry.credit_in_transaction_currency).as_("tax_amount"),
+            Sum(gl_entry.debit_in_transaction_currency).as_("tax_amount_reversed"),
+            pe.name.as_("payment_entry"),
+            pe.paid_amount,
+        )
+        .where(gl_entry.is_cancelled == 0)
+        .where(gl_entry.voucher_type == "Payment Entry")
+        .where(gl_entry.voucher_no.isin(references))
+        .where(gl_entry.account.isin(gst_accounts))
+        .where(gl_entry.company == company)
+        .groupby(gl_entry.voucher_no)
+        .run(as_dict=True)
+    )
+
+    taxes = {tax.payment_entry: tax for tax in taxes}
 
     return taxes
