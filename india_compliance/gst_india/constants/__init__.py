@@ -61,6 +61,7 @@ STATE_NUMBERS = {
     "Mizoram": "15",
     "Nagaland": "13",
     "Odisha": "21",
+    "Other Countries": "96",
     "Other Territory": "97",
     "Puducherry": "34",
     "Punjab": "03",
