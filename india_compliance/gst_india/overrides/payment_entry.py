@@ -298,8 +298,8 @@ def get_taxes_summary(company, payment_entries):
         .join(pe)
         .on(pe.name == gl_entry.voucher_no)
         .select(
-            Sum(gl_entry.credit_in_transaction_currency).as_("tax_amount"),
-            Sum(gl_entry.debit_in_transaction_currency).as_("tax_amount_reversed"),
+            Sum(gl_entry.credit_in_account_currency).as_("tax_amount"),
+            Sum(gl_entry.debit_in_account_currency).as_("tax_amount_reversed"),
             pe.name.as_("payment_entry"),
             pe.paid_amount,
         )
