@@ -75,6 +75,8 @@ STATE_NUMBERS = {
     "West Bengal": "19",
 }
 
+INDIAN_STATES = {k: v for k, v in STATE_NUMBERS.items() if k != "Other Countries"}
+
 GST_UOMS = {
     "Bottle": "BTL (Bottles)",
     "Dozen": "DOZ (Dozens)",
