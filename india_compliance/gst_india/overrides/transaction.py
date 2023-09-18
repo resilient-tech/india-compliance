@@ -416,7 +416,6 @@ def validate_items(doc):
 def validate_place_of_supply(doc):
     valid_options = get_place_of_supply_options(
         as_list=True,
-        with_other_countries=doc.doctype in SALES_DOCTYPES,
     )
 
     if doc.place_of_supply not in valid_options:
