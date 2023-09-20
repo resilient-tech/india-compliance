@@ -7,7 +7,7 @@ from india_compliance.audit_trail.utils import (
     enqueue_disable_audit_trail_notification,
     is_audit_trail_enabled,
 )
-from india_compliance.gst_india.constants import GST_PARTY_TYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import GST_PARTY_TYPES, INDIAN_STATES
 
 
 def set_bootinfo(bootinfo):
@@ -21,7 +21,7 @@ def set_bootinfo(bootinfo):
         gst_settings.pop(key, None)
 
     bootinfo["gst_settings"] = gst_settings
-    bootinfo["india_state_options"] = list(STATE_NUMBERS)
+    bootinfo["india_state_options"] = list(INDIAN_STATES)
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)
 
     set_trigger_for_audit_trail_notification(bootinfo)
