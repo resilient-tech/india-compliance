@@ -193,7 +193,7 @@ CUSTOM_FIELDS = {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
             "fieldtype": "Autocomplete",
-            "options": get_place_of_supply_options(with_other_countries=True),
+            "options": get_place_of_supply_options(),
             "insert_after": "gst_category",
             "print_hide": 1,
             "read_only": 0,

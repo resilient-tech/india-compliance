@@ -563,14 +563,11 @@ def get_gst_uom(uom, settings=None):
     return next((k for k, v in UOM_MAP.items() if v == uom), "OTH")
 
 
-def get_place_of_supply_options(*, as_list=False, with_other_countries=False):
+def get_place_of_supply_options(*, as_list=False):
     options = []
 
     for state_name, state_number in STATE_NUMBERS.items():
         options.append(f"{state_number}-{state_name}")
-
-    if with_other_countries:
-        options.append("96-Other Countries")
 
     if as_list:
         return options

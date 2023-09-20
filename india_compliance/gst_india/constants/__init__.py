@@ -61,6 +61,7 @@ STATE_NUMBERS = {
     "Mizoram": "15",
     "Nagaland": "13",
     "Odisha": "21",
+    "Other Countries": "96",
     "Other Territory": "97",
     "Puducherry": "34",
     "Punjab": "03",
@@ -73,6 +74,8 @@ STATE_NUMBERS = {
     "Uttarakhand": "05",
     "West Bengal": "19",
 }
+
+INDIAN_STATES = {k: v for k, v in STATE_NUMBERS.items() if k != "Other Countries"}
 
 GST_UOMS = {
     "Bottle": "BTL (Bottles)",
