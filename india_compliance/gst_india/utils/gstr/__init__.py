@@ -385,6 +385,7 @@ def _download_queued_request(doc):
     if response.error_type:
         return frappe.db.delete("GSTR Import Log", {"name": doc.name})
 
+    frappe.db.set_value("GSTR Import Log", doc.name, "request_id", None)
     GSTR_FUNCTIONS[doc.return_type](doc.gstin, doc.return_period, response)
 
 

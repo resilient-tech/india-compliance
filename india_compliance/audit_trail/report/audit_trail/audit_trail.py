@@ -69,7 +69,7 @@ class BaseAuditTrail:
     def get_data(self):
         pass
 
-    def append_rows(self):
+    def append_rows(self, new_count, modified_count, doctype):
         pass
 
     def get_conditions(self):

@@ -62,9 +62,12 @@ class GSTR2bAPI(ReturnsAPI):
     API_NAME = "GSTR-2B"
     BASE_PATH = "returns/gstr2b"
 
-    def get_data(self, return_period, otp=None):
-        # TODO: Create further calls if more than one file to download
-        return self.get("GET2B", return_period, otp, {"rtnprd": return_period})
+    def get_data(self, return_period, otp=None, file_num=None):
+        params = {"rtnprd": return_period}
+        if file_num:
+            params["file_num"] = file_num
+
+        return self.get("GET2B", return_period, otp, params)
 
 
 class GSTR2aAPI(ReturnsAPI):
@@ -72,5 +75,4 @@ class GSTR2aAPI(ReturnsAPI):
     BASE_PATH = "returns/gstr2a"
 
     def get_data(self, action, return_period, otp=None):
-        # TODO: Create further calls if more than one file to download
         return self.get(action, return_period, otp, {"ret_period": return_period})

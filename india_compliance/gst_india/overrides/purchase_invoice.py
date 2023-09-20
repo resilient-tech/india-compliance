@@ -46,6 +46,26 @@ def validate(doc, method=None):
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
+    set_reconciliation_status(doc)
+
+
+def set_reconciliation_status(doc):
+    reconciliation_status = "Not Applicable"
+
+    if is_b2b_invoice(doc):
+        reconciliation_status = "Unreconciled"
+
+    doc.reconciliation_status = reconciliation_status
+
+
+def is_b2b_invoice(doc):
+    return not (
+        doc.supplier_gstin in ["", None]
+        or doc.gst_category in ["Registered Composition", "Unregistered", "Overseas"]
+        or doc.supplier_gstin == doc.company_gstin
+        or doc.is_opening == "Yes"
+        or any(row for row in doc.items if row.is_non_gst == 1)
+    )
 
 
 def update_itc_totals(doc, method=None):
@@ -100,7 +120,11 @@ def get_dashboard_data(data):
     reference_section["items"].append("Bill of Entry")
 
     update_dashboard_with_gst_logs(
-        "Purchase Invoice", data, "e-Waybill Log", "Integration Request"
+        "Purchase Invoice",
+        data,
+        "e-Waybill Log",
+        "Integration Request",
+        "GST Inward Supply",
     )
 
     return data
