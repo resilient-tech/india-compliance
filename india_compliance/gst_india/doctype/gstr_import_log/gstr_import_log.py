@@ -14,8 +14,8 @@ def create_import_log(
     gstin,
     return_type,
     return_period,
-    data_not_found=False,
     classification=None,
+    data_not_found=False,
     request_id=None,
     retry_after_mins=None,
 ):
@@ -37,8 +37,8 @@ def _create_import_log(
     gstin,
     return_type,
     return_period,
-    data_not_found=False,
     classification=None,
+    data_not_found=False,
     request_id=None,
     retry_after_mins=None,
 ):
