@@ -703,6 +703,7 @@ E_WAYBILL_DN_FIELDS = [
         "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
+        "no_copy": 1,
         "description": (
             "Set as zero to update distance as per the e-Waybill portal (if available)"
         ),
@@ -714,6 +715,7 @@ E_WAYBILL_DN_FIELDS = [
         "insert_after": "transporter",
         "fetch_from": "transporter.gst_transporter_id",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -724,6 +726,7 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Road",
         "insert_after": "transporter_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -736,6 +739,7 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
 ]
@@ -757,6 +761,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "transporter_info",
         "options": "Supplier",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "driver",
@@ -765,6 +770,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "gst_transporter_id",
         "options": "Driver",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "lr_no",
@@ -772,6 +778,7 @@ E_WAYBILL_INV_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "driver",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 30,
     },
@@ -781,6 +788,7 @@ E_WAYBILL_INV_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "lr_no",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 15,
     },
@@ -797,6 +805,7 @@ E_WAYBILL_INV_FIELDS = [
         "fetch_from": "transporter.supplier_name",
         "read_only": 1,
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -806,6 +815,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "mode_of_transport",
         "fetch_from": "driver.full_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -815,6 +825,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "driver_name",
         "default": "Today",
         "print_hide": 1,
+        "no_copy": 1,
     },
     *E_WAYBILL_DN_FIELDS,
 ]
