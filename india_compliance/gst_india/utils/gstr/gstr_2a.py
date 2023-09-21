@@ -2,7 +2,7 @@ from datetime import datetime
 
 import frappe
 
-from india_compliance.gst_india.utils import parse_datetime
+from india_compliance.gst_india.utils import get_datetime, parse_datetime
 from india_compliance.gst_india.utils.gstr.gstr import GSTR, get_mapped_value
 
 
@@ -13,8 +13,12 @@ def map_date_format(date_str, source_format, target_format):
 
 
 class GSTR2a(GSTR):
+    def setup(self):
+        self.all_gstins = set()
+        self.cancelled_gstins = {}
+
     def get_supplier_details(self, supplier):
-        return {
+        supplier_details = {
             "supplier_gstin": supplier.ctin,
             "gstr_1_filled": get_mapped_value(
                 supplier.cfs, self.VALUE_MAPS.Y_N_to_check
@@ -26,6 +30,19 @@ class GSTR2a(GSTR):
             "registration_cancel_date": parse_datetime(supplier.dtcancel),
             "sup_return_period": map_date_format(supplier.flprdr1, "%b-%y", "%m%Y"),
         }
+
+        self.update_gstins_list(supplier_details)
+
+        return supplier_details
+
+    def update_gstins_list(self, supplier_details):
+        self.all_gstins.add(supplier_details.get("supplier_gstin"))
+
+        if supplier_details.get("registration_cancel_date"):
+            self.cancelled_gstins.setdefault(
+                supplier_details.get("supplier_gstin"),
+                supplier_details.get("registration_cancel_date"),
+            )
 
     # item details are in item_det for GSTR2a
     def get_transaction_items(self, invoice):
@@ -46,6 +63,36 @@ class GSTR2a(GSTR):
             "sgst": item.samt,
             "cess": item.csamt,
         }
+
+    def update_gstins(self):
+        if not self.all_gstins:
+            return
+
+        frappe.db.set_value(
+            "GSTIN",
+            {"name": ("in", self.all_gstins)},
+            "last_updated_on",
+            get_datetime(),
+        )
+        if not self.cancelled_gstins:
+            return
+
+        existing_cancelled_gstins = frappe.db.get_all(
+            "GSTIN",
+            filters={
+                "name": ("in", self.cancelled_gstins),
+                "status": ("!=", "Cancelled"),
+            },
+            pluck="name",
+        )
+
+        for gstin in existing_cancelled_gstins:
+            cancelled_date = self.cancelled_gstins.get(gstin)
+            frappe.db.set_value(
+                "GSTIN",
+                gstin,
+                {"cancelled_date": cancelled_date, "status": "Cancelled"},
+            )
 
 
 class GSTR2aB2B(GSTR2a):
