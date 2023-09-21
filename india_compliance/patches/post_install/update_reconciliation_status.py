@@ -37,7 +37,7 @@ def execute():
 
     (
         frappe.qb.update(BOE)
-        .set(PI.reconciliation_status, "Unreconciled")
-        .where(PI.docstatus == 1)
+        .set(BOE.reconciliation_status, "Unreconciled")
+        .where(BOE.docstatus == 1)
         .run()
     )
