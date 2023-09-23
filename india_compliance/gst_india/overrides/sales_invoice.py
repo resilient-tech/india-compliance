@@ -256,6 +256,8 @@ def set_and_validate_advances_with_gst(doc):
     taxes = get_taxes_summary(doc.company, doc.advances)
 
     allocated_amount_with_taxes = 0
+    tax_amount = 0
+
     for advance in doc.get("advances"):
         if not advance.allocated_amount:
             continue
@@ -264,10 +266,12 @@ def set_and_validate_advances_with_gst(doc):
             advance.reference_name, frappe._dict(paid_amount=1, tax_amount=0)
         )
 
-        allocated_amount_with_taxes += advance.allocated_amount
-        allocated_amount_with_taxes += flt(
+        _tax_amount = flt(
             advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2
         )
+        tax_amount += _tax_amount
+        allocated_amount_with_taxes += _tax_amount
+        allocated_amount_with_taxes += advance.allocated_amount
 
     if allocated_amount_with_taxes > doc.rounded_total:
         frappe.throw(
@@ -280,3 +284,4 @@ def set_and_validate_advances_with_gst(doc):
 
     doc.total_advance = allocated_amount_with_taxes
     doc.set_payment_schedule()
+    doc.outstanding_amount -= tax_amount
