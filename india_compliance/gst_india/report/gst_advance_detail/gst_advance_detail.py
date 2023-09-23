@@ -80,10 +80,18 @@ class GSTAdvanceDetail:
                 "width": 120,
             },
             {
+                "fieldname": "against_voucher_type",
+                "label": _("Against Voucher Type"),
+                "fieldtype": "Link",
+                "options": "DocType",
+                "width": 150,
+                "hidden": 1,
+            },
+            {
                 "fieldname": "against_voucher",
                 "label": _("Against Voucher"),
-                "fieldtype": "Link",
-                "options": "Sales Invoice",
+                "fieldtype": "Dynamic Link",
+                "options": "against_voucher_type",
                 "width": 150,
             },
             {
@@ -141,6 +149,7 @@ class GSTAdvanceDetail:
             self.get_query()
             .select(
                 ConstantColumn(0).as_("allocated_amount"),
+                ConstantColumn("").as_("against_voucher_type"),
                 ConstantColumn("").as_("against_voucher"),
             )
             .where(self.gl_entry.credit_in_account_currency > 0)
@@ -149,18 +158,25 @@ class GSTAdvanceDetail:
         )
 
     def get_allocated_entries(self):
-        return (
+        query = (
             self.get_query()
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(
                 self.pe_ref.allocated_amount,
+                self.pe_ref.reference_doctype.as_("against_voucher_type"),
                 self.pe_ref.reference_name.as_("against_voucher"),
             )
             .where(self.gl_entry.debit_in_account_currency > 0)
-            .groupby(self.gl_entry.voucher_detail_no)
-            .run(as_dict=True)
         )
+
+        if self.filters.get("show_summary"):
+            query = query.groupby(self.gl_entry.voucher_no)
+
+        else:
+            query = query.groupby(self.gl_entry.voucher_detail_no)
+
+        return query.run(as_dict=True)
 
     def get_query(self):
         return (
