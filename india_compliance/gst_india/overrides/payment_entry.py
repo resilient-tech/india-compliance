@@ -97,6 +97,7 @@ def make_gst_revesal_entry_from_advance_payment(doc):
 
 
 def get_gl_for_advance_gst_reversal(payment_entry, reference_row):
+    gl_dicts = []
     voucher_date = frappe.db.get_value(
         reference_row.reference_doctype, reference_row.reference_name, "posting_date"
     )
@@ -109,11 +110,10 @@ def get_gl_for_advance_gst_reversal(payment_entry, reference_row):
     taxes = get_proportionate_taxes_for_reversal(payment_entry, reference_row)
 
     if not taxes:
-        return
+        return gl_dicts
 
     total_amount = sum(taxes.values())
 
-    gl_dicts = []
     args = {
         "posting_date": posting_date,
         "voucher_detail_no": reference_row.name,
