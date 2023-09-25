@@ -29,6 +29,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh(frm) {
+        set_e_invoice_status_options(frm);
         gst_invoice_warning(frm);
     },
 });
@@ -44,6 +45,14 @@ async function gst_invoice_warning(frm) {
             true
         );
     }
+}
+
+function set_e_invoice_status_options(frm) {
+    const options = ["Pending", "Not Applicable"];
+    if (!options.includes(frm.doc.e_waybill_status)) {
+        options.push(frm.doc.e_waybill_status);
+    }
+    set_field_options("e_waybill_status", options);
 }
 
 function is_gst_invoice(frm) {
