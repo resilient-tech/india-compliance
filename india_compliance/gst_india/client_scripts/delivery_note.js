@@ -4,15 +4,18 @@ setup_e_waybill_actions(DOCTYPE);
 frappe.ui.form.on(DOCTYPE, {
     after_save(frm) {
         if (
-            frm.doc.docstatus ||
             frm.doc.customer_address ||
-            !(gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_dn)
+            !has_e_waybill_threshold_met(frm) ||
+            !is_e_waybill_applicable(frm)
         )
             return;
 
-        frappe.show_alert({
-            message: __("Billing Address is required to create e-Waybill"),
-            indicator: "yellow",
-        }, 10);
+        frappe.show_alert(
+            {
+                message: __("Billing Address is required to create e-Waybill"),
+                indicator: "yellow",
+            },
+            10
+        );
     },
 });

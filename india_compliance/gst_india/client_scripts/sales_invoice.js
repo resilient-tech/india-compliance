@@ -32,6 +32,25 @@ frappe.ui.form.on(DOCTYPE, {
         set_e_invoice_status_options(frm);
         gst_invoice_warning(frm);
     },
+
+    after_save(frm) {
+        if (
+            frm.doc.customer_address ||
+            frm.doc.is_return ||
+            frm.doc.is_debit_note ||
+            !has_e_waybill_threshold_met(frm) ||
+            !is_e_waybill_applicable(frm)
+        )
+            return;
+
+        frappe.show_alert(
+            {
+                message: __("Supplier Address is required to create e-Waybill"),
+                indicator: "yellow",
+            },
+            10
+        );
+    },
 });
 
 async function gst_invoice_warning(frm) {

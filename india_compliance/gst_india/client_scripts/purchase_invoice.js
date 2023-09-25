@@ -4,9 +4,11 @@ setup_e_waybill_actions(DOCTYPE);
 frappe.ui.form.on(DOCTYPE, {
     after_save(frm) {
         if (
-            frm.doc.docstatus ||
             frm.doc.supplier_address ||
-            !is_e_waybill_applicable(frm)
+            !frm.doc.gst_category === "Unregistered" ||
+            !frm.doc.is_return ||
+            !is_e_waybill_applicable(frm) ||
+            !has_e_waybill_threshold_met(frm)
         )
             return;
 
