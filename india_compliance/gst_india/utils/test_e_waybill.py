@@ -243,6 +243,7 @@ class TestEWaybill(FrappeTestCase):
         self._generate_e_waybill()
 
         credit_note = make_return_doc("Sales Invoice", si.name)
+        credit_note.vehicle_no = "GJ05DL9009"
         credit_note.save()
         credit_note.submit()
 
@@ -793,9 +794,10 @@ class TestEWaybill(FrappeTestCase):
         )
 
         # Return Note
-        return_note = make_return_doc(
-            "Purchase Invoice", purchase_invoice.name
-        ).submit()
+        return_note = make_return_doc("Purchase Invoice", purchase_invoice.name)
+        return_note.distance = 10
+        return_note.vehicle_no = "GJ05DL9009"
+        return_note.submit()
 
         return_pi_data = self.e_waybill_test_data.get(
             "purchase_return_for_registered_supplier"
