@@ -24,15 +24,20 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
-            if (
-                frm.doc.docstatus != 1 ||
-                frm.is_dirty() ||
-                !is_e_waybill_applicable(frm)
-            )
-                return;
+            if (frm.doc.docstatus != 1 || frm.is_dirty()) return;
+
+            if (!frm.doc.company_gstin || !gst_settings.enable_e_waybill) return;
 
             if (!frm.doc.ewaybill) {
                 if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
+                    frm.add_custom_button(
+                        __("Mark as Generated"),
+                        () => show_mark_e_waybill_as_generated_dialog(frm),
+                        "e-Waybill"
+                    );
+                }
+
+                if (is_e_waybill_applicable(frm)) {
                     frm.add_custom_button(
                         __("Generate"),
                         () => show_generate_e_waybill_dialog(frm),
@@ -42,11 +47,6 @@ function setup_e_waybill_actions(doctype) {
                     frm.add_custom_button(
                         __("Fetch if Generated"),
                         () => show_fetch_if_generated_dialog(frm),
-                        "e-Waybill"
-                    );
-                    frm.add_custom_button(
-                        __("Mark as Generated"),
-                        () => show_mark_e_waybill_as_generated_dialog(frm),
                         "e-Waybill"
                     );
                 }
@@ -133,14 +133,15 @@ function setup_e_waybill_actions(doctype) {
         async on_submit(frm) {
             if (
                 frm.doctype != "Sales Invoice" ||
-                !has_e_waybill_threshold_met(frm) ||
+                !frm.doc.customer_address ||
+                frm.doc.is_return ||
+                frm.doc.is_debit_note ||
                 frm.doc.ewaybill ||
                 !india_compliance.is_api_enabled() ||
-                !gst_settings.auto_generate_e_waybill ||
+                !has_e_waybill_threshold_met(frm) ||
                 is_e_invoice_applicable(frm) ||
                 !is_e_waybill_applicable(frm) ||
-                frm.doc.is_return ||
-                frm.doc.is_debit_note
+                !gst_settings.auto_generate_e_waybill
             )
                 return;
 
@@ -228,25 +229,29 @@ function show_generate_e_waybill_dialog(frm) {
 
     const api_enabled = india_compliance.is_api_enabled();
 
-    const d = get_generate_e_waybill_dialog({
-        title: __("Generate e-Waybill"),
-        primary_action_label: get_primary_action_label_for_generation(frm.doc),
-        primary_action(values) {
-            d.hide();
-            if (api_enabled) {
-                generate_action(values);
-            } else {
-                json_action(values);
-            }
-        },
-        secondary_action_label: api_enabled && frm.doc.doctype ? __("Download JSON") : null,
-        secondary_action: api_enabled
-            ? () => {
+    const d = get_generate_e_waybill_dialog(
+        {
+            title: __("Generate e-Waybill"),
+            primary_action_label: get_primary_action_label_for_generation(frm.doc),
+            primary_action(values) {
                 d.hide();
-                json_action(d.get_values());
-            }
-            : null,
-    }, frm);
+                if (api_enabled) {
+                    generate_action(values);
+                } else {
+                    json_action(values);
+                }
+            },
+            secondary_action_label:
+                api_enabled && frm.doc.doctype ? __("Download JSON") : null,
+            secondary_action: api_enabled
+                ? () => {
+                      d.hide();
+                      json_action(d.get_values());
+                  }
+                : null,
+        },
+        frm
+    );
 
     d.show();
 
@@ -995,23 +1000,17 @@ function is_e_waybill_cancellable(frm) {
 function is_e_waybill_applicable_on_sales_invoice(frm) {
     return (
         frm.doctype == "Sales Invoice" &&
-        frm.doc.company_gstin !== frm.doc.billing_address_gstin &&
-        frm.doc.customer_address
+        frm.doc.company_gstin !== frm.doc.billing_address_gstin
     );
 }
 
 function is_e_waybill_applicable_on_delivery_note(frm) {
-    return (
-        frm.doctype == "Delivery Note" &&
-        frm.doc.customer_address &&
-        gst_settings.enable_e_waybill_from_dn
-    );
+    return frm.doctype == "Delivery Note" && gst_settings.enable_e_waybill_from_dn;
 }
 
 function is_e_waybill_applicable_on_purchase_invoice(frm) {
     return (
         frm.doctype == "Purchase Invoice" &&
-        frm.doc.supplier_address &&
         frm.doc.company_gstin !== frm.doc.supplier_gstin &&
         gst_settings.enable_e_waybill_from_pi
     );
