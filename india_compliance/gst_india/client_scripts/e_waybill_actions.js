@@ -593,7 +593,11 @@ function get_cancel_e_waybill_dialog_fields(frm) {
     ];
 }
 
-function show_update_vehicle_info_dialog(frm) {
+async function show_update_vehicle_info_dialog(frm) {
+    const destination_address = await frappe.db.get_doc(
+        "Address",
+        get_dispatch_address_name(frm)
+    );
     const d = new frappe.ui.Dialog({
         title: __("Update Vehicle Information"),
         fields: [
@@ -603,6 +607,13 @@ function show_update_vehicle_info_dialog(frm) {
                 fieldtype: "Data",
                 read_only: 1,
                 default: frm.doc.ewaybill,
+            },
+            {
+                label: "Place of Change",
+                fieldname: "place_of_change",
+                fieldtype: "Data",
+                reqd: 1,
+                default: destination_address.city,
             },
             {
                 label: "Vehicle No",
@@ -631,6 +642,14 @@ function show_update_vehicle_info_dialog(frm) {
                 default: frm.doc.mode_of_transport,
                 mandatory_depends_on: "eval: doc.lr_no",
                 onchange: () => update_vehicle_type(d),
+            },
+            {
+                label: "State",
+                fieldname: "state",
+                fieldtype: "Autocomplete",
+                options: frappe.boot.india_state_options.join("\n"),
+                reqd: 1,
+                default: destination_address.state,
             },
             {
                 label: "GST Vehicle Type",
@@ -1145,5 +1164,17 @@ function get_destination_address_name(frm) {
         if (frm.doc.is_return)
             return frm.doc.dispatch_address_name || frm.doc.company_address;
         return frm.doc.shipping_address_name || frm.doc.customer_address;
+    }
+}
+
+function get_dispatch_address_name(frm) {
+    if (frm.doc.doctype == "Purchase Invoice") {
+        if (frm.doc.is_return)
+            return frm.doc.shipping_address_name || frm.doc.billing_address;
+        return frm.doc.supplier_address;
+    } else {
+        if (frm.doc.is_return)
+            return frm.frm.doc.shipping_address_name || frm.doc.customer_address;
+        return frm.doc.dispatch_address_name || frm.doc.company_address;
     }
 }

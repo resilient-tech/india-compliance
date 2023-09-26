@@ -317,6 +317,8 @@ def update_vehicle_info(*, doctype, docname, values):
         "LR Date": values.lr_date,
         "Mode of Transport": values.mode_of_transport,
         "GST Vehicle Type": values.gst_vehicle_type,
+        "Place of Change": values.place_of_change,
+        "State": values.state,
     }
 
     for key, value in values_in_comment.items():
@@ -824,20 +826,13 @@ class EWaybillData(GSTTransactionData):
         self.validate_mode_of_transport()
         self.set_transporter_details()
 
-        addresses = ADDRESS_FIELDS.get(self.doc.doctype, {})
-
-        ship_from_address_name = (
-            addresses.get("ship_from")
-            if self.doc.get(addresses.get("ship_from"))
-            else addresses.get("bill_from")
-        )
-        ship_from = self.get_address_details(self.doc.get(ship_from_address_name))
-
         return {
             "ewbNo": self.doc.ewaybill,
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": ship_from.city,
-            "fromState": ship_from.state_number,
+            "fromPlace": self.sanitize_value(
+                values.place_of_change, regex=3, max_length=50
+            ),
+            "fromState": STATE_NUMBERS[values.state],
             "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
             "reasonRem": self.sanitize_value(values.remark, regex=3),
             "transDocNo": self.transaction_details.lr_no,
