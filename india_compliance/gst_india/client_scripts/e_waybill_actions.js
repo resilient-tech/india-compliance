@@ -24,9 +24,13 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
-            if (frm.doc.docstatus != 1 || frm.is_dirty()) return;
-
-            if (!frm.doc.company_gstin || !gst_settings.enable_e_waybill) return;
+            if (
+                frm.doc.docstatus != 1 ||
+                frm.is_dirty() ||
+                !is_e_waybill_applicable(frm, (using_api = false)) ||
+                frm.doc.e_waybill_status === "Not Applicable"
+            )
+                return;
 
             if (!frm.doc.ewaybill) {
                 if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
@@ -965,14 +969,14 @@ function has_e_waybill_threshold_met(frm) {
         return true;
 }
 
-function is_e_waybill_applicable(frm) {
+function is_e_waybill_applicable(frm, using_api = true) {
     if (
         // means company is Indian and not Unregistered
         !frm.doc.company_gstin ||
         !gst_settings.enable_e_waybill ||
         !(
-            is_e_waybill_applicable_on_sales_invoice(frm) ||
-            is_e_waybill_applicable_on_purchase_invoice(frm) ||
+            is_e_waybill_applicable_on_sales_invoice(frm, using_api) ||
+            is_e_waybill_applicable_on_purchase_invoice(frm, using_api) ||
             is_e_waybill_applicable_on_delivery_note(frm)
         )
     )
@@ -1016,10 +1020,10 @@ function is_e_waybill_cancellable(frm) {
     );
 }
 
-function is_e_waybill_applicable_on_sales_invoice(frm) {
+function is_e_waybill_applicable_on_sales_invoice(frm, using_api) {
     return (
         frm.doctype == "Sales Invoice" &&
-        frm.doc.company_gstin !== frm.doc.billing_address_gstin
+        (using_api ? frm.doc.company_gstin !== frm.doc.billing_address_gstin : true)
     );
 }
 
@@ -1027,11 +1031,11 @@ function is_e_waybill_applicable_on_delivery_note(frm) {
     return frm.doctype == "Delivery Note" && gst_settings.enable_e_waybill_from_dn;
 }
 
-function is_e_waybill_applicable_on_purchase_invoice(frm) {
+function is_e_waybill_applicable_on_purchase_invoice(frm, using_api) {
     return (
         frm.doctype == "Purchase Invoice" &&
-        frm.doc.company_gstin !== frm.doc.supplier_gstin &&
-        gst_settings.enable_e_waybill_from_pi
+        gst_settings.enable_e_waybill_from_pi &&
+        (using_api ? frm.doc.company_gstin !== frm.doc.supplier_gstin : true)
     );
 }
 
