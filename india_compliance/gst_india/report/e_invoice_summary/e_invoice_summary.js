@@ -6,10 +6,15 @@ frappe.query_reports["e-Invoice Summary"] = {
         {
             fieldtype: "Link",
             options: "Company",
-            reqd: 1,
             fieldname: "company",
             label: __("Company"),
-            default: frappe.defaults.get_user_default("Company"),
+            get_query: function () {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
+            },
         },
         {
             fieldtype: "Link",
@@ -35,7 +40,7 @@ frappe.query_reports["e-Invoice Summary"] = {
             fieldtype: "Select",
             fieldname: "status",
             label: __("e-Invoice Status"),
-            options: "\nPending\nGenerated\nCancelled\nFailed",
+            options: "\nPending\nGenerated\nCancelled\nFailed\nNot Applicable",
         },
         {
             fieldtype: "Select",

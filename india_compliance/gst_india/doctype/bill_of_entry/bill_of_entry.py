@@ -18,6 +18,9 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 class BillofEntry(Document):
     get_gl_dict = AccountsController.get_gl_dict
+    get_value_in_transaction_currency = (
+        AccountsController.get_value_in_transaction_currency
+    )
 
     def onload(self):
         if self.docstatus != 1:
@@ -41,6 +44,7 @@ class BillofEntry(Document):
     def validate(self):
         self.validate_purchase_invoice()
         self.validate_taxes()
+        self.reconciliation_status = "Unreconciled"
 
     def on_submit(self):
         make_gl_entries(self.get_gl_entries())
@@ -304,6 +308,10 @@ class BillofEntry(Document):
 
 @frappe.whitelist()
 def make_bill_of_entry(source_name, target_doc=None):
+    """
+    Permission checked in get_mapped_doc
+    """
+
     def set_missing_values(source, target):
         target.set_defaults()
 
@@ -365,6 +373,10 @@ def make_bill_of_entry(source_name, target_doc=None):
 
 @frappe.whitelist()
 def make_journal_entry_for_payment(source_name, target_doc=None):
+    """
+    Permission checked in get_mapped_doc
+    """
+
     def set_missing_values(source, target):
         target.voucher_type = "Bank Entry"
         target.posting_date = target.cheque_date = today()
@@ -411,6 +423,10 @@ def make_journal_entry_for_payment(source_name, target_doc=None):
 
 @frappe.whitelist()
 def make_landed_cost_voucher(source_name, target_doc=None):
+    """
+    Permission checked in get_mapped_doc
+    """
+
     def set_missing_values(source, target):
         items = get_items_for_landed_cost_voucher(source)
         if not items:

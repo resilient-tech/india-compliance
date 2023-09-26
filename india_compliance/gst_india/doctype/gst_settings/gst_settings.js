@@ -3,8 +3,6 @@
 
 frappe.ui.form.on("GST Settings", {
     setup(frm) {
-        frm.get_field("credentials").grid.get_docfield("password").reqd = 1;
-
         ["cgst_account", "sgst_account", "igst_account", "cess_account"].forEach(
             field => filter_accounts(frm, field)
         );
@@ -35,15 +33,6 @@ frappe.ui.form.on("GST Settings", {
         // sets latest values in frappe.boot for current user
         // other users will still need to refresh page
         Object.assign(gst_settings, frm.doc);
-    },
-});
-
-frappe.ui.form.on("GST Credential", {
-    service(frm, cdt, cdn) {
-        const doc = frappe.get_doc(cdt, cdn);
-        const row = frm.get_field("credentials").grid.grid_rows_by_docname[doc.name];
-
-        row.toggle_reqd("password", doc.service !== "Returns");
     },
 });
 
@@ -95,6 +84,7 @@ function show_ic_api_promo(frm) {
 
 function show_update_gst_category_button(frm) {
     if (
+        !frappe.perm.has_perm(frm.doctype, 0, "write", frm.doc.name) ||
         !frm.doc.__onload?.has_missing_gst_category ||
         !india_compliance.is_api_enabled() ||
         !frm.doc.autofill_party_info
@@ -105,7 +95,7 @@ function show_update_gst_category_button(frm) {
         frappe.msgprint({
             title: __("Update GST Category"),
             message: __(
-                "Confirm to update GST Category for all Address where its missing using API. It is missing for these <a><span class='custom-link' data-fieldtype='Link' data-doctype='Address'>Addresses</span><a>."
+                "Confirm to update GST Category for all Addresses where it is missing using API. It is missing for these <a><span class='custom-link' data-fieldtype='Link' data-doctype='Address'>Addresses</span><a>."
             ),
             primary_action: {
                 label: __("Update"),

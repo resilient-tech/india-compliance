@@ -33,12 +33,7 @@ def onload(doc, method=None):
         if not doc.get("irn"):
             return
 
-    gst_settings = frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        ("enable_api", "enable_e_waybill", "enable_e_invoice", "api_secret"),
-        as_dict=1,
-    )
+    gst_settings = frappe.get_cached_doc("GST Settings")
 
     if not is_api_enabled(gst_settings):
         return
@@ -54,11 +49,14 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
     validate_invoice_number(doc)
     validate_credit_debit_note(doc)
-    validate_fields_and_set_status_for_e_invoice(doc)
+    validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
+    set_e_waybill_status(doc, gst_settings)
 
 
 def validate_invoice_number(doc):
@@ -90,11 +88,11 @@ def validate_credit_debit_note(doc):
         )
 
 
-def validate_fields_and_set_status_for_e_invoice(doc):
-    gst_settings = frappe.get_cached_doc("GST Settings")
+def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
     if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
         doc, gst_settings=gst_settings, throw=False
     ):
+        doc.einvoice_status = "Not Applicable"
         return
 
     validate_mandatory_fields(
@@ -216,6 +214,7 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
         {
             "e-Waybill Log": "reference_name",
             "Integration Request": "reference_docname",
+            "GST Inward Supply": "link_name",
         }
     )
 
@@ -231,3 +230,18 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
     transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
 
     return data
+
+
+def set_e_waybill_status(doc, gst_settings=None):
+    if doc.docstatus != 1 or doc.e_waybill_status:
+        return
+
+    e_waybill_status = "Not Applicable"
+
+    if is_e_waybill_applicable(doc, gst_settings):
+        e_waybill_status = "Pending"
+
+    if doc.ewaybill:
+        e_waybill_status = "Manually Generated"
+
+    doc.update({"e_waybill_status": e_waybill_status})

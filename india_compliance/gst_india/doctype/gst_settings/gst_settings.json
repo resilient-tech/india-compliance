@@ -10,6 +10,7 @@
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
   "round_off_gst_values",
+  "require_supplier_invoice_no",
   "column_break_4",
   "validate_hsn_code",
   "min_hsn_digits",
@@ -22,6 +23,7 @@
   "e_waybill_section",
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
+  "enable_e_waybill_from_pi",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "column_break_10",
@@ -32,13 +34,17 @@
   "auto_generate_e_invoice",
   "generate_e_waybill_with_e_invoice",
   "apply_e_invoice_only_for_selected_companies",
+  "enable_retry_e_invoice_generation",
+  "is_retry_e_invoice_generation_pending",
   "column_break_17",
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
   "other_apis_section",
   "autofill_party_info",
-  "column_break_bydp",
   "archive_party_info_days",
+  "column_break_bydp",
+  "validate_gstin_status",
+  "gstin_status_refresh_interval",
   "uom_mapping_section",
   "gst_uom_map",
   "accounts_tab",
@@ -239,6 +245,13 @@
    "label": "Autofill Party Information based on GSTIN"
   },
   {
+   "default": "0",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "fieldname": "enable_e_waybill_from_pi",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Generation from Purchase Invoice"
+  },
+  {
    "collapsible": 1,
    "fieldname": "uom_mapping_section",
    "fieldtype": "Section Break",
@@ -299,7 +312,15 @@
    "description": "Minimize API usage by reusing GSTIN party information retained from recent days",
    "fieldname": "archive_party_info_days",
    "fieldtype": "Int",
-   "label": "Archive Party Information (In Days)"
+   "label": "Use Archived Party Information (In Days)"
+  },
+  {
+   "default": "30",
+   "depends_on": "eval:doc.validate_gstin_status",
+   "description": "Will auto refresh status if its older than days set here",
+   "fieldname": "gstin_status_refresh_interval",
+   "fieldtype": "Int",
+   "label": "GSTIN Status Refresh Interval (In Days)"
   },
   {
    "default": "5000",
@@ -314,21 +335,46 @@
    "fieldname": "enable_rcm_for_unregistered_supplier",
    "fieldtype": "Check",
    "label": "Enable Reverse Charge for Purchase from Unregistered Supplier"
+  },
+  {
+   "default": "1",
+   "description": "If checked, Supplier Invoice Number will be mandatory for all purchases (except from unregistered suppliers). This will help ensure smooth purchase reconciliation.",
+   "fieldname": "require_supplier_invoice_no",
+   "fieldtype": "Check",
+   "label": "Require Supplier Invoice Number for GST Purchases"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.enable_e_invoice",
+   "description": "Automatically Retry e-Invoice Generation for Gateway Timeout Errors",
+   "fieldname": "enable_retry_e_invoice_generation",
+   "fieldtype": "Check",
+   "label": "Enable Retry e-Invoice Generation"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_retry_e_invoice_generation_pending",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Retry e-Invoice Generation Pending"
+  },
+  {
+   "default": "1",
+   "description": "Ensures valid GSTIN in transactions by refreshing status periodically from government database",
+   "fieldname": "validate_gstin_status",
+   "fieldtype": "Check",
+   "label": "Refresh and Validate GSTIN Status in Transactions"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-07-12 16:32:45.185690",
+ "modified": "2023-08-24 19:19:53.537062",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
  "owner": "Administrator",
  "permissions": [
-  {
-   "read": 1,
-   "role": "All"
-  },
   {
    "create": 1,
    "read": 1,

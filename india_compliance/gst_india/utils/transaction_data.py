@@ -19,14 +19,11 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     validate_pincode,
 )
-from india_compliance.income_tax_india.overrides.tax_withholding_category import (
-    get_tax_withholding_accounts,
-)
 
 REGEX_MAP = {
     1: re.compile(r"[^A-Za-z0-9]"),
     2: re.compile(r"[^A-Za-z0-9\-\/. ]"),
-    3: re.compile(r"[^A-Za-z0-9@#\-\/,&. ]"),
+    3: re.compile(r"[^A-Za-z0-9@#\-\/,&.(*) ]"),
 }
 
 
@@ -39,30 +36,55 @@ class GSTTransactionData:
         self.sandbox_mode = self.settings.sandbox_mode
         self.transaction_details = frappe._dict()
 
+        gst_type = "Output"
+        self.party_name_field = "customer_name"
+
+        if self.doc.doctype == "Purchase Invoice":
+            self.party_name_field = "supplier_name"
+            if self.doc.is_reverse_charge != 1:
+                # for with reverse charge, gst_type is Output
+                # this will ensure zero taxes in transaction details
+                gst_type = "Input"
+
+        self.party_name = self.doc.get(self.party_name_field)
+
         # "CGST Account - TC": "cgst_account"
         self.gst_accounts = {
             v: k
-            for k, v in get_gst_accounts_by_type(self.doc.company, "Output").items()
+            for k, v in get_gst_accounts_by_type(self.doc.company, gst_type).items()
         }
 
     def set_transaction_details(self):
-        tds_amount = self.get_tds_amount()
+        rounding_adjustment = self.rounded(self.doc.base_rounding_adjustment)
+        if self.doc.is_return:
+            rounding_adjustment = -rounding_adjustment
+
+        grand_total_fieldname = (
+            "base_grand_total"
+            if self.doc.disable_rounded_total
+            else "base_rounded_total"
+        )
+
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
-                "customer_name": self.sanitize_value(
-                    self.doc.customer_name
+                "party_name": self.sanitize_value(
+                    self.party_name
                     or frappe.db.get_value(
-                        "Customer", self.doc.customer, "customer_name"
+                        self.doc.doctype, self.party_name, self.party_name_field
                     )
                 ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
                 "total": abs(
                     self.rounded(sum(row.taxable_value for row in self.doc.items))
                 ),
-                "rounding_adjustment": self.get_adjusted_rounding(tds_amount),
-                "grand_total": self.get_adjusted_grand_total(tds_amount),
-                "grand_total_in_foreign_currency": self.get_adjusted_total_in_foreign_currency(),
+                "rounding_adjustment": rounding_adjustment,
+                "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),
+                "grand_total_in_foreign_currency": (
+                    abs(self.rounded(self.doc.grand_total))
+                    if self.doc.currency != "INR"
+                    else ""
+                ),
                 "discount_amount": (
                     abs(self.rounded(self.doc.base_discount_amount))
                     if self.doc.get("is_cash_or_non_trade_discount")
@@ -75,60 +97,6 @@ class GSTTransactionData:
         )
         self.update_transaction_details()
         self.update_transaction_tax_details()
-
-    def get_tds_amount(self, currency="INR"):
-        tds_accounts = get_tax_withholding_accounts(self.doc.company)
-        amount_field = (
-            "base_tax_amount_after_discount_amount"
-            if currency == "INR"
-            else "tax_amount_after_discount_amount"
-        )
-        tds_amount = 0
-
-        if not tds_accounts:
-            return tds_amount
-
-        for row in self.doc.taxes:
-            if row.account_head in tds_accounts:
-                tds_amount += row.get(amount_field)
-
-        return tds_amount
-
-    def get_adjusted_rounding(self, tds_amount):
-        """Adjust rounding for TDS Roundoff and Returns"""
-
-        if self.doc.disable_rounded_total:
-            return 0.0
-
-        tds_rounding_adjustment = self.rounded(tds_amount, 0) - tds_amount
-        rounding_adjustment = self.rounded(
-            self.doc.base_rounding_adjustment - tds_rounding_adjustment
-        )
-
-        if self.doc.is_return:
-            rounding_adjustment = -rounding_adjustment
-
-        return rounding_adjustment
-
-    def get_adjusted_grand_total(self, tds_amount):
-        grand_total_fieldname = "base_grand_total"
-
-        if not self.doc.disable_rounded_total:
-            grand_total_fieldname = "base_rounded_total"
-            tds_amount = self.rounded(tds_amount, 0)
-
-        return abs(self.rounded(self.doc.get(grand_total_fieldname) - tds_amount))
-
-    def get_adjusted_total_in_foreign_currency(self):
-        grand_total_in_foreign_currency = ""
-        if self.doc.currency != "INR":
-            grand_total_in_foreign_currency = abs(
-                self.rounded(
-                    self.doc.grand_total - self.get_tds_amount(self.doc.currency)
-                )
-            )
-
-        return grand_total_in_foreign_currency
 
     def update_transaction_details(self):
         # to be overrridden
@@ -266,6 +234,7 @@ class GSTTransactionData:
                 msg=_("Posting Date cannot be greater than Today's Date"),
                 title=_("Invalid Data"),
             )
+
         # compare posting date and lr date, only if lr no is set
         if (
             self.doc.lr_no

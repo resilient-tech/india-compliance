@@ -24,10 +24,7 @@ GST_CATEGORIES = {
 
 @frappe.whitelist()
 def get_gstin_info(gstin):
-    if (
-        frappe.get_cached_value("User", frappe.session.user, "user_type")
-        == "Website User"
-    ):
+    if not frappe.get_cached_doc("User", frappe.session.user).has_desk_access():
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
     validate_gstin(gstin)
@@ -35,6 +32,11 @@ def get_gstin_info(gstin):
 
     if not response:
         response = PublicAPI().get_gstin_info(gstin)
+        frappe.enqueue(
+            "india_compliance.gst_india.doctype.gstin.gstin.create_or_update_gstin_status",
+            queue="long",
+            response=response,
+        )
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm

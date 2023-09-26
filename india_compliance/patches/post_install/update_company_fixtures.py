@@ -2,7 +2,8 @@ import frappe
 from erpnext.setup.setup_wizard.operations.taxes_setup import get_or_create_tax_group
 
 from india_compliance.gst_india.overrides.company import (
-    create_company_fixtures as create_gst_fixtures,
+    make_default_customs_accounts,
+    make_default_tax_templates,
 )
 from india_compliance.income_tax_india.overrides.company import (
     create_company_fixtures as create_income_tax_fixtures,
@@ -14,7 +15,9 @@ This patch is used to create company fixtures for Indian Companies created befor
 
 
 def execute():
-    company_list = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
+    company_list = frappe.get_all(
+        "Company", filters={"country": "India"}, pluck="name", order_by="lft asc"
+    )
     for company in company_list:
         # Income Tax fixtures
         if not frappe.db.exists(
@@ -25,7 +28,12 @@ def execute():
         # GST fixtures
         update_root_for_rcm(company)
         if not frappe.db.exists("GST Account", {"company": company}):
-            create_gst_fixtures(company)
+            make_default_tax_templates(company)
+
+        if not frappe.db.exists(
+            "Account", {"company": company, "account_name": "Customs Duty Payable"}
+        ):
+            make_default_customs_accounts(company)
 
 
 def update_root_for_rcm(company):

@@ -21,7 +21,7 @@ def execute(filters=None):
     return Gstr1Report(filters).run()
 
 
-class Gstr1Report(object):
+class Gstr1Report:
     def __init__(self, filters=None):
         self.filters = frappe._dict(filters or {})
         self.columns = []
@@ -232,7 +232,15 @@ class Gstr1Report(object):
                             if item_code in items
                         ]
                     )
-                    row["cess_amount"] += flt(self.invoice_cess.get(inv), 2)
+                    row["cess_amount"] += sum(
+                        [
+                            cess
+                            for item_code, cess in self.invoice_cess.get(
+                                inv, {}
+                            ).items()
+                            if item_code in items
+                        ]
+                    )
                     row["type"] = "E" if ecommerce_gstin else "OE"
 
             for key, value in b2c_output.items():
@@ -279,16 +287,18 @@ class Gstr1Report(object):
             else:
                 row.append(invoice_details.get(fieldname))
         taxable_value = 0
+        cess_amount = 0
 
         for item_code, net_amount in self.invoice_items.get(invoice).items():
             if item_code in items:
                 taxable_value += abs(net_amount)
+                cess_amount += self.invoice_cess.get(invoice, {}).get(item_code, 0.0)
 
         row += [tax_rate or 0, taxable_value]
 
         for column in self.other_columns:
             if column.get("fieldname") == "cess_amount":
-                row.append(flt(self.invoice_cess.get(invoice), 2))
+                row.append(cess_amount)
 
         return row, taxable_value
 
@@ -377,6 +387,9 @@ class Gstr1Report(object):
         elif self.filters.get("type_of_business") == "EXPORT":
             conditions += """ AND is_return !=1 and gst_category = 'Overseas' and place_of_supply = '96-Other Countries' """
 
+        elif self.filters.get("type_of_business") == "NIL Rated":
+            conditions += """ AND IFNULL(place_of_supply, '') != '96-Other Countries' and IFNULL(gst_category, '') != 'Overseas'"""
+
         conditions += " AND IFNULL(billing_address_gstin, '') != company_gstin"
 
         return conditions
@@ -387,7 +400,7 @@ class Gstr1Report(object):
 
         items = frappe.db.sql(
             """
-			select item_code, item_name, parent, taxable_value, base_net_amount, item_tax_rate, is_nil_exempt,
+			select item_code, item_name, parent, taxable_value, item_tax_rate, is_nil_exempt,
 			is_non_gst from `tab%s Item`
 			where parent in (%s)
 		"""
@@ -399,9 +412,7 @@ class Gstr1Report(object):
         for d in items:
             d.item_code = d.item_code or d.item_name
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
-            self.invoice_items[d.parent][d.item_code] += d.get(
-                "taxable_value", 0
-            ) or d.get("base_net_amount", 0)
+            self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
 
             if d.is_nil_exempt:
                 self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
@@ -414,10 +425,10 @@ class Gstr1Report(object):
                 self.nil_exempt_non_gst[d.parent][2] += d.get("taxable_value", 0)
 
     def get_items_based_on_tax_rate(self):
-        self.tax_details = frappe.db.sql(
+        tax_details = frappe.db.sql(
             """
 			select
-				parent, account_head, item_wise_tax_detail, base_tax_amount_after_discount_amount
+				parent, account_head, item_wise_tax_detail
 			from `tab%s`
 			where
 				parenttype = %s and docstatus = 1
@@ -430,53 +441,51 @@ class Gstr1Report(object):
 
         self.items_based_on_tax_rate = {}
         self.invoice_cess = frappe._dict()
-        self.cgst_sgst_invoices = []
 
-        unidentified_gst_accounts = []
-        unidentified_gst_accounts_invoice = []
-        for parent, account, item_wise_tax_detail, tax_amount in self.tax_details:
-            if account == self.gst_accounts.cess_account:
-                self.invoice_cess.setdefault(parent, tax_amount)
-            else:
-                if item_wise_tax_detail:
-                    try:
-                        item_wise_tax_detail = json.loads(item_wise_tax_detail)
-                        cgst_or_sgst = False
-                        if (
-                            account == self.gst_accounts.cgst_account
-                            or account == self.gst_accounts.sgst_account
-                        ):
-                            cgst_or_sgst = True
+        unidentified_gst_accounts = set()
+        unidentified_gst_accounts_invoice = set()
+        for parent, account, item_wise_tax_detail in tax_details:
+            if not item_wise_tax_detail:
+                continue
 
-                        if not (
-                            cgst_or_sgst or account == self.gst_accounts.igst_account
-                        ):
-                            if (
-                                "gst" in account.lower()
-                                and account not in unidentified_gst_accounts
-                            ):
-                                unidentified_gst_accounts.append(account)
-                                unidentified_gst_accounts_invoice.append(parent)
-                            continue
+            if account not in self.gst_accounts.values():
+                if "gst" in account.lower():
+                    unidentified_gst_accounts.add(account)
+                    unidentified_gst_accounts_invoice.add(parent)
 
-                        for item_code, tax_amounts in item_wise_tax_detail.items():
-                            tax_rate = tax_amounts[0]
-                            if not tax_rate and parent not in self.nil_exempt_non_gst:
-                                continue
+                continue
 
-                            if cgst_or_sgst:
-                                tax_rate *= 2
-                                if parent not in self.cgst_sgst_invoices:
-                                    self.cgst_sgst_invoices.append(parent)
+            try:
+                item_wise_tax_detail = json.loads(item_wise_tax_detail)
+            except ValueError:
+                continue
 
-                            rate_based_dict = self.items_based_on_tax_rate.setdefault(
-                                parent, {}
-                            ).setdefault(tax_rate, [])
-                            if item_code not in rate_based_dict:
-                                rate_based_dict.append(item_code)
+            is_cess = account == self.gst_accounts.cess_account
+            is_cgst_or_sgst = (
+                account == self.gst_accounts.cgst_account
+                or account == self.gst_accounts.sgst_account
+            )
 
-                    except ValueError:
-                        continue
+            for item_code, tax_amounts in item_wise_tax_detail.items():
+                tax_rate = tax_amounts[0]
+
+                if not tax_rate and parent not in self.nil_exempt_non_gst:
+                    continue
+
+                if is_cess:
+                    self.invoice_cess.setdefault(parent, {})
+                    self.invoice_cess[parent].setdefault(item_code, 0.0)
+                    self.invoice_cess[parent][item_code] += tax_amounts[1]
+                    continue
+
+                if is_cgst_or_sgst:
+                    tax_rate *= 2
+
+                (
+                    self.items_based_on_tax_rate.setdefault(parent, {})
+                    .setdefault(tax_rate, set())
+                    .add(item_code)
+                )
 
         if unidentified_gst_accounts:
             frappe.msgprint(

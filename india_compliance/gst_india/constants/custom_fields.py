@@ -93,6 +93,7 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "supplier_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "company_gstin",
@@ -186,12 +187,13 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "customer_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
             "fieldtype": "Autocomplete",
-            "options": get_place_of_supply_options(with_other_countries=True),
+            "options": get_place_of_supply_options(),
             "insert_after": "gst_category",
             "print_hide": 1,
             "read_only": 0,
@@ -370,7 +372,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_section",
             "label": "GST Details",
             "fieldtype": "Section Break",
-            "insert_after": "language",
+            "insert_after": "gst_vehicle_type",
             "print_hide": 1,
             "collapsible": 1,
         },
@@ -389,9 +391,19 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
         {
+            "fieldname": "reconciliation_status",
+            "label": "Reconciliation Status",
+            "fieldtype": "Select",
+            "insert_after": "eligibility_for_itc",
+            "print_hide": 1,
+            "options": ("\nNot Applicable\nReconciled\nUnreconciled\nIgnored"),
+            "no_copy": 1,
+            "read_only": 1,
+        },
+        {
             "fieldname": "gst_col_break",
             "fieldtype": "Column Break",
-            "insert_after": "eligibility_for_itc",
+            "insert_after": "reconciliation_status",
         },
         {
             "fieldname": "itc_integrated_tax",
@@ -673,13 +685,13 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nCancelled\nFailed",
+            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nFailed\nNot Applicable",
             "default": None,
             "hidden": 1,
             "no_copy": 1,
             "print_hide": 1,
             "read_only": 1,
-            "translatable": 0,
+            "translatable": 1,
         },
     ]
 }
@@ -691,6 +703,7 @@ E_WAYBILL_DN_FIELDS = [
         "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
+        "no_copy": 1,
         "description": (
             "Set as zero to update distance as per the e-Waybill portal (if available)"
         ),
@@ -702,6 +715,7 @@ E_WAYBILL_DN_FIELDS = [
         "insert_after": "transporter",
         "fetch_from": "transporter.gst_transporter_id",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -712,6 +726,7 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Road",
         "insert_after": "transporter_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -724,21 +739,12 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "ewaybill",
-        "label": "e-Waybill No.",
-        "fieldtype": "Data",
-        "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
-        "allow_on_submit": 1,
-        "insert_after": "customer_name",
-        "translatable": 0,
         "no_copy": 1,
+        "translatable": 0,
     },
 ]
 
-E_WAYBILL_SI_FIELDS = [
+E_WAYBILL_INV_FIELDS = [
     {
         "fieldname": "transporter_info",
         "label": "Transporter Info",
@@ -755,6 +761,7 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "transporter_info",
         "options": "Supplier",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "driver",
@@ -763,6 +770,7 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "gst_transporter_id",
         "options": "Driver",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "lr_no",
@@ -770,6 +778,7 @@ E_WAYBILL_SI_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "driver",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 30,
     },
@@ -779,6 +788,7 @@ E_WAYBILL_SI_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "lr_no",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 15,
     },
@@ -795,6 +805,7 @@ E_WAYBILL_SI_FIELDS = [
         "fetch_from": "transporter.supplier_name",
         "read_only": 1,
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -804,6 +815,7 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "mode_of_transport",
         "fetch_from": "driver.full_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -813,11 +825,42 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "driver_name",
         "default": "Today",
         "print_hide": 1,
+        "no_copy": 1,
     },
     *E_WAYBILL_DN_FIELDS,
 ]
 
+sales_e_waybill_field = {
+    "fieldname": "ewaybill",
+    "label": "e-Waybill No.",
+    "fieldtype": "Data",
+    "depends_on": "eval: doc.docstatus === 1 && (doc.ewaybill || doc.e_waybill_status !== 'Not Applicable')",
+    "allow_on_submit": 1,
+    "translatable": 0,
+    "no_copy": 1,
+    "insert_after": "customer_name",
+    "read_only": 1,
+}
+
+e_waybill_status_field = {
+    "fieldname": "e_waybill_status",
+    "label": "e-Waybill Status",
+    "fieldtype": "Select",
+    "insert_after": "ewaybill",
+    "options": "\nPending\nGenerated\nCancelled\nNot Applicable\nManually Generated\nManually Cancelled",
+    "print_hide": 1,
+    "no_copy": 1,
+    "translatable": 1,
+    "allow_on_submit": 1,
+    "depends_on": "eval:doc.docstatus === 1 && !doc.ewaybill",
+    "read_only_depends_on": "eval:doc.ewaybill",
+}
+
+purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
+
 E_WAYBILL_FIELDS = {
-    "Sales Invoice": E_WAYBILL_SI_FIELDS,
-    "Delivery Note": E_WAYBILL_DN_FIELDS,
+    "Sales Invoice": E_WAYBILL_INV_FIELDS
+    + [sales_e_waybill_field, e_waybill_status_field],
+    "Delivery Note": E_WAYBILL_DN_FIELDS + [sales_e_waybill_field],
+    "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
 }

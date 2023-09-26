@@ -10,7 +10,7 @@
 				"LglNm": "_Test Registered Customer",
 				"Loc": "Test City",
 				"Pin": 500055,
-				"Pos": "01",
+				"Pos": "02",
 				"Stcd": "36",
 				"TrdNm": "_Test Registered Customer"
 			},
@@ -116,7 +116,7 @@
 				"LglNm": "_Test Registered Customer",
 				"Loc": "Test City",
 				"Pin": 500055,
-				"Pos": "01",
+				"Pos": "02",
 				"Stcd": "36",
 				"TrdNm": "_Test Registered Customer"
 			},
@@ -221,7 +221,7 @@
 				"LglNm": "_Test Registered Customer",
 				"Loc": "Test City",
 				"Pin": 500055,
-				"Pos": "01",
+				"Pos": "02",
 				"Stcd": "36",
 				"TrdNm": "_Test Registered Customer"
 			},
@@ -275,7 +275,7 @@
 			"PayDtls": {
 				"CrDay": 0,
 				"PaidAmt": 0,
-				"PaymtDue": 0.0
+				"PaymtDue": 17.0
 			},
 			"RefDtls": {
 				"PrecDocDtls": [
@@ -354,7 +354,7 @@
 				"LglNm": "_Test Registered Customer",
 				"Loc": "Test City",
 				"Pin": 500055,
-				"Pos": "01",
+				"Pos": "02",
 				"Stcd": "36",
 				"TrdNm": "_Test Registered Customer"
 			},
