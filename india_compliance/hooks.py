@@ -261,7 +261,10 @@ audit_trail_doctypes = [
     "Bill of Entry",
 ]
 
-
+default_company_account_fields = [
+    "default_customs_expense_account",
+    "default_customs_payable_account",
+]
 # Includes in <head>
 # ------------------
 
