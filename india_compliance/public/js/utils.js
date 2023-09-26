@@ -51,7 +51,7 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date) {
+    async set_gstin_status(field, transaction_date, force_update = 0) {
         const gstin = field.value;
         if (!gstin || gstin.length != 15) return field.set_description("");
 
@@ -61,8 +61,11 @@ Object.assign(india_compliance, {
                 gstin,
                 transaction_date,
                 is_request_from_ui: 1,
+                force_update,
             },
         });
+
+        if (!message) return field.set_description("");
 
         field.set_description(
             india_compliance.get_gstin_status_desc(
@@ -70,6 +73,8 @@ Object.assign(india_compliance, {
                 message?.last_updated_on
             )
         );
+
+        this.set_gstin_refresh_btn(field, transaction_date);
 
         return message;
     },
@@ -82,10 +87,33 @@ Object.assign(india_compliance, {
         const STATUS_COLORS = { Active: "green", Cancelled: "red" };
         return `<div class="d-flex indicator ${STATUS_COLORS[status] || "orange"}">
                     Status:&nbsp;<strong>${status}</strong>
-                    <span class="text-right ml-auto" title="${user_date}">
-                        ${datetime ? "updated " + pretty_date : ""}
+                    <span class="text-right ml-auto gstin-last-updated">
+                        <span title="${user_date}">
+                            ${datetime ? "updated " + pretty_date : ""}
+                        </span>
                     </span>
                 </div>`;
+    },
+
+    set_gstin_refresh_btn(field, transaction_date) {
+        if (
+            !this.is_api_enabled() ||
+            gst_settings.sandbox_mode ||
+            !gst_settings.validate_gstin_status ||
+            field.$wrapper.find(".refresh-gstin").length
+        )
+            return;
+
+        const refresh_btn = $(`
+            <svg class="icon icon-sm refresh-gstin" style="">
+                <use class="" href="#icon-refresh" style="cursor: pointer"></use>
+            </svg>
+        `).appendTo(field.$wrapper.find(".gstin-last-updated"));
+
+        refresh_btn.on("click", async function () {
+            const force_update = 1;
+            await india_compliance.set_gstin_status(field, transaction_date, force_update);
+        });
     },
 
     set_state_options(frm) {
