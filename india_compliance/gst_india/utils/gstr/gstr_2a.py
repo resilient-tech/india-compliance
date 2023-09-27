@@ -77,7 +77,7 @@ class GSTR2a(GSTR):
         if not self.cancelled_gstins:
             return
 
-        existing_cancelled_gstins = frappe.db.get_all(
+        cancelled_gstins_to_update = frappe.db.get_all(
             "GSTIN",
             filters={
                 "name": ("in", self.cancelled_gstins),
@@ -86,7 +86,7 @@ class GSTR2a(GSTR):
             pluck="name",
         )
 
-        for gstin in existing_cancelled_gstins:
+        for gstin in cancelled_gstins_to_update:
             cancelled_date = self.cancelled_gstins.get(gstin)
             frappe.db.set_value(
                 "GSTIN",
