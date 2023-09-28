@@ -6,7 +6,7 @@ from functools import reduce
 import frappe
 from frappe import _
 from frappe.query_builder import Case
-from frappe.query_builder.functions import Coalesce
+from frappe.query_builder.functions import Coalesce, IfNull
 from frappe.utils.data import get_datetime
 
 from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
@@ -24,8 +24,11 @@ def execute(filters=None):
 def get_data_for_all_companies(filters):
     data = []
 
-    indian_companies = [filters.get("company")]
-    if not indian_companies:
+    indian_companies = []
+
+    if filters.get("company"):
+        indian_companies.append(filters.get("company"))
+    else:
         indian_companies = frappe.get_all(
             "Company", filters={"country": "India"}, pluck="name"
         )
@@ -47,7 +50,7 @@ def validate_filters(filters=None):
 
     if not settings.enable_e_invoice:
         frappe.throw(
-            _("e-Invoice is not enabled for {}").format(filters.company),
+            _("e-Invoice is not enabled for your company."),
             title=_("Invalid Filter"),
         )
 
@@ -93,7 +96,7 @@ def get_data(filters=None):
     if not settings.enable_e_invoice or not e_invoice_applicability_date:
         return []
 
-    conditions = e_invoice_conditions(filters, e_invoice_applicability_date)
+    conditions = e_invoice_conditions(e_invoice_applicability_date)
 
     query = (
         frappe.qb.from_(sales_invoice)
@@ -110,6 +113,10 @@ def get_data(filters=None):
             sales_invoice.company,
             e_invoice_log.acknowledgement_number,
             e_invoice_log.acknowledged_on,
+            Case()
+            .when(sales_invoice.docstatus == 1, "Submitted")
+            .else_("Cancelled")
+            .as_("docstatus"),
         )
         .where(
             sales_invoice.posting_date[
@@ -126,37 +133,52 @@ def get_data(filters=None):
     if filters.get("customer"):
         query = query.where(sales_invoice.customer == filters.get("customer"))
 
+    if not filters.get("exceptions"):
+        data = query.where(sales_invoice.docstatus == 1).run(as_dict=True)
+        cancelled_active_e_invoices = get_cancelled_active_e_invoice_query(
+            filters, sales_invoice, query
+        ).run(as_dict=True)
+
+        return sorted(data + cancelled_active_e_invoices, key=lambda x: x.posting_date)
+
     if filters.get("exceptions") == "e-Invoice Not Generated":
-        query = query.where(((sales_invoice.irn == "") | (sales_invoice.irn.isnull())))
+        query = query.where(
+            (
+                ((sales_invoice.irn == "") | (sales_invoice.irn.isnull()))
+                & (sales_invoice.docstatus == 1)
+            )
+        )
 
-    if filters.get("exceptions") != "Invoice Cancelled but not e-Invoice":
-        query = query.where(sales_invoice.docstatus == 1)
-
-    else:
+    if filters.get("exceptions") == "Invoice Cancelled but not e-Invoice":
         # invoice is cancelled but irn is not cancelled
-        query = query.where(sales_invoice.docstatus == 2).where(
-            (sales_invoice.irn != "") & (sales_invoice.irn.notnull())
-        )
-
-        valid_irns = frappe.get_all(
-            "Sales Invoice",
-            pluck="irn",
-            filters={
-                "docstatus": 1,
-                "company": filters.get("company"),
-                # logical optimization
-                "posting_date": [">=", filters.get("from_date")],
-                "irn": ["is", "set"],
-            },
-        )
-
-        if valid_irns:
-            query = query.where(sales_invoice.irn.notin(valid_irns))
+        query = get_cancelled_active_e_invoice_query(filters, sales_invoice, query)
 
     return query.run(as_dict=True)
 
 
-def e_invoice_conditions(filters, e_invoice_applicability_date):
+def get_cancelled_active_e_invoice_query(filters, sales_invoice, query):
+    query = query.where(
+        (sales_invoice.docstatus == 2) & (IfNull(sales_invoice.irn, "") != "")
+    )
+
+    valid_irns = frappe.get_all(
+        "Sales Invoice",
+        pluck="irn",
+        filters={
+            "docstatus": 1,
+            "company": filters.get("company"),
+            # logical optimization
+            "posting_date": [">=", filters.get("from_date")],
+            "irn": ["is", "set"],
+        },
+    )
+
+    if valid_irns:
+        query = query.where(sales_invoice.irn.notin(valid_irns))
+    return query
+
+
+def e_invoice_conditions(e_invoice_applicability_date):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     sub_query = validate_sales_invoice_item()
     conditions = []
@@ -202,13 +224,13 @@ def get_columns(filters=None):
             "fieldname": "sales_invoice",
             "label": _("Sales Invoice"),
             "options": "Sales Invoice",
-            "width": 140,
+            "width": 130,
         },
         {
             "fieldtype": "Data",
             "fieldname": "einvoice_status",
             "label": _("e-Invoice Status"),
-            "width": 100,
+            "width": 90,
         },
         {
             "fieldtype": "Link",
@@ -225,14 +247,14 @@ def get_columns(filters=None):
         {
             "fieldtype": "Data",
             "fieldname": "acknowledgement_number",
-            "label": "Acknowledgement Number",
-            "width": 145,
+            "label": _("Acknowledgement Number"),
+            "width": 110,
         },
         {
-            "fieldtype": "Data",
+            "fieldtype": "Datetime",
             "fieldname": "acknowledged_on",
-            "label": "Acknowledged On (IST)",
-            "width": 165,
+            "label": _("Acknowledged On (IST)"),
+            "width": 110,
         },
         {"fieldtype": "Data", "fieldname": "irn", "label": _("IRN No."), "width": 250},
         {
@@ -241,6 +263,12 @@ def get_columns(filters=None):
             "fieldname": "base_grand_total",
             "label": _("Grand Total"),
             "width": 120,
+        },
+        {
+            "fieldtype": "Data",
+            "fieldname": "docstatus",
+            "label": _("Document Status"),
+            "width": 100,
         },
     ]
 
