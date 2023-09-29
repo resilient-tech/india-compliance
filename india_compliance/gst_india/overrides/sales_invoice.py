@@ -3,6 +3,7 @@ from frappe import _
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
     ignore_gst_validations,
     validate_mandatory_fields,
     validate_transaction,
@@ -101,12 +102,22 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
         _("{0} is a mandatory field for generating e-Invoices"),
     )
 
+    validate_hsn_codes_for_e_invoice(doc)
+
     if is_foreign_doc(doc):
         country = frappe.db.get_value("Address", doc.customer_address, "country")
         get_validated_country_code(country)
 
     if doc.docstatus == 1 and not doc.irn:
         doc.einvoice_status = "Pending"
+
+
+def validate_hsn_codes_for_e_invoice(doc):
+    _validate_hsn_codes(
+        doc,
+        valid_hsn_length=[6, 8],
+        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+    )
 
 
 def validate_port_address(doc):
