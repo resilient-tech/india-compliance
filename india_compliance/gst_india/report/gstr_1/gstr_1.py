@@ -1084,20 +1084,25 @@ def get_json(filters, report_name, data):
         out = get_cdnr_unreg_json(res, gstin)
         gst_json["cdnur"] = out
 
-    elif filters["type_of_business"] == "Advances":
+    elif filters["type_of_business"] in ("Advances", "Adjustment"):
+        business_type_key = {
+            "Advances": "at",
+            "Adjustment": "txpd",
+        }
+
         for item in report_data[:-1]:
             if not item.get("place_of_supply"):
                 frappe.throw(
                     _(
                         """{0} not entered in some entries.
-					Please update and try again"""
+                        Please update and try again"""
                     ).format(frappe.bold("Place Of Supply"))
                 )
 
             res.setdefault(item["place_of_supply"], []).append(item)
 
         out = get_advances_json(res, gstin)
-        gst_json["at"] = out
+        gst_json[business_type_key[filters.get("type_of_business")]] = out
 
     elif filters["type_of_business"] == "NIL Rated":
         res = report_data[:-1]
@@ -1200,12 +1205,10 @@ def get_advances_json(data, gstin):
     company_state_number = gstin[0:2]
     out = []
     for place_of_supply, items in data.items():
-        supply_type = (
-            "INTRA"
-            if company_state_number == place_of_supply.split("-")[0]
-            else "INTER"
-        )
-        row = {"pos": place_of_supply.split("-")[0], "itms": [], "sply_ty": supply_type}
+        pos = place_of_supply.split("-")[0]
+        supply_type = "INTRA" if company_state_number == pos else "INTER"
+
+        row = {"pos": pos, "itms": [], "sply_ty": supply_type}
 
         for item in items:
             itms = {
@@ -1214,16 +1217,16 @@ def get_advances_json(data, gstin):
                 "csamt": flt(item.get("cess_amount"), 2),
             }
 
+            tax_amount = (itms["ad_amount"] * itms["rt"]) / 100
             if supply_type == "INTRA":
                 itms.update(
                     {
-                        "samt": flt((itms["ad_amount"] * itms["rt"]) / 100, 2),
-                        "camt": flt((itms["ad_amount"] * itms["rt"]) / 100, 2),
-                        "rt": itms["rt"] * 2,
+                        "samt": flt(tax_amount / 2, 2),
+                        "camt": flt(tax_amount / 2, 2),
                     }
                 )
             else:
-                itms["iamt"] = flt((itms["ad_amount"] * itms["rt"]) / 100, 2)
+                itms["iamt"] = flt(tax_amount, 2)
 
             row["itms"].append(itms)
         out.append(row)
