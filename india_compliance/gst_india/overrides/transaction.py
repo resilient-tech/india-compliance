@@ -482,6 +482,10 @@ def validate_hsn_codes(doc, method=None):
     if not validate_hsn_code:
         return
 
+    return _validate_hsn_codes(doc, valid_hsn_length, message=None)
+
+
+def _validate_hsn_codes(doc, valid_hsn_length, message=None):
     rows_with_missing_hsn = []
     rows_with_invalid_hsn = []
 
@@ -501,26 +505,29 @@ def validate_hsn_codes(doc, method=None):
 
         frappe.throw(
             _(
+                "{0}"
                 "Please enter a valid HSN/SAC code for the following row numbers:"
-                " <br>{0}"
-            ).format(frappe.bold(", ".join(rows_with_invalid_hsn))),
+                " <br>{1}"
+            ).format(message or "", frappe.bold(", ".join(rows_with_invalid_hsn))),
             title=_("Invalid HSN/SAC"),
         )
 
     if rows_with_missing_hsn:
         frappe.msgprint(
             _(
-                "Please enter HSN/SAC code for the following row numbers: <br>{0}"
-            ).format(frappe.bold(", ".join(rows_with_missing_hsn))),
+                "{0}" "Please enter HSN/SAC code for the following row numbers: <br>{1}"
+            ).format(message or "", frappe.bold(", ".join(rows_with_missing_hsn))),
             title=_("Invalid HSN/SAC"),
         )
 
     if rows_with_invalid_hsn:
         frappe.msgprint(
             _(
-                "HSN/SAC code should be {0} digits long for the following"
-                " row numbers: <br>{1}"
+                "{0}"
+                "HSN/SAC code should be {1} digits long for the following"
+                " row numbers: <br>{2}"
             ).format(
+                message or "",
                 join_list_with_custom_separators(valid_hsn_length),
                 frappe.bold(", ".join(rows_with_invalid_hsn)),
             ),
