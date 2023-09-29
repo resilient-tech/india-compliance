@@ -928,7 +928,7 @@ class GSTR11A11BData:
         elif self.filters.get("type_of_business") == "Adjustment":
             records = self.get_11B_data()
 
-        return self.process_data(records, self.filters.get("type_of_business"))
+        return self.process_data(records)
 
     def get_11A_data(self):
         return (
@@ -1008,7 +1008,7 @@ class GSTR11A11BData:
 
         return conditions
 
-    def process_data(self, records, type):
+    def process_data(self, records):
         data = {}
         for entry in records:
             tax_rate = round(((entry.tax_amount / entry.taxable_value) * 100))
