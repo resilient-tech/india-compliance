@@ -26,6 +26,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     onload(frm) {
+        if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         frm.trigger("company");
     },
 
@@ -53,7 +54,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 () => unlink_documents(frm),
                 __("Actions")
             );
-            frm.add_custom_button(__("dropdown-divider"), () => { }, __("Actions"));
+            frm.add_custom_button(__("dropdown-divider"), () => {}, __("Actions"));
         }
         ["Accept My Values", "Accept Supplier Values", "Pending", "Ignore"].forEach(
             action =>
@@ -95,7 +96,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     after_save(frm) {
         frm.purchase_reconciliation_tool.refresh(
-            JSON.parse(frm.doc.reconciliation_data)
+            frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : []
         );
     },
 
@@ -157,7 +158,9 @@ class PurchaseReconciliationTool {
 
     init(frm) {
         this.frm = frm;
-        this.data = frm.doc.reconciliation_data ? JSON.parse(frm.doc.reconciliation_data) : [];
+        this.data = frm.doc.reconciliation_data
+            ? JSON.parse(frm.doc.reconciliation_data)
+            : [];
         this.filtered_data = this.data;
         this.$wrapper = this.frm.get_field("reconciliation_html").$wrapper;
         this._tabs = ["invoice", "supplier", "summary"];
@@ -872,8 +875,9 @@ class DetailViewDialog {
                         ? ["GST Inward Supply"]
                         : ["Purchase Invoice", "Bill of Entry"],
 
-                read_only_depends_on: `eval: ${this.missing_doctype == "GST Inward Supply"
-                    }`,
+                read_only_depends_on: `eval: ${
+                    this.missing_doctype == "GST Inward Supply"
+                }`,
 
                 onchange: () => {
                     const doctype = this.dialog.get_value("doctype");
@@ -923,11 +927,11 @@ class DetailViewDialog {
         // determine actions
         let actions = [];
         const doctype = this.dialog.get_value("doctype");
-        if (this.row.match_status == "Missing in 2A/2B") actions.push("Link");
+        if (this.row.match_status == "Missing in 2A/2B") actions.push("Link", "Ignore");
         else if (this.row.match_status == "Missing in PI")
             if (doctype == "Purchase Invoice")
-                actions.push("Create", "Link", "Pending");
-            else actions.push("Link", "Pending");
+                actions.push("Create", "Link", "Pending", "Ignore");
+            else actions.push("Link", "Pending", "Ignore");
         else
             actions.push(
                 "Unlink",
@@ -935,8 +939,6 @@ class DetailViewDialog {
                 "Accept Supplier Values",
                 "Pending"
             );
-
-        actions.push("Ignore");
 
         // setup actions
         actions.forEach(action => {
@@ -1315,40 +1317,38 @@ class EmailDialog {
         });
     }
 
-    prepare_email_args(attachment) {
-        this.subject = `Reconciliation for ${this.data.supplier_name}-${this.data.supplier_gstin}`;
-        this.message = this.get_email_message();
+    async prepare_email_args(attachment) {
         this.attachment = attachment;
-
-        this.get_recipients()
-            .then(recipients => {
-                this.recipients = recipients;
-            })
-            .then(() => {
-                this.show_email_dialog();
-            });
+        Object.assign(this, await this.get_template());
+        this.recipients = await this.get_recipients();
+        this.show_email_dialog();
     }
 
     show_email_dialog() {
         const args = {
             subject: this.subject,
-            recipients: this.recipients || [],
+            recipients: this.recipients,
             attach_document_print: false,
             message: this.message,
             attachments: this.attachment,
         };
         new frappe.views.CommunicationComposer(args);
     }
+    async get_template() {
+        if (!this.frm.meta.default_email_template) return {};
+        let doc = {
+            ...this.frm.doc,
+            ...this.data,
+        };
 
-    get_email_message() {
-        const from_date = frappe.datetime.str_to_user(
-            this.frm.doc.inward_supply_from_date
-        );
-        const to_date = frappe.datetime.str_to_user(this.frm.doc.inward_supply_to_date);
+        const { message } = await frappe.call({
+            method: "frappe.email.doctype.email_template.email_template.get_email_template",
+            args: {
+                template_name: this.frm.meta.default_email_template,
+                doc: doc,
+            },
+        });
 
-        let message = "Hello,<br><br>";
-        message += `We have made purchase reconciliation for the period ${from_date} to ${to_date} for purchases made by ${this.frm.doc.company} from you.<br><br>`;
-        message += `You are reqested to kindly make necessary corrections to GST Portal your end if required. Attached is the sheet for your reference.<br><br>`;
         return message;
     }
 
@@ -1360,7 +1360,7 @@ class EmailDialog {
             },
         });
 
-        return message?.contact_email;
+        return message?.contact_email || [];
     }
 }
 
@@ -1441,6 +1441,12 @@ async function unlink_documents(frm, selected_rows) {
     const { invoice_tab } = frm.purchase_reconciliation_tool.tabs;
     if (!selected_rows) selected_rows = invoice_tab.get_checked_items();
 
+    if (!selected_rows.length)
+        return frappe.show_alert({
+            message: __("Please select rows to unlink"),
+            indicator: "red",
+        });
+
     // validate selected rows
     selected_rows.forEach(row => {
         if (row.match_status.includes("Missing"))
@@ -1493,6 +1499,12 @@ function apply_action(frm, action, selected_rows) {
     const { filtered_data, data } = frm.purchase_reconciliation_tool;
     let affected_rows = get_affected_rows(active_tab, selected_rows, filtered_data);
 
+    if (!affected_rows.length)
+        return frappe.show_alert({
+            message: __("Please select rows to apply action"),
+            indicator: "red",
+        });
+
     // validate affected rows
     if (action.includes("Accept")) {
         let warn = false;
@@ -1510,10 +1522,10 @@ function apply_action(frm, action, selected_rows) {
                     "You can only Accept values where a match is available. Rows where match is missing will be ignored."
                 )
             );
-    } else if (action != "Ignore") {
+    } else if (action == "Ignore") {
         let warn = false;
         affected_rows = affected_rows.filter(row => {
-            if (row.match_status == "Missing in 2A/2B") {
+            if (!row.match_status.includes("Missing")) {
                 warn = true;
                 return false;
             }
@@ -1523,7 +1535,7 @@ function apply_action(frm, action, selected_rows) {
         if (warn)
             frappe.msgprint(
                 __(
-                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B. These rows will be ignored."
+                    "You can only apply <strong>Ignore</strong> action on rows where data is Missing in 2A/2B or Missing in PI. These rows will be ignored."
                 )
             );
     }
