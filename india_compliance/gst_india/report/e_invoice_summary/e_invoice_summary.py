@@ -143,10 +143,7 @@ def get_data(filters=None):
 
     if filters.get("exceptions") == "e-Invoice Not Generated":
         query = query.where(
-            (
-                ((sales_invoice.irn == "") | (sales_invoice.irn.isnull()))
-                & (sales_invoice.docstatus == 1)
-            )
+            ((IfNull(sales_invoice.irn, "") == "") & (sales_invoice.docstatus == 1))
         )
 
     if filters.get("exceptions") == "Invoice Cancelled but not e-Invoice":
