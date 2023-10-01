@@ -138,7 +138,9 @@ def generate_e_invoice(docname, throw=True, force=False):
             response = api.sync_gstin_info(gstin)
 
             if response.Status != "ACT" or response.BlkStatus == "B":
-                raise frappe.ValidationError("GSTIN is Inactive or Blocked")
+                raise frappe.ValidationError(
+                    f"GSTIN {gstin} status seems Inactive or Blocked"
+                )
 
             result = api.generate_irn(data)
 
