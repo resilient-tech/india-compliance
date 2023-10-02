@@ -76,6 +76,8 @@ class GSTR:
         for supplier in suppliers:
             transactions.extend(self.get_supplier_transactions(category, supplier))
 
+        self.update_gstins()
+
         return transactions
 
     def get_supplier_transactions(self, category, supplier):
@@ -117,3 +119,6 @@ class GSTR:
 
     def set_key(self, key, value):
         self.KEY_MAPS[key] = value
+
+    def update_gstins(self):
+        pass
