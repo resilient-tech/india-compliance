@@ -134,12 +134,12 @@ def generate_e_invoice(docname, throw=True, force=False):
 
         # Handle Invalid GSTIN Error
         if result.error_code == "3028":
-            gstin = result.message.split("-")[1][:15]
+            gstin = data.get("BuyerDtls").get("Gstin")
             response = api.sync_gstin_info(gstin)
 
             if response.Status != "ACT" or response.BlkStatus == "B":
-                raise frappe.ValidationError(
-                    f"GSTIN {gstin} status seems Inactive or Blocked"
+                frappe.throw(
+                    _("GSTIN {0} status seems Inactive or Blocked").format(gstin)
                 )
 
             result = api.generate_irn(data)
