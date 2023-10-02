@@ -180,8 +180,9 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
 
     if gstin_doc.status not in ("Active", "Cancelled"):
         return _throw(
-            _("Status of Party GSTIN {1} is {0}").format(gstin_doc.status),
-            gstin_doc.gstin,
+            _("Status of Party GSTIN {1} is {0}").format(
+                gstin_doc.status, gstin_doc.gstin
+            )
         )
 
 

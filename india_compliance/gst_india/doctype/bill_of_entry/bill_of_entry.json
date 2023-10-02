@@ -9,9 +9,9 @@
  "engine": "InnoDB",
  "field_order": [
   "naming_series",
-  "column_break_2wjs",
-  "amended_from",
   "column_break_hbfk",
+  "amended_from",
+  "column_break_2wjs",
   "section_break_fqdh",
   "purchase_invoice",
   "column_break_epap",
@@ -31,7 +31,7 @@
   "column_break_xjvk",
   "customs_expense_account",
   "column_break_zsed",
-  "ignore_reconciliation",
+  "reconciliation_status",
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
@@ -272,19 +272,20 @@
    "label": "Bill of Lading No."
   },
   {
-   "default": "0",
-   "fieldname": "ignore_reconciliation",
-   "fieldtype": "Check",
-   "label": "Ignore Reconciliation",
+   "fieldname": "reconciliation_status",
+   "fieldtype": "Select",
+   "label": "Reconciliation Status",
    "no_copy": 1,
-   "print_hide": 1
+   "options": "\nNot Applicable\nReconciled\nUnreconciled\nIgnored",
+   "print_hide": 1,
+   "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-09-06 21:43:12.372700",
+ "modified": "2023-09-14 16:43:49.370165",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
