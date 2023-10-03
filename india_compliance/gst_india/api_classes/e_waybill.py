@@ -45,6 +45,7 @@ class EWaybillAPI(BaseAPI):
                 "gstin": company_gstin,
                 "username": self.username,
                 "password": self.password,
+                "requestid": self.generate_request_id(),
             }
         )
 

@@ -50,6 +50,7 @@ class EInvoiceAPI(BaseAPI):
                 "gstin": company_gstin,
                 "user_name": self.username,
                 "password": self.password,
+                "requestid": self.generate_request_id(),
             }
         )
 

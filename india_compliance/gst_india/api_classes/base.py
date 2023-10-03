@@ -94,7 +94,6 @@ class BaseAPI:
             params=params,
             headers={
                 # auto-generated hash, required by some endpoints
-                "requestid": self.generate_request_id(),
                 **self.default_headers,
                 **(headers or {}),
             },
@@ -128,6 +127,8 @@ class BaseAPI:
         response_json = None
 
         try:
+            request_args.json = self.encrypt_request(request_args.json)
+
             response = requests.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
                 log.request_id = api_request_id
@@ -136,6 +137,8 @@ class BaseAPI:
                 response_json = response.json(object_hook=frappe._dict)
             except Exception:
                 pass
+
+            response_json = self.decrypt_response(response_json)
 
             # Raise special error for certain HTTP codes
             self.handle_http_code(response.status_code, response_json)
@@ -149,18 +152,7 @@ class BaseAPI:
             else:
                 self.response = response_json
 
-            # All error responses have a success key set to false
-            success_value = response_json.get("success", True)
-            if isinstance(success_value, str):
-                success_value = sbool(success_value)
-
-            if not success_value and not self.handle_failed_response(response_json):
-                frappe.throw(
-                    response_json.get("message")
-                    # Fallback to response body if message is not present
-                    or frappe.as_json(response_json, indent=4),
-                    title=_("API Request Failed"),
-                )
+            self.handle_error_response(response_json)
 
             return response_json.get("result", response_json)
 
@@ -178,6 +170,26 @@ class BaseAPI:
                     alert=True,
                 )
                 frappe.flags.ic_sandbox_message_shown = True
+
+    def handle_error_response(self, response_json):
+        # All error responses have a success key set to false
+        success_value = response_json.get("success", True)
+        if isinstance(success_value, str):
+            success_value = sbool(success_value)
+
+        if not success_value and not self.handle_failed_response(response_json):
+            frappe.throw(
+                response_json.get("message")
+                # Fallback to response body if message is not present
+                or frappe.as_json(response_json, indent=4),
+                title=_("API Request Failed"),
+            )
+
+    def encrypt_request(self, request_args):
+        return request_args
+
+    def decrypt_response(self, response):
+        return response
 
     def handle_failed_response(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
