@@ -59,6 +59,10 @@ class BaseAPI:
         self.username = row.username
         self.company = row.company
         self.password = row.get_password(raise_exception=require_password)
+        self.app_key = row.app_key
+        self.auth_token = row.auth_token
+        self.auth_token_expiry = row.auth_token_expiry
+        self.session_key = row.session_key
 
     def get_url(self, *parts):
         parts = list(parts)
@@ -185,8 +189,8 @@ class BaseAPI:
                 title=_("API Request Failed"),
             )
 
-    def encrypt_request(self, request_args):
-        return request_args
+    def encrypt_request(self, request_json):
+        return request_json
 
     def decrypt_response(self, response):
         return response

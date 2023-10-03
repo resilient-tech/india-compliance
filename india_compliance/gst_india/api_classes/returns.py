@@ -1,8 +1,7 @@
-from base64 import b64encode
+from base64 import b64decode, b64encode
 
 import frappe
 from frappe import _
-from frappe.utils import add_to_date, now
 
 from india_compliance.gst_india.api_classes.base import BaseAPI
 from india_compliance.gst_india.utils.cryptography import (
@@ -15,7 +14,8 @@ from india_compliance.gst_india.utils.cryptography import (
 
 class StandardAPI(BaseAPI):
     API_NAME = "GST Standard"
-    BASE_PATH = "gstn"
+    BASE_PATH = "standard"
+
     IGNORED_ERROR_CODES = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
@@ -38,7 +38,6 @@ class StandardAPI(BaseAPI):
     def setup(self, company_gstin):
         self.company_gstin = company_gstin
         self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
-        self.app_key = self.get_app_key()
         self.default_headers.update(
             {
                 "state-cd": self.company_gstin[:2],
@@ -68,56 +67,50 @@ class StandardAPI(BaseAPI):
 
 
 class Authenticate(StandardAPI):
-    API_NAME = "GST Standard Authentication"
+    API_NAME = "GST Standard API Authentication"
 
-    def setup(self, gstin):
-        super().setup(gstin)
+    def setup(self, company_gstin):
+        super().setup(company_gstin)
         self.app_key = self.get_app_key()
 
     def request_otp(self):
-        return self.post(
-            {
+        return super().post(
+            json={
                 "action": "OTPREQUEST",
                 "app_key": self.app_key,
                 "username": self.username,
             },
-            endpoint="authenticate",
+            endpoint="gstn/authenticate",
         )
 
     def autheticate(self, otp):
-        return self.post(
-            {
+        return super().post(
+            json={
                 "action": "AUTHTOKEN",
                 "app_key": self.app_key,
                 "username": self.username,
                 "otp": otp,
             },
-            endpoint="authenticate",
+            endpoint="gstn/authenticate",
         )
 
     def refresh_token(self, auth_token):
-        return self.post(
-            {
+        return super().post(
+            json={
                 "action": "REFRESHTOKEN",
                 "app_key": self.app_key,
                 "username": self.username,
                 "auth_token": auth_token,
             },
-            endpoint="authenticate",
+            endpoint="gstn/authenticate",
         )
 
     def fetch_auth_token(self):
-        if not self.settings:
-            self.settings = frappe.get_cached_doc("GST Settings")
-
-        for row in self.settings.credentials:
-            if row.gstin == self.gstin and row.service == "Returns":
-                break
-
-        if not row.auth_token or row.auth_token_expiry < now():
+        # TODO: Check if auth token is expired
+        if not self.auth_token:
             return None
 
-        return row.auth_token
+        return self.auth_token
 
     def decrypt_response(self, response):
         values = {}
@@ -125,15 +118,22 @@ class Authenticate(StandardAPI):
         if response.get("auth_token"):
             values["auth_token"] = response.auth_token
 
-        if response.get("auth_token_expiry"):
-            values["auth_token_expiry"] = add_to_date(
-                now(), seconds=response.get("auth_token_expiry")
-            )
+        # TODO: set expiry date
 
         if response.get("sek"):
-            self.session_key = aes_decrypt_data(response.sek, self.app_key)
+            self.session_key = self.decrypt_session_key(response.sek, self.app_key)
             response.decrypted_sek = self.session_key
-            values["session_key"] = str(b64encode(self.session_key))
+            values["session_key"] = self.session_key
+
+        if response.get("rek"):
+            session_key = self.get_session_key()
+
+            decrypted_rek = aes_decrypt_data(response.rek, session_key)
+            response.decrypted_rek = decrypted_rek
+
+        if response.get("data"):
+            decrypted_data = aes_decrypt_data(response.data, decrypted_rek)
+            response.decrypted_data = decrypted_data
 
         if values:
             frappe.db.set_value(
@@ -145,56 +145,62 @@ class Authenticate(StandardAPI):
                 },
                 values,
             )
+
         return response
+
+    def decrypt_session_key(self, session_key, app_key):
+        # Convert to bytes to base64 string
+        return b64encode(aes_decrypt_data(session_key, app_key)).decode()
 
     def encrypt_request(self, json):
         if not json:
             return
 
         if json.get("app_key"):
-            json["app_key"] = self.encrypt_app_key(json.get("app_key"))
+            json["app_key"] = self.encrypt_app_key()
 
         if json.get("otp"):
             json["otp"] = self.encrypt_otp(json.get("otp"))
 
         return json
 
-    def encrypt_app_key(self, app_key):
-        return encrypt_using_public_key(app_key)
+    def encrypt_app_key(self):
+        return encrypt_using_public_key(self.app_key)
 
     def encrypt_otp(self, otp):
-        session_key = self.get_session_key()
-        return aes_encrypt_data(otp, session_key)
+        return aes_encrypt_data(otp, self.app_key)
 
     def get_app_key(self):
-        app_key = frappe.cache.get_value("gst_app_key")
-
-        if not app_key:
-            app_key = self.generate_app_key()
-
-        return app_key
+        return self.app_key or self.generate_app_key()
 
     def generate_app_key(self):
         app_key = self.generate_request_id(length=32)
-        frappe.cache.set_value(
-            "gst_app_key",
-            app_key,
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": "Returns",
+            },
+            {"app_key": app_key},
         )
+
         return app_key
 
-    def validate_auth_token(self):
-        auth_token = self.fetch_auth_token()
-        if not auth_token:
-            response = self.request_otp()
-            if response.status_cd != 1:
-                return response
-
-        response["error_type"] = "otp_requested"
-
-        return response
-
     def get_session_key(self):
-        pass
+        # Convert from base64 string to bytes
+        return b64decode(self.session_key)
+
+    def generate_otp(self):
+        response = self.request_otp()
+        if response.status_cd != 1:
+            return response
+
+        return response.update(
+            {
+                "error_type": "otp_requested",
+            }
+        )
 
 
 class ReturnsAPI(Authenticate, StandardAPI):
@@ -204,15 +210,13 @@ class ReturnsAPI(Authenticate, StandardAPI):
         super().setup(company_gstin)
 
     def get(self, action, return_period, params=None, endpoint=None):
-        auth_token = self.validate_auth_token
+        auth_token = self.fetch_auth_token()
+
+        if not auth_token:
+            return self.generate_otp()
 
         return super().get(
-            params={
-                "action": action,
-                "gstin": self.company_gstin,
-                "ret_period": return_period,
-            },
-            **(params or {}),
+            params={"action": action, "gstin": self.company_gstin, **(params or {})},
             headers={
                 "gstin": self.company_gstin,
                 "ret_period": return_period,
@@ -224,11 +228,11 @@ class ReturnsAPI(Authenticate, StandardAPI):
     def post(self, action, return_period, params=None, endpoint=None, json=None):
         auth_token = self.fetch_auth_token()
 
+        if not auth_token:
+            return self.generate_otp()
+
         return super().post(
-            params={
-                "action": action,
-            },
-            **(params or {}),
+            params={"action": action, **(params or {})},
             headers={
                 "auth-token": auth_token,
             },
@@ -236,24 +240,9 @@ class ReturnsAPI(Authenticate, StandardAPI):
             endpoint=endpoint,
         )
 
-    def encrypt_request(
-        self,
-        json,
-    ):
-        pass
-
-    def decrypt_response(self, response):
-        pass
-
-    def valaidate_hmac(self, response):
-        pass
-
 
 class GSTR2bAPI(ReturnsAPI):
     API_NAME = "GSTR-2B"
-
-    def setup(self, company_gstin):
-        super().setup(company_gstin)
 
     def get_data(self, return_period, otp=None, file_num=None):
         if otp:
@@ -261,14 +250,17 @@ class GSTR2bAPI(ReturnsAPI):
             if response.status_cd != 1:
                 return response
 
-        params = {}
+        params = {
+            "rtnprd": return_period,
+        }
         if file_num:
-            params = {"file_num": file_num}
+            params.update({"file_num": file_num})
+
         return self.get(
             "GET2B",
             return_period,
             params=params,
-            endpoint="returns/gstr2b",
+            endpoint="gstn/returns/gstr2b",
         )
 
 
@@ -289,5 +281,5 @@ class GSTR2aAPI(ReturnsAPI):
         return self.get(
             action,
             return_period,
-            endpoint="returns/gstr2a",
+            endpoint="gstn/returns/gstr2a",
         )

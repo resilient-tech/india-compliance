@@ -20,14 +20,16 @@ def aes_encrypt_data(data, key):  # will encrypt the given string
     cipher = AES.new(key, AES.MODE_ECB)
     enc = cipher.encrypt(raw)
 
-    return str(b64encode(enc), "utf-8")
+    return b64encode(enc).decode()
 
 
-def aes_decrypt_data(data, key):
-    data = b64decode(data)
+def aes_decrypt_data(encrypted, key):
+    if isinstance(key, str):
+        key = key.encode()
+
+    encrypted = b64decode(encrypted)
     cipher = AES.new(key, AES.MODE_ECB)
-    decrypted = unpad(cipher.decrypt(data), BS)
-
+    decrypted = unpad(cipher.decrypt(encrypted), BS)
     return decrypted
 
 
@@ -56,4 +58,4 @@ def encrypt_using_public_key(data, key=None):
         data = data.encode()
     ciphertext = cipher.encrypt(data)
 
-    return str(b64encode(ciphertext), "utf-8")
+    return b64encode(ciphertext).decode()
