@@ -127,6 +127,17 @@ def generate_e_invoice(docname, throw=True, force=False):
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
             response = api.get_e_invoice_by_irn(result.Desc.Irn)
+            if signed_data := response.SignedInvoice:
+                invoice_data = json.loads(
+                    jwt.decode(signed_data, options={"verify_signature": False})["data"]
+                )
+
+                if invoice_data.get("ValDtls").get("TotInvVal") != doc.grand_total:
+                    frappe.throw(
+                        _(
+                            "You seem to have a valid e-invoice against this Invoice number with different details. You should generate a new e-Invoice with a different Invoice Number if the details are different."
+                        )
+                    )
 
             # Handle error 2283:
             # IRN details cannot be provided as it is generated more than 2 days ago
