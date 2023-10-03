@@ -606,6 +606,31 @@ class TestEInvoice(FrappeTestCase):
             "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
+    @responses.activate
+    def test_e_invoice_for_duplicate_irn(self):
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+
+        # Mock response for generating irn
+        self._mock_e_invoice_response(data=test_data)
+        generate_e_invoice(si.name)
+
+        test_data_with_diff_value = self.e_invoice_test_data.get("duplicate_irn")
+
+        si = create_sales_invoice(rate=1400, is_in_state=True)
+        self._mock_e_invoice_response(data=test_data_with_diff_value)
+
+        # Assert if Invoice amount has changed
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(
+                r"^(You seem to have a valid e-invoice against this Invoice number.*)$"
+            ),
+            generate_e_invoice,
+            si.name,
+        )
+
     def _cancel_e_invoice(self, invoice_no):
         values = frappe._dict(
             {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
@@ -660,6 +685,17 @@ class TestEInvoice(FrappeTestCase):
             status=200,
         )
 
+        # Mock get e_invoice by IRN response
+        data = self.e_invoice_test_data.get("get_e_invoice_by_irn")
+
+        responses.add(
+            responses.GET,
+            url + "/irn",
+            body=json.dumps(data.get("response_data")),
+            match=[matchers.query_string_matcher(data.get("request_data"))],
+            status=200,
+        )
+
 
 def update_dates_for_test_data(test_data):
     """Update test data for e-invoice and e-waybill"""
@@ -683,13 +719,26 @@ def update_dates_for_test_data(test_data):
         "return_invoice",
         "debit_invoice",
         "foreign_transaction",
+        "duplicate_irn",
+        "get_e_invoice_by_irn",
     ):
-        test_data.get(key).get("request_data").get("DocDtls")["Dt"] = today
-        if exp_details := test_data.get(key).get("request_data").get("ExpDtls"):
-            exp_details["ShipBDt"] = today
+        request_data = test_data.get(key).get("request_data")
+        if request_data:
+            if "DocDtls" in request_data and (
+                doc_details := request_data.get("DocDtls")
+            ):
+                doc_details["Dt"] = today
+            if "ExpDtls" in request_data and (
+                exp_details := request_data.get("ExpDtls")
+            ):
+                exp_details["ShipBDt"] = today
 
         if "response_data" in test_data.get(key):
-            test_data.get(key).get("response_data").get("result")["AckDt"] = now
+            result = test_data.get(key).get("response_data").get("result")
+            if isinstance(result, list):
+                result = result[0]
+
+            result["AckDt"] = now
 
     response = test_data.cancel_e_waybill.get("response_data")
     response.get("result")["cancelDate"] = now_datetime().strftime(

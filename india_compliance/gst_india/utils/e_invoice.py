@@ -135,7 +135,8 @@ def generate_e_invoice(docname, throw=True, force=False):
                 if invoice_data.get("ValDtls").get("TotInvVal") != doc.grand_total:
                     frappe.throw(
                         _(
-                            "You seem to have a valid e-invoice against this Invoice number with different details. You should generate a new e-Invoice with a different Invoice Number if the details are different."
+                            "You seem to have a valid e-invoice against this Invoice number with different details."
+                            " You should generate a new e-Invoice with a different Invoice Number if the details are different."
                         )
                     )
 
