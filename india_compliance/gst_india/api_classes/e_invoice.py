@@ -23,6 +23,7 @@ class EInvoiceAPI(BaseAPI):
         "4002": "EwayBill is already generated for this IRN",
         # Invalid GSTIN error
         "3028": "GSTIN is invalid",
+        "3029": "GSTIN is not active",
     }
 
     def setup(self, doc=None, *, company_gstin=None):
