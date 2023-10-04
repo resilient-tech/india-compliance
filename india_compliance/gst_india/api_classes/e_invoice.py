@@ -21,6 +21,9 @@ class EInvoiceAPI(BaseAPI):
         # Cancel IRN errors
         "9999": "Invoice is not active",
         "4002": "EwayBill is already generated for this IRN",
+        # Invalid GSTIN error
+        "3028": "GSTIN is invalid",
+        "3029": "GSTIN is not active",
     }
 
     def setup(self, doc=None, *, company_gstin=None):
@@ -103,3 +106,6 @@ class EInvoiceAPI(BaseAPI):
 
     def get_gstin_info(self, gstin):
         return self.get(endpoint="master/gstin", params={"gstin": gstin})
+
+    def sync_gstin_info(self, gstin):
+        return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
