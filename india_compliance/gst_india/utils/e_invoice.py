@@ -127,16 +127,23 @@ def generate_e_invoice(docname, throw=True, force=False):
         # Handle Duplicate IRN
         if result.InfCd == "DUPIRN":
             response = api.get_e_invoice_by_irn(result.Desc.Irn)
+
             if signed_data := response.SignedInvoice:
                 invoice_data = json.loads(
                     jwt.decode(signed_data, options={"verify_signature": False})["data"]
                 )
 
-                if invoice_data.get("ValDtls").get("TotInvVal") != doc.grand_total:
+                previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
+                current_invoice_amount = data.get("ValDtls").get("TotInvVal")
+
+                if previous_invoice_amount != current_invoice_amount:
                     frappe.throw(
                         _(
-                            "You seem to have a valid e-invoice against this Invoice number with different details."
+                            "e-Invoice is already available against Invoice {0} with a Grand Total of Rs.{1}"
                             " You should generate a new e-Invoice with a different Invoice Number if the details are different."
+                        ).format(
+                            frappe.bold(invoice_data.get("DocDtls").get("No")),
+                            frappe.bold(previous_invoice_amount),
                         )
                     )
 
