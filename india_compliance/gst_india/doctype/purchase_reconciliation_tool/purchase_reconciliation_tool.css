@@ -16,6 +16,7 @@ div[data-page-route="Purchase Reconciliation Tool"]
     align-items: center;
     border-bottom: 0px solid black;
     padding-right: var(--padding-lg);
+    position: inherit;
 }
 
 div[data-page-route="Purchase Reconciliation Tool"]
