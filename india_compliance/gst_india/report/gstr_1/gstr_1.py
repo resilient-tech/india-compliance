@@ -1,12 +1,14 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
-
-
 import json
 from datetime import date
 
+from pypika.terms import Case
+
 import frappe
 from frappe import _
+from frappe.query_builder import Criterion
+from frappe.query_builder.functions import Sum
 from frappe.utils import flt, formatdate, getdate
 
 from india_compliance.gst_india.utils import (
@@ -73,8 +75,8 @@ class Gstr1Report(object):
     def get_data(self):
         if self.filters.get("type_of_business") in ("B2C Small", "B2C Large"):
             self.get_b2c_data()
-        elif self.filters.get("type_of_business") == "Advances":
-            self.get_advance_data()
+        elif self.filters.get("type_of_business") in ("Advances", "Adjustment"):
+            self.get_11A_11B_data()
         elif self.filters.get("type_of_business") == "NIL Rated":
             self.get_nil_rated_invoices()
         elif self.invoices:
@@ -104,28 +106,6 @@ class Gstr1Report(object):
 
                     if taxable_value:
                         self.data.append(row)
-
-    def get_advance_data(self):
-        advances_data = {}
-        advances = self.get_advance_entries()
-        for entry in advances:
-            # only consider IGST and SGST so as to avoid duplication of taxable amount
-            if (
-                entry.account_head == self.gst_accounts.igst_account
-                or entry.account_head == self.gst_accounts.sgst_account
-            ):
-                advances_data.setdefault(
-                    (entry.place_of_supply, entry.rate), [0.0, 0.0]
-                )
-                advances_data[(entry.place_of_supply, entry.rate)][0] += (
-                    entry.amount * 100 / entry.rate
-                )
-            elif entry.account_head == self.gst_accounts.cess_account:
-                advances_data[(entry.place_of_supply, entry.rate)][1] += entry.amount
-
-        for key, value in advances_data.items():
-            row = [key[0], key[1], value[0], value[1]]
-            self.data.append(row)
 
     def get_nil_rated_invoices(self):
         nil_exempt_output = [
@@ -327,19 +307,13 @@ class Gstr1Report(object):
             d.is_reverse_charge = "Y" if d.is_reverse_charge else "N"
             self.invoices.setdefault(d.invoice_number, d)
 
-    def get_advance_entries(self):
-        return frappe.db.sql(
-            """
-			SELECT SUM(a.base_tax_amount) as amount, a.account_head, a.rate, p.place_of_supply
-			FROM `tabPayment Entry` p, `tabAdvance Taxes and Charges` a
-			WHERE p.docstatus = 1
-			AND p.name = a.parent
-			AND posting_date between %s and %s
-			GROUP BY a.account_head, p.place_of_supply, a.rate
-		""",
-            (self.filters.get("from_date"), self.filters.get("to_date")),
-            as_dict=1,
-        )
+    def get_11A_11B_data(self):
+        report = GSTR11A11BData(self.filters, self.gst_accounts)
+        data = report.get_data()
+
+        for key, value in data.items():
+            row = [key[0], key[1], value[0], value[1]]
+            self.data.append(row)
 
     def get_conditions(self):
         conditions = ""
@@ -526,12 +500,17 @@ class Gstr1Report(object):
 
         if self.filters.get("type_of_business") != "NIL Rated":
             self.tax_columns = [
-                {"fieldname": "rate", "label": "Rate", "fieldtype": "Int", "width": 60},
+                {
+                    "fieldname": "rate",
+                    "label": _("Rate"),
+                    "fieldtype": "Int",
+                    "width": 60,
+                },
                 {
                     "fieldname": "taxable_value",
-                    "label": "Taxable Value",
+                    "label": _("Taxable Value"),
                     "fieldtype": "Currency",
-                    "width": 100,
+                    "width": 150,
                 },
             ]
 
@@ -539,54 +518,54 @@ class Gstr1Report(object):
             self.invoice_columns = [
                 {
                     "fieldname": "billing_address_gstin",
-                    "label": "GSTIN/UIN of Recipient",
+                    "label": _("GSTIN/UIN of Recipient"),
                     "fieldtype": "Data",
                     "width": 150,
                 },
                 {
                     "fieldname": "customer_name",
-                    "label": "Receiver Name",
+                    "label": _("Receiver Name"),
                     "fieldtype": "Data",
                     "width": 100,
                 },
                 {
                     "fieldname": "invoice_number",
-                    "label": "Invoice Number",
+                    "label": _("Invoice Number"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 100,
                 },
                 {
                     "fieldname": "posting_date",
-                    "label": "Invoice date",
+                    "label": _("Invoice date"),
                     "fieldtype": "Data",
                     "width": 80,
                 },
                 {
                     "fieldname": "invoice_value",
-                    "label": "Invoice Value",
+                    "label": _("Invoice Value"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "place_of_supply",
-                    "label": "Place Of Supply",
+                    "label": _("Place Of Supply"),
                     "fieldtype": "Data",
                     "width": 100,
                 },
                 {
                     "fieldname": "is_reverse_charge",
-                    "label": "Reverse Charge",
+                    "label": _("Reverse Charge"),
                     "fieldtype": "Data",
                 },
                 {
                     "fieldname": "gst_category",
-                    "label": "Invoice Type",
+                    "label": _("Invoice Type"),
                     "fieldtype": "Data",
                 },
                 {
                     "fieldname": "ecommerce_gstin",
-                    "label": "E-Commerce GSTIN",
+                    "label": _("E-Commerce GSTIN"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
@@ -594,7 +573,7 @@ class Gstr1Report(object):
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
-                    "label": "Cess Amount",
+                    "label": _("Cess Amount"),
                     "fieldtype": "Currency",
                     "width": 100,
                 }
@@ -604,32 +583,32 @@ class Gstr1Report(object):
             self.invoice_columns = [
                 {
                     "fieldname": "invoice_number",
-                    "label": "Invoice Number",
+                    "label": _("Invoice Number"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 120,
                 },
                 {
                     "fieldname": "posting_date",
-                    "label": "Invoice date",
+                    "label": _("Invoice date"),
                     "fieldtype": "Data",
                     "width": 100,
                 },
                 {
                     "fieldname": "invoice_value",
-                    "label": "Invoice Value",
+                    "label": _("Invoice Value"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "place_of_supply",
-                    "label": "Place Of Supply",
+                    "label": _("Place Of Supply"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "ecommerce_gstin",
-                    "label": "E-Commerce GSTIN",
+                    "label": _("E-Commerce GSTIN"),
                     "fieldtype": "Data",
                     "width": 130,
                 },
@@ -637,7 +616,7 @@ class Gstr1Report(object):
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
-                    "label": "Cess Amount",
+                    "label": _("Cess Amount"),
                     "fieldtype": "Currency",
                     "width": 100,
                 }
@@ -646,67 +625,67 @@ class Gstr1Report(object):
             self.invoice_columns = [
                 {
                     "fieldname": "billing_address_gstin",
-                    "label": "GSTIN/UIN of Recipient",
+                    "label": _("GSTIN/UIN of Recipient"),
                     "fieldtype": "Data",
                     "width": 150,
                 },
                 {
                     "fieldname": "customer_name",
-                    "label": "Receiver Name",
+                    "label": _("Receiver Name"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "return_against",
-                    "label": "Invoice/Advance Receipt Number",
+                    "label": _("Invoice/Advance Receipt Number"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 120,
                 },
                 {
                     "fieldname": "posting_date",
-                    "label": "Invoice/Advance Receipt date",
+                    "label": _("Invoice/Advance Receipt date"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "invoice_number",
-                    "label": "Invoice/Advance Receipt Number",
+                    "label": _("Invoice/Advance Receipt Number"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 120,
                 },
                 {
                     "fieldname": "is_reverse_charge",
-                    "label": "Reverse Charge",
+                    "label": _("Reverse Charge"),
                     "fieldtype": "Data",
                 },
                 {
                     "fieldname": "export_type",
-                    "label": "Export Type",
+                    "label": _("Export Type"),
                     "fieldtype": "Data",
                     "hidden": 1,
                 },
                 {
                     "fieldname": "reason_for_issuing_document",
-                    "label": "Reason For Issuing document",
+                    "label": _("Reason For Issuing document"),
                     "fieldtype": "Data",
                     "width": 140,
                 },
                 {
                     "fieldname": "place_of_supply",
-                    "label": "Place Of Supply",
+                    "label": _("Place Of Supply"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "gst_category",
-                    "label": "GST Category",
+                    "label": _("GST Category"),
                     "fieldtype": "Data",
                 },
                 {
                     "fieldname": "invoice_value",
-                    "label": "Invoice Value",
+                    "label": _("Invoice Value"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
@@ -714,19 +693,19 @@ class Gstr1Report(object):
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
-                    "label": "Cess Amount",
+                    "label": _("Cess Amount"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "pre_gst",
-                    "label": "PRE GST",
+                    "label": _("PRE GST"),
                     "fieldtype": "Data",
                     "width": 80,
                 },
                 {
                     "fieldname": "document_type",
-                    "label": "Document Type",
+                    "label": _("Document Type"),
                     "fieldtype": "Data",
                     "width": 80,
                 },
@@ -735,56 +714,56 @@ class Gstr1Report(object):
             self.invoice_columns = [
                 {
                     "fieldname": "customer_name",
-                    "label": "Receiver Name",
+                    "label": _("Receiver Name"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "return_against",
-                    "label": "Issued Against",
+                    "label": _("Issued Against"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 120,
                 },
                 {
                     "fieldname": "posting_date",
-                    "label": "Note Date",
+                    "label": _("Note Date"),
                     "fieldtype": "Date",
                     "width": 120,
                 },
                 {
                     "fieldname": "invoice_number",
-                    "label": "Note Number",
+                    "label": _("Note Number"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 120,
                 },
                 {
                     "fieldname": "export_type",
-                    "label": "Export Type",
+                    "label": _("Export Type"),
                     "fieldtype": "Data",
                     "hidden": 1,
                 },
                 {
                     "fieldname": "reason_for_issuing_document",
-                    "label": "Reason For Issuing document",
+                    "label": _("Reason For Issuing document"),
                     "fieldtype": "Data",
                     "width": 140,
                 },
                 {
                     "fieldname": "place_of_supply",
-                    "label": "Place Of Supply",
+                    "label": _("Place Of Supply"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "gst_category",
-                    "label": "GST Category",
+                    "label": _("GST Category"),
                     "fieldtype": "Data",
                 },
                 {
                     "fieldname": "invoice_value",
-                    "label": "Invoice Value",
+                    "label": _("Invoice Value"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
@@ -792,19 +771,19 @@ class Gstr1Report(object):
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
-                    "label": "Cess Amount",
+                    "label": _("Cess Amount"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "pre_gst",
-                    "label": "PRE GST",
+                    "label": _("PRE GST"),
                     "fieldtype": "Data",
                     "width": 80,
                 },
                 {
                     "fieldname": "document_type",
-                    "label": "Document Type",
+                    "label": _("Document Type"),
                     "fieldtype": "Data",
                     "width": 80,
                 },
@@ -813,13 +792,13 @@ class Gstr1Report(object):
             self.invoice_columns = [
                 {
                     "fieldname": "place_of_supply",
-                    "label": "Place Of Supply",
+                    "label": _("Place Of Supply"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "ecommerce_gstin",
-                    "label": "E-Commerce GSTIN",
+                    "label": _("E-Commerce GSTIN"),
                     "fieldtype": "Data",
                     "width": 130,
                 },
@@ -827,13 +806,13 @@ class Gstr1Report(object):
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
-                    "label": "Cess Amount",
+                    "label": _("Cess Amount"),
                     "fieldtype": "Currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "type",
-                    "label": "Type",
+                    "label": _("Type"),
                     "fieldtype": "Data",
                     "width": 50,
                 },
@@ -842,95 +821,204 @@ class Gstr1Report(object):
             self.invoice_columns = [
                 {
                     "fieldname": "export_type",
-                    "label": "Export Type",
+                    "label": _("Export Type"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "invoice_number",
-                    "label": "Invoice Number",
+                    "label": _("Invoice Number"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 120,
                 },
                 {
                     "fieldname": "posting_date",
-                    "label": "Invoice date",
+                    "label": _("Invoice date"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "invoice_value",
-                    "label": "Invoice Value",
+                    "label": _("Invoice Value"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
                 {
                     "fieldname": "port_code",
-                    "label": "Port Code",
+                    "label": _("Port Code"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "shipping_bill_number",
-                    "label": "Shipping Bill Number",
+                    "label": _("Shipping Bill Number"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
                     "fieldname": "shipping_bill_date",
-                    "label": "Shipping Bill Date",
+                    "label": _("Shipping Bill Date"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
             ]
-        elif self.filters.get("type_of_business") == "Advances":
+        elif self.filters.get("type_of_business") in ("Advances", "Adjustment"):
             self.invoice_columns = [
                 {
                     "fieldname": "place_of_supply",
-                    "label": "Place Of Supply",
+                    "label": _("Place Of Supply"),
                     "fieldtype": "Data",
-                    "width": 120,
+                    "width": 180,
                 }
             ]
 
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
-                    "label": "Cess Amount",
+                    "label": _("Cess Amount"),
                     "fieldtype": "Currency",
-                    "width": 100,
+                    "width": 130,
                 }
             ]
         elif self.filters.get("type_of_business") == "NIL Rated":
             self.invoice_columns = [
                 {
                     "fieldname": "description",
-                    "label": "Description",
+                    "label": _("Description"),
                     "fieldtype": "Data",
                     "width": 420,
                 },
                 {
                     "fieldname": "nil_rated",
-                    "label": "Nil Rated",
+                    "label": _("Nil Rated"),
                     "fieldtype": "Currency",
                     "width": 200,
                 },
                 {
                     "fieldname": "exempted",
-                    "label": "Exempted",
+                    "label": _("Exempted"),
                     "fieldtype": "Currency",
                     "width": 200,
                 },
                 {
                     "fieldname": "non_gst",
-                    "label": "Non GST",
+                    "label": _("Non GST"),
                     "fieldtype": "Currency",
                     "width": 200,
                 },
             ]
 
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
+
+
+class GSTR11A11BData:
+    def __init__(self, filters, gst_accounts):
+        self.filters = filters
+
+        self.pe = frappe.qb.DocType("Payment Entry")
+        self.pe_ref = frappe.qb.DocType("Payment Entry Reference")
+        self.gl_entry = frappe.qb.DocType("GL Entry")
+        self.gst_accounts = gst_accounts
+
+    def get_data(self):
+        if self.filters.get("type_of_business") == "Advances":
+            records = self.get_11A_data()
+
+        elif self.filters.get("type_of_business") == "Adjustment":
+            records = self.get_11B_data()
+
+        return self.process_data(records)
+
+    def get_11A_data(self):
+        return (
+            self.get_query()
+            .select(self.pe.paid_amount.as_("taxable_value"))
+            .groupby(self.pe.name)
+            .run(as_dict=True)
+        )
+
+    def get_11B_data(self):
+        query = (
+            self.get_query()
+            .join(self.pe_ref)
+            .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
+            .select(self.pe_ref.allocated_amount.as_("taxable_value"))
+            .groupby(self.gl_entry.voucher_detail_no)
+        )
+
+        return query.run(as_dict=True)
+
+    def get_query(self):
+        cr_or_dr = (
+            "credit" if self.filters.get("type_of_business") == "Advances" else "debit"
+        )
+        cr_or_dr_amount_field = getattr(
+            self.gl_entry, f"{cr_or_dr}_in_account_currency"
+        )
+
+        return (
+            frappe.qb.from_(self.gl_entry)
+            .join(self.pe)
+            .on(self.pe.name == self.gl_entry.voucher_no)
+            .select(
+                self.pe.place_of_supply,
+                Sum(
+                    Case()
+                    .when(
+                        self.gl_entry.account != self.gst_accounts.cess_account,
+                        cr_or_dr_amount_field,
+                    )
+                    .else_(0)
+                ).as_("tax_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        self.gl_entry.account == self.gst_accounts.cess_account,
+                        cr_or_dr_amount_field,
+                    )
+                    .else_(0)
+                ).as_("cess_amount"),
+            )
+            .where(Criterion.all(self.get_conditions()))
+            .where(cr_or_dr_amount_field > 0)
+        )
+
+    def get_conditions(self):
+        gst_accounts_list = [
+            account_head for account_head in self.gst_accounts.values() if account_head
+        ]
+
+        conditions = []
+
+        conditions.append(self.gl_entry.is_cancelled == 0)
+        conditions.append(self.gl_entry.voucher_type == "Payment Entry")
+        conditions.append(self.gl_entry.company == self.filters.get("company"))
+        conditions.append(self.gl_entry.account.isin(gst_accounts_list))
+        conditions.append(
+            self.gl_entry.posting_date[
+                self.filters.get("from_date") : self.filters.get("to_date")
+            ]
+        )
+
+        if self.filters.get("company_gstin"):
+            conditions.append(
+                self.gl_entry.company_gstin == self.filters.get("company_gstin")
+            )
+
+        return conditions
+
+    def process_data(self, records):
+        data = {}
+        for entry in records:
+            tax_rate = round(((entry.tax_amount / entry.taxable_value) * 100))
+
+            data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
+
+            data[(entry.place_of_supply, tax_rate)][0] += entry.taxable_value
+            data[(entry.place_of_supply, tax_rate)][1] += entry.cess_amount
+
+        return data
 
 
 @frappe.whitelist()
@@ -996,20 +1084,25 @@ def get_json(filters, report_name, data):
         out = get_cdnr_unreg_json(res, gstin)
         gst_json["cdnur"] = out
 
-    elif filters["type_of_business"] == "Advances":
+    elif filters["type_of_business"] in ("Advances", "Adjustment"):
+        business_type_key = {
+            "Advances": "at",
+            "Adjustment": "txpd",
+        }
+
         for item in report_data[:-1]:
             if not item.get("place_of_supply"):
                 frappe.throw(
                     _(
                         """{0} not entered in some entries.
-					Please update and try again"""
+                        Please update and try again"""
                     ).format(frappe.bold("Place Of Supply"))
                 )
 
             res.setdefault(item["place_of_supply"], []).append(item)
 
         out = get_advances_json(res, gstin)
-        gst_json["at"] = out
+        gst_json[business_type_key[filters.get("type_of_business")]] = out
 
     elif filters["type_of_business"] == "NIL Rated":
         res = report_data[:-1]
@@ -1112,12 +1205,10 @@ def get_advances_json(data, gstin):
     company_state_number = gstin[0:2]
     out = []
     for place_of_supply, items in data.items():
-        supply_type = (
-            "INTRA"
-            if company_state_number == place_of_supply.split("-")[0]
-            else "INTER"
-        )
-        row = {"pos": place_of_supply.split("-")[0], "itms": [], "sply_ty": supply_type}
+        pos = place_of_supply.split("-")[0]
+        supply_type = "INTRA" if company_state_number == pos else "INTER"
+
+        row = {"pos": pos, "itms": [], "sply_ty": supply_type}
 
         for item in items:
             itms = {
@@ -1126,16 +1217,16 @@ def get_advances_json(data, gstin):
                 "csamt": flt(item.get("cess_amount"), 2),
             }
 
+            tax_amount = (itms["ad_amount"] * itms["rt"]) / 100
             if supply_type == "INTRA":
                 itms.update(
                     {
-                        "samt": flt((itms["ad_amount"] * itms["rt"]) / 100, 2),
-                        "camt": flt((itms["ad_amount"] * itms["rt"]) / 100, 2),
-                        "rt": itms["rt"] * 2,
+                        "samt": flt(tax_amount / 2, 2),
+                        "camt": flt(tax_amount / 2, 2),
                     }
                 )
             else:
-                itms["iamt"] = flt((itms["ad_amount"] * itms["rt"]) / 100, 2)
+                itms["iamt"] = flt(tax_amount, 2)
 
             row["itms"].append(itms)
         out.append(row)
