@@ -126,7 +126,7 @@ class BaseAPI:
         response_json = None
 
         try:
-            request_args.json = self.encrypt_request(request_args.json)
+            self.before_request(request_args)
 
             response = requests.request(method, **request_args)
             if api_request_id := response.headers.get("x-amzn-RequestId"):
@@ -137,8 +137,6 @@ class BaseAPI:
             except Exception:
                 pass
 
-            response_json = self.decrypt_response(response_json)
-
             # Raise special error for certain HTTP codes
             self.handle_http_code(response.status_code, response_json)
 
@@ -148,12 +146,9 @@ class BaseAPI:
             # Expect all successful responses to be JSON
             if not response_json:
                 frappe.throw(_("Error parsing response: {0}").format(response.content))
-            else:
-                self.response = response_json
 
-            self.handle_error_response(response_json)
-
-            return response_json.get("result", response_json.get("data", response_json))
+            response_json = self.process_response(response_json)
+            return response_json.get("result", response_json)
 
         except Exception as e:
             log.error = str(e)
@@ -172,6 +167,14 @@ class BaseAPI:
                 )
                 frappe.flags.ic_sandbox_message_shown = True
 
+    def before_request(self, request_args):
+        return
+
+    def process_response(self, response):
+        self.handle_error_response(response)
+        self.response = response
+        return response
+
     def handle_error_response(self, response_json):
         # All error responses have a success key set to false
         success_value = response_json.get("success", True)
@@ -185,12 +188,6 @@ class BaseAPI:
                 or frappe.as_json(response_json, indent=4),
                 title=_("API Request Failed"),
             )
-
-    def encrypt_request(self, request_json):
-        return request_json
-
-    def decrypt_response(self, response):
-        return response
 
     def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw

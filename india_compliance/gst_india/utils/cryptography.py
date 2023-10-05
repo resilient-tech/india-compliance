@@ -40,8 +40,7 @@ def aes_decrypt_data(encrypted, key):
 
 def hmac_sha256(data, key):
     hmac_value = hmac.new(key, data, sha256)
-
-    return str(b64encode(hmac_value.digest()), "utf-8")
+    return b64encode(hmac_value.digest()).decode()
 
 
 def encrypt_using_public_key(data, key=None):

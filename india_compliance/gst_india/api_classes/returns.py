@@ -13,91 +13,7 @@ from india_compliance.gst_india.utils.cryptography import (
 )
 
 
-class StandardAPI(BaseAPI):
-    BASE_PATH = "standard/gstn"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
-        "auth-token",
-        "app_key",
-        "auth_token",
-        "sek",
-        "rek",
-    )
-
-    IGNORED_ERROR_CODES = {
-        "RETOTPREQUEST": "otp_requested",
-        "EVCREQUEST": "otp_requested",
-        "RET11416": "no_docs_found",
-        "RET13508": "no_docs_found",
-        "RET13509": "no_docs_found",
-        "RET13510": "no_docs_found",
-        "RET2B1023": "no_docs_found",
-        "RET2B1016": "no_docs_found",
-        "RT-3BAS1009": "no_docs_found",
-        "RET2B1018": "requested_before_cutoff_date",
-        "RETINPROGRESS": "queued",
-        "AUTH4033": "invalid_otp",  # Invalid Session
-        # "AUTH4034": "invalid_otp",  # Invalid OTP
-        # "AUTH4038": "authorization_failed",  # Session Expired
-        "RET11402": "authorization_failed",  # API Authorization Failed for 2A
-        "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
-    }
-
-    def setup(self, company_gstin):
-        self.company_gstin = company_gstin
-        self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
-        self.default_headers.update(
-            {
-                "gstin": self.company_gstin,
-                "state-cd": self.company_gstin[:2],
-                "username": self.username,
-                "ip-usr": frappe.local.request_ip,
-                "txn": self.generate_request_id(length=32),
-            }
-        )
-
-    def _fetch_credentials(self, row, require_password=True):
-        self.app_key = row.app_key or self.generate_app_key()
-        self.auth_token = row.auth_token
-        self.session_key = b64decode(row.session_key or "")
-        self.session_expiry = row.session_expiry
-
-    def is_ignored_error(self, response_json):
-        error_code = response_json.get("error").get("error_cd")
-
-        if error_code in self.IGNORED_ERROR_CODES:
-            response_json.error_type = self.IGNORED_ERROR_CODES[error_code]
-            return True
-
-    def handle_error_response(self, response_json):
-        success_value = response_json.get("status_cd") == 1
-
-        if not success_value and not self.is_ignored_error(response_json):
-            frappe.throw(
-                response_json.get("error").get("message")
-                # Fallback to response body if message is not present
-                or frappe.as_json(response_json, indent=4),
-                title=_("API Request Failed"),
-            )
-
-        if response_json.get("data"):
-            response_json.data = frappe.parse_json(response_json.data)
-
-    def generate_app_key(self):
-        app_key = self.generate_request_id(length=32)
-        frappe.db.set_value(
-            "GST Credential",
-            {
-                "gstin": self.company_gstin,
-                "username": self.username,
-                "service": "Returns",
-            },
-            {"app_key": app_key},
-        )
-
-        return app_key
-
-
-class Authenticate(StandardAPI):
+class ReturnsAuthenticate(BaseAPI):
     def request_otp(self):
         response = super().post(
             json={
@@ -139,7 +55,7 @@ class Authenticate(StandardAPI):
             endpoint="authenticate",
         )
 
-    def refresh_token(self, auth_token):
+    def refresh_auth_token(self, auth_token):
         return super().post(
             json={
                 "action": "REFRESHTOKEN",
@@ -149,15 +65,6 @@ class Authenticate(StandardAPI):
             },
             endpoint="authenticate",
         )
-
-    def fetch_auth_token(self):
-        if not self.auth_token:
-            return None
-
-        if self.session_expriy <= now_datetime():
-            return None
-
-        return self.auth_token
 
     def decrypt_response(self, response):
         values = {}
@@ -201,50 +108,80 @@ class Authenticate(StandardAPI):
         if json.get("otp"):
             json["otp"] = aes_encrypt_data(json.get("otp"), self.app_key)
 
-        return json
 
-
-class ReturnsAPI(Authenticate):
+class ReturnsAPI(ReturnsAuthenticate):
     API_NAME = "GST Returns"
+    BASE_PATH = "standard/gstn"
+    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
+        "auth-token",
+        "app_key",
+        "auth_token",
+        "sek",
+        "rek",
+    )
 
-    def get(self, action, return_period, params=None, endpoint=None, otp=None):
-        auth_token = self.fetch_auth_token()
+    IGNORED_ERROR_CODES = {
+        "RETOTPREQUEST": "otp_requested",
+        "EVCREQUEST": "otp_requested",
+        "RET11416": "no_docs_found",
+        "RET13508": "no_docs_found",
+        "RET13509": "no_docs_found",
+        "RET13510": "no_docs_found",
+        "RET2B1023": "no_docs_found",
+        "RET2B1016": "no_docs_found",
+        "RT-3BAS1009": "no_docs_found",
+        "RET2B1018": "requested_before_cutoff_date",
+        "RETINPROGRESS": "queued",
+        "AUTH4033": "invalid_otp",  # Invalid Session
+        # "AUTH4034": "invalid_otp",  # Invalid OTP
+        "AUTH4038": "authorization_failed",  # Session Expired
+        "RET11402": "authorization_failed",  # API Authorization Failed for 2A
+        "RET2B1010": "authorization_failed",  # API Authorization Failed for 2B
+    }
 
-        if not auth_token:
-            response = self.autheticate_with_otp(otp=otp)
-            if response.error_type in ["otp_requested", "invalid_otp"]:
-                return response
-
-        response = super().get(
-            params={"action": action, "gstin": self.company_gstin, **(params or {})},
-            headers={
+    def setup(self, company_gstin):
+        self.company_gstin = company_gstin
+        self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
+        self.default_headers.update(
+            {
                 "gstin": self.company_gstin,
-                "ret_period": return_period,
-                "auth-token": auth_token,
-            },
-            endpoint=endpoint,
+                "state-cd": self.company_gstin[:2],
+                "username": self.username,
+                "ip-usr": frappe.local.request_ip,
+                "txn": self.generate_request_id(length=32),
+            }
         )
 
-        if response.error_type == "authorization_failed":
-            return self.autheticate_with_otp()
+    def _fetch_credentials(self, row, require_password=True):
+        self.app_key = row.app_key or self.generate_app_key()
+        self.auth_token = row.auth_token
+        self.session_key = b64decode(row.session_key or "")
+        self.session_expiry = row.session_expiry
 
-        return response
-
-    def post(
-        self, action, return_period, params=None, endpoint=None, json=None, otp=None
+    def _request(
+        self,
+        method,
+        action,
+        return_period=None,
+        params=None,
+        endpoint=None,
+        json=None,
+        otp=None,
     ):
-        auth_token = self.fetch_auth_token()
+        auth_token = self.get_auth_token()
 
         if not auth_token:
             response = self.autheticate_with_otp(otp=otp)
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
-        response = super().post(
+        headers = {"auth-token": auth_token}
+        if return_period:
+            headers["ret_period"] = return_period
+
+        response = getattr(super(), method)(
             params={"action": action, **(params or {})},
-            headers={
-                "auth-token": auth_token,
-            },
+            headers=headers,
             json=json,
             endpoint=endpoint,
         )
@@ -254,7 +191,24 @@ class ReturnsAPI(Authenticate):
 
         return response
 
+    def get(self, action, return_period, params=None, endpoint=None, otp=None):
+        params = {"gstin": self.company_gstin, **(params or {})}
+        return self._request("get", action, return_period, params, endpoint, None, otp)
+
+    def post(self, action, params=None, endpoint=None, json=None, otp=None):
+        return self._request("post", action, None, params, endpoint, json, otp)
+
+    def before_request(self, request_args):
+        self.encrypt_request(request_args.get("json"))
+
+    def process_response(self, response):
+        self.handle_error_response(response)
+        response = self.decrypt_response(response)
+        return response
+
     def decrypt_response(self, response):
+        decrypted_rek = None
+
         if response.get("auth_token"):
             return super().decrypt_response(response)
 
@@ -262,10 +216,57 @@ class ReturnsAPI(Authenticate):
             decrypted_rek = aes_decrypt_data(response.rek, self.session_key)
 
         if response.get("data"):
-            decrypted_data = aes_decrypt_data(response.data, decrypted_rek)
-            response.data = b64decode(decrypted_data).decode()
+            decrypted_data = aes_decrypt_data(response.pop("data"), decrypted_rek)
+
+            if response.get("hmac"):
+                hmac = hmac_sha256(decrypted_data, decrypted_rek)
+                if hmac != response.hmac:
+                    frappe.throw(_("HMAC mismatch"))
+
+            response.result = frappe.parse_json(b64decode(decrypted_data).decode())
 
         return response
+
+    def handle_error_response(self, response):
+        success_value = response.get("status_cd") == 1
+
+        if not success_value and not self.is_ignored_error(response):
+            frappe.throw(
+                response.get("error").get("message")
+                # Fallback to response body if message is not present
+                or frappe.as_json(response, indent=4),
+                title=_("API Request Failed"),
+            )
+
+    def is_ignored_error(self, response):
+        error_code = response.get("error").get("error_cd")
+
+        if error_code in self.IGNORED_ERROR_CODES:
+            response.error_type = self.IGNORED_ERROR_CODES[error_code]
+            return True
+
+    def generate_app_key(self):
+        app_key = self.generate_request_id(length=32)
+        frappe.db.set_value(
+            "GST Credential",
+            {
+                "gstin": self.company_gstin,
+                "username": self.username,
+                "service": "Returns",
+            },
+            {"app_key": app_key},
+        )
+
+        return app_key
+
+    def get_auth_token(self):
+        if not self.auth_token:
+            return None
+
+        if self.session_expiry <= now_datetime():
+            return None
+
+        return self.auth_token
 
 
 class GSTR2bAPI(ReturnsAPI):
