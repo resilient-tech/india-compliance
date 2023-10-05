@@ -5,11 +5,16 @@ from hashlib import sha256
 from Crypto.Cipher import AES, PKCS1_v1_5
 from Crypto.PublicKey import RSA
 from Crypto.Util.Padding import pad, unpad
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+
+from frappe.utils import now_datetime
 
 from india_compliance.gst_india.utils.__init__ import get_data_file_path
 
 BS = 16
-GSTN_CERTIFICATE = get_data_file_path("GSTN_G2B_Prod_public.pem")
+GSTN_CERTIFICATE = get_data_file_path("GSTN_G2B_Prod_public.cer")
 
 
 def aes_encrypt_data(data, key):  # will encrypt the given string
@@ -40,22 +45,32 @@ def hmac_sha256(data, key):
 
 
 def encrypt_using_public_key(data, key=None):
+    # TODO: save cert file in site and get path dynamically and check if expired to get latest path
     if not data:
         return
 
     if not key:
         key = GSTN_CERTIFICATE
-    # can be certificate or key
-    # TODO: extract puvblic key from certificate
-    # validate certificate
-    with open(key) as f:
-        public_key = f.read()
 
-    key = RSA.importKey(public_key)
+    with open(key, "rb") as f:
+        cert = x509.load_pem_x509_certificate(f.read(), default_backend())
+
+    valid_up_to = cert.not_valid_after
+    if valid_up_to < now_datetime():
+        raise Exception("Certificate has expired")
+
+    public_key = cert.public_key()
+    pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+    key = RSA.importKey(pem)
 
     cipher = PKCS1_v1_5.new(key)
     if isinstance(data, str):
         data = data.encode()
+
     ciphertext = cipher.encrypt(data)
 
     return b64encode(ciphertext).decode()

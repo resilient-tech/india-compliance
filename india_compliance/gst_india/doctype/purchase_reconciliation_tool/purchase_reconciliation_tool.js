@@ -31,7 +31,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     async company(frm) {
-        if (frm.doc.company) {
+        if (frm.doc.company && !frm.doc.company_gstin) {
             const options = await set_gstin_options(frm);
             frm.set_value("company_gstin", options[0]);
         }
@@ -1215,8 +1215,8 @@ class ImportDialog {
 
         this.frm.events.show_progress(this.frm, "download");
         const { message } = await this.frm.call(method, args);
-        if (message && message.error_type == "otp_requested") {
-            const otp = await india_compliance.get_gstin_otp();
+        if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
+            const otp = await india_compliance.get_gstin_otp(message.error_type);
             if (otp) this.download_gstr(only_missing, otp);
             return;
         }

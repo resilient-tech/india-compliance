@@ -16,7 +16,7 @@ BASE_URL = "https://asp.resilient.tech"
 class BaseAPI:
     API_NAME = "GST"
     BASE_PATH = ""
-    SENSITIVE_HEADERS = ("x-api-key",)
+    SENSITIVE_INFO = ("x-api-key",)
 
     def __init__(self, *args, **kwargs):
         self.settings = frappe.get_cached_doc("GST Settings")
@@ -58,11 +58,10 @@ class BaseAPI:
 
         self.username = row.username
         self.company = row.company
+        self._fetch_credentials(row, require_password=require_password)
+
+    def _fetch_credentials(self, row, require_password=True):
         self.password = row.get_password(raise_exception=require_password)
-        self.app_key = row.app_key
-        self.auth_token = row.auth_token
-        self.auth_token_expiry = row.auth_token_expiry
-        self.session_key = row.session_key
 
     def get_url(self, *parts):
         parts = list(parts)
@@ -105,11 +104,6 @@ class BaseAPI:
 
         log_headers = request_args.headers.copy()
 
-        # Mask sensitive headers
-        for header in self.SENSITIVE_HEADERS:
-            if header in log_headers:
-                log_headers[header] = "*****"
-
         log = frappe._dict(
             **self.default_log_values,
             url=request_args.url,
@@ -120,12 +114,13 @@ class BaseAPI:
         if method == "POST" and json:
             request_args.json = json
 
+            json_data = json.copy()
             if not request_args.params:
-                log.data = json
+                log.data = json_data
             else:
                 log.data = {
                     "params": request_args.params,
-                    "body": json,
+                    "body": json_data,
                 }
 
         response_json = None
@@ -158,14 +153,16 @@ class BaseAPI:
 
             self.handle_error_response(response_json)
 
-            return response_json.get("result", response_json)
+            return response_json.get("result", response_json.get("data", response_json))
 
         except Exception as e:
             log.error = str(e)
             raise e
 
         finally:
-            log.output = response_json
+            log.output = response_json.copy()
+            self.mask_sensitive_info(log)
+
             enqueue_integration_request(**log)
 
             if self.sandbox_mode and not frappe.flags.ic_sandbox_message_shown:
@@ -181,7 +178,7 @@ class BaseAPI:
         if isinstance(success_value, str):
             success_value = sbool(success_value)
 
-        if not success_value and not self.handle_failed_response(response_json):
+        if not success_value and not self.is_ignored_error(response_json):
             frappe.throw(
                 response_json.get("message")
                 # Fallback to response body if message is not present
@@ -195,7 +192,7 @@ class BaseAPI:
     def decrypt_response(self, response):
         return response
 
-    def handle_failed_response(self, response_json):
+    def is_ignored_error(self, response_json):
         # Override in subclass, return truthy value to stop frappe.throw
         pass
 
@@ -235,3 +232,17 @@ class BaseAPI:
 
     def generate_request_id(self, length=12):
         return frappe.generate_hash(length=length)
+
+    def mask_sensitive_info(self, log):
+        for key in self.SENSITIVE_INFO:
+            if key in log.request_headers:
+                log.request_headers[key] = "*****"
+
+            if key in log.data:
+                log.data[key] = "*****"
+
+            if key in log.data.get("body", {}):
+                log.data["body"][key] = "*****"
+
+            if key in log.output:
+                log.output[key] = "*****"

@@ -98,7 +98,7 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 continue
 
             response = api.get_data(action, return_period, otp)
-            if response.error_type == "otp_requested":
+            if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
             if response.error_type == "no_docs_found":
@@ -166,7 +166,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
         # TODO: skip if today is not greater than 14th return period's next months
         response = api.get_data(return_period, otp)
-        if response.error_type == "otp_requested":
+        if response.error_type in ["otp_requested", "invalid_otp"]:
             return response
 
         if response.error_type == "no_docs_found":
@@ -367,7 +367,7 @@ def _download_queued_request(doc):
     except Exception:
         return frappe.db.delete("GSTR Import Log", {"name": doc.name})
 
-    if response.error_type == "otp_requested":
+    if response.error_type in ["otp_requested", "invalid_otp"]:
         return toggle_scheduled_jobs(stopped=True)
 
     if response.error_type == "no_docs_found":
