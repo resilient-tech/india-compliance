@@ -9,13 +9,16 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
+import frappe
+from frappe import _
 from frappe.utils import now_datetime
 
 BS = 16
 
 
-def aes_encrypt_data(data, key):  # will encrypt the given string
+def aes_encrypt_data(data: str, key: bytes | str) -> str:
     raw = pad(data.encode(), BS)
+
     if isinstance(key, str):
         key = key.encode()
 
@@ -25,22 +28,23 @@ def aes_encrypt_data(data, key):  # will encrypt the given string
     return b64encode(enc).decode()
 
 
-def aes_decrypt_data(encrypted, key):
+def aes_decrypt_data(encrypted: str, key: bytes | str) -> bytes:
     if isinstance(key, str):
         key = key.encode()
 
     encrypted = b64decode(encrypted)
     cipher = AES.new(key, AES.MODE_ECB)
     decrypted = unpad(cipher.decrypt(encrypted), BS)
+
     return decrypted
 
 
-def hmac_sha256(data, key):
+def hmac_sha256(data: str, key: bytes) -> str:
     hmac_value = hmac.new(key, data, sha256)
     return b64encode(hmac_value.digest()).decode()
 
 
-def encrypt_using_public_key(data, certificate):
+def encrypt_using_public_key(data: str, certificate: bytes) -> str:
     if not data:
         return
 
@@ -48,7 +52,7 @@ def encrypt_using_public_key(data, certificate):
 
     valid_up_to = cert.not_valid_after
     if valid_up_to < now_datetime():
-        raise Exception("Certificate has expired")
+        frappe.throw(_("Public Certificate has expired"))
 
     public_key = cert.public_key()
     pem = public_key.public_bytes(

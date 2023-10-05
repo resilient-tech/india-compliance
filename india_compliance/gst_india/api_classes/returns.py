@@ -16,12 +16,12 @@ from india_compliance.gst_india.utils.cryptography import (
 )
 
 
-class PublicCert(BaseAPI):
+class PublicCertificate(BaseAPI):
     BASE_PATH = "static"
 
-    def get_gstn_prod_certificate(self):
+    def get_gstn_public_certificate(self) -> str:
         response = self.get(endpoint="gstn_g2b_prod_public")
-        self.settings.db_set("gst_prod_cer", response.certificate)
+        self.settings.db_set("gstn_public_certificate", response.certificate)
 
         return response.certificate
 
@@ -124,16 +124,16 @@ class ReturnsAuthenticate(BaseAPI):
             json["otp"] = aes_encrypt_data(json.get("otp"), self.app_key)
 
     def get_public_certificate(self):
-        certificate = self.settings.gst_prod_cer
+        certificate = self.settings.gstn_public_certificate
 
         if not certificate:
-            certificate = PublicCert().get_gstn_prod_certificate()
+            certificate = PublicCertificate().get_gstn_public_certificate()
 
         cert = x509.load_pem_x509_certificate(certificate.encode(), default_backend())
         valid_up_to = cert.not_valid_after
 
         if valid_up_to < now_datetime():
-            certificate = PublicCert().get_gstn_prod_certificate()
+            certificate = PublicCertificate().get_gstn_public_certificate()
 
         return certificate.encode()
 
@@ -260,18 +260,18 @@ class ReturnsAPI(ReturnsAuthenticate):
         return response
 
     def handle_error_response(self, response):
-        success_value = response.get("status_cd") == 1
+        success_value = response.get("status_cd") != 0
 
         if not success_value and not self.is_ignored_error(response):
             frappe.throw(
-                response.get("error").get("message")
+                response.get("error", {}).get("message")
                 # Fallback to response body if message is not present
                 or frappe.as_json(response, indent=4),
                 title=_("API Request Failed"),
             )
 
     def is_ignored_error(self, response):
-        error_code = response.get("error").get("error_cd")
+        error_code = response.get("error", {}).get("error_cd")
 
         if error_code in self.IGNORED_ERROR_CODES:
             response.error_type = self.IGNORED_ERROR_CODES[error_code]
