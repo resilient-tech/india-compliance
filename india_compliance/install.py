@@ -37,6 +37,7 @@ POST_INSTALL_PATCHES = (
     "remove_old_fields",
     "update_custom_role_for_e_invoice_summary",
     "update_company_gstin",
+    "update_payment_entry_fields",
 )
 
 

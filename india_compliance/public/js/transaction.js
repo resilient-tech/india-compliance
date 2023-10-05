@@ -1,5 +1,6 @@
 // functions in this file will apply to most transactions
 // POS Invoice is a notable exception since it doesn't get created from the UI
+frappe.provide("india_compliance");
 
 const TRANSACTION_DOCTYPES = [
     "Quotation",
@@ -110,8 +111,12 @@ async function update_gst_details(frm, event) {
 
     args.party_details = JSON.stringify(party_details);
 
+    india_compliance.fetch_and_update_gst_details(frm, args);
+}
+
+india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
     frappe.call({
-        method: "india_compliance.gst_india.overrides.transaction.get_gst_details",
+        method: method || "india_compliance.gst_india.overrides.transaction.get_gst_details",
         args,
         async callback(r) {
             if (!r.message) return;

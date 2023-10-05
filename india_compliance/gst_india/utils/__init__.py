@@ -327,7 +327,7 @@ def is_overseas_transaction(doctype, gst_category, place_of_supply):
     if gst_category == "SEZ":
         return True
 
-    if doctype in SALES_DOCTYPES:
+    if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         return is_foreign_transaction(gst_category, place_of_supply)
 
     return gst_category == "Overseas"
@@ -361,7 +361,7 @@ def get_place_of_supply(party_details, doctype):
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
 
-    if doctype in SALES_DOCTYPES:
+    if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
             return "96-Other Countries"
