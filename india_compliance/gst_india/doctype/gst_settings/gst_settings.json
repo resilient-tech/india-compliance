@@ -51,7 +51,8 @@
   "gst_accounts",
   "credentials_tab",
   "credentials",
-  "api_secret"
+  "api_secret",
+  "gst_prod_cer"
  ],
  "fields": [
   {
@@ -364,12 +365,18 @@
    "fieldname": "validate_gstin_status",
    "fieldtype": "Check",
    "label": "Refresh and Validate GSTIN Status in Transactions"
+  },
+  {
+   "fieldname": "gst_prod_cer",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "GSTN G2B Prod Public Certificate"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-08-24 19:19:53.537062",
+ "modified": "2023-10-05 15:16:40.442414",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

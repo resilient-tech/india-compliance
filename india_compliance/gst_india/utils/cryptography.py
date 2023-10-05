@@ -11,10 +11,7 @@ from cryptography.hazmat.primitives import serialization
 
 from frappe.utils import now_datetime
 
-from india_compliance.gst_india.utils.__init__ import get_data_file_path
-
 BS = 16
-GSTN_CERTIFICATE = get_data_file_path("GSTN_G2B_Prod_public.cer")
 
 
 def aes_encrypt_data(data, key):  # will encrypt the given string
@@ -43,16 +40,11 @@ def hmac_sha256(data, key):
     return b64encode(hmac_value.digest()).decode()
 
 
-def encrypt_using_public_key(data, key=None):
-    # TODO: save cert file in site and get path dynamically and check if expired to get latest path
+def encrypt_using_public_key(data, certificate):
     if not data:
         return
 
-    if not key:
-        key = GSTN_CERTIFICATE
-
-    with open(key, "rb") as f:
-        cert = x509.load_pem_x509_certificate(f.read(), default_backend())
+    cert = x509.load_pem_x509_certificate(certificate, default_backend())
 
     valid_up_to = cert.not_valid_after
     if valid_up_to < now_datetime():

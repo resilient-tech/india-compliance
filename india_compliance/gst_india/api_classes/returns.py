@@ -1,5 +1,8 @@
 from base64 import b64decode, b64encode
 
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+
 import frappe
 from frappe import _
 from frappe.utils import add_to_date, cint, now_datetime
@@ -11,6 +14,16 @@ from india_compliance.gst_india.utils.cryptography import (
     encrypt_using_public_key,
     hmac_sha256,
 )
+
+
+class PublicCert(BaseAPI):
+    BASE_PATH = "static"
+
+    def get_gstn_prod_certificate(self):
+        response = self.get(endpoint="gstn_g2b_prod_public")
+        self.settings.db_set("gst_prod_cer", response.certificate)
+
+        return response.certificate
 
 
 class ReturnsAuthenticate(BaseAPI):
@@ -103,10 +116,26 @@ class ReturnsAuthenticate(BaseAPI):
             return
 
         if json.get("app_key"):
-            json["app_key"] = encrypt_using_public_key(self.app_key)
+            json["app_key"] = encrypt_using_public_key(
+                self.app_key, self.get_public_certificate()
+            )
 
         if json.get("otp"):
             json["otp"] = aes_encrypt_data(json.get("otp"), self.app_key)
+
+    def get_public_certificate(self):
+        certificate = self.settings.gst_prod_cer
+
+        if not certificate:
+            certificate = PublicCert().get_gstn_prod_certificate()
+
+        cert = x509.load_pem_x509_certificate(certificate.encode(), default_backend())
+        valid_up_to = cert.not_valid_after
+
+        if valid_up_to < now_datetime():
+            certificate = PublicCert().get_gstn_prod_certificate()
+
+        return certificate.encode()
 
 
 class ReturnsAPI(ReturnsAuthenticate):
@@ -140,6 +169,9 @@ class ReturnsAPI(ReturnsAuthenticate):
     }
 
     def setup(self, company_gstin):
+        if self.sandbox_mode:
+            frappe.throw(_("Sandbox mode not supported for Returns API"))
+
         self.company_gstin = company_gstin
         self.fetch_credentials(self.company_gstin, "Returns", require_password=False)
         self.default_headers.update(

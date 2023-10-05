@@ -235,11 +235,14 @@ class BaseAPI:
             if key in log.request_headers:
                 log.request_headers[key] = "*****"
 
-            if key in log.data:
-                log.data[key] = "*****"
-
-            if key in log.data.get("body", {}):
-                log.data["body"][key] = "*****"
-
             if key in log.output:
                 log.output[key] = "*****"
+
+            if not log.data:
+                return
+
+            if key in log.get("data", {}):
+                log.data[key] = "*****"
+
+            if key in log.get("data", {}).get("body", {}):
+                log.data["body"][key] = "*****"
