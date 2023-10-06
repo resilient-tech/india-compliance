@@ -281,11 +281,13 @@ def set_and_validate_advances_with_gst(doc):
         _tax_amount = flt(
             advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2
         )
+
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
+        allocated_amount_with_taxes = flt(allocated_amount_with_taxes, 2)
 
-    if allocated_amount_with_taxes > doc.rounded_total:
+    if allocated_amount_with_taxes > doc.grand_total:
         frappe.throw(
             _(
                 "Allocated amount with taxes (GST) in advances table cannot be greater than"
@@ -297,3 +299,6 @@ def set_and_validate_advances_with_gst(doc):
     doc.total_advance = allocated_amount_with_taxes
     doc.set_payment_schedule()
     doc.outstanding_amount -= tax_amount
+    doc.outstanding_amount = (
+        0 if -1 < doc.outstanding_amount < 0 else doc.outstanding_amount
+    )
