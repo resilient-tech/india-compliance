@@ -84,19 +84,6 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 doctype="Purchase Reconciliation Tool",
             )
 
-            # call api only if data is available
-            if frappe.db.get_value(
-                "GSTR Import Log",
-                {
-                    "gstin": gstin,
-                    "return_type": return_type.value,
-                    "return_period": return_period,
-                    "classification": category.value,
-                },
-                "data_not_found",
-            ):
-                continue
-
             response = api.get_data(action, return_period, otp)
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
@@ -364,6 +351,7 @@ def _download_queued_request(doc):
             doc.return_period,
             doc.request_id,
         )
+
     except Exception:
         return frappe.db.delete("GSTR Import Log", {"name": doc.name})
 
