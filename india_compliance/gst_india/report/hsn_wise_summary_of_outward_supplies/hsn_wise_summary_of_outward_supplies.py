@@ -317,6 +317,8 @@ def get_hsn_wise_json_data(filters, report_data):
     count = 1
 
     for hsn in report_data:
+        if hsn.get("gst_hsn_code") == "Total":
+            continue
         row = {
             "num": count,
             "hsn_sc": hsn.get("gst_hsn_code"),
