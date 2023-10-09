@@ -145,7 +145,13 @@ class BaseAPI:
 
             # Expect all successful responses to be JSON
             if not response_json:
-                frappe.throw(_("Error parsing response: {0}").format(response.content))
+                if "tar.gz" in request_args.url:
+                    response_json = response.content
+
+                else:
+                    frappe.throw(
+                        _("Error parsing response: {0}").format(response.content)
+                    )
 
             response_json = self.process_response(response_json)
             return response_json.get("result", response_json)
@@ -246,3 +252,7 @@ class BaseAPI:
 
             if key in log.get("data", {}).get("body", {}):
                 log.data["body"][key] = "*****"
+
+
+def get_public_ip():
+    return requests.get("https://api.ipify.org").text

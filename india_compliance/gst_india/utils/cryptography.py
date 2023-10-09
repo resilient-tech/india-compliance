@@ -44,6 +44,10 @@ def hmac_sha256(data: str, key: bytes) -> str:
     return b64encode(hmac_value.digest()).decode()
 
 
+def hash_sha256(data: bytes) -> str:
+    return sha256(data).hexdigest()
+
+
 def encrypt_using_public_key(data: str, certificate: bytes) -> str:
     if not data:
         return

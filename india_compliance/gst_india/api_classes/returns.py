@@ -1,3 +1,4 @@
+import json
 from base64 import b64decode, b64encode
 
 from cryptography import x509
@@ -7,11 +8,13 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, cint, now_datetime
 
-from india_compliance.gst_india.api_classes.base import BaseAPI
+from india_compliance.gst_india.api_classes.base import BaseAPI, get_public_ip
+from india_compliance.gst_india.utils import merge_dicts, tar_gz_bytes_to_data
 from india_compliance.gst_india.utils.cryptography import (
     aes_decrypt_data,
     aes_encrypt_data,
     encrypt_using_public_key,
+    hash_sha256,
     hmac_sha256,
 )
 
@@ -24,6 +27,45 @@ class PublicCertificate(BaseAPI):
         self.settings.db_set("gstn_public_certificate", response.certificate)
 
         return response.certificate
+
+
+class FilesAPI(BaseAPI):
+    BASE_PATH = "standard/gstn/files"
+
+    def get_all(self, url_details):
+        response = frappe._dict()
+        self.encryption_key = b64decode(url_details.ek)
+
+        for row in url_details.urls:
+            self.hash = row.get("hash")
+            self.ul = row.get("ul")
+            data = self.get(endpoint=self.ul)
+
+            if not response:
+                response = data
+            else:
+                merge_dicts(response, data)
+
+        return response
+
+    def process_response(self, response):
+        computed_hash = hash_sha256(response)
+        if computed_hash != self.hash:
+            frappe.throw(
+                _(
+                    "Hash of file doesn't match for {0}. File may be corrupted or tampered."
+                ).format(self.ul)
+            )
+
+        encrypted_data = tar_gz_bytes_to_data(response)
+        data = self.decrypt_data(encrypted_data)
+        data = json.loads(data, object_hook=frappe._dict)
+
+        return data
+
+    def decrypt_data(self, encrypted_json):
+        data = aes_decrypt_data(encrypted_json, self.encryption_key)
+        return b64decode(data).decode()
 
 
 class ReturnsAuthenticate(BaseAPI):
@@ -143,8 +185,8 @@ class ReturnsAPI(ReturnsAuthenticate):
     BASE_PATH = "standard/gstn"
     SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
         "auth-token",
-        "app_key",
         "auth_token",
+        "app_key",
         "sek",
         "rek",
     )
@@ -160,7 +202,7 @@ class ReturnsAPI(ReturnsAuthenticate):
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
         "RET2B1018": "requested_before_cutoff_date",
-        "RETINPROGRESS": "queued",
+        "RTN_24": "queued",
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
@@ -179,7 +221,7 @@ class ReturnsAPI(ReturnsAuthenticate):
                 "gstin": self.company_gstin,
                 "state-cd": self.company_gstin[:2],
                 "username": self.username,
-                "ip-usr": frappe.local.request_ip,
+                "ip-usr": frappe.cache.hget("public_ip", "public_ip", get_public_ip),
                 "txn": self.generate_request_id(length=32),
             }
         )
@@ -299,6 +341,20 @@ class ReturnsAPI(ReturnsAuthenticate):
             return None
 
         return self.auth_token
+
+    def download_files(self, return_period, token, otp=None):
+        response = self.get(
+            "FILEDET",
+            return_period,
+            params={"ret_period": return_period, "token": token},
+            endpoint="returns",
+            otp=otp,
+        )
+
+        if response.error_type == "queued":
+            return response
+
+        return FilesAPI().get_all(response)
 
 
 class GSTR2bAPI(ReturnsAPI):
