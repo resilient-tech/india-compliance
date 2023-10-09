@@ -112,7 +112,11 @@ Object.assign(india_compliance, {
 
         refresh_btn.on("click", async function () {
             const force_update = 1;
-            await india_compliance.set_gstin_status(field, transaction_date, force_update);
+            await india_compliance.set_gstin_status(
+                field,
+                transaction_date,
+                force_update
+            );
         });
     },
 
@@ -191,6 +195,25 @@ Object.assign(india_compliance, {
                 },
             };
         };
+    },
+
+    set_reconciliation_status(frm, field) {
+        if (!frm.doc.docstatus === 1 || !frm.doc.reconciliation_status) return;
+
+        const STATUS_COLORS = {
+            "Reconciled": "green",
+            "Unreconciled": "red",
+            "Ignored": "grey",
+            "Not Applicable": "grey",
+        };
+
+        frm.get_field(field).set_description(
+            `<div class="d-flex indicator ${
+                STATUS_COLORS[frm.doc.reconciliation_status]
+            }">Reco Status :&nbsp;<strong>${
+                frm.doc.reconciliation_status
+            }</strong></div>`
+        );
     },
 });
 
