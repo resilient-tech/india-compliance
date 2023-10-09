@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import LiteralValue, Sum
+from frappe.query_builder.functions import Ifnull, LiteralValue, Sum
 from frappe.utils import cint, get_first_day, get_last_day
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -142,6 +142,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
+                & (Ifnull(purchase_invoice.eligibility_for_itc, "") != "")
             )
             .groupby(purchase_invoice.name)
         )
