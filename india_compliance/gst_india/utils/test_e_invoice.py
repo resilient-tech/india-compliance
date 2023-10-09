@@ -698,50 +698,42 @@ class TestEInvoice(FrappeTestCase):
 def update_dates_for_test_data(test_data):
     """Update test data for e-invoice and e-waybill"""
     today = format_date(frappe.utils.today(), "dd/mm/yyyy")
-    now = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
-    validity = add_to_date(getdate(), days=1).strftime("%Y-%m-%d %I:%M:%S %p")
+    current_datetime = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+    valid_upto = add_to_date(getdate(), days=1).strftime("%Y-%m-%d %I:%M:%S %p")
 
-    # Update test data for goods_item_with_ewaybill
-    goods_item = test_data.get("goods_item_with_ewaybill")
-    goods_item.get("response_data").get("result").update(
-        {
-            "EwbDt": now,
-            "EwbValidTill": validity,
-        }
-    )
+    for key, value in test_data.items():
+        if not (value.get("response_data") or value.get("request_data")):
+            continue
 
-    # Update Document Date in given test data
-    for key in (
-        "goods_item_with_ewaybill",
-        "service_item",
-        "return_invoice",
-        "debit_invoice",
-        "foreign_transaction",
-        "duplicate_irn",
-        "get_e_invoice_by_irn",
-    ):
-        request_data = test_data.get(key).get("request_data")
-        if request_data:
-            if "DocDtls" in request_data and (
-                doc_details := request_data.get("DocDtls")
-            ):
-                doc_details["Dt"] = today
-            if "ExpDtls" in request_data and (
-                exp_details := request_data.get("ExpDtls")
-            ):
-                exp_details["ShipBDt"] = today
+        response_request = (
+            value.get("request_data")
+            if isinstance(value.get("request_data"), dict)
+            else {}
+        )
+        response_result = (
+            value.get("response_data").get("result")
+            if value.get("response_data")
+            else {}
+        )
 
-        if "response_data" in test_data.get(key):
-            result = test_data.get(key).get("response_data").get("result")
-            if isinstance(result, list):
-                result = result[0]
+        # Handle Duplicate IRN test data
+        if isinstance(response_result, list):
+            response_result = response_result[0].get("Desc")
 
-            result["AckDt"] = now
+        for k, v in response_request.items():
+            if k == "DocDtls":
+                response_request[k]["Dt"] = today
+            elif k == "ExpDtls":
+                response_request[k]["ShipBDt"] = today
 
-    response = test_data.cancel_e_waybill.get("response_data")
-    response.get("result")["cancelDate"] = now_datetime().strftime(
-        "%d/%m/%Y %I:%M:%S %p"
-    )
-
-    response = test_data.cancel_e_invoice.get("response_data")
-    response.get("result")["CancelDate"] = now
+        for k, v in response_result.items():
+            if k == "EwbDt":
+                response_result[k] = current_datetime
+            elif k == "EwbValidTill":
+                response_result[k] = valid_upto
+            elif k == "AckDt":
+                response_result[k] = current_datetime
+            elif k == "cancelDate":
+                response_result[k] = now_datetime().strftime("%d/%m/%Y %I:%M:%S %p")
+            elif k == "CancelDate":
+                response_result[k] = current_datetime
