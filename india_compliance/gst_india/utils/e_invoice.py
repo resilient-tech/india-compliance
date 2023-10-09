@@ -128,6 +128,25 @@ def generate_e_invoice(docname, throw=True, force=False):
         if result.InfCd == "DUPIRN":
             response = api.get_e_invoice_by_irn(result.Desc.Irn)
 
+            if signed_data := response.SignedInvoice:
+                invoice_data = json.loads(
+                    jwt.decode(signed_data, options={"verify_signature": False})["data"]
+                )
+
+                previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
+                current_invoice_amount = data.get("ValDtls").get("TotInvVal")
+
+                if previous_invoice_amount != current_invoice_amount:
+                    frappe.throw(
+                        _(
+                            "e-Invoice is already available against Invoice {0} with a Grand Total of Rs.{1}"
+                            " Duplicate IRN requests are not considered by e-Invoice Portal."
+                        ).format(
+                            frappe.bold(invoice_data.get("DocDtls").get("No")),
+                            frappe.bold(previous_invoice_amount),
+                        )
+                    )
+
             # Handle error 2283:
             # IRN details cannot be provided as it is generated more than 2 days ago
             result = result.Desc if response.error_code == "2283" else response
