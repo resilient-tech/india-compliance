@@ -701,7 +701,7 @@ def update_dates_for_test_data(test_data):
     current_datetime = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
     valid_upto = add_to_date(getdate(), days=1).strftime("%Y-%m-%d %I:%M:%S %p")
 
-    for key, value in test_data.items():
+    for value in test_data.values():
         if not (value.get("response_data") or value.get("request_data")):
             continue
 
@@ -720,13 +720,13 @@ def update_dates_for_test_data(test_data):
         if isinstance(response_result, list):
             response_result = response_result[0].get("Desc")
 
-        for k, v in response_request.items():
+        for k in response_request:
             if k == "DocDtls":
                 response_request[k]["Dt"] = today
             elif k == "ExpDtls":
                 response_request[k]["ShipBDt"] = today
 
-        for k, v in response_result.items():
+        for k in response_result:
             if k == "EwbDt":
                 response_result[k] = current_datetime
             elif k == "EwbValidTill":

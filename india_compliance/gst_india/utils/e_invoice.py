@@ -140,7 +140,7 @@ def generate_e_invoice(docname, throw=True, force=False):
                     frappe.throw(
                         _(
                             "e-Invoice is already available against Invoice {0} with a Grand Total of Rs.{1}"
-                            " You should generate a new e-Invoice with a different Invoice Number if the details are different."
+                            " Duplicate IRN requests are not considered by e-Invoice Portal."
                         ).format(
                             frappe.bold(invoice_data.get("DocDtls").get("No")),
                             frappe.bold(previous_invoice_amount),
