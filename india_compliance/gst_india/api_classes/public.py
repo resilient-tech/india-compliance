@@ -15,6 +15,7 @@ class PublicAPI(BaseAPI):
                     "Autofill Party Information based on GSTIN is not supported in sandbox mode"
                 )
             )
+        self.default_headers.update({"requestid": self.generate_request_id()})
 
     def get_gstin_info(self, gstin):
         response = self.get("search", params={"action": "TP", "gstin": gstin})

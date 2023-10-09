@@ -150,7 +150,11 @@ Object.assign(india_compliance, {
         }
     },
 
-    get_gstin_otp() {
+    get_gstin_otp(error_type) {
+        let description = "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.";
+        if (error_type === "invalid_otp")
+            description = "Invalid OTP was provided. Please try again.";
+
         return new Promise(resolve => {
             frappe.prompt(
                 {
@@ -158,8 +162,7 @@ Object.assign(india_compliance, {
                     label: "One Time Password",
                     fieldname: "otp",
                     reqd: 1,
-                    description:
-                        "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.",
+                    description: description,
                 },
                 function ({ otp }) {
                     resolve(otp);

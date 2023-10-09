@@ -3,7 +3,7 @@ from enum import Enum
 import frappe
 from frappe import _
 from frappe.query_builder.terms import Criterion
-from frappe.utils import get_datetime
+from frappe.utils import cint
 
 from india_compliance.gst_india.api_classes.returns import (
     GSTR2aAPI,
@@ -45,8 +45,8 @@ ACTIONS = {
 }
 
 GSTR_MODULES = {
-    ReturnType.GSTR2A: gstr_2a,
-    ReturnType.GSTR2B: gstr_2b,
+    ReturnType.GSTR2A.value: gstr_2a,
+    ReturnType.GSTR2B.value: gstr_2b,
 }
 
 IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
@@ -84,21 +84,8 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 doctype="Purchase Reconciliation Tool",
             )
 
-            # call api only if data is available
-            if frappe.db.get_value(
-                "GSTR Import Log",
-                {
-                    "gstin": gstin,
-                    "return_type": return_type.value,
-                    "return_period": return_period,
-                    "classification": category.value,
-                },
-                "data_not_found",
-            ):
-                continue
-
             response = api.get_data(action, return_period, otp)
-            if response.error_type == "otp_requested":
+            if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
             if response.error_type == "no_docs_found":
@@ -111,14 +98,15 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 )
                 continue
 
-            if response.error_type == "queued":
+            # Queued
+            if response.token:
                 create_import_log(
                     gstin,
                     return_type.value,
                     return_period,
                     classification=category.value,
-                    request_id=response.requestid,
-                    retry_after_mins=response.retryTimeInMinutes,
+                    request_id=response.token,
+                    retry_after_mins=cint(response.est),
                 )
                 queued_message = True
                 continue
@@ -166,7 +154,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
         # TODO: skip if today is not greater than 14th return period's next months
         response = api.get_data(return_period, otp)
-        if response.error_type == "otp_requested":
+        if response.error_type in ["otp_requested", "invalid_otp"]:
             return response
 
         if response.error_type == "no_docs_found":
@@ -262,7 +250,7 @@ def save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
         now=frappe.flags.in_test,
         timeout=1800,
         gstin=gstin,
-        return_type=return_type,
+        return_type=return_type.value,
         return_period=return_period,
         json_data=json_data,
         gen_date_2b=gen_date_2b,
@@ -287,7 +275,7 @@ def _save_gstr(gstin, return_type, return_period, json_data, gen_date_2b=None):
 
 
 def get_data_handler(return_type, category):
-    class_name = return_type.value + category.value
+    class_name = return_type + category.value
     return getattr(GSTR_MODULES[return_type], class_name)
 
 
@@ -351,23 +339,22 @@ def download_queued_request():
         return toggle_scheduled_jobs(stopped=True)
 
     for doc in queued_requests:
-        if get_datetime(doc.request_time) > get_datetime():
-            continue
-
-        frappe.enqueue(_download_queued_request, queue="short", doc=doc)
+        frappe.enqueue(_download_queued_request, queue="long", doc=doc)
 
 
 def _download_queued_request(doc):
     try:
         api = ReturnsAPI(doc.gstin)
-        response = api.get_return_status(
+        response = api.download_files(
             doc.return_period,
             doc.request_id,
         )
-    except Exception:
-        return frappe.db.delete("GSTR Import Log", {"name": doc.name})
 
-    if response.error_type == "otp_requested":
+    except Exception as e:
+        frappe.db.delete("GSTR Import Log", {"name": doc.name})
+        raise e
+
+    if response.error_type in ["otp_requested", "invalid_otp"]:
         return toggle_scheduled_jobs(stopped=True)
 
     if response.error_type == "no_docs_found":
