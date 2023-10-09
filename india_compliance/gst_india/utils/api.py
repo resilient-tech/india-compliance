@@ -19,6 +19,9 @@ def create_integration_request(
     reference_name=None,
 ):
 
+    if len(url) > 140:
+        url = url[:137] + "..."
+
     return frappe.get_doc(
         {
             "doctype": "Integration Request",
