@@ -356,11 +356,11 @@ function setup_pincode_field(dialog, gstin_info) {
     };
 }
 
-function get_gstin_info(gstin) {
+function get_gstin_info(gstin, throw_error = true) {
     return frappe
         .call({
             method: "india_compliance.gst_india.utils.gstin_info.get_gstin_info",
-            args: { gstin },
+            args: { gstin, throw_error },
         })
         .then(r => r.message);
 }
