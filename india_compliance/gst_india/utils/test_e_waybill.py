@@ -123,7 +123,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         # assertions
-        expected_comment = "Vehicle Info has been updated by <strong>Administrator</strong>.<br><br> New details are: <br><strong>Vehicle No</strong>: GJ07DL9001 <br><strong>Mode of Transport</strong>: Road <br><strong>GST Vehicle Type</strong>: Regular <br><strong>Distance</strong>: 10.0 <br><strong>Place of Change</strong>: Test City <br><strong>State</strong>: Gujarat <br>"
+        expected_comment = "Vehicle Info has been updated by <strong>Administrator</strong>.<br><br> New details are: <br><strong>Vehicle No</strong>: GJ07DL9001 <br><strong>Mode of Transport</strong>: Road <br><strong>GST Vehicle Type</strong>: Regular <br><strong>Place of Change</strong>: Test City <br><strong>State</strong>: Gujarat <br>"
 
         self.assertDocumentEqual(
             {"name": vehicle_data.get("request_data").get("ewbNo")},
