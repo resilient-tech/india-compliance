@@ -1,6 +1,6 @@
 import frappe
-from frappe import _
-from frappe.utils import flt
+from frappe import _, bold
+from frappe.utils import flt, fmt_money
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
@@ -284,20 +284,21 @@ def set_and_validate_advances_with_gst(doc):
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount
-        allocated_amount_with_taxes = flt(allocated_amount_with_taxes, 2)
 
-    if allocated_amount_with_taxes > doc.grand_total:
-        frappe.throw(
-            _(
-                "Allocated amount with taxes (GST) in advances table cannot be greater than"
-                " outstanding amount of the document"
-            ),
-            title=_("Invalid Allocated Amount"),
-        )
+    excess_allocation = flt(
+        flt(allocated_amount_with_taxes, 2) - (doc.rounded_total or doc.grand_total), 2
+    )
+    if excess_allocation > 0:
+        message = _(
+            "Allocated amount with taxes (GST) in advances table cannot be greater than"
+            " outstanding amount of the document. Allocated amount with taxes is greater by {0}."
+        ).format(bold(fmt_money(excess_allocation, currency=doc.currency)))
+
+        if excess_allocation < 1:
+            message += "<br><br>Is it becasue of Rounding Adjustment? Try disabling Rounded Total in the document."
+
+        frappe.throw(message, title=_("Invalid Allocated Amount"))
 
     doc.total_advance = allocated_amount_with_taxes
     doc.set_payment_schedule()
     doc.outstanding_amount -= tax_amount
-    doc.outstanding_amount = (
-        0 if -1 < doc.outstanding_amount < 1 else doc.outstanding_amount
-    )
