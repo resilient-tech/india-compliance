@@ -1,3 +1,11 @@
+{% include "india_compliance/gst_india/client_scripts/e_waybill_applicability.js" %}
+
+EWAYBILL_CLASS = {
+    "Sales Invoice": SalesInvoiceEwaybill,
+    "Purchase Invoice": PurchaseInvoiceEwaybill,
+    "Delivery Note": DeliveryNoteEwaybill,
+};
+
 function setup_e_waybill_actions(doctype) {
     if (!gst_settings.enable_e_waybill) return;
 
@@ -27,12 +35,22 @@ function setup_e_waybill_actions(doctype) {
             if (
                 frm.doc.docstatus != 1 ||
                 frm.is_dirty() ||
-                !is_e_waybill_applicable(frm, (using_api = false)) ||
+                !is_e_waybill_applicable(frm) ||
                 frm.doc.e_waybill_status === "Not Applicable"
             )
                 return;
 
             if (!frm.doc.ewaybill) {
+                if (frm.doc.e_waybill_status === "Pending") {
+                    frm.dashboard.add_comment(
+                        __(
+                            "e-Waybill is applicable for this invoice, but not yet generated or updated."
+                        ),
+                        "yellow",
+                        true
+                    );
+                        }
+
                 if (frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)) {
                     frm.add_custom_button(
                         __("Mark as Generated"),
@@ -41,7 +59,24 @@ function setup_e_waybill_actions(doctype) {
                     );
                 }
 
-                if (is_e_waybill_applicable(frm)) {
+
+
+                if (!india_compliance.is_api_enabled()) {
+                    return;
+                }
+
+                if (!is_e_waybill_generatable_using_api(frm)) {
+                    let reason = (!frm.doc.customer_address || !frm.doc.supplier_address) ? "Address is missing." : "Same GSTIN Billing.";
+                    frm.dashboard.add_comment(
+                        __(
+                            "e-Waybill cannot be generated using API beacuse "  + reason
+                        ),
+                        "yellow",
+                        true
+                    )
+                    return;
+                }
+
                     frm.add_custom_button(
                         __("Generate"),
                         () => show_generate_e_waybill_dialog(frm),
@@ -53,22 +88,20 @@ function setup_e_waybill_actions(doctype) {
                         () => show_fetch_if_generated_dialog(frm),
                         "e-Waybill"
                     );
+
+                    return;
                 }
 
-                if (frm.doc.e_waybill_status === "Pending") {
-                    frm.dashboard.add_comment(
-                        __(
-                            "e-Waybill is applicable for this invoice, but not yet generated or updated."
-                        ),
-                        "yellow",
-                        true
+            if (!india_compliance.is_api_enabled()) {
+
+                if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
+                    frm.add_custom_button(
+                        __("Mark as Cancelled"),
+                        () => show_mark_e_waybill_as_cancelled_dialog(frm),
+                        "e-Waybill"
                     );
                 }
 
-                return;
-            }
-
-            if (!india_compliance.is_api_enabled()) {
                 return;
             }
 
@@ -136,16 +169,7 @@ function setup_e_waybill_actions(doctype) {
         },
         async on_submit(frm) {
             if (
-                frm.doctype != "Sales Invoice" ||
-                !frm.doc.customer_address ||
-                frm.doc.is_return ||
-                frm.doc.is_debit_note ||
-                frm.doc.ewaybill ||
-                !india_compliance.is_api_enabled() ||
-                !has_e_waybill_threshold_met(frm) ||
-                is_e_invoice_applicable(frm) ||
-                !is_e_waybill_applicable(frm) ||
-                !gst_settings.auto_generate_e_waybill
+                !auto_generate_e_waybill(frm)
             )
                 return;
 
@@ -968,25 +992,16 @@ function has_e_waybill_threshold_met(frm) {
     if (Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold)
         return true;
 }
+function is_e_waybill_applicable(frm) {
+    return new EWAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable();
+}
 
-function is_e_waybill_applicable(frm, using_api = true) {
-    if (
-        // means company is Indian and not Unregistered
-        !frm.doc.company_gstin ||
-        !gst_settings.enable_e_waybill ||
-        !(
-            is_e_waybill_applicable_on_sales_invoice(frm, using_api) ||
-            is_e_waybill_applicable_on_purchase_invoice(frm, using_api) ||
-            is_e_waybill_applicable_on_delivery_note(frm)
-        )
-    )
-        return;
+function is_e_waybill_generatable_using_api(frm) {
+    return new EWAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable_using_api();
+}
 
-    // at least one item is not a service
-    for (const item of frm.doc.items) {
-        if (item.gst_hsn_code && !item.gst_hsn_code.startsWith("99") && item.qty !== 0)
-            return true;
-    }
+function auto_generate_e_waybill(frm) {
+    return new EWAYBILL_CLASS[frm.doctype](frm).auto_generate_e_waybill();
 }
 
 function can_extend_e_waybill(frm) {
@@ -1017,25 +1032,6 @@ function is_e_waybill_cancellable(frm) {
             .convert_to_user_tz(e_waybill_info.created_on, false)
             .add("days", 1)
             .diff() > 0
-    );
-}
-
-function is_e_waybill_applicable_on_sales_invoice(frm, using_api) {
-    return (
-        frm.doctype == "Sales Invoice" &&
-        (using_api ? frm.doc.company_gstin !== frm.doc.billing_address_gstin : true)
-    );
-}
-
-function is_e_waybill_applicable_on_delivery_note(frm) {
-    return frm.doctype == "Delivery Note" && gst_settings.enable_e_waybill_from_dn;
-}
-
-function is_e_waybill_applicable_on_purchase_invoice(frm, using_api) {
-    return (
-        frm.doctype == "Purchase Invoice" &&
-        gst_settings.enable_e_waybill_from_pi &&
-        (using_api ? frm.doc.company_gstin !== frm.doc.supplier_gstin : true)
     );
 }
 
