@@ -25,6 +25,8 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh(frm) {
+        india_compliance.set_reconciliation_status(frm, "bill_no");
+
         if (
             frm.doc.docstatus !== 1 ||
             frm.doc.gst_category !== "Overseas" ||
