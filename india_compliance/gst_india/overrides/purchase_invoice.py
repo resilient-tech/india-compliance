@@ -69,6 +69,10 @@ def is_b2b_invoice(doc):
 
 
 def update_itc_totals(doc, method=None):
+    # Set default value
+    if not doc.eligibility_for_itc:
+        doc.eligibility_for_itc = "All Other ITC"
+
     # Initialize values
     doc.itc_integrated_tax = 0
     doc.itc_state_tax = 0
