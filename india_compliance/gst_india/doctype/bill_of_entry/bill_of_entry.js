@@ -8,6 +8,8 @@ frappe.ui.form.on("Bill of Entry", {
     },
 
     refresh(frm) {
+        india_compliance.set_reconciliation_status(frm, "bill_of_entry_no");
+
         if (frm.doc.docstatus === 0) return;
 
         // check if Journal Entry exists;

@@ -606,6 +606,29 @@ class TestEInvoice(FrappeTestCase):
             "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
+    @responses.activate
+    def test_e_invoice_for_duplicate_irn(self):
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+
+        # Mock response for generating irn
+        self._mock_e_invoice_response(data=test_data)
+        generate_e_invoice(si.name)
+
+        test_data_with_diff_value = self.e_invoice_test_data.get("duplicate_irn")
+
+        si = create_sales_invoice(rate=1400, is_in_state=True)
+        self._mock_e_invoice_response(data=test_data_with_diff_value)
+
+        # Assert if Invoice amount has changed
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(e-Invoice is already available against Invoice.*)$"),
+            generate_e_invoice,
+            si.name,
+        )
+
     def _cancel_e_invoice(self, invoice_no):
         values = frappe._dict(
             {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
@@ -660,41 +683,57 @@ class TestEInvoice(FrappeTestCase):
             status=200,
         )
 
+        # Mock get e_invoice by IRN response
+        data = self.e_invoice_test_data.get("get_e_invoice_by_irn")
+
+        responses.add(
+            responses.GET,
+            url + "/irn",
+            body=json.dumps(data.get("response_data")),
+            match=[matchers.query_string_matcher(data.get("request_data"))],
+            status=200,
+        )
+
 
 def update_dates_for_test_data(test_data):
     """Update test data for e-invoice and e-waybill"""
     today = format_date(frappe.utils.today(), "dd/mm/yyyy")
-    now = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
-    validity = add_to_date(getdate(), days=1).strftime("%Y-%m-%d %I:%M:%S %p")
+    current_datetime = now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+    valid_upto = add_to_date(getdate(), days=1).strftime("%Y-%m-%d %I:%M:%S %p")
 
-    # Update test data for goods_item_with_ewaybill
-    goods_item = test_data.get("goods_item_with_ewaybill")
-    goods_item.get("response_data").get("result").update(
-        {
-            "EwbDt": now,
-            "EwbValidTill": validity,
-        }
-    )
+    for value in test_data.values():
+        if not (value.get("response_data") or value.get("request_data")):
+            continue
 
-    # Update Document Date in given test data
-    for key in (
-        "goods_item_with_ewaybill",
-        "service_item",
-        "return_invoice",
-        "debit_invoice",
-        "foreign_transaction",
-    ):
-        test_data.get(key).get("request_data").get("DocDtls")["Dt"] = today
-        if exp_details := test_data.get(key).get("request_data").get("ExpDtls"):
-            exp_details["ShipBDt"] = today
+        response_request = (
+            value.get("request_data")
+            if isinstance(value.get("request_data"), dict)
+            else {}
+        )
+        response_result = (
+            value.get("response_data").get("result")
+            if value.get("response_data")
+            else {}
+        )
 
-        if "response_data" in test_data.get(key):
-            test_data.get(key).get("response_data").get("result")["AckDt"] = now
+        # Handle Duplicate IRN test data
+        if isinstance(response_result, list):
+            response_result = response_result[0].get("Desc")
 
-    response = test_data.cancel_e_waybill.get("response_data")
-    response.get("result")["cancelDate"] = now_datetime().strftime(
-        "%d/%m/%Y %I:%M:%S %p"
-    )
+        for k in response_request:
+            if k == "DocDtls":
+                response_request[k]["Dt"] = today
+            elif k == "ExpDtls":
+                response_request[k]["ShipBDt"] = today
 
-    response = test_data.cancel_e_invoice.get("response_data")
-    response.get("result")["CancelDate"] = now
+        for k in response_result:
+            if k == "EwbDt":
+                response_result[k] = current_datetime
+            elif k == "EwbValidTill":
+                response_result[k] = valid_upto
+            elif k == "AckDt":
+                response_result[k] = current_datetime
+            elif k == "cancelDate":
+                response_result[k] = now_datetime().strftime("%d/%m/%Y %I:%M:%S %p")
+            elif k == "CancelDate":
+                response_result[k] = current_datetime

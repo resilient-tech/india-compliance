@@ -1,8 +1,11 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
+from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
     ignore_gst_validations,
     validate_mandatory_fields,
     validate_transaction,
@@ -56,6 +59,7 @@ def validate(doc, method=None):
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
     validate_unique_hsn_and_uom(doc)
     validate_port_address(doc)
+    set_and_validate_advances_with_gst(doc)
     set_e_waybill_status(doc, gst_settings)
 
 
@@ -101,12 +105,22 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
         _("{0} is a mandatory field for generating e-Invoices"),
     )
 
+    validate_hsn_codes_for_e_invoice(doc)
+
     if is_foreign_doc(doc):
         country = frappe.db.get_value("Address", doc.customer_address, "country")
         get_validated_country_code(country)
 
     if doc.docstatus == 1 and not doc.irn:
         doc.einvoice_status = "Pending"
+
+
+def validate_hsn_codes_for_e_invoice(doc):
+    _validate_hsn_codes(
+        doc,
+        valid_hsn_length=[6, 8],
+        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+    )
 
 
 def validate_port_address(doc):
@@ -246,3 +260,41 @@ def set_e_waybill_status(doc, gst_settings=None):
         e_waybill_status = "Manually Generated"
 
     doc.update({"e_waybill_status": e_waybill_status})
+
+
+def set_and_validate_advances_with_gst(doc):
+    if not doc.advances:
+        return
+
+    taxes = get_taxes_summary(doc.company, doc.advances)
+
+    allocated_amount_with_taxes = 0
+    tax_amount = 0
+
+    for advance in doc.get("advances"):
+        if not advance.allocated_amount:
+            continue
+
+        tax_row = taxes.get(
+            advance.reference_name, frappe._dict(paid_amount=1, tax_amount=0)
+        )
+
+        _tax_amount = flt(
+            advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2
+        )
+        tax_amount += _tax_amount
+        allocated_amount_with_taxes += _tax_amount
+        allocated_amount_with_taxes += advance.allocated_amount
+
+    if allocated_amount_with_taxes > doc.rounded_total:
+        frappe.throw(
+            _(
+                "Allocated amount with taxes (GST) in advances table cannot be greater than"
+                " outstanding amount of the document"
+            ),
+            title=_("Invalid Allocated Amount"),
+        )
+
+    doc.total_advance = allocated_amount_with_taxes
+    doc.set_payment_schedule()
+    doc.outstanding_amount -= tax_amount

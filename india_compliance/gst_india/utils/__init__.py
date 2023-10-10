@@ -1,3 +1,7 @@
+import copy
+import io
+import tarfile
+
 from dateutil import parser
 from pytz import timezone
 from titlecase import titlecase as _titlecase
@@ -327,7 +331,7 @@ def is_overseas_transaction(doctype, gst_category, place_of_supply):
     if gst_category == "SEZ":
         return True
 
-    if doctype in SALES_DOCTYPES:
+    if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         return is_foreign_transaction(gst_category, place_of_supply)
 
     return gst_category == "Overseas"
@@ -361,7 +365,7 @@ def get_place_of_supply(party_details, doctype):
     # fallback to company GSTIN for sales or supplier GSTIN for purchases
     # (in retail scenarios, customer / company GSTIN may not be set)
 
-    if doctype in SALES_DOCTYPES:
+    if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
             return "96-Other Countries"
@@ -640,3 +644,67 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
 
         case _:
             return
+
+
+def merge_dicts(d1: dict, d2: dict) -> dict:
+    """
+    Sample Input:
+    -------------
+    d1 = {
+        'key1': 'value1',
+        'key2': {'nested': 'value'},
+        'key3': ['value1'],
+        'key4': 'value4'
+    }
+    d2 = {
+        'key1': 'value2',
+        'key2': {'key': 'value3'},
+        'key3': ['value2'],
+        'key5': 'value5'
+    }
+
+    Sample Output:
+    --------------
+    {
+        'key1': 'value2',
+        'key2': {'nested': 'value', 'key': 'value3'},
+        'key3': ['value1', 'value2'],
+        'key4': 'value4',
+        'key5': 'value5'
+    }
+    """
+    for key in set(d1.keys()) | set(d2.keys()):
+        if key in d2 and key in d1:
+            if isinstance(d1[key], dict) and isinstance(d2[key], dict):
+                merge_dicts(d1[key], d2[key])
+
+            elif isinstance(d1[key], list) and isinstance(d2[key], list):
+                d1[key] = d1[key] + d2[key]
+
+            else:
+                d1[key] = copy.deepcopy(d2[key])
+
+        elif key in d2:
+            d1[key] = copy.deepcopy(d2[key])
+
+    return d1
+
+
+def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
+    """
+    Return first file in tar.gz ending with .json
+    """
+    with tarfile.open(fileobj=io.BytesIO(tar_gz_bytes), mode="r:gz") as tar_gz_file:
+        for filename in tar_gz_file.getnames():
+            if not filename.endswith(".json"):
+                continue
+
+            file_in_tar = tar_gz_file.extractfile(filename)
+
+            if not file_in_tar:
+                continue
+
+            data = file_in_tar.read().decode("utf-8")
+            break
+
+    return data
