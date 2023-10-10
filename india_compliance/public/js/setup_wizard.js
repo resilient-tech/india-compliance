@@ -44,7 +44,7 @@ function update_erpnext_slides_settings() {
 async function autofill_company_info(slide) {
     const gstin = slide.get_input("company_gstin").val();
     const gstin_field = slide.get_field("company_gstin");
-    const gstin_info = await get_gstin_info(gstin);
+    const gstin_info = await get_gstin_info(gstin, false);
 
     if (gstin_info.business_name) {
         await slide.get_field("company_name").set_value(gstin_info.business_name);

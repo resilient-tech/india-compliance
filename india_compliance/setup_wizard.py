@@ -51,9 +51,12 @@ def setup_company_gstin_details(params):
     if not params.company_gstin:
         return
 
+    if not (params.company_name or frappe.db.exists("Company", params.company_name)):
+        return
+
     gstin_info = frappe._dict()
     if can_fetch_gstin_info():
-        gstin_info = get_gstin_info(params.company_gstin)
+        gstin_info = get_gstin_info(params.company_gstin, throw_error=False)
 
     update_company_info(params, gstin_info.gst_category)
     create_address(gstin_info)
