@@ -832,8 +832,8 @@ class EWaybillData(GSTTransactionData):
             "fromPlace": self.sanitize_value(
                 values.place_of_change, regex=3, max_length=50
             ),
-            "fromState": STATE_NUMBERS[values.state],
-            "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
+            "fromState": int(STATE_NUMBERS[values.state]),
+            "reasonCode": int(UPDATE_VEHICLE_REASON_CODES[values.reason]),
             "reasonRem": self.sanitize_value(values.remark, regex=3),
             "transDocNo": self.transaction_details.lr_no,
             "transDocDate": self.transaction_details.lr_date,
