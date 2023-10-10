@@ -201,18 +201,17 @@ Object.assign(india_compliance, {
         if (!frm.doc.docstatus === 1 || !frm.doc.reconciliation_status) return;
 
         const STATUS_COLORS = {
-            "Reconciled": "green",
-            "Unreconciled": "red",
-            "Ignored": "grey",
+            Reconciled: "green",
+            Unreconciled: "red",
+            Ignored: "grey",
             "Not Applicable": "grey",
         };
+        const color = STATUS_COLORS[frm.doc.reconciliation_status];
 
         frm.get_field(field).set_description(
-            `<div class="d-flex indicator ${
-                STATUS_COLORS[frm.doc.reconciliation_status]
-            }">Reco Status :&nbsp;<strong>${
-                frm.doc.reconciliation_status
-            }</strong></div>`
+            `<div class="d-flex indicator ${color}">
+                Reco Status:&nbsp;<strong>${frm.doc.reconciliation_status}</strong>
+            </div>`
         );
     },
 });
