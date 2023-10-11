@@ -34,13 +34,16 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 			"fieldname":"from_date",
 			"label": __("From Date"),
 			"fieldtype": "Date",
-			"width": "80"
+			"width": "80",
+			"default": frappe.datetime.add_months(frappe.datetime.get_today(), -1)
 		},
 		{
 			"fieldname":"to_date",
 			"label": __("To Date"),
 			"fieldtype": "Date",
-			"width": "80"
+			"width": "80",
+			"mandatory_depends_on": "eval: doc.from_date",
+			"default": frappe.datetime.get_today()
 		},
 
 	],
