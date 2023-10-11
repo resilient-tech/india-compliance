@@ -11,7 +11,7 @@ frappe.ui.form.on("Sales Invoice", {
             frm.add_custom_button(
                 __("Mark as Cancelled"),
                 () => show_mark_e_invoice_as_cancelled_dialog(frm),
-                "e-Invoice Log"
+                "e-Invoice"
             );
         }
 
