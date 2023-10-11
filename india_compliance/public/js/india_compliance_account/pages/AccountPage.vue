@@ -34,6 +34,7 @@
             <a href="https://discuss.erpnext.com/c/erpnext/india-compliance/65"><li>Community Forum</li></a>
             <a href="https://github.com/resilient-tech/india-compliance/issues/new"><li>Report a Bug</li></a>
             <a href="mailto:api-support@indiacompliance.app"><li>Email Support</li></a>
+            <a @click.prevent="openInvoiceDialog"><li>Invoice History</li></a>
             <a @click.prevent="logout"><li>Logout</li></a>
           </ul>
         </div>
@@ -46,7 +47,7 @@
 import PageTitle from "../components/PageTitle.vue";
 import Message from "../components/Message.vue";
 import PreLoader from "../components/PreLoader.vue";
-import { getReadableNumber } from "../utils";
+import { getReadableNumber, get_invoice_history_dialog } from "../utils";
 
 export default {
   components: {
@@ -78,6 +79,9 @@ data() {
           this.$router.replace({ name: "auth" });
         }
       );
+    },
+    openInvoiceDialog(){
+      get_invoice_history_dialog(this.subscriptionDetails.email).show();
     }
   },
   computed: {

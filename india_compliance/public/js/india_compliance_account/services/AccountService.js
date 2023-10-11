@@ -28,3 +28,19 @@ export async function verify_payment(orderId) {
         with_api_secret: true,
     });
 }
+
+export async function get_invoice_history(from_date, to_date) {
+    return india_compliance.gst_api.call("account.get_invoice_history", {
+        method: "POST",
+        body: { from_date, to_date },
+        with_api_secret: true,
+    });
+}
+
+export async function send_invoice_email(invoice_name, email) {
+    return india_compliance.gst_api.call("account.send_invoice_email", {
+        method: "POST",
+        body: { invoice_name, email },
+        with_api_secret: true,
+    });
+}
