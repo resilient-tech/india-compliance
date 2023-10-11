@@ -491,7 +491,11 @@ class TestEInvoice(FrappeTestCase):
         si.reload()
         si.cancel()
 
-        mark_e_invoice_as_cancelled("Sales Invoice", si.name)
+        values = frappe._dict(
+            {"reason": "Others", "remark": "Manually deleted from GSTR-1"}
+        )
+
+        mark_e_invoice_as_cancelled("Sales Invoice", si.name, values)
         cancelled_doc = frappe.get_doc("Sales Invoice", si.name)
 
         self.assertDocumentEqual(
