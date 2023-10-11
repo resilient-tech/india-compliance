@@ -11,7 +11,15 @@ fi
 
 cd ~ || exit
 
-sudo apt update && sudo apt install redis-server
+echo "Setting Up System Dependencies..."
+
+sudo apt update
+
+sudo apt remove mysql-server mysql-client
+sudo apt install libcups2-dev redis-server mariadb-client
+
+wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
+sudo apt install ./wkhtmltox_0.12.6-1.focal_amd64.deb
 
 pip install frappe-bench
 
@@ -34,9 +42,6 @@ GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost';
 FLUSH PRIVILEGES;
 "
 
-wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
-sudo apt install ./wkhtmltox_0.12.6-1.focal_amd64.deb
-
 cd ~/frappe-bench || exit
 
 sed -i 's/watch:/# watch:/g' Procfile
@@ -46,6 +51,7 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch "$BRANCH_TO_CLONE" --resolve-deps
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
+bench setup requirements --dev
 
 bench use test_site
 bench start &
