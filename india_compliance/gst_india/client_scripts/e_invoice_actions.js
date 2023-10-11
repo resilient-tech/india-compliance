@@ -3,6 +3,14 @@ frappe.ui.form.on("Sales Invoice", {
         if (frm.doc.__onload?.e_invoice_info?.is_generated_in_sandbox_mode)
             frm.get_field("irn").set_description("Generated in Sandbox Mode");
 
+        if (frm.doc.irn && frm.doc.docstatus == 2) {
+            frm.add_custom_button(
+                __("Mark as Cancelled"),
+                () => mark_e_invoice_as_cancelled(frm),
+                "e-Invoice Log"
+            );
+        }
+
         if (!is_e_invoice_applicable(frm)) return;
 
         if (
@@ -160,6 +168,19 @@ function show_cancel_e_invoice_dialog(frm, callback) {
     });
 
     d.show();
+}
+
+function mark_e_invoice_as_cancelled (frm){
+    frappe.call({
+        method: "india_compliance.gst_india.utils.e_invoice.mark_e_invoice_as_cancelled",
+        args: {
+            doctype: frm.doctype,
+            docname: frm.doc.name,
+        },
+        callback: () => {
+            frm.refresh();
+        },
+    });
 }
 
 function is_e_invoice_applicable(frm) {

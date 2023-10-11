@@ -291,6 +291,35 @@ def cancel_e_invoice(docname, values):
     return send_updated_doc(doc)
 
 
+@frappe.whitelist()
+def mark_e_invoice_as_cancelled(doctype, docname):
+    doc = load_doc(doctype, docname, "cancel")
+
+    if doc.docstatus != 2:
+        return
+
+    log_e_invoice(
+        doc,
+        {
+            "name": doc.irn,
+            "is_cancelled": 1,
+            "cancel_reason_code": "Cancelled from Portal",
+            "cancel_remark": "Cancelled from Portal",
+            "cancelled_on": get_datetime(),
+        },
+    )
+
+    doc.db_set({"einvoice_status": "Manually Cancelled", "irn": ""})
+
+    frappe.msgprint(
+        _("e-Invoice cancelled successfully"),
+        indicator="green",
+        alert=True,
+    )
+
+    return send_updated_doc(doc)
+
+
 def log_e_invoice(doc, log_data):
     frappe.enqueue(
         _log_e_invoice,
