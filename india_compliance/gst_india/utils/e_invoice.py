@@ -265,22 +265,8 @@ def cancel_e_invoice(docname, values):
     }
 
     result = EInvoiceAPI(doc).cancel_irn(data)
-    log_e_invoice(
-        doc,
-        {
-            "name": doc.irn,
-            "is_cancelled": 1,
-            "cancel_reason_code": values.reason,
-            "cancel_remark": values.remark,
-            "cancelled_on": (
-                get_datetime()  # Fallback to handle already cancelled IRN
-                if result.error_code == "9999"
-                else parse_datetime(result.CancelDate)
-            ),
-        },
-    )
 
-    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
+    log_and_process_e_invoice_cancellation(doc, values, result)
 
     frappe.msgprint(
         _("e-Invoice cancelled successfully"),
@@ -291,28 +277,49 @@ def cancel_e_invoice(docname, values):
     return send_updated_doc(doc)
 
 
-@frappe.whitelist()
-def mark_e_invoice_as_cancelled(doctype, docname):
-    doc = load_doc(doctype, docname, "cancel")
-
-    if doc.docstatus != 2:
-        return
-
+def log_and_process_e_invoice_cancellation(doc, values, result):
     log_e_invoice(
         doc,
         {
             "name": doc.irn,
             "is_cancelled": 1,
-            "cancel_reason_code": "Cancelled from Portal",
-            "cancel_remark": "Cancelled from Portal",
-            "cancelled_on": get_datetime(),
+            "cancel_reason_code": values.reason,
+            "cancel_remark": values.remark or values.reason,
+            "cancelled_on": (
+                get_datetime()  # Fallback to handle already cancelled IRN
+                if result.error_code == "9999"
+                else parse_datetime(result.CancelDate)
+            ),
         },
     )
 
-    doc.db_set({"einvoice_status": "Manually Cancelled", "irn": ""})
+    doc.db_set(
+        {
+            "einvoice_status": result.get("einvoice_status") or "Cancelled",
+            "irn": "",
+        }
+    )
+
+
+@frappe.whitelist()
+def mark_e_invoice_as_cancelled(doctype, docname, values):
+    doc = load_doc(doctype, docname, "cancel")
+
+    if doc.docstatus != 2:
+        return
+
+    values = frappe.parse_json(values)
+    result = frappe._dict(
+        {
+            "CancelDate": values.cancelled_on,
+            "einvoice_status": "Manually Cancelled",
+        }
+    )
+
+    log_and_process_e_invoice_cancellation(doc, values, result)
 
     frappe.msgprint(
-        _("e-Invoice cancelled successfully"),
+        _("e-Invoice marked as cancelled successfully"),
         indicator="green",
         alert=True,
     )
