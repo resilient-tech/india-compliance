@@ -23,7 +23,7 @@ mkdir ~/frappe-bench/sites/test_site
 cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites/test_site/
 
 
-mysql --host 127.0.0.1 --port 3306 -u root -e "
+mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "
 SET GLOBAL character_set_server = 'utf8mb4';
 SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
 
@@ -31,7 +31,6 @@ CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient';
 CREATE DATABASE test_resilient;
 GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost';
 
-UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root';
 FLUSH PRIVILEGES;
 "
 
@@ -47,7 +46,6 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
 bench get-app erpnext --branch "$BRANCH_TO_CLONE" --resolve-deps
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
-bench setup requirements --dev
 
 bench use test_site
 bench start &
