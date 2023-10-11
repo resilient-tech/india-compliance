@@ -3,7 +3,11 @@ frappe.ui.form.on("Sales Invoice", {
         if (frm.doc.__onload?.e_invoice_info?.is_generated_in_sandbox_mode)
             frm.get_field("irn").set_description("Generated in Sandbox Mode");
 
-        if (frm.doc.irn && frm.doc.docstatus == 2) {
+        if (
+            frm.doc.irn &&
+            frm.doc.docstatus == 2 &&
+            frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
+        ) {
             frm.add_custom_button(
                 __("Mark as Cancelled"),
                 () => show_mark_e_invoice_as_cancelled_dialog(frm),
