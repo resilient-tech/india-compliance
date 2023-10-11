@@ -266,18 +266,14 @@ def cancel_e_invoice(docname, values):
 
     result = EInvoiceAPI(doc).cancel_irn(data)
 
-    log_and_process_e_invoice_cancellation(doc, values, result)
-
-    frappe.msgprint(
-        _("e-Invoice cancelled successfully"),
-        indicator="green",
-        alert=True,
+    log_and_process_e_invoice_cancellation(
+        doc, values, result, "e-Invoice cancelled successfully"
     )
 
     return send_updated_doc(doc)
 
 
-def log_and_process_e_invoice_cancellation(doc, values, result):
+def log_and_process_e_invoice_cancellation(doc, values, result, message):
     log_e_invoice(
         doc,
         {
@@ -300,6 +296,8 @@ def log_and_process_e_invoice_cancellation(doc, values, result):
         }
     )
 
+    frappe.msgprint(_(message), indicator="green", alert=True)
+
 
 @frappe.whitelist()
 def mark_e_invoice_as_cancelled(doctype, docname, values):
@@ -316,12 +314,8 @@ def mark_e_invoice_as_cancelled(doctype, docname, values):
         }
     )
 
-    log_and_process_e_invoice_cancellation(doc, values, result)
-
-    frappe.msgprint(
-        _("e-Invoice marked as cancelled successfully"),
-        indicator="green",
-        alert=True,
+    log_and_process_e_invoice_cancellation(
+        doc, values, result, "e-Invoice marked as cancelled successfully"
     )
 
     return send_updated_doc(doc)
