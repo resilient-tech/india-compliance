@@ -16,6 +16,7 @@ from india_compliance.gst_india.utils.e_invoice import (
     EInvoiceData,
     cancel_e_invoice,
     generate_e_invoice,
+    mark_e_invoice_as_cancelled,
     validate_e_invoice_applicability,
     validate_if_e_invoice_can_be_cancelled,
 )
@@ -475,6 +476,36 @@ class TestEInvoice(FrappeTestCase):
             cancelled_doc,
         )
         self.assertDocumentEqual({"ewaybill": ""}, cancelled_doc)
+
+    @responses.activate
+    def test_mark_e_invoice_as_cancelled(self):
+        """Test for mark e-Invoice as cancelled"""
+        test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
+
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+
+        # Mock response for generating irn
+        self._mock_e_invoice_response(data=test_data)
+
+        generate_e_invoice(si.name)
+        si.reload()
+        si.cancel()
+
+        values = frappe._dict(
+            {"reason": "Others", "remark": "Manually deleted from GSTR-1"}
+        )
+
+        mark_e_invoice_as_cancelled("Sales Invoice", si.name, values)
+        cancelled_doc = frappe.get_doc("Sales Invoice", si.name)
+
+        self.assertDocumentEqual(
+            {"einvoice_status": "Manually Cancelled", "irn": ""},
+            cancelled_doc,
+        )
+
+        self.assertTrue(
+            frappe.get_cached_value("e-Invoice Log", si.irn, "is_cancelled"), 1
+        )
 
     def test_validate_e_invoice_applicability(self):
         """Test if e_invoicing is applicable"""

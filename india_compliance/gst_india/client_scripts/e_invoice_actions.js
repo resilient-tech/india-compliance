@@ -3,6 +3,18 @@ frappe.ui.form.on("Sales Invoice", {
         if (frm.doc.__onload?.e_invoice_info?.is_generated_in_sandbox_mode)
             frm.get_field("irn").set_description("Generated in Sandbox Mode");
 
+        if (
+            frm.doc.irn &&
+            frm.doc.docstatus == 2 &&
+            frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)
+        ) {
+            frm.add_custom_button(
+                __("Mark as Cancelled"),
+                () => show_mark_e_invoice_as_cancelled_dialog(frm),
+                "e-Invoice"
+            );
+        }
+
         if (!is_e_invoice_applicable(frm)) return;
 
         if (
@@ -104,42 +116,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
             : __("Cancel e-Invoice"),
-        fields: [
-            {
-                label: "IRN Number",
-                fieldname: "irn",
-                fieldtype: "Data",
-                read_only: 1,
-                default: frm.doc.irn,
-            },
-            {
-                label: "e-Waybill Number",
-                fieldname: "ewaybill",
-                fieldtype: "Data",
-                read_only: 1,
-                default: frm.doc.ewaybill || "",
-            },
-            {
-                label: "Reason",
-                fieldname: "reason",
-                fieldtype: "Select",
-                reqd: 1,
-                default: "Data Entry Mistake",
-                options: [
-                    "Duplicate",
-                    "Data Entry Mistake",
-                    "Order Cancelled",
-                    "Others",
-                ],
-            },
-            {
-                label: "Remark",
-                fieldname: "remark",
-                fieldtype: "Data",
-                reqd: 1,
-                mandatory_depends_on: "eval: doc.reason == 'Others'",
-            },
-        ],
+        fields: get_cancel_e_invoice_dialog_fields(frm),
         primary_action_label: frm.doc.ewaybill
             ? __("Cancel IRN & e-Waybill")
             : __("Cancel IRN"),
@@ -160,6 +137,78 @@ function show_cancel_e_invoice_dialog(frm, callback) {
     });
 
     d.show();
+}
+
+function show_mark_e_invoice_as_cancelled_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Update Cancelled e-Invoice Details"),
+        fields: get_cancel_e_invoice_dialog_fields(frm, true),
+        primary_action_label: __("Update"),
+        primary_action(values) {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_invoice.mark_e_invoice_as_cancelled",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.doc.name,
+                    values,
+                },
+                callback: () => {
+                    d.hide();
+                    frm.refresh();
+                },
+            });
+        },
+    });
+
+    d.show();
+}
+
+function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
+    let fields = [
+        {
+            label: "IRN Number",
+            fieldname: "irn",
+            fieldtype: "Data",
+            read_only: 1,
+            default: frm.doc.irn,
+        },
+        {
+            label: "Reason",
+            fieldname: "reason",
+            fieldtype: "Select",
+            reqd: 1,
+            default: manual_cancel ? "Others" : "Data Entry Mistake",
+            options: ["Duplicate", "Data Entry Mistake", "Order Cancelled", "Others"],
+        },
+        {
+            label: "Remark",
+            fieldname: "remark",
+            fieldtype: "Data",
+            reqd: 1,
+            mandatory_depends_on: "eval: doc.reason == 'Others'",
+            default: manual_cancel ? "Manually deleted from GSTR-1" : "",
+        },
+    ];
+
+    if (manual_cancel) {
+        fields.push({
+            label: "Cancelled On",
+            fieldname: "cancelled_on",
+            fieldtype: "Datetime",
+            reqd: 1,
+            default: frappe.datetime.now_datetime(),
+        });
+    } else {
+        fields.splice(1, 0, {
+            label: "e-Waybill Number",
+            fieldname: "ewaybill",
+            fieldtype: "Data",
+            read_only: 1,
+            default: frm.doc.ewaybill || "",
+        });
+    }
+
+    return fields;
 }
 
 function is_e_invoice_applicable(frm) {
