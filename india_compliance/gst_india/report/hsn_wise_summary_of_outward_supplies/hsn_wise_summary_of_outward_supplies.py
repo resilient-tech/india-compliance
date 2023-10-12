@@ -201,6 +201,9 @@ def get_tax_accounts(
     company_currency,
     output_gst_accounts,
 ):
+    if not item_list:
+        return [], {}
+
     tax_doctype = "Sales Taxes and Charges"
     tax_columns = set()
     itemised_tax = {}
@@ -223,8 +226,8 @@ def get_tax_accounts(
             from `tab{tax_doctype}`
             where
                 parenttype = "Sales Invoice" and docstatus = 1
-                and parent in ({frappe.db.escape(", ".join(invoice for invoice in invoice_numbers))})
-                and account_head in ({frappe.db.escape(", ".join(account for account in output_gst_accounts))})
+                and parent in ({", ".join(frappe.db.escape(invoice) for invoice in invoice_numbers)})
+                and account_head in ({", ".join(frappe.db.escape(account) for account in output_gst_accounts)})
         """,
     )
 
