@@ -39,16 +39,10 @@ Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/
     bench get-app --branch [branch name] https://github.com/resilient-tech/india-compliance.git
     ```
 
-    Replace `[branch name]` with the appropriate branch as per your setup:
+    Replace `[branch name]` with the branch that you're using for Frappe Framework and ERPNext.
+    If it isn't specified, the `--branch` option will default to **develop**.
 
-    | Frappe Branch | India Compliance Branch |
-    |---------------|-------------------------|
-    | version-14    | version-14              |
-    | develop       | develop                 |
-
-    If it isn't specified, the `--branch` option will default to `develop`.
-
-2. Install the app on your site.
+3. Install the app on your site.
 
     ```bash
     bench --site [site name] install-app india_compliance
