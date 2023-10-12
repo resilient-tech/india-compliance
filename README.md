@@ -26,7 +26,7 @@ It builds on top of [ERPNext](https://github.com/frappe/erpnext) and the [Frappe
 - Configurable features based on business needs
 - Powerful validations to ensure correct compliance
 
-For a detailed overview of these features, please [refer to the documentation](https://docs.erpnext.com/docs/v14/user/manual/en/regional/india).
+For a detailed overview of these features, please [refer to the documentation](https://docs.indiacompliance.app/).
 
 ## Installation
 
