@@ -1368,7 +1368,7 @@ async function fetch_date_range(frm, field_prefix) {
     const from_date_field = field_prefix + "_from_date";
     const to_date_field = field_prefix + "_to_date";
     const period = frm.doc[field_prefix + "_period"];
-    if (period == "Custom") return;
+    if (!period) return;
 
     const { message } = await frm.call("get_date_range", { period });
     if (!message) return;
