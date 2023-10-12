@@ -959,7 +959,7 @@ class ReconciledData(BaseReconciliation):
         This can be used to show comparision of matched values.
         """
         inward_supplies = self.get_all_inward_supply(
-            [inward_supply_name], only_names=True
+            names=[inward_supply_name], only_names=True
         )
         purchases = self.get_all_purchase_invoice_and_bill_of_entry(
             "", [purchase_name], only_names=True
@@ -993,7 +993,7 @@ class ReconciledData(BaseReconciliation):
         if inward_supply_names or purchase_names:
             retain_doc = only_names = True
 
-        inward_supplies = self.get_all_inward_supply(inward_supply_names)
+        inward_supplies = self.get_all_inward_supply(names=inward_supply_names)
         purchases_and_bill_of_entry = self.get_all_purchase_invoice_and_bill_of_entry(
             inward_supplies, purchase_names, only_names
         )
@@ -1017,7 +1017,9 @@ class ReconciledData(BaseReconciliation):
         self.process_data(reconciliation_data, retain_doc=retain_doc)
         return reconciliation_data
 
-    def get_all_inward_supply(self, inward_supply_names=None, only_names=False):
+    def get_all_inward_supply(
+        self, additional_fields=None, names=None, only_names=False
+    ):
         inward_supply_fields = [
             "supplier_name",
             "classification",
@@ -1027,9 +1029,7 @@ class ReconciledData(BaseReconciliation):
             "link_name",
         ]
 
-        return super().get_all_inward_supply(
-            inward_supply_fields, inward_supply_names, only_names
-        )
+        return super().get_all_inward_supply(inward_supply_fields, names, only_names)
 
     def get_all_purchase_invoice_and_bill_of_entry(
         self, inward_supplies, purchase_names, only_names=False

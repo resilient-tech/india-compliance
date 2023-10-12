@@ -130,7 +130,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 frm.flag_last_return_period = data.return_period;
             }
             if (
-                current_progress == 100 &&
+                current_progress === 100 &&
                 method != "update_api_progress" &&
                 frm.flag_last_return_period == data.return_period
             ) {
@@ -1025,7 +1025,7 @@ class DetailViewDialog {
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
                 indicator:
-                    this.row.tax_difference == 0 ? "text-success" : "text-danger",
+                    this.row.tax_difference === 0 ? "text-success" : "text-danger",
             },
             {
                 value: this.row.taxable_value_difference,
@@ -1033,7 +1033,7 @@ class DetailViewDialog {
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
                 indicator:
-                    this.row.taxable_value_difference == 0
+                    this.row.taxable_value_difference === 0
                         ? "text-success"
                         : "text-danger",
             },
@@ -1645,7 +1645,7 @@ async function set_gstin_options(frm) {
         args: params,
     });
 
-    if (!message) return;
+    if (!message) return [];
     const gstin_field = frm.get_field("company_gstin");
     gstin_field.set_data(message);
     return message;
