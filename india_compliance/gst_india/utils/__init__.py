@@ -548,6 +548,11 @@ def is_api_enabled(settings=None):
     return settings.enable_api and can_enable_api(settings)
 
 
+def is_autofill_party_info_enabled():
+    settings = frappe.get_cached_doc("GST Settings")
+    return is_api_enabled(settings) and settings.autofill_party_info
+
+
 def can_enable_api(settings):
     return settings.api_secret or frappe.conf.ic_api_secret
 
