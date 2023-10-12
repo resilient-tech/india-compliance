@@ -128,9 +128,38 @@ def generate_e_invoice(docname, throw=True, force=False):
         if result.InfCd == "DUPIRN":
             response = api.get_e_invoice_by_irn(result.Desc.Irn)
 
+            if signed_data := response.SignedInvoice:
+                invoice_data = json.loads(
+                    jwt.decode(signed_data, options={"verify_signature": False})["data"]
+                )
+
+                previous_invoice_amount = invoice_data.get("ValDtls").get("TotInvVal")
+                current_invoice_amount = data.get("ValDtls").get("TotInvVal")
+
+                if previous_invoice_amount != current_invoice_amount:
+                    frappe.throw(
+                        _(
+                            "e-Invoice is already available against Invoice {0} with a Grand Total of Rs.{1}"
+                            " Duplicate IRN requests are not considered by e-Invoice Portal."
+                        ).format(
+                            frappe.bold(invoice_data.get("DocDtls").get("No")),
+                            frappe.bold(previous_invoice_amount),
+                        )
+                    )
+
             # Handle error 2283:
             # IRN details cannot be provided as it is generated more than 2 days ago
             result = result.Desc if response.error_code == "2283" else response
+
+        # Handle Invalid GSTIN Error
+        if result.error_code in ("3028", "3029"):
+            gstin = data.get("BuyerDtls").get("Gstin")
+            response = api.sync_gstin_info(gstin)
+
+            if response.Status != "ACT":
+                frappe.throw(_("GSTIN {0} status is not Active").format(gstin))
+
+            result = api.generate_irn(data)
 
     except GatewayTimeoutError as e:
         einvoice_status = "Failed"
@@ -236,13 +265,22 @@ def cancel_e_invoice(docname, values):
     }
 
     result = EInvoiceAPI(doc).cancel_irn(data)
+
+    log_and_process_e_invoice_cancellation(
+        doc, values, result, "e-Invoice cancelled successfully"
+    )
+
+    return send_updated_doc(doc)
+
+
+def log_and_process_e_invoice_cancellation(doc, values, result, message):
     log_e_invoice(
         doc,
         {
             "name": doc.irn,
             "is_cancelled": 1,
             "cancel_reason_code": values.reason,
-            "cancel_remark": values.remark,
+            "cancel_remark": values.remark or values.reason,
             "cancelled_on": (
                 get_datetime()  # Fallback to handle already cancelled IRN
                 if result.error_code == "9999"
@@ -251,12 +289,33 @@ def cancel_e_invoice(docname, values):
         },
     )
 
-    doc.db_set({"einvoice_status": "Cancelled", "irn": ""})
+    doc.db_set(
+        {
+            "einvoice_status": result.get("einvoice_status") or "Cancelled",
+            "irn": "",
+        }
+    )
 
-    frappe.msgprint(
-        _("e-Invoice cancelled successfully"),
-        indicator="green",
-        alert=True,
+    frappe.msgprint(_(message), indicator="green", alert=True)
+
+
+@frappe.whitelist()
+def mark_e_invoice_as_cancelled(doctype, docname, values):
+    doc = load_doc(doctype, docname, "cancel")
+
+    if doc.docstatus != 2:
+        return
+
+    values = frappe.parse_json(values)
+    result = frappe._dict(
+        {
+            "CancelDate": values.cancelled_on,
+            "einvoice_status": "Manually Cancelled",
+        }
+    )
+
+    log_and_process_e_invoice_cancellation(
+        doc, values, result, "e-Invoice marked as cancelled successfully"
     )
 
     return send_updated_doc(doc)

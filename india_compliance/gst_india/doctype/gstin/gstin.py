@@ -42,14 +42,18 @@ class GSTIN(Document):
 
 
 @frappe.whitelist()
-def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
+def get_gstin_status(
+    gstin, transaction_date=None, is_request_from_ui=0, force_update=0
+):
     """
     Permission check not required as GSTIN details are public where GSTIN is known.
     """
     if not gstin:
         return
 
-    if not is_status_refresh_required(gstin, transaction_date):
+    if not int(force_update) and not is_status_refresh_required(
+        gstin, transaction_date
+    ):
         if not frappe.db.exists("GSTIN", gstin):
             return
 
@@ -176,8 +180,9 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
 
     if gstin_doc.status not in ("Active", "Cancelled"):
         return _throw(
-            _("Status of Party GSTIN {1} is {0}").format(gstin_doc.status),
-            gstin_doc.gstin,
+            _("Status of Party GSTIN {1} is {0}").format(
+                gstin_doc.status, gstin_doc.gstin
+            )
         )
 
 

@@ -18,7 +18,6 @@ def create_integration_request(
     reference_doctype=None,
     reference_name=None,
 ):
-
     return frappe.get_doc(
         {
             "doctype": "Integration Request",

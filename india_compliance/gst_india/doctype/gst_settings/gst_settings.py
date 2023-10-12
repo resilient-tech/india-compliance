@@ -144,7 +144,11 @@ class GSTSettings(Document):
             return
 
         for credential in self.credentials:
-            if credential.service == "Returns" or credential.password:
+            if credential.service == "Returns":
+                self.validate_app_key(credential)
+                continue
+
+            if credential.password:
                 continue
 
             frappe.throw(
@@ -169,6 +173,10 @@ class GSTSettings(Document):
                 indicator="yellow",
                 alert=True,
             )
+
+    def validate_app_key(self, credential):
+        if not credential.app_key or len(credential.app_key) != 32:
+            credential.app_key = frappe.generate_hash(length=32)
 
     def validate_enable_api(self):
         if (

@@ -3,7 +3,7 @@ execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #29
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #31
 execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #3
 india_compliance.patches.post_install.remove_old_fields
 india_compliance.patches.post_install.update_company_gstin
@@ -27,3 +27,6 @@ india_compliance.patches.v14.set_reverse_charge_applicability_in_supplier
 india_compliance.patches.post_install.update_e_waybill_status
 india_compliance.patches.post_install.add_einvoice_status_field
 execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_refresh_interval", 30)
+execute:from india_compliance.gst_india.setup import create_email_template; create_email_template()
+india_compliance.patches.post_install.update_reconciliation_status
+india_compliance.patches.post_install.update_payment_entry_fields

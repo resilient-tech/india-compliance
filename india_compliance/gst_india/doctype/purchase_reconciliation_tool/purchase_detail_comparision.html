@@ -1,0 +1,86 @@
+<div class="container">
+	<table class="table table-bordered table-hover">
+		<thead>
+			<tr class="text-center">
+				<th></th>
+				<th>2A / 2B</th>
+				<th>Purchase</th>
+			</tr>
+		</thead>
+		<tbody data-label="detail-view-content">
+			<tr>
+				<th>Document Links</td>
+				{% if inward_supply.name %}
+				<td data-label="name">{{ frappe.utils.get_form_link("GST Inward Supply",
+					inward_supply.name, true) }}</td>
+				{% else %}
+				<td data-label="name">-</td>
+				{% endif %}
+
+				{% if purchase.name %}
+				<td data-label="name">{{ frappe.utils.get_form_link(purchase.doctype,
+					purchase.name, true)}}</td>
+				{% else %}
+				<td data-label="name">-</td>
+				{% endif %}
+			</tr>
+			<tr>
+				<th>Bill No</td>
+				<td data-label="bill_no">{{ inward_supply.bill_no || '-' }}</td>
+				<td data-label="bill_no">{{ purchase.bill_no || '-' }}</td>
+			</tr>
+			<tr>
+				<th>Bill Date</td>
+				<td data-label="bill_date">
+					{{ frappe.format(inward_supply.bill_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+				<td data-label="bill_date">
+					{{ frappe.format(purchase.bill_date, {'fieldtype': 'Date'}) || '-' }}
+				</td>
+			</tr>
+			<tr>
+				<th>Place of Supply</th>
+				<td data-label="place_of_supply">{{ inward_supply.place_of_supply || '-' }}</td>
+				<td data-label="place_of_supply">{{ purchase.place_of_supply || '-' }}</td>
+			</tr>
+			<tr>
+				<th>Reverse Charge</th>
+				<td data-label="is_reverse_charge">{{ inward_supply.is_reverse_charge || '-' }}</td>
+				<td data-label="is_reverse_charge">{{ purchase.is_reverse_charge || '-' }}</td>
+			</tr>
+			{% if purchase.cgst || inward_supply.cgst %}
+			<tr>
+				<th>CGST</td>
+				<td>{{ inward_supply.cgst || '-' }}</td>
+				<td>{{ purchase.cgst || '-' }}</td>
+			</tr>
+			{% endif %}
+			{% if purchase.sgst || inward_supply.sgst %}
+			<tr>
+				<th>SGST</td>
+				<td>{{ inward_supply.sgst || '-' }}</td>
+				<td>{{ purchase.sgst || '-' }}</td>
+			</tr>
+			{% endif %}
+			{% if purchase.igst || inward_supply.igst %}
+			<tr>
+				<th>IGST</td>
+				<td>{{ inward_supply.igst || '-' }}</td>
+				<td>{{ purchase.igst || '-' }}</td>
+			</tr>
+			{% endif %}
+			{% if purchase.cess || inward_supply.cess %}
+			<tr>
+				<th>CESS</td>
+				<td>{{ inward_supply.cess || '-' }}</td>
+				<td>{{ purchase.cess || '-' }}</td>
+			</tr>
+			{% endif %}
+			<tr>
+				<th>Taxable Amount</td>
+				<td>{{ inward_supply.taxable_value || '-' }}</td>
+				<td>{{ purchase.taxable_value || '-' }}</td>
+			</tr>
+		</tbody>
+	</table>
+</div>

@@ -391,9 +391,19 @@ CUSTOM_FIELDS = {
             "translatable": 0,
         },
         {
+            "fieldname": "reconciliation_status",
+            "label": "Reconciliation Status",
+            "fieldtype": "Select",
+            "insert_after": "eligibility_for_itc",
+            "print_hide": 1,
+            "options": ("\nNot Applicable\nReconciled\nUnreconciled\nIgnored"),
+            "no_copy": 1,
+            "read_only": 1,
+        },
+        {
             "fieldname": "gst_col_break",
             "fieldtype": "Column Break",
-            "insert_after": "eligibility_for_itc",
+            "insert_after": "reconciliation_status",
         },
         {
             "fieldname": "itc_integrated_tax",
@@ -526,11 +536,13 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "company_gstin",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "translatable": 0,
+            "depends_on": 'eval:doc.party_type === "Customer"',
         },
         {
             "fieldname": "gst_column_break",
@@ -547,7 +559,7 @@ CUSTOM_FIELDS = {
             "depends_on": 'eval:doc.party_type == "Customer"',
         },
         {
-            "fieldname": "customer_gstin",
+            "fieldname": "billing_address_gstin",
             "label": "Customer GSTIN",
             "fieldtype": "Data",
             "insert_after": "customer_address",
@@ -555,6 +567,19 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "read_only": 1,
             "translatable": 0,
+            "depends_on": 'eval:doc.party_type === "Customer"',
+        },
+        {
+            "fieldname": "gst_category",
+            "label": "GST Category",
+            "fieldtype": "Data",
+            "insert_after": "billing_address_gstin",
+            "read_only": 1,
+            "print_hide": 1,
+            "fetch_from": "customer_address.gst_category",
+            "translatable": 0,
+            "fetch_if_empty": 0,
+            "depends_on": 'eval:doc.party_type === "Customer"',
         },
     ],
     "Journal Entry": [
@@ -675,7 +700,7 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nFailed\nNot Applicable",
+            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable",
             "default": None,
             "hidden": 1,
             "no_copy": 1,
@@ -693,6 +718,7 @@ E_WAYBILL_DN_FIELDS = [
         "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
+        "no_copy": 1,
         "description": (
             "Set as zero to update distance as per the e-Waybill portal (if available)"
         ),
@@ -704,6 +730,7 @@ E_WAYBILL_DN_FIELDS = [
         "insert_after": "transporter",
         "fetch_from": "transporter.gst_transporter_id",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -714,6 +741,7 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Road",
         "insert_after": "transporter_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -726,6 +754,7 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
 ]
@@ -747,6 +776,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "transporter_info",
         "options": "Supplier",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "driver",
@@ -755,6 +785,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "gst_transporter_id",
         "options": "Driver",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "lr_no",
@@ -762,6 +793,7 @@ E_WAYBILL_INV_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "driver",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 30,
     },
@@ -771,6 +803,7 @@ E_WAYBILL_INV_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "lr_no",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 15,
     },
@@ -787,6 +820,7 @@ E_WAYBILL_INV_FIELDS = [
         "fetch_from": "transporter.supplier_name",
         "read_only": 1,
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -796,6 +830,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "mode_of_transport",
         "fetch_from": "driver.full_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -805,6 +840,7 @@ E_WAYBILL_INV_FIELDS = [
         "insert_after": "driver_name",
         "default": "Today",
         "print_hide": 1,
+        "no_copy": 1,
     },
     *E_WAYBILL_DN_FIELDS,
 ]

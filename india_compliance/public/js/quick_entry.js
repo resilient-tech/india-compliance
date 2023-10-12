@@ -284,11 +284,19 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
     get_default_party() {
         const doc = cur_frm && cur_frm.doc;
-        if (doc && frappe.dynamic_link && frappe.dynamic_link.doc === doc) {
-            return {
-                party_type: frappe.dynamic_link.doctype,
-                party: frappe.dynamic_link.doc[frappe.dynamic_link.fieldname],
-            };
+        if (!doc) return;
+
+        let party_type = doc.doctype;
+        let party = doc.name;
+
+        if (frappe.dynamic_link && frappe.dynamic_link.doc === doc) {
+            party_type = frappe.dynamic_link.doctype;
+            party = frappe.dynamic_link.doc[frappe.dynamic_link.fieldname];
+        }
+
+        return {
+            party_type: party_type,
+            party: party
         }
     }
 }
@@ -356,11 +364,11 @@ function setup_pincode_field(dialog, gstin_info) {
     };
 }
 
-function get_gstin_info(gstin) {
+function get_gstin_info(gstin, throw_error = true) {
     return frappe
         .call({
             method: "india_compliance.gst_india.utils.gstin_info.get_gstin_info",
-            args: { gstin },
+            args: { gstin, throw_error },
         })
         .then(r => r.message);
 }

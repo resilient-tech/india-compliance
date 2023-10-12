@@ -364,7 +364,7 @@ def validate_tax_accounts_for_non_gst(doc):
 def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 
-    if not doc.items:
+    if not doc.get("items"):
         return
 
     item_tax_templates = frappe._dict()
@@ -460,7 +460,7 @@ def get_source_state_code(doc):
     Logic opposite to that of utils.get_place_of_supply
     """
 
-    if doc.doctype in SALES_DOCTYPES:
+    if doc.doctype in SALES_DOCTYPES or doc.doctype == "Payment Entry":
         return doc.company_gstin[:2]
 
     if doc.gst_category == "Overseas":
@@ -482,6 +482,10 @@ def validate_hsn_codes(doc, method=None):
     if not validate_hsn_code:
         return
 
+    return _validate_hsn_codes(doc, valid_hsn_length, message=None)
+
+
+def _validate_hsn_codes(doc, valid_hsn_length, message=None):
     rows_with_missing_hsn = []
     rows_with_invalid_hsn = []
 
@@ -501,26 +505,29 @@ def validate_hsn_codes(doc, method=None):
 
         frappe.throw(
             _(
+                "{0}"
                 "Please enter a valid HSN/SAC code for the following row numbers:"
-                " <br>{0}"
-            ).format(frappe.bold(", ".join(rows_with_invalid_hsn))),
+                " <br>{1}"
+            ).format(message or "", frappe.bold(", ".join(rows_with_invalid_hsn))),
             title=_("Invalid HSN/SAC"),
         )
 
     if rows_with_missing_hsn:
         frappe.msgprint(
             _(
-                "Please enter HSN/SAC code for the following row numbers: <br>{0}"
-            ).format(frappe.bold(", ".join(rows_with_missing_hsn))),
+                "{0}" "Please enter HSN/SAC code for the following row numbers: <br>{1}"
+            ).format(message or "", frappe.bold(", ".join(rows_with_missing_hsn))),
             title=_("Invalid HSN/SAC"),
         )
 
     if rows_with_invalid_hsn:
         frappe.msgprint(
             _(
-                "HSN/SAC code should be {0} digits long for the following"
-                " row numbers: <br>{1}"
+                "{0}"
+                "HSN/SAC code should be {1} digits long for the following"
+                " row numbers: <br>{2}"
             ).format(
+                message or "",
                 join_list_with_custom_separators(valid_hsn_length),
                 frappe.bold(", ".join(rows_with_invalid_hsn)),
             ),
@@ -650,7 +657,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
      - taxes in the tax template
     """
 
-    is_sales_transaction = doctype in SALES_DOCTYPES
+    is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
 
     if isinstance(party_details, str):
         party_details = frappe.parse_json(party_details)
@@ -693,6 +700,9 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         if is_reverse_charge:
             party_details.update(is_reverse_charge)
             gst_details.update(is_reverse_charge)
+
+    if doctype == "Payment Entry":
+        return gst_details
 
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
@@ -951,6 +961,9 @@ def validate_transaction(doc, method=None):
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
+        gstin = doc.billing_address_gstin
+    elif doc.doctype == "Payment Entry":
+        is_sales_transaction = True
         gstin = doc.billing_address_gstin
     else:
         validate_reverse_charge_transaction(doc)
