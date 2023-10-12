@@ -194,7 +194,7 @@ class GSTR2aISD(GSTR2a):
             "document_value": invoice.iamt + invoice.camt + invoice.samt + invoice.cess,
         }
 
-    def get_transaction_item(self, item):
+    def get_transaction_item(self, item, item_number=None):
         transaction_item = super().get_transaction_item(item)
         transaction_item["cess"] = item.cess
         return transaction_item
