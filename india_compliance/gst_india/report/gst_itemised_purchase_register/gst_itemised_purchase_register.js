@@ -5,3 +5,4 @@
 {% include "erpnext/accounts/report/item_wise_purchase_register/item_wise_purchase_register.js" %}
 
 frappe.query_reports["GST Itemised Purchase Register"] = frappe.query_reports["Item-wise Purchase Register"]
+india_compliance.set_last_month_as_default_period(frappe.query_reports["GST Itemised Purchase Register"]);
