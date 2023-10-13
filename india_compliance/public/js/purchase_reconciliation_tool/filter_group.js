@@ -20,6 +20,30 @@ india_compliance.FILTER_OPERATORS = {
     },
 };
 
+india_compliance.filter_button_group = $(
+    `
+    <div class="custom-button-group">
+        <div class="filter-selector">
+            <div class="btn-group">
+                <button class="btn btn-default btn-sm filter-button">
+                    <span class="filter-icon">
+                        ${frappe.utils.icon("filter")}
+                    </span>
+                    <span class="button-label hidden-xs">
+                        ${__("Filter")}
+                    <span>
+                </button>
+                <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
+                    <span class="filter-icon">
+                        ${frappe.utils.icon("filter-x")}
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+    `
+)
+
 class _Filter extends frappe.ui.Filter {
     set_conditions_from_config() {
         let filter_options = this.filter_list.filter_options;
@@ -38,6 +62,19 @@ class _Filter extends frappe.ui.Filter {
 }
 
 india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
+
+    constructor(opts) {
+        if (opts.parent) {
+            india_compliance.filter_button_group.appendTo(opts.parent);
+
+            $.extend(opts, {
+                filter_button: india_compliance.filter_button_group.find(".filter-button"),
+                filter_x_button: india_compliance.filter_button_group.find(".filter-x-button"),
+            });
+        }
+        super(opts);
+    }
+
     _push_new_filter(...args) {
         const Filter = frappe.ui.Filter;
         try {
@@ -46,6 +83,16 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
         } finally {
             frappe.ui.Filter = Filter;
         }
+    }
+
+    set_clear_all_filters_event() {
+        if (!this.filter_x_button) return;
+
+        super.set_clear_all_filters_event();
+
+        this.filter_x_button.on("click", () => {
+            this.on_change();
+        });
     }
 };
 
