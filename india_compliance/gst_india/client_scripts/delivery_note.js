@@ -3,17 +3,12 @@ setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     onload(frm) {
-        if (!gst_settings.enable_e_waybill) return;
+        if (!is_e_waybill_applicable(frm)) return;
         show_sandbox_mode_indicator();
     },
 
     after_save(frm) {
-        if (
-            frm.doc.customer_address ||
-            !has_e_waybill_threshold_met(frm) ||
-            !is_e_waybill_applicable(frm)
-        )
-            return;
+        if (frm.doc.customer_address || !is_e_waybill_applicable(frm)) return;
 
         frappe.show_alert(
             {

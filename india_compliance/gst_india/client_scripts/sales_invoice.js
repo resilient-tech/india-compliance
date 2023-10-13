@@ -34,7 +34,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     refresh(frm) {
-        set_e_invoice_status_options(frm);
+        set_e_waybill_status_options(frm);
         gst_invoice_warning(frm);
     },
 
@@ -50,7 +50,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         frappe.show_alert(
             {
-                message: __("Supplier Address is required to create e-Waybill"),
+                message: __("Billing Address is required to create e-Waybill"),
                 indicator: "yellow",
             },
             10
@@ -71,7 +71,7 @@ async function gst_invoice_warning(frm) {
     }
 }
 
-function set_e_invoice_status_options(frm) {
+function set_e_waybill_status_options(frm) {
     const options = ["Pending", "Not Applicable"];
     if (!options.includes(frm.doc.e_waybill_status)) {
         options.push(frm.doc.e_waybill_status);
