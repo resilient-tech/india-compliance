@@ -233,34 +233,9 @@ class PurchaseReconciliationTool {
     }
 
     setup_filter_button() {
-        const filter_button_group = $(
-            `
-        <div class="custom-button-group">
-            <div class="filter-selector">
-                <div class="btn-group">
-                    <button class="btn btn-default btn-sm filter-button">
-                        <span class="filter-icon">
-                            ${frappe.utils.icon("filter")}
-                        </span>
-                        <span class="button-label hidden-xs">
-                            ${__("Filter")}
-                        <span>
-                    </button>
-                    <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
-                        <span class="filter-icon">
-                            ${frappe.utils.icon("filter-x")}
-                        </span>
-                    </button>
-                </div>
-            </div>
-        </div>
-        `
-        ).appendTo(this.$wrapper.find(".form-tabs-list"));
-
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
-            filter_button: filter_button_group.find(".filter-button"),
-            filter_x_button: filter_button_group.find(".filter-x-button"),
+            parent: this.$wrapper.find(".form-tabs-list"),
             filter_options: {
                 fieldname: "supplier_name",
                 filter_fields: this.get_filter_fields(),
