@@ -20,7 +20,7 @@ india_compliance.FILTER_OPERATORS = {
     },
 };
 
-india_compliance.filter_button_group = $(
+FILTER_GROUP_BUTTON = $(
     `
     <div class="custom-button-group">
         <div class="filter-selector">
@@ -64,14 +64,16 @@ class _Filter extends frappe.ui.Filter {
 india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
 
     constructor(opts) {
-        if (opts.parent) {
-            india_compliance.filter_button_group.appendTo(opts.parent);
+        if (!opts.parent)
+            frappe.throw("india_compliance.FilterGroup: Parent element not found");
 
-            $.extend(opts, {
-                filter_button: india_compliance.filter_button_group.find(".filter-button"),
-                filter_x_button: india_compliance.filter_button_group.find(".filter-x-button"),
-            });
-        }
+        FILTER_GROUP_BUTTON.appendTo(opts.parent);
+
+        Object.assign(opts, {
+            filter_button: FILTER_GROUP_BUTTON.find(".filter-button"),
+            filter_x_button: FILTER_GROUP_BUTTON.find(".filter-x-button"),
+        });
+
         super(opts);
     }
 
