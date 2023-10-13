@@ -130,7 +130,7 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
                 frm.flag_last_return_period = data.return_period;
             }
             if (
-                current_progress == 100 &&
+                current_progress === 100 &&
                 method != "update_api_progress" &&
                 frm.flag_last_return_period == data.return_period
             ) {
@@ -233,34 +233,9 @@ class PurchaseReconciliationTool {
     }
 
     setup_filter_button() {
-        const filter_button_group = $(
-            `
-        <div class="custom-button-group">
-            <div class="filter-selector">
-                <div class="btn-group">
-                    <button class="btn btn-default btn-sm filter-button">
-                        <span class="filter-icon">
-                            ${frappe.utils.icon("filter")}
-                        </span>
-                        <span class="button-label hidden-xs">
-                            ${__("Filter")}
-                        <span>
-                    </button>
-                    <button class="btn btn-default btn-sm filter-x-button" title="${__("Clear all filters")}">
-                        <span class="filter-icon">
-                            ${frappe.utils.icon("filter-x")}
-                        </span>
-                    </button>
-                </div>
-            </div>
-        </div>
-        `
-        ).appendTo(this.$wrapper.find(".form-tabs-list"));
-
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
-            filter_button: filter_button_group.find(".filter-button"),
-            filter_x_button: filter_button_group.find(".filter-x-button"),
+            parent: this.$wrapper.find(".form-tabs-list"),
             filter_options: {
                 fieldname: "supplier_name",
                 filter_fields: this.get_filter_fields(),
@@ -1025,7 +1000,7 @@ class DetailViewDialog {
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
                 indicator:
-                    this.row.tax_difference == 0 ? "text-success" : "text-danger",
+                    this.row.tax_difference === 0 ? "text-success" : "text-danger",
             },
             {
                 value: this.row.taxable_value_difference,
@@ -1033,7 +1008,7 @@ class DetailViewDialog {
                 datatype: "Currency",
                 currency: frappe.boot.sysdefaults.currency,
                 indicator:
-                    this.row.taxable_value_difference == 0
+                    this.row.taxable_value_difference === 0
                         ? "text-success"
                         : "text-danger",
             },
@@ -1368,7 +1343,7 @@ async function fetch_date_range(frm, field_prefix) {
     const from_date_field = field_prefix + "_from_date";
     const to_date_field = field_prefix + "_to_date";
     const period = frm.doc[field_prefix + "_period"];
-    if (period == "Custom") return;
+    if (!period) return;
 
     const { message } = await frm.call("get_date_range", { period });
     if (!message) return;
@@ -1645,7 +1620,7 @@ async function set_gstin_options(frm) {
         args: params,
     });
 
-    if (!message) return;
+    if (!message) return [];
     const gstin_field = frm.get_field("company_gstin");
     gstin_field.set_data(message);
     return message;

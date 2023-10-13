@@ -217,6 +217,25 @@ Object.assign(india_compliance, {
             </div>`
         );
     },
+
+    set_last_month_as_default_period(report) {
+        report.filters.forEach(filter => {
+            if (filter.fieldname === "from_date") {
+                filter.default = this.last_month_start();
+            }
+            if (filter.fieldname === "to_date") {
+                filter.default = this.last_month_end();
+            }
+        });
+    },
+
+    last_month_start() {
+        return frappe.datetime.add_months(frappe.datetime.month_start(), -1);
+    },
+
+    last_month_end() {
+        return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {

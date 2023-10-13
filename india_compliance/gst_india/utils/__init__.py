@@ -206,7 +206,9 @@ def validate_gst_category(gst_category, gstin):
 
     if gst_category == "Unregistered":
         frappe.throw(
-            "GST Category cannot be Unregistered for party with GSTIN",
+            _(
+                "GST Category cannot be Unregistered for party with GSTIN",
+            )
         )
 
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
@@ -653,19 +655,17 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
 
     company = company or frappe.defaults.get_user_default("Company")
 
-    match timespan:
-        case "this fiscal year":
-            date = getdate()
-            fiscal_year = get_fiscal_year(date, company=company)
-            return (fiscal_year[1], fiscal_year[2])
+    if timespan == "this fiscal year":
+        date = getdate()
+        fiscal_year = get_fiscal_year(date, company=company)
+        return (fiscal_year[1], fiscal_year[2])
 
-        case "last fiscal year":
-            date = add_to_date(getdate(), years=-1)
-            fiscal_year = get_fiscal_year(date, company=company)
-            return (fiscal_year[1], fiscal_year[2])
+    if timespan == "last fiscal year":
+        date = add_to_date(getdate(), years=-1)
+        fiscal_year = get_fiscal_year(date, company=company)
+        return (fiscal_year[1], fiscal_year[2])
 
-        case _:
-            return
+    return
 
 
 def merge_dicts(d1: dict, d2: dict) -> dict:
