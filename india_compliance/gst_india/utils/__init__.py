@@ -279,9 +279,14 @@ def validate_pincode(address):
     )
 
 
-def guess_gst_category(gstin: str | None, country: str | None) -> str:
+def guess_gst_category(
+    gstin: str | None, country: str | None, gst_category: str | None = None
+) -> str:
     if not gstin:
         if country and country != "India":
+            return "Overseas"
+
+        if not country and gst_category == "Overseas":
             return "Overseas"
 
         return "Unregistered"
@@ -290,6 +295,14 @@ def guess_gst_category(gstin: str | None, country: str | None) -> str:
         return "Tax Deductor"
 
     if GSTIN_FORMATS["Registered Regular"].match(gstin):
+        if gst_category in (
+            "Registered Regular",
+            "Registered Composition",
+            "SEZ",
+            "Deemed Export",
+        ):
+            return gst_category
+
         return "Registered Regular"
 
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
@@ -548,6 +561,15 @@ def is_api_enabled(settings=None):
         )
 
     return settings.enable_api and can_enable_api(settings)
+
+
+def is_autofill_party_info_enabled():
+    settings = frappe.get_cached_doc("GST Settings")
+    return (
+        is_api_enabled(settings)
+        and settings.autofill_party_info
+        and not settings.sandbox_mode
+    )
 
 
 def can_enable_api(settings):
