@@ -285,7 +285,7 @@ def guess_gst_category(
     if not gstin:
         if country and country != "India":
             return "Overseas"
-        
+
         if not country and gst_category == "Overseas":
             return "Overseas"
 
