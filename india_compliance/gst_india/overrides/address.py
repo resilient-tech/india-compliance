@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
-from india_compliance.gst_india.overrides.party import _set_gst_category
+from india_compliance.gst_india.overrides.party import set_gst_category
 from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
@@ -17,13 +17,6 @@ def validate(doc, method=None):
     validate_overseas_gst_category(doc)
     validate_state(doc)
     validate_pincode(doc)
-
-
-def set_gst_category(doc):
-    if not doc.gstin and doc.gst_category == "Overseas" and doc.country != "India":
-        return
-
-    _set_gst_category(doc)
 
 
 def validate_overseas_gst_category(doc):

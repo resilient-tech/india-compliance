@@ -23,13 +23,6 @@ def validate_party(doc, method=None):
 
 
 def set_gst_category(doc):
-    if not doc.gstin and doc.gst_category == "Overseas":
-        return
-
-    _set_gst_category(doc)
-
-
-def _set_gst_category(doc):
     """
     Set GST Category from GSTIN.
     """
@@ -41,34 +34,20 @@ def _set_gst_category(doc):
     doc.gst_category = gst_category
 
     frappe.msgprint(
-        _("GST Category has been updated to {0}.").format(frappe.bold(gst_category)),
+        _("GST Category updated to {0}.").format(frappe.bold(gst_category)),
         indicator="green",
         alert=True,
     )
 
 
 def fetch_or_guess_gst_category(doc):
-    if (
-        doc.gstin
-        and doc.gst_category in (None, "Unregistered")
-        and is_autofill_party_info_enabled()
-    ):
+    if doc.gstin and is_autofill_party_info_enabled():
         gstin_info = get_gstin_info(doc.gstin, throw_error=False) or {}
 
         if gstin_info.get("gst_category"):
             return gstin_info.gst_category
 
-    gst_category = guess_gst_category(doc.gstin, doc.get("country"))
-
-    if gst_category == "Registered Regular" and doc.gst_category in (
-        "Registered Regular",
-        "Registered Composition",
-        "SEZ",
-        "Deemed Export",
-    ):
-        gst_category = doc.gst_category
-
-    return gst_category
+    return guess_gst_category(doc.gstin, doc.get("country"), doc.gst_category)
 
 
 def validate_pan(doc):
