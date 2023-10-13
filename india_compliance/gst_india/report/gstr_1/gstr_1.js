@@ -40,7 +40,7 @@ frappe.query_reports["GSTR-1"] = {
 			"label": __("From Date"),
 			"fieldtype": "Date",
 			"reqd": 1,
-			"default": frappe.datetime.add_months(frappe.datetime.get_today(), -3),
+			"default": india_compliance.last_month_start(),
 			"width": "80"
 		},
 		{
@@ -48,7 +48,7 @@ frappe.query_reports["GSTR-1"] = {
 			"label": __("To Date"),
 			"fieldtype": "Date",
 			"reqd": 1,
-			"default": frappe.datetime.get_today()
+			"default": india_compliance.last_month_end(),
 		},
 		{
 			"fieldname": "type_of_business",

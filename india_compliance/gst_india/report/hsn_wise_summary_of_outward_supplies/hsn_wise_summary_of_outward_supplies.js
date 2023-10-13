@@ -35,7 +35,7 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 			"label": __("From Date"),
 			"fieldtype": "Date",
 			"width": "80",
-			"default": frappe.datetime.add_months(frappe.datetime.get_today(), -1)
+			"default": india_compliance.last_month_start()
 		},
 		{
 			"fieldname":"to_date",
@@ -43,7 +43,7 @@ frappe.query_reports["HSN-wise-summary of outward supplies"] = {
 			"fieldtype": "Date",
 			"width": "80",
 			"mandatory_depends_on": "eval: doc.from_date",
-			"default": frappe.datetime.get_today()
+			"default": india_compliance.last_month_end()
 		},
 
 	],
