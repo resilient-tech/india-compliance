@@ -65,7 +65,7 @@ india_compliance.FilterGroup = class FilterGroup extends frappe.ui.FilterGroup {
 
     constructor(opts) {
         if (!opts.parent)
-            frappe.throw("india_compliance.FilterGroup: Parent element not found");
+            frappe.throw(__("india_compliance.FilterGroup: Parent element not found"));
 
         FILTER_GROUP_BUTTON.appendTo(opts.parent);
 

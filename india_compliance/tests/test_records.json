@@ -178,6 +178,7 @@
         },
         {
             "name": "_Test Foreign Supplier",
+            "country": "United States",
             "supplier_name": "_Test Foreign Supplier",
             "supplier_type": "Individual",
             "gstin": "",

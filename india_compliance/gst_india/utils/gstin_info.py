@@ -42,7 +42,7 @@ def get_gstin_info(gstin, *, throw_error=True):
             if throw_error:
                 raise exc
 
-            frappe.log_error(title="Failed to Fetch GSTIN Info", exc=exc)
+            frappe.log_error(title="Failed to Fetch GSTIN Info", message=exc)
             frappe.clear_last_message()
             return
 
