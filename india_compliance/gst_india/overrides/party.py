@@ -23,7 +23,7 @@ def validate_party(doc, method=None):
 
 
 def set_gst_category(doc):
-    if not doc.gstin and doc.gst_category in ("Unregistered", "Overseas"):
+    if not doc.gstin and doc.gst_category == "Overseas":
         return
 
     _set_gst_category(doc)
@@ -38,32 +38,35 @@ def _set_gst_category(doc):
     if doc.gst_category == gst_category:
         return
 
-    if gst_category == "Registered Regular" and doc.gst_category in (
-        "Registered Regular",
-        "Registered Composition",
-        "SEZ",
-        "Deemed Export",
-    ):
-        return
-
     doc.gst_category = gst_category
 
     frappe.msgprint(
-        _("GST Category has been updated to {0} based on GSTIN.").format(
-            frappe.bold(gst_category)
-        ),
+        _("GST Category has been updated to {0}.").format(frappe.bold(gst_category)),
         indicator="green",
         alert=True,
     )
 
 
 def fetch_or_guess_gst_category(doc):
+    if (
+        doc.gstin
+        and doc.gst_category in (None, "Unregistered")
+        and is_autofill_party_info_enabled()
+    ):
+        gstin_info = get_gstin_info(doc.gstin, throw_error=False) or {}
+
+        if gstin_info.get("gst_category"):
+            return gstin_info.gst_category
+
     gst_category = guess_gst_category(doc.gstin, doc.get("country"))
 
-    if doc.gstin and not doc.gst_category and is_autofill_party_info_enabled():
-        gstin_info = get_gstin_info(doc.gstin, throw_error=False) or {}
-        if gstin_info.get("gst_category"):
-            gst_category = gstin_info.gst_category
+    if gst_category == "Registered Regular" and doc.gst_category in (
+        "Registered Regular",
+        "Registered Composition",
+        "SEZ",
+        "Deemed Export",
+    ):
+        gst_category = doc.gst_category
 
     return gst_category
 

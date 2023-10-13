@@ -21,10 +21,7 @@ frappe.ui.form.on(DOCTYPE, {
             return;
         }
 
-        frm.set_value(
-            "gst_category",
-            india_compliance.guess_gst_category(frm.doc.gstin, frm.doc.country)
-        );
+        frm.trigger("gstin");
     },
     async refresh(frm) {
         india_compliance.set_state_options(frm);

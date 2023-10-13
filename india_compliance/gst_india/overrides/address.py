@@ -20,7 +20,7 @@ def validate(doc, method=None):
 
 
 def set_gst_category(doc):
-    if not doc.gstin and doc.gst_category == "Unregistered" and doc.country == "India":
+    if not doc.gstin and doc.gst_category == "Overseas" and doc.country != "India":
         return
 
     _set_gst_category(doc)
