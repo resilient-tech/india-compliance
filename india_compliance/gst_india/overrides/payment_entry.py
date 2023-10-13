@@ -291,6 +291,9 @@ def get_taxes_summary(company, payment_entries):
         if advance.reference_type == "Payment Entry"
     ]
 
+    if not references:
+        return {}
+
     gl_entry = frappe.qb.DocType("GL Entry")
     pe = frappe.qb.DocType("Payment Entry")
     taxes = (
