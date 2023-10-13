@@ -260,7 +260,6 @@ class PurchaseReconciliationTool {
         this.filter_group = new india_compliance.FilterGroup({
             doctype: "Purchase Reconciliation Tool",
             filter_button: filter_button_group.find(".filter-button"),
-            filter_x_button: filter_button_group.find(".filter-x-button"),
             filter_options: {
                 fieldname: "supplier_name",
                 filter_fields: this.get_filter_fields(),
@@ -268,6 +267,13 @@ class PurchaseReconciliationTool {
             on_change: () => {
                 this.refresh();
             },
+        });
+
+        filter_button_group.find(".filter-x-button").on("click", () => {
+            this.filter_group.toggle_empty_filters(true);
+            this.filter_group.clear_filters();
+            this.filter_group.update_filter_button();
+            this.filter_group.on_change();
         });
     }
 
