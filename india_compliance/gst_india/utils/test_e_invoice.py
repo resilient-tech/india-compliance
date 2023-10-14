@@ -634,7 +634,8 @@ class TestEInvoice(FrappeTestCase):
 
         self.assertEqual(
             json.loads(frappe.message_log[-1]).get("message"),
-            "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
+            "You have already generated e-Waybill/e-Invoice for this document."
+            " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
     @responses.activate
