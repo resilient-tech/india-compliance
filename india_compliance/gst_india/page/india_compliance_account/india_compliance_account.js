@@ -4,5 +4,5 @@ frappe.pages["india-compliance-account"].on_page_load = async function (wrapper)
         "india_compliance_account.bundle.css",
     ]);
 
-    icAccountPage = new india_compliance.pages.IndiaComplianceAccountPage(wrapper, PAGE_NAME);
+    new india_compliance.pages.IndiaComplianceAccountPage(wrapper);
 };
