@@ -1269,9 +1269,9 @@ class BaseUtil:
         return inv
 
     @staticmethod
-    def get_dict_for_key(key, list):
+    def get_dict_for_key(key, args_list):
         new_dict = frappe._dict()
-        for data in list:
+        for data in args_list:
             new_dict.setdefault(data[key], {})[data.name] = data
 
         return new_dict

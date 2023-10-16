@@ -185,7 +185,7 @@ class TestEInvoice(FrappeTestCase):
         si = create_sales_invoice(do_not_submit=True)
         item_row = si.get("items")[0]
 
-        for index in range(0, 1000):
+        for _ in range(0, 1000):
             si.append(
                 "items",
                 {
