@@ -204,20 +204,21 @@ class TestTransaction(FrappeTestCase):
             doc.submit,
         )
 
-    def test_invalid_hsn_digits(self):
+    def test_invalid_hsn(self):
         if not self.is_sales_doctype:
             return
 
-        # default GST Setting is 6 digits.
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
 
+        # default GST Setting is 6 digits - set incorrect hsn code
         doc.items[0].gst_hsn_code = "12345"
-        doc.save()
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(Please enter a valid HSN/SAC code for.*)$"),
-            doc.submit,
-        )
+
+        # correct hsn for item code should be fetched when submit is triggered
+        doc.submit()
+
+        doc.load_from_db()
+        item_hsn = frappe.get_cached_value("Item", doc.items[0].item_code, "gst_hsn_code")
+        self.assertEqual(doc.items[0].gst_hsn_code, item_hsn)
 
     def test_reverse_charge_transaction(self):
         if self.is_sales_doctype:
