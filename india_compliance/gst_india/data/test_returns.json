@@ -1,0 +1,33 @@
+{
+    "gstn_public_certificate": {
+        "request_args": {},
+        "response": {
+            "statusCode": 200,
+            "certificate": "-----BEGIN CERTIFICATE-----\nMIID+TCCAuGgAwIBAgIUX2J9pb/zMeCtxWKjLngSKhwi704wDQYJKoZIhvcNAQEL\nBQAwgYsxCzAJBgNVBAYTAklOMRAwDgYDVQQIDAdIYXJ5YW5hMRAwDgYDVQQHDAdH\ndXJnYW9uMRAwDgYDVQQKDAdJbmZvc3lzMQ0wCwYDVQQLDARJTkREMREwDwYDVQQD\nDAhkYzFhbnNiMjEkMCIGCSqGSIb3DQEJARYVYW1hcmppdC5zQGluZm9zeXMuY29t\nMB4XDTIzMDYyMTEyMDQxNVoXDTI0MDYyMDEyMDQxNVowgYsxCzAJBgNVBAYTAklO\nMRAwDgYDVQQIDAdIYXJ5YW5hMRAwDgYDVQQHDAdHdXJnYW9uMRAwDgYDVQQKDAdJ\nbmZvc3lzMQ0wCwYDVQQLDARJTkREMREwDwYDVQQDDAhkYzFhbnNiMjEkMCIGCSqG\nSIb3DQEJARYVYW1hcmppdC5zQGluZm9zeXMuY29tMIIBIjANBgkqhkiG9w0BAQEF\nAAOCAQ8AMIIBCgKCAQEAgT9WDfNxyzEW3rWzR2Me6mqUl0zZSEfyKCE/rEuBPwHS\nUU40o2INl8CPQFv20g8NJ2sUru+RDyZRO7/X60JDij/ia3DZELkLJqozpS1GwK4U\n072l31lVLfZOzGC54q34EU3MQMt1KXdaVUZCC3tCEDAOpI+dI1Uw3VXI0E8HSQbA\nSPhmDd3ZYQ/lYEvlkfum7/D3cAE7oUJQVNDksxixc6veWXRZQmTtEdBcUuQv2rf7\nV2XcWYnOgs68nbLTLAKzLLyb4oE+wQXHoqFafODIhbapkHd6Xi7rB19LFHIsM9US\n1Zpa6CMIxU7jsdEhLJ75Pn/Se/PFe521NMJYtdm/HQIDAQABo1MwUTAdBgNVHQ4E\nFgQUWTRCOrcGl/v4pC2iXoMYRGFJji8wHwYDVR0jBBgwFoAUWTRCOrcGl/v4pC2i\nXoMYRGFJji8wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAU2Gc\nRTdaP3C++bwFTN/n8vLYVPeMdnbqoYX0grLhlamxV/gglrqxXiHZ442iOc3K/ZM2\nCEETNm9XEnlWruVTr9XO2mvgOb02cMjVS7mueWQInPeghoVsFvVXRlrgIAjVKH3S\ncA9Kyo6aCFRHXm7bcaaAOPy9VQxuVvO0v7oX5Q+t1awN2DBKaqJbI1u7YJJxFQ4M\nxDuMdFGwHcwX+mx2Laq794VITWlY6bpR/Ssp5lfPHtTNHeDFb6FUAzKXNGW/KZPZ\niGHGdZdtI54m1b6UI8eUcwVC3H01IOwGRr2HeKVTHRzs7zUjOD/J8ihhUFpGFHRL\nXHaYHl8uwOmTAnqsKw==\n-----END CERTIFICATE-----"
+        }
+    },
+    "otp_request": {
+        "headers": {
+            "x-api-key": "anythingyoulike",
+            "gstin": "24AUTPV8831F1ZZ",
+            "state-cd": "24",
+            "username": "resilient.tech",
+            "ip-usr": "49.36.91.119",
+            "txn": "76012604de8cb80cb287c269fe8e6f88"
+        },
+        "request_args": {
+            "action": "OTPREQUEST",
+            "app_key": "ATsjXp/j13I2CeoPLDubNFvnB6M9/kGbUvsiwuSfWUvFXksX6LO1gFUDhrLJDCs5bP5Pn8y4ivXX0XPz85fih+H5E0p6q+7bN3ofv6SPjT1VAj+uxHom+mZB9fwH2xPEKsUzdUoQuXM1rrJ3ezxWFACU2lBRanltxD9fWUGFCylDoKSMeW35loIei1gEDv5heITLoInhiOHCKDKjDfLNdY7Im/FvqOkNTswquU7UhjgY+31cx2rUrRxw1/Fa1raGibiYE9yOy2XbFBGYilTE0dSdGFT5TXVvnqIApJQEgFJ/WJ/sEoOB/SeJe/7x9cm2c+0hMom4WL2ZkYxrOcrpRQ==",
+            "username": "resilient.tech"
+        },
+        "response": { "status_cd": 1 }
+    },
+    "authenticate_otp": {
+        "request_args": {
+            "action": "AUTHTOKEN",
+            "app_key": "Td3kESJS8Ef0f6az6gB37y4vE/UQzXT0YoUK48QHV+p2K8GJ9mixPaxnQuG1L7ydsg4+lU8sUactd4qE7Dn8VX9wi9u/HwEWp41ONQHJ95SJFz9+bTWsY9s73rXdtIFAKHaeRjHSDMHzRv5ikdFpy0/z3vOd2QzhmHxND4Oxy2qfN8u2H06ZvjCqi5/5NFoV2WUtv53io+44rniBmQRBdCsWnU7gD2SPEz3juZPoYS73jxGFz2M9N/2qyk9FDGzkVuYSwBCMtpBBvM5La4t7OQHP3aibsxqJjaXbTNOKabarmgcKVxpbL872+YqV7rEpdTUjjMsawReEQt5RzK7Uyw==",
+            "username": "resilient.tech",
+            "otp": "eSz9p6qTVHEb4LP4sCtc2Q=="
+        }
+    }
+}
