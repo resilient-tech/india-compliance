@@ -217,7 +217,9 @@ class TestTransaction(FrappeTestCase):
         doc.submit()
 
         doc.load_from_db()
-        item_hsn = frappe.get_cached_value("Item", doc.items[0].item_code, "gst_hsn_code")
+        item_hsn = frappe.get_cached_value(
+            "Item", doc.items[0].item_code, "gst_hsn_code"
+        )
         self.assertEqual(doc.items[0].gst_hsn_code, item_hsn)
 
     def test_reverse_charge_transaction(self):
