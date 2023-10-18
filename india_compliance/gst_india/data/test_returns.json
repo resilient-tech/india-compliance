@@ -23,11 +23,25 @@
         "response": { "status_cd": 1 }
     },
     "authenticate_otp": {
+        "headers": {
+            "x-api-key": "anythingyoulike",
+            "gstin": "24AUTPV8831F1ZZ",
+            "state-cd": "24",
+            "username": "resilient.tech",
+            "ip-usr": "49.36.91.119",
+            "txn": "dec9af9cce5063c9d28977ac314b3576"
+        },
         "request_args": {
             "action": "AUTHTOKEN",
             "app_key": "Td3kESJS8Ef0f6az6gB37y4vE/UQzXT0YoUK48QHV+p2K8GJ9mixPaxnQuG1L7ydsg4+lU8sUactd4qE7Dn8VX9wi9u/HwEWp41ONQHJ95SJFz9+bTWsY9s73rXdtIFAKHaeRjHSDMHzRv5ikdFpy0/z3vOd2QzhmHxND4Oxy2qfN8u2H06ZvjCqi5/5NFoV2WUtv53io+44rniBmQRBdCsWnU7gD2SPEz3juZPoYS73jxGFz2M9N/2qyk9FDGzkVuYSwBCMtpBBvM5La4t7OQHP3aibsxqJjaXbTNOKabarmgcKVxpbL872+YqV7rEpdTUjjMsawReEQt5RzK7Uyw==",
             "username": "resilient.tech",
             "otp": "eSz9p6qTVHEb4LP4sCtc2Q=="
+        },
+        "response": {
+            "auth_token": "6411ec6ce80f4bdeb92177c7821a0d30",
+            "sek": "2w47O2zdHB3l6IkEC6pwmg/KTPnurbeiErHrRK0a8BYI7/4ocxOw5FEnI3PXpTlF",
+            "expiry": 43200,
+            "status_cd": 1
         }
     }
 }

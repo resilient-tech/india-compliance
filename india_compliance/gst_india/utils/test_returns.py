@@ -7,6 +7,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.returns import (
     PublicCertificate,
+    ReturnsAPI,
     ReturnsAuthenticate,
 )
 
@@ -15,6 +16,11 @@ class TestReturns(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+
+        cls.doc = frappe.get_doc("Purchase Reconciliation Tool")
+        cls.doc.company = "_Test Indian Registered Company"
+        cls.doc.company_gstin = "24AUTPV8831F1ZZ"
+        cls.doc.save()
 
         cls.test_data = frappe._dict(
             frappe.get_file_json(
@@ -30,7 +36,7 @@ class TestReturns(FrappeTestCase):
         public_certificate_data = self.test_data.get("gstn_public_certificate")
         self._mock_api_response(
             method="GET",
-            api="static/gstn_g2b_prod_public",
+            api="test/static/gstn_g2b_prod_public",
             data=public_certificate_data.get("response"),
         )
 
@@ -52,6 +58,8 @@ class TestReturns(FrappeTestCase):
         api = "standard/gstn/authenticate"
         otp_request_data = self.test_data.get("otp_request")
 
+        api = ReturnsAPI(self.doc.company_gstin)
+
         # Request OTP
         self._mock_api_response(
             api=api,
@@ -70,10 +78,24 @@ class TestReturns(FrappeTestCase):
         )
 
         # Authenticate OTP
+        authentication_data = self.test_data.get("authenticate_otp")
+        self._mock_api_response(
+            api=api,
+            data=authentication_data.get("response"),
+            match_list=[
+                matchers.header_matcher(authentication_data.get("headers")),
+                matchers.json_params_matcher(authentication_data.get("request_args")),
+            ],
+        )
+
+        self.assertEqual(
+            ReturnsAuthenticate().autheticate_with_otp(),
+            authentication_data.get("response"),
+        )
 
     def _mock_api_response(self, method="POST", api=None, data=None, match_list=None):
         """Mock Return APIs response for given data and match_list"""
-        url = f"{BASE_URL}/test/{api}"
+        url = f"{BASE_URL}/{api}"
 
         response_method = responses.GET if method == "GET" else responses.POST
 
@@ -81,6 +103,6 @@ class TestReturns(FrappeTestCase):
             response_method,
             url,
             json=data,
-            match=match_list,
+            match=match_list or [],
             status=200,
         )
