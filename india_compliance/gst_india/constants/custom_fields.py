@@ -67,6 +67,13 @@ CUSTOM_FIELDS = {
             "options": "Account",
             "insert_after": "default_finance_book",
         },
+        {
+            "fieldname": "default_gst_expense_account",
+            "label": "Default GST Expense Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "default_customs_expense_account",
+        },
     ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
@@ -308,6 +315,7 @@ CUSTOM_FIELDS = {
         "Sales Invoice Item",
         "POS Invoice Item",
         "Purchase Invoice Item",
+        "Purchase Receipt Item",
     ): [
         {
             "fieldname": "taxable_value",
@@ -318,6 +326,22 @@ CUSTOM_FIELDS = {
             "options": "Company:company:default_currency",
             "print_hide": 1,
             "no_copy": 1,
+        },
+    ],
+    (
+        "Supplier Quotation Item",
+        "Purchase Order Item",
+        "Purchase Receipt Item",
+        "Purchase Invoice Item",
+    ): [
+        {
+            "fieldname": "is_ineligible_for_itc",
+            "label": "Is Ineligible for Input Tax Credit",
+            "fieldtype": "Check",
+            "fetch_from": "item_code.is_ineligible_for_itc",
+            "insert_after": "is_nil_exempt",
+            "fetch_if_empty": 1,
+            "print_hide": 1,
         },
     ],
     "Sales Invoice": [
@@ -377,24 +401,34 @@ CUSTOM_FIELDS = {
             "collapsible": 1,
         },
         {
-            "fieldname": "eligibility_for_itc",
-            "label": "Eligibility For ITC",
+            "fieldname": "itc_classification",
+            "label": "ITC Classification",
             "fieldtype": "Select",
             "insert_after": "gst_section",
             "print_hide": 1,
             "options": (
                 "Input Service Distributor\nImport Of Service\nImport Of"
-                " Goods\nITC on Reverse Charge\nIneligible As Per Section"
-                " 17(5)\nIneligible Others\nAll Other ITC"
+                " Goods\nITC on Reverse Charge\nAll Other ITC"
             ),
             "default": "All Other ITC",
             "translatable": 0,
         },
         {
+            "fieldname": "ineligibility_reason",
+            "label": "Reason for Ineligibility",
+            "fieldtype": "Select",
+            "insert_after": "itc_classification",
+            "options": (
+                "\nIneligible As Per Section 17(5)\nITC restricted due to PoS rules"
+            ),
+            "read_only": 1,
+            "print_hide": 1,
+        },
+        {
             "fieldname": "reconciliation_status",
             "label": "Reconciliation Status",
             "fieldtype": "Select",
-            "insert_after": "eligibility_for_itc",
+            "insert_after": "ineligibility_reason",
             "print_hide": 1,
             "options": ("\nNot Applicable\nReconciled\nUnreconciled\nIgnored"),
             "no_copy": 1,
@@ -407,26 +441,29 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "itc_integrated_tax",
-            "label": "Availed ITC Integrated Tax",
+            "label": "Integrated Tax",
             "fieldtype": "Currency",
             "insert_after": "gst_col_break",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
         {
             "fieldname": "itc_central_tax",
-            "label": "Availed ITC Central Tax",
+            "label": "Central Tax",
             "fieldtype": "Currency",
             "insert_after": "itc_integrated_tax",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
         {
             "fieldname": "itc_state_tax",
-            "label": "Availed ITC State/UT Tax",
+            "label": "State/UT Tax",
             "fieldtype": "Currency",
             "insert_after": "itc_central_tax",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
         {
@@ -435,6 +472,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Currency",
             "insert_after": "itc_state_tax",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
     ],
@@ -584,7 +622,7 @@ CUSTOM_FIELDS = {
     ],
     "Journal Entry": [
         {
-            "fieldname": "reversal_type",
+            "fieldname": "ineligibility_reason",
             "label": "Reversal Type",
             "fieldtype": "Select",
             "insert_after": "voucher_type",
@@ -646,6 +684,12 @@ CUSTOM_FIELDS = {
             "label": "Is Non GST ",
             "fieldtype": "Check",
             "insert_after": "is_nil_exempt",
+        },
+        {
+            "fieldname": "is_ineligible_for_itc",
+            "label": "Is Ineligible for Input Tax Credit",
+            "fieldtype": "Check",
+            "insert_after": "item_tax_section_break",
         },
     ],
 }

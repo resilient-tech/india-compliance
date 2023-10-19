@@ -93,7 +93,7 @@ class GSTR3BReport(Document):
     def get_itc_reversal_entries(self):
         reversal_entries = frappe.db.sql(
             """
-            SELECT ja.account, j.reversal_type, sum(credit_in_account_currency) as amount
+            SELECT ja.account, j.ineligibility_reason, sum(credit_in_account_currency) as amount
             FROM `tabJournal Entry` j, `tabJournal Entry Account` ja
             where j.docstatus = 1
             and j.is_opening = 'No'
@@ -101,7 +101,7 @@ class GSTR3BReport(Document):
             and j.voucher_type = 'Reversal Of ITC'
             and month(j.posting_date) = %s and year(j.posting_date) = %s
             and j.company = %s and j.company_gstin = %s
-            GROUP BY ja.account, j.reversal_type""",
+            GROUP BY ja.account, j.ineligibility_reason""",
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
             as_dict=1,
         )
@@ -109,7 +109,7 @@ class GSTR3BReport(Document):
         net_itc = self.report_dict["itc_elg"]["itc_net"]
 
         for entry in reversal_entries:
-            if entry.reversal_type == "As per rules 42 & 43 of CGST Rules":
+            if entry.ineligibility_reason == "As per rules 42 & 43 of CGST Rules":
                 index = 0
             else:
                 index = 1
@@ -124,7 +124,7 @@ class GSTR3BReport(Document):
     def get_itc_details(self):
         itc_amounts = frappe.db.sql(
             """
-            SELECT eligibility_for_itc, sum(itc_integrated_tax) as itc_integrated_tax,
+            SELECT itc_classification, sum(itc_integrated_tax) as itc_integrated_tax,
             sum(itc_central_tax) as itc_central_tax,
             sum(itc_state_tax) as itc_state_tax,
             sum(itc_cess_amount) as itc_cess_amount
@@ -133,7 +133,7 @@ class GSTR3BReport(Document):
             and is_opening = 'No'
             and month(posting_date) = %s and year(posting_date) = %s and company = %s
             and company_gstin = %s
-            GROUP BY eligibility_for_itc
+            GROUP BY itc_classification
         """,
             (self.month_no, self.year, self.company, self.gst_details.get("gstin")),
             as_dict=1,
@@ -142,7 +142,7 @@ class GSTR3BReport(Document):
         itc_details = {}
         for d in itc_amounts:
             itc_details.setdefault(
-                d.eligibility_for_itc,
+                d.itc_classification,
                 {
                     "iamt": d.itc_integrated_tax,
                     "camt": d.itc_central_tax,

@@ -101,7 +101,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     "width": 100,
                 },
                 {
-                    "fieldname": "eligibility_for_itc",
+                    "fieldname": "itc_classification",
                     "label": _("Eligibility for ITC"),
                     "fieldtype": "Data",
                     "width": 100,
@@ -118,7 +118,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
 
         self.data = sorted(
             data,
-            key=lambda k: (k["eligibility_for_itc"], k["posting_date"]),
+            key=lambda k: (k["itc_classification"], k["posting_date"]),
         )
 
     def get_itc_from_purchase(self):
@@ -130,7 +130,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 ConstantColumn("Purchase Invoice").as_("voucher_type"),
                 purchase_invoice.name.as_("voucher_no"),
                 purchase_invoice.posting_date,
-                purchase_invoice.eligibility_for_itc,
+                purchase_invoice.itc_classification,
                 Sum(purchase_invoice.itc_integrated_tax).as_("integrated_tax"),
                 Sum(purchase_invoice.itc_central_tax).as_("central_tax"),
                 Sum(purchase_invoice.itc_state_tax).as_("state_tax"),
@@ -142,7 +142,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
-                & (Ifnull(purchase_invoice.eligibility_for_itc, "") != "")
+                & (Ifnull(purchase_invoice.itc_classification, "") != "")
             )
             .groupby(purchase_invoice.name)
         )
@@ -180,7 +180,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 ).as_("cess_amount"),
                 LiteralValue(0).as_("central_tax"),
                 LiteralValue(0).as_("state_tax"),
-                ConstantColumn("Import of Goods").as_("eligibility_for_itc"),
+                ConstantColumn("Import of Goods").as_("itc_classification"),
             )
             .where(
                 (boe.docstatus == 1)
@@ -237,7 +237,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     )
                     .else_(0)
                 ).as_("cess_amount"),
-                journal_entry.reversal_type.as_("eligibility_for_itc"),
+                journal_entry.ineligibility_reason.as_("itc_classification"),
             )
             .where(
                 (journal_entry.docstatus == 1)

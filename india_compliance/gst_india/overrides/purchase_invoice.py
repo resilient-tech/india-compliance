@@ -47,6 +47,7 @@ def validate(doc, method=None):
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
     set_reconciliation_status(doc)
+    set_ineligibility_reason(doc)
 
 
 def set_reconciliation_status(doc):
@@ -70,8 +71,8 @@ def is_b2b_invoice(doc):
 
 def update_itc_totals(doc, method=None):
     # Set default value
-    if not doc.eligibility_for_itc:
-        doc.eligibility_for_itc = "All Other ITC"
+    if not doc.itc_classification:
+        doc.itc_classification = "All Other ITC"
 
     # Initialize values
     doc.itc_integrated_tax = 0
@@ -200,3 +201,15 @@ def get_tax_amount(taxes, account_head):
             if tax.account_head == account_head
         ]
     )
+
+
+def set_ineligibility_reason(doc):
+    doc.ineligibility_reason = ""
+
+    for item in doc.items:
+        if item.is_ineligible_for_itc:
+            doc.ineligibility_reason = "Ineligible As Per Section 17(5)"
+            break
+
+    if doc.place_of_supply[:2] != doc.company_gstin[:2]:
+        doc.ineligibility_reason = "ITC restricted due to PoS rules"
