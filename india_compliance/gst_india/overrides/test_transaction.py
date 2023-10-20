@@ -208,10 +208,42 @@ class TestTransaction(FrappeTestCase):
         if not self.is_sales_doctype:
             return
 
-        # default GST Setting is 6 digits.
-        doc = create_transaction(**self.transaction_details, do_not_submit=True)
+        item_defaults = {
+            "company": "_Test Indian Registered Company",
+            "default_warehouse": "Stores - _TIRC",
+            "expense_account": "Cost of Goods Sold - _TIRC",
+            "buying_cost_center": "Main - _TIRC",
+            "selling_cost_center": "Main - _TIRC",
+            "income_account": "Sales - _TIRC",
+        }
 
-        doc.items[0].gst_hsn_code = "12345"
+        item_with_invalid_hsn = {
+            "doctype": "Item",
+            "item_code": "Test Item With Invalid HSN",
+            "item_name": "Test Item With Invalid HSN",
+            "item_group": "All Item Groups",
+            "gst_hsn_code": "73041",
+            "is_stock_item": 1,
+            "item_defaults": [item_defaults],
+        }
+
+        # create invalid hsn code
+        hsn = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "73041"})
+        hsn.flags.ignore_validate = True
+        hsn.insert()
+
+        # create invalid hsn item
+        item = frappe.get_doc(item_with_invalid_hsn)
+        item.flags.ignore_validate = True
+        item.insert()
+
+        # default GST Setting is 6 digits.
+        doc = create_transaction(
+            **self.transaction_details,
+            item_code="Test Item With Invalid HSN",
+            do_not_submit=True,
+        )
+
         doc.save()
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
