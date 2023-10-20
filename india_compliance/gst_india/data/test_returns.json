@@ -1,4 +1,5 @@
 {
+    "old_certificate": "-----BEGIN CERTIFICATE-----\nMIIDVzCCAj+gAwIBAgIJAI5glYwVEozuMA0GCSqGSIb3DQEBCwUAMEIxCzAJBgNV\nBAYTAklOMRUwEwYDVQQHDAxEZWZhdWx0IENpdHkxHDAaBgNVBAoME0RlZmF1bHQg\nQ29tcGFueSBMdGQwHhcNMjIwNjI4MDUyNzM5WhcNMjMwNjI4MDUyNzM5WjBCMQsw\nCQYDVQQGEwJJTjEVMBMGA1UEBwwMRGVmYXVsdCBDaXR5MRwwGgYDVQQKDBNEZWZh\ndWx0IENvbXBhbnkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\n55lQtKSgtDRcCG4GmN+NSMyMH9t5TMp1kc0wmrwBqyrAvpre/oHKSmT0W+T2EEpU\n1/b/9uCTICWMBHFdSHNZO6Aqw9c1QYi6GmQeCGGCeyoxMmXWE90Ks4JXHAkKiLB8\ng1xocZvOCrvs4aTNohogfFfK/ohEF8rYUKgD1TSlH9exTHyGvQ7LKaCgsfFgy76q\ncN3RTYPVf/NZgBiHF+tHg61oA2vXYuE5J6rEPH2XK51YiITOjz0lGbeVciOg/koR\ngvcaXIhJl9AZzeNGrPeeye2axqtA8JFAcfMvZTzhbFDbhJK/C1BbRN/OUE/1cze3\nFOaTOdf44cQo6Stqjxm8YwIDAQABo1AwTjAdBgNVHQ4EFgQUQ2/eUQeMS3m7pYTM\nmW5ug1PORxcwHwYDVR0jBBgwFoAUQ2/eUQeMS3m7pYTMmW5ug1PORxcwDAYDVR0T\nBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEA3ur5GjddIQOC8jnb0bQun0OutfDQ\nZxO8DARdbdHhRvzQ2uho/L7spsqYE5zh9nq/9pawsXPJcj2TMcUtM80qgKyVJBJD\nbHl7HbnZYaoervXy6ekec+a0dguklw6avhw+exW+4vCKENVKsKvddEijaxQmoreN\nE2mS7ntcHwFfqY9zAzsyK4CTX7HGw2W1rzjMjzFGDCD/f2qstLAuQYiT0bgvvH86\nccHQ7RtSuvs39Sa89gwZqsKmSV6rCjtaLMlklyAz8R3RnW5CCko4gvw9O7eR1Q+9\nzQUxZvMeGxxDW9wrZfWR0P/2UgpqxkhLV6Sg5+Q3vGdT5sZMtzF/W4M+Zg==\n-----END CERTIFICATE-----",
     "gstn_public_certificate": {
         "request_args": {},
         "response": {
@@ -11,35 +12,35 @@
             "x-api-key": "anythingyoulike",
             "gstin": "24AUTPV8831F1ZZ",
             "state-cd": "24",
-            "username": "resilient.tech",
+            "username": "admin",
             "ip-usr": "49.36.91.119",
             "txn": "76012604de8cb80cb287c269fe8e6f88"
         },
         "request_args": {
             "action": "OTPREQUEST",
             "app_key": "ATsjXp/j13I2CeoPLDubNFvnB6M9/kGbUvsiwuSfWUvFXksX6LO1gFUDhrLJDCs5bP5Pn8y4ivXX0XPz85fih+H5E0p6q+7bN3ofv6SPjT1VAj+uxHom+mZB9fwH2xPEKsUzdUoQuXM1rrJ3ezxWFACU2lBRanltxD9fWUGFCylDoKSMeW35loIei1gEDv5heITLoInhiOHCKDKjDfLNdY7Im/FvqOkNTswquU7UhjgY+31cx2rUrRxw1/Fa1raGibiYE9yOy2XbFBGYilTE0dSdGFT5TXVvnqIApJQEgFJ/WJ/sEoOB/SeJe/7x9cm2c+0hMom4WL2ZkYxrOcrpRQ==",
-            "username": "resilient.tech"
+            "username": "admin"
         },
-        "response": { "status_cd": 1 }
+        "response": { "status_cd": 1, "error_type": "otp_requested" }
     },
     "authenticate_otp": {
         "headers": {
             "x-api-key": "anythingyoulike",
             "gstin": "24AUTPV8831F1ZZ",
             "state-cd": "24",
-            "username": "resilient.tech",
+            "username": "admin",
             "ip-usr": "49.36.91.119",
             "txn": "dec9af9cce5063c9d28977ac314b3576"
         },
         "request_args": {
             "action": "AUTHTOKEN",
-            "app_key": "Td3kESJS8Ef0f6az6gB37y4vE/UQzXT0YoUK48QHV+p2K8GJ9mixPaxnQuG1L7ydsg4+lU8sUactd4qE7Dn8VX9wi9u/HwEWp41ONQHJ95SJFz9+bTWsY9s73rXdtIFAKHaeRjHSDMHzRv5ikdFpy0/z3vOd2QzhmHxND4Oxy2qfN8u2H06ZvjCqi5/5NFoV2WUtv53io+44rniBmQRBdCsWnU7gD2SPEz3juZPoYS73jxGFz2M9N/2qyk9FDGzkVuYSwBCMtpBBvM5La4t7OQHP3aibsxqJjaXbTNOKabarmgcKVxpbL872+YqV7rEpdTUjjMsawReEQt5RzK7Uyw==",
+            "app_key": "W910BmV7KcxSvMWG6UYAP9Dnb5lI8aTm1sjGg1O2GeI+ItKWSOsQyUZ7NKATIh+nAcIxh60XSbNF5UZ4aRGFePhh+a4RF2vFTOF10dJvWGtTplX5VlxuEzQBTVMQh7/uEvrcVsbqVoXmVu0UKeqXI9B+HaPZiBaBENLvEzC0yRD8oBHk8dEIi0wAqdWgbtoee5F+5Ec8S3vnPKZa8W1dnVZKRHYklyJxq+mCe09asUOHEp0Xq9gvqpwtEbRZz7Yywc4BtgdHx7xiFrXvl5kG0yTiPBCF5hwaJP42M6dW9L2OBMP1HepoU5GHYA79IF2tCxZh6bX/U2b5LWPzkRFAIw==",
             "username": "resilient.tech",
-            "otp": "eSz9p6qTVHEb4LP4sCtc2Q=="
+            "otp": "8N4Q55Su527yFuIlmx81zg=="
         },
         "response": {
-            "auth_token": "6411ec6ce80f4bdeb92177c7821a0d30",
-            "sek": "2w47O2zdHB3l6IkEC6pwmg/KTPnurbeiErHrRK0a8BYI7/4ocxOw5FEnI3PXpTlF",
+            "auth_token": "705811ea9c9c4fe0b97d8ca40fbd4d22",
+            "sek": "YmwgibfR9woFaj+xE0+XjsO+Yg/bpGPHayAqPLFe93YI7/4ocxOw5FEnI3PXpTlF",
             "expiry": 43200,
             "status_cd": 1
         }

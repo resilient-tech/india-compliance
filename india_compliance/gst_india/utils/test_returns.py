@@ -1,12 +1,13 @@
 import responses
-from responses import matchers
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.utils import now_datetime
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.returns import (
-    PublicCertificate,
     ReturnsAPI,
     ReturnsAuthenticate,
 )
@@ -19,7 +20,7 @@ class TestReturns(FrappeTestCase):
 
         cls.doc = frappe.get_doc("Purchase Reconciliation Tool")
         cls.doc.company = "_Test Indian Registered Company"
-        cls.doc.company_gstin = "24AUTPV8831F1ZZ"
+        cls.doc.company_gstin = "24AAQCA8719H1ZC"
         cls.doc.save()
 
         cls.test_data = frappe._dict(
@@ -30,13 +31,26 @@ class TestReturns(FrappeTestCase):
             )
         )
 
-    @change_settings("GST Settings", {"gstn_public_certificate": ""})
+        cls.settings = update_gst_settings(cls.test_data)
+
     @responses.activate
     def test_get_public_certificate(self):
+        # Test Old certificate
+        cert = x509.load_pem_x509_certificate(
+            self.settings.gstn_public_certificate.encode(), default_backend()
+        )
+        valid_up_to = cert.not_valid_after
+
+        self.assertTrue(valid_up_to < now_datetime(), True)
+
+        # Test generate certificate
+
+        self.settings.db_set("gstn_public_certificate", "")
+
         public_certificate_data = self.test_data.get("gstn_public_certificate")
         self._mock_api_response(
             method="GET",
-            api="test/static/gstn_g2b_prod_public",
+            api_endpoint="test/static/gstn_g2b_prod_public",
             data=public_certificate_data.get("response"),
         )
 
@@ -45,8 +59,8 @@ class TestReturns(FrappeTestCase):
         )
 
         self.assertEqual(
-            PublicCertificate().get_gstn_public_certificate(),
-            certificate_response,
+            ReturnsAuthenticate().get_public_certificate(),
+            certificate_response.encode(),
         )
 
         self.assertEqual(
@@ -54,48 +68,56 @@ class TestReturns(FrappeTestCase):
             certificate_response,
         )
 
+    @change_settings("GST Settings", {"sandbox_mode": 0})
+    @responses.activate
     def test_autheticate_with_otp(self):
         api = "standard/gstn/authenticate"
         otp_request_data = self.test_data.get("otp_request")
 
-        api = ReturnsAPI(self.doc.company_gstin)
-
-        # Request OTP
         self._mock_api_response(
-            api=api,
-            data=otp_request_data.get("response"),
-            match_list=[
-                matchers.header_matcher(
-                    otp_request_data.get("headers"),
-                    matchers.json_params_matcher(otp_request_data.get("request_args")),
-                )
-            ],
+            method="GET", url="https://api.ipify.org", data="202.47.112.9"
         )
 
-        self.assertEqual(
-            ReturnsAuthenticate().autheticate_with_otp(),
+        public_certificate_data = self.test_data.get("gstn_public_certificate")
+        self._mock_api_response(
+            method="GET",
+            api_endpoint="static/gstn_g2b_prod_public",
+            data=public_certificate_data.get("response"),
+        )
+
+        return_api = ReturnsAPI(self.doc.company_gstin)
+        # Request OTP
+        self._mock_api_response(
+            api_endpoint=api,
+            data=otp_request_data.get("response"),
+        )
+
+        self.assertDictEqual(
+            return_api.autheticate_with_otp(),
             otp_request_data.get("response"),
         )
 
         # Authenticate OTP
         authentication_data = self.test_data.get("authenticate_otp")
+
         self._mock_api_response(
-            api=api,
+            api_endpoint=api,
             data=authentication_data.get("response"),
-            match_list=[
-                matchers.header_matcher(authentication_data.get("headers")),
-                matchers.json_params_matcher(authentication_data.get("request_args")),
-            ],
         )
 
         self.assertEqual(
-            ReturnsAuthenticate().autheticate_with_otp(),
+            return_api.autheticate_with_otp(
+                authentication_data.get("request_args").get("otp")
+            ),
             authentication_data.get("response"),
         )
 
-    def _mock_api_response(self, method="POST", api=None, data=None, match_list=None):
+    def _mock_api_response(
+        self, method="POST", api_endpoint=None, url=None, data=None, match_list=None
+    ):
         """Mock Return APIs response for given data and match_list"""
-        url = f"{BASE_URL}/{api}"
+        if not url:
+            url = f"{BASE_URL}/{api_endpoint}"
 
         response_method = responses.GET if method == "GET" else responses.POST
 
@@ -106,3 +128,22 @@ class TestReturns(FrappeTestCase):
             match=match_list or [],
             status=200,
         )
+
+
+def update_gst_settings(test_data):
+    settings = frappe.get_doc("GST Settings")
+    settings.gstn_public_certificate = test_data.get("old_certificate")
+
+    settings.append(
+        "credentials",
+        {
+            "company": "_Test Indian Registered Company",
+            "service": "Returns",
+            "gstin": "24AAQCA8719H1ZC",
+            "username": "admin",
+            "app_key": "07d4fd376dd7a64b36ca081e28958cb7",
+        },
+    )
+
+    settings.save()
+    return settings
