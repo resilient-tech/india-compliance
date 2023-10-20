@@ -1,16 +1,17 @@
+import re
+
 import responses
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from frappe.utils import add_to_date, cint, now_datetime
+from frappe.utils import add_to_date, cint
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.returns import (
     ReturnsAPI,
     ReturnsAuthenticate,
 )
+from india_compliance.gst_india.utils.cryptography import encrypt_using_public_key
 
 
 class TestReturns(FrappeTestCase):
@@ -36,21 +37,22 @@ class TestReturns(FrappeTestCase):
     @responses.activate
     def test_get_public_certificate(self):
         # Test Old certificate
-        cert = x509.load_pem_x509_certificate(
-            self.settings.gstn_public_certificate.encode(), default_backend()
-        )
-        valid_up_to = cert.not_valid_after
 
-        self.assertTrue(valid_up_to < now_datetime(), True)
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Public Certificate has expired)$"),
+            encrypt_using_public_key,
+            "07d4fd376dd7a64b36ca081e28958cb7",
+            self.settings.gstn_public_certificate.encode(),
+        )
 
         # Test generate certificate
-
         self.settings.db_set("gstn_public_certificate", "")
 
         public_certificate_data = self.test_data.get("gstn_public_certificate")
         self._mock_api_response(
             method="GET",
-            api_endpoint="test/static/gstn_g2b_prod_public",
+            api_endpoint="static/gstn_g2b_prod_public",
             data=public_certificate_data.get("response"),
         )
 
