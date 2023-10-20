@@ -62,7 +62,7 @@ async function set_gstin_options(report) {
     const gstin_field = report.get_filter("company_gstin");
     gstin_field.set_data(options);
 
-    if (options.length == 1) gstin_field.set_value(options[0]);
+    if (options.length === 1) gstin_field.set_value(options[0]);
 }
 
 function toggle_filters(report) {
@@ -85,9 +85,8 @@ function add_custom_button_to_update_gstin(report) {
             if (!voucher_types.length) return;
 
             report._gst_accounts = company_accounts;
-            report.page.add_inner_button(
-                __("Update GSTIN"),
-                () => update_gstin_message(report, voucher_types)
+            report.page.add_inner_button(__("Update GSTIN"), () =>
+                update_gstin_message(report, voucher_types)
             );
         });
 }
@@ -107,7 +106,7 @@ async function update_gstin_message(report, voucher_types) {
 
     frappe.msg_dialog.custom_onhide = () => {
         report.refresh();
-    }
+    };
 }
 
 function get_update_gstin_message(report, voucher_types) {

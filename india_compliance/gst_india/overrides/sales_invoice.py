@@ -207,7 +207,8 @@ def on_update_after_submit(doc, method=None):
     if doc.ewaybill or doc.irn:
         frappe.msgprint(
             _(
-                "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
+                "You have already generated e-Waybill/e-Invoice for this document."
+                " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
             ),
             title="Possible Inconsistent Item Details",
             indicator="orange",
