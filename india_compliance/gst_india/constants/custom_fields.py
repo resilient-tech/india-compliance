@@ -282,7 +282,7 @@ CUSTOM_FIELDS = {
             "insert_after": "description",
             "allow_on_submit": 1,
             "print_hide": 1,
-            "fetch_if_empty": 1,
+            "fetch_if_empty": 0,
             "translatable": 0,
         },
         {
