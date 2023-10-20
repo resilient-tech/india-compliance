@@ -252,7 +252,7 @@ def validate_pincode(address):
     first_three_digits = cint(address.pincode[:3])
     pincode_range = STATE_PINCODE_MAPPING[address.state]
 
-    if type(pincode_range[0]) == int:
+    if isinstance(pincode_range[0], int):
         pincode_range = (pincode_range,)
 
     for lower_limit, upper_limit in pincode_range:

@@ -11,10 +11,10 @@
     }
 }
 
-.print-format tbody > tr > td,
-.print-format tbody > tr > th {
+.print-format tbody>tr>td,
+.print-format tbody>tr>th {
     padding: 6px !important;
-    border-top: None;
+    border-top: none;
     color: black;
 }
 
@@ -30,7 +30,7 @@
 
 .print-format .page-layout {
     font-size: 12px;
-    line-height: 1.42857143;
+    line-height: 1.4286;
     box-sizing: border-box;
     transform-origin: top center;
     width: 95%;
@@ -49,7 +49,7 @@
 
 .print-format .vehicle-info td,
 .print-format .vehicle-info th {
-    border: 0px !important;
+    border: 0 !important;
     border-top: 1px solid black !important;
 }
 

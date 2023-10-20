@@ -53,7 +53,7 @@ Object.assign(india_compliance, {
 
     async set_gstin_status(field, transaction_date, force_update = 0) {
         const gstin = field.value;
-        if (!gstin || gstin.length != 15) return field.set_description("");
+        if (!gstin || gstin.length !== 15) return field.set_description("");
 
         const { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
@@ -155,7 +155,8 @@ Object.assign(india_compliance, {
     },
 
     get_gstin_otp(error_type) {
-        let description = "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.";
+        let description =
+            "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.";
         if (error_type === "invalid_otp")
             description = "Invalid OTP was provided. Please try again.";
 
