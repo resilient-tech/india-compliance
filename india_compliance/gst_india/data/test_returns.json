@@ -44,5 +44,23 @@
             "expiry": 43200,
             "status_cd": 1
         }
+    },
+    "encrypt_request": {
+        "request_args": {
+            "app_key": "07d4fd376dd7a64b36ca081e28958cb7",
+            "otp": "688364"
+        },
+        "response": {
+            "app_key": "f+2XCEVdg90LU1R3UJnYnlkshzEZtdPFSfPDWgJx6Hhfx90ZVHAf93cn5hvIW0Plo/eGGxS8cZYPP7UFYeRUC7Cn848egQgw08V1cinzqXXoZwI8HIOVnFdAGYSTPfLPczNfJdah+LY1sMaNHh96Zcyzg4xHCWrpxquh1FOAYMW4x7I/LoisroDwQSjJxUrkCPb80YPBr7pn4kjwv0DnKMu+pgvv5CpF0CptU/6CyPFdeZooRZJJKHXKE3/oS4lyLASEHr+cZgbtnj/+bOXqJhm+rLA8YulU20OdlAeKkfMmSA3A9ABWvbBIXx5bgtcZIFuYkeWiN1Krj95BsV2ljQ==",
+            "otp": "8N4Q55Su527yFuIlmx81zg=="
+        }
+    },
+    "decrypt_response": {
+        "response": {
+            "auth_token": "705811ea9c9c4fe0b97d8ca40fbd4d22",
+            "sek": "YmwgibfR9woFaj+xE0+XjsO+Yg/bpGPHayAqPLFe93YI7/4ocxOw5FEnI3PXpTlF",
+            "expiry": 43200,
+            "status_cd": 1
+        }
     }
 }

@@ -3,8 +3,8 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import now_datetime
+from frappe.tests.utils import FrappeTestCase
+from frappe.utils import add_to_date, cint, now_datetime
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.returns import (
@@ -68,7 +68,6 @@ class TestReturns(FrappeTestCase):
             certificate_response,
         )
 
-    @change_settings("GST Settings", {"sandbox_mode": 0})
     @responses.activate
     def test_autheticate_with_otp(self):
         api = "standard/gstn/authenticate"
@@ -112,6 +111,50 @@ class TestReturns(FrappeTestCase):
             authentication_data.get("response"),
         )
 
+    def test_encrypt_request(self):
+        encrypt_request_data = self.test_data.get("encrypt_request")
+        request_args = frappe._dict(encrypt_request_data.get("request_args")).copy()
+
+        ReturnsAPI(self.doc.company_gstin).encrypt_request(request_args)
+
+        self.assertEqual(
+            request_args.get("otp"),
+            encrypt_request_data.get("response").get("otp"),
+        )
+
+    def test_decrypt_response(self):
+        decrypt_response_data = self.test_data.get("decrypt_response")
+        response = frappe._dict(decrypt_response_data.get("response"))
+
+        self.assertDictEqual(
+            ReturnsAPI(self.doc.company_gstin).decrypt_response(response),
+            response,
+        )
+
+        gst_credentials = frappe.db.get_value(
+            "GST Credential",
+            {
+                "gstin": self.doc.company_gstin,
+                "username": "admin",
+                "service": "Returns",
+            },
+            ["auth_token", "session_expiry"],
+            as_dict=1,
+        )
+
+        self.assertEqual(
+            gst_credentials.auth_token,
+            response.get("auth_token"),
+        )
+
+        session_expiry = add_to_date(
+            None, minutes=cint(response.expiry), as_datetime=True
+        )
+
+        self.assertEqual(
+            str(gst_credentials.session_expiry)[:-7], str(session_expiry)[:-7]
+        )
+
     def _mock_api_response(
         self, method="POST", api_endpoint=None, url=None, data=None, match_list=None
     ):
@@ -133,6 +176,7 @@ class TestReturns(FrappeTestCase):
 def update_gst_settings(test_data):
     settings = frappe.get_doc("GST Settings")
     settings.gstn_public_certificate = test_data.get("old_certificate")
+    settings.sandbox_mode = 0
 
     settings.append(
         "credentials",
