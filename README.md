@@ -9,8 +9,6 @@ Simple, yet powerful compliance solutions for Indian businesses
 
 </div>
 
-
-
 ## Introduction
 
 India Compliance has been designed to make compliance with Indian rules and regulations simple, swift and reliable. To this end, it has been carefully integrated with GST APIs to simplify recurring compliance processes.
@@ -19,11 +17,12 @@ It builds on top of [ERPNext](https://github.com/frappe/erpnext) and the [Frappe
 
 ## Key Features
 
-- End-to-end GST e-Waybill management
-- Automated GST e-Invoice generation and cancellation
-- Autofill Party and Address details by entering their GSTIN
-- Configurable features based on business needs
-- Powerful validations to ensure correct compliance
+-   End-to-end GST e-Waybill management
+-   Automated GST e-Invoice generation and cancellation
+-   Advanced purchase reconciliation based on GSTR-2B and GSTR-2A
+-   Autofill Party and Address details by entering their GSTIN
+-   Configurable features based on business needs
+-   Powerful validations to ensure correct compliance
 
 For a detailed overview of these features, please [refer to the documentation](https://docs.erpnext.com/docs/v14/user/manual/en/regional/india).
 
@@ -31,23 +30,16 @@ For a detailed overview of these features, please [refer to the documentation](h
 
 Once you've [set up a Frappe site](https://frappeframework.com/docs/v14/user/en/installation/), installing India Compliance is simple:
 
-
-1. Download the app using the Bench CLI.
+1.  Download the app using the Bench CLI.
 
     ```bash
     bench get-app --branch [branch name] https://github.com/resilient-tech/india-compliance.git
     ```
 
-    Replace `[branch name]` with the appropriate branch as per your setup:
+Replace `[branch name]` with the branch that you're using for Frappe Framework and ERPNext.
+If it isn't specified, the `--branch` option will default to **develop**.
 
-    | Frappe Branch | India Compliance Branch |
-    |---------------|-------------------------|
-    | version-14    | version-14              |
-    | develop       | next                    |
-
-    If it isn't specified, the `--branch` option will default to `next`.
-
-2. Install the app on your site.
+2.  Install the app on your site.
 
     ```bash
     bench --site [site name] install-app india_compliance
@@ -59,13 +51,12 @@ Some of the automation features available in India Compliance require access to 
 
 ## Planned Features
 
-- Advanced purchase reconciliation based on GSTR-2B and GSTR-2A
-- Quick and easy filing process for GSTR-1 and GSTR-3B
+-   Quick and easy filing process for GSTR-1 and GSTR-3B
 
 ## Contributing
 
-- [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
-- [Pull Request Requirements](https://github.com/frappe/erpnext/wiki/Contribution-Guidelines)
+-   [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
+-   [Pull Request Requirements](https://github.com/frappe/erpnext/wiki/Contribution-Guidelines)
 
 ## License
 

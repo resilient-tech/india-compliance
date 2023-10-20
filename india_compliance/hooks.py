@@ -1,5 +1,3 @@
-from . import __version__ as app_version
-
 app_name = "india_compliance"
 app_title = "India Compliance"
 app_publisher = "Resilient Tech"
@@ -188,8 +186,12 @@ regional_overrides = {
     "India": {
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header",
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
-        "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
-        "erpnext.controllers.accounts_controller.update_gl_dict_with_regional_fields": "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields",
+        "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": (
+            "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts"
+        ),
+        "erpnext.controllers.accounts_controller.update_gl_dict_with_regional_fields": (
+            "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields"
+        ),
         "erpnext.controllers.accounts_controller.get_advance_payment_entries_for_regional": (
             "india_compliance.gst_india.overrides.payment_entry.get_advance_payment_entries_for_regional"
         ),
