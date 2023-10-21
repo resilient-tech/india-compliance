@@ -22,6 +22,16 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
 
+for (const doctype of [...TRANSACTION_DOCTYPES, "Material Request", "Supplier Quotation", "POS Invoice"]) {
+    set_fetch_if_empty_for_gst_hsn_code(doctype);
+}
+
+function set_fetch_if_empty_for_gst_hsn_code(doctype) {
+    frappe.ui.form.on(doctype, "setup", function(frm) {
+        frm.get_docfield("items", "gst_hsn_code").fetch_if_empty = 0;
+    });
+}
+
 function fetch_gst_details(doctype) {
     const event_fields = [
         "tax_category",
