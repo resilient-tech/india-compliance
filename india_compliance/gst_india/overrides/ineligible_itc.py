@@ -5,6 +5,9 @@ from erpnext.assets.doctype.asset.asset import (
     is_cwip_accounting_enabled,
 )
 
+from india_compliance.gst_india.overrides.transaction import (
+    is_indian_registered_company,
+)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -16,8 +19,8 @@ class IneligibleITC:
         self.is_perpetual = self.company.enable_perpetual_inventory
         self.cost_center = doc.cost_center or self.company.cost_center
 
-        self.dr_or_cr = "credit" if doc.is_return else "debit"
-        self.cr_or_dr = "debit" if doc.is_return else "credit"
+        self.dr_or_cr = "credit" if doc.get("is_return") else "debit"
+        self.cr_or_dr = "debit" if doc.get("is_return") else "credit"
 
     def update_valuation_rate(self):
         """
@@ -26,6 +29,11 @@ class IneligibleITC:
         - Only updates if its a stock item or fixed asset
         - No updates for expense items
         """
+        if self.doc.get("is_opening") == "Yes" or not is_indian_registered_company(
+            self.doc
+        ):
+            return
+
         self.doc._has_ineligible_itc_items = False
         stock_items = self.doc.get_stock_items()
 
@@ -44,20 +52,18 @@ class IneligibleITC:
             if item.item_code in stock_items:
                 item._is_stock_item = True
 
-            if item.get("_is_stock_item") or item.is_fixed_asset:
+            if item.get("_is_stock_item") or item.get("is_fixed_asset"):
                 ineligible_tax_amount = item._ineligible_tax_amount
-                if self.doc.is_return:
+                if self.doc.get("is_return"):
                     ineligible_tax_amount = -ineligible_tax_amount
 
                 # TODO: handle rounding off
-                item.valuation_rate += flt(ineligible_tax_amount / item.stock_qty, 2)
+                self.update_item_valuation_rate(item, ineligible_tax_amount)
 
     def update_gl_entries(self, gl_entries):
         self.gl_entries = gl_entries
 
-        if self.doc.get("is_opening") == "Yes" or not self.doc.get(
-            "_has_ineligible_itc_items"
-        ):
+        if not self.doc.get("_has_ineligible_itc_items"):
             return gl_entries
 
         for item in self.doc.items:
@@ -124,7 +130,7 @@ class IneligibleITC:
             )
         )
 
-        if item.is_fixed_asset:
+        if item.get("is_fixed_asset"):
             item.expense_account = _get_asset_account(
                 item.asset_category, self.doc.company
             )
@@ -167,6 +173,9 @@ class IneligibleITC:
 
         item._ineligible_taxes = ineligible_taxes
         item._ineligible_tax_amount = sum(ineligible_taxes.values())
+
+    def update_item_valuation_rate(self, item, ineligible_tax_amount):
+        item.valuation_rate += flt(ineligible_tax_amount / item.stock_qty, 2)
 
     def get_item_tax_amount(self, item, tax):
         """
@@ -269,17 +278,82 @@ class PurchaseInvoice(IneligibleITC):
 
 
 class BillOfEntry(IneligibleITC):
-    pass
+    def update_valuation_rate(self):
+        # Update fixed assets
+        asset_items = self.doc.get_asset_items()
+        expense_account = frappe.db.get_values(
+            "Purchase Invoice Item",
+            {"parent": self.doc.purchase_invoice},
+            ["expense_account", "name"],
+            as_dict=True,
+        )
+        expense_account = {d.name: d.expense_account for d in expense_account}
+
+        for item in self.doc.items:
+            if item.item_code in asset_items:
+                item.is_fixed_asset = True
+
+            if item.pi_detail in expense_account:
+                item.expense_account = expense_account[item.pi_detail]
+
+        super().update_valuation_rate()
+
+    def get_item_tax_amount(self, item, tax):
+        tax_rate = frappe.parse_json(tax.item_wise_tax_rates).get(item.name)
+        if tax_rate is None:
+            return 0
+
+        tax_rate = rounded(tax_rate, 3)
+        tax_amount = tax_rate * item.taxable_value / 100
+
+        return abs(tax_amount)
+
+    def update_item_valuation_rate(self, item, ineligible_tax_amount):
+        item.valuation_rate = ineligible_tax_amount
+
+    def update_item_gl_entries(self, item):
+        if not (
+            (item.get("_is_stock_item") and self.is_perpetual)
+            or item.get("is_fixed_asset")
+        ):
+            self.make_gst_expense_entry(item)
+
+        self.reverse_input_taxes_entry(item)
+
+    def update_landed_cost_voucher(self, landed_cost_voucher):
+        self.update_valuation_rate()
+        boe_items = frappe._dict({item.name: item for item in self.doc.items})
+        total_gst_expense = 0
+
+        for item in landed_cost_voucher.items:
+            if item.get("boe_detail") not in boe_items:
+                continue
+
+            gst_expense = boe_items[item.boe_detail].get("valuation_rate", 0)
+            if not gst_expense:
+                continue
+
+            total_gst_expense += gst_expense
+            item.applicable_charges += gst_expense / item.qty
+
+        landed_cost_voucher.append(
+            "taxes",
+            {
+                "expense_account": self.company.default_gst_expense_account,
+                "description": "Customs Duty",
+                "amount": total_gst_expense,
+            },
+        )
 
 
 DOCTYPE_MAPPING = {
     "Purchase Invoice": PurchaseInvoice,
     "Purchase Receipt": PurchaseReceipt,
-    "Bill Of Entry": BillOfEntry,
+    "Bill of Entry": BillOfEntry,
 }
 
 
-def before_submit(doc, method=None):
+def update_valuation_rate(doc, method=None):
     if doc.doctype in DOCTYPE_MAPPING:
         DOCTYPE_MAPPING[doc.doctype](doc).update_valuation_rate()
 
@@ -289,6 +363,10 @@ def update_regional_gl_entries(gl_entries, doc):
         DOCTYPE_MAPPING[doc.doctype](doc).update_gl_entries(gl_entries)
 
     return gl_entries
+
+
+def update_landed_cost_voucher_for_gst_expense(source, target):
+    BillOfEntry(source).update_landed_cost_voucher(target)
 
 
 def _get_asset_account(asset_category, company):

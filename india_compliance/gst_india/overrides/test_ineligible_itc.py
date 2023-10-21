@@ -721,93 +721,62 @@ class TestIneligibleITC(FrappeTestCase):
 
         doc = create_transaction(**transaction_details)
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "GST Expense - _TIRC", "debit": 0.0, "credit": 190.08},
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1999.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 2178.82,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 998.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Unsecured Loans - _TIRC",
+                    "debit": 0.0,
+                    "credit": 998.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 1500.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Unsecured Loans - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1500.0,
+                },
+                {
+                    "account": "Stock Received But Not Billed - _TIRC",
+                    "debit": 0.0,
+                    "credit": 257.0,
+                },
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 267.26,
+                    "credit": 0.0,
+                },
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "GST Expense - _TIRC", "debit": 0.0, "credit": 190.08},
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 0.0,
-                        "credit": 1999.0,
-                    },
-                    {
-                        "account": "CWIP Account - _TIRC",
-                        "debit": 2178.82,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 998.0,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Unsecured Loans - _TIRC",
-                        "debit": 0.0,
-                        "credit": 998.0,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 1500.0,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Unsecured Loans - _TIRC",
-                        "debit": 0.0,
-                        "credit": 1500.0,
-                    },
-                    {
-                        "account": "Stock Received But Not Billed - _TIRC",
-                        "debit": 0.0,
-                        "credit": 257.0,
-                    },
-                    {
-                        "account": "Stock In Hand - _TIRC",
-                        "debit": 267.26,
-                        "credit": 0.0,
-                    },
-                ],
-                key=json.dumps,
-            )
+        self.assertStockValues(
+            doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42}
         )
-        self.assertEqual(out_str, expected_out_str)
 
-        # Check Stock Ledger Entries
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Stock Item"},
-            "incoming_rate",
+        self.assertAssetValues(
+            "Purchase Receipt",
+            doc.name,
+            {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
         )
-        self.assertEqual(incoming_rate, 20)
-
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Ineligible Stock Item"},
-            "incoming_rate",
-        )
-        self.assertEqual(incoming_rate, 22.42)  # 19 * 1.18
-
-        # Check Asset Valuation Rate
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1000)
-
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Ineligible Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1178.82)
 
         # Create Purchase Invoice
         doc = make_purchase_invoice(doc.name)
@@ -816,54 +785,44 @@ class TestIneligibleITC(FrappeTestCase):
 
         self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
 
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.32},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 369.72,
+                    "credit": 179.64,
+                },
+                {"account": "TDS Payable - _TIRC", "debit": 0.0, "credit": 475.4},
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,
+                },
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 1999.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 2677.64,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Stock Received But Not Billed - _TIRC",
+                    "debit": 257.0,
+                    "credit": 0.0,
+                },
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5134.0},
+            ],
         )
-
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.32},
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 369.72,
-                        "credit": 179.64,
-                    },
-                    {"account": "TDS Payable - _TIRC", "debit": 0.0, "credit": 475.4},
-                    {
-                        "account": "Input Tax SGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,
-                    },
-                    {
-                        "account": "Input Tax CGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,
-                    },
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 1999.0,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 2677.64,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Stock Received But Not Billed - _TIRC",
-                        "debit": 257.0,
-                        "credit": 0.0,
-                    },
-                    {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5134.0},
-                ],
-                key=json.dumps,
-            )
-        )
-        self.assertEqual(out_str, expected_out_str)
 
         # Disable Provisional Expense
         frappe.db.set_value(
@@ -874,6 +833,39 @@ class TestIneligibleITC(FrappeTestCase):
                 "default_provisional_account": "",
             },
         )
+
+    def test_purchase_invoice_with_bill_of_entry(self):
+        pass
+
+    def assertGLEntry(self, docname, expected_gl_entry):
+        gl_entries = frappe.get_all(
+            "GL Entry",
+            filters={"voucher_no": docname},
+            fields=["account", "debit", "credit"],
+        )
+
+        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
+        expected_out_str = json.dumps(sorted(expected_gl_entry, key=json.dumps))
+
+        self.assertEqual(out_str, expected_out_str)
+
+    def assertAssetValues(self, doctype, docname, asset_values):
+        for asset, value in asset_values.items():
+            asset_purchase_value = frappe.db.get_value(
+                "Asset",
+                {f"{frappe.scrub(doctype)}": docname, "item_code": asset},
+                "gross_purchase_amount",
+            )
+            self.assertEqual(asset_purchase_value, value)
+
+    def assertStockValues(self, docname, incoming_rates):
+        for item, value in incoming_rates.items():
+            incoming_rate = frappe.db.get_value(
+                "Stock Ledger Entry",
+                {"voucher_no": docname, "item_code": item},
+                "incoming_rate",
+            )
+            self.assertEqual(incoming_rate, value)
 
 
 def create_test_items():
