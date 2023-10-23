@@ -1,10 +1,21 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
 import re
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Optional
 
 import frappe
 from frappe import _
-from frappe.utils import cint
+from frappe.model.naming import (
+    NAMING_SERIES_PART_TYPES,
+    determine_consecutive_week_number,
+    getseries,
+    has_custom_parser,
+)
+from frappe.utils import cint, cstr, now_datetime
+
+if TYPE_CHECKING:
+    from frappe.model.document import Document
 
 
 def execute(filters=None):
@@ -87,9 +98,8 @@ def get_document_summary(filters, document_type, nature_of_document):
 
     query = (
         frappe.qb.from_(doctype)
-        .select(
-            doctype.name, doctype.naming_series, doctype.creation, doctype.docstatus
-        )
+        # to parse naming series by fieldname
+        .select("*")
         .where(doctype.company == filters.company)
         .where(doctype.posting_date.between(filters.from_date, filters.to_date))
         .where(doctype.naming_series.isnotnull())
@@ -107,7 +117,10 @@ def get_summarized_data(data, nature_of_document):
     naming_series_data = {}
 
     for item in data:
-        naming_series, item.serial_number = _parse_naming_series(doc=item)
+        naming_series = parse_naming_series(
+            item.naming_series.replace("#", ""), doc=item
+        )
+        item.serial_number = get_serial_number(item)
         naming_series_data.setdefault(naming_series, {})
         naming_series_data[naming_series][item.serial_number] = item
 
@@ -170,25 +183,92 @@ def apply_document_wise_condition(filters, query, nature_of_document, doctype):
     return query
 
 
+def get_serial_number(item):
+    if ".#" in item.naming_series:
+        prefix, hashes = item.naming_series.rsplit(".", 1)
+        if "#" not in hashes:
+            hash = re.search("#+", item.naming_series)
+            if not hash:
+                return
+            item.name = item.name.replace(hashes, "")
+            prefix = prefix.replace(hash.group(), "")
+    else:
+        prefix = item.naming_series
+
+    if "." in prefix:
+        prefix = parse_naming_series(prefix.split("."), doc=item)
+
+    count = item.name.replace(prefix, "")
+
+    if "-" in count:
+        count = count.split("-")[0]
+
+    return cint(count)
+
+
 def _parse_naming_series(doc):
-    naming_series = doc.naming_series.replace(".", "")
-    hash = re.search("#+", naming_series)
+    naming_series = parse_naming_series(doc.naming_series, doc=doc)
+    serial_number = get_serial_number(doc)
+    return naming_series, serial_number
 
-    if not hash:
-        naming_series += "#####"
-        hash = re.search("#+", naming_series)
 
-    serial_number = cint(doc.name[hash.start() : hash.end()])
+def parse_naming_series(
+    parts: list[str] | str,
+    doctype=None,
+    doc: Optional["Document"] = None,
+    number_generator: Callable[[str, int], str] | None = None,
+) -> str:
+    """Parse the naming series and get next name.
 
-    new_naming_series = doc.name.replace(
-        doc.name[hash.start() : hash.end()], hash.group()
-    )
+    args:
+            parts: naming series parts (split by `.`)
+            doc: document to use for series that have parts using fieldnames
+            number_generator: Use different counter backend other than `tabSeries`. Primarily used for testing.
+    """
 
-    # Remove suffix from amended documents having names like SINV-23-00001-1
-    if len(new_naming_series) > len(naming_series):
-        new_naming_series = new_naming_series[: len(naming_series)]
+    name = ""
+    _sentinel = object()
+    if isinstance(parts, str):
+        parts = parts.split(".")
 
-    return (
-        new_naming_series,
-        serial_number,
-    )
+    if not number_generator:
+        number_generator = getseries
+
+    series_set = False
+    today = doc.get("creation") if doc else now_datetime()
+    for e in parts:
+        if not e:
+            continue
+
+        part = ""
+        if e.startswith("#"):
+            if not series_set:
+                digits = len(e)
+                part = number_generator(name, digits)
+                series_set = True
+        elif e == "YY":
+            part = today.strftime("%y")
+        elif e == "MM":
+            part = today.strftime("%m")
+        elif e == "DD":
+            part = today.strftime("%d")
+        elif e == "YYYY":
+            part = today.strftime("%Y")
+        elif e == "WW":
+            part = determine_consecutive_week_number(today)
+        elif e == "timestamp":
+            part = str(today)
+        elif doc and (e.startswith("{") or doc.get(e, _sentinel) is not _sentinel):
+            e = e.replace("{", "").replace("}", "")
+            part = doc.get(e)
+        elif method := has_custom_parser(e):
+            part = frappe.get_attr(method[0])(doc, e)
+        else:
+            part = e
+
+        if isinstance(part, str):
+            name += part
+        elif isinstance(part, NAMING_SERIES_PART_TYPES):
+            name += cstr(part).strip()
+
+    return name
