@@ -447,7 +447,16 @@ class PurchaseInvoice:
             # return is initiated by the customer. So bill date may not be available or known.
             fields += [self.PI.posting_date.as_("bill_date")]
         else:
-            fields += ["bill_date"]
+            fields += [
+                # Default to posting date if bill date is not available.
+                Case()
+                .when(
+                    IfNull(self.PI.bill_date, "") == "",
+                    self.PI.posting_date,
+                )
+                .else_(self.PI.bill_date)
+                .as_("bill_date")
+            ]
 
         if additional_fields:
             fields += additional_fields
