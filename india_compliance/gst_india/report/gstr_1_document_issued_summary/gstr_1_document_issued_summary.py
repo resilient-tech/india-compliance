@@ -175,11 +175,20 @@ def _parse_naming_series(doc):
     hash = re.search("#+", naming_series)
 
     if not hash:
-        return doc.name.replace(doc.name[-5:], "#####"), cint(doc.name[-5:])
+        naming_series += "#####"
+        hash = re.search("#+", naming_series)
 
     serial_number = cint(doc.name[hash.start() : hash.end()])
 
+    new_naming_series = doc.name.replace(
+        doc.name[hash.start() : hash.end()], hash.group()
+    )
+
+    # Remove suffix from amended documents having names like SINV-23-00001-1
+    if len(new_naming_series) > len(naming_series):
+        new_naming_series = new_naming_series[: len(naming_series)]
+
     return (
-        doc.name.replace(doc.name[hash.start() : hash.end()], hash.group()),
+        new_naming_series,
         serial_number,
     )
