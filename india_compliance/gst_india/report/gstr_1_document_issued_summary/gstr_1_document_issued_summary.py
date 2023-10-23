@@ -4,7 +4,6 @@ import re
 
 import frappe
 from frappe import _
-from frappe.model.naming import parse_naming_series
 from frappe.utils import cint
 
 
@@ -101,43 +100,36 @@ def get_document_summary(filters, document_type, nature_of_document):
 
     data = query.run(as_dict=True)
 
-    return get_processed_data(data, nature_of_document)
+    return get_summarized_data(data, nature_of_document)
 
 
-def get_processed_data(data, nature_of_document):
+def get_summarized_data(data, nature_of_document):
     naming_series_data = {}
 
-    # Group items by naming series and serial number
     for item in data:
-        naming_series = parse_naming_series(
-            item.naming_series.replace("#", ""), doc=item
-        )
-        item.serial_number = get_serial_number(item)
+        naming_series, item.serial_number = _parse_naming_series(doc=item)
         naming_series_data.setdefault(naming_series, {})
         naming_series_data[naming_series][item.serial_number] = item
 
-    processed_data = []
+    summarized_data = []
 
-    # Process items for each naming series
     for naming_series, items in naming_series_data.items():
         if not items:
             continue
 
-        # Sort items by serial number
         sorted_items = sorted(items.items(), key=lambda x: x[0])
 
-        # Split items into contiguous groups
         slice_indices = [
             i
             for i in range(1, len(sorted_items))
             if sorted_items[i][0] - sorted_items[i - 1][0] != 1
         ]
+
         list_sorted_items = [
             sorted_items[i:j]
             for i, j in zip([0] + slice_indices, slice_indices + [None])
         ]
 
-        # Process items in each group
         for sorted_items in list_sorted_items:
             draft_count = sum(1 for item in sorted_items if item[1].docstatus == 0)
             total_submitted_count = sum(
@@ -145,7 +137,7 @@ def get_processed_data(data, nature_of_document):
             )
             canceled_count = sum(1 for item in sorted_items if item[1].docstatus == 2)
 
-            processed_data.append(
+            summarized_data.append(
                 {
                     "naming_series": naming_series,
                     "nature_of_document": nature_of_document,
@@ -160,30 +152,7 @@ def get_processed_data(data, nature_of_document):
                 }
             )
 
-    return processed_data
-
-
-def get_serial_number(item):
-    if ".#" in item.naming_series:
-        prefix, hashes = item.naming_series.rsplit(".", 1)
-        if "#" not in hashes:
-            hash = re.search("#+", item.naming_series)
-            if not hash:
-                return
-            item.name = item.name.replace(hashes, "")
-            prefix = prefix.replace(hash.group(), "")
-    else:
-        prefix = item.naming_series
-
-    if "." in prefix:
-        prefix = parse_naming_series(prefix.split("."), doc=item)
-
-    count = item.name.replace(prefix, "")
-
-    if "-" in count:
-        count = count.split("-")[0]
-
-    return cint(count)
+    return summarized_data
 
 
 def apply_document_wise_condition(filters, query, nature_of_document, doctype):
@@ -201,11 +170,16 @@ def apply_document_wise_condition(filters, query, nature_of_document, doctype):
     return query
 
 
-def get_bank_accounts(company):
-    bank_accounts = frappe.db.get_all(
-        "Account",
-        {"company": company, "account_type": "Bank", "is_group": 0},
-        pluck="name",
-    )
+def _parse_naming_series(doc):
+    naming_series = doc.naming_series.replace(".", "")
+    hash = re.search("#+", naming_series)
 
-    return bank_accounts
+    if not hash:
+        return doc.name.replace(doc.name[-5:], "#####"), cint(doc.name[-5:])
+
+    serial_number = cint(doc.name[hash.start() : hash.end()])
+
+    return (
+        doc.name.replace(doc.name[hash.start() : hash.end()], hash.group()),
+        serial_number,
+    )
