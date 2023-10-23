@@ -185,7 +185,7 @@ class TestEInvoice(FrappeTestCase):
         si = create_sales_invoice(do_not_submit=True)
         item_row = si.get("items")[0]
 
-        for index in range(0, 1000):
+        for _ in range(0, 1000):
             si.append(
                 "items",
                 {
@@ -633,8 +633,9 @@ class TestEInvoice(FrappeTestCase):
         doc.save()
 
         self.assertEqual(
-            json.loads(frappe.message_log[-1]).get("message"),
-            "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
+            frappe.parse_json(frappe.message_log[-1]).get("message"),
+            "You have already generated e-Waybill/e-Invoice for this document."
+            " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
     @responses.activate

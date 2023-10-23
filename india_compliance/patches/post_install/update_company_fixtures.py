@@ -10,12 +10,12 @@ from india_compliance.income_tax_india.overrides.company import (
     create_company_fixtures as create_income_tax_fixtures,
 )
 
-"""
-This patch is used to create company fixtures for Indian Companies created before installing India Compliance.
-"""
-
 
 def execute():
+    """
+    This patch is used to create company fixtures for Indian Companies created before installing India Compliance.
+    """
+
     company_list = frappe.get_all(
         "Company", filters={"country": "India"}, pluck="name", order_by="lft asc"
     )
