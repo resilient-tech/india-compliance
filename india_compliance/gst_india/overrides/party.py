@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
 )
-from india_compliance.gst_india.utils.gstin_info import get_gstin_info
+from india_compliance.gst_india.utils.gstin_info import _get_gstin_info
 
 
 def validate_party(doc, method=None):
@@ -42,7 +42,7 @@ def set_gst_category(doc):
 
 def fetch_or_guess_gst_category(doc):
     if doc.gstin and is_autofill_party_info_enabled():
-        gstin_info = get_gstin_info(doc.gstin, throw_error=False) or {}
+        gstin_info = _get_gstin_info(doc.gstin, throw_error=False) or {}
 
         if gstin_info.get("gst_category"):
             return gstin_info.gst_category
