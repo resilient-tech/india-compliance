@@ -131,5 +131,221 @@
                 "purchase_doctype": "Purchase Invoice"
             }
         ]
+    },
+    "Suggested Match": {
+        "Inward Supply": [
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "supplier_name": "_Test Canon India Supplier",
+                "bill_no": "456-1",
+                "bill_date": "2023-10-23",
+                "classification": "B2B",
+                "doc_type": "Invoice",
+                "supply_type": "Regular",
+                "place_of_supply": "24-Gujarat",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "items": [
+                    { "taxable_value": 1000, "rate": 18, "sgst": 90, "cgst": 90 }
+                ],
+                "document_value": 1180,
+                "itc_availability": "Yes",
+                "return_period_2b": "102023",
+                "gen_date_2b": "2023-10-23"
+            },
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "supplier_name": "_Test Canon India Supplier",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "classification": "B2B",
+                "doc_type": "Invoice",
+                "supply_type": "Regular",
+                "place_of_supply": "24-Gujarat",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "items": [
+                    { "taxable_value": 999.89, "rate": 18, "sgst": 90, "cgst": 90 }
+                ],
+                "document_value": 1180,
+                "itc_availability": "Yes",
+                "return_period_2b": "102023",
+                "gen_date_2b": "2023-10-23"
+            },
+            {
+                "company": "_Test Indian Registered Company",
+                "company_gstin": "24AAQCA8719H1ZC",
+                "supplier_name": "_Test Canon India Supplier",
+                "bill_no": "456-2",
+                "bill_date": "2023-10-23",
+                "classification": "B2B",
+                "doc_type": "Invoice",
+                "supply_type": "Regular",
+                "place_of_supply": "24-Gujarat",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "items": [
+                    {
+                        "taxable_value": 999.89,
+                        "rate": 18,
+                        "sgst": 89.99,
+                        "cgst": 89.99
+                    }
+                ],
+                "document_value": 1180,
+                "itc_availability": "Yes",
+                "return_period_2b": "102023",
+                "gen_date_2b": "2023-10-23"
+            }
+        ],
+        "Purchase Invoice": [
+            {
+                "supplier": "_Test Canon India Supplier",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "qty": 10,
+                "is_in_state": 1
+            }
+        ],
+        "reconciliation_data": [
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "123",
+                "bill_date": "2023-10-23",
+                "match_status": "Exact Match",
+                "purchase_invoice_name": "PINV-23-00007",
+                "inward_supply_name": "GST-IS-000001",
+                "taxable_value_difference": 0.0,
+                "tax_difference": 0.0,
+                "differences": "",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            },
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "match_status": "Suggested Match",
+                "purchase_invoice_name": "PINV-23-00008",
+                "inward_supply_name": "GST-IS-000002",
+                "taxable_value_difference": 0.0,
+                "tax_difference": 0.0,
+                "differences": "",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            }
+        ],
+        "reconciliation_data_1": [
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "123",
+                "bill_date": "2023-10-23",
+                "match_status": "Exact Match",
+                "purchase_invoice_name": "PINV-23-00007",
+                "inward_supply_name": "GST-IS-000001",
+                "taxable_value_difference": 0.0,
+                "tax_difference": 0.0,
+                "differences": "",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            },
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "match_status": "Suggested Match",
+                "purchase_invoice_name": "PINV-23-00008",
+                "inward_supply_name": "GST-IS-000002",
+                "taxable_value_difference": 0.0,
+                "tax_difference": 0.0,
+                "differences": "",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            },
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "match_status": "Suggested Match",
+                "purchase_invoice_name": "PINV-23-00009",
+                "inward_supply_name": "GST-IS-000003",
+                "taxable_value_difference": 0.11,
+                "tax_difference": 0.0,
+                "differences": "Rounding Difference, TAXABLE_VALUE",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            }
+        ],
+        "reconciliation_data_2": [
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "123",
+                "bill_date": "2023-10-23",
+                "match_status": "Exact Match",
+                "purchase_invoice_name": "PINV-23-00007",
+                "inward_supply_name": "GST-IS-000001",
+                "taxable_value_difference": 0.0,
+                "tax_difference": 0.0,
+                "differences": "",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            },
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "match_status": "Suggested Match",
+                "purchase_invoice_name": "PINV-23-00008",
+                "inward_supply_name": "GST-IS-000002",
+                "taxable_value_difference": 0.0,
+                "tax_difference": 0.0,
+                "differences": "",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            },
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "match_status": "Suggested Match",
+                "purchase_invoice_name": "PINV-23-00009",
+                "inward_supply_name": "GST-IS-000003",
+                "taxable_value_difference": 0.11,
+                "tax_difference": 0.0,
+                "differences": "Rounding Difference, TAXABLE_VALUE",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            },
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "456",
+                "bill_date": "2023-10-23",
+                "match_status": "Suggested Match",
+                "purchase_invoice_name": "PINV-23-00010",
+                "inward_supply_name": "GST-IS-000004",
+                "taxable_value_difference": 0.11,
+                "tax_difference": 0.02,
+                "differences": "Rounding Difference, TAXABLE_VALUE, CGST, SGST",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            }
+        ]
     }
 }

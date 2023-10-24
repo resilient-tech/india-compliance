@@ -28,7 +28,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
 
         create_test_records(cls.test_records)
 
-    def test_get_data_for_exact_match(self):
+    def test_reconciled_data_for_exact_match(self):
         exact_match_records = self.test_records.get("Exact Match")
         create_inward_supply(frappe._dict(exact_match_records.get("Inward Supply")))
 
@@ -42,6 +42,54 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         self.assertListEqual(
             ast.literal_eval(self.reco_data.reconciliation_data),
             exact_match_records.get("reconciliation_data"),
+        )
+
+    def test_reconciled_data_for_suggested_match(self):
+        suggested_match_records = self.test_records.get("Suggested Match")
+
+        create_purchase_invoice(
+            **suggested_match_records.get("Purchase Invoice")[0],
+        )
+
+        create_inward_supply(
+            frappe._dict(suggested_match_records.get("Inward Supply")[0])
+        )
+
+        self.reco_data = update_purchase_reconciliation()
+        self.reco_data.save()
+
+        self.assertListEqual(
+            ast.literal_eval(self.reco_data.reconciliation_data),
+            suggested_match_records.get("reconciliation_data"),
+        )
+
+        create_purchase_invoice(
+            **suggested_match_records.get("Purchase Invoice")[0],
+        )
+
+        create_inward_supply(
+            frappe._dict(suggested_match_records.get("Inward Supply")[1])
+        )
+
+        self.reco_data.save()
+
+        self.assertListEqual(
+            ast.literal_eval(self.reco_data.reconciliation_data),
+            suggested_match_records.get("reconciliation_data_1"),
+        )
+
+        create_purchase_invoice(
+            **suggested_match_records.get("Purchase Invoice")[0],
+        )
+
+        create_inward_supply(
+            frappe._dict(suggested_match_records.get("Inward Supply")[2])
+        )
+
+        self.reco_data.save()
+        self.assertListEqual(
+            ast.literal_eval(self.reco_data.reconciliation_data),
+            suggested_match_records.get("reconciliation_data_2"),
         )
 
 
