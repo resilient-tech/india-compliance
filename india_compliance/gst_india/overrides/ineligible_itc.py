@@ -236,8 +236,8 @@ class PurchaseInvoice(IneligibleITC):
         self.reverse_input_taxes_entry(item)
 
     def is_debit_entry_required(self, item):
-        # For Stock Entry in PI, Additional Debit is accounted automatically from valuation rates
-        return self.is_expense_item(item) or item.is_fixed_asset
+        # For Stock Entry / Fixed Asset in PI, Additional Debit is accounted automatically from valuation rates
+        return self.is_expense_item(item)
 
     def is_expense_item(self, item):
         """
@@ -335,6 +335,9 @@ class BillOfEntry(IneligibleITC):
 
             total_gst_expense += gst_expense
             item.applicable_charges += gst_expense / item.qty
+
+        if total_gst_expense == 0:
+            return
 
         landed_cost_voucher.append(
             "taxes",

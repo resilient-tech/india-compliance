@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -38,6 +39,59 @@ SAMPLE_ITEM_LIST = [
 # Ineligible Service Item = 499 * 2 * 18% = 179.64 or CGST + SGST = 89.82 + 89.82 = 179.64
 
 
+@contextmanager
+def toggle_perpetual_inventory():
+    frappe.db.set_value(
+        "Company",
+        "_Test Indian Registered Company",
+        "enable_perpetual_inventory",
+        0,
+    )
+
+    if hasattr(frappe.local, "enable_perpetual_inventory"):
+        del frappe.local.enable_perpetual_inventory
+
+    try:
+        yield
+
+    finally:
+        frappe.db.set_value(
+            "Company",
+            "_Test Indian Registered Company",
+            "enable_perpetual_inventory",
+            1,
+        )
+
+        if hasattr(frappe.local, "enable_perpetual_inventory"):
+            del frappe.local.enable_perpetual_inventory
+
+
+@contextmanager
+def toggle_provisional_accounting():
+    # Enable Provisional Expense
+    frappe.db.set_value(
+        "Company",
+        "_Test Indian Registered Company",
+        {
+            "enable_provisional_accounting_for_non_stock_items": 1,
+            "default_provisional_account": "Unsecured Loans - _TIRC",
+        },
+    )
+
+    try:
+        yield
+
+    finally:
+        frappe.db.set_value(
+            "Company",
+            "_Test Indian Registered Company",
+            {
+                "enable_provisional_accounting_for_non_stock_items": 0,
+                "default_provisional_account": None,
+            },
+        )
+
+
 class TestIneligibleITC(FrappeTestCase):
     @classmethod
     def setUpClass(cls):
@@ -57,85 +111,52 @@ class TestIneligibleITC(FrappeTestCase):
 
         self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 369.72,
+                    "credit": 369.72,
+                },  # 179.64 + 179.82 + 10.26
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,  # 369.72 / 2
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 2677.64,  # 500 * 3 + 499 * 2 + 179.64
+                    "credit": 0.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 2178.82,
+                    "credit": 0.0,
+                },  # 1000 + 999 + 179.82
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 267.26,
+                    "credit": 0.0,
+                },  # 20 * 5 + 19 * 3 + 100 * 1 + 10.26
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 369.72,
-                        "credit": 369.72,
-                    },  # 179.64 + 179.82 + 10.26
-                    {
-                        "account": "Input Tax SGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,  # 369.72 / 2
-                    },
-                    {
-                        "account": "Input Tax CGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 2677.64,  # 500 * 3 + 499 * 2 + 179.64
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "CWIP Account - _TIRC",
-                        "debit": 2178.82,
-                        "credit": 0.0,
-                    },  # 1000 + 999 + 179.82
-                    {
-                        "account": "Stock In Hand - _TIRC",
-                        "debit": 267.26,
-                        "credit": 0.0,
-                    },  # 20 * 5 + 19 * 3 + 100 * 1 + 10.26
-                    {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
-                ],
-                key=json.dumps,
-            )
+        self.assertStockValues(
+            doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42}
         )
-
-        self.assertEqual(out_str, expected_out_str)
-
-        # Check Stock Ledger Entries
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Stock Item"},
-            "incoming_rate",
-        )
-        self.assertEqual(incoming_rate, 20)
-
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Ineligible Stock Item"},
-            "incoming_rate",
-        )
-        self.assertEqual(incoming_rate, 22.42)  # 19 * 1.18
-
-        # Check Asset Valuation Rate
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_invoice": doc.name, "item_code": "Test Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1000)
-
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_invoice": doc.name, "item_code": "Test Ineligible Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1178.82)  # 999 + 179.82
+        self.assertAssetValues(
+            "Purchase Invoice",
+            doc.name,
+            {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
+        )  # 999 + 179.82
 
     def test_purchase_invoice_with_ineligible_pos(self):
         transaction_details = {
@@ -151,80 +172,47 @@ class TestIneligibleITC(FrappeTestCase):
 
         self.assertEqual(doc.ineligibility_reason, "ITC restricted due to PoS rules")
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 855.72,
+                    "credit": 855.72,
+                },  # full taxes reversed
+                {
+                    "account": "Input Tax IGST - _TIRC",
+                    "debit": 855.72,
+                    "credit": 855.72,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 2947.64,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 2358.82,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 303.26,
+                    "credit": 0.0,
+                },
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 855.72,
-                        "credit": 855.72,
-                    },  # full taxes reversed
-                    {
-                        "account": "Input Tax IGST - _TIRC",
-                        "debit": 855.72,
-                        "credit": 855.72,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 2947.64,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "CWIP Account - _TIRC",
-                        "debit": 2358.82,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Stock In Hand - _TIRC",
-                        "debit": 303.26,
-                        "credit": 0.0,
-                    },
-                    {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
-                ],
-                key=json.dumps,
-            )
+        self.assertStockValues(
+            doc.name, {"Test Stock Item": 23.6, "Test Ineligible Stock Item": 22.42}
         )
-
-        self.assertEqual(out_str, expected_out_str)
-
-        # Check Stock Ledger Entries
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Stock Item"},
-            "incoming_rate",
+        self.assertAssetValues(
+            "Purchase Invoice",
+            doc.name,
+            {"Test Fixed Asset": 1180, "Test Ineligible Fixed Asset": 1178.82},
         )
-        self.assertEqual(incoming_rate, 23.60)
-
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Ineligible Stock Item"},
-            "incoming_rate",
-        )
-        self.assertEqual(incoming_rate, 22.42)
-
-        # Check Asset Valuation Rate
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_invoice": doc.name, "item_code": "Test Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1180)
-
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_invoice": doc.name, "item_code": "Test Ineligible Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1178.82)
 
     def test_purchase_receipt_and_then_purchase_invoice(self):
         transaction_details = {
@@ -235,77 +223,45 @@ class TestIneligibleITC(FrappeTestCase):
 
         doc = create_transaction(**transaction_details)
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 0.0,
+                    "credit": 190.08,
+                },  # 10.26 + 179.82
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1999.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 2178.82,  # 1999 + 179.82
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Stock Received But Not Billed - _TIRC",
+                    "debit": 0.0,
+                    "credit": 257.0,
+                },
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 267.26,  # 257 + 10.26
+                    "credit": 0.0,
+                },
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 0.0,
-                        "credit": 190.08,
-                    },  # 10.26 + 179.82
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 0.0,
-                        "credit": 1999.0,
-                    },
-                    {
-                        "account": "CWIP Account - _TIRC",
-                        "debit": 2178.82,  # 1999 + 179.82
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Stock Received But Not Billed - _TIRC",
-                        "debit": 0.0,
-                        "credit": 257.0,
-                    },
-                    {
-                        "account": "Stock In Hand - _TIRC",
-                        "debit": 267.26,  # 257 + 10.26
-                        "credit": 0.0,
-                    },
-                ],
-                key=json.dumps,
-            )
+        self.assertStockValues(
+            doc.name, {"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42}
         )
-        self.assertEqual(out_str, expected_out_str)
-
-        # Check Stock Ledger Entries
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Stock Item"},
-            "incoming_rate",
+        self.assertAssetValues(
+            "Purchase Receipt",
+            doc.name,
+            {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
         )
-        self.assertEqual(incoming_rate, 20)
-
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Ineligible Stock Item"},
-            "incoming_rate",
-        )
-        self.assertEqual(incoming_rate, 22.42)  # 19 * 1.18
-
-        # Check Asset Valuation Rate
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1000)
-
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Ineligible Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1178.82)  # 999 + 179.82
 
         # Create Purchase Invoice
         doc = make_purchase_invoice(doc.name)
@@ -314,52 +270,42 @@ class TestIneligibleITC(FrappeTestCase):
 
         self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
 
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
-        )
-
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.32},
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 369.72,  # 179.82 + 179.64 + 10.26
-                        "credit": 179.64,  # Only Expense
-                    },
-                    {"account": "TDS Payable - _TIRC", "debit": 0.0, "credit": 475.4},
-                    {
-                        "account": "Input Tax SGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,
-                    },
-                    {
-                        "account": "Input Tax CGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,  # 369.72 / 2
-                    },
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 1999.0,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 2677.64,  # 1500 + 998 + 179.64
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Stock Received But Not Billed - _TIRC",
-                        "debit": 257.0,
-                        "credit": 0.0,
-                    },
-                    {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5134.0},
-                ],
-                key=json.dumps,
-            )
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 369.72,  # 179.82 + 179.64 + 10.26
+                    "credit": 179.64,  # Only Expense
+                },
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,  # 369.72 / 2
+                },
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 1999.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 2677.64,  # 1500 + 998 + 179.64
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Stock Received But Not Billed - _TIRC",
+                    "debit": 257.0,
+                    "credit": 0.0,
+                },
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+            ],
         )
 
     def test_purchase_receipt_and_then_purchase_invoice_for_ineligible_pos(self):
@@ -372,77 +318,49 @@ class TestIneligibleITC(FrappeTestCase):
 
         doc = create_transaction(**transaction_details)
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 0.0,
+                    "credit": 406.08,
+                },  # 855.72 - 449.64 (reversal on expense)
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1999.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 2358.82,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Stock Received But Not Billed - _TIRC",
+                    "debit": 0.0,
+                    "credit": 257.0,
+                },
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 303.26,
+                    "credit": 0.0,
+                },
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 0.0,
-                        "credit": 406.08,
-                    },  # 855.72 - 449.64 (reversal on expense)
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 0.0,
-                        "credit": 1999.0,
-                    },
-                    {
-                        "account": "CWIP Account - _TIRC",
-                        "debit": 2358.82,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Stock Received But Not Billed - _TIRC",
-                        "debit": 0.0,
-                        "credit": 257.0,
-                    },
-                    {
-                        "account": "Stock In Hand - _TIRC",
-                        "debit": 303.26,
-                        "credit": 0.0,
-                    },
-                ],
-                key=json.dumps,
-            )
+        self.assertStockValues(
+            doc.name,
+            {
+                "Test Stock Item": 23.6,
+                "Test Ineligible Stock Item": 22.42,
+            },
         )
-        self.assertEqual(out_str, expected_out_str)
-
-        # Check Stock Ledger Entries
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Stock Item"},
-            "incoming_rate",
+        self.assertAssetValues(
+            "Purchase Receipt",
+            doc.name,
+            {"Test Fixed Asset": 1180, "Test Ineligible Fixed Asset": 1178.82},
         )
-        self.assertEqual(incoming_rate, 23.60)
-
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Ineligible Stock Item"},
-            "incoming_rate",
-        )
-        self.assertEqual(incoming_rate, 22.42)
-
-        # Check Asset Valuation Rate
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1180)
-
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Ineligible Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1178.82)
 
         # Create Purchase Invoice
         doc = make_purchase_invoice(doc.name)
@@ -451,50 +369,38 @@ class TestIneligibleITC(FrappeTestCase):
 
         self.assertEqual(doc.ineligibility_reason, "ITC restricted due to PoS rules")
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 855.72,
+                    "credit": 449.64,  # expense reversal
+                },
+                {
+                    "account": "Input Tax IGST - _TIRC",
+                    "debit": 855.72,
+                    "credit": 855.72,
+                },
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 1999.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 2947.64,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Stock Received But Not Billed - _TIRC",
+                    "debit": 257.0,
+                    "credit": 0.0,
+                },
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+            ],
         )
-
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.32},
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 855.72,
-                        "credit": 449.64,  # expense reversal
-                    },
-                    {"account": "TDS Payable - _TIRC", "debit": 0.0, "credit": 475.4},
-                    {
-                        "account": "Input Tax IGST - _TIRC",
-                        "debit": 855.72,
-                        "credit": 855.72,
-                    },
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 1999.0,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 2947.64,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Stock Received But Not Billed - _TIRC",
-                        "debit": 257.0,
-                        "credit": 0.0,
-                    },
-                    {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5134.0},
-                ],
-                key=json.dumps,
-            )
-        )
-        self.assertEqual(out_str, expected_out_str)
 
     def test_purchase_returns_with_update_stock(self):
         transaction_details = {
@@ -509,66 +415,46 @@ class TestIneligibleITC(FrappeTestCase):
         doc = make_return_doc("Purchase Invoice", doc.name)
         doc.submit()
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.28},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 369.72,
+                    "credit": 369.72,
+                },
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 0.0,
+                    "credit": 243.0,
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 0.0,
+                    "credit": 243.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 0.0,
+                    "credit": 2178.82,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 0.0,
+                    "credit": 2677.64,
+                },
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 0.0,
+                    "credit": 267.26,
+                },
+                {"account": "Creditors - _TIRC", "debit": 5610.0, "credit": 0.0},
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.28},
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 369.72,
-                        "credit": 369.72,
-                    },
-                    {
-                        "account": "Input Tax SGST - _TIRC",
-                        "debit": 0.0,
-                        "credit": 243.0,
-                    },
-                    {
-                        "account": "Input Tax CGST - _TIRC",
-                        "debit": 0.0,
-                        "credit": 243.0,
-                    },
-                    {
-                        "account": "CWIP Account - _TIRC",
-                        "debit": 0.0,
-                        "credit": 2178.82,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 0.0,
-                        "credit": 2677.64,
-                    },
-                    {
-                        "account": "Stock In Hand - _TIRC",
-                        "debit": 0.0,
-                        "credit": 267.26,
-                    },
-                    {"account": "Creditors - _TIRC", "debit": 5610.0, "credit": 0.0},
-                ],
-                key=json.dumps,
-            )
-        )
-        self.assertEqual(out_str, expected_out_str)
-
+    @toggle_perpetual_inventory()
     def test_purchase_receipt_and_then_purchase_invoice_for_non_perpetual_stock(self):
-        # Disable Perpetual Inventory
-        frappe.db.set_value(
-            "Company",
-            "_Test Indian Registered Company",
-            "enable_perpetual_inventory",
-            0,
-        )
-        # ERPNext uses erpnext.is_perpetual_inventory_enabled from local
-        del frappe.local.enable_perpetual_inventory
-
         transaction_details = {
             "doctype": "Purchase Receipt",
             "items": SAMPLE_ITEM_LIST,
@@ -576,53 +462,32 @@ class TestIneligibleITC(FrappeTestCase):
         }
 
         doc = create_transaction(**transaction_details)
-
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 0.0,
+                    "credit": 179.82,
+                },  # only asset
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 0.0,
+                    "credit": 1999.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 2178.82,
+                    "credit": 0.0,
+                },
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 0.0,
-                        "credit": 179.82,
-                    },  # only asset
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 0.0,
-                        "credit": 1999.0,
-                    },
-                    {
-                        "account": "CWIP Account - _TIRC",
-                        "debit": 2178.82,
-                        "credit": 0.0,
-                    },
-                ],
-                key=json.dumps,
-            )
+        self.assertAssetValues(
+            doc.doctype,
+            doc.name,
+            {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
         )
-        self.assertEqual(out_str, expected_out_str)
-
-        # Check Asset Valuation Rate
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1000)
-
-        asset_purchase_value = frappe.db.get_value(
-            "Asset",
-            {"purchase_receipt": doc.name, "item_code": "Test Ineligible Fixed Asset"},
-            "gross_purchase_amount",
-        )
-        self.assertEqual(asset_purchase_value, 1178.82)
 
         # Create Purchase Invoice
         doc = make_purchase_invoice(doc.name)
@@ -631,88 +496,51 @@ class TestIneligibleITC(FrappeTestCase):
 
         self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
 
-        # Check GL Entries
-        gl_entries = frappe.get_all(
-            "GL Entry",
-            filters={"voucher_no": doc.name},
-            fields=["account", "debit", "credit"],
+        self.assertGLEntry(
+            doc.name,
+            [
+                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 369.72,
+                    "credit": 189.9,
+                },
+                {
+                    "account": "Input Tax SGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,
+                },
+                {
+                    "account": "Input Tax CGST - _TIRC",
+                    "debit": 427.86,
+                    "credit": 184.86,
+                },
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 1999.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 2677.64,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Cost of Goods Sold - _TIRC",
+                    "debit": 267.26,  # stock with gst expense
+                    "credit": 0.0,
+                },
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+            ],
         )
 
-        out_str = json.dumps(sorted(gl_entries, key=json.dumps))
-        expected_out_str = json.dumps(
-            sorted(
-                [
-                    {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.32},
-                    {
-                        "account": "GST Expense - _TIRC",
-                        "debit": 369.72,
-                        "credit": 189.9,
-                    },
-                    {"account": "TDS Payable - _TIRC", "debit": 0.0, "credit": 475.4},
-                    {
-                        "account": "Input Tax SGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,
-                    },
-                    {
-                        "account": "Input Tax CGST - _TIRC",
-                        "debit": 427.86,
-                        "credit": 184.86,
-                    },
-                    {
-                        "account": "Asset Received But Not Billed - _TIRC",
-                        "debit": 1999.0,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Administrative Expenses - _TIRC",
-                        "debit": 2677.64,
-                        "credit": 0.0,
-                    },
-                    {
-                        "account": "Cost of Goods Sold - _TIRC",
-                        "debit": 267.26,  # stock with gst expense
-                        "credit": 0.0,
-                    },
-                    {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5134.0},
-                ],
-                key=json.dumps,
-            )
-        )
+        self.assertStockValues(doc.name, {"Test Stock Item": None})
 
-        self.assertEqual(out_str, expected_out_str)
-
-        # Check Stock Ledger Entries
-        incoming_rate = frappe.db.get_value(
-            "Stock Ledger Entry",
-            {"voucher_no": doc.name, "item_code": "Test Stock Item"},
-            "incoming_rate",
-        )
-        self.assertEqual(incoming_rate, None)
-
-        # Enable Perpetual Inventory
-        frappe.db.set_value(
-            "Company",
-            "_Test Indian Registered Company",
-            "enable_perpetual_inventory",
-            1,
-        )
-        del frappe.local.enable_perpetual_inventory
-
+    @toggle_provisional_accounting()
     def test_purchase_receipt_and_then_purchase_invoice_for_provisional_expense(self):
         """
         No change in accounting because of provisional accounting as it's reversed on purchase invoice
         """
-        # Enable Provisional Expense
-        frappe.db.set_value(
-            "Company",
-            "_Test Indian Registered Company",
-            {
-                "enable_provisional_accounting_for_non_stock_items": 1,
-                "default_provisional_account": "Unsecured Loans - _TIRC",
-            },
-        )
-
         transaction_details = {
             "doctype": "Purchase Receipt",
             "items": SAMPLE_ITEM_LIST,
@@ -788,13 +616,12 @@ class TestIneligibleITC(FrappeTestCase):
         self.assertGLEntry(
             doc.name,
             [
-                {"account": "Round Off - _TIRC", "debit": 0.0, "credit": 0.32},
+                {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
                 {
                     "account": "GST Expense - _TIRC",
                     "debit": 369.72,
                     "credit": 179.64,
                 },
-                {"account": "TDS Payable - _TIRC", "debit": 0.0, "credit": 475.4},
                 {
                     "account": "Input Tax SGST - _TIRC",
                     "debit": 427.86,
@@ -820,18 +647,8 @@ class TestIneligibleITC(FrappeTestCase):
                     "debit": 257.0,
                     "credit": 0.0,
                 },
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5134.0},
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
             ],
-        )
-
-        # Disable Provisional Expense
-        frappe.db.set_value(
-            "Company",
-            "_Test Indian Registered Company",
-            {
-                "enable_provisional_accounting_for_non_stock_items": 0,
-                "default_provisional_account": "",
-            },
         )
 
     def test_purchase_invoice_with_bill_of_entry(self):
@@ -907,6 +724,7 @@ def create_test_items():
                 {
                     "company_name": "_Test Indian Registered Company",
                     "fixed_asset_account": asset_account.name,
+                    "capital_work_in_progress_account": "CWIP Account - _TIRC",
                 }
             ],
         }
