@@ -77,7 +77,6 @@ def set_default_company_for_tests():
             "default_inventory_account": "Stock In Hand - _TIRC",
             "stock_adjustment_account": "Stock Adjustment - _TIRC",
             "stock_received_but_not_billed": "Stock Received But Not Billed - _TIRC",
-            "expenses_included_in_valuation": "Expenses Included In Valuation - _TIRC",
         },
     )
 

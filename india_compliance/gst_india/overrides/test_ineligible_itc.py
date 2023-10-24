@@ -2,12 +2,17 @@ import json
 from contextlib import contextmanager
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.utils import today
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     make_purchase_invoice,
 )
 
+from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
+    make_bill_of_entry,
+    make_landed_cost_voucher,
+)
 from india_compliance.gst_india.utils.tests import create_transaction
 
 SAMPLE_ITEM_LIST = [
@@ -651,8 +656,56 @@ class TestIneligibleITC(FrappeTestCase):
             ],
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_purchase_invoice_with_bill_of_entry(self):
-        pass
+        transaction_details = {
+            "doctype": "Purchase Invoice",
+            "supplier": "_Test Foreign Supplier",
+            "bill_no": "BILL-08",
+            "update_stock": 1,
+            "items": SAMPLE_ITEM_LIST,
+        }
+        doc = create_transaction(**transaction_details)
+        boe = make_bill_of_entry(doc.name)
+        boe.bill_of_entry_no = "BILL-09"
+        boe.bill_of_entry_date = today()
+        boe.submit()
+
+        self.assertGLEntry(
+            boe.name,
+            [
+                {
+                    "account": "Administrative Expenses - _TIRC",
+                    "debit": 179.64,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Customs Duty Payable - _TIRC",
+                    "debit": 0.0,
+                    "credit": 855.72,
+                },
+                {"account": "GST Expense - _TIRC", "debit": 369.72, "credit": 179.64},
+                {"account": "Input Tax IGST - _TIRC", "debit": 0.0, "credit": 369.72},
+                {"account": "Input Tax IGST - _TIRC", "debit": 855.72, "credit": 0.0},
+            ],
+        )
+
+        lcv = make_landed_cost_voucher(boe.name)
+        lcv.save()
+
+        for item in lcv.items:
+            if item.item_code == "Test Ineligible Stock Item":
+                self.assertEqual(item.applicable_charges, 3.42)  # 10.26 / 3 Nos
+            elif item.item_code == "Test Ineligible Fixed Asset":
+                self.assertEqual(item.applicable_charges, 179.82)
+            else:
+                self.assertEqual(item.applicable_charges, 0.0)
+
+        for row in lcv.taxes:
+            if row.expense_account == "GST Expense - _TIRC":
+                self.assertEqual(row.amount, 190.08)
+            else:
+                self.assertEqual(row.amount, 0.0)
 
     def assertGLEntry(self, docname, expected_gl_entry):
         gl_entries = frappe.get_all(
