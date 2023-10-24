@@ -1,0 +1,135 @@
+{
+    "Supplier": [
+        {
+            "name": "_Test Canon India Supplier",
+            "supplier_name": "_Test Canon India Supplier",
+            "supplier_type": "Company",
+            "gstin": "24AAACC4175D1Z4",
+            "gst_category": "Registered Regular"
+        },
+        {
+            "name": "_Test Ujjvan Finance Supplier",
+            "supplier_name": "_Test Ujjvan Finance Supplier",
+            "supplier_type": "Company",
+            "gstin": "24AABCU9603R1ZT",
+            "gst_category": "Registered Regular"
+        }
+    ],
+    "Address": [
+        {
+            "name": "_Test Canon India Supplier-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Canon Address - 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AAACC4175D1Z4",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Canon India Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Canon India Supplier-Billing-1",
+            "address_type": "Billing",
+            "address_line1": "Test Canon Address - 2",
+            "city": "Test City",
+            "state": "Maharashtra",
+            "pincode": "400069",
+            "country": "India",
+            "gstin": "27AAACC4175D1ZY",
+            "gst_category": "Registered Regular",
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Canon India Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Ujjvan Finance Supplier-Billing",
+            "address_type": "Billing",
+            "address_line1": "Test Ujjvan Address - 1",
+            "city": "Test City",
+            "state": "Gujarat",
+            "pincode": "380015",
+            "country": "India",
+            "gstin": "24AABCU9603R1ZT",
+            "gst_category": "Registered Regular",
+            "is_primary_address": 1,
+            "is_shipping_address": 1,
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Ujjvan Finance Supplier"
+                }
+            ]
+        },
+        {
+            "name": "_Test Ujjvan Finance Supplier-Billing-1",
+            "address_type": "Billing",
+            "address_line1": "Test Ujjvan Address - 2",
+            "city": "Test City",
+            "state": "Maharashtra",
+            "pincode": "411014",
+            "country": "India",
+            "gstin": "27AABCU9603R1ZN",
+            "gst_category": "Registered Regular",
+            "links": [
+                {
+                    "link_doctype": "Supplier",
+                    "link_name": "_Test Ujjvan Finance Supplier"
+                }
+            ]
+        }
+    ],
+    "Exact Match": {
+        "Inward Supply": {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "supplier_name": "_Test Canon India Supplier",
+            "bill_no": "123",
+            "bill_date": "2023-10-23",
+            "classification": "B2B",
+            "doc_type": "Invoice",
+            "supply_type": "Regular",
+            "place_of_supply": "24-Gujarat",
+            "supplier_gstin": "24AAACC4175D1Z4",
+            "items": [{ "taxable_value": 1000, "rate": 18, "sgst": 90, "cgst": 90 }],
+            "document_value": 1180,
+            "itc_availability": "Yes",
+            "return_period_2b": "102023",
+            "gen_date_2b": "2023-10-23"
+        },
+        "Purchase Invoice": {
+            "supplier": "_Test Canon India Supplier",
+            "bill_no": "123",
+            "bill_date": "2023-10-23",
+            "qty": 10,
+            "is_in_state": 1
+        },
+        "reconciliation_data": [
+            {
+                "supplier_name": "_Test Canon India Supplier",
+                "supplier_gstin": "24AAACC4175D1Z4",
+                "bill_no": "123",
+                "bill_date": "2023-10-23",
+                "match_status": "Exact Match",
+                "purchase_invoice_name": "PINV-23-00007",
+                "inward_supply_name": "GST-IS-000001",
+                "taxable_value_difference": 0.0,
+                "tax_difference": 0.0,
+                "differences": "",
+                "action": "No Action",
+                "classification": "B2B",
+                "purchase_doctype": "Purchase Invoice"
+            }
+        ]
+    }
+}
