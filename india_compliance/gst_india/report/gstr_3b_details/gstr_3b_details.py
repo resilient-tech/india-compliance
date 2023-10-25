@@ -110,6 +110,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
         )
 
     def get_data(self):
+        self.gst_accounts = get_gst_accounts_by_type(self.company, "Input")
         purchase_data = self.get_itc_from_purchase()
         boe_data = self.get_itc_from_boe()
         journal_entry_data = self.get_itc_from_journal_entry()
@@ -152,7 +153,6 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
     def get_itc_from_boe(self):
         boe = frappe.qb.DocType("Bill of Entry")
         boe_taxes = frappe.qb.DocType("Bill of Entry Taxes")
-        self.gst_accounts = get_gst_accounts_by_type(self.company, "Input")
 
         query = (
             frappe.qb.from_(boe)
@@ -299,7 +299,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 )
 
             intra, inter = 0, 0
-            base_amount = invoice.base_amount
+            taxable_value = invoice.taxable_value
 
             if (
                 invoice.is_nil_exempt == 1
@@ -311,9 +311,9 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 nature_of_supply = "Non GST Supply"
 
             if supplier_state == place_of_supply:
-                intra = base_amount
+                intra = taxable_value
             else:
-                inter = base_amount
+                inter = taxable_value
 
             formatted_data.append(
                 {
@@ -347,7 +347,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 purchase_invoice.posting_date,
                 purchase_invoice.place_of_supply,
                 purchase_invoice.supplier_address,
-                Sum(purchase_invoice_item.base_amount).as_("base_amount"),
+                Sum(purchase_invoice_item.taxable_value).as_("taxable_value"),
                 purchase_invoice_item.is_nil_exempt,
                 purchase_invoice_item.is_non_gst,
                 purchase_invoice.supplier_gstin,
