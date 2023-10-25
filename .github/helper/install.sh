@@ -11,7 +11,15 @@ fi
 
 cd ~ || exit
 
-sudo apt update && sudo apt install redis-server
+echo "Setting Up System Dependencies..."
+
+sudo apt update
+
+sudo apt remove mysql-server mysql-client
+sudo apt install libcups2-dev redis-server mariadb-client
+
+wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
+sudo apt install ./wkhtmltox_0.12.6-1.focal_amd64.deb
 
 pip install frappe-bench
 
@@ -23,7 +31,7 @@ mkdir ~/frappe-bench/sites/test_site
 cp -r "${GITHUB_WORKSPACE}/.github/helper/site_config.json" ~/frappe-bench/sites/test_site/
 
 
-mysql --host 127.0.0.1 --port 3306 -u root -e "
+mariadb --host 127.0.0.1 --port 3306 -u root -ptravis -e "
 SET GLOBAL character_set_server = 'utf8mb4';
 SET GLOBAL collation_server = 'utf8mb4_unicode_ci';
 
@@ -31,12 +39,8 @@ CREATE USER 'test_resilient'@'localhost' IDENTIFIED BY 'test_resilient';
 CREATE DATABASE test_resilient;
 GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost';
 
-UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root';
 FLUSH PRIVILEGES;
 "
-
-wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
-sudo apt install ./wkhtmltox_0.12.6-1.focal_amd64.deb
 
 cd ~/frappe-bench || exit
 

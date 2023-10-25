@@ -1,5 +1,4 @@
 import datetime
-import json
 import random
 import re
 
@@ -243,6 +242,7 @@ class TestEWaybill(FrappeTestCase):
         self._generate_e_waybill()
 
         credit_note = make_return_doc("Sales Invoice", si.name)
+        credit_note.vehicle_no = "GJ05DL9009"
         credit_note.save()
         credit_note.submit()
 
@@ -647,8 +647,9 @@ class TestEWaybill(FrappeTestCase):
         doc.save()
 
         self.assertEqual(
-            json.loads(frappe.message_log[-1]).get("message"),
-            "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
+            frappe.parse_json(frappe.message_log[-1]).get("message"),
+            "You have already generated e-Waybill/e-Invoice for this document."
+            " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
     @change_settings("GST Settings", {"enable_e_waybill_from_dn": 1})
@@ -793,9 +794,10 @@ class TestEWaybill(FrappeTestCase):
         )
 
         # Return Note
-        return_note = make_return_doc(
-            "Purchase Invoice", purchase_invoice.name
-        ).submit()
+        return_note = make_return_doc("Purchase Invoice", purchase_invoice.name)
+        return_note.distance = 10
+        return_note.vehicle_no = "GJ05DL9009"
+        return_note.submit()
 
         return_pi_data = self.e_waybill_test_data.get(
             "purchase_return_for_registered_supplier"

@@ -1,5 +1,3 @@
-from . import __version__ as app_version
-
 app_name = "india_compliance"
 app_title = "India Compliance"
 app_publisher = "Resilient Tech"
@@ -101,9 +99,9 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
     },
     "Payment Entry": {
-        "validate": (
-            "india_compliance.gst_india.overrides.payment_entry.update_place_of_supply"
-        )
+        "validate": "india_compliance.gst_india.overrides.payment_entry.validate",
+        "on_submit": "india_compliance.gst_india.overrides.payment_entry.on_submit",
+        "on_update_after_submit": "india_compliance.gst_india.overrides.payment_entry.on_update_after_submit",
     },
     "Purchase Invoice": {
         "onload": "india_compliance.gst_india.overrides.purchase_invoice.onload",
@@ -184,12 +182,24 @@ regional_overrides = {
     "India": {
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header",
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
-        "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts",
-        "erpnext.controllers.accounts_controller.update_gl_dict_with_regional_fields": "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields",
+        "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": (
+            "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts"
+        ),
+        "erpnext.controllers.accounts_controller.update_gl_dict_with_regional_fields": (
+            "india_compliance.gst_india.overrides.gl_entry.update_gl_dict_with_regional_fields"
+        ),
+        "erpnext.controllers.accounts_controller.get_advance_payment_entries_for_regional": (
+            "india_compliance.gst_india.overrides.payment_entry.get_advance_payment_entries_for_regional"
+        ),
+        "erpnext.accounts.doctype.payment_reconciliation.payment_reconciliation.adjust_allocations_for_taxes": (
+            "india_compliance.gst_india.overrides.payment_entry.adjust_allocations_for_taxes_in_payment_reconciliation"
+        ),
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
-        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_updated_rate_of_depreciation_for_wdv_and_dd": "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_updated_rate_of_depreciation_for_wdv_and_dd",
+        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_updated_rate_of_depreciation_for_wdv_and_dd": (
+            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_updated_rate_of_depreciation_for_wdv_and_dd"
+        ),
     }
 }
 
@@ -268,6 +278,7 @@ scheduler_events = {
     "cron": {
         "*/5 * * * *": [
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_generation",
+            "india_compliance.gst_india.utils.gstr.download_queued_request",
         ],
     }
 }

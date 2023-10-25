@@ -1121,3 +1121,24 @@ function get_destination_address_name(frm) {
         return frm.doc.shipping_address_name || frm.doc.customer_address;
     }
 }
+
+function show_sandbox_mode_indicator() {
+    $(document).find(".form-sidebar .ic-sandbox-mode").remove();
+
+    if (!gst_settings.sandbox_mode) return;
+
+    $(document)
+        .find(".form-sidebar .sidebar-image-section")
+        .after(
+            `
+            <div class="sidebar-menu ic-sandbox-mode">
+                <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
+                "Your site has enabled Sandbox Mode in GST Settings."
+            )}">${__("Sandbox Mode")}</label></p>
+                <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
+                "Sandbox Mode is enabled for GST APIs."
+            )}</a></p>
+            </div>
+            `
+        );
+}

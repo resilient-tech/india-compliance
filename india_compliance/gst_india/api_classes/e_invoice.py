@@ -10,7 +10,7 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
     BASE_PATH = "ei/api"
-    SENSITIVE_HEADERS = BaseAPI.SENSITIVE_HEADERS + ("password",)
+    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
     IGNORED_ERROR_CODES = {
         # Generate IRN errors
         "2150": "Duplicate IRN",
@@ -21,6 +21,9 @@ class EInvoiceAPI(BaseAPI):
         # Cancel IRN errors
         "9999": "Invoice is not active",
         "4002": "EwayBill is already generated for this IRN",
+        # Invalid GSTIN error
+        "3028": "GSTIN is invalid",
+        "3029": "GSTIN is not active",
     }
 
     def setup(self, doc=None, *, company_gstin=None):
@@ -50,10 +53,11 @@ class EInvoiceAPI(BaseAPI):
                 "gstin": company_gstin,
                 "user_name": self.username,
                 "password": self.password,
+                "requestid": self.generate_request_id(),
             }
         )
 
-    def handle_failed_response(self, response_json):
+    def is_ignored_error(self, response_json):
         message = response_json.get("message", "").strip()
 
         for error_code in self.IGNORED_ERROR_CODES:
@@ -103,3 +107,6 @@ class EInvoiceAPI(BaseAPI):
 
     def get_gstin_info(self, gstin):
         return self.get(endpoint="master/gstin", params={"gstin": gstin})
+
+    def sync_gstin_info(self, gstin):
+        return self.get(endpoint="master/syncgstin", params={"gstin": gstin})

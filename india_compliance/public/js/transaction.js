@@ -1,5 +1,6 @@
 // functions in this file will apply to most transactions
 // POS Invoice is a notable exception since it doesn't get created from the UI
+frappe.provide("india_compliance");
 
 const TRANSACTION_DOCTYPES = [
     "Quotation",
@@ -19,6 +20,16 @@ for (const doctype of TRANSACTION_DOCTYPES) {
 
 for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
+}
+
+for (const doctype of [...TRANSACTION_DOCTYPES, "Material Request", "Supplier Quotation", "POS Invoice"]) {
+    set_fetch_if_empty_for_gst_hsn_code(doctype);
+}
+
+function set_fetch_if_empty_for_gst_hsn_code(doctype) {
+    frappe.ui.form.on(doctype, "setup", function(frm) {
+        frm.get_docfield("items", "gst_hsn_code").fetch_if_empty = 0;
+    });
 }
 
 function fetch_gst_details(doctype) {
@@ -110,8 +121,12 @@ async function update_gst_details(frm, event) {
 
     args.party_details = JSON.stringify(party_details);
 
+    india_compliance.fetch_and_update_gst_details(frm, args);
+}
+
+india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
     frappe.call({
-        method: "india_compliance.gst_india.overrides.transaction.get_gst_details",
+        method: method || "india_compliance.gst_india.overrides.transaction.get_gst_details",
         args,
         async callback(r) {
             if (!r.message) return;
@@ -216,6 +231,8 @@ async function _set_gstin_status(frm, gstin_field_name) {
 }
 
 function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
+    if (!gst_settings.validate_gstin_status) return;
+
     const date_field =
         frm.get_field("posting_date") || frm.get_field("transaction_date");
 

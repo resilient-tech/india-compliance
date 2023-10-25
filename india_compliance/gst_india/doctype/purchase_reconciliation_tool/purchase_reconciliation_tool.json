@@ -1,0 +1,192 @@
+{
+ "actions": [],
+ "creation": "2022-04-22 15:27:38.166558",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "include_ignored",
+  "column_break_2",
+  "company_gstin",
+  "column_break_3",
+  "purchase_period",
+  "purchase_from_date",
+  "purchase_to_date",
+  "column_break_6",
+  "inward_supply_period",
+  "inward_supply_from_date",
+  "inward_supply_to_date",
+  "column_break_12",
+  "gst_return",
+  "section_break_11",
+  "reconciliation_html",
+  "not_reconciled",
+  "no_reconciliation_data",
+  "is_modified",
+  "section_break_cmfa",
+  "reconciliation_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "company_gstin",
+   "fieldtype": "Autocomplete",
+   "label": "Company GSTIN"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchase_period",
+   "fieldtype": "Select",
+   "label": "Purchase Period",
+   "options": "\nThis Month\nThis Quarter\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom"
+  },
+  {
+   "depends_on": "eval: doc.purchase_period == 'Custom'",
+   "fieldname": "purchase_from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "read_only_depends_on": "eval: doc.purchase_period != 'Custom'"
+  },
+  {
+   "depends_on": "eval: doc.purchase_period == 'Custom'",
+   "fieldname": "purchase_to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "read_only_depends_on": "eval: doc.purchase_period != 'Custom'"
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "inward_supply_period",
+   "fieldtype": "Select",
+   "label": "Inward Supply Period",
+   "options": "\nThis Month\nThis Quarter\nThis Fiscal Year\nLast Month\nLast Quarter\nLast Fiscal Year\nCustom"
+  },
+  {
+   "depends_on": "eval: doc.inward_supply_period == 'Custom'",
+   "fieldname": "inward_supply_from_date",
+   "fieldtype": "Date",
+   "label": "From Date",
+   "read_only_depends_on": "eval: doc.inward_supply_period != 'Custom'"
+  },
+  {
+   "depends_on": "eval: doc.inward_supply_period == 'Custom'",
+   "fieldname": "inward_supply_to_date",
+   "fieldtype": "Date",
+   "label": "To Date",
+   "read_only_depends_on": "eval: doc.inward_supply_period != 'Custom'"
+  },
+  {
+   "fieldname": "section_break_11",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.reconciliation_data?.length",
+   "fieldname": "reconciliation_html",
+   "fieldtype": "HTML"
+  },
+  {
+   "depends_on": "eval: doc.reconciliation_data && !doc.reconciliation_data.length",
+   "fieldname": "no_reconciliation_data",
+   "fieldtype": "HTML",
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
+  },
+  {
+   "fieldname": "column_break_12",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gst_return",
+   "fieldtype": "Select",
+   "label": "GST Return",
+   "options": "GSTR 2B\nBoth GSTR 2A & 2B"
+  },
+  {
+   "depends_on": "eval: !doc.reconciliation_data",
+   "fieldname": "not_reconciled",
+   "fieldtype": "HTML",
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Reconcile to view the data\") }}</p>"
+  },
+  {
+   "fieldname": "section_break_cmfa",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "reconciliation_data",
+   "fieldtype": "JSON",
+   "label": "Reconciliation Data"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_modified",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Modified"
+  },
+  {
+   "default": "0",
+   "fieldname": "include_ignored",
+   "fieldtype": "Check",
+   "label": "Include Ignored"
+  }
+ ],
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2023-10-12 16:20:03.501277",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "Purchase Reconciliation Tool",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Accounts User",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

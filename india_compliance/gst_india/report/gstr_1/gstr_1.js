@@ -8,6 +8,7 @@ const TYPES_OF_BUSINESS = {
 	"CDNR-UNREG": __("Credit/Debit Notes (Unregistered) - 9B"),
 	"EXPORT": __("Export Invoice - 6A"),
 	"Advances": __("Tax Liability (Advances Received) - 11A(1), 11A(2)"),
+	"Adjustment": __("Adjustment of Advances - 11B(1), 11B(2)"),
 	"NIL Rated": __("NIL RATED/EXEMPTED Invoices")
 };
 
@@ -51,7 +52,7 @@ frappe.query_reports["GSTR-1"] = {
 			"label": __("From Date"),
 			"fieldtype": "Date",
 			"reqd": 1,
-			"default": frappe.datetime.add_months(frappe.datetime.get_today(), -3),
+			"default": india_compliance.last_month_start(),
 			"width": "80"
 		},
 		{
@@ -59,7 +60,7 @@ frappe.query_reports["GSTR-1"] = {
 			"label": __("To Date"),
 			"fieldtype": "Date",
 			"reqd": 1,
-			"default": frappe.datetime.get_today()
+			"default": india_compliance.last_month_end(),
 		},
 		{
 			"fieldname": "type_of_business",

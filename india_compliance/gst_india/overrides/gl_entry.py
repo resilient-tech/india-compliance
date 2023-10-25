@@ -16,7 +16,10 @@ def validate(doc, method=None):
         return
 
     frappe.throw(
-        _("Company GSTIN is a mandatory field for accounting of GST Accounts.")
+        _(
+            "Company GSTIN is a mandatory field for accounting of GST Accounts."
+            " Run `Update GSTIN` patch from GST Balance Report to update GSTIN in all transactions."
+        )
     )
 
 

@@ -30,14 +30,6 @@ class GSTIN(Document):
         self.is_blocked = GSTIN_BLOCK_STATUS.get(self.is_blocked, 0)
         self.last_updated_on = get_datetime()
 
-        self.registration_date = parse_datetime(
-            self.registration_date, day_first=True, throw=False
-        )
-
-        self.cancelled_date = parse_datetime(
-            self.cancelled_date, day_first=True, throw=False
-        )
-
         if not self.cancelled_date and self.status == "Cancelled":
             self.cancelled_date = self.registration_date
 
@@ -50,14 +42,18 @@ class GSTIN(Document):
 
 
 @frappe.whitelist()
-def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0):
+def get_gstin_status(
+    gstin, transaction_date=None, is_request_from_ui=0, force_update=0
+):
     """
     Permission check not required as GSTIN details are public where GSTIN is known.
     """
     if not gstin:
         return
 
-    if not is_status_refresh_required(gstin, transaction_date):
+    if not int(force_update) and not is_status_refresh_required(
+        gstin, transaction_date
+    ):
         if not frappe.db.exists("GSTIN", gstin):
             return
 
@@ -123,8 +119,8 @@ def _get_gstin_info(*, gstin=None, response=None):
         return frappe._dict(
             {
                 "gstin": gstin,
-                "registration_date": response.DtReg,
-                "cancelled_date": response.DtDReg,
+                "registration_date": parse_datetime(response.DtReg, throw=False),
+                "cancelled_date": parse_datetime(response.DtDReg, throw=False),
                 "status": response.Status,
                 "is_blocked": response.BlkStatus,
             }
@@ -184,8 +180,9 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
 
     if gstin_doc.status not in ("Active", "Cancelled"):
         return _throw(
-            _("Status of Party GSTIN {1} is {0}").format(gstin_doc.status),
-            gstin_doc.gstin,
+            _("Status of Party GSTIN {1} is {0}").format(
+                gstin_doc.status, gstin_doc.gstin
+            )
         )
 
 
@@ -230,8 +227,12 @@ def get_formatted_response(response):
     return frappe._dict(
         {
             "gstin": response.gstin,
-            "registration_date": response.rgdt,
-            "cancelled_date": response.cxdt,
+            "registration_date": parse_datetime(
+                response.rgdt, day_first=True, throw=False
+            ),
+            "cancelled_date": parse_datetime(
+                response.cxdt, day_first=True, throw=False
+            ),
             "status": response.sts,
         }
     )
