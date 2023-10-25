@@ -53,7 +53,7 @@ Object.assign(india_compliance, {
 
     async set_gstin_status(field, transaction_date, force_update = 0) {
         const gstin = field.value;
-        if (!gstin || gstin.length != 15) return field.set_description("");
+        if (!gstin || gstin.length !== 15) return field.set_description("");
 
         const { message } = await frappe.call({
             method: "india_compliance.gst_india.doctype.gstin.gstin.get_gstin_status",
@@ -155,7 +155,8 @@ Object.assign(india_compliance, {
     },
 
     get_gstin_otp(error_type) {
-        let description = "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.";
+        let description =
+            "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.";
         if (error_type === "invalid_otp")
             description = "Invalid OTP was provided. Please try again.";
 
@@ -216,6 +217,32 @@ Object.assign(india_compliance, {
                 Reco Status:&nbsp;<strong>${frm.doc.reconciliation_status}</strong>
             </div>`
         );
+    },
+
+    trigger_file_download(file_content, file_name) {
+        let type = "application/json;charset=utf-8";
+
+        if (!file_name.endsWith(".json")) {
+            type = "application/octet-stream";
+        }
+        const blob = new Blob([file_content], { type: type });
+
+        // Create a link and set the URL using `createObjectURL`
+        const link = document.createElement("a");
+        link.style.display = "none";
+        link.href = URL.createObjectURL(blob);
+        link.download = file_name;
+
+        // It needs to be added to the DOM so it can be clicked
+        document.body.appendChild(link);
+        link.click();
+
+        // To make this work on Firefox we need to wait
+        // a little while before removing it.
+        setTimeout(() => {
+            URL.revokeObjectURL(link.href);
+            link.parentNode.removeChild(link);
+        }, 0);
     },
 
     set_last_month_as_default_period(report) {

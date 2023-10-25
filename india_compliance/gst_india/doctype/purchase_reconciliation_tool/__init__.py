@@ -447,7 +447,16 @@ class PurchaseInvoice:
             # return is initiated by the customer. So bill date may not be available or known.
             fields += [self.PI.posting_date.as_("bill_date")]
         else:
-            fields += ["bill_date"]
+            fields += [
+                # Default to posting date if bill date is not available.
+                Case()
+                .when(
+                    IfNull(self.PI.bill_date, "") == "",
+                    self.PI.posting_date,
+                )
+                .else_(self.PI.bill_date)
+                .as_("bill_date")
+            ]
 
         if additional_fields:
             fields += additional_fields
@@ -1269,9 +1278,9 @@ class BaseUtil:
         return inv
 
     @staticmethod
-    def get_dict_for_key(key, list):
+    def get_dict_for_key(key, args_list):
         new_dict = frappe._dict()
-        for data in list:
+        for data in args_list:
             new_dict.setdefault(data[key], {})[data.name] = data
 
         return new_dict
@@ -1290,7 +1299,7 @@ class BaseUtil:
         doc.cess = doc.get("cess", 0) + doc.get("cess_non_advol", 0)
 
     @staticmethod
-    def get_periods(date_range, return_type: ReturnType, reversed=False):
+    def get_periods(date_range, return_type: ReturnType, reversed_order=False):
         """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
         if not date_range:
             return []
@@ -1300,7 +1309,9 @@ class BaseUtil:
 
         # latest to oldest
         return tuple(
-            BaseUtil._reversed(BaseUtil._get_periods(date_range[0], end_date), reversed)
+            BaseUtil._reversed(
+                BaseUtil._get_periods(date_range[0], end_date), reversed_order
+            )
         )
 
     @staticmethod
