@@ -1119,7 +1119,12 @@ def get_json(type_of_business, gstin, data):
 
         return get_cdnr_unreg_json(res, gstin)
 
-    elif type_of_business in ("Advances", "Adjustment"):
+    elif filters["type_of_business"] in ("Advances", "Adjustment"):
+        business_type_key = {
+            "Advances": "at",
+            "Adjustment": "txpd",
+        }
+
         for item in data:
             if not item.get("place_of_supply"):
                 frappe.throw(

@@ -218,7 +218,7 @@ Object.assign(india_compliance, {
             </div>`
         );
     },
-
+  
     trigger_file_download(file_content, file_name) {
         let type = "application/json;charset=utf-8";
 
