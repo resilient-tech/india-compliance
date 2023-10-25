@@ -13,6 +13,9 @@ from frappe.query_builder.functions import Extract, Sum
 from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
+    IneligibleITC,
+)
 from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     is_overseas_transaction,
@@ -72,11 +75,6 @@ class GSTR3BReport(Document):
             "OTH": "All Other ITC",
         }
 
-        itc_ineligible_map = {
-            "RUL": "Ineligible As Per Section 17(5)",
-            "OTH": "Ineligible Others",
-        }
-
         net_itc = self.report_dict["itc_elg"]["itc_net"]
 
         for d in self.report_dict["itc_elg"]["itc_avl"]:
@@ -85,12 +83,48 @@ class GSTR3BReport(Document):
                 d[key] = flt(itc_details.get(itc_type, {}).get(key))
                 net_itc[key] += flt(d[key], 2)
 
-        for d in self.report_dict["itc_elg"]["itc_inelg"]:
-            itc_type = itc_ineligible_map.get(d["ty"])
-            for key in ["iamt", "camt", "samt", "csamt"]:
-                d[key] = flt(itc_details.get(itc_type, {}).get(key))
-
     def get_itc_reversal_entries(self):
+        self.update_itc_reversal_from_journal_entry()
+        self.update_itc_reversal_from_purchase_invoice()
+        self.update_itc_reversal_from_bill_of_entry()
+
+    def update_itc_reversal_from_purchase_invoice(self):
+        ineligible_credit = IneligibleITC(
+            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+        ).get_for_purchase_invoice(group_by="ineligibility_reason")
+
+        return self.process_ineligible_credit(ineligible_credit)
+
+    def update_itc_reversal_from_bill_of_entry(self):
+        ineligible_credit = IneligibleITC(
+            self.company, self.gst_details.get("gstin"), self.month_no, self.year
+        ).get_for_bill_of_entry()
+
+        return self.process_ineligible_credit(ineligible_credit)
+
+    def process_ineligible_credit(self, ineligible_credit):
+        if not ineligible_credit:
+            return
+
+        tax_amounts = ["camt", "samt", "iamt", "csamt"]
+
+        for row in ineligible_credit:
+            if row.itc_classification == "Ineligible As Per Section 17(5)":
+                for key in tax_amounts:
+                    if key not in row:
+                        continue
+
+                    self.report_dict["itc_elg"]["itc_rev"][0][key] += flt(row[key])
+                    self.report_dict["itc_elg"]["itc_net"][key] -= flt(row[key])
+
+            elif row.itc_classification == "ITC restricted due to PoS rules":
+                for key in tax_amounts:
+                    if key not in row:
+                        continue
+
+                    self.report_dict["itc_elg"]["itc_inelg"][1][key] += flt(row[key])
+
+    def update_itc_reversal_from_journal_entry(self):
         reversal_entries = frappe.db.sql(
             """
             SELECT ja.account, j.ineligibility_reason, sum(credit_in_account_currency) as amount

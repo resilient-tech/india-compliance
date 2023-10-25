@@ -43,11 +43,11 @@ def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
+    set_ineligibility_reason(doc)
     update_itc_totals(doc)
     validate_supplier_invoice_number(doc)
     validate_with_inward_supply(doc)
     set_reconciliation_status(doc)
-    set_ineligibility_reason(doc)
 
 
 def set_reconciliation_status(doc):
@@ -79,6 +79,9 @@ def update_itc_totals(doc, method=None):
     doc.itc_state_tax = 0
     doc.itc_central_tax = 0
     doc.itc_cess_amount = 0
+
+    if doc.ineligibility_reason == "ITC restricted due to PoS rules":
+        return
 
     gst_accounts = get_gst_accounts_by_type(doc.company, "Input")
 
