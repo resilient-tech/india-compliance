@@ -27,6 +27,10 @@ def get_gstin_info(gstin, *, throw_error=True):
     if not frappe.get_cached_doc("User", frappe.session.user).has_desk_access():
         frappe.throw(_("Not allowed"), frappe.PermissionError)
 
+    return _get_gstin_info(gstin, throw_error=throw_error)
+
+
+def _get_gstin_info(gstin, *, throw_error=True):
     validate_gstin(gstin)
     response = get_archived_gstin_info(gstin)
 
