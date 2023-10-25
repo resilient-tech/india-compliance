@@ -1036,48 +1036,45 @@ class GSTR11A11BData:
 
 
 @frappe.whitelist()
-def get_gstr1_json(filters, full_report=0, data=None):
+def get_gstr1_json(filters, data=None):
     frappe.has_permission("GSTR-1", throw=True)
 
     report_dict = set_gst_json_defaults(filters)
     filters = json.loads(filters)
+    filename = ["gstr-1"]
+    gstin = report_dict["gstin"]
+    report_types = TYPES_OF_BUSINESS
 
-    if not full_report:
-        report_dict[TYPES_OF_BUSINESS[filters["type_of_business"]]] = get_json(
-            filters.get("type_of_business"), report_dict["gstin"], data
-        )
+    data_dict = {}
+    if data:
+        type_of_business = filters.get("type_of_business")
+        filename.append(frappe.scrub(type_of_business))
 
-        return {
-            "file_name": frappe.scrub(
-                f"GSTR-1 {filters['type_of_business']} {report_dict['gstin']} {report_dict['fp']}.json"
-            ),
-            "data": report_dict,
-        }
+        report_types = {type_of_business: TYPES_OF_BUSINESS[type_of_business]}
+        data_dict.setdefault(type_of_business, json.loads(data))
 
-    for type_of_business in TYPES_OF_BUSINESS:
+    filename.extend([gstin, report_dict["fp"]])
+
+    for type_of_business, abbr in report_types.items():
         filters["type_of_business"] = type_of_business
 
-        report_data = get_json(
-            type_of_business,
-            report_dict.get("gstin"),
-            format_data_to_dict(execute(filters)),
+        report_data = data_dict.get(type_of_business) or format_data_to_dict(
+            execute(filters)
         )
+        report_data = get_json(type_of_business, gstin, report_data)
 
-        if report_data:
-            report_dict[TYPES_OF_BUSINESS[type_of_business]] = report_data
+        if not report_data:
+            continue
+
+        report_dict[abbr] = report_data
 
     return {
-        "file_name": frappe.scrub(
-            f"GSTR-1 full {report_dict['gstin']} {report_dict['fp']}.json"
-        ),
+        "file_name": "_".join(filename) + ".json",
         "data": report_dict,
     }
 
 
 def get_json(type_of_business, gstin, data):
-    if isinstance(data, str):
-        data = json.loads(data)
-
     if data and list(data[-1].values())[0] == "Total":
         data = data[:-1]
 
@@ -1090,41 +1087,38 @@ def get_json(type_of_business, gstin, data):
 
         return get_b2b_json(res, gstin)
 
-    elif type_of_business == "B2C Large":
+    if type_of_business == "B2C Large":
         for item in data:
             res.setdefault(item["place_of_supply"], []).append(item)
 
         return get_b2cl_json(res, gstin)
 
-    elif type_of_business == "B2C Small":
+    if type_of_business == "B2C Small":
         return get_b2cs_json(data, gstin)
 
-    elif type_of_business == "EXPORT":
+    if type_of_business == "EXPORT":
         for item in data:
             res.setdefault(item["export_type"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
         return get_export_json(res)
-    elif type_of_business == "CDNR-REG":
+
+    if type_of_business == "CDNR-REG":
         for item in data:
             res.setdefault(item["billing_address_gstin"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
         return get_cdnr_reg_json(res, gstin)
-    elif type_of_business == "CDNR-UNREG":
+
+    if type_of_business == "CDNR-UNREG":
         for item in data:
             res.setdefault(item["invoice_number"], []).append(item)
 
         return get_cdnr_unreg_json(res, gstin)
 
-    elif filters["type_of_business"] in ("Advances", "Adjustment"):
-        business_type_key = {
-            "Advances": "at",
-            "Adjustment": "txpd",
-        }
-
+    if type_of_business in ("Advances", "Adjustment"):
         for item in data:
             if not item.get("place_of_supply"):
                 frappe.throw(
@@ -1138,7 +1132,7 @@ def get_json(type_of_business, gstin, data):
 
         return get_advances_json(res, gstin)
 
-    elif type_of_business == "NIL Rated":
+    if type_of_business == "NIL Rated":
         return get_exempted_json(data)
 
 

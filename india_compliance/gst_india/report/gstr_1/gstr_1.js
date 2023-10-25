@@ -102,7 +102,6 @@ function download_current_report(report) {
 		method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_gstr1_json',
 		args: {
 			data: report.data,
-			report_name: report.report_name,
 			filters: report.get_values()
 		},
 		callback: function (r) {
@@ -117,9 +116,7 @@ function download_full_report(report) {
 	frappe.call({
 		method: 'india_compliance.gst_india.report.gstr_1.gstr_1.get_gstr1_json',
 		args: {
-			report_name: report.report_name,
 			filters: report.get_values(),
-			full_report: 1
 		},
 		callback: function (r) {
 			if (r.message) {
