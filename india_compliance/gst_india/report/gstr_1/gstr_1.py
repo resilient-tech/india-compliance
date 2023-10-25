@@ -18,6 +18,18 @@ from india_compliance.gst_india.utils import (
 
 B2C_LIMIT = 2_50_000
 
+TYPES_OF_BUSINESS = {
+    "B2B": "b2b",
+    "B2C Large": "b2cl",
+    "B2C Small": "b2cs",
+    "CDNR-REG": "cdnr",
+    "CDNR-UNREG": "cdnur",
+    "EXPORT": "exp",
+    "Advances": "at",
+    "Adjustment": "txpd",
+    "NIL Rated": "nil",
+}
+
 
 def execute(filters=None):
     return Gstr1Report(filters).run()
@@ -197,7 +209,9 @@ class Gstr1Report:
                             "cess_amount": 0,
                             "type": "",
                             "invoice_number": invoice_number,
-                            "posting_date": invoice_details.get("posting_date"),
+                            "posting_date": invoice_details.get(
+                                "posting_date"
+                            ).strftime("%d-%m-%Y"),
                             "invoice_value": invoice_details.get("base_grand_total"),
                         },
                     )
@@ -1022,75 +1036,90 @@ class GSTR11A11BData:
 
 
 @frappe.whitelist()
-def get_json(filters, report_name, data):
-    """
-    This function does not check for permissions since it only manipulates data sent to it
-    """
+def get_gstr1_json(filters, data=None):
+    frappe.has_permission("GSTR-1", throw=True)
 
+    report_dict = set_gst_json_defaults(filters)
     filters = json.loads(filters)
-    report_data = json.loads(data)
-    gstin = filters.get("company_gstin") or get_company_gstin_number(
-        filters.get("company"), filters.get("company_address")
-    )
+    filename = ["gstr-1"]
+    gstin = report_dict["gstin"]
+    report_types = TYPES_OF_BUSINESS
 
-    fp = "%02d%s" % (
-        getdate(filters["to_date"]).month,
-        getdate(filters["to_date"]).year,
-    )
+    data_dict = {}
+    if data:
+        type_of_business = filters.get("type_of_business")
+        filename.append(frappe.scrub(type_of_business))
 
-    gst_json = {"version": "GST3.0.4", "hash": "hash", "gstin": gstin, "fp": fp}
+        report_types = {type_of_business: TYPES_OF_BUSINESS[type_of_business]}
+        data_dict.setdefault(type_of_business, json.loads(data))
+
+    filename.extend([gstin, report_dict["fp"]])
+
+    for type_of_business, abbr in report_types.items():
+        filters["type_of_business"] = type_of_business
+
+        report_data = data_dict.get(type_of_business) or format_data_to_dict(
+            execute(filters)
+        )
+        report_data = get_json(type_of_business, gstin, report_data)
+
+        if not report_data:
+            continue
+
+        report_dict[abbr] = report_data
+
+    return {
+        "file_name": "_".join(filename) + ".json",
+        "data": report_dict,
+    }
+
+
+def get_json(type_of_business, gstin, data):
+    if data and list(data[-1].values())[0] == "Total":
+        data = data[:-1]
 
     res = {}
-    if filters["type_of_business"] == "B2B":
-        for item in report_data[:-1]:
+    if type_of_business == "B2B":
+        for item in data:
             res.setdefault(item["billing_address_gstin"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
-        out = get_b2b_json(res, gstin)
-        gst_json["b2b"] = out
+        return get_b2b_json(res, gstin)
 
-    elif filters["type_of_business"] == "B2C Large":
-        for item in report_data[:-1]:
+    if type_of_business == "B2C Large":
+        for item in data:
             res.setdefault(item["place_of_supply"], []).append(item)
 
-        out = get_b2cl_json(res, gstin)
-        gst_json["b2cl"] = out
+        return get_b2cl_json(res, gstin)
 
-    elif filters["type_of_business"] == "B2C Small":
-        out = get_b2cs_json(report_data[:-1], gstin)
-        gst_json["b2cs"] = out
+    if type_of_business == "B2C Small":
+        return get_b2cs_json(data, gstin)
 
-    elif filters["type_of_business"] == "EXPORT":
-        for item in report_data[:-1]:
+    if type_of_business == "EXPORT":
+        for item in data:
             res.setdefault(item["export_type"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
-        out = get_export_json(res)
-        gst_json["exp"] = out
-    elif filters["type_of_business"] == "CDNR-REG":
-        for item in report_data[:-1]:
+        return get_export_json(res)
+
+    if type_of_business == "CDNR-REG":
+        for item in data:
             res.setdefault(item["billing_address_gstin"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
-        out = get_cdnr_reg_json(res, gstin)
-        gst_json["cdnr"] = out
-    elif filters["type_of_business"] == "CDNR-UNREG":
-        for item in report_data[:-1]:
+        return get_cdnr_reg_json(res, gstin)
+
+    if type_of_business == "CDNR-UNREG":
+        for item in data:
             res.setdefault(item["invoice_number"], []).append(item)
 
-        out = get_cdnr_unreg_json(res, gstin)
-        gst_json["cdnur"] = out
+        return get_cdnr_unreg_json(res, gstin)
 
-    elif filters["type_of_business"] in ("Advances", "Adjustment"):
-        business_type_key = {
-            "Advances": "at",
-            "Adjustment": "txpd",
-        }
-
-        for item in report_data[:-1]:
+    if type_of_business in ("Advances", "Adjustment"):
+        for item in data:
             if not item.get("place_of_supply"):
                 frappe.throw(
                     _(
@@ -1101,19 +1130,41 @@ def get_json(filters, report_name, data):
 
             res.setdefault(item["place_of_supply"], []).append(item)
 
-        out = get_advances_json(res, gstin)
-        gst_json[business_type_key[filters.get("type_of_business")]] = out
+        return get_advances_json(res, gstin)
 
-    elif filters["type_of_business"] == "NIL Rated":
-        res = report_data[:-1]
-        out = get_exempted_json(res)
-        gst_json["nil"] = out
+    if type_of_business == "NIL Rated":
+        return get_exempted_json(data)
 
-    return {
-        "report_name": report_name,
-        "report_type": filters["type_of_business"],
-        "data": gst_json,
-    }
+
+def set_gst_json_defaults(filters):
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    gstin = filters.get("company_gstin") or get_company_gstin_number(
+        filters.get("company"), filters.get("company_address")
+    )
+
+    fp = "%02d%s" % (
+        getdate(filters["to_date"]).month,
+        getdate(filters["to_date"]).year,
+    )
+
+    gst_json = {"version": "GST3.0.4", "hash": "hash", "gstin": gstin, "fp": fp}
+    return gst_json
+
+
+def format_data_to_dict(data):
+    data_rows = data[1]
+
+    if not data_rows:
+        return []
+
+    if isinstance(data_rows[0], dict):
+        return data_rows
+
+    columns = [column["fieldname"] for column in data[0]]
+    report_data = [dict(zip(columns, row)) for row in data_rows]
+    return report_data
 
 
 def get_b2b_json(res, gstin):
@@ -1472,8 +1523,17 @@ def get_company_gstin_number(company, address=None, all_gstins=False):
 def download_json_file():
     """download json content in a file"""
     data = frappe._dict(frappe.local.form_dict)
+    report_data = json.loads(data["data"])
+
     frappe.response["filename"] = (
-        frappe.scrub("{0} {1}".format(data["report_name"], data["report_type"]))
+        frappe.scrub(
+            "{0} {1} {2} {3}".format(
+                data["report_name"],
+                data["report_type"],
+                report_data["gstin"],
+                report_data["fp"],
+            )
+        )
         + ".json"
     )
     frappe.response["filecontent"] = data["data"]
