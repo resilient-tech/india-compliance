@@ -206,9 +206,6 @@ regional_overrides = {
         "erpnext.stock.doctype.purchase_receipt.purchase_receipt.update_regional_gl_entries": (
             "india_compliance.gst_india.overrides.ineligible_itc.update_regional_gl_entries"
         ),
-        "erpnext.controllers.stock_controller.update_regional_gl_entries": (
-            "india_compliance.gst_india.overrides.ineligible_itc.update_regional_gl_entries"
-        ),
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
