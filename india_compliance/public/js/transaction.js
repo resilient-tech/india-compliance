@@ -22,6 +22,7 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
 
+<<<<<<< HEAD
 for (const doctype of [
     ...TRANSACTION_DOCTYPES,
     "Material Request",
@@ -52,6 +53,8 @@ function set_fetch_if_empty_for_is_ineligible_for_itc(doctype) {
     });
 }
 
+=======
+>>>>>>> d11b1fba (revert: temp fixes for fetch_if_empty)
 function fetch_gst_details(doctype) {
     const event_fields = [
         "tax_category",
