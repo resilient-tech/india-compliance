@@ -4,6 +4,9 @@ from india_compliance.gst_india.utils import GST_ACCOUNT_FIELDS
 
 
 def execute():
+    if "eligibility_for_itc" not in frappe.db.get_table_columns("Purchase Invoice"):
+        return
+
     itc_amounts = {
         "itc_integrated_tax": 0,
         "itc_state_tax": 0,
