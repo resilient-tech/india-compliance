@@ -29,6 +29,7 @@ from india_compliance.income_tax_india.overrides.tax_withholding_category import
 )
 
 DOCTYPES_WITH_TAXABLE_VALUE = {
+    "Purchase Receipt",
     "Purchase Invoice",
     "Delivery Note",
     "Sales Invoice",
@@ -867,8 +868,8 @@ def validate_reverse_charge_transaction(doc, method=None):
 
         frappe.throw(msg)
 
-    if doc.get("eligibility_for_itc") == "All Other ITC":
-        doc.eligibility_for_itc = "ITC on Reverse Charge"
+    if doc.get("itc_classification") == "All Other ITC":
+        doc.itc_classification = "ITC on Reverse Charge"
 
 
 def is_export_without_payment_of_gst(doc):

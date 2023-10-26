@@ -28,6 +28,9 @@ def execute():
 
     delete_old_fields("invoice_type", doctypes)
 
+    if "eligibility_for_itc" not in frappe.db.get_table_columns("Purchase Invoice"):
+        return
+
     # update eligibility_for_itc with new options
     for old_value, new_value in {
         "ineligible": "Ineligible",

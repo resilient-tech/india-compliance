@@ -221,7 +221,7 @@
 				<td></td>
 			</tr>
 			<tr>
-				<td>&nbsp (1) {{__("As per rules 42 & 43 of CGST Rules")}}</td>
+				<td>&nbsp (1) {{__("As per rules 42 & 43 of CGST Rules and section 17(5)")}}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_rev[0].iamt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_rev[0].camt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_rev[0].samt, 2) }}</td>
@@ -249,14 +249,14 @@
 				<td></td>
 			</tr>
 			<tr>
-				<td>&nbsp (1) {{__("As per section 17(5)")}}</td>
+				<td>&nbsp (1) {{__("ITC reclaimed which was reversed under Table 4(B)(2) in earlier tax period")}}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_inelg[0].iamt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_inelg[0].camt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_inelg[0].samt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_inelg[0].csamt, 2) }}</td>
 			</tr>
 			<tr>
-				<td>&nbsp (2) {{__("Others")}}</td>
+				<td>&nbsp (2) {{__("Ineligible ITC under section 16(4) & ITC restricted due to PoS rules")}}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_inelg[1].iamt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_inelg[1].camt, 2) }}</td>
 				<td class="right">{{ flt(data.itc_elg.itc_inelg[1].samt, 2) }}</td>

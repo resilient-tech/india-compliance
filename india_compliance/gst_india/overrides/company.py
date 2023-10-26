@@ -28,6 +28,7 @@ def make_company_fixtures(doc, method=None):
 def create_company_fixtures(company):
     make_default_tax_templates(company)
     make_default_customs_accounts(company)
+    make_default_gst_expense_accounts(company)
 
 
 def make_default_customs_accounts(company):
@@ -43,6 +44,15 @@ def make_default_customs_accounts(company):
         account_name="Customs Duty Expense",
         parent="Stock Expenses",
         default_fieldname="default_customs_expense_account",
+    )
+
+
+def make_default_gst_expense_accounts(company):
+    create_default_company_account(
+        company,
+        account_name="GST Expense",
+        parent="Indirect Expenses",
+        default_fieldname="default_gst_expense_account",
     )
 
 

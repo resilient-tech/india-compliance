@@ -9,10 +9,15 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import today
 import erpnext
-from erpnext.accounts.general_ledger import make_gl_entries
+from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accounts
 
+from india_compliance.gst_india.overrides.ineligible_itc import (
+    update_landed_cost_voucher_for_gst_expense,
+    update_regional_gl_entries,
+    update_valuation_rate,
+)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -45,13 +50,16 @@ class BillofEntry(Document):
         self.validate_purchase_invoice()
         self.validate_taxes()
         self.reconciliation_status = "Unreconciled"
+        update_valuation_rate(self)
 
     def on_submit(self):
-        make_gl_entries(self.get_gl_entries())
+        gl_entries = self.get_gl_entries()
+        update_regional_gl_entries(gl_entries, self)
+        make_gl_entries(gl_entries)
 
     def on_cancel(self):
         self.ignore_linked_doctypes = ("GL Entry",)
-        make_gl_entries(self.get_gl_entries(), cancel=True)
+        make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
 
     # Code adapted from AccountsController.on_trash
     def on_trash(self):
@@ -305,6 +313,32 @@ class BillofEntry(Document):
 
         return items, taxes
 
+    def get_stock_items(self):
+        stock_items = []
+        item_codes = list(set(item.item_code for item in self.get("items")))
+        if item_codes:
+            stock_items = frappe.db.get_values(
+                "Item",
+                {"name": ["in", item_codes], "is_stock_item": 1},
+                pluck="name",
+                cache=True,
+            )
+
+        return stock_items
+
+    def get_asset_items(self):
+        asset_items = []
+        item_codes = list(set(item.item_code for item in self.get("items")))
+        if item_codes:
+            asset_items = frappe.db.get_values(
+                "Item",
+                {"name": ["in", item_codes], "is_fixed_asset": 1},
+                pluck="name",
+                cache=True,
+            )
+
+        return asset_items
+
 
 @frappe.whitelist()
 def make_bill_of_entry(source_name, target_doc=None):
@@ -454,6 +488,7 @@ def make_landed_cost_voucher(source_name, target_doc=None):
         for item in target.items:
             item.applicable_charges = items[item.purchase_receipt_item].customs_duty
             total_customs_duty += item.applicable_charges
+            item.boe_detail = items[item.purchase_receipt_item].boe_detail
 
         # add taxes
         target.append(
@@ -472,6 +507,8 @@ def make_landed_cost_voucher(source_name, target_doc=None):
                     " manually."
                 )
             )
+
+        update_landed_cost_voucher_for_gst_expense(source, target)
 
     doc = get_mapped_doc(
         "Bill of Entry",
@@ -503,6 +540,7 @@ def get_items_for_landed_cost_voucher(boe):
     """
     pi = frappe.get_doc("Purchase Invoice", boe.purchase_invoice)
     item_customs_map = {item.pi_detail: item.customs_duty for item in boe.items}
+    item_name_map = {item.pi_detail: item.name for item in boe.items}
 
     def _item_dict(items):
         return frappe._dict({item.name: item for item in items})
@@ -512,6 +550,7 @@ def get_items_for_landed_cost_voucher(boe):
         pi_items = [pi_item.as_dict() for pi_item in pi.items]
         for pi_item in pi_items:
             pi_item.customs_duty = item_customs_map.get(pi_item.name)
+            pi_item.boe_detail = item_name_map.get(pi_item.name)
 
         return _item_dict(pi_items)
 
@@ -526,6 +565,7 @@ def get_items_for_landed_cost_voucher(boe):
 
         for pr_item in pr_items:
             pr_item.customs_duty = item_customs_map.get(pr_pi_map.get(pr_item.name))
+            pr_item.boe_detail = item_name_map.get(pr_pi_map.get(pr_item.name))
 
         return _item_dict(pr_items)
 
@@ -542,5 +582,6 @@ def get_items_for_landed_cost_voucher(boe):
         customs_duty_for_item = item_customs_map.get(pr_item.purchase_invoice_item)
         total_qty = item_qty_map.get(pr_item.purchase_invoice_item)
         pr_item.customs_duty = customs_duty_for_item * pr_item.qty / total_qty
+        pr_item.boe_detail = item_name_map.get(pr_item.purchase_invoice_item)
 
     return _item_dict(pr_items)

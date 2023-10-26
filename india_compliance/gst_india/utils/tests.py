@@ -49,9 +49,9 @@ def create_transaction(**data):
 
         if (
             transaction.doctype == "Purchase Invoice"
-            and not transaction.eligibility_for_itc
+            and not transaction.itc_classification
         ):
-            transaction.eligibility_for_itc = "All Other ITC"
+            transaction.itc_classification = "All Other ITC"
 
     if transaction.doctype == "POS Invoice":
         transaction.append(
