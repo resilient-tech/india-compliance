@@ -257,10 +257,8 @@ function show_generate_e_waybill_dialog(frm) {
 
     //Alert if E-waybill cannot be generated using api
     if (api_enabled && !is_e_waybill_generatable_using_api(frm)) {
-        let reason =
-            !frm.doc.customer_address || !frm.doc.supplier_address
-                ? "address is missing."
-                : "same GSTIN billing.";
+        let address = frm.doc.customer_address || frm.doc.supplier_address;
+        let reason = !address ? "address is missing." : "of same GSTIN billing.";
         $(`
             <div class="alert alert-warning" role="alert">
                 e-Waybill cannot be generated using API because ${reason}
