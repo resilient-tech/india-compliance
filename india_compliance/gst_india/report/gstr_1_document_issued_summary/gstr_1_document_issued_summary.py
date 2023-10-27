@@ -1,21 +1,10 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
 import re
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Optional
 
 import frappe
 from frappe import _
-from frappe.model.naming import (
-    NAMING_SERIES_PART_TYPES,
-    determine_consecutive_week_number,
-    getseries,
-    has_custom_parser,
-)
-from frappe.utils import cint, cstr, now_datetime
-
-if TYPE_CHECKING:
-    from frappe.model.document import Document
+from frappe.utils import cint
 
 
 def execute(filters=None):
@@ -81,194 +70,131 @@ def get_columns(filters) -> list:
 def get_data(filters) -> list:
     data = []
 
-    document_mapper = {
-        "Invoices for outward supply": "Sales Invoice",
-        "Debit Note": "Sales Invoice",
-        "Credit Note": "Sales Invoice",
-    }
-
-    for nature_of_document, document_type in document_mapper.items():
-        data.extend(get_document_summary(filters, document_type, nature_of_document))
+    data = get_document_summary(filters)
 
     return data
 
 
-def get_document_summary(filters, document_type, nature_of_document):
-    doctype = frappe.qb.DocType(document_type)
+def get_document_summary(filters):
+    doctype = frappe.qb.DocType("Sales Invoice")
 
     query = (
         frappe.qb.from_(doctype)
-        # to parse naming series by fieldname
-        .select("*")
+        .select(
+            doctype.name,
+            doctype.naming_series,
+            doctype.creation,
+            doctype.docstatus,
+            doctype.is_return,
+            doctype.is_debit_note,
+            doctype.amended_from,
+        )
         .where(doctype.company == filters.company)
         .where(doctype.posting_date.between(filters.from_date, filters.to_date))
         .where(doctype.naming_series.isnotnull())
-        .orderby(doctype.creation)
+        .orderby(doctype.name)
     )
-
-    query = apply_document_wise_condition(filters, query, nature_of_document, doctype)
 
     data = query.run(as_dict=True)
 
-    return get_summarized_data(data, nature_of_document)
-
-
-def get_summarized_data(data, nature_of_document):
-    naming_series_data = {}
-
-    for item in data:
-        naming_series = parse_naming_series(
-            item.naming_series.replace("#", ""), doc=item
-        )
-        item.serial_number = get_serial_number(item)
-        naming_series_data.setdefault(naming_series, {})
-        naming_series_data[naming_series][item.serial_number] = item
+    data = filter_amended_docs(data, filters)
 
     summarized_data = []
 
-    for naming_series, items in naming_series_data.items():
-        if not items:
-            continue
-
-        sorted_items = sorted(items.items(), key=lambda x: x[0])
-
-        slice_indices = [
-            i
-            for i in range(1, len(sorted_items))
-            if sorted_items[i][0] - sorted_items[i - 1][0] != 1
-        ]
-
-        list_sorted_items = [
-            sorted_items[i:j]
-            for i, j in zip([0] + slice_indices, slice_indices + [None])
-        ]
-
-        for sorted_items in list_sorted_items:
-            draft_count = sum(1 for item in sorted_items if item[1].docstatus == 0)
-            total_submitted_count = sum(
-                1 for item in sorted_items if item[1].docstatus == 1
-            )
-            canceled_count = sum(1 for item in sorted_items if item[1].docstatus == 2)
-
-            summarized_data.append(
-                {
-                    "naming_series": naming_series,
-                    "nature_of_document": nature_of_document,
-                    "from_serial_no": sorted_items[0][1].name,
-                    "to_serial_no": sorted_items[-1][1].name,
-                    "total_number": total_submitted_count,
-                    "canceled": canceled_count,
-                    "total_draft": draft_count,
-                    "total_issued": draft_count
-                    + total_submitted_count
-                    + canceled_count,
-                }
-            )
+    for nature_of_document, seperated_data in seperate_data_by_nature_of_document(
+        data
+    ).items():
+        summarized_data.extend(get_summarized_data(seperated_data, nature_of_document))
 
     return summarized_data
 
 
-def apply_document_wise_condition(filters, query, nature_of_document, doctype):
-    if filters.get("company_gstin"):
-        query = query.where(doctype.company_gstin == filters.company_gstin)
+def get_summarized_data(data, nature_of_document):
+    if not data:
+        return []
 
-    if nature_of_document == "Invoices for outward supply":
-        query = query.where(doctype.is_return == 0)
-        query = query.where(doctype.is_debit_note == 0)
-    elif nature_of_document == "Debit Note":
-        query = query.where(doctype.is_debit_note == 1)
-    elif nature_of_document == "Credit Note":
-        query = query.where(doctype.is_return == 1)
+    slice_indices = []
+    summarized_data = []
 
-    return query
+    for i in range(1, len(data)):
+        alphabet_pattern = re.compile(r"[A-Za-z]+")
+        number_pattern = re.compile(r"\d+")
 
+        a_0 = "".join(alphabet_pattern.findall(data[i - 1].name))
+        n_0 = "".join(number_pattern.findall(data[i - 1].name))
 
-def get_serial_number(item):
-    if ".#" in item.naming_series:
-        prefix, hashes = item.naming_series.rsplit(".", 1)
-        if "#" not in hashes:
-            hash = re.search("#+", item.naming_series)
-            if not hash:
-                return
-            item.name = item.name.replace(hashes, "")
-            prefix = prefix.replace(hash.group(), "")
-    else:
-        prefix = item.naming_series
+        a_1 = "".join(alphabet_pattern.findall(data[i].name))
+        n_1 = "".join(number_pattern.findall(data[i].name))
 
-    if "." in prefix:
-        prefix = parse_naming_series(prefix.split("."), doc=item)
-
-    count = item.name.replace(prefix, "")
-
-    if "-" in count:
-        count = count.split("-")[0]
-
-    return cint(count)
-
-
-def _parse_naming_series(doc):
-    naming_series = parse_naming_series(doc.naming_series, doc=doc)
-    serial_number = get_serial_number(doc)
-    return naming_series, serial_number
-
-
-def parse_naming_series(
-    parts: list[str] | str,
-    doctype=None,
-    doc: Optional["Document"] = None,
-    number_generator: Callable[[str, int], str] | None = None,
-) -> str:
-    """Parse the naming series and get next name.
-
-    args:
-            parts: naming series parts (split by `.`)
-            doc: document to use for series that have parts using fieldnames
-            number_generator: Use different counter backend other than `tabSeries`. Primarily used for testing.
-    """
-
-    name = ""
-    _sentinel = object()
-    if isinstance(parts, str):
-        parts = parts.split(".")
-
-    if not number_generator:
-        number_generator = getseries
-
-    series_set = False
-    today = doc.get("creation") if doc else now_datetime()
-    for e in parts:
-        if not e:
+        if a_1 != a_0:
+            slice_indices.append(i)
             continue
 
-        part = ""
-        if e.startswith("#"):
-            if not series_set:
-                digits = len(e)
-                part = number_generator(name, digits)
-                series_set = True
-        elif e == "YY":
-            part = today.strftime("%y")
-        elif e == "MM":
-            part = today.strftime("%m")
-        elif e == "DD":
-            part = today.strftime("%d")
-        elif e == "YYYY":
-            part = today.strftime("%Y")
-        elif e == "WW":
-            part = determine_consecutive_week_number(today)
-        elif e == "timestamp":
-            part = str(today)
-        elif doc and (e.startswith("{") or doc.get(e, _sentinel) is not _sentinel):
-            e = e.replace("{", "").replace("}", "")
-            part = doc.get(e)
-        elif method := has_custom_parser(e):
-            part = frappe.get_attr(method[0])(doc, e)
+        if cint(n_1) - cint(n_0) != 1:
+            slice_indices.append(i)
+
+    list_sorted_items = [
+        data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])
+    ]
+
+    for sorted_items in list_sorted_items:
+        draft_count = sum(1 for item in sorted_items if item.docstatus == 0)
+        total_submitted_count = sum(1 for item in sorted_items if item.docstatus == 1)
+        canceled_count = sum(1 for item in sorted_items if item.docstatus == 2)
+
+        summarized_data.append(
+            {
+                "naming_series": "".join(sorted_items[0].naming_series.split(".")),
+                "nature_of_document": nature_of_document,
+                "from_serial_no": sorted_items[0].name,
+                "to_serial_no": sorted_items[-1].name,
+                "total_number": total_submitted_count,
+                "canceled": canceled_count,
+                "total_draft": draft_count,
+                "total_issued": draft_count + total_submitted_count + canceled_count,
+            }
+        )
+
+    return summarized_data
+
+
+def seperate_data_by_nature_of_document(data):
+    nature_of_document = {
+        "Invoices for outward supply": [],
+        "Debit Note": [],
+        "Credit Note": [],
+    }
+
+    for item in data:
+        if item.is_return:
+            nature_of_document["Credit Note"].append(item)
+        elif item.is_debit_note:
+            nature_of_document["Debit Note"].append(item)
         else:
-            part = e
+            nature_of_document["Invoices for outward supply"].append(item)
 
-        if isinstance(part, str):
-            name += part
-        elif isinstance(part, NAMING_SERIES_PART_TYPES):
-            name += cstr(part).strip()
+    return nature_of_document
 
-    return name
+
+def filter_amended_docs(data, filters):
+    data_dict = {item.name: item for item in data}
+    amended_dict = {}
+    amended_list = []
+
+    for item in data:
+        if (
+            item.amended_from
+            and len(item.amended_from) != len(item.name)
+            or item.amended_from in amended_dict
+        ):
+            amended_dict[item.name] = item.amended_from
+            amended_list.append(item.name)
+
+    amended_list.reverse()
+
+    for item in amended_list:
+        data_dict[amended_dict[item]] = data_dict[item]
+        data_dict[amended_dict[item]]["name"] = amended_dict[item]
+        data_dict.pop(item)
+
+    return list(data_dict.values())
