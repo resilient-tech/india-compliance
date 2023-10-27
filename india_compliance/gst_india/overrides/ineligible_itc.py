@@ -1,5 +1,6 @@
 import frappe
-from frappe.utils import flt, rounded
+from frappe import _
+from frappe.utils import flt, get_link_to_form, rounded
 from erpnext.assets.doctype.asset.asset import (
     get_asset_account,
     is_cwip_accounting_enabled,
@@ -19,6 +20,13 @@ class IneligibleITC:
         self.is_perpetual = self.company.enable_perpetual_inventory
         self.cost_center = doc.cost_center or self.company.cost_center
 
+        if not self.company.default_gst_expense_account:
+            frappe.throw(
+                _(
+                    "Please set <strong>Default GST Expense Account</strong> in Company {0}"
+                ).format(get_link_to_form("Company", self.company.name))
+            )
+
         self.dr_or_cr = "credit" if doc.get("is_return") else "debit"
         self.cr_or_dr = "debit" if doc.get("is_return") else "credit"
 
@@ -29,11 +37,6 @@ class IneligibleITC:
         - Only updates if its a stock item or fixed asset
         - No updates for expense items
         """
-        if self.doc.get("is_opening") == "Yes" or not is_indian_registered_company(
-            self.doc
-        ):
-            return
-
         self.doc._has_ineligible_itc_items = False
         stock_items = self.doc.get_stock_items()
 
@@ -357,11 +360,17 @@ DOCTYPE_MAPPING = {
 
 
 def update_valuation_rate(doc, method=None):
+    if doc.get("is_opening") == "Yes" or not is_indian_registered_company(doc):
+        return
+
     if doc.doctype in DOCTYPE_MAPPING:
         DOCTYPE_MAPPING[doc.doctype](doc).update_valuation_rate()
 
 
 def update_regional_gl_entries(gl_entries, doc):
+    if doc.get("is_opening") == "Yes" or not is_indian_registered_company(doc):
+        return gl_entries
+
     if doc.doctype in DOCTYPE_MAPPING:
         DOCTYPE_MAPPING[doc.doctype](doc).update_gl_entries(gl_entries)
 
