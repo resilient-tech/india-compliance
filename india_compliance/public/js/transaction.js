@@ -46,7 +46,7 @@ for (const doctype of [
     set_fetch_if_empty_for_is_ineligible_for_itc(doctype);
 }
 
-function set_fetch_if_empty_for_gst_hsn_code(doctype) {
+function set_fetch_if_empty_for_is_ineligible_for_itc(doctype) {
     frappe.ui.form.on(doctype, "setup", function (frm) {
         frm.get_docfield("items", "is_ineligible_for_itc").fetch_if_empty = 0;
     });
