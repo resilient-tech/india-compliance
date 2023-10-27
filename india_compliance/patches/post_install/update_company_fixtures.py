@@ -3,6 +3,7 @@ from erpnext.setup.setup_wizard.operations.taxes_setup import get_or_create_tax_
 
 from india_compliance.gst_india.overrides.company import (
     make_default_customs_accounts,
+    make_default_gst_expense_accounts,
     make_default_tax_templates,
 )
 from india_compliance.income_tax_india.overrides.company import (
@@ -34,6 +35,11 @@ def execute():
             "Account", {"company": company, "account_name": "Customs Duty Payable"}
         ):
             make_default_customs_accounts(company)
+
+        if not frappe.db.exists(
+            "Account", {"company": company, "account_name": "GST Expense"}
+        ):
+            make_default_gst_expense_accounts(company)
 
 
 def update_root_for_rcm(company):
