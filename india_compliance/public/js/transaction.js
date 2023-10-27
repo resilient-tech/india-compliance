@@ -22,13 +22,33 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
     ignore_port_code_validation(doctype);
 }
 
-for (const doctype of [...TRANSACTION_DOCTYPES, "Material Request", "Supplier Quotation", "POS Invoice"]) {
+for (const doctype of [
+    ...TRANSACTION_DOCTYPES,
+    "Material Request",
+    "Supplier Quotation",
+    "POS Invoice",
+]) {
     set_fetch_if_empty_for_gst_hsn_code(doctype);
 }
 
 function set_fetch_if_empty_for_gst_hsn_code(doctype) {
-    frappe.ui.form.on(doctype, "setup", function(frm) {
+    frappe.ui.form.on(doctype, "setup", function (frm) {
         frm.get_docfield("items", "gst_hsn_code").fetch_if_empty = 0;
+    });
+}
+
+for (const doctype of [
+    "Supplier Quotation Item",
+    "Purchase Order Item",
+    "Purchase Receipt Item",
+    "Purchase Invoice Item",
+]) {
+    set_fetch_if_empty_for_is_ineligible_for_itc(doctype);
+}
+
+function set_fetch_if_empty_for_is_ineligible_for_itc(doctype) {
+    frappe.ui.form.on(doctype, "setup", function (frm) {
+        frm.get_docfield("items", "is_ineligible_for_itc").fetch_if_empty = 0;
     });
 }
 

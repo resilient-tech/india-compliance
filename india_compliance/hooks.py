@@ -112,6 +112,9 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
+        "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
     },
     "Purchase Order": {
         "validate": (
@@ -128,6 +131,9 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
+        "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
     },
     "Sales Invoice": {
         "on_trash": (
@@ -197,6 +203,12 @@ regional_overrides = {
         ),
         "erpnext.accounts.doctype.payment_reconciliation.payment_reconciliation.adjust_allocations_for_taxes": (
             "india_compliance.gst_india.overrides.payment_entry.adjust_allocations_for_taxes_in_payment_reconciliation"
+        ),
+        "erpnext.accounts.doctype.purchase_invoice.purchase_invoice.make_regional_gl_entries": (
+            "india_compliance.gst_india.overrides.ineligible_itc.update_regional_gl_entries"
+        ),
+        "erpnext.stock.doctype.purchase_receipt.purchase_receipt.update_regional_gl_entries": (
+            "india_compliance.gst_india.overrides.ineligible_itc.update_regional_gl_entries"
         ),
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
