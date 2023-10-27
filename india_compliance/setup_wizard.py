@@ -51,7 +51,7 @@ def setup_company_gstin_details(params):
     if not params.company_gstin:
         return
 
-    if not (params.company_name or frappe.db.exists("Company", params.company_name)):
+    if not (params.company_name and frappe.db.exists("Company", params.company_name)):
         return
 
     gstin_info = frappe._dict()
