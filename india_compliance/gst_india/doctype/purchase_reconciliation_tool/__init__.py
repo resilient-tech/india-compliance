@@ -779,7 +779,7 @@ class Reconciler(BaseReconciliation):
         """
 
         for supplier_gstin in purchases:
-            if not inward_supplies.get(supplier_gstin) and category != "IMPG":
+            if not inward_supplies.get(supplier_gstin):
                 continue
 
             summary_diff = {}
