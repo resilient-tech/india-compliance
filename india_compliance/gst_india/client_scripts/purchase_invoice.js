@@ -10,8 +10,8 @@ frappe.ui.form.on(DOCTYPE, {
     after_save(frm) {
         if (
             frm.doc.supplier_address ||
-            frm.doc.gst_category !== "Unregistered" ||
-            !frm.doc.is_return ||
+            !(frm.doc.gst_category == "Unregistered" ||
+                frm.doc.is_return) ||
             !is_e_waybill_applicable(frm) ||
             !has_e_waybill_threshold_met(frm)
         )

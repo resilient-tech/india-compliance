@@ -8,7 +8,7 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     after_save(frm) {
-        if (frm.doc.customer_address || !is_e_waybill_applicable(frm)) return;
+        if (!is_e_waybill_generatable(frm)) return;
 
         frappe.show_alert(
             {

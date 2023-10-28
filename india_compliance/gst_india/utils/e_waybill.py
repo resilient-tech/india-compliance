@@ -782,13 +782,26 @@ def get_address_map(doc):
 
 
 @frappe.whitelist()
-def get_billing_shipping_address(doc):
+def get_source_destination_address(doctype, docname, address_type):
+    doc = frappe.get_doc(doctype, docname)
+    address_map = get_billing_shipping_address_map(doc)
+
+    if address_type == "source_address":
+        address_name = address_map.ship_from or address_map.bill_from
+
+    elif address_type == "destination_address":
+        address_name = address_map.ship_to or address_map.bill_to
+
+    else:
+        frappe.throw(_("Invalid address type"))
+
+    return frappe.get_doc("Address", address_name)
+
+
+def get_billing_shipping_address_map(doc):
     """
     Set address for bill_to, bill_from, ship_to, ship_from
     """
-    if isinstance(doc, str):
-        doc = frappe.parse_json(doc)
-
     address = get_address_map(doc)
 
     address.ship_to = (
@@ -1196,7 +1209,7 @@ class EWaybillData(GSTTransactionData):
 
     def set_party_address_details(self):
         transaction_type = 1
-        address = get_billing_shipping_address(self.doc)
+        address = get_billing_shipping_address_map(self.doc)
         has_different_to_address = (
             address.ship_to and address.ship_to != address.bill_to
         )
