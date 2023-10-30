@@ -288,14 +288,16 @@
                             "account_head": {
                                 "account_name": "Output Tax SGST",
                                 "tax_rate": 9.0,
-                                "account_type": "Tax"
+                                "account_type": "Tax",
+                                "description": "SGST"
                             }
                         },
                         {
                             "account_head": {
                                 "account_name": "Output Tax CGST",
                                 "tax_rate": 9.0,
-                                "account_type": "Tax"
+                                "account_type": "Tax",
+                                "description": "CGST"
                             }
                         }
                     ],
@@ -308,7 +310,8 @@
                             "account_head": {
                                 "account_name": "Output Tax IGST",
                                 "tax_rate": 18.0,
-                                "account_type": "Tax"
+                                "account_type": "Tax",
+                                "description": "IGST"
                             }
                         }
                     ],
@@ -324,7 +327,8 @@
                                 "account_name": "Input Tax CGST",
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
-                                "account_type": "Tax"
+                                "account_type": "Tax",
+                                "description": "CGST"
                             }
                         },
                         {
@@ -332,7 +336,8 @@
                                 "account_name": "Input Tax SGST",
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
-                                "account_type": "Tax"
+                                "account_type": "Tax",
+                                "description": "SGST"
                             }
                         }
                     ],
@@ -346,7 +351,8 @@
                                 "account_name": "Input Tax IGST",
                                 "tax_rate": 18.0,
                                 "root_type": "Asset",
-                                "account_type": "Tax"
+                                "account_type": "Tax",
+                                "description": "IGST"
                             }
                         }
                     ],
