@@ -579,14 +579,14 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.PI.supplier_name,
+            self.PI.place_of_supply,
+            self.PI.is_reverse_charge,
             *tax_fields,
         ]
 
         # In IMPGSEZ supplier details are avaialble in 2A
         purchase_fields = [
             "supplier_gstin",
-            "place_of_supply",
-            "is_reverse_charge",
             "gst_category",
         ]
 
@@ -594,7 +594,7 @@ class BillOfEntry:
             fields.append(
                 Case()
                 .when(self.PI.gst_category == "SEZ", getattr(self.PI, field))
-                .else_("")
+                .else_(None)
                 .as_(field)
             )
 
@@ -958,7 +958,8 @@ class ReconciledData(BaseReconciliation):
             doc.update(
                 {f"{prefix}_{key}": value for key, value in inward_supply.items()}
             )
-            doc.pan = doc.supplier_gstin[2:-3]
+            if doc.supplier_gstin:
+                doc.pan = doc.supplier_gstin[2:-3]
 
         return data
 
