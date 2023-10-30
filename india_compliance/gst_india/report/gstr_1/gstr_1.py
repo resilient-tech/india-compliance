@@ -1121,7 +1121,7 @@ class GSTR1DocumentIssuedSummary:
             seperated_data,
         ) in self.seperate_data_by_nature_of_document(data).items():
             summarized_data.extend(
-                self.get_summarized_data(seperated_data, nature_of_document)
+                self.seperate_data_by_naming_series(seperated_data, nature_of_document)
             )
 
         return summarized_data
@@ -1133,7 +1133,7 @@ class GSTR1DocumentIssuedSummary:
             .on(self.sales_invoice.name == self.sales_invoice_item.parent)
             .select(
                 self.sales_invoice.name,
-                self.sales_invoice.naming_series,
+                IfNull(self.sales_invoice.naming_series, "").as_("naming_series"),
                 self.sales_invoice.creation,
                 self.sales_invoice.docstatus,
                 self.sales_invoice.is_return,
@@ -1156,7 +1156,6 @@ class GSTR1DocumentIssuedSummary:
                     self.filters.from_date, self.filters.to_date
                 )
             )
-            .where(self.sales_invoice.naming_series.isnotnull())
             .orderby(self.sales_invoice.name)
             .groupby(self.sales_invoice.name)
         )
@@ -1176,7 +1175,7 @@ class GSTR1DocumentIssuedSummary:
 
         return query
 
-    def get_summarized_data(self, data, nature_of_document):
+    def seperate_data_by_naming_series(self, data, nature_of_document):
         if not data:
             return []
 
@@ -1184,37 +1183,25 @@ class GSTR1DocumentIssuedSummary:
         summarized_data = []
 
         for i in range(1, len(data)):
-            alphabet_pattern = re.compile(r"[A-Za-z]+")
-            number_pattern = re.compile(r"\d+")
-
-            a_0 = "".join(alphabet_pattern.findall(data[i - 1].name))
-            n_0 = "".join(number_pattern.findall(data[i - 1].name))
-
-            a_1 = "".join(alphabet_pattern.findall(data[i].name))
-            n_1 = "".join(number_pattern.findall(data[i].name))
-
-            if a_1 != a_0:
-                slice_indices.append(i)
+            if self.is_same_naming_series(data[i - 1].name, data[i].name):
                 continue
+            slice_indices.append(i)
 
-            if cint(n_1) - cint(n_0) != 1:
-                slice_indices.append(i)
-
-        sorted_docs_list = [
+        document_series_list = [
             data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])
         ]
 
-        for sorted_doc in sorted_docs_list:
-            draft_count = sum(1 for doc in sorted_doc if doc.docstatus == 0)
-            total_submitted_count = sum(1 for doc in sorted_doc if doc.docstatus == 1)
-            cancelled_count = sum(1 for doc in sorted_doc if doc.docstatus == 2)
+        for series in document_series_list:
+            draft_count = sum(1 for doc in series if doc.docstatus == 0)
+            total_submitted_count = sum(1 for doc in series if doc.docstatus == 1)
+            cancelled_count = sum(1 for doc in series if doc.docstatus == 2)
 
             summarized_data.append(
                 {
-                    "naming_series": "".join(sorted_doc[0].naming_series.split(".")),
+                    "naming_series": series[0].naming_series.replace(".", ""),
                     "nature_of_document": nature_of_document,
-                    "from_serial_no": sorted_doc[0].name,
-                    "to_serial_no": sorted_doc[-1].name,
+                    "from_serial_no": series[0].name,
+                    "to_serial_no": series[-1].name,
                     "total_submitted": total_submitted_count,
                     "cancelled": cancelled_count,
                     "total_draft": draft_count,
@@ -1225,6 +1212,38 @@ class GSTR1DocumentIssuedSummary:
             )
 
         return summarized_data
+
+    def is_same_naming_series(self, name_1, name_2):
+        alphabet_pattern = re.compile(r"[A-Za-z]+")
+        number_pattern = re.compile(r"\d+")
+
+        a_0 = "".join(alphabet_pattern.findall(name_1))
+        n_0 = "".join(number_pattern.findall(name_1))
+
+        a_1 = "".join(alphabet_pattern.findall(name_2))
+        n_1 = "".join(number_pattern.findall(name_2))
+
+        if a_1 != a_0:
+            return False
+
+        if len(n_0) != len(n_1):
+            return False
+
+        common_length = 0
+
+        for i in range(len(n_0) - 1, 0, -1):
+            if n_0[i] == n_1[i]:
+                common_length += 1
+            else:
+                break
+
+        if common_length:
+            n_0, n_1 = n_0[:-common_length], n_1[:-common_length]
+
+        if cint(n_1) - cint(n_0) != 1:
+            return False
+
+        return True
 
     def seperate_data_by_nature_of_document(self, data):
         nature_of_document = {
@@ -1271,9 +1290,7 @@ class GSTR1DocumentIssuedSummary:
                 or doc.amended_from in amended_dict
             ):
                 amended_dict[doc.name] = doc
-
-        for doc in amended_dict:
-            data_dict.pop(doc)
+                data_dict.pop(doc.name)
 
         data_dict.update(amended_dict)
 
