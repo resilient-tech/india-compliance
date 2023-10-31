@@ -289,14 +289,16 @@
                                 "account_name": "Output Tax SGST",
                                 "tax_rate": 9.0,
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "SGST"
                         },
                         {
                             "account_head": {
                                 "account_name": "Output Tax CGST",
                                 "tax_rate": 9.0,
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "CGST"
                         }
                     ],
                     "tax_category": "In-State"
@@ -309,7 +311,8 @@
                                 "account_name": "Output Tax IGST",
                                 "tax_rate": 18.0,
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "IGST"
                         }
                     ],
                     "tax_category": "Out-State"
@@ -325,7 +328,8 @@
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "CGST"
                         },
                         {
                             "account_head": {
@@ -333,7 +337,8 @@
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "SGST"
                         }
                     ],
                     "tax_category": "In-State"
@@ -347,7 +352,8 @@
                                 "tax_rate": 18.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "IGST"
                         }
                     ],
                     "tax_category": "Out-State"
@@ -361,7 +367,8 @@
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "CGST"
                         },
                         {
                             "account_head": {
@@ -369,7 +376,8 @@
                                 "tax_rate": 9.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "SGST"
                         },
                         {
                             "account_head": {
@@ -377,7 +385,8 @@
                                 "tax_rate": 9.0,
                                 "account_type": "Tax"
                             },
-                            "add_deduct_tax": "Deduct"
+                            "add_deduct_tax": "Deduct",
+                            "description": "CGST RCM"
                         },
                         {
                             "account_head": {
@@ -385,7 +394,8 @@
                                 "tax_rate": 9.0,
                                 "account_type": "Tax"
                             },
-                            "add_deduct_tax": "Deduct"
+                            "add_deduct_tax": "Deduct",
+                            "description": "SGST RCM"
                         }
                     ],
                     "tax_category": "Reverse Charge In-State"
@@ -399,7 +409,8 @@
                                 "tax_rate": 18.0,
                                 "root_type": "Asset",
                                 "account_type": "Tax"
-                            }
+                            },
+                            "description": "IGST"
                         },
                         {
                             "account_head": {
@@ -407,7 +418,8 @@
                                 "tax_rate": 18.0,
                                 "account_type": "Tax"
                             },
-                            "add_deduct_tax": "Deduct"
+                            "add_deduct_tax": "Deduct",
+                            "description": "IGST RCM"
                         }
                     ],
                     "tax_category": "Reverse Charge Out-State"
