@@ -146,24 +146,28 @@ def get_columns():
             "fieldname": "total_assessable_value",
             "label": _("Total Assessable Value"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 110,
         },
         {
             "fieldname": "total_customs_duty",
             "label": _("Total Customs Duty"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 110,
         },
         {
             "fieldname": "total_taxes",
             "label": _("Total Taxes"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 100,
         },
         {
             "fieldname": "total_amount_payable",
             "label": _("Amount Payable"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 90,
         },
     ]
