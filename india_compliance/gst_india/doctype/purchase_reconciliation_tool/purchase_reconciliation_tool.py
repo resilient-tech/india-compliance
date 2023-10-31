@@ -400,7 +400,7 @@ class PurchaseReconciliationTool(Document):
         GSTR2 = frappe.qb.DocType("GST Inward Supply")
         query = (
             self.ReconciledData.query_inward_supply(["classification"])
-            .where(GSTR2.supplier_gstin.like(f"%{filters.supplier_gstin}%"))
+            .where(IfNull(GSTR2.supplier_gstin, "").like(f"%{filters.supplier_gstin}%"))
             .where(GSTR2.bill_date[filters.bill_from_date : filters.bill_to_date])
         )
 

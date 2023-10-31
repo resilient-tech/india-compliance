@@ -214,7 +214,7 @@ Object.assign(india_compliance, {
 
         frm.get_field(field).set_description(
             `<div class="d-flex indicator ${color}">
-                Reco Status:&nbsp;<strong>${frm.doc.reconciliation_status}</strong>
+                2A/2B Status:&nbsp;<strong>${frm.doc.reconciliation_status}</strong>
             </div>`
         );
     },
