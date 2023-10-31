@@ -59,24 +59,28 @@ class GSTAdvanceDetail:
                 "fieldname": "paid_amount",
                 "label": _("Paid Amount"),
                 "fieldtype": "Currency",
+                "options": "Company:company:default_currency",
                 "width": 120,
             },
             {
                 "fieldname": "allocated_amount",
                 "label": _("Allocated Amount"),
                 "fieldtype": "Currency",
+                "options": "Company:company:default_currency",
                 "width": 120,
             },
             {
                 "fieldname": "gst_paid",
                 "label": _("GST Paid"),
                 "fieldtype": "Currency",
+                "options": "Company:company:default_currency",
                 "width": 120,
             },
             {
                 "fieldname": "gst_allocated",
                 "label": _("GST Allocated"),
                 "fieldtype": "Currency",
+                "options": "Company:company:default_currency",
                 "width": 120,
             },
             {

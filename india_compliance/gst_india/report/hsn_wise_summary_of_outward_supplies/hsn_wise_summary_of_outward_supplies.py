@@ -131,12 +131,14 @@ def get_columns():
             "fieldname": "total_amount",
             "label": _("Total Amount"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 120,
         },
         {
             "fieldname": "taxable_amount",
             "label": _("Total Taxable Amount"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 170,
         },
     ]
