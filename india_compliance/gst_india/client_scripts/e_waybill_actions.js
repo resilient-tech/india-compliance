@@ -262,7 +262,7 @@ function show_generate_e_waybill_dialog(frm) {
     //Alert if E-waybill cannot be generated using api
     if (!is_e_waybill_generatable(frm)) {
         const address = frm.doc.customer_address || frm.doc.supplier_address;
-        const reason = !address ? "party address is missing." : "party GSTIN is same as company GSTIN.";
+        const reason = !address ? "<strong>party address</strong> is missing." : "party <strong>GSTIN is same</strong> as company GSTIN.";
         $(`
             <div class="alert alert-warning" role="alert">
                 e-Waybill cannot be generated as ${reason}
