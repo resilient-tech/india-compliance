@@ -1214,6 +1214,17 @@ class GSTR1DocumentIssuedSummary:
         return summarized_data
 
     def is_same_naming_series(self, name_1, name_2):
+        """
+        Checks if two document names belong to the same naming series.
+
+        Args:
+            name_1 (str): The first document name.
+            name_2 (str): The second document name.
+
+        Returns:
+            bool: True if the two document names belong to the same naming series, False otherwise.
+        """
+
         alphabet_pattern = re.compile(r"[A-Za-z]+")
         number_pattern = re.compile(r"\d+")
 
@@ -1229,16 +1240,19 @@ class GSTR1DocumentIssuedSummary:
         if len(n_0) != len(n_1):
             return False
 
-        common_length = 0
+        # If common suffix is present between the two names, remove it to compare the numbers
+        # Example: SINV-00001-2023 and SINV-00002-2023, the common suffix 2023 will be removed
+
+        suffix_length = 0
 
         for i in range(len(n_0) - 1, 0, -1):
             if n_0[i] == n_1[i]:
-                common_length += 1
+                suffix_length += 1
             else:
                 break
 
-        if common_length:
-            n_0, n_1 = n_0[:-common_length], n_1[:-common_length]
+        if suffix_length:
+            n_0, n_1 = n_0[:-suffix_length], n_1[:-suffix_length]
 
         if cint(n_1) - cint(n_0) != 1:
             return False
