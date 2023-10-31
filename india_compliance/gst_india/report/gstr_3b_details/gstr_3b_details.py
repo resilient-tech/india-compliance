@@ -80,24 +80,28 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                     "fieldname": "iamt",
                     "label": _("Integrated Tax"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "camt",
                     "label": _("Central Tax"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "samt",
                     "label": _("State/UT Tax"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "csamt",
                     "label": _("Cess Tax"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -296,12 +300,14 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                     "fieldname": "intra",
                     "label": _("Intra State"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
                     "fieldname": "inter",
                     "label": _("Inter State"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
