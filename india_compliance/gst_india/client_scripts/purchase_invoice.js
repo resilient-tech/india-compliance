@@ -2,16 +2,12 @@ const DOCTYPE = "Purchase Invoice";
 setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
-    onload(frm) {
-        if (!gst_settings.enable_e_waybill) return;
-        show_sandbox_mode_indicator();
-    },
-
     after_save(frm) {
         if (
-            frm.doc.docstatus ||
             frm.doc.supplier_address ||
-            !is_e_waybill_applicable(frm)
+            !(frm.doc.gst_category == "Unregistered" || frm.doc.is_return) ||
+            !is_e_waybill_applicable(frm) ||
+            !has_e_waybill_threshold_met(frm)
         )
             return;
 
@@ -26,6 +22,8 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         india_compliance.set_reconciliation_status(frm, "bill_no");
+        if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pi)
+            show_sandbox_mode_indicator();
 
         if (
             frm.doc.docstatus !== 1 ||
