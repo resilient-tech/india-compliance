@@ -277,16 +277,26 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
     }
 
     async set_default_values() {
-        const default_party = this.get_default_party();
+        const default_party = this.guess_default_party();
         if (default_party && default_party.party) {
             await this.dialog.set_value("link_doctype", default_party.party_type);
             this.dialog.set_value("link_name", default_party.party);
         }
     }
 
-    get_default_party() {
+    guess_default_party() {
         const doc = cur_frm && cur_frm.doc;
         if (!doc) return;
+        if (
+            ![
+                ...frappe.boot.sales_doctypes,
+                ...frappe.boot.purchase_doctypes,
+                "Customer",
+                "Supplier",
+                "Company",
+            ].includes(doc.doctype)
+        )
+            return;
 
         let party_type = doc.doctype;
         let party = doc.name;
