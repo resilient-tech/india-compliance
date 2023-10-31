@@ -87,6 +87,9 @@ def make_gst_revesal_entry_from_advance_payment(doc):
         return
 
     for row in doc.get("references"):
+        if row.reference_doctype not in ("Sales Invoice", "Journal Entry"):
+            continue
+
         gl_dict.extend(get_gl_for_advance_gst_reversal(doc, row))
 
     if not gl_dict:
