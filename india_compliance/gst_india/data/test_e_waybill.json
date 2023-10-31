@@ -93,6 +93,8 @@
             "vehicle_no": "GJ07DL9001",
             "mode_of_transport": "Road",
             "gst_vehicle_type": "Regular",
+            "place_of_change": "Test City",
+            "state": "Gujarat",
             "reason": "Others",
             "remark": "Vehicle Info added",
             "update_e_waybill_data": 1
@@ -101,7 +103,7 @@
             "ewbNo": "301002999920",
             "fromPlace": "Test City",
             "fromState": 24,
-            "reasonCode": "3",
+            "reasonCode": 3,
             "reasonRem": "Vehicle Info added",
             "transDocDate": "",
             "transDocNo": null,

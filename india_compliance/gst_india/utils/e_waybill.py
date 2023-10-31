@@ -320,6 +320,8 @@ def update_vehicle_info(*, doctype, docname, values):
         "LR Date": values.lr_date,
         "Mode of Transport": values.mode_of_transport,
         "GST Vehicle Type": values.gst_vehicle_type,
+        "Place of Change": values.place_of_change,
+        "State": values.state,
     }
 
     for key, value in values_in_comment.items():
@@ -765,6 +767,56 @@ def get_validated_e_waybill_number(ewaybill: str):
     return ewaybill
 
 
+def get_address_map(doc):
+    """
+    Return address names for bill_to, bill_from, ship_to, ship_from
+    """
+
+    address_fields = ADDRESS_FIELDS.get(doc.doctype, {})
+    out = frappe._dict()
+
+    for key, field in address_fields.items():
+        out[key] = doc.get(field)
+
+    return out
+
+
+@frappe.whitelist()
+def get_source_destination_address(doctype, docname, address_type):
+    doc = frappe.get_doc(doctype, docname)
+    address_map = get_billing_shipping_address_map(doc)
+
+    if address_type == "source_address":
+        address_name = address_map.ship_from or address_map.bill_from
+
+    elif address_type == "destination_address":
+        address_name = address_map.ship_to or address_map.bill_to
+
+    else:
+        frappe.throw(_("Invalid address type"))
+
+    return frappe.get_doc("Address", address_name)
+
+
+def get_billing_shipping_address_map(doc):
+    """
+    Set address for bill_to, bill_from, ship_to, ship_from
+    """
+    address = get_address_map(doc)
+
+    address.ship_to = (
+        doc.port_address
+        if (is_foreign_doc(doc) and doc.port_address)
+        else address.ship_to
+    )
+
+    if doc.is_return:
+        address.bill_from, address.bill_to = address.bill_to, address.bill_from
+        address.ship_from, address.ship_to = address.ship_to, address.ship_from
+
+    return address
+
+
 #######################################################################################
 ### e-Waybill Data Generation #########################################################
 #######################################################################################
@@ -827,21 +879,14 @@ class EWaybillData(GSTTransactionData):
         self.validate_mode_of_transport()
         self.set_transporter_details()
 
-        addresses = ADDRESS_FIELDS.get(self.doc.doctype, {})
-
-        ship_from_address_name = (
-            addresses.get("ship_from")
-            if self.doc.get(addresses.get("ship_from"))
-            else addresses.get("bill_from")
-        )
-        ship_from = self.get_address_details(self.doc.get(ship_from_address_name))
-
         return {
             "ewbNo": self.doc.ewaybill,
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": ship_from.city,
-            "fromState": ship_from.state_number,
-            "reasonCode": UPDATE_VEHICLE_REASON_CODES[values.reason],
+            "fromPlace": self.sanitize_value(
+                values.place_of_change, regex=3, max_length=50
+            ),
+            "fromState": int(STATE_NUMBERS[values.state]),
+            "reasonCode": int(UPDATE_VEHICLE_REASON_CODES[values.reason]),
             "reasonRem": self.sanitize_value(values.remark, regex=3),
             "transDocNo": self.transaction_details.lr_no,
             "transDocDate": self.transaction_details.lr_date,
@@ -1164,18 +1209,7 @@ class EWaybillData(GSTTransactionData):
 
     def set_party_address_details(self):
         transaction_type = 1
-        address = self.get_address_map()
-
-        address.ship_to = (
-            self.doc.port_address
-            if (is_foreign_doc(self.doc) and self.doc.port_address)
-            else address.ship_to
-        )
-
-        if self.doc.is_return:
-            address.bill_from, address.bill_to = address.bill_to, address.bill_from
-            address.ship_from, address.ship_to = address.ship_to, address.ship_from
-
+        address = get_billing_shipping_address_map(self.doc)
         has_different_to_address = (
             address.ship_to and address.ship_to != address.bill_to
         )
@@ -1221,18 +1255,6 @@ class EWaybillData(GSTTransactionData):
 
         if self.doc.gst_category == "SEZ":
             self.bill_to.state_number = 96
-
-    def get_address_map(self):
-        """
-        Return address names for bill_to, bill_from, ship_to, ship_from
-        """
-        address_fields = ADDRESS_FIELDS.get(self.doc.doctype, {})
-        out = frappe._dict()
-
-        for key, field in address_fields.items():
-            out[key] = self.doc.get(field)
-
-        return out
 
     def get_address_details(self, *args, **kwargs):
         address_details = super().get_address_details(*args, **kwargs)
