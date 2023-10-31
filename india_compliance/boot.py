@@ -1,7 +1,7 @@
 import frappe
 import frappe.defaults
 from frappe.utils import cint
-from erpnext.stock.get_item_details import sales_doctypes
+from erpnext.stock.get_item_details import purchase_doctypes, sales_doctypes
 
 from india_compliance.audit_trail.utils import (
     enqueue_disable_audit_trail_notification,
@@ -12,6 +12,7 @@ from india_compliance.gst_india.constants import GST_PARTY_TYPES, INDIAN_STATES
 
 def set_bootinfo(bootinfo):
     bootinfo["sales_doctypes"] = sales_doctypes
+    bootinfo["purchase_doctypes"] = purchase_doctypes
     bootinfo["gst_party_types"] = GST_PARTY_TYPES
 
     gst_settings = frappe.get_cached_doc("GST Settings").as_dict()
