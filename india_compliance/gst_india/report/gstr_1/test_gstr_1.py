@@ -28,11 +28,11 @@ JSON_OUTPUT = {
                 },
                 {
                     "num": 2,
-                    "to": "SINV-23-00020",
-                    "from": "SINV-23-00016",
+                    "to": "SINV-23-00025",
+                    "from": "SINV-23-00021",
                     "totnum": 5,
-                    "cancel": 3,
-                    "net_issue": 2,
+                    "cancel": 4,
+                    "net_issue": 1,
                 },
             ],
         },
@@ -127,7 +127,7 @@ def create_test_items():
         elif 10 <= i < 15:
             # Debit Notes
             sales_invoices[i].is_debit_note = 1
-        elif 20 <= i < 25:
+        elif 15 <= i < 20:
             # Sales Invoices with non GST Items
             # Excluded from Document Issued Summary
             sales_invoices[i].items[0].item_code = "_Test Non GST Item"
@@ -137,6 +137,8 @@ def create_test_items():
             # Excluded from Document Issued Summary
             sales_invoices[i].save()
             sales_invoices[i].customer_address = sales_invoices[i].company_address
+
+        sales_invoices[i].save()
 
     # Opening Entry
     # Excluded from Document Issued Summary
@@ -148,7 +150,7 @@ def create_test_items():
     for sales_invoice in sales_invoices:
         action = random.choice(["save", "submit", "cancel"])
         if action == "save":
-            sales_invoice.save()
+            continue
         elif action == "submit":
             sales_invoice.save()
             sales_invoice.submit()
@@ -171,11 +173,13 @@ def create_opening_entry():
         {
             "company": "_Test Indian Registered Company",
             "is_opening": "Yes",
+            "against_income_account": "Temporary Opening - _TIRC",
             "items": [
                 {
                     "item_code": "_Test Trading Goods 1",
                     "item_name": "_Test Trading Goods 1",
                     "qty": 1,
+                    "income_account": "Temporary Opening - _TIRC",
                 }
             ],
             "customer": "_Test Registered Customer",
