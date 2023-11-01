@@ -1223,6 +1223,12 @@ class GSTR1DocumentIssuedSummary:
 
         Returns:
             bool: True if the two document names belong to the same naming series, False otherwise.
+
+        Limitations:
+            Case 1: When the difference between the serial numbers in the document names is a multiple of 10. For example, 'SINV-00010-2023' and 'SINV-00020-2023'.
+            Case 2: When the serial numbers are identical, but the months differ. For example, 'SINV-01-2023-001' and 'SINV-02-2023-001'.
+
+            Above cases are false positives and will be considered as same naming series although they are not.
         """
 
         alphabet_pattern = re.compile(r"[A-Za-z]+")
