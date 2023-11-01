@@ -44,8 +44,8 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
         // add custom buttons
         api_enabled
-            ? frm.add_custom_button(__("Download"), () => new ImportDialog(frm))
-            : frm.add_custom_button(__("Upload"), () => new ImportDialog(frm, false));
+            ? frm.add_custom_button(__("Download 2A/2B"), () => new ImportDialog(frm))
+            : frm.add_custom_button(__("Upload 2A/2B"), () => new ImportDialog(frm, false));
 
         if (!frm.purchase_reconciliation_tool?.data?.length) return;
         if (frm.get_active_tab()?.df.fieldname == "invoice_tab") {
@@ -1328,6 +1328,8 @@ class EmailDialog {
     }
 
     async get_recipients() {
+        if (!this.data) return [];
+
         const { message } = await frappe.call({
             method: "india_compliance.gst_india.utils.get_party_contact_details",
             args: {

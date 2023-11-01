@@ -539,6 +539,7 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Taxable Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 150,
                 },
             ]
@@ -574,6 +575,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -604,6 +606,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 }
             ]
@@ -627,6 +630,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -647,6 +651,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 }
             ]
@@ -716,6 +721,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 120,
                 },
             ]
@@ -724,6 +730,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -794,6 +801,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 120,
                 },
             ]
@@ -802,6 +810,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -837,6 +846,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -871,6 +881,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 120,
                 },
                 {
@@ -907,6 +918,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 130,
                 }
             ]
@@ -922,18 +934,21 @@ class Gstr1Report:
                     "fieldname": "nil_rated",
                     "label": _("Nil Rated"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 200,
                 },
                 {
                     "fieldname": "exempted",
                     "label": _("Exempted"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 200,
                 },
                 {
                     "fieldname": "non_gst",
                     "label": _("Non GST"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 200,
                 },
             ]
