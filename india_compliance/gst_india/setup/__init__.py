@@ -84,24 +84,25 @@ def create_address_template():
     ).insert(ignore_permissions=True)
 
 
+EMAIL_TEMPLATE_DATA = {
+    "doctype": "Email Template",
+    "name": "Purchase Reconciliation",
+    "subject": "2A/2B Reconciliation for {{ supplier_name }}-{{ supplier_gstin }}",
+    "response": (
+        "Hello,<br><br>We have made a purchase reconciliation"
+        " for the period {{ inward_supply_from_date }} to {{ inward_supply_to_date }}"
+        " for purchases made by {{ company }} from you.<br><br>You are requested to kindly"
+        " make necessary corrections to the GST Portal on your end if required."
+        " The attached sheet is for your reference."
+    ),
+}
+
+
 def create_email_template():
     if frappe.db.exists("Email Template", "Purchase Reconciliation"):
         return
 
-    frappe.get_doc(
-        {
-            "doctype": "Email Template",
-            "name": "Purchase Reconciliation",
-            "subject": "2A/2B Reconciliation for {{ supplier_name }}-{{ supplier_gstin }}",
-            "response": (
-                "Hello,<br><br>We have made a purchase reconciliation"
-                "for the period {{ inward_supply_from_date }} to {{ inward_supply_to_date }}"
-                " for purchases made by {{ company }} from you.<br>You are requested to kindly"
-                "make necessary corrections to the GST Portal on your end if required."
-                "Attached is the sheet for your reference."
-            ),
-        }
-    ).insert(ignore_permissions=True)
+    frappe.get_doc(EMAIL_TEMPLATE_DATA).insert(ignore_permissions=True)
 
 
 def create_hsn_codes():
