@@ -1,5 +1,3 @@
-import random
-
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import getdate
@@ -23,16 +21,16 @@ JSON_OUTPUT = {
                     "to": "SINV-23-00005",
                     "from": "SINV-23-00001",
                     "totnum": 5,
-                    "cancel": 4,
-                    "net_issue": 1,
+                    "cancel": 2,
+                    "net_issue": 3,
                 },
                 {
                     "num": 2,
                     "to": "SINV-23-00025",
                     "from": "SINV-23-00021",
                     "totnum": 5,
-                    "cancel": 4,
-                    "net_issue": 1,
+                    "cancel": 0,
+                    "net_issue": 5,
                 },
             ],
         },
@@ -42,11 +40,11 @@ JSON_OUTPUT = {
             "docs": [
                 {
                     "num": 1,
-                    "to": "SINV-23-00015",
-                    "from": "SINV-23-00011",
+                    "to": "SINV-23-00018",
+                    "from": "SINV-23-00014",
                     "totnum": 5,
-                    "cancel": 3,
-                    "net_issue": 2,
+                    "cancel": 0,
+                    "net_issue": 5,
                 }
             ],
         },
@@ -59,8 +57,8 @@ JSON_OUTPUT = {
                     "to": "SINV-23-00010",
                     "from": "SINV-23-00006",
                     "totnum": 5,
-                    "cancel": 1,
-                    "net_issue": 4,
+                    "cancel": 2,
+                    "net_issue": 3,
                 }
             ],
         },
@@ -117,54 +115,43 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
 def create_test_items():
     """Create Sales Invoices for testing GSTR1 Document Issued Summary."""
 
-    sales_invoices = create_sales_invoices(30)
+    # Sales Invoices
+    create_sales_invoices(3)
+    create_sales_invoices(1)[0].cancel()
+    create_sales_invoices(1, do_not_save=True, do_not_submit=True)[0].save()
 
-    for i in range(len(sales_invoices)):
-        if 5 <= i < 10:
-            # Credit Notes
-            sales_invoices[i].is_return = 1
-            sales_invoices[i].items[0].qty = -1
-        elif 10 <= i < 15:
-            # Debit Notes
-            sales_invoices[i].is_debit_note = 1
-        elif 15 <= i < 20:
-            # Sales Invoices with non GST Items
-            # Excluded from Document Issued Summary
-            sales_invoices[i].items[0].item_code = "_Test Non GST Item"
-            sales_invoices[i].items[0].item_name = "_Test Non GST Item"
-        elif 25 <= i < 30:
-            # Sales Invoices with same GSTIN Billing
-            # Excluded from Document Issued Summary
-            sales_invoices[i].save()
-            sales_invoices[i].customer_address = sales_invoices[i].company_address
+    # Credit Notes
+    create_sales_invoices(3, is_return=1, qty=-1)
+    create_sales_invoices(1, is_return=1, qty=-1)[0].cancel()
+    create_sales_invoices(1, is_return=1, qty=-1, do_not_save=True, do_not_submit=True)[
+        0
+    ].save()
 
-        sales_invoices[i].save()
+    # Sales Invoices with Non GST Items
+    # Excluded from Document Issued Summary
+    create_sales_invoices(3, item_code="_Test Non GST Item")
+
+    # Debit Notes
+    create_sales_invoices(5, is_debit_note=1)
 
     # Opening Entry
     # Excluded from Document Issued Summary
-    sales_invoices.append(create_opening_entry())
+    create_opening_entry().submit()
 
-    # Setting seed to 1 to get same random action for each test run
-    random.seed(1)
+    # Sales Invoice with Same Billing GSTIN
+    # Excluded from Document Issued Summary
+    sales_invoice = create_sales_invoices(1, do_not_submit=True)[0]
+    sales_invoice.customer_address = sales_invoice.company_address
+    sales_invoice.save()
+    sales_invoice.submit()
 
-    for sales_invoice in sales_invoices:
-        action = random.choice(["save", "submit", "cancel"])
-        if action == "save":
-            continue
-        elif action == "submit":
-            sales_invoice.save()
-            sales_invoice.submit()
-        elif action == "cancel":
-            sales_invoice.save()
-            sales_invoice.submit()
-            sales_invoice.cancel()
+    # Sales Invoices
+    create_sales_invoices(5)
 
 
-def create_sales_invoices(count):
+def create_sales_invoices(count, **kwargs):
     """Create a list of sales invoices."""
-    return [
-        create_sales_invoice(do_not_save=True, do_not_submit=True) for _ in range(count)
-    ]
+    return [create_sales_invoice(**kwargs) for _ in range(count)]
 
 
 def create_opening_entry():
@@ -185,6 +172,7 @@ def create_opening_entry():
             "customer": "_Test Registered Customer",
         }
     )
+
     sales_invoice.save()
 
     return sales_invoice
