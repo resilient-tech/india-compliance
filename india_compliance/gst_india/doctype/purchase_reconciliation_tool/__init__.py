@@ -1003,7 +1003,9 @@ class ReconciledData(BaseReconciliation):
         if inward_supply_names or purchase_names:
             retain_doc = only_names = True
 
-        inward_supplies = self.get_all_inward_supply(names=inward_supply_names)
+        inward_supplies = self.get_all_inward_supply(
+            names=inward_supply_names, only_names=only_names
+        )
         purchases_and_bill_of_entry = self.get_all_purchase_invoice_and_bill_of_entry(
             inward_supplies, purchase_names, only_names
         )
@@ -1039,7 +1041,9 @@ class ReconciledData(BaseReconciliation):
             "link_name",
         ]
 
-        return super().get_all_inward_supply(inward_supply_fields, names, only_names)
+        return (
+            super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
+        )
 
     def get_all_purchase_invoice_and_bill_of_entry(
         self, inward_supplies, purchase_names, only_names=False
@@ -1141,6 +1145,7 @@ class ReconciledData(BaseReconciliation):
             {
                 "supplier_name": data.supplier_name
                 or self.guess_supplier_name(data.supplier_gstin),
+                "supplier_gstin": data.supplier_gstin or data.supplier_name,
                 "purchase_doctype": purchase.get("doctype"),
                 "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
