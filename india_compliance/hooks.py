@@ -91,6 +91,10 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
+    "Email Template": {
+        "after_rename": "india_compliance.gst_india.overrides.email_template.after_rename",
+        "on_trash": "india_compliance.gst_india.overrides.email_template.on_trash",
+    },
     "GL Entry": {
         "validate": "india_compliance.gst_india.overrides.gl_entry.validate",
     },
