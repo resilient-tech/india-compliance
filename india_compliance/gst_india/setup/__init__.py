@@ -105,6 +105,25 @@ def create_email_template():
     frappe.get_doc(EMAIL_TEMPLATE_DATA).insert(ignore_permissions=True)
 
 
+def update_default_email_template(old_name, new_name):
+    """
+    Update default email template in Property Setter for Purchase Reconciliation Tool
+    """
+
+    doctype = "Purchase Reconciliation Tool"
+    filters = {
+        "doc_type": doctype,
+        "property": "default_email_template",
+        "value": old_name,
+    }
+
+    if not frappe.db.exists("Property Setter", filters):
+        return
+
+    frappe.db.set_value("Property Setter", filters, "value", new_name)
+    frappe.clear_cache(doctype=doctype)
+
+
 def create_hsn_codes():
     if frappe.db.count("GST HSN Code") > 0:
         return
