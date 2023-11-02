@@ -9,7 +9,8 @@ const TYPES_OF_BUSINESS = {
 	"EXPORT": __("Export Invoice - 6A"),
 	"Advances": __("Tax Liability (Advances Received) - 11A(1), 11A(2)"),
 	"Adjustment": __("Adjustment of Advances - 11B(1), 11B(2)"),
-	"NIL Rated": __("NIL RATED/EXEMPTED Invoices")
+	"NIL Rated": __("NIL RATED/EXEMPTED Invoices"),
+	"Document Issued Summary": __("Document Issued Summary"),
 };
 
 
