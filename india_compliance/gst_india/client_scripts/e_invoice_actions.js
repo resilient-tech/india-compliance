@@ -45,6 +45,8 @@ frappe.ui.form.on("Sales Invoice", {
                 () => show_cancel_e_invoice_dialog(frm),
                 "e-Invoice"
             );
+
+            india_compliance.make_text_red("e-Invoice", "Cancel");
         }
     },
     async on_submit(frm) {

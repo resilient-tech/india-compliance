@@ -135,13 +135,15 @@ function setup_e_waybill_actions(doctype) {
 
             if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
                 if (is_e_waybill_cancellable(frm)) {
-                    add_divider_to_btn_group("e-Waybill");
+                    india_compliance.add_divider_to_btn_group("e-Waybill");
 
                     frm.add_custom_button(
                         __("Cancel"),
                         () => show_cancel_e_waybill_dialog(frm),
                         "e-Waybill"
                     );
+
+                    india_compliance.make_text_red("e-Waybill", "Cancel");
                 }
 
                 frm.add_custom_button(
@@ -149,6 +151,8 @@ function setup_e_waybill_actions(doctype) {
                     () => show_mark_e_waybill_as_cancelled_dialog(frm),
                     "e-Waybill"
                 );
+
+                india_compliance.make_text_red("e-Waybill", "Mark as Cancelled");
             }
         },
         async on_submit(frm) {
@@ -1146,12 +1150,4 @@ function show_sandbox_mode_indicator() {
             </div>
             `
         );
-}
-
-function add_divider_to_btn_group(btn_group_name) {
-    let dropdown_menu = $(document).find(
-        `.inner-group-button[data-label=${btn_group_name}]`
-    ).find(`.dropdown-menu`);
-
-    dropdown_menu.append($('<li class="dropdown-divider"></li>'));
 }
