@@ -263,6 +263,10 @@ Object.assign(india_compliance, {
     last_month_end() {
         return frappe.datetime.add_days(frappe.datetime.month_start(), -1);
     },
+
+    primary_to_danger_btn(parent) {
+        parent.$wrapper.find(".btn-primary").removeClass("btn-primary").addClass("btn-danger");
+    },
 });
 
 function is_gstin_check_digit_valid(gstin) {

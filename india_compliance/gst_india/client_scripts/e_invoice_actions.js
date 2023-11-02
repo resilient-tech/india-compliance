@@ -136,6 +136,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
         },
     });
 
+    india_compliance.primary_to_danger_btn(d);
     d.show();
 }
 
