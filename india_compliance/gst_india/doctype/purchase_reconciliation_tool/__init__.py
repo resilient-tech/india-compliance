@@ -579,14 +579,14 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.PI.supplier_name,
+            self.PI.place_of_supply,
+            self.PI.is_reverse_charge,
             *tax_fields,
         ]
 
         # In IMPGSEZ supplier details are avaialble in 2A
         purchase_fields = [
             "supplier_gstin",
-            "place_of_supply",
-            "is_reverse_charge",
             "gst_category",
         ]
 
@@ -594,7 +594,7 @@ class BillOfEntry:
             fields.append(
                 Case()
                 .when(self.PI.gst_category == "SEZ", getattr(self.PI, field))
-                .else_("")
+                .else_(None)
                 .as_(field)
             )
 
@@ -779,7 +779,7 @@ class Reconciler(BaseReconciliation):
         """
 
         for supplier_gstin in purchases:
-            if not inward_supplies.get(supplier_gstin) and category != "IMPG":
+            if not inward_supplies.get(supplier_gstin):
                 continue
 
             summary_diff = {}
@@ -958,7 +958,8 @@ class ReconciledData(BaseReconciliation):
             doc.update(
                 {f"{prefix}_{key}": value for key, value in inward_supply.items()}
             )
-            doc.pan = doc.supplier_gstin[2:-3]
+            if doc.supplier_gstin:
+                doc.pan = doc.supplier_gstin[2:-3]
 
         return data
 
@@ -1002,7 +1003,9 @@ class ReconciledData(BaseReconciliation):
         if inward_supply_names or purchase_names:
             retain_doc = only_names = True
 
-        inward_supplies = self.get_all_inward_supply(names=inward_supply_names)
+        inward_supplies = self.get_all_inward_supply(
+            names=inward_supply_names, only_names=only_names
+        )
         purchases_and_bill_of_entry = self.get_all_purchase_invoice_and_bill_of_entry(
             inward_supplies, purchase_names, only_names
         )
@@ -1038,7 +1041,9 @@ class ReconciledData(BaseReconciliation):
             "link_name",
         ]
 
-        return super().get_all_inward_supply(inward_supply_fields, names, only_names)
+        return (
+            super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
+        )
 
     def get_all_purchase_invoice_and_bill_of_entry(
         self, inward_supplies, purchase_names, only_names=False
@@ -1140,6 +1145,7 @@ class ReconciledData(BaseReconciliation):
             {
                 "supplier_name": data.supplier_name
                 or self.guess_supplier_name(data.supplier_gstin),
+                "supplier_gstin": data.supplier_gstin or data.supplier_name,
                 "purchase_doctype": purchase.get("doctype"),
                 "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
