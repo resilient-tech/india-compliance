@@ -1,6 +1,6 @@
 {% include "india_compliance/gst_india/client_scripts/e_waybill_applicability.js" %}
 
-E_WAYBILL_CLASS = {
+const E_WAYBILL_CLASS = {
     "Sales Invoice": SalesInvoiceEwaybill,
     "Purchase Invoice": PurchaseInvoiceEwaybill,
     "Delivery Note": DeliveryNoteEwaybill,
