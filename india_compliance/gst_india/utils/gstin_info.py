@@ -48,7 +48,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
 
             frappe.log_error(title="Failed to Fetch GSTIN Info", message=exc)
             frappe.clear_last_message()
-            return
+            return frappe._dict()
 
     business_name = (
         response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
