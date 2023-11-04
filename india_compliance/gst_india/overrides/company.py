@@ -161,8 +161,13 @@ def create_default_company_account(
     parent,
     default_fieldname=None,
 ):
+    """
+    Creats a default company account if missing
+    Updates the company with the default account name
+    """
     parent_account = frappe.db.get_value(
-        "Account", filters={"account_name": parent, "company": company}
+        "Account",
+        filters={"account_name": parent, "company": company, "is_group": 1},
     )
 
     if not parent_account:
@@ -181,7 +186,9 @@ def create_default_company_account(
     account.flags.ignore_permissions = True
     account.insert(ignore_if_duplicate=True)
 
-    if default_fieldname:
+    if default_fieldname and not frappe.db.get_value(
+        "Company", company, default_fieldname
+    ):
         frappe.db.set_value(
             "Company", company, default_fieldname, account.name, update_modified=False
         )
