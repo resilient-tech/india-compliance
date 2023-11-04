@@ -20,13 +20,6 @@ class IneligibleITC:
         self.is_perpetual = self.company.enable_perpetual_inventory
         self.cost_center = doc.cost_center or self.company.cost_center
 
-        if not self.company.default_gst_expense_account:
-            frappe.throw(
-                _(
-                    "Please set <strong>Default GST Expense Account</strong> in Company {0}"
-                ).format(get_link_to_form("Company", self.company.name))
-            )
-
         self.dr_or_cr = "credit" if doc.get("is_return") else "debit"
         self.cr_or_dr = "debit" if doc.get("is_return") else "credit"
 
@@ -68,6 +61,13 @@ class IneligibleITC:
 
         if not self.doc.get("_has_ineligible_itc_items"):
             return gl_entries
+
+        if not self.company.default_gst_expense_account:
+            frappe.throw(
+                _(
+                    "Please set <strong>Default GST Expense Account</strong> in Company {0}"
+                ).format(get_link_to_form("Company", self.company.name))
+            )
 
         for item in self.doc.items:
             if not item.get("_ineligible_tax_amount"):
