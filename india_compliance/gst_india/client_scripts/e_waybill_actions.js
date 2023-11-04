@@ -319,7 +319,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
                     },
                 };
             },
-            onchange: () => update_gst_tranporter_id(d, frm.doc),
+            onchange: () => update_gst_tranporter_id(d),
         },
         {
             label: "Distance (in km)",
@@ -558,7 +558,7 @@ function show_cancel_e_waybill_dialog(frm, callback) {
 }
 
 function show_mark_e_waybill_as_cancelled_dialog(frm) {
-    fields = get_cancel_e_waybill_dialog_fields(frm);
+    const fields = get_cancel_e_waybill_dialog_fields(frm);
     fields.push({
         label: "Cancelled On",
         fieldname: "cancelled_on",
