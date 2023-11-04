@@ -1169,7 +1169,7 @@ class ImportDialog {
             frappe.throw(
                 __(
                     "Please make sure you have uploaded the correct file. File Uploaded is not for {0}",
-                    [return_type]
+                    [this.return_type]
                 )
             );
         }

@@ -12,10 +12,6 @@ from india_compliance.income_tax_india.overrides.company import (
 
 
 def execute():
-    """
-    This patch is used to create company fixtures for Indian Companies created before installing India Compliance.
-    """
-
     company_list = frappe.get_all(
         "Company", filters={"country": "India"}, pluck="name", order_by="lft asc"
     )
@@ -31,15 +27,8 @@ def execute():
         if not frappe.db.exists("GST Account", {"company": company}):
             make_default_tax_templates(company)
 
-        if not frappe.db.exists(
-            "Account", {"company": company, "account_name": "Customs Duty Payable"}
-        ):
-            make_default_customs_accounts(company)
-
-        if not frappe.db.exists(
-            "Account", {"company": company, "account_name": "GST Expense"}
-        ):
-            make_default_gst_expense_accounts(company)
+        make_default_customs_accounts(company)
+        make_default_gst_expense_accounts(company)
 
 
 def update_root_for_rcm(company):
