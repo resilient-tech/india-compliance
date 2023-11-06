@@ -77,7 +77,7 @@ CUSTOM_FIELDS = {
     ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
-    ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [
+    ("Purchase Order", "Purchase Receipt", "Purchase Invoice", "Supplier Quotation"): [
         {
             "fieldname": "supplier_gstin",
             "label": "Supplier GSTIN",
