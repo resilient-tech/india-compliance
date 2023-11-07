@@ -216,3 +216,10 @@ def set_ineligibility_reason(doc):
 
     if doc.place_of_supply[:2] != doc.company_gstin[:2]:
         doc.ineligibility_reason = "ITC restricted due to PoS rules"
+
+    if doc.ineligibility_reason:
+        frappe.msgprint(
+            _("ITC Ineligible: {0}").format(frappe.bold(doc.ineligibility_reason)),
+            alert=True,
+            indicator="orange",
+        )
