@@ -1061,7 +1061,8 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account != self.gst_accounts.cess_account,
+                        self.gl_entry.account
+                        != IfNull(self.gst_accounts.cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
@@ -1069,7 +1070,8 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account == self.gst_accounts.cess_account,
+                        self.gl_entry.account
+                        == IfNull(self.gst_accounts.cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
