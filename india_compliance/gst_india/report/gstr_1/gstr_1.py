@@ -1061,7 +1061,8 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account != self.gst_accounts.cess_account,
+                        self.gl_entry.account
+                        != IfNull(self.gst_accounts.cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
@@ -1069,7 +1070,8 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account == self.gst_accounts.cess_account,
+                        self.gl_entry.account
+                        == IfNull(self.gst_accounts.cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
@@ -1334,7 +1336,7 @@ class GSTR1DocumentIssuedSummary:
 
 @frappe.whitelist()
 def get_gstr1_json(filters, data=None):
-    frappe.has_permission("GSTR-1", throw=True)
+    frappe.has_permission("GL Entry", throw=True)
 
     report_dict = set_gst_json_defaults(filters)
     filters = json.loads(filters)
