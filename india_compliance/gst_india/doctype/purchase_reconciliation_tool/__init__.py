@@ -14,6 +14,7 @@ from frappe.utils import add_months, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
+    get_escaped_name,
     get_gst_accounts_by_type,
     get_party_for_gstin,
 )
@@ -464,6 +465,7 @@ class PurchaseInvoice:
         return fields
 
     def query_tax_amount(self, account):
+        account = get_escaped_name(account)
         return Abs(
             Sum(
                 Case()
@@ -608,6 +610,7 @@ class BillOfEntry:
         return fields
 
     def query_tax_amount(self, account):
+        account = get_escaped_name(account)
         return Abs(
             Sum(
                 Case()
