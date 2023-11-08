@@ -1334,7 +1334,7 @@ class GSTR1DocumentIssuedSummary:
 
 @frappe.whitelist()
 def get_gstr1_json(filters, data=None):
-    frappe.has_permission("GSTR-1", throw=True)
+    frappe.has_permission("GL Entry", throw=True)
 
     report_dict = set_gst_json_defaults(filters)
     filters = json.loads(filters)
