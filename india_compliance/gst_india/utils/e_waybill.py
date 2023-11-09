@@ -1201,7 +1201,7 @@ class EWaybillData(GSTTransactionData):
             ("Purchase Receipt", 1): {
                 "supply_type": "O",
                 "sub_supply_type": 8,  # Others
-                "document_type": "OTH",
+                "document_type": "CHL",
                 "sub_supply_desc": "Purchase Return",
             },
         }
