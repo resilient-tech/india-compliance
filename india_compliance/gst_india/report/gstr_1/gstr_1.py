@@ -13,6 +13,7 @@ from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
 from india_compliance.gst_india.utils import (
+    get_escaped_name,
     get_gst_accounts_by_type,
     is_overseas_transaction,
 )
@@ -1051,6 +1052,7 @@ class GSTR11A11BData:
         cr_or_dr_amount_field = getattr(
             self.gl_entry, f"{cr_or_dr}_in_account_currency"
         )
+        cess_account = get_escaped_name(self.gst_accounts.cess_account)
 
         return (
             frappe.qb.from_(self.gl_entry)
@@ -1061,8 +1063,7 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account
-                        != IfNull(self.gst_accounts.cess_account, ""),
+                        self.gl_entry.account != IfNull(cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
@@ -1070,8 +1071,7 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account
-                        == IfNull(self.gst_accounts.cess_account, ""),
+                        self.gl_entry.account == IfNull(cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
