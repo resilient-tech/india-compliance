@@ -10,7 +10,7 @@ on:
             - "**.csv"
 
     push:
-        branches: [develop, version-14-hotfix, version-14]
+        branches: [develop, version-14-hotfix, version-14, version-15-hotfix, version-15]
         paths-ignore:
             - "**.css"
             - "**.js"
