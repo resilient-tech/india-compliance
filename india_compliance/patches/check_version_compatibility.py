@@ -24,6 +24,9 @@ VERSIONS_TO_COMPARE = [
 
 
 def execute():
+    if IC_VERSION.major == 16:
+        return
+
     for app in VERSIONS_TO_COMPARE:
         app_name = app["app_name"]
         app_version = app["current_version"]
