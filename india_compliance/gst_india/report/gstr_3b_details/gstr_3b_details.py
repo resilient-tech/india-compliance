@@ -8,7 +8,7 @@ from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
 from frappe.utils import cint, flt, get_first_day, get_last_day
 
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils import get_escaped_gst_accounts
 
 
 def execute(filters=None):
@@ -114,7 +114,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
         )
 
     def get_data(self):
-        self.gst_accounts = get_gst_accounts_by_type(self.company, "Input")
+        self.gst_accounts = get_escaped_gst_accounts(self.company, "Input")
         purchase_data = self.get_itc_from_purchase()
         boe_data = self.get_itc_from_boe()
         journal_entry_data = self.get_itc_from_journal_entry()
@@ -421,7 +421,7 @@ class IneligibleITC:
         self.gstin = gstin
         self.month = month
         self.year = year
-        self.gst_accounts = get_gst_accounts_by_type(company, "Input")
+        self.gst_accounts = get_escaped_gst_accounts(company, "Input")
 
     def get_for_purchase_invoice(self, group_by="name"):
         ineligible_transactions = self.get_vouchers_with_gst_expense("Purchase Invoice")
