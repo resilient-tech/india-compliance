@@ -1,6 +1,6 @@
 <template>
   <h2 class="page-heading">
-    {{ title }}<span class="full-stop-highlight">.</span>
+    {{ title }}
   </h2>
 </template>
 
