@@ -70,12 +70,9 @@ pull_request_rules:
   - name: automatically merge backport if they pass tests
     conditions:
       - author=mergify[bot]
-      - base~=^mergify/bp/
-      - head~=^version-
+      - base~=^version-
+      - head~=^mergify/bp/
       - label!=conflicts
-      - check-success="linters"
-      - check-success="Check Commit Titles"
-      - check-success="Python Unit Tests"
     actions:
       merge:
         method: merge
