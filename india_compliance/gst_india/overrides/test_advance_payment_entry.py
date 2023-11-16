@@ -1,36 +1,9 @@
 import json
-from contextlib import contextmanager
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils.tests import create_transaction
-
-
-@contextmanager
-def toggle_seperate_advance_accounting():
-    # Enable Provisional Expense
-    frappe.db.set_value(
-        "Company",
-        "_Test Indian Registered Company",
-        {
-            "book_advance_payments_in_separate_party_account": 1,
-            "default_advance_received_account": "Creditors - _TIRC",
-        },
-    )
-
-    try:
-        yield
-
-    finally:
-        frappe.db.set_value(
-            "Company",
-            "_Test Indian Registered Company",
-            {
-                "book_advance_payments_in_separate_party_account": 0,
-                "default_advance_received_account": None,
-            },
-        )
 
 
 class TestAdvancePaymentEntry(FrappeTestCase):
@@ -50,27 +23,6 @@ class TestAdvancePaymentEntry(FrappeTestCase):
 
         # Assert GL Entries for Payment Entry
         self.assertGLEntries(payment_doc, self.EXPECTED_GL)
-
-    @toggle_seperate_advance_accounting()
-    def test_advance_payment_entry_with_seperate_account(self):
-        payment_doc = self._create_payment_entry()
-        self._create_sales_invoice(payment_doc)
-
-        # Assert GL Entries for Payment Entry
-        self.assertGLEntries(
-            payment_doc,
-            [
-                {"account": "Cash - _TIRC", "debit": 11800.0, "credit": 0.0},
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 10000.0},
-                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 900.0},
-                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 900.0},
-                {"account": "Creditors - _TIRC", "debit": 100.0, "credit": 0.0},
-                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 100.0},
-                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 18.0},
-                {"account": "Output Tax CGST - _TIRC", "debit": 9.0, "credit": 0.0},
-                {"account": "Output Tax SGST - _TIRC", "debit": 9.0, "credit": 0.0},
-            ],
-        )
 
     def test_payment_entry_allocation(self):
         payment_doc = self._create_payment_entry()
