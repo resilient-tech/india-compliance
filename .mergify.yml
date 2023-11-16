@@ -53,18 +53,6 @@ pull_request_rules:
           - version-14-hotfix
         assignees:
           - "{{ author }}"
-<<<<<<< HEAD
-=======
-
-  - name: backport to version-15-hotfix
-    conditions:
-      - label="backport version-15-hotfix"
-    actions:
-      backport:
-        branches:
-          - version-15-hotfix
-        assignees:
-          - "{{ author }}"
 
   - name: automatically merge backport if they pass tests
     conditions:
@@ -78,4 +66,3 @@ pull_request_rules:
     actions:
       merge:
         method: merge
->>>>>>> e410092f (ci(Mergify): configuration update)
