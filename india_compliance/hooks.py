@@ -143,6 +143,7 @@ doc_events = {
         "on_update_after_submit": (
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
         ),
+        "before_cancel": "india_compliance.gst_india.overrides.sales_invoice.before_cancel",
     },
     "Sales Order": {
         "validate": (
@@ -163,6 +164,9 @@ doc_events = {
     },
     "Tax Withholding Category": {
         "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
+    },
+    "Unreconcile Payments": {
+        "before_submit": "india_compliance.gst_india.overrides.unreconcile_payments.before_submit",
     },
     "POS Invoice": {
         "validate": (
