@@ -10,6 +10,9 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_transaction,
 )
+from india_compliance.gst_india.overrides.unreconcile_payments import (
+    reverse_gst_adjusted_against_payment_entry,
+)
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
     get_validated_country_code,
@@ -185,6 +188,26 @@ def on_submit(doc, method=None):
             queue="short",
             doctype=doc.doctype,
             docname=doc.name,
+        )
+
+
+def before_cancel(doc, method=None):
+    payment_references = frappe.get_all(
+        "Payment Entry Reference",
+        filters={
+            "reference_doctype": doc.doctype,
+            "reference_name": doc.name,
+            "docstatus": 1,
+        },
+        fields=["name as voucher_detail_no", "parent as payment_name"],
+    )
+
+    if not payment_references:
+        return
+
+    for reference in payment_references:
+        reverse_gst_adjusted_against_payment_entry(
+            reference.voucher_detail_no, reference.payment_name
         )
 
 
