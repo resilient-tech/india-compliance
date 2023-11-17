@@ -143,6 +143,9 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row):
     )
 
     if frappe.db.exists("GL Entry", args):
+        if frappe.db.exists("Payment Ledger Entry", {**args, "delinked": 0}):
+            return gl_dicts
+
         # All existing PLE are delinked and new ones are created everytime on update
         # refer: reconcile_against_document in utils.py
         create_payment_ledger_entry(
