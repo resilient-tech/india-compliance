@@ -82,15 +82,7 @@ def make_gst_revesal_entry_from_advance_payment(doc):
     On Update after Submit: Creates GLEs for new references. Creates PLEs for all references.
     """
     gl_dict = []
-
-    if not doc.taxes:
-        return
-
-    for row in doc.get("references"):
-        if row.reference_doctype not in ("Sales Invoice", "Journal Entry"):
-            continue
-
-        gl_dict.extend(get_gl_for_advance_gst_reversal(doc, row))
+    update_gl_for_advance_gst_reversal(gl_dict, doc)
 
     if not gl_dict:
         return
@@ -99,7 +91,18 @@ def make_gst_revesal_entry_from_advance_payment(doc):
     make_gl_entries(gl_dict)
 
 
-def get_gl_for_advance_gst_reversal(payment_entry, reference_row):
+def update_gl_for_advance_gst_reversal(gl_dict, doc):
+    if not doc.taxes:
+        return
+
+    for row in doc.get("references"):
+        if row.reference_doctype not in ("Sales Invoice", "Journal Entry"):
+            continue
+
+        gl_dict.extend(_get_gl_for_advance_gst_reversal(doc, row))
+
+
+def _get_gl_for_advance_gst_reversal(payment_entry, reference_row):
     gl_dicts = []
     voucher_date = frappe.db.get_value(
         reference_row.reference_doctype, reference_row.reference_name, "posting_date"
