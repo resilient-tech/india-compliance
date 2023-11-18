@@ -154,6 +154,23 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row):
 
         return gl_dicts
 
+    if not frappe.flags.gst_excess_allocation_validated:
+        total_allocation = total_amount + reference_row.allocated_amount
+        excess_allocation = total_allocation - reference_row.outstanding_amount
+
+        if excess_allocation > 1:
+            frappe.throw(
+                _(
+                    "Outstanding amount {0} is less than the total allocated amount"
+                    " with taxes {1} for {2} {3}"
+                ).format(
+                    reference_row.outstanding_amount,
+                    total_allocation,
+                    reference_row.reference_doctype,
+                    reference_row.reference_name,
+                )
+            )
+
     gl_dicts.append(gl_entry)
 
     # Reverse taxes
@@ -282,14 +299,29 @@ def adjust_allocations_for_taxes_in_payment_reconciliation(doc):
 
     taxes = get_taxes_summary(doc.company, doc.allocation)
     taxes = {
-        tax.payment_entry: tax.paid_amount / (tax.paid_amount + tax.tax_amount)
+        tax.payment_entry: frappe._dict(
+            {
+                **tax,
+                "paid_proportion": tax.paid_amount / (tax.paid_amount + tax.tax_amount),
+            }
+        )
         for tax in taxes.values()
     }
 
     for row in doc.allocation:
-        paid_proportion = taxes.get(row.reference_name, 1)
-        for field in ("amount", "allocated_amount", "unreconciled_amount"):
-            row.set(field, flt(row.get(field, 0) * paid_proportion, 2))
+        tax_row = taxes.get(row.reference_name)
+        if not tax_row:
+            continue
+
+        row.update(
+            {
+                "amount": tax_row.unallocated_amount,
+                "allocated_amount": flt(
+                    row.get("allocated_amount", 0) * tax_row.paid_proportion, 2
+                ),
+                "unreconciled_amount": tax_row.unallocated_amount,
+            }
+        )
 
 
 def get_taxes_summary(company, payment_entries):
@@ -314,6 +346,7 @@ def get_taxes_summary(company, payment_entries):
             Sum(gl_entry.debit_in_account_currency).as_("tax_amount_reversed"),
             pe.name.as_("payment_entry"),
             pe.paid_amount,
+            pe.unallocated_amount,
         )
         .where(gl_entry.is_cancelled == 0)
         .where(gl_entry.voucher_type == "Payment Entry")
