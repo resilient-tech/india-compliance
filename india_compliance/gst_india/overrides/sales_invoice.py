@@ -327,3 +327,4 @@ def set_and_validate_advances_with_gst(doc):
     doc.total_advance = allocated_amount_with_taxes
     doc.set_payment_schedule()
     doc.outstanding_amount -= tax_amount
+    frappe.flags.gst_excess_allocation_validated = True
