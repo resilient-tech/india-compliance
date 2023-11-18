@@ -7,7 +7,7 @@ def before_submit(doc, method=None):
         return
 
     for allocation in doc.allocations:
-        voucher_detail_no = frappe.get_value(
+        voucher_detail_nos = frappe.get_all(
             "Payment Entry Reference",
             {
                 "parent": doc.voucher_no,
@@ -15,9 +15,13 @@ def before_submit(doc, method=None):
                 "reference_name": allocation.reference_name,
                 "docstatus": 1,
             },
+            pluck="name",
         )
 
-        reverse_gst_adjusted_against_payment_entry(voucher_detail_no, doc.voucher_no)
+        for voucher_detail_no in voucher_detail_nos:
+            reverse_gst_adjusted_against_payment_entry(
+                voucher_detail_no, doc.voucher_no
+            )
 
 
 def reverse_gst_adjusted_against_payment_entry(voucher_detail_no, payment_name):
