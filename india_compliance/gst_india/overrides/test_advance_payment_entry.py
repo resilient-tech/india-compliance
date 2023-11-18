@@ -35,10 +35,10 @@ def toggle_seperate_advance_accounting():
 
 class TestAdvancePaymentEntry(FrappeTestCase):
     EXPECTED_GL = [
-        {"account": "Cash - _TIRC", "debit": 11800.0, "credit": 0.0},
-        {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 10000.0},
-        {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 900.0},
-        {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 900.0},
+        {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+        {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
+        {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
+        {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 18.0},
         {"account": "Output Tax SGST - _TIRC", "debit": 9.0, "credit": 0.0},
         {"account": "Output Tax CGST - _TIRC", "debit": 9.0, "credit": 0.0},
@@ -46,29 +46,57 @@ class TestAdvancePaymentEntry(FrappeTestCase):
 
     def test_advance_payment_entry(self):
         payment_doc = self._create_payment_entry()
-        self._create_sales_invoice(payment_doc)
+        invoice_doc = self._create_sales_invoice(payment_doc)
 
-        # Assert GL Entries for Payment Entry
+        # Verify outstanding amount
+        outstanding_amount = frappe.db.get_value(
+            "Sales Invoice", invoice_doc.name, "outstanding_amount"
+        )
+        self.assertEqual(outstanding_amount, 0)
+
         self.assertGLEntries(payment_doc, self.EXPECTED_GL)
+        self.assertPLEntries(
+            payment_doc,
+            [
+                {"amount": -100.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -18.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -400.0, "against_voucher_no": payment_doc.name},
+            ],
+        )
 
     @toggle_seperate_advance_accounting()
     def test_advance_payment_entry_with_seperate_account(self):
         payment_doc = self._create_payment_entry()
-        self._create_sales_invoice(payment_doc)
+        invoice_doc = self._create_sales_invoice(payment_doc)
 
-        # Assert GL Entries for Payment Entry
+        # Verify outstanding amount
+        outstanding_amount = frappe.db.get_value(
+            "Sales Invoice", invoice_doc.name, "outstanding_amount"
+        )
+        self.assertEqual(outstanding_amount, 0)
+
         self.assertGLEntries(
             payment_doc,
             [
-                {"account": "Cash - _TIRC", "debit": 11800.0, "credit": 0.0},
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 10000.0},
-                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 900.0},
-                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 900.0},
+                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 500.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
                 {"account": "Creditors - _TIRC", "debit": 100.0, "credit": 0.0},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 100.0},
                 {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 18.0},
                 {"account": "Output Tax CGST - _TIRC", "debit": 9.0, "credit": 0.0},
                 {"account": "Output Tax SGST - _TIRC", "debit": 9.0, "credit": 0.0},
+            ],
+        )
+        self.assertPLEntries(
+            payment_doc,
+            [
+                {"amount": -100.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -18.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -100.0, "against_voucher_no": payment_doc.name},
+                {"amount": 400.0, "against_voucher_no": payment_doc.name},
+                {"amount": 100.0, "against_voucher_no": payment_doc.name},
             ],
         )
 
@@ -98,7 +126,21 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
         pr.reconcile()
 
+        # Verify outstanding amount
+        outstanding_amount = frappe.db.get_value(
+            "Sales Invoice", invoice_doc.name, "outstanding_amount"
+        )
+        self.assertEqual(outstanding_amount, 0)
+
         self.assertGLEntries(payment_doc, self.EXPECTED_GL)
+        self.assertPLEntries(
+            payment_doc,
+            [
+                {"amount": -100.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -18.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -400.0, "against_voucher_no": payment_doc.name},
+            ],
+        )
 
     def _create_sales_invoice(self, payment_doc=None):
         invoice_doc = create_transaction(
@@ -130,7 +172,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             party="_Test Registered Customer",
             customer_address="_Test Registered Customer-Billing",
             paid_to="Cash - _TIRC",
-            paid_amount=10000,
+            paid_amount=500,
             is_in_state=1,
             do_not_save=True,
         )
@@ -154,4 +196,17 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         )
         out_str = json.dumps(sorted(gl_entries, key=json.dumps))
         expected_out_str = json.dumps(sorted(expected_gl_entries, key=json.dumps))
+        self.assertEqual(out_str, expected_out_str)
+
+    def assertPLEntries(self, payment_doc, expected_pl_entries):
+        pl_entries = frappe.get_all(
+            "Payment Ledger Entry",
+            filters={
+                "voucher_type": payment_doc.doctype,
+                "voucher_no": payment_doc.name,
+            },
+            fields=["amount", "against_voucher_no"],
+        )
+        out_str = json.dumps(sorted(pl_entries, key=json.dumps))
+        expected_out_str = json.dumps(sorted(expected_pl_entries, key=json.dumps))
         self.assertEqual(out_str, expected_out_str)
