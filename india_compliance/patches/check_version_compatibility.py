@@ -13,17 +13,20 @@ VERSIONS_TO_COMPARE = [
     {
         "app_name": "Frappe",
         "current_version": version.parse(frappe.__version__),
-        "required_versions": {"version-14": "14.42.0"},
+        "required_versions": {"version-14": "14.54.0", "version-15": "15.1.0"},
     },
     {
         "app_name": "ERPNext",
         "current_version": version.parse(erpnext.__version__),
-        "required_versions": {"version-14": "14.32.0"},
+        "required_versions": {"version-14": "14.45.1", "version-15": "15.2.0"},
     },
 ]
 
 
 def execute():
+    if IC_VERSION.major == 16:
+        return
+
     for app in VERSIONS_TO_COMPARE:
         app_name = app["app_name"]
         app_version = app["current_version"]

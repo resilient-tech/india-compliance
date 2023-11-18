@@ -48,7 +48,7 @@ def create_transaction(**data):
         if not transaction.get("customer") and transaction.doctype != "Quotation":
             transaction.customer = "_Test Registered Customer"
 
-    else:
+    elif transaction.doctype not in ["Payment Entry", "Journal Entry"]:
         if not transaction.supplier:
             transaction.supplier = "_Test Registered Supplier"
 
@@ -95,6 +95,9 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
     if not data:
         data = frappe._dict()
 
+    if data.doctype in ["Payment Entry", "Journal Entry"]:
+        return
+
     return transaction.append(
         "items",
         {
@@ -124,10 +127,13 @@ def _append_taxes(
     if isinstance(accounts, str):
         accounts = [accounts]
 
-    if transaction.doctype in SALES_DOCTYPES:
+    if transaction.doctype in SALES_DOCTYPES or transaction.doctype == "Payment Entry":
         account_type = "Output Tax"
     else:
         account_type = "Input Tax"
+
+    if transaction.doctype == "Payment Entry" and charge_type == "On Net Total":
+        charge_type = "On Paid Amount"
 
     for account in accounts:
         tax = {

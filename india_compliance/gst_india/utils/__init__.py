@@ -90,7 +90,6 @@ def send_updated_doc(doc, set_docinfo=False):
 def get_gstin_list(party, party_type="Company"):
     """
     Returns a list the party's GSTINs.
-    This function doesn't check for permissions since GSTINs are publicly available.
     """
 
     frappe.has_permission(party_type, doc=party, throw=True)
@@ -409,6 +408,28 @@ def get_place_of_supply(party_details, doctype):
         return f"{state_code}-{state}"
 
 
+def get_escaped_gst_accounts(company, account_type, throw=True):
+    gst_accounts = get_gst_accounts_by_type(company, account_type, throw=throw)
+
+    for tax_type in gst_accounts:
+        gst_accounts[tax_type] = get_escaped_name(gst_accounts[tax_type])
+
+    return gst_accounts
+
+
+def get_escaped_name(name):
+    """
+    This function will replace % in account name with %% to escape it for PyPika
+    """
+    if not name:
+        return
+
+    if "%" not in name:
+        return name
+
+    return name.replace("%", "%%")
+
+
 def get_gst_accounts_by_type(company, account_type, throw=True):
     """
     :param company: Company to get GST Accounts for
@@ -442,14 +463,12 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
 
 @frappe.whitelist()
 def get_all_gst_accounts(company):
+    """
+    Permission not checked here:
+    List of GST account names isn't considered sensitive data
+    """
     if not company:
         frappe.throw(_("Please set Company first"))
-
-    if not (
-        frappe.has_permission("Account", "read")
-        or frappe.has_permission("Account", "select")
-    ):
-        frappe.throw(_("Not Permitted to select/read Accounts"), frappe.PermissionError)
 
     settings = frappe.get_cached_doc("GST Settings")
 
