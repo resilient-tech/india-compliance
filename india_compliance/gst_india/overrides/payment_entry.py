@@ -127,7 +127,7 @@ def get_gl_for_advance_gst_reversal(payment_entry, reference_row):
     # Reduce receivables
     gl_entry = payment_entry.get_gl_dict(
         {
-            "account": reference_row.account,
+            "account": reference_row.get("account") or payment_entry.paid_from,
             "credit": total_amount,
             "credit_in_account_currency": total_amount,
             "party_type": payment_entry.party_type,

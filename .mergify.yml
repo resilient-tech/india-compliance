@@ -53,3 +53,13 @@ pull_request_rules:
           - version-14-hotfix
         assignees:
           - "{{ author }}"
+
+  - name: automatically merge backport if they pass tests
+    conditions:
+      - author=mergify[bot]
+      - base~=^version-
+      - head~=^mergify/bp/
+      - label!=conflicts
+    actions:
+      merge:
+        method: merge
