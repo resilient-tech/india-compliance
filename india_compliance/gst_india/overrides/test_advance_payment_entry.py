@@ -1,7 +1,15 @@
 import json
+<<<<<<< HEAD
+=======
+import re
+from contextlib import contextmanager
+>>>>>>> b94a2409 (test: rounding issue with payment reco, unlink payments)
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from erpnext.accounts.doctype.payment_entry.payment_entry import (
+    get_outstanding_reference_documents,
+)
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
@@ -38,7 +46,135 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         )
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+        # unlink payment entry
+        invoice_doc.cancel()
+
+        self.assertGLEntries(
+            payment_doc,
+            [
+                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
+            ],
+        )
+        self.assertPLEntries(
+            payment_doc,
+            [
+                {"amount": -100.0, "against_voucher_no": payment_doc.name},
+                {"amount": -400.0, "against_voucher_no": payment_doc.name},
+            ],
+        )
+
+    def test_first_sales_then_payment_entry(self):
+        invoice_doc = self._create_sales_invoice()
+        payment_doc = self._create_payment_entry(do_not_submit=True)
+
+        args = {
+            "posting_date": payment_doc.posting_date,
+            "company": payment_doc.company,
+            "party_type": payment_doc.party_type,
+            "payment_type": payment_doc.payment_type,
+            "party": payment_doc.party,
+            "party_account": payment_doc.party_account,
+            "from_posting_date": payment_doc.posting_date,
+            "to_posting_date": payment_doc.posting_date,
+        }
+        references = get_outstanding_reference_documents(args)
+        current_ref = next(
+            ref for ref in references if ref.voucher_no == invoice_doc.name
+        )
+
+        payment_doc.extend(
+            "references",
+            [
+                {
+                    **current_ref,
+                    "reference_doctype": current_ref.voucher_type,
+                    "reference_name": current_ref.voucher_no,
+                    "total_amount": current_ref.invoice_amount,
+                    "allocated_amount": 100.0,
+                }
+            ],
+        )
+
+        payment_doc.save()
+        payment_doc.submit()
+
+        # Verify outstanding amount
+        outstanding_amount = frappe.db.get_value(
+            "Sales Invoice", invoice_doc.name, "outstanding_amount"
+        )
+        self.assertEqual(outstanding_amount, 0)
+
+        self.assertGLEntries(
+            payment_doc,
+            [
+                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 100.0},
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 400.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 18.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 9.0, "credit": 0.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 9.0, "credit": 0.0},
+            ],
+        )
+
+        self.assertPLEntries(
+            payment_doc,
+            [
+                {"amount": -100.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -18.0, "against_voucher_no": invoice_doc.name},
+                {"amount": -400.0, "against_voucher_no": payment_doc.name},
+            ],
+        )
+
+    def validate_payment_entry_allocation(self):
+        invoice_doc = self._create_sales_invoice()
+        payment_doc = self._create_payment_entry(do_not_submit=True)
+
+        args = {
+            "posting_date": payment_doc.posting_date,
+            "company": payment_doc.company,
+            "party_type": payment_doc.party_type,
+            "payment_type": payment_doc.payment_type,
+            "party": payment_doc.party,
+            "party_account": payment_doc.party_account,
+            "from_posting_date": payment_doc.posting_date,
+            "to_posting_date": payment_doc.posting_date,
+        }
+        references = get_outstanding_reference_documents(args)
+        current_ref = next(
+            ref for ref in references if ref.voucher_no == invoice_doc.name
+        )
+
+        payment_doc.extend(
+            "references",
+            [
+                {
+                    **current_ref,
+                    "reference_doctype": current_ref.voucher_type,
+                    "reference_name": current_ref.voucher_no,
+                    "total_amount": current_ref.invoice_amount,
+                    "allocated_amount": 118.0,
+                }
+            ],
+        )
+
+        payment_doc.save()
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Outstanding amount 118.0 is less than the total allocated amount with taxes 139.24.*)$"
+            ),
+            payment_doc.submit,
+        )
+
+>>>>>>> b94a2409 (test: rounding issue with payment reco, unlink payments)
     @toggle_seperate_advance_accounting()
     def test_advance_payment_entry_with_seperate_account(self):
         payment_doc = self._create_payment_entry()
@@ -80,27 +216,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice()
 
-        pr = frappe.get_doc("Payment Reconciliation")
-        pr.company = "_Test Indian Registered Company"
-        pr.party_type = "Customer"
-        pr.party = invoice_doc.customer
-        pr.receivable_payable_account = invoice_doc.debit_to
-
-        pr.get_unreconciled_entries()
-
-        invoices = [
-            row.as_dict()
-            for row in pr.invoices
-            if row.invoice_number == invoice_doc.name
-        ]
-        payments = [
-            row.as_dict()
-            for row in pr.payments
-            if row.reference_name == payment_doc.name
-        ]
-
-        pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
-        pr.reconcile()
+        make_payment_reconciliation(payment_doc, invoice_doc, 118)
 
         # Verify outstanding amount
         outstanding_amount = frappe.db.get_value(
@@ -115,6 +231,48 @@ class TestAdvancePaymentEntry(FrappeTestCase):
                 {"amount": -100.0, "against_voucher_no": invoice_doc.name},
                 {"amount": -18.0, "against_voucher_no": invoice_doc.name},
                 {"amount": -400.0, "against_voucher_no": payment_doc.name},
+            ],
+        )
+
+    def test_payment_entry_allocation_with_rounding_off(self):
+        payment_doc = self._create_payment_entry()
+        invoice_doc = self._create_sales_invoice()
+
+        make_payment_reconciliation(payment_doc, invoice_doc, 50)
+        make_payment_reconciliation(payment_doc, invoice_doc, 20)
+
+        # Verify outstanding amount
+        outstanding_amount = frappe.db.get_value(
+            "Sales Invoice", invoice_doc.name, "outstanding_amount"
+        )
+        self.assertEqual(outstanding_amount, 48)
+
+        self.assertGLEntries(
+            payment_doc,
+            [
+                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
+                # 20 / 1.18 * 0.18
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 3.06},
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
+                # 50 / 1.18 * 0.18
+                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 7.62},
+                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 1.53, "credit": 0.0},
+                {"account": "Output Tax CGST - _TIRC", "debit": 3.81, "credit": 0.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 1.53, "credit": 0.0},
+                {"account": "Output Tax SGST - _TIRC", "debit": 3.81, "credit": 0.0},
+            ],
+        )
+        self.assertPLEntries(
+            payment_doc,
+            [
+                {"amount": -16.95, "against_voucher_no": invoice_doc.name},
+                {"amount": -3.06, "against_voucher_no": invoice_doc.name},
+                {"amount": -42.37, "against_voucher_no": invoice_doc.name},
+                {"amount": -7.62, "against_voucher_no": invoice_doc.name},
+                # 500 - 16.95 - 42.37
+                {"amount": -440.68, "against_voucher_no": payment_doc.name},
             ],
         )
 
@@ -138,7 +296,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
 
         return invoice_doc
 
-    def _create_payment_entry(self):
+    def _create_payment_entry(self, do_not_submit=False):
         payment_doc = create_transaction(
             doctype="Payment Entry",
             payment_type="Receive",
@@ -160,14 +318,16 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             payment_doc.paid_amount / payment_doc.target_exchange_rate
         )
         payment_doc.save()
-        payment_doc.submit()
+
+        if not do_not_submit:
+            payment_doc.submit()
 
         return payment_doc
 
     def assertGLEntries(self, payment_doc, expected_gl_entries):
         gl_entries = frappe.get_all(
             "GL Entry",
-            filters={"voucher_no": payment_doc.name},
+            filters={"voucher_no": payment_doc.name, "is_cancelled": 0},
             fields=["account", "debit", "credit"],
         )
         out_str = json.dumps(sorted(gl_entries, key=json.dumps))
@@ -180,9 +340,30 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             filters={
                 "voucher_type": payment_doc.doctype,
                 "voucher_no": payment_doc.name,
+                "delinked": 0,
             },
             fields=["amount", "against_voucher_no"],
         )
         out_str = json.dumps(sorted(pl_entries, key=json.dumps))
         expected_out_str = json.dumps(sorted(expected_pl_entries, key=json.dumps))
         self.assertEqual(out_str, expected_out_str)
+
+
+def make_payment_reconciliation(payment_doc, invoice_doc, amount):
+    pr = frappe.get_doc("Payment Reconciliation")
+    pr.company = "_Test Indian Registered Company"
+    pr.party_type = "Customer"
+    pr.party = invoice_doc.customer
+    pr.receivable_payable_account = invoice_doc.debit_to
+
+    pr.get_unreconciled_entries()
+    invoices = [
+        row.as_dict() for row in pr.invoices if row.invoice_number == invoice_doc.name
+    ]
+    payments = [
+        row.as_dict() for row in pr.payments if row.reference_name == payment_doc.name
+    ]
+
+    pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
+    pr.allocation[0].allocated_amount = amount
+    pr.reconcile()
