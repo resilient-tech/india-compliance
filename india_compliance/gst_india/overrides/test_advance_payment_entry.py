@@ -1,9 +1,5 @@
 import json
-<<<<<<< HEAD
-=======
 import re
-from contextlib import contextmanager
->>>>>>> b94a2409 (test: rounding issue with payment reco, unlink payments)
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -45,10 +41,6 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             ],
         )
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
         # unlink payment entry
         invoice_doc.cancel()
 
@@ -174,44 +166,6 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             payment_doc.submit,
         )
 
->>>>>>> b94a2409 (test: rounding issue with payment reco, unlink payments)
-    @toggle_seperate_advance_accounting()
-    def test_advance_payment_entry_with_seperate_account(self):
-        payment_doc = self._create_payment_entry()
-        invoice_doc = self._create_sales_invoice(payment_doc)
-
-        # Verify outstanding amount
-        outstanding_amount = frappe.db.get_value(
-            "Sales Invoice", invoice_doc.name, "outstanding_amount"
-        )
-        self.assertEqual(outstanding_amount, 0)
-
-        self.assertGLEntries(
-            payment_doc,
-            [
-                {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
-                {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 500.0},
-                {"account": "Output Tax CGST - _TIRC", "debit": 0.0, "credit": 45.0},
-                {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
-                {"account": "Creditors - _TIRC", "debit": 100.0, "credit": 0.0},
-                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 100.0},
-                {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 18.0},
-                {"account": "Output Tax CGST - _TIRC", "debit": 9.0, "credit": 0.0},
-                {"account": "Output Tax SGST - _TIRC", "debit": 9.0, "credit": 0.0},
-            ],
-        )
-        self.assertPLEntries(
-            payment_doc,
-            [
-                {"amount": -100.0, "against_voucher_no": invoice_doc.name},
-                {"amount": -18.0, "against_voucher_no": invoice_doc.name},
-                {"amount": -100.0, "against_voucher_no": payment_doc.name},
-                {"amount": 400.0, "against_voucher_no": payment_doc.name},
-                {"amount": 100.0, "against_voucher_no": payment_doc.name},
-            ],
-        )
-
->>>>>>> 5c593e2f (test: outstanding amount and PLEs)
     def test_payment_entry_allocation(self):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice()
