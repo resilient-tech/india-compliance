@@ -132,7 +132,7 @@ data() {
 
           const response = await get_invoice_history(from_date, to_date);
           const data = response.message?.length > 0 ? response.message : null;
-          const invoiceHistoryTable = frappe.render_template("invoice_history_table", {data});
+          const invoiceHistoryTable = frappe.render_template("invoice_history_table", {data_array: data});
           const invoice_history = dialog.fields_dict.invoice_history
 
           invoice_history.html(invoiceHistoryTable);
