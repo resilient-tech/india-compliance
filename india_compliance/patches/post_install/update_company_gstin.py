@@ -75,6 +75,9 @@ def update_gstin_for_je(company, gst_accounts):
         return
 
     company_gstins = get_gstin_list(company)
+    if not company_gstins:
+        return
+
     if len(company_gstins) > 1:
         click.secho(
             "Multiple GSTINs found for company {0}. Please update Company GSTIN in Journal Entry manually to use GST Balance Report.".format(

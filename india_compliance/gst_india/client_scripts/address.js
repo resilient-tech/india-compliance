@@ -16,9 +16,10 @@ frappe.ui.form.on(DOCTYPE, {
 
         // Assume default country to be India for now
         // Automatically set GST Category as Overseas if country is not India
-        if (frm.doc.country != "India") {
+        if (frm.doc.country != "India")
             frm.set_value("gst_category", "Overseas");
-        }
+        else
+            frm.trigger("gstin");
     },
     async refresh(frm) {
         india_compliance.set_state_options(frm);

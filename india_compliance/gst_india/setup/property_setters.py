@@ -94,6 +94,12 @@ def get_property_setters():
             "property": "collapsible",
             "value": "1",
         },
+        {
+            "doctype": "Purchase Reconciliation Tool",
+            "doctype_or_field": "DocType",
+            "property": "default_email_template",
+            "value": "Purchase Reconciliation",
+        },
     ]
 
 

@@ -90,7 +90,6 @@ def send_updated_doc(doc, set_docinfo=False):
 def get_gstin_list(party, party_type="Company"):
     """
     Returns a list the party's GSTINs.
-    This function doesn't check for permissions since GSTINs are publicly available.
     """
 
     frappe.has_permission(party_type, doc=party, throw=True)
@@ -206,7 +205,9 @@ def validate_gst_category(gst_category, gstin):
 
     if gst_category == "Unregistered":
         frappe.throw(
-            "GST Category cannot be Unregistered for party with GSTIN",
+            _(
+                "GST Category cannot be Unregistered for party with GSTIN",
+            )
         )
 
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
@@ -250,7 +251,7 @@ def validate_pincode(address):
     first_three_digits = cint(address.pincode[:3])
     pincode_range = STATE_PINCODE_MAPPING[address.state]
 
-    if type(pincode_range[0]) == int:
+    if isinstance(pincode_range[0], int):
         pincode_range = (pincode_range,)
 
     for lower_limit, upper_limit in pincode_range:
@@ -277,9 +278,14 @@ def validate_pincode(address):
     )
 
 
-def guess_gst_category(gstin: str | None, country: str | None) -> str:
+def guess_gst_category(
+    gstin: str | None, country: str | None, gst_category: str | None = None
+) -> str:
     if not gstin:
         if country and country != "India":
+            return "Overseas"
+
+        if not country and gst_category == "Overseas":
             return "Overseas"
 
         return "Unregistered"
@@ -288,6 +294,14 @@ def guess_gst_category(gstin: str | None, country: str | None) -> str:
         return "Tax Deductor"
 
     if GSTIN_FORMATS["Registered Regular"].match(gstin):
+        if gst_category in (
+            "Registered Regular",
+            "Registered Composition",
+            "SEZ",
+            "Deemed Export",
+        ):
+            return gst_category
+
         return "Registered Regular"
 
     if GSTIN_FORMATS["UIN Holders"].match(gstin):
@@ -394,6 +408,28 @@ def get_place_of_supply(party_details, doctype):
         return f"{state_code}-{state}"
 
 
+def get_escaped_gst_accounts(company, account_type, throw=True):
+    gst_accounts = get_gst_accounts_by_type(company, account_type, throw=throw)
+
+    for tax_type in gst_accounts:
+        gst_accounts[tax_type] = get_escaped_name(gst_accounts[tax_type])
+
+    return gst_accounts
+
+
+def get_escaped_name(name):
+    """
+    This function will replace % in account name with %% to escape it for PyPika
+    """
+    if not name:
+        return
+
+    if "%" not in name:
+        return name
+
+    return name.replace("%", "%%")
+
+
 def get_gst_accounts_by_type(company, account_type, throw=True):
     """
     :param company: Company to get GST Accounts for
@@ -427,14 +463,12 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
 
 @frappe.whitelist()
 def get_all_gst_accounts(company):
+    """
+    Permission not checked here:
+    List of GST account names isn't considered sensitive data
+    """
     if not company:
         frappe.throw(_("Please set Company first"))
-
-    if not (
-        frappe.has_permission("Account", "read")
-        or frappe.has_permission("Account", "select")
-    ):
-        frappe.throw(_("Not Permitted to select/read Accounts"), frappe.PermissionError)
 
     settings = frappe.get_cached_doc("GST Settings")
 
@@ -548,6 +582,15 @@ def is_api_enabled(settings=None):
     return settings.enable_api and can_enable_api(settings)
 
 
+def is_autofill_party_info_enabled():
+    settings = frappe.get_cached_doc("GST Settings")
+    return (
+        is_api_enabled(settings)
+        and settings.autofill_party_info
+        and not settings.sandbox_mode
+    )
+
+
 def can_enable_api(settings):
     return settings.api_secret or frappe.conf.ic_api_secret
 
@@ -631,19 +674,17 @@ def get_timespan_date_range(timespan: str, company: str | None = None) -> tuple 
 
     company = company or frappe.defaults.get_user_default("Company")
 
-    match timespan:
-        case "this fiscal year":
-            date = getdate()
-            fiscal_year = get_fiscal_year(date, company=company)
-            return (fiscal_year[1], fiscal_year[2])
+    if timespan == "this fiscal year":
+        date = getdate()
+        fiscal_year = get_fiscal_year(date, company=company)
+        return (fiscal_year[1], fiscal_year[2])
 
-        case "last fiscal year":
-            date = add_to_date(getdate(), years=-1)
-            fiscal_year = get_fiscal_year(date, company=company)
-            return (fiscal_year[1], fiscal_year[2])
+    if timespan == "last fiscal year":
+        date = add_to_date(getdate(), years=-1)
+        fiscal_year = get_fiscal_year(date, company=company)
+        return (fiscal_year[1], fiscal_year[2])
 
-        case _:
-            return
+    return
 
 
 def merge_dicts(d1: dict, d2: dict) -> dict:

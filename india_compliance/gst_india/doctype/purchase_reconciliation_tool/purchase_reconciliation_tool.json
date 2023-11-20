@@ -44,7 +44,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "This Fiscal Year",
    "fieldname": "purchase_period",
    "fieldtype": "Select",
    "label": "Purchase Period",
@@ -69,7 +68,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "This Fiscal Year",
    "fieldname": "inward_supply_period",
    "fieldtype": "Select",
    "label": "Inward Supply Period",
@@ -152,7 +150,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-09-14 12:57:00.756535",
+ "modified": "2023-10-12 16:20:03.501277",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Purchase Reconciliation Tool",

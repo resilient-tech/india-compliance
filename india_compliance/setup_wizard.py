@@ -51,7 +51,7 @@ def setup_company_gstin_details(params):
     if not params.company_gstin:
         return
 
-    if not (params.company_name or frappe.db.exists("Company", params.company_name)):
+    if not (params.company_name and frappe.db.exists("Company", params.company_name)):
         return
 
     gstin_info = frappe._dict()
@@ -59,7 +59,7 @@ def setup_company_gstin_details(params):
         gstin_info = get_gstin_info(params.company_gstin, throw_error=False)
 
     update_company_info(params, gstin_info.gst_category)
-    create_address(gstin_info)
+    create_address(gstin_info, params)
 
 
 def update_company_info(params, gst_category=None):
@@ -74,13 +74,13 @@ def update_company_info(params, gst_category=None):
     company_doc.save()
 
 
-def create_address(gstin_info: dict) -> None:
+def create_address(gstin_info: dict, params: dict) -> None:
     if not gstin_info.permanent_address:
         return
 
     address = frappe.new_doc("Address")
     address.append(
-        "links", {"link_doctype": "Company", "link_name": gstin_info.business_name}
+        "links", {"link_doctype": "Company", "link_name": params.company_name}
     )
 
     for key, value in gstin_info.permanent_address.items():

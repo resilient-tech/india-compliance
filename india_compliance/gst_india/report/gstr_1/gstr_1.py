@@ -1,6 +1,7 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 import json
+import re
 from datetime import date
 
 from pypika.terms import Case
@@ -8,15 +9,29 @@ from pypika.terms import Case
 import frappe
 from frappe import _
 from frappe.query_builder import Criterion
-from frappe.query_builder.functions import Sum
-from frappe.utils import flt, formatdate, getdate
+from frappe.query_builder.functions import IfNull, Sum
+from frappe.utils import cint, flt, formatdate, getdate
 
 from india_compliance.gst_india.utils import (
+    get_escaped_name,
     get_gst_accounts_by_type,
     is_overseas_transaction,
 )
 
 B2C_LIMIT = 2_50_000
+
+TYPES_OF_BUSINESS = {
+    "B2B": "b2b",
+    "B2C Large": "b2cl",
+    "B2C Small": "b2cs",
+    "CDNR-REG": "cdnr",
+    "CDNR-UNREG": "cdnur",
+    "EXPORT": "exp",
+    "Advances": "at",
+    "Adjustment": "txpd",
+    "NIL Rated": "nil",
+    "Document Issued Summary": "doc_issue",
+}
 
 
 def execute(filters=None):
@@ -79,6 +94,8 @@ class Gstr1Report:
             self.get_11A_11B_data()
         elif self.filters.get("type_of_business") == "NIL Rated":
             self.get_nil_rated_invoices()
+        elif self.filters.get("type_of_business") == "Document Issued Summary":
+            self.get_documents_issued_data()
         elif self.invoices:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
@@ -197,7 +214,9 @@ class Gstr1Report:
                             "cess_amount": 0,
                             "type": "",
                             "invoice_number": invoice_number,
-                            "posting_date": invoice_details.get("posting_date"),
+                            "posting_date": invoice_details.get(
+                                "posting_date"
+                            ).strftime("%d-%m-%Y"),
                             "invoice_value": invoice_details.get("base_grand_total"),
                         },
                     )
@@ -313,6 +332,13 @@ class Gstr1Report:
 
         for key, value in data.items():
             row = [key[0], key[1], value[0], value[1]]
+            self.data.append(row)
+
+    def get_documents_issued_data(self):
+        report = GSTR1DocumentIssuedSummary(self.filters)
+        data = report.get_data()
+
+        for row in data:
             self.data.append(row)
 
     def get_conditions(self):
@@ -497,8 +523,12 @@ class Gstr1Report:
     def get_columns(self):
         self.other_columns = []
         self.tax_columns = []
+        self.invoice_columns = []
 
-        if self.filters.get("type_of_business") != "NIL Rated":
+        if (
+            self.filters.get("type_of_business") != "NIL Rated"
+            and self.filters.get("type_of_business") != "Document Issued Summary"
+        ):
             self.tax_columns = [
                 {
                     "fieldname": "rate",
@@ -510,6 +540,7 @@ class Gstr1Report:
                     "fieldname": "taxable_value",
                     "label": _("Taxable Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 150,
                 },
             ]
@@ -545,6 +576,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -575,6 +607,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 }
             ]
@@ -598,6 +631,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -618,6 +652,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 }
             ]
@@ -687,6 +722,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 120,
                 },
             ]
@@ -695,6 +731,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -765,6 +802,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 120,
                 },
             ]
@@ -773,6 +811,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -808,6 +847,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 100,
                 },
                 {
@@ -842,6 +882,7 @@ class Gstr1Report:
                     "fieldname": "invoice_value",
                     "label": _("Invoice Value"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 120,
                 },
                 {
@@ -878,6 +919,7 @@ class Gstr1Report:
                     "fieldname": "cess_amount",
                     "label": _("Cess Amount"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 130,
                 }
             ]
@@ -893,19 +935,73 @@ class Gstr1Report:
                     "fieldname": "nil_rated",
                     "label": _("Nil Rated"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 200,
                 },
                 {
                     "fieldname": "exempted",
                     "label": _("Exempted"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 200,
                 },
                 {
                     "fieldname": "non_gst",
                     "label": _("Non GST"),
                     "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                     "width": 200,
+                },
+            ]
+        elif self.filters.get("type_of_business") == "Document Issued Summary":
+            self.other_columns = [
+                {
+                    "fieldname": "nature_of_document",
+                    "label": _("Nature of Document"),
+                    "fieldtype": "Data",
+                    "width": 300,
+                },
+                {
+                    "fieldname": "naming_series",
+                    "label": _("Series"),
+                    "fieldtype": "Data",
+                    "width": 150,
+                },
+                {
+                    "fieldname": "from_serial_no",
+                    "label": _("Serial Number From"),
+                    "fieldtype": "Data",
+                    "width": 160,
+                },
+                {
+                    "fieldname": "to_serial_no",
+                    "label": _("Serial Number To"),
+                    "fieldtype": "Data",
+                    "width": 160,
+                },
+                {
+                    "fieldname": "total_submitted",
+                    "label": _("Submitted Number"),
+                    "fieldtype": "Int",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "total_draft",
+                    "label": _("Draft Number"),
+                    "fieldtype": "Int",
+                    "width": 150,
+                },
+                {
+                    "fieldname": "cancelled",
+                    "label": _("Cancelled Number"),
+                    "fieldtype": "Int",
+                    "width": 160,
+                },
+                {
+                    "fieldname": "total_issued",
+                    "label": _("Total Issued Documents"),
+                    "fieldtype": "Int",
+                    "width": 150,
                 },
             ]
 
@@ -956,6 +1052,7 @@ class GSTR11A11BData:
         cr_or_dr_amount_field = getattr(
             self.gl_entry, f"{cr_or_dr}_in_account_currency"
         )
+        cess_account = get_escaped_name(self.gst_accounts.cess_account)
 
         return (
             frappe.qb.from_(self.gl_entry)
@@ -966,7 +1063,7 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account != self.gst_accounts.cess_account,
+                        self.gl_entry.account != IfNull(cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
@@ -974,7 +1071,7 @@ class GSTR11A11BData:
                 Sum(
                     Case()
                     .when(
-                        self.gl_entry.account == self.gst_accounts.cess_account,
+                        self.gl_entry.account == IfNull(cess_account, ""),
                         cr_or_dr_amount_field,
                     )
                     .else_(0)
@@ -1021,76 +1118,307 @@ class GSTR11A11BData:
         return data
 
 
+class GSTR1DocumentIssuedSummary:
+    def __init__(self, filters):
+        self.filters = filters
+        self.sales_invoice = frappe.qb.DocType("Sales Invoice")
+        self.sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
+
+    def get_data(self) -> list:
+        return self.get_document_summary()
+
+    def get_document_summary(self):
+        query = self.get_query()
+        data = query.run(as_dict=True)
+        data = self.handle_amended_docs(data)
+        summarized_data = []
+
+        for (
+            nature_of_document,
+            seperated_data,
+        ) in self.seperate_data_by_nature_of_document(data).items():
+            summarized_data.extend(
+                self.seperate_data_by_naming_series(seperated_data, nature_of_document)
+            )
+
+        return summarized_data
+
+    def get_query(self):
+        query = (
+            frappe.qb.from_(self.sales_invoice)
+            .join(self.sales_invoice_item)
+            .on(self.sales_invoice.name == self.sales_invoice_item.parent)
+            .select(
+                self.sales_invoice.name,
+                IfNull(self.sales_invoice.naming_series, "").as_("naming_series"),
+                self.sales_invoice.creation,
+                self.sales_invoice.docstatus,
+                self.sales_invoice.is_return,
+                self.sales_invoice.is_debit_note,
+                self.sales_invoice.amended_from,
+                Case()
+                .when(
+                    IfNull(self.sales_invoice.billing_address_gstin, "")
+                    == self.sales_invoice.company_gstin,
+                    1,
+                )
+                .else_(0)
+                .as_("same_gstin_billing"),
+                self.sales_invoice.is_opening,
+                self.sales_invoice_item.is_non_gst,
+            )
+            .where(self.sales_invoice.company == self.filters.company)
+            .where(
+                self.sales_invoice.posting_date.between(
+                    self.filters.from_date, self.filters.to_date
+                )
+            )
+            .orderby(self.sales_invoice.name)
+            .groupby(self.sales_invoice.name)
+        )
+        query = (
+            query.where(
+                self.sales_invoice.company_address == self.filters.company_address
+            )
+            if self.filters.company_address
+            else query
+        )
+
+        query = (
+            query.where(self.sales_invoice.company_gstin == self.filters.company_gstin)
+            if self.filters.company_gstin
+            else query
+        )
+
+        return query
+
+    def seperate_data_by_naming_series(self, data, nature_of_document):
+        if not data:
+            return []
+
+        slice_indices = []
+        summarized_data = []
+
+        for i in range(1, len(data)):
+            if self.is_same_naming_series(data[i - 1].name, data[i].name):
+                continue
+            slice_indices.append(i)
+
+        document_series_list = [
+            data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])
+        ]
+
+        for series in document_series_list:
+            draft_count = sum(1 for doc in series if doc.docstatus == 0)
+            total_submitted_count = sum(1 for doc in series if doc.docstatus == 1)
+            cancelled_count = sum(1 for doc in series if doc.docstatus == 2)
+
+            summarized_data.append(
+                {
+                    "naming_series": series[0].naming_series.replace(".", ""),
+                    "nature_of_document": nature_of_document,
+                    "from_serial_no": series[0].name,
+                    "to_serial_no": series[-1].name,
+                    "total_submitted": total_submitted_count,
+                    "cancelled": cancelled_count,
+                    "total_draft": draft_count,
+                    "total_issued": draft_count
+                    + total_submitted_count
+                    + cancelled_count,
+                }
+            )
+
+        return summarized_data
+
+    def is_same_naming_series(self, name_1, name_2):
+        """
+        Checks if two document names belong to the same naming series.
+
+        Args:
+            name_1 (str): The first document name.
+            name_2 (str): The second document name.
+
+        Returns:
+            bool: True if the two document names belong to the same naming series, False otherwise.
+
+        Limitations:
+            Case 1: When the difference between the serial numbers in the document names is a multiple of 10. For example, 'SINV-00010-2023' and 'SINV-00020-2023'.
+            Case 2: When the serial numbers are identical, but the months differ. For example, 'SINV-01-2023-001' and 'SINV-02-2023-001'.
+
+            Above cases are false positives and will be considered as same naming series although they are not.
+        """
+
+        alphabet_pattern = re.compile(r"[A-Za-z]+")
+        number_pattern = re.compile(r"\d+")
+
+        a_0 = "".join(alphabet_pattern.findall(name_1))
+        n_0 = "".join(number_pattern.findall(name_1))
+
+        a_1 = "".join(alphabet_pattern.findall(name_2))
+        n_1 = "".join(number_pattern.findall(name_2))
+
+        if a_1 != a_0:
+            return False
+
+        if len(n_0) != len(n_1):
+            return False
+
+        # If common suffix is present between the two names, remove it to compare the numbers
+        # Example: SINV-00001-2023 and SINV-00002-2023, the common suffix 2023 will be removed
+
+        suffix_length = 0
+
+        for i in range(len(n_0) - 1, 0, -1):
+            if n_0[i] == n_1[i]:
+                suffix_length += 1
+            else:
+                break
+
+        if suffix_length:
+            n_0, n_1 = n_0[:-suffix_length], n_1[:-suffix_length]
+
+        if cint(n_1) - cint(n_0) != 1:
+            return False
+
+        return True
+
+    def seperate_data_by_nature_of_document(self, data):
+        nature_of_document = {
+            "Excluded from Report (Same GSTIN Billing)": [],
+            "Excluded from Report (Is Opening Entry)": [],
+            "Excluded from Report (Has Non GST Item)": [],
+            "Invoices for outward supply": [],
+            "Debit Note": [],
+            "Credit Note": [],
+        }
+
+        for doc in data:
+            if doc.is_opening == "Yes":
+                nature_of_document["Excluded from Report (Is Opening Entry)"].append(
+                    doc
+                )
+            elif doc.same_gstin_billing:
+                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
+                    doc
+                )
+            elif doc.is_non_gst:
+                nature_of_document["Excluded from Report (Has Non GST Item)"].append(
+                    doc
+                )
+            elif doc.is_return:
+                nature_of_document["Credit Note"].append(doc)
+            elif doc.is_debit_note:
+                nature_of_document["Debit Note"].append(doc)
+            else:
+                nature_of_document["Invoices for outward supply"].append(doc)
+
+        return nature_of_document
+
+    def handle_amended_docs(self, data):
+        """Move amended docs like SINV-00001-1 to the end of the list"""
+
+        data_dict = {doc.name: doc for doc in data}
+        amended_dict = {}
+
+        for doc in data:
+            if (
+                doc.amended_from
+                and len(doc.amended_from) != len(doc.name)
+                or doc.amended_from in amended_dict
+            ):
+                amended_dict[doc.name] = doc
+                data_dict.pop(doc.name)
+
+        data_dict.update(amended_dict)
+
+        return list(data_dict.values())
+
+
 @frappe.whitelist()
-def get_json(filters, report_name, data):
-    """
-    This function does not check for permissions since it only manipulates data sent to it
-    """
+def get_gstr1_json(filters, data=None):
+    frappe.has_permission("GL Entry", throw=True)
 
+    report_dict = set_gst_json_defaults(filters)
     filters = json.loads(filters)
-    report_data = json.loads(data)
-    gstin = filters.get("company_gstin") or get_company_gstin_number(
-        filters.get("company"), filters.get("company_address")
-    )
+    filename = ["gstr-1"]
+    gstin = report_dict["gstin"]
+    report_types = TYPES_OF_BUSINESS
 
-    fp = "%02d%s" % (
-        getdate(filters["to_date"]).month,
-        getdate(filters["to_date"]).year,
-    )
+    data_dict = {}
+    if data:
+        type_of_business = filters.get("type_of_business")
+        filename.append(frappe.scrub(type_of_business))
 
-    gst_json = {"version": "GST3.0.4", "hash": "hash", "gstin": gstin, "fp": fp}
+        report_types = {type_of_business: TYPES_OF_BUSINESS[type_of_business]}
+        data_dict.setdefault(type_of_business, json.loads(data))
+
+    filename.extend([gstin, report_dict["fp"]])
+
+    for type_of_business, abbr in report_types.items():
+        filters["type_of_business"] = type_of_business
+
+        report_data = data_dict.get(type_of_business) or format_data_to_dict(
+            execute(filters)
+        )
+        report_data = get_json(type_of_business, gstin, report_data)
+
+        if not report_data:
+            continue
+
+        report_dict[abbr] = report_data
+
+    return {
+        "file_name": "_".join(filename) + ".json",
+        "data": report_dict,
+    }
+
+
+def get_json(type_of_business, gstin, data):
+    if data and list(data[-1].values())[0] == "Total":
+        data = data[:-1]
 
     res = {}
-    if filters["type_of_business"] == "B2B":
-        for item in report_data[:-1]:
+    if type_of_business == "B2B":
+        for item in data:
             res.setdefault(item["billing_address_gstin"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
-        out = get_b2b_json(res, gstin)
-        gst_json["b2b"] = out
+        return get_b2b_json(res, gstin)
 
-    elif filters["type_of_business"] == "B2C Large":
-        for item in report_data[:-1]:
+    if type_of_business == "B2C Large":
+        for item in data:
             res.setdefault(item["place_of_supply"], []).append(item)
 
-        out = get_b2cl_json(res, gstin)
-        gst_json["b2cl"] = out
+        return get_b2cl_json(res, gstin)
 
-    elif filters["type_of_business"] == "B2C Small":
-        out = get_b2cs_json(report_data[:-1], gstin)
-        gst_json["b2cs"] = out
+    if type_of_business == "B2C Small":
+        return get_b2cs_json(data, gstin)
 
-    elif filters["type_of_business"] == "EXPORT":
-        for item in report_data[:-1]:
+    if type_of_business == "EXPORT":
+        for item in data:
             res.setdefault(item["export_type"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
-        out = get_export_json(res)
-        gst_json["exp"] = out
-    elif filters["type_of_business"] == "CDNR-REG":
-        for item in report_data[:-1]:
+        return get_export_json(res)
+
+    if type_of_business == "CDNR-REG":
+        for item in data:
             res.setdefault(item["billing_address_gstin"], {}).setdefault(
                 item["invoice_number"], []
             ).append(item)
 
-        out = get_cdnr_reg_json(res, gstin)
-        gst_json["cdnr"] = out
-    elif filters["type_of_business"] == "CDNR-UNREG":
-        for item in report_data[:-1]:
+        return get_cdnr_reg_json(res, gstin)
+
+    if type_of_business == "CDNR-UNREG":
+        for item in data:
             res.setdefault(item["invoice_number"], []).append(item)
 
-        out = get_cdnr_unreg_json(res, gstin)
-        gst_json["cdnur"] = out
+        return get_cdnr_unreg_json(res, gstin)
 
-    elif filters["type_of_business"] in ("Advances", "Adjustment"):
-        business_type_key = {
-            "Advances": "at",
-            "Adjustment": "txpd",
-        }
-
-        for item in report_data[:-1]:
+    if type_of_business in ("Advances", "Adjustment"):
+        for item in data:
             if not item.get("place_of_supply"):
                 frappe.throw(
                     _(
@@ -1101,19 +1429,44 @@ def get_json(filters, report_name, data):
 
             res.setdefault(item["place_of_supply"], []).append(item)
 
-        out = get_advances_json(res, gstin)
-        gst_json[business_type_key[filters.get("type_of_business")]] = out
+        return get_advances_json(res, gstin)
 
-    elif filters["type_of_business"] == "NIL Rated":
-        res = report_data[:-1]
-        out = get_exempted_json(res)
-        gst_json["nil"] = out
+    if type_of_business == "NIL Rated":
+        return get_exempted_json(data)
 
-    return {
-        "report_name": report_name,
-        "report_type": filters["type_of_business"],
-        "data": gst_json,
-    }
+    if type_of_business == "Document Issued Summary":
+        return get_document_issued_summary_json(data)
+
+
+def set_gst_json_defaults(filters):
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    gstin = filters.get("company_gstin") or get_company_gstin_number(
+        filters.get("company"), filters.get("company_address")
+    )
+
+    fp = "%02d%s" % (
+        getdate(filters["to_date"]).month,
+        getdate(filters["to_date"]).year,
+    )
+
+    gst_json = {"version": "GST3.0.4", "hash": "hash", "gstin": gstin, "fp": fp}
+    return gst_json
+
+
+def format_data_to_dict(data):
+    data_rows = data[1]
+
+    if not data_rows:
+        return []
+
+    if isinstance(data_rows[0], dict):
+        return data_rows
+
+    columns = [column["fieldname"] for column in data[0]]
+    report_data = [dict(zip(columns, row)) for row in data_rows]
+    return report_data
 
 
 def get_b2b_json(res, gstin):
@@ -1382,6 +1735,44 @@ def get_exempted_json(data):
     return out
 
 
+def get_document_issued_summary_json(data):
+    document_types = {
+        "Invoices for outward supply": 1,
+        "Debit Note": 4,
+        "Credit Note": 5,
+    }
+
+    document_lists = {document_type: [] for document_type in document_types}
+
+    for row in data:
+        if row["nature_of_document"] not in document_types:
+            continue
+
+        document_lists[row["nature_of_document"]].append(
+            {
+                "num": len(document_lists[row["nature_of_document"]]) + 1,
+                "to": row["to_serial_no"],
+                "from": row["from_serial_no"],
+                "totnum": row["total_issued"],
+                "cancel": row["cancelled"] + row["total_draft"],
+                "net_issue": row["total_submitted"],
+            }
+        )
+
+    doc_det = []
+
+    for document_type in document_lists:
+        doc_det.append(
+            {
+                "doc_num": document_types[document_type],
+                "doc_typ": document_type,
+                "docs": document_lists[document_type],
+            }
+        )
+
+    return {"doc_det": doc_det}
+
+
 def get_invoice_type(row):
     gst_category = row.get("gst_category")
 
@@ -1472,8 +1863,17 @@ def get_company_gstin_number(company, address=None, all_gstins=False):
 def download_json_file():
     """download json content in a file"""
     data = frappe._dict(frappe.local.form_dict)
+    report_data = json.loads(data["data"])
+
     frappe.response["filename"] = (
-        frappe.scrub("{0} {1}".format(data["report_name"], data["report_type"]))
+        frappe.scrub(
+            "{0} {1} {2} {3}".format(
+                data["report_name"],
+                data["report_type"],
+                report_data["gstin"],
+                report_data["fp"],
+            )
+        )
         + ".json"
     )
     frappe.response["filecontent"] = data["data"]

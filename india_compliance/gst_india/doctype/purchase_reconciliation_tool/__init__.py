@@ -14,6 +14,7 @@ from frappe.utils import add_months, format_date, getdate, rounded
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
+    get_escaped_name,
     get_gst_accounts_by_type,
     get_party_for_gstin,
 )
@@ -447,7 +448,16 @@ class PurchaseInvoice:
             # return is initiated by the customer. So bill date may not be available or known.
             fields += [self.PI.posting_date.as_("bill_date")]
         else:
-            fields += ["bill_date"]
+            fields += [
+                # Default to posting date if bill date is not available.
+                Case()
+                .when(
+                    IfNull(self.PI.bill_date, "") == "",
+                    self.PI.posting_date,
+                )
+                .else_(self.PI.bill_date)
+                .as_("bill_date")
+            ]
 
         if additional_fields:
             fields += additional_fields
@@ -455,6 +465,7 @@ class PurchaseInvoice:
         return fields
 
     def query_tax_amount(self, account):
+        account = get_escaped_name(account)
         return Abs(
             Sum(
                 Case()
@@ -570,14 +581,14 @@ class BillOfEntry:
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
             self.PI.supplier_name,
+            self.PI.place_of_supply,
+            self.PI.is_reverse_charge,
             *tax_fields,
         ]
 
         # In IMPGSEZ supplier details are avaialble in 2A
         purchase_fields = [
             "supplier_gstin",
-            "place_of_supply",
-            "is_reverse_charge",
             "gst_category",
         ]
 
@@ -585,7 +596,7 @@ class BillOfEntry:
             fields.append(
                 Case()
                 .when(self.PI.gst_category == "SEZ", getattr(self.PI, field))
-                .else_("")
+                .else_(None)
                 .as_(field)
             )
 
@@ -599,6 +610,7 @@ class BillOfEntry:
         return fields
 
     def query_tax_amount(self, account):
+        account = get_escaped_name(account)
         return Abs(
             Sum(
                 Case()
@@ -770,7 +782,7 @@ class Reconciler(BaseReconciliation):
         """
 
         for supplier_gstin in purchases:
-            if not inward_supplies.get(supplier_gstin) and category != "IMPG":
+            if not inward_supplies.get(supplier_gstin):
                 continue
 
             summary_diff = {}
@@ -870,6 +882,9 @@ class Reconciler(BaseReconciliation):
         - First check for partial ratio, with 100% confidence
         - Next check for approximate match, with 90% confidence
         """
+        if not purchase.bill_no or not inward_supply.bill_no:
+            return False
+
         if abs((purchase.bill_date - inward_supply.bill_date).days) > 10:
             return False
 
@@ -949,7 +964,8 @@ class ReconciledData(BaseReconciliation):
             doc.update(
                 {f"{prefix}_{key}": value for key, value in inward_supply.items()}
             )
-            doc.pan = doc.supplier_gstin[2:-3]
+            if doc.supplier_gstin:
+                doc.pan = doc.supplier_gstin[2:-3]
 
         return data
 
@@ -959,7 +975,7 @@ class ReconciledData(BaseReconciliation):
         This can be used to show comparision of matched values.
         """
         inward_supplies = self.get_all_inward_supply(
-            [inward_supply_name], only_names=True
+            names=[inward_supply_name], only_names=True
         )
         purchases = self.get_all_purchase_invoice_and_bill_of_entry(
             "", [purchase_name], only_names=True
@@ -993,7 +1009,9 @@ class ReconciledData(BaseReconciliation):
         if inward_supply_names or purchase_names:
             retain_doc = only_names = True
 
-        inward_supplies = self.get_all_inward_supply(inward_supply_names)
+        inward_supplies = self.get_all_inward_supply(
+            names=inward_supply_names, only_names=only_names
+        )
         purchases_and_bill_of_entry = self.get_all_purchase_invoice_and_bill_of_entry(
             inward_supplies, purchase_names, only_names
         )
@@ -1017,7 +1035,9 @@ class ReconciledData(BaseReconciliation):
         self.process_data(reconciliation_data, retain_doc=retain_doc)
         return reconciliation_data
 
-    def get_all_inward_supply(self, inward_supply_names=None, only_names=False):
+    def get_all_inward_supply(
+        self, additional_fields=None, names=None, only_names=False
+    ):
         inward_supply_fields = [
             "supplier_name",
             "classification",
@@ -1027,8 +1047,8 @@ class ReconciledData(BaseReconciliation):
             "link_name",
         ]
 
-        return super().get_all_inward_supply(
-            inward_supply_fields, inward_supply_names, only_names
+        return (
+            super().get_all_inward_supply(inward_supply_fields, names, only_names) or []
         )
 
     def get_all_purchase_invoice_and_bill_of_entry(
@@ -1131,6 +1151,7 @@ class ReconciledData(BaseReconciliation):
             {
                 "supplier_name": data.supplier_name
                 or self.guess_supplier_name(data.supplier_gstin),
+                "supplier_gstin": data.supplier_gstin or data.supplier_name,
                 "purchase_doctype": purchase.get("doctype"),
                 "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
@@ -1269,9 +1290,9 @@ class BaseUtil:
         return inv
 
     @staticmethod
-    def get_dict_for_key(key, list):
+    def get_dict_for_key(key, args_list):
         new_dict = frappe._dict()
-        for data in list:
+        for data in args_list:
             new_dict.setdefault(data[key], {})[data.name] = data
 
         return new_dict
@@ -1290,7 +1311,7 @@ class BaseUtil:
         doc.cess = doc.get("cess", 0) + doc.get("cess_non_advol", 0)
 
     @staticmethod
-    def get_periods(date_range, return_type: ReturnType, reversed=False):
+    def get_periods(date_range, return_type: ReturnType, reversed_order=False):
         """Returns a list of month (formatted as `MMYYYY`) in a fiscal year"""
         if not date_range:
             return []
@@ -1300,7 +1321,9 @@ class BaseUtil:
 
         # latest to oldest
         return tuple(
-            BaseUtil._reversed(BaseUtil._get_periods(date_range[0], end_date), reversed)
+            BaseUtil._reversed(
+                BaseUtil._get_periods(date_range[0], end_date), reversed_order
+            )
         )
 
     @staticmethod

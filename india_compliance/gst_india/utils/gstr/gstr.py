@@ -6,8 +6,8 @@ from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply impo
 )
 
 
-def get_mapped_value(value, map):
-    return map.get(value)
+def get_mapped_value(value, mapping):
+    return mapping.get(value)
 
 
 class GSTR:

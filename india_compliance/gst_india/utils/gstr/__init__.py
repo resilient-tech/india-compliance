@@ -379,7 +379,8 @@ def _download_queued_request(doc):
 def show_queued_message():
     frappe.msgprint(
         _(
-            "Some returns are queued for download at GSTN as there may be over"
-            " 10000 records. Please check the imports after about 35 minutes."
+            "Some returns are queued for download at GSTN as there may be large data."
+            " We will retry download every few minutes until it succeeds.<br><br>"
+            "You can track download status from download dialog."
         )
     )

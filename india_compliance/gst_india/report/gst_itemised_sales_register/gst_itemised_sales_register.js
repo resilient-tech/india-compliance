@@ -28,3 +28,4 @@ frappe.query_reports["GST Itemised Sales Register"] = {
     filters: filters,
     onload: fetch_gstins,
 };
+india_compliance.set_last_month_as_default_period(frappe.query_reports["GST Itemised Sales Register"]);

@@ -19,6 +19,8 @@ def execute(filters=None):
     if not filters:
         filters = {}
 
+    validate_filters(filters)
+
     columns = get_columns()
     output_gst_accounts_dict = get_gst_accounts_by_type(filters.company, "Output")
 
@@ -85,6 +87,13 @@ def execute(filters=None):
     return columns, data
 
 
+def validate_filters(filters):
+    from_date, to_date = filters.get("from_date"), filters.get("to_date")
+
+    if from_date and to_date and getdate(to_date) < getdate(from_date):
+        frappe.throw(_("To Date cannot be less than From Date"))
+
+
 def get_columns():
     columns = [
         {
@@ -122,12 +131,14 @@ def get_columns():
             "fieldname": "total_amount",
             "label": _("Total Amount"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 120,
         },
         {
             "fieldname": "taxable_amount",
             "label": _("Total Taxable Amount"),
             "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 170,
         },
     ]
@@ -192,6 +203,9 @@ def get_tax_accounts(
     company_currency,
     output_gst_accounts,
 ):
+    if not item_list:
+        return [], {}
+
     tax_doctype = "Sales Taxes and Charges"
     tax_columns = set()
     itemised_tax = {}

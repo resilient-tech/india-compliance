@@ -52,7 +52,7 @@ async function generate_e_waybill_json(docnames) {
         { doctype: DOCTYPE, docnames }
     );
 
-    trigger_file_download(ewb_data, get_e_waybill_file_name());
+    india_compliance.trigger_file_download(ewb_data, get_e_waybill_file_name());
 }
 
 function show_bulk_update_transporter_dialog(docnames) {

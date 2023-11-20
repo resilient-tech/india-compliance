@@ -28,6 +28,7 @@ def make_company_fixtures(doc, method=None):
 def create_company_fixtures(company):
     make_default_tax_templates(company)
     make_default_customs_accounts(company)
+    make_default_gst_expense_accounts(company)
 
 
 def make_default_customs_accounts(company):
@@ -43,6 +44,15 @@ def make_default_customs_accounts(company):
         account_name="Customs Duty Expense",
         parent="Stock Expenses",
         default_fieldname="default_customs_expense_account",
+    )
+
+
+def make_default_gst_expense_accounts(company):
+    create_default_company_account(
+        company,
+        account_name="GST Expense",
+        parent="Indirect Expenses",
+        default_fieldname="default_gst_expense_account",
     )
 
 
@@ -151,8 +161,13 @@ def create_default_company_account(
     parent,
     default_fieldname=None,
 ):
+    """
+    Creats a default company account if missing
+    Updates the company with the default account name
+    """
     parent_account = frappe.db.get_value(
-        "Account", filters={"account_name": parent, "company": company}
+        "Account",
+        filters={"account_name": parent, "company": company, "is_group": 1},
     )
 
     if not parent_account:
@@ -171,7 +186,9 @@ def create_default_company_account(
     account.flags.ignore_permissions = True
     account.insert(ignore_if_duplicate=True)
 
-    if default_fieldname:
+    if default_fieldname and not frappe.db.get_value(
+        "Company", company, default_fieldname
+    ):
         frappe.db.set_value(
             "Company", company, default_fieldname, account.name, update_modified=False
         )

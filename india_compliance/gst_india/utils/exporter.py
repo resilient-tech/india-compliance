@@ -144,7 +144,7 @@ class Worksheet:
             merge_from_idx = self.get_column_index(value[0])
             merge_to_idx = self.get_column_index(value[1])
 
-            range = self.get_range(
+            cell_range = self.get_range(
                 start_row=self.row_dimension,
                 start_column=merge_from_idx,
                 end_row=self.row_dimension,
@@ -153,7 +153,7 @@ class Worksheet:
 
             self.ws.cell(row=self.row_dimension, column=merge_from_idx).value = key
 
-            self.ws.merge_cells(range)
+            self.ws.merge_cells(cell_range)
 
             self.apply_format(
                 row=self.row_dimension,
@@ -167,12 +167,12 @@ class Worksheet:
         """build total row array of fields to be calculated"""
         total_row = []
 
-        for idx, property in enumerate(self.headers, 1):
+        for idx, column in enumerate(self.headers, 1):
             if idx == 1:
                 total_row.append("Totals")
-            elif property.get("fieldtype") in ("Float", "Int"):
-                range = self.get_range(self.data_row, idx, self.ws.max_row, idx)
-                total_row.append(f"=SUM({range})")
+            elif column.get("fieldtype") in ("Float", "Int"):
+                cell_range = self.get_range(self.data_row, idx, self.ws.max_row, idx)
+                total_row.append(f"=SUM({cell_range})")
             else:
                 total_row.append("")
 
@@ -235,7 +235,7 @@ class Worksheet:
             # eg formula used: IF(ISBLANK(H6), FALSE, H6<>R6)
             formula = f"IF(ISBLANK({column}{self.data_row}), FALSE, {column}{self.data_row}<>{compare_column}{self.data_row})"
 
-            range = self.get_range(
+            cell_range = self.get_range(
                 start_row=self.data_row,
                 start_column=column,
                 end_row=self.ws.max_row - has_totals,
@@ -243,7 +243,7 @@ class Worksheet:
             )
 
             self.ws.conditional_formatting.add(
-                range,
+                cell_range,
                 FormulaRule(
                     formula=[formula],
                     stopIfTrue=True,

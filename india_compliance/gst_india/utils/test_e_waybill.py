@@ -1,5 +1,4 @@
 import datetime
-import json
 import random
 import re
 
@@ -123,7 +122,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         # assertions
-        expected_comment = "Vehicle Info has been updated by <strong>Administrator</strong>.<br><br> New details are: <br><strong>Vehicle No</strong>: GJ07DL9001 <br><strong>Mode of Transport</strong>: Road <br><strong>GST Vehicle Type</strong>: Regular <br>"
+        expected_comment = "Vehicle Info has been updated by <strong>Administrator</strong>.<br><br> New details are: <br><strong>Vehicle No</strong>: GJ07DL9001 <br><strong>Mode of Transport</strong>: Road <br><strong>GST Vehicle Type</strong>: Regular <br><strong>Place of Change</strong>: Test City <br><strong>State</strong>: Gujarat <br>"
 
         self.assertDocumentEqual(
             {"name": vehicle_data.get("request_data").get("ewbNo")},
@@ -648,8 +647,9 @@ class TestEWaybill(FrappeTestCase):
         doc.save()
 
         self.assertEqual(
-            json.loads(frappe.message_log[-1]).get("message"),
-            "You have already generated e-Waybill/e-Invoice for this document. This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
+            frappe.parse_json(frappe.message_log[-1]).get("message"),
+            "You have already generated e-Waybill/e-Invoice for this document."
+            " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
         )
 
     @change_settings("GST Settings", {"enable_e_waybill_from_dn": 1})
