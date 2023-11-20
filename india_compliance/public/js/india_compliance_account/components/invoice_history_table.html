@@ -1,0 +1,37 @@
+{% if data_array %}
+<div class="invoice-table">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th class="text-center">Name</th>
+                <th class="text-center">Posting Date</th>
+                <th class="text-center">Credits</th>
+                <th class="text-center">Grand Total</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in data_array %}
+            <tr>
+                <td class="text-center">{{ data.name }}</td>
+                <td class="text-center">{{ data.posting_date }}</td>
+                <td class="text-center">{{ data.credits }}</td>
+                <td class="text-center">{{ data.grand_total }}</td>
+                <td>
+                    <button
+                        class="btn btn-primary get-invoice"
+                        data-invoice-name="{{ data.name }}"
+                    >
+                        Get Invoice
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-center">
+    No invoices found! <i class="fa fa-soundcloud" aria-hidden="true"></i>
+</p>
+{% endif %}
