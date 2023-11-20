@@ -49,7 +49,7 @@ import Message from "../components/Message.vue";
 import PreLoader from "../components/PreLoader.vue";
 import { getReadableNumber } from "../utils";
 import { get_invoice_history, send_invoice_email } from '../services/AccountService';
-import "../../../../templates/invoice_history_table.html";
+import "../components/invoice_history_table.html";
 
 
 export default {
@@ -84,7 +84,7 @@ data() {
       );
     },
     openInvoiceDialog() {
-      const invoiceHistoryDialog = new frappe.ui.Dialog({
+      const dialog = new frappe.ui.Dialog({
         title: __("Invoice History"),
         fields: [
           {
@@ -131,17 +131,16 @@ data() {
             frappe.throw(__("From Date cannot be greater than To Date"));
 
           const response = await get_invoice_history(from_date, to_date);
-          const data = response.message;
+          const data = response.message?.length > 0 ? response.message : null;
+          const invoiceHistoryTable = frappe.render_template("invoice_history_table", {data});
+          const invoice_history = dialog.fields_dict.invoice_history
 
-          const invoiceHistoryTable = frappe.render_template("invoice_history_table", { data_array: data.length > 0 ? data : null });
-          invoiceHistoryDialog.fields_dict.invoice_history.html(invoiceHistoryTable);
-
-          invoiceHistoryDialog.fields_dict.invoice_history.df.hidden = 0;
-
-          invoiceHistoryDialog.fields_dict.invoice_history.$wrapper.ready(function () {
+          invoice_history.html(invoiceHistoryTable);
+          invoice_history.df.hidden = 0;
+          invoice_history.$wrapper.ready(function () {
             $('.get-invoice').click(async function () {
               const invoice_name = $(this).data('invoice-name');
-              const email = invoiceHistoryDialog.get_value('email');
+              const email = dialog.get_value('email');
 
               const response = await send_invoice_email(invoice_name, email);
               if (response.success) {
@@ -153,10 +152,10 @@ data() {
               }
             });
           });
-          invoiceHistoryDialog.refresh();
+          dialog.refresh();
         },
       });
-      invoiceHistoryDialog.show();
+      dialog.show();
     }
   },
   computed: {
