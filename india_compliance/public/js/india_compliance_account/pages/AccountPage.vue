@@ -93,9 +93,6 @@ data() {
             fieldtype: "Date",
             reqd: 1,
             default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
-            onchange: () => {
-              console.log('onchange from_date');
-            },
           },
           {
             fieldname: "email",
@@ -114,9 +111,6 @@ data() {
             fieldtype: "Date",
             reqd: 1,
             default: frappe.datetime.get_today(),
-            onchange: () => {
-              console.log('onchange to_date');
-            },
           },
           {
             label: __("Invoice History"),
