@@ -249,6 +249,9 @@ override_doctype_dashboards = {
     "Purchase Invoice": (
         "india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"
     ),
+    "Purchase Receipt": (
+        "india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"
+    ),
 }
 
 override_doctype_class = {
