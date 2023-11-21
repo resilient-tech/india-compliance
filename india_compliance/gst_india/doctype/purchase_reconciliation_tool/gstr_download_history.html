@@ -1,0 +1,37 @@
+<div class="download_data">
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                {% for(let i=0; i<columns.length; i++) { %} <th class="text-left">{{ columns[i] }}
+                    </th>
+                    {% } %}
+            </tr>
+        </thead>
+        <tbody>
+            {% let previous_period = ''; %}
+            {% for(let period in data) { %}
+            <!-- for first class -->
+            <tr>
+                {% if(period != previous_period) { %}
+                <td rowspan="{{data[period].length}}">{{period}}</td>
+                {% previous_period = period; %}
+                {% } %}
+                {% for(let value of Object.values(data[period].shift())) { %}
+                <td>{{ value }}</td>
+                {% } %}
+            </tr>
+
+            <!-- for more than one class -->
+            {% if(data[period].length > 0) { %}
+            {% for(let category of data[period]) { %}
+            <tr>
+                {% for(let value of Object.values(category)) { %}
+                <td>{{ value }}</td>
+                {% } %}
+            </tr>
+            {% } %}
+            {% } %}
+            {% } %}
+        </tbody>
+    </table>
+</div>

@@ -3,6 +3,7 @@
 </style>
 
 {% set data = _dict(json.loads(doc.data)) %}
+{%- set irn = frappe.db.get_value("Sales Invoice", {"ewaybill": data.ewbNo}, "irn") -%}
 
 <html lang="en">
     <body>
@@ -81,6 +82,18 @@
                             </span>
                         </td>
                     </tr>
+                    {% if irn %}
+                    <tr>
+                        <td>
+                            <span>IRN:</span>
+                        </td>
+                        <td>
+                            <span>
+                                <strong>{{ irn }}</strong>
+                            </span>
+                        </td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <td colspan="2">
                             <div class="section-separator"></div>

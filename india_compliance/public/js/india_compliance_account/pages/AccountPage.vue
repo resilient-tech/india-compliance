@@ -12,14 +12,14 @@
         <div class="card subscription-info">
           <p class="last-updated-text">Last Updated On {{ last_synced_on }}</p>
           <div class="subscription-details-item">
-            <p class="label">Available Credits</p>
-            <p class="value">{{ getReadableNumber(balance_credits, 0) }}</p>
+            <p class="label">{{ is_unlimited_account ? 'Used Credits' : 'Available Credits' }}</p>
+            <p class="value">{{ getReadableNumber(is_unlimited_account ? used_credits : balance_credits, 0)}}</p>
           </div>
           <div class="subscription-details-item">
-            <p class="label">Valid Upto</p>
-            <p class="value">{{ valid_upto }}</p>
+            <p class="label">{{ is_unlimited_account ? 'Next Billing Date' : 'Valid Upto' }}</p>
+            <p class="value" :class="{ 'mb-4': is_unlimited_account }">{{ valid_upto }}</p>
           </div>
-          <router-link
+          <router-link v-if="!is_unlimited_account"
             class="btn btn-primary btn-sm btn-block"
             to="/purchase-credits"
           >
@@ -31,6 +31,7 @@
           <ul class="links">
             <a @click.prevent="showUsage"><li>Review API Usage</li></a>
             <!-- <a href="#"><li>Check API Status</li></a> -->
+            <a @click.prevent="openInvoiceDialog"><li>Invoice History</li></a>
             <a href="https://discuss.erpnext.com/c/erpnext/india-compliance/65"><li>Community Forum</li></a>
             <a href="https://github.com/resilient-tech/india-compliance/issues/new"><li>Report a Bug</li></a>
             <a href="mailto:api-support@indiacompliance.app"><li>Email Support</li></a>
@@ -47,6 +48,9 @@ import PageTitle from "../components/PageTitle.vue";
 import Message from "../components/Message.vue";
 import PreLoader from "../components/PreLoader.vue";
 import { getReadableNumber } from "../utils";
+import { get_invoice_history, send_invoice_email } from '../services/AccountService';
+import "../components/invoice_history_table.html";
+
 
 export default {
   components: {
@@ -55,9 +59,10 @@ export default {
     PreLoader,
   },
 
-  data() {
+data() {
     return {
       isLoading: true,
+      message: null,
     };
   },
 
@@ -77,6 +82,80 @@ export default {
           this.$router.replace({ name: "auth" });
         }
       );
+    },
+    openInvoiceDialog() {
+      const dialog = new frappe.ui.Dialog({
+        title: __("Invoice History"),
+        fields: [
+          {
+            fieldname: "from_date",
+            label: __("From Date"),
+            fieldtype: "Date",
+            reqd: 1,
+            default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
+          },
+          {
+            fieldname: "email",
+            label: __("Email"),
+            fieldtype: "Data",
+            description: __("Invoice will be sent to this email address"),
+            options: "Email",
+            default: this.subscriptionDetails.email,
+          },
+          {
+            fieldtype: "Column Break"
+          },
+          {
+            fieldname: "to_date",
+            label: __("To Date"),
+            fieldtype: "Date",
+            reqd: 1,
+            default: frappe.datetime.get_today(),
+          },
+          {
+            label: __("Invoice History"),
+            fieldtype: "Section Break",
+          },
+          {
+            fieldname: "invoice_history",
+            label: __("Invoice History"),
+            fieldtype: "HTML",
+            hidden: 1,
+          }
+        ],
+        primary_action_label: __("Get Invoice History"),
+        primary_action: async (values) => {
+          const { from_date, to_date } = values;
+
+          if (from_date > to_date)
+            frappe.throw(__("From Date cannot be greater than To Date"));
+
+          const response = await get_invoice_history(from_date, to_date);
+          const data = response.message?.length > 0 ? response.message : null;
+          const invoiceHistoryTable = frappe.render_template("invoice_history_table", {data_array: data});
+          const invoice_history = dialog.fields_dict.invoice_history
+
+          invoice_history.html(invoiceHistoryTable);
+          invoice_history.df.hidden = 0;
+          invoice_history.$wrapper.ready(function () {
+            $('.get-invoice').click(async function () {
+              const invoice_name = $(this).data('invoice-name');
+              const email = dialog.get_value('email');
+
+              const response = await send_invoice_email(invoice_name, email);
+              if (response.success) {
+                frappe.msgprint({
+                  title: __("Success"),
+                  message: __("Invoice {0} sent successfully.", [invoice_name]),
+                  indicator: "green",
+                });
+              }
+            });
+          });
+          dialog.refresh();
+        },
+      });
+      dialog.show();
     }
   },
   computed: {
@@ -94,6 +173,14 @@ export default {
       return this.$store.state.account.subscriptionDetails || {};
     },
 
+    is_unlimited_account() {
+      return this.subscriptionDetails.total_credits === -1;
+    },
+
+    used_credits() {
+      return this.subscriptionDetails.used_credits;
+    },
+
     balance_credits() {
       return this.subscriptionDetails.balance_credits;
     },
@@ -101,24 +188,14 @@ export default {
     valid_upto() {
       return frappe.datetime.str_to_user(this.subscriptionDetails.expiry_date);
     },
-
-    message() {
-      return this.$route.params.message;
-    },
-  },
-
-  beforeRouteEnter(to, from, next) {
-    next((vm) => {
-      vm.$store.getters.isLoggedIn
-        ? next()
-        : next({ name: "auth", replace: true });
-    });
   },
 
   async created() {
-    if (!this.$store.getters.isLoggedIn) return;
     await this.$store.dispatch("fetchDetails", "subscription");
     this.isLoading = false;
+
+    this.message = this.$store.state.account.message;
+    this.$store.dispatch("resetMessage");
   },
 };
 </script>

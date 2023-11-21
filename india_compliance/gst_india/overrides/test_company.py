@@ -1,9 +1,5 @@
-import re
-
 import frappe
 from frappe.tests.utils import FrappeTestCase
-
-from india_compliance.gst_india.overrides.company import make_default_tax_templates
 
 
 class TestCompanyFixtures(FrappeTestCase):
@@ -31,15 +27,6 @@ class TestCompanyFixtures(FrappeTestCase):
     @classmethod
     def tearDownClass(cls):
         frappe.db.rollback(save_point="before_test_company")
-
-    def test_company_exist(self):
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(.*does not exist yet.*)$"),
-            make_default_tax_templates,
-            "Random Company Name",
-            "India",
-        )
 
     def test_tax_defaults_setup(self):
         # Check for tax category creations.

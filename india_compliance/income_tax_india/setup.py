@@ -4,4 +4,4 @@ from india_compliance.income_tax_india.constants.custom_fields import CUSTOM_FIE
 
 
 def after_install():
-    create_custom_fields(CUSTOM_FIELDS, update=True)
+    create_custom_fields(CUSTOM_FIELDS, ignore_validate=True)

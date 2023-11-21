@@ -16,3 +16,6 @@
 
 # sort lines in hooks
 dec2438be2d63eff24da45d6c936ec846d8ab0df
+
+# refactor window.ic => window.india_compliance
+38a53480c70a2c820049f023cbabbdaa3ea8aad6

@@ -1,19 +1,26 @@
-from copy import deepcopy
-
 import frappe
 
-from india_compliance.gst_india.constants import GST_CATEGORIES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GST_CATEGORIES,
+    PORT_CODES,
+    STATE_NUMBERS,
+)
+from india_compliance.gst_india.utils import get_place_of_supply_options
 
 state_options = "\n" + "\n".join(STATE_NUMBERS)
 gst_category_options = "\n".join(GST_CATEGORIES)
 default_gst_category = "Unregistered"
+port_code_options = frappe.as_json(
+    [{"label": f"{code} - {name}", "value": code} for code, name in PORT_CODES.items()]
+)
+
 
 party_fields = [
     {
         "fieldname": "tax_details_section",
         "label": "Tax Details",
         "fieldtype": "Section Break",
-        "insert_after": "companies",
+        "insert_after": "tax_withholding_category",
     },
     {
         "fieldname": "gstin",
@@ -39,11 +46,35 @@ party_fields = [
     },
 ]
 
-company_fields = deepcopy(party_fields)
-company_fields[0]["insert_after"] = "parent_company"
-
 CUSTOM_FIELDS = {
-    "Company": company_fields,
+    "Company": [
+        {
+            **party_fields[0],
+            "insert_after": "parent_company",
+        },
+        *party_fields[1:],
+        {
+            "fieldname": "default_customs_expense_account",
+            "label": "Default Customs Duty Expense Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "unrealized_profit_loss_account",
+        },
+        {
+            "fieldname": "default_customs_payable_account",
+            "label": "Default Customs Duty Payable Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "default_finance_book",
+        },
+        {
+            "fieldname": "default_gst_expense_account",
+            "label": "Default GST Expense Account",
+            "fieldtype": "Link",
+            "options": "Account",
+            "insert_after": "default_customs_expense_account",
+        },
+    ],
     ("Customer", "Supplier"): party_fields,
     # Purchase Fields
     ("Purchase Order", "Purchase Receipt", "Purchase Invoice"): [
@@ -69,6 +100,7 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "supplier_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "company_gstin",
@@ -83,11 +115,13 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "company_gstin",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "translatable": 0,
+            "fetch_from": "",
         },
         {
             "fieldname": "is_reverse_charge",
@@ -106,7 +140,7 @@ CUSTOM_FIELDS = {
         "fieldtype": "Check",
         "insert_after": "is_reverse_charge",
         "print_hide": 1,
-        "depends_on": 'eval:in_list(["SEZ", "Overseas"], doc.gst_category)',
+        "depends_on": 'eval:doc.gst_category == "SEZ" || (doc.gst_category == "Overseas" && doc.place_of_supply == "96-Other Countries")',
         "default": 0,
         "translatable": 0,
     },
@@ -116,7 +150,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_section",
             "label": "GST Details",
             "fieldtype": "Section Break",
-            "insert_after": "language",
+            "insert_after": "gst_vehicle_type",
             "print_hide": 1,
             "collapsible": 1,
         },
@@ -160,16 +194,19 @@ CUSTOM_FIELDS = {
             "default": None,
             "fetch_from": "customer_address.gst_category",
             "translatable": 0,
+            "fetch_if_empty": 0,
         },
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "gst_category",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "length": 50,
             "translatable": 0,
+            "fetch_from": "",
         },
         {
             "fieldname": "company_gstin",
@@ -188,10 +225,11 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "port_code",
             "label": "Port Code",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": port_code_options,
             "insert_after": "gst_col_break",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' ",
+            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
             "length": 15,
             "translatable": 0,
         },
@@ -201,7 +239,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "port_code",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' ",
+            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
             "length": 50,
             "translatable": 0,
         },
@@ -211,8 +249,24 @@ CUSTOM_FIELDS = {
             "fieldtype": "Date",
             "insert_after": "shipping_bill_number",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' ",
+            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
         },
+    ],
+    ("Journal Entry", "GL Entry"): [
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Autocomplete",
+            "insert_after": "company",
+            "hidden": 0,
+            # clear original default values
+            "read_only": 0,
+            "print_hide": 0,
+            "fetch_from": "",
+            "depends_on": "",
+            "mandatory_depends_on": "",
+            "translatable": 0,
+        }
     ],
     # Transaction Item Fields
     (
@@ -269,6 +323,7 @@ CUSTOM_FIELDS = {
         "Sales Invoice Item",
         "POS Invoice Item",
         "Purchase Invoice Item",
+        "Purchase Receipt Item",
     ): [
         {
             "fieldname": "taxable_value",
@@ -278,9 +333,42 @@ CUSTOM_FIELDS = {
             "hidden": 1,
             "options": "Company:company:default_currency",
             "print_hide": 1,
+            "no_copy": 1,
+        },
+    ],
+    (
+        "Supplier Quotation Item",
+        "Purchase Order Item",
+        "Purchase Receipt Item",
+        "Purchase Invoice Item",
+    ): [
+        {
+            "fieldname": "is_ineligible_for_itc",
+            "label": "Is Ineligible for Input Tax Credit",
+            "fieldtype": "Check",
+            "fetch_from": "item_code.is_ineligible_for_itc",
+            "insert_after": "is_nil_exempt",
+            "fetch_if_empty": 1,
+            "print_hide": 1,
         },
     ],
     "Sales Invoice": [
+        {
+            "fieldname": "port_address",
+            "label": "Origin Port / Border Checkpost Address Name",
+            "fieldtype": "Link",
+            "options": "Address",
+            "print_hide": 1,
+            "description": (
+                "Address of the place / port in India from where goods are being"
+                " exported <br>(for generating e-Waybill against export of goods)"
+            ),
+            "insert_after": "shipping_address",
+            "depends_on": (
+                "eval:doc.company_gstin && doc.gst_category === 'Overseas' &&"
+                " doc.place_of_supply == '96-Other Countries' && gst_settings.enable_e_waybill"
+            ),
+        },
         {
             "fieldname": "invoice_copy",
             "label": "Invoice Copy",
@@ -316,51 +404,74 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_section",
             "label": "GST Details",
             "fieldtype": "Section Break",
-            "insert_after": "language",
+            "insert_after": "gst_vehicle_type",
             "print_hide": 1,
             "collapsible": 1,
         },
         {
-            "fieldname": "eligibility_for_itc",
-            "label": "Eligibility For ITC",
+            "fieldname": "itc_classification",
+            "label": "ITC Classification",
             "fieldtype": "Select",
             "insert_after": "gst_section",
             "print_hide": 1,
             "options": (
-                "Input Service Distributor\nImport Of Service\nImport Of Capital"
-                " Goods\nITC on Reverse Charge\nIneligible As Per Section"
-                " 17(5)\nIneligible Others\nAll Other ITC"
+                "Input Service Distributor\nImport Of Service\nImport Of"
+                " Goods\nITC on Reverse Charge\nAll Other ITC"
             ),
             "default": "All Other ITC",
             "translatable": 0,
         },
         {
+            "fieldname": "ineligibility_reason",
+            "label": "Reason for Ineligibility",
+            "fieldtype": "Select",
+            "insert_after": "itc_classification",
+            "options": (
+                "\nIneligible As Per Section 17(5)\nITC restricted due to PoS rules"
+            ),
+            "read_only": 1,
+            "print_hide": 1,
+        },
+        {
+            "fieldname": "reconciliation_status",
+            "label": "Reconciliation Status",
+            "fieldtype": "Select",
+            "insert_after": "ineligibility_reason",
+            "print_hide": 1,
+            "options": ("\nNot Applicable\nReconciled\nUnreconciled\nIgnored"),
+            "no_copy": 1,
+            "read_only": 1,
+        },
+        {
             "fieldname": "gst_col_break",
             "fieldtype": "Column Break",
-            "insert_after": "eligibility_for_itc",
+            "insert_after": "reconciliation_status",
         },
         {
             "fieldname": "itc_integrated_tax",
-            "label": "Availed ITC Integrated Tax",
+            "label": "Integrated Tax",
             "fieldtype": "Currency",
             "insert_after": "gst_col_break",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
         {
             "fieldname": "itc_central_tax",
-            "label": "Availed ITC Central Tax",
+            "label": "Central Tax",
             "fieldtype": "Currency",
             "insert_after": "itc_integrated_tax",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
         {
             "fieldname": "itc_state_tax",
-            "label": "Availed ITC State/UT Tax",
+            "label": "State/UT Tax",
             "fieldtype": "Currency",
             "insert_after": "itc_central_tax",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
         {
@@ -369,6 +480,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Currency",
             "insert_after": "itc_state_tax",
             "options": "Company:company:default_currency",
+            "read_only": 1,
             "print_hide": 1,
         },
     ],
@@ -379,9 +491,19 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "gst_category",
             "depends_on": "eval:doc.is_transporter",
-            "read_only_depends_on": "eval:doc.gstin",
+            # don't delete below line; required to unset existing value
+            "read_only_depends_on": None,
             "translatable": 0,
-        }
+        },
+        {
+            "fieldname": "is_reverse_charge_applicable",
+            "label": "Reverse Charge Applicable",
+            "fieldtype": "Check",
+            "insert_after": "gst_transporter_id",
+            "print_hide": 1,
+            "translatable": 0,
+            "depends_on": 'eval:in_list(["Registered Regular", "Overseas", "Unregistered"], doc.gst_category)',
+        },
     ],
     "Address": [
         {
@@ -460,11 +582,13 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "place_of_supply",
             "label": "Place of Supply",
-            "fieldtype": "Data",
+            "fieldtype": "Autocomplete",
+            "options": get_place_of_supply_options(),
             "insert_after": "company_gstin",
             "print_hide": 1,
-            "read_only": 1,
+            "read_only": 0,
             "translatable": 0,
+            "depends_on": 'eval:doc.party_type === "Customer"',
         },
         {
             "fieldname": "gst_column_break",
@@ -481,7 +605,7 @@ CUSTOM_FIELDS = {
             "depends_on": 'eval:doc.party_type == "Customer"',
         },
         {
-            "fieldname": "customer_gstin",
+            "fieldname": "billing_address_gstin",
             "label": "Customer GSTIN",
             "fieldtype": "Data",
             "insert_after": "customer_address",
@@ -489,11 +613,24 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "read_only": 1,
             "translatable": 0,
+            "depends_on": 'eval:doc.party_type === "Customer"',
+        },
+        {
+            "fieldname": "gst_category",
+            "label": "GST Category",
+            "fieldtype": "Data",
+            "insert_after": "billing_address_gstin",
+            "read_only": 1,
+            "print_hide": 1,
+            "fetch_from": "customer_address.gst_category",
+            "translatable": 0,
+            "fetch_if_empty": 0,
+            "depends_on": 'eval:doc.party_type === "Customer"',
         },
     ],
     "Journal Entry": [
         {
-            "fieldname": "reversal_type",
+            "fieldname": "ineligibility_reason",
             "label": "Reversal Type",
             "fieldtype": "Select",
             "insert_after": "voucher_type",
@@ -501,28 +638,6 @@ CUSTOM_FIELDS = {
             "options": "As per rules 42 & 43 of CGST Rules\nOthers",
             "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
             "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "translatable": 0,
-        },
-        {
-            "fieldname": "company_address",
-            "label": "Company Address",
-            "fieldtype": "Link",
-            "options": "Address",
-            "insert_after": "reversal_type",
-            "print_hide": 1,
-            "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "mandatory_depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-        },
-        {
-            "fieldname": "company_gstin",
-            "label": "Company GSTIN",
-            "fieldtype": "Data",
-            "read_only": 1,
-            "insert_after": "company_address",
-            "print_hide": 1,
-            "fetch_from": "company_address.gstin",
-            "depends_on": "eval:doc.voucher_type == 'Reversal Of ITC'",
-            "mandatory_depends_on": "eval:doc.voucher_type=='Reversal Of ITC'",
             "translatable": 0,
         },
     ],
@@ -562,6 +677,9 @@ CUSTOM_FIELDS = {
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "insert_after": "item_group",
+            "allow_in_quick_entry": 1,
+            "mandatory_depends_on": "eval:gst_settings.validate_hsn_code && doc.is_sales_item",
+            "description": "You can search code by the description of the category.",
         },
     ],
     "Item Tax Template": [
@@ -589,6 +707,24 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
             "insert_after": "is_exempted",
         },
+        {
+            "fieldname": "is_ineligible_for_itc",
+            "label": "Is Ineligible for Input Tax Credit",
+            "fieldtype": "Check",
+            "insert_after": "item_tax_section_break",
+        },
+    ],
+}
+
+HRMS_CUSTOM_FIELDS = {
+    "Expense Claim": [
+        {
+            "fieldname": "company_gstin",
+            "label": "Company GSTIN",
+            "fieldtype": "Autocomplete",
+            "insert_after": "company",
+            "translatable": 0,
+        }
     ],
 }
 
@@ -622,10 +758,7 @@ E_INVOICE_FIELDS = {
             "insert_after": "customer",
             "no_copy": 1,
             "print_hide": 1,
-            "depends_on": (
-                'eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed'
-                ' Export"], doc.gst_category)'
-            ),
+            "depends_on": 'eval:doc.gst_category != "Unregistered"',
             "translatable": 0,
         },
         {
@@ -633,13 +766,13 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nCancelled\nFailed",
+            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable",
             "default": None,
             "hidden": 1,
             "no_copy": 1,
             "print_hide": 1,
             "read_only": 1,
-            "translatable": 0,
+            "translatable": 1,
         },
     ]
 }
@@ -651,6 +784,7 @@ E_WAYBILL_DN_FIELDS = [
         "fieldtype": "Int",
         "insert_after": "vehicle_no",
         "print_hide": 1,
+        "no_copy": 1,
         "description": (
             "Set as zero to update distance as per the e-Waybill portal (if available)"
         ),
@@ -662,6 +796,7 @@ E_WAYBILL_DN_FIELDS = [
         "insert_after": "transporter",
         "fetch_from": "transporter.gst_transporter_id",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -672,6 +807,7 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Road",
         "insert_after": "transporter_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -684,26 +820,17 @@ E_WAYBILL_DN_FIELDS = [
         "default": "Regular",
         "insert_after": "lr_date",
         "print_hide": 1,
-        "translatable": 0,
-    },
-    {
-        "fieldname": "ewaybill",
-        "label": "e-Waybill No.",
-        "fieldtype": "Data",
-        "depends_on": "eval: doc.docstatus === 1 || doc.ewaybill",
-        "allow_on_submit": 1,
-        "insert_after": "customer_name",
-        "translatable": 0,
         "no_copy": 1,
+        "translatable": 0,
     },
 ]
 
-E_WAYBILL_SI_FIELDS = [
+E_WAYBILL_INV_FIELDS = [
     {
         "fieldname": "transporter_info",
         "label": "Transporter Info",
         "fieldtype": "Section Break",
-        "insert_after": "terms",
+        "insert_after": "language",
         "collapsible": 1,
         "collapsible_depends_on": "transporter",
         "print_hide": 1,
@@ -715,6 +842,7 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "transporter_info",
         "options": "Supplier",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "driver",
@@ -723,6 +851,7 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "gst_transporter_id",
         "options": "Driver",
         "print_hide": 1,
+        "no_copy": 1,
     },
     {
         "fieldname": "lr_no",
@@ -730,6 +859,7 @@ E_WAYBILL_SI_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "driver",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 30,
     },
@@ -739,6 +869,7 @@ E_WAYBILL_SI_FIELDS = [
         "fieldtype": "Data",
         "insert_after": "lr_no",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
         "length": 15,
     },
@@ -752,9 +883,10 @@ E_WAYBILL_SI_FIELDS = [
         "label": "Transporter Name",
         "fieldtype": "Small Text",
         "insert_after": "transporter_col_break",
-        "fetch_from": "transporter.name",
+        "fetch_from": "transporter.supplier_name",
         "read_only": 1,
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -764,6 +896,7 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "mode_of_transport",
         "fetch_from": "driver.full_name",
         "print_hide": 1,
+        "no_copy": 1,
         "translatable": 0,
     },
     {
@@ -773,11 +906,42 @@ E_WAYBILL_SI_FIELDS = [
         "insert_after": "driver_name",
         "default": "Today",
         "print_hide": 1,
+        "no_copy": 1,
     },
     *E_WAYBILL_DN_FIELDS,
 ]
 
+sales_e_waybill_field = {
+    "fieldname": "ewaybill",
+    "label": "e-Waybill No.",
+    "fieldtype": "Data",
+    "depends_on": "eval: doc.docstatus === 1 && (doc.ewaybill || doc.e_waybill_status !== 'Not Applicable')",
+    "allow_on_submit": 1,
+    "translatable": 0,
+    "no_copy": 1,
+    "insert_after": "customer_name",
+    "read_only": 1,
+}
+
+e_waybill_status_field = {
+    "fieldname": "e_waybill_status",
+    "label": "e-Waybill Status",
+    "fieldtype": "Select",
+    "insert_after": "ewaybill",
+    "options": "\nPending\nGenerated\nCancelled\nNot Applicable\nManually Generated\nManually Cancelled",
+    "print_hide": 1,
+    "no_copy": 1,
+    "translatable": 1,
+    "allow_on_submit": 1,
+    "depends_on": "eval:doc.docstatus === 1 && !doc.ewaybill",
+    "read_only_depends_on": "eval:doc.ewaybill",
+}
+
+purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
+
 E_WAYBILL_FIELDS = {
-    "Sales Invoice": E_WAYBILL_SI_FIELDS,
-    "Delivery Note": E_WAYBILL_DN_FIELDS,
+    "Sales Invoice": E_WAYBILL_INV_FIELDS
+    + [sales_e_waybill_field, e_waybill_status_field],
+    "Delivery Note": E_WAYBILL_DN_FIELDS + [sales_e_waybill_field],
+    "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
 }

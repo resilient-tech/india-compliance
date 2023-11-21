@@ -174,7 +174,7 @@ export default {
 
       if (!value) return set_error("GSTIN is required");
 
-      value = ic.validate_gstin(value);
+      value = india_compliance.validate_gstin(value);
       if (!value) return set_error("Invalid GSTIN detected");
 
       const { message, error } = await check_free_trial_eligibility(value);

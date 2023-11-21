@@ -1,12 +1,10 @@
-import VueRouter from "vue-router";
-
 import AuthPage from "./pages/AuthPage.vue";
 import AccountPage from "./pages/AccountPage.vue";
 import MailSentPage from "./pages/MailSentPage.vue";
 import PurchaseCreditsPage from "./pages/PurchaseCreditsPage.vue";
 import PaymentPage from "./pages/PaymentPage.vue";
 
-const routes = [
+export const routes = [
     {
         name: "auth",
         path: "/authentication",
@@ -32,11 +30,7 @@ const routes = [
         path: "/",
         component: AccountPage,
         alias: "/account",
-    }
+    },
 ];
 
-export default new VueRouter({
-    mode: "history",
-    base: "/app/india-compliance-account",
-    routes: routes,
-});
+export const AUTH_ROUTES = ["auth", "mailSent"];

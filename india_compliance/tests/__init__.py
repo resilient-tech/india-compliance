@@ -1,3 +1,5 @@
+from functools import partial
+
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from frappe.test_runner import make_test_objects
@@ -34,17 +36,24 @@ def before_tests():
 
     set_default_settings_for_tests()
     create_test_records()
+    set_default_company_for_tests()
     frappe.db.commit()
 
     frappe.flags.country = "India"
     frappe.flags.skip_test_records = True
+    frappe.enqueue = partial(frappe.enqueue, now=True)
 
 
 def set_default_settings_for_tests():
+    # e.g. set "All Customer Groups" as the default Customer Group
     for key in ("Customer Group", "Supplier Group", "Item Group", "Territory"):
         frappe.db.set_default(frappe.scrub(key), get_root_of(key))
 
+    # Allow Negative Stock
     frappe.db.set_single_value("Stock Settings", "allow_negative_stock", 1)
+
+    # Enable Sandbox Mode in GST Settings
+    frappe.db.set_single_value("GST Settings", "sandbox_mode", 1)
 
 
 def create_test_records():
@@ -56,6 +65,25 @@ def create_test_records():
         make_test_objects(doctype, data, reset=True)
         if doctype == "Company":
             add_companies_to_fiscal_year(data)
+
+
+def set_default_company_for_tests():
+    # stock settings
+    frappe.db.set_value(
+        "Company",
+        "_Test Indian Registered Company",
+        {
+            "enable_perpetual_inventory": 1,
+            "default_inventory_account": "Stock In Hand - _TIRC",
+            "stock_adjustment_account": "Stock Adjustment - _TIRC",
+            "stock_received_but_not_billed": "Stock Received But Not Billed - _TIRC",
+        },
+    )
+
+    # set default company
+    global_defaults = frappe.get_single("Global Defaults")
+    global_defaults.default_company = "_Test Indian Registered Company"
+    global_defaults.save()
 
 
 def add_companies_to_fiscal_year(data):

@@ -5,21 +5,24 @@ const DOCTYPE = "Address";
 validate_gstin(DOCTYPE);
 update_gstin_in_other_documents(DOCTYPE);
 show_overseas_disabled_warning(DOCTYPE);
+set_gstin_options_and_status(DOCTYPE);
+set_gst_category(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     country(frm) {
-        ic.set_state_options(frm);
+        india_compliance.set_state_options(frm);
 
         if (!frm.doc.country) return;
 
         // Assume default country to be India for now
         // Automatically set GST Category as Overseas if country is not India
-        if (frm.doc.country != "India") {
+        if (frm.doc.country != "India")
             frm.set_value("gst_category", "Overseas");
-        }
+        else
+            frm.trigger("gstin");
     },
     async refresh(frm) {
-        ic.set_state_options(frm);
+        india_compliance.set_state_options(frm);
 
         // set default values for GST fields
         if (!frm.is_new() || !frm.doc.links || frm.doc.gstin) return;

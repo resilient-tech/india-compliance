@@ -1,57 +1,69 @@
 import frappe
 from frappe import _, bold
-from frappe.model import delete_doc
+from frappe.utils import flt, fmt_money
 
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
-from india_compliance.gst_india.overrides.transaction import validate_transaction
-from india_compliance.gst_india.utils import is_api_enabled
-from india_compliance.gst_india.utils.e_invoice import validate_e_invoice_applicability
+from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
+from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
+    ignore_gst_validations,
+    validate_mandatory_fields,
+    validate_transaction,
+)
+from india_compliance.gst_india.overrides.unreconcile_payments import (
+    reverse_gst_adjusted_against_payment_entry,
+)
+from india_compliance.gst_india.utils import (
+    are_goods_supplied,
+    get_validated_country_code,
+    is_api_enabled,
+    is_foreign_doc,
+)
+from india_compliance.gst_india.utils.e_invoice import (
+    get_e_invoice_info,
+    validate_e_invoice_applicability,
+)
+from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
+from india_compliance.gst_india.utils.transaction_data import (
+    validate_unique_hsn_and_uom,
+)
 
 
 def onload(doc, method=None):
-    if not doc.get("ewaybill") and not doc.get("irn"):
-        return
+    if not doc.get("ewaybill"):
+        if doc.gst_category == "Overseas" and is_e_waybill_applicable(doc):
+            doc.set_onload(
+                "shipping_address_in_india", is_shipping_address_in_india(doc)
+            )
 
-    gst_settings = frappe.get_cached_value(
-        "GST Settings",
-        "GST Settings",
-        ("enable_api", "enable_e_waybill", "enable_e_invoice", "api_secret"),
-        as_dict=1,
-    )
+        if not doc.get("irn"):
+            return
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
 
     if not is_api_enabled(gst_settings):
         return
 
     if gst_settings.enable_e_waybill and doc.ewaybill:
-        doc.set_onload(
-            "e_waybill_info",
-            frappe.get_value(
-                "e-Waybill Log",
-                doc.ewaybill,
-                ("created_on", "valid_upto"),
-                as_dict=True,
-            ),
-        )
+        doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
     if gst_settings.enable_e_invoice and doc.irn:
-        doc.set_onload(
-            "e_invoice_info",
-            frappe.get_value(
-                "e-Invoice Log",
-                doc.irn,
-                "acknowledged_on",
-                as_dict=True,
-            ),
-        )
+        doc.set_onload("e_invoice_info", get_e_invoice_info(doc))
 
 
 def validate(doc, method=None):
     if validate_transaction(doc) is False:
         return
 
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
     validate_invoice_number(doc)
-    validate_fields_and_set_status_for_e_invoice(doc)
-    validate_billing_address_gstin(doc)
+    validate_credit_debit_note(doc)
+    validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
+    validate_unique_hsn_and_uom(doc)
+    validate_port_address(doc)
+    set_and_validate_advances_with_gst(doc)
+    set_e_waybill_status(doc, gst_settings)
 
 
 def validate_invoice_number(doc):
@@ -73,48 +85,87 @@ def validate_invoice_number(doc):
         )
 
 
-def validate_fields_and_set_status_for_e_invoice(doc):
-    gst_settings = frappe.get_cached_doc("GST Settings")
-    if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
-        doc, gst_settings=gst_settings, throw=False
-    ):
-        return
-
-    for field in ("customer_address",):
-        if not doc.get(field):
-            frappe.throw(
-                _("{0} is a mandatory field for generating e-Invoices").format(
-                    bold(_(doc.meta.get_label(field))),
-                )
-            )
-
-    if doc._action == "submit" and not doc.irn:
-        doc.einvoice_status = "Pending"
-
-
-def validate_billing_address_gstin(doc):
-    if doc.company_gstin == doc.billing_address_gstin:
+def validate_credit_debit_note(doc):
+    if doc.is_return and doc.is_debit_note:
         frappe.throw(
-            _("Billing Address GSTIN and Company GSTIN cannot be the same"),
-            title=_("Invalid Billing Address GSTIN"),
+            _(
+                "You have selected both 'Is Return' and 'Is Rate Adjustment Entry'. You can select only one of them."
+            ),
+            title=_("Invalid Options Selected"),
         )
 
 
+def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
+    if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
+        doc, gst_settings=gst_settings, throw=False
+    ):
+        doc.einvoice_status = "Not Applicable"
+        return
+
+    validate_mandatory_fields(
+        doc,
+        "customer_address",
+        _("{0} is a mandatory field for generating e-Invoices"),
+    )
+
+    validate_hsn_codes_for_e_invoice(doc)
+
+    if is_foreign_doc(doc):
+        country = frappe.db.get_value("Address", doc.customer_address, "country")
+        get_validated_country_code(country)
+
+    if doc.docstatus == 1 and not doc.irn:
+        doc.einvoice_status = "Pending"
+
+
+def validate_hsn_codes_for_e_invoice(doc):
+    _validate_hsn_codes(
+        doc,
+        valid_hsn_length=[6, 8],
+        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+    )
+
+
+def validate_port_address(doc):
+    if (
+        doc.gst_category != "Overseas"
+        or not is_e_waybill_applicable(doc)
+        or doc.port_address
+        or is_shipping_address_in_india(doc)
+    ):
+        return
+
+    label = doc.meta.get_label("port_address")
+
+    frappe.msgprint(
+        _(
+            "{0} must be specified for generating e-Waybills against export of goods"
+            " (if Shipping Address is not in India)"
+        ).format(frappe.bold(label)),
+        title=_("{0} Not Set").format(label),
+        indicator="yellow",
+    )
+
+
+def is_shipping_address_in_india(doc):
+    if doc.shipping_address_name and (
+        frappe.db.get_value("Address", doc.shipping_address_name, "country") == "India"
+    ):
+        return True
+
+
 def on_submit(doc, method=None):
-    if getattr(doc, "_submitted_from_ui", None) or not doc.company_gstin:
+    if getattr(doc, "_submitted_from_ui", None) or validate_transaction(doc) is False:
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not is_api_enabled(gst_settings):
         return
 
-    if gst_settings.enable_e_invoice:
-        if (
-            not gst_settings.auto_generate_e_invoice
-            or not validate_e_invoice_applicability(doc, gst_settings, throw=False)
-        ):
-            return
-
+    if (
+        validate_e_invoice_applicability(doc, gst_settings, throw=False)
+        and gst_settings.auto_generate_e_invoice
+    ):
         frappe.enqueue(
             "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
             enqueue_after_commit=True,
@@ -126,37 +177,65 @@ def on_submit(doc, method=None):
         return
 
     if (
-        not gst_settings.enable_e_waybill
-        or not gst_settings.auto_generate_e_waybill
-        or doc.ewaybill
-        or doc.is_return
-        or doc.is_debit_note
-        or abs(doc.base_grand_total) < gst_settings.e_waybill_threshold
-        or not any(
-            item
-            for item in doc.items
-            if item.gst_hsn_code
-            and not item.gst_hsn_code.startswith("99")
-            and item.qty != 0
-        )
+        gst_settings.auto_generate_e_waybill
+        and is_e_waybill_applicable(doc, gst_settings)
+        and not doc.is_debit_note
+        and not doc.is_return
     ):
+        frappe.enqueue(
+            "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
+            enqueue_after_commit=True,
+            queue="short",
+            doctype=doc.doctype,
+            docname=doc.name,
+        )
+
+
+def before_cancel(doc, method=None):
+    payment_references = frappe.get_all(
+        "Payment Entry Reference",
+        filters={
+            "reference_doctype": doc.doctype,
+            "reference_name": doc.name,
+            "docstatus": 1,
+        },
+        fields=["name as voucher_detail_no", "parent as payment_name"],
+    )
+
+    if not payment_references:
         return
 
-    frappe.enqueue(
-        "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
-        enqueue_after_commit=True,
-        queue="short",
-        doctype=doc.doctype,
-        docname=doc.name,
+    for reference in payment_references:
+        reverse_gst_adjusted_against_payment_entry(
+            reference.voucher_detail_no, reference.payment_name
+        )
+
+
+def is_e_waybill_applicable(doc, gst_settings=None):
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    return bool(
+        gst_settings.enable_e_waybill
+        and doc.company_gstin != doc.billing_address_gstin
+        and not doc.ewaybill
+        and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
+        and are_goods_supplied(doc)
     )
 
 
-def ignore_logs_on_trash(doc, method=None):
-    # TODO: design better way to achieve this
-    if "e-Waybill Log" not in delete_doc.doctypes_to_skip:
-        delete_doc.doctypes_to_skip += (
-            "e-Waybill Log",
-            "e-Invoice Log",
+def on_update_after_submit(doc, method=None):
+    if not doc.has_value_changed("group_same_items") or ignore_gst_validations(doc):
+        return
+
+    if doc.ewaybill or doc.irn:
+        frappe.msgprint(
+            _(
+                "You have already generated e-Waybill/e-Invoice for this document."
+                " This could result in mismatch of item details in e-Waybill/e-Invoice with print format.",
+            ),
+            title="Possible Inconsistent Item Details",
+            indicator="orange",
         )
 
 
@@ -174,6 +253,7 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
         {
             "e-Waybill Log": "reference_name",
             "Integration Request": "reference_docname",
+            "GST Inward Supply": "link_name",
         }
     )
 
@@ -189,3 +269,62 @@ def update_dashboard_with_gst_logs(doctype, data, *log_doctypes):
     transactions.insert(2, {"label": _("GST Logs"), "items": log_doctypes})
 
     return data
+
+
+def set_e_waybill_status(doc, gst_settings=None):
+    if doc.docstatus != 1 or doc.e_waybill_status:
+        return
+
+    e_waybill_status = "Not Applicable"
+
+    if is_e_waybill_applicable(doc, gst_settings):
+        e_waybill_status = "Pending"
+
+    if doc.ewaybill:
+        e_waybill_status = "Manually Generated"
+
+    doc.update({"e_waybill_status": e_waybill_status})
+
+
+def set_and_validate_advances_with_gst(doc):
+    if not doc.advances:
+        return
+
+    taxes = get_taxes_summary(doc.company, doc.advances)
+
+    allocated_amount_with_taxes = 0
+    tax_amount = 0
+
+    for advance in doc.get("advances"):
+        if not advance.allocated_amount:
+            continue
+
+        tax_row = taxes.get(
+            advance.reference_name, frappe._dict(paid_amount=1, tax_amount=0)
+        )
+
+        _tax_amount = flt(
+            advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2
+        )
+        tax_amount += _tax_amount
+        allocated_amount_with_taxes += _tax_amount
+        allocated_amount_with_taxes += advance.allocated_amount
+
+    excess_allocation = flt(
+        flt(allocated_amount_with_taxes, 2) - (doc.rounded_total or doc.grand_total), 2
+    )
+    if excess_allocation > 0:
+        message = _(
+            "Allocated amount with taxes (GST) in advances table cannot be greater than"
+            " outstanding amount of the document. Allocated amount with taxes is greater by {0}."
+        ).format(bold(fmt_money(excess_allocation, currency=doc.currency)))
+
+        if excess_allocation < 1:
+            message += "<br><br>Is it becasue of Rounding Adjustment? Try disabling Rounded Total in the document."
+
+        frappe.throw(message, title=_("Invalid Allocated Amount"))
+
+    doc.total_advance = allocated_amount_with_taxes
+    doc.set_payment_schedule()
+    doc.outstanding_amount -= tax_amount
+    frappe.flags.gst_excess_allocation_validated = True

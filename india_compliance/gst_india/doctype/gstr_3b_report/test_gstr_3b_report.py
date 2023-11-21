@@ -19,7 +19,7 @@ class TestGSTR3BReport(unittest.TestCase):
         filters = {"company": "_Test Indian Registered Company"}
 
         for doctype in ("Sales Invoice", "Purchase Invoice", "GSTR 3B Report"):
-            frappe.db.delete("Sales Invoice", filters=filters)
+            frappe.db.delete(doctype, filters=filters)
 
     @classmethod
     def tearDownClass(cls):

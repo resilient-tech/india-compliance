@@ -15,11 +15,11 @@
         :id="name"
         class="form-control"
         :class="inputClass"
-        :value="value"
+        :value="modelValue"
         :placeholder="placeholder"
         :required="required"
         v-if="['text', 'email'].includes(inputType)"
-        @input="$emit('input', $event.target.value)"
+        @input="$emit('update:modelValue', $event.target.value)"
         @blur="$emit('blur', $event.target.value.trim())"
       />
       <div class="suffix-icon">
@@ -52,9 +52,9 @@ import Loading from "./Loading.vue";
 import { UiState } from "../constants";
 export default {
   components: { Loading },
-
+  emits: ["update:modelValue", "blur"],
   props: {
-    value: String,
+    modelValue: String,
     inputType: {
       type: String,
       validator(value) {

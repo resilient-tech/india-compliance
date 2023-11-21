@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "autoname": "field:gstin",
+ "creation": "2023-06-19 18:16:47.324987",
+ "default_view": "List",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "gstin",
+  "registration_date",
+  "status",
+  "is_blocked",
+  "column_break_nrjd",
+  "last_updated_on",
+  "cancelled_date"
+ ],
+ "fields": [
+  {
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "GSTIN",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "reqd": 1
+  },
+  {
+   "fieldname": "registration_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Registration Date"
+  },
+  {
+   "fieldname": "cancelled_date",
+   "fieldtype": "Date",
+   "label": "Cancelled Date"
+  },
+  {
+   "fieldname": "last_updated_on",
+   "fieldtype": "Datetime",
+   "label": "Last Updated On"
+  },
+  {
+   "fieldname": "column_break_nrjd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "User is blocked from Generating e-Waybill or e-Invoice",
+   "fieldname": "is_blocked",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Is Blocked"
+  }
+ ],
+ "in_create": 1,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2023-08-17 11:32:42.332746",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTIN",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "gstin"
+}

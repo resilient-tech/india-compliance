@@ -11,10 +11,10 @@
     }
 }
 
-.print-format tbody > tr > td,
-.print-format tbody > tr > th {
+.print-format tbody>tr>td,
+.print-format tbody>tr>th {
     padding: 6px !important;
-    border-top: None;
+    border-top: none;
     color: black;
 }
 
@@ -30,10 +30,10 @@
 
 .print-format .page-layout {
     font-size: 12px;
-    line-height: 1.42857143;
+    line-height: 1.4286;
     box-sizing: border-box;
     transform-origin: top center;
-    width: 550px;
+    width: 95%;
     margin: 0 auto;
 }
 
@@ -49,13 +49,8 @@
 
 .print-format .vehicle-info td,
 .print-format .vehicle-info th {
-    border: 0px !important;
+    border: 0 !important;
     border-top: 1px solid black !important;
-}
-
-.print-format table.table {
-    width: 520px;
-    margin: 15px;
 }
 
 .print-format .ewb-no-span {

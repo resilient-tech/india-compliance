@@ -11,6 +11,10 @@ def create_sales_invoice(**data):
 
 def create_purchase_invoice(**data):
     data["doctype"] = "Purchase Invoice"
+
+    if "bill_no" not in data:
+        data["bill_no"] = frappe.generate_hash(length=5)
+
     return create_transaction(**data)
 
 
@@ -36,18 +40,18 @@ def create_transaction(**data):
         transaction.posting_date = getdate()
 
     if transaction.doctype in SALES_DOCTYPES:
-        if not transaction.customer:
+        if not transaction.get("customer") and transaction.doctype != "Quotation":
             transaction.customer = "_Test Registered Customer"
 
-    else:
+    elif transaction.doctype not in ["Payment Entry", "Journal Entry"]:
         if not transaction.supplier:
             transaction.supplier = "_Test Registered Supplier"
 
         if (
             transaction.doctype == "Purchase Invoice"
-            and not transaction.eligibility_for_itc
+            and not transaction.itc_classification
         ):
-            transaction.eligibility_for_itc = "All Other ITC"
+            transaction.itc_classification = "All Other ITC"
 
     if transaction.doctype == "POS Invoice":
         transaction.append(
@@ -86,11 +90,15 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
     if not data:
         data = frappe._dict()
 
+    if data.doctype in ["Payment Entry", "Journal Entry"]:
+        return
+
     return transaction.append(
         "items",
         {
             "item_code": data.item_code or "_Test Trading Goods 1",
             "qty": data.qty or 1,
+            "uom": data.uom,
             "rate": data.rate or 100,
             "cost_center": f"Main - {company_abbr}",
             "is_nil_rated": data.is_nil_rated,
@@ -115,10 +123,13 @@ def _append_taxes(
     if isinstance(accounts, str):
         accounts = [accounts]
 
-    if transaction.doctype in SALES_DOCTYPES:
+    if transaction.doctype in SALES_DOCTYPES or transaction.doctype == "Payment Entry":
         account_type = "Output Tax"
     else:
         account_type = "Input Tax"
+
+    if transaction.doctype == "Payment Entry" and charge_type == "On Net Total":
+        charge_type = "On Paid Amount"
 
     for account in accounts:
         tax = {

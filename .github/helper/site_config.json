@@ -3,6 +3,7 @@
  "db_port": 3306,
  "db_name": "test_frappe",
  "db_password": "test_frappe",
+ "db_type": "mariadb",
  "auto_email_id": "test@example.com",
  "mail_server": "smtp.example.com",
  "mail_login": "test@example.com",
@@ -12,6 +13,6 @@
  "root_password": "travis",
  "host_name": "http://test_site:8000",
  "install_apps": ["erpnext"],
- "ic_api_sandbox_mode": 1,
+ "ic_api_secret": "*****",
  "throttle_user_limit": 100
 }

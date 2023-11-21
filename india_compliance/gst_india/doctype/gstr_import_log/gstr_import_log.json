@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "creation": "2022-04-12 18:57:59.122090",
+ "description": "This document will maintain time log of latest download of GST Returns",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "gstin",
+  "return_type",
+  "classification",
+  "return_period",
+  "last_updated_on",
+  "data_not_found",
+  "request_id",
+  "request_time"
+ ],
+ "fields": [
+  {
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "GSTIN"
+  },
+  {
+   "fieldname": "classification",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Classification",
+   "options": "\nB2B\nB2BA\nCDNR\nCDNRA\nISD\nISDA\nIMPG\nIMPGSEZ"
+  },
+  {
+   "fieldname": "return_period",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Return Period"
+  },
+  {
+   "fieldname": "last_updated_on",
+   "fieldtype": "Datetime",
+   "label": "Last updated on"
+  },
+  {
+   "fieldname": "return_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Return Type"
+  },
+  {
+   "default": "0",
+   "fieldname": "data_not_found",
+   "fieldtype": "Check",
+   "label": "Data not Found"
+  },
+  {
+   "fieldname": "request_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Request ID"
+  },
+  {
+   "fieldname": "request_time",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "Request Time"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2023-09-06 09:18:47.885426",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR Import Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager"
+  },
+  {
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "gstin"
+}

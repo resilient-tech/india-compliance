@@ -13,7 +13,6 @@ def execute():
             "GST E-Invoice",
         ],
         "Report": [
-            "E-Invoice Summary",
             "Eway Bill",
         ],
     }
