@@ -882,6 +882,9 @@ class Reconciler(BaseReconciliation):
         - First check for partial ratio, with 100% confidence
         - Next check for approximate match, with 90% confidence
         """
+        if not purchase.bill_no or not inward_supply.bill_no:
+            return False
+
         if abs((purchase.bill_date - inward_supply.bill_date).days) > 10:
             return False
 

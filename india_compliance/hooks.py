@@ -147,6 +147,7 @@ doc_events = {
         "on_update_after_submit": (
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
         ),
+        "before_cancel": "india_compliance.gst_india.overrides.sales_invoice.before_cancel",
     },
     "Sales Order": {
         "validate": (
@@ -167,6 +168,9 @@ doc_events = {
     },
     "Tax Withholding Category": {
         "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
+    },
+    "Unreconcile Payments": {
+        "before_submit": "india_compliance.gst_india.overrides.unreconcile_payments.before_submit",
     },
     "POS Invoice": {
         "validate": (
@@ -213,6 +217,9 @@ regional_overrides = {
         ),
         "erpnext.stock.doctype.purchase_receipt.purchase_receipt.update_regional_gl_entries": (
             "india_compliance.gst_india.overrides.ineligible_itc.update_regional_gl_entries"
+        ),
+        "erpnext.accounts.doctype.payment_entry.payment_entry.add_regional_gl_entries": (
+            "india_compliance.gst_india.overrides.payment_entry.update_gl_for_advance_gst_reversal"
         ),
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
