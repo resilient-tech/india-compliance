@@ -169,8 +169,8 @@ doc_events = {
     "Tax Withholding Category": {
         "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
     },
-    "Unreconcile Payments": {
-        "before_submit": "india_compliance.gst_india.overrides.unreconcile_payments.before_submit",
+    "Unreconcile Payment": {
+        "before_submit": "india_compliance.gst_india.overrides.unreconcile_payment.before_submit",
     },
     "POS Invoice": {
         "validate": (
