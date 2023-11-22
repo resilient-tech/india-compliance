@@ -23,20 +23,20 @@ def validate_zero_tax_options(doc):
     if doc.is_nil_rated + doc.is_exempted + doc.is_non_gst > 1:
         frappe.throw(
             _("Only one of Nil Rated, Exempted and Non GST can be selected at a time"),
-            title="Invalid Options Selected",
+            title=_("Invalid Options Selected"),
         )
 
     if doc.tax_rate != 0:
         frappe.throw(
             _("Tax Rate should be 0 for Nil Rated / Exempted / Non GST template"),
-            title="Invalid Tax Rate",
+            title=_("Invalid Tax Rate"),
         )
 
 
 def validate_tax_rates(doc):
     if doc.tax_rate < 0 or doc.tax_rate > 100:
         frappe.throw(
-            _("Tax Rate should be between 0 and 100"), title="Invalid Tax Rate"
+            _("Tax Rate should be between 0 and 100"), title=_("Invalid Tax Rate")
         )
 
     if not doc.taxes:
