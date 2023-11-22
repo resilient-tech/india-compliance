@@ -10,7 +10,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_mandatory_fields,
     validate_transaction,
 )
-from india_compliance.gst_india.overrides.unreconcile_payments import (
+from india_compliance.gst_india.overrides.unreconcile_payment import (
     reverse_gst_adjusted_against_payment_entry,
 )
 from india_compliance.gst_india.utils import (
