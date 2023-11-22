@@ -161,19 +161,40 @@ Object.assign(india_compliance, {
             description = "Invalid OTP was provided. Please try again.";
 
         return new Promise(resolve => {
-            frappe.prompt(
-                {
-                    fieldtype: "Data",
-                    label: "One Time Password",
-                    fieldname: "otp",
-                    reqd: 1,
-                    description: description,
+            const prompt = new frappe.ui.Dialog({
+                title: __("Enter OTP"),
+                fields: [
+                    {
+                        fieldtype: "Data",
+                        label: __("One Time Password"),
+                        fieldname: "otp",
+                        reqd: 1,
+                        description: description,
+                    },
+                ],
+                primary_action_label: __("Submit"),
+                primary_action(values) {
+                    resolve(values.otp);
+                    prompt.hide();
                 },
-                function ({ otp }) {
-                    resolve(otp);
+                secondary_action_label: __("Resend OTP"),
+                secondary_action() {
+                    frappe.call({
+                        method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.resend_otp",
+                        args: {
+                            company_gstin: cur_frm.doc.company_gstin,
+                        },
+                        callback: function () {
+                            frappe.show_alert({
+                                message: __("OTP has been resent."),
+                                indicator: "green",
+                            });
+                            prompt.get_secondary_btn().addClass("disabled");
+                        },
+                    });
                 },
-                "Enter OTP"
-            );
+            });
+            prompt.show();
         });
     },
 
