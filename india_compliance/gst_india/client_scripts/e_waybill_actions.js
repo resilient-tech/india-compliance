@@ -4,6 +4,7 @@ const E_WAYBILL_CLASS = {
     "Sales Invoice": SalesInvoiceEwaybill,
     "Purchase Invoice": PurchaseInvoiceEwaybill,
     "Delivery Note": DeliveryNoteEwaybill,
+    "Purchase Receipt": PurchaseReceiptEwaybill,
 };
 
 function setup_e_waybill_actions(doctype) {
