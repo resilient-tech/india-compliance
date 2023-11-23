@@ -172,7 +172,13 @@ def validate_gstin(
     if not (is_transporter_id and gstin.startswith("88")):
         validate_gstin_check_digit(gstin, label)
 
-    if is_tcs_gstin and not TCS.match(gstin):
+    if not is_tcs_gstin and TCS.match(gstin):
+        frappe.throw(
+            _("e-Commerce Operator (TCS) GSTIN is not allowed"),
+            title=_("GSTIN Not Allowed"),
+        )
+
+    elif is_tcs_gstin and not TCS.match(gstin):
         frappe.throw(
             _("Invalid format for e-Commerce Operator (TCS) GSTIN"),
             title=_("Invalid GSTIN"),

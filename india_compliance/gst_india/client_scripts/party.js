@@ -1,3 +1,4 @@
+const TCS_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[C]{1}[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
 function update_gstin_in_other_documents(doctype) {
@@ -55,6 +56,10 @@ function validate_gstin(doctype) {
 
             if (gstin.length > 15) {
                 frappe.throw(__("GSTIN/UIN should be 15 characters long"));
+            }
+
+            if (TCS_REGEX.test(gstin)){
+                frappe.throw(__("e-Commerce Operator (TCS) GSTIN is not allowed"));
             }
 
             frm.doc.gstin = gstin.trim().toUpperCase();
