@@ -20,6 +20,7 @@ from india_compliance.gst_india.utils.tests import (
         ("Purchase Order",),
         ("Purchase Receipt",),
         ("Purchase Invoice",),
+        ("Supplier Quotation",),
         ("Quotation",),
         ("Sales Order",),
         ("Delivery Note",),

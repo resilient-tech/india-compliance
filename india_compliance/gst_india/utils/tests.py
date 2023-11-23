@@ -26,7 +26,12 @@ def create_transaction(**data):
         transaction.company = "_Test Indian Registered Company"
 
     # Update mandatory transaction dates
-    if transaction.doctype in ["Purchase Order", "Quotation", "Sales Order"]:
+    if transaction.doctype in [
+        "Purchase Order",
+        "Quotation",
+        "Sales Order",
+        "Supplier Quotation",
+    ]:
         if not transaction.transaction_date:
             transaction.transaction_date = getdate()
 
