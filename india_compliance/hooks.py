@@ -182,6 +182,11 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
     },
+    "Supplier Quotation": {
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
+    },
     "Accounts Settings": {
         "validate": "india_compliance.audit_trail.overrides.accounts_settings.validate"
     },
