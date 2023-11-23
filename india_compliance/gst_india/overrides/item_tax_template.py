@@ -63,4 +63,4 @@ def validate_tax_rates(doc):
     for idx, tax_rate in invalid_tax_rates.items():
         message += f"Row #{idx} - {rounded(tax_rate, 2)} <br>"
 
-    frappe.throw(_(message), title="Invalid Tax Rates"),
+    frappe.throw(_(message), title=_("Invalid Tax Rates")),
