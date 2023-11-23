@@ -154,7 +154,7 @@ Object.assign(india_compliance, {
         }
     },
 
-    get_gstin_otp(error_type) {
+    get_gstin_otp(error_type, company_gstin) {
         let description =
             "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.";
         if (error_type === "invalid_otp")
@@ -181,9 +181,7 @@ Object.assign(india_compliance, {
                 secondary_action() {
                     frappe.call({
                         method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.resend_otp",
-                        args: {
-                            company_gstin: cur_frm.doc.company_gstin,
-                        },
+                        args: { company_gstin },
                         callback: function () {
                             frappe.show_alert({
                                 message: __("OTP has been resent."),
@@ -286,25 +284,25 @@ Object.assign(india_compliance, {
     },
 
     primary_to_danger_btn(parent) {
-        parent.$wrapper.find(".btn-primary").removeClass("btn-primary").addClass("btn-danger");
+        parent.$wrapper
+            .find(".btn-primary")
+            .removeClass("btn-primary")
+            .addClass("btn-danger");
     },
 
     add_divider_to_btn_group(btn_group_name) {
-        $(document).find(
-            `.inner-group-button[data-label=${btn_group_name}]`
-        )
+        $(document)
+            .find(`.inner-group-button[data-label=${btn_group_name}]`)
             .find(`.dropdown-menu`)
             .append($('<li class="dropdown-divider"></li>'));
     },
 
     make_text_red(btn_group_name, btn_name) {
-        $(document).find(
-            `.inner-group-button[data-label=${btn_group_name}]`
-        )
+        $(document)
+            .find(`.inner-group-button[data-label=${btn_group_name}]`)
             .find(`.dropdown-item[data-label="${encodeURIComponent(btn_name)}"]`)
             .addClass("text-danger");
     },
-
 });
 
 function is_gstin_check_digit_valid(gstin) {
