@@ -1,3 +1,4 @@
+import json
 import os
 
 import frappe
@@ -654,6 +655,73 @@ def publish_pdf_update(doc, pdf_deleted=False):
 
 def get_pdf_filename(e_waybill_number):
     return f"e-Waybill_{e_waybill_number}.pdf"
+
+
+@frappe.whitelist()
+def get_valid_and_invalid_e_waybill_log(
+    doctype,
+    docs,
+):
+    """
+    - Validate e-Waybill Log
+    - If not latest update
+    - Return Valid e-waybill no and invalid documents
+    """
+    frappe.has_permission("e-Waybill Log", "print", throw=True)
+
+    if isinstance(docs, str):
+        docs = json.loads(docs)
+
+    valid_log = []
+    invalid_log = []
+
+    # get e-waybill nos from sales invoice
+    e_waybills = {
+        doc.name: doc.ewaybill
+        for doc in frappe.get_all(
+            "Sales Invoice", filters={"name": ["in", docs]}, fields=["name", "ewaybill"]
+        )
+    }
+
+    e_waybill_log = {
+        log.name: log
+        for log in frappe.get_all(
+            "e-Waybill Log",
+            filters={"name": ["in", e_waybills.values()]},
+            fields=[
+                "name",
+                "is_latest_data",
+            ],
+        )
+    }
+
+    for docname in docs:
+        e_waybill_no = e_waybills.get(docname)
+
+        if not e_waybill_no:
+            invalid_log.append(docname)
+            continue
+
+        log = e_waybill_log.get(e_waybill_no)
+
+        if not log:
+            invalid_log.append(docname)
+            continue
+
+        if log.is_latest_data:
+            valid_log.append(e_waybill_no)
+            continue
+
+        try:
+            fetch_e_waybill_data(doctype=doctype, docname=docname, attach=False)
+            valid_log.append(e_waybill_no)
+        except Exception:
+            invalid_log.append(docname)
+
+    if not valid_log:
+        frappe.throw(_("No Valid e-Waybill log found."))
+
+    return {"valid_log": valid_log, "invalid_log": invalid_log}
 
 
 #######################################################################################
