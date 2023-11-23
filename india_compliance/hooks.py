@@ -47,6 +47,10 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_invoice.js",
     ],
+    "Purchase Receipt": [
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/purchase_receipt.js",
+    ],
     "Sales Invoice": [
         "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/e_waybill_actions.js",
@@ -251,6 +255,9 @@ override_doctype_dashboards = {
     ),
     "Purchase Invoice": (
         "india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"
+    ),
+    "Purchase Receipt": (
+        "india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"
     ),
 }
 

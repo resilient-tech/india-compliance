@@ -28,6 +28,7 @@ ADDRESS_FIELDS = {
     "Sales Invoice": selling_address,
     "Purchase Invoice": buying_address,
     "Delivery Note": selling_address,
+    "Purchase Receipt": buying_address,
 }
 PERMITTED_DOCTYPES = list(ADDRESS_FIELDS.keys())
 

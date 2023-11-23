@@ -1193,6 +1193,17 @@ class EWaybillData(GSTTransactionData):
                 "document_type": "OTH",
                 "sub_supply_desc": "Purchase Return",
             },
+            ("Purchase Receipt", 0): {
+                "supply_type": "I",
+                "sub_supply_type": 1,  # Supply
+                "document_type": "INV",
+            },
+            ("Purchase Receipt", 1): {
+                "supply_type": "O",
+                "sub_supply_type": 8,  # Others
+                "document_type": "CHL",
+                "sub_supply_desc": "Purchase Return",
+            },
         }
 
         self.transaction_details.update(
@@ -1306,6 +1317,8 @@ class EWaybillData(GSTTransactionData):
                 ("Sales Invoice", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Purchase Invoice", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
                 ("Purchase Invoice", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
+                ("Purchase Receipt", 0): (OTHER_GSTIN, REGISTERED_GSTIN),
+                ("Purchase Receipt", 1): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 0): (REGISTERED_GSTIN, OTHER_GSTIN),
                 ("Delivery Note", 1): (OTHER_GSTIN, REGISTERED_GSTIN),
             }

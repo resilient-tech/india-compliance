@@ -24,6 +24,7 @@
   "enable_e_waybill",
   "enable_e_waybill_from_dn",
   "enable_e_waybill_from_pi",
+  "enable_e_waybill_from_pr",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
   "column_break_10",
@@ -371,12 +372,18 @@
    "fieldtype": "Code",
    "hidden": 1,
    "label": "GSTN Public Certificate"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_e_waybill_from_pr",
+   "fieldtype": "Check",
+   "label": "Enable e-Waybill Generation from Purchase Receipt"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-10-05 20:27:28.909862",
+ "modified": "2023-11-07 17:56:07.859891",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
