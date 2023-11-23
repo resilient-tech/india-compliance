@@ -211,7 +211,7 @@ def update_items(templates):
         "modified",
     )
 
-    def append_tax_template():
+    def append_tax_template(template):
         values.append(
             [
                 random_string(10),
@@ -231,13 +231,13 @@ def update_items(templates):
     for item in item_list:
         if item.is_nil_exempt:
             for template in templates["is_nil_rated"]:
-                append_tax_template()
+                append_tax_template(template)
 
             for template in templates["is_exempted"]:
-                append_tax_template()
+                append_tax_template(template)
 
         if item.is_non_gst:
             for template in templates["is_non_gst"]:
-                append_tax_template()
+                append_tax_template(template)
 
     frappe.db.bulk_insert("Item Tax", fields=fields, values=values)

@@ -347,7 +347,7 @@ CUSTOM_FIELDS = {
             "label": "Is Ineligible for Input Tax Credit",
             "fieldtype": "Check",
             "fetch_from": "item_code.is_ineligible_for_itc",
-            "insert_after": "is_nil_exempt",
+            "insert_after": "is_non_gst",
             "fetch_if_empty": 1,
             "print_hide": 1,
         },
@@ -681,10 +681,16 @@ CUSTOM_FIELDS = {
             "mandatory_depends_on": "eval:gst_settings.validate_hsn_code && doc.is_sales_item",
             "description": "You can search code by the description of the category.",
         },
+        {
+            "fieldname": "is_ineligible_for_itc",
+            "label": "Is Ineligible for Input Tax Credit",
+            "fieldtype": "Check",
+            "insert_after": "item_tax_section_break",
+        },
     ],
     "Item Tax Template": [
         {
-            "fieldname": "tax_rate",
+            "fieldname": "gst_rate",
             "label": "Tax Rate",
             "fieldtype": "Float",
             "insert_after": "column_break_3",
@@ -693,7 +699,7 @@ CUSTOM_FIELDS = {
             "fieldname": "is_nil_rated",
             "label": "Is Nil Rated",
             "fieldtype": "Check",
-            "insert_after": "tax_rate",
+            "insert_after": "gst_rate",
         },
         {
             "fieldname": "is_exempted",
@@ -706,12 +712,6 @@ CUSTOM_FIELDS = {
             "label": "Is Non GST ",
             "fieldtype": "Check",
             "insert_after": "is_exempted",
-        },
-        {
-            "fieldname": "is_ineligible_for_itc",
-            "label": "Is Ineligible for Input Tax Credit",
-            "fieldtype": "Check",
-            "insert_after": "item_tax_section_break",
         },
     ],
 }

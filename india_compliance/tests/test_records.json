@@ -68,7 +68,6 @@
             "is_stock_item": 1,
             "item_code": "_Test Non GST Item",
             "item_name": "_Test Non GST Item",
-            "is_non_gst": 1,
             "valuation_rate": 100,
             "gst_hsn_code": "27131100",
             "uoms": [
@@ -87,6 +86,11 @@
                     "buying_cost_center": "Main - _TIRC",
                     "selling_cost_center": "Main - _TIRC",
                     "income_account": "Sales - _TIRC"
+                }
+            ],
+            "taxes": [
+                {
+                    "item_tax_template": "Non GST - _TIRC"
                 }
             ]
         },

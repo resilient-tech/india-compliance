@@ -26,7 +26,7 @@ def validate_zero_tax_options(doc):
             title=_("Invalid Options Selected"),
         )
 
-    if doc.tax_rate != 0:
+    if doc.gst_rate != 0:
         frappe.throw(
             _("Tax Rate should be 0 for Nil Rated / Exempted / Non GST template"),
             title=_("Invalid Tax Rate"),
@@ -34,7 +34,7 @@ def validate_zero_tax_options(doc):
 
 
 def validate_tax_rates(doc):
-    if doc.tax_rate < 0 or doc.tax_rate > 100:
+    if doc.gst_rate < 0 or doc.gst_rate > 100:
         frappe.throw(
             _("Tax Rate should be between 0 and 100"), title=_("Invalid Tax Rate")
         )
@@ -46,21 +46,23 @@ def validate_tax_rates(doc):
     invalid_tax_rates = {}
     for row in doc.taxes:
         # check intra state
-        if row.tax_type in valid_accounts[1] and doc.tax_rate != row.tax_rate * 2:
-            invalid_tax_rates[row.idx] = doc.tax_rate / 2
+        if row.tax_type in valid_accounts[1] and doc.gst_rate != row.tax_rate * 2:
+            invalid_tax_rates[row.idx] = doc.gst_rate / 2
 
         # check inter state
-        elif row.tax_type in valid_accounts[2] and doc.tax_rate != row.tax_rate:
-            invalid_tax_rates[row.idx] = doc.tax_rate
+        elif row.tax_type in valid_accounts[2] and doc.gst_rate != row.tax_rate:
+            invalid_tax_rates[row.idx] = doc.gst_rate
 
     if not invalid_tax_rates:
         return
 
     # throw
-    message = "Plese make sure account taxes are in sync with tax rate mentioned."
-    " Following rows have inconsistant tax rates: <br><br>"
+    message = (
+        "Plese make sure account taxes are in sync with tax rate mentioned."
+        " Following rows have inconsistant tax rates: <br><br>"
+    )
 
     for idx, tax_rate in invalid_tax_rates.items():
         message += f"Row #{idx} - {rounded(tax_rate, 2)} <br>"
 
-    frappe.throw(_(message), title=_("Invalid Tax Rates")),
+    frappe.throw(_(message), title=_("Invalid Tax Rates"))
