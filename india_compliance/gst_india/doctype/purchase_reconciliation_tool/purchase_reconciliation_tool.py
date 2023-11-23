@@ -22,6 +22,7 @@ from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
     IMPORT_CATEGORY,
     GSTRCategory,
+    ReturnsAPI,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
@@ -511,6 +512,13 @@ def parse_params(fun):
         return fun(*args, **kwargs)
 
     return wrapper
+
+
+@frappe.whitelist()
+def resend_otp(company_gstin):
+    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+
+    return ReturnsAPI(company_gstin).request_otp()
 
 
 class BuildExcel:

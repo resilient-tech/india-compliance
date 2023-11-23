@@ -1191,7 +1191,7 @@ class ImportDialog {
         this.frm.events.show_progress(this.frm, "download");
         const { message } = await this.frm.call(method, args);
         if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
-            const otp = await india_compliance.get_gstin_otp(message.error_type);
+            const otp = await india_compliance.get_gstin_otp(message.error_type, this.frm.doc.company_gstin);
             if (otp) this.download_gstr(only_missing, otp);
             return;
         }
