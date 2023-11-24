@@ -29,6 +29,14 @@ frappe.listview_settings[DOCTYPE].onload = function (list_view) {
         );
     }
 
+    if (frappe.model.can_print("e-Waybill Log")) {
+        add_bulk_action_for_invoices(
+            list_view,
+            __("Print e-Waybill"),
+            bulk_e_waybill_print
+        );
+    }
+
     if (india_compliance.is_e_invoice_enabled())
         add_bulk_action_for_invoices(
             list_view,
@@ -74,6 +82,40 @@ function show_bulk_update_transporter_dialog(docnames) {
     });
 
     d.show();
+}
+
+async function bulk_e_waybill_print(docnames) {
+    frappe.call({
+        method: "india_compliance.gst_india.utils.e_waybill.get_valid_and_invalid_e_waybill_log",
+        args: {
+            doctype: DOCTYPE,
+            docs: JSON.stringify(docnames),
+        },
+        callback: function (r) {
+            if (r.message) {
+                if (r.message.invalid_log.length > 1) {
+                    const invalid_docs = r.message.invalid_log.map(
+                        doc => `${doc.link} - ${doc.reason}`
+                    );
+                    frappe.msgprint(
+                        __(
+                            "Cannot print e-Waybill for following documents:<br><br>{0}",
+                            [invalid_docs.join("<br>")]
+                        )
+                    );
+                }
+
+                window.open_url_post(
+                    "/api/method/frappe.utils.print_format.download_multi_pdf",
+                    {
+                        doctype: "e-Waybill Log",
+                        name: JSON.stringify(r.message.valid_log),
+                    },
+                    true
+                );
+            }
+        },
+    });
 }
 
 async function enqueue_bulk_e_waybill_generation(docnames) {
