@@ -49,7 +49,7 @@ function update_gstin_in_other_documents(doctype) {
 function validate_gstin(doctype) {
     frappe.ui.form.on(doctype, {
         gstin(frm) {
-            const { gstin } = frm.doc;
+            let { gstin } = frm.doc;
 
             // TODO: remove below condition once event is fixed in frappe
             if (!gstin || gstin.length < 15) return;
@@ -58,11 +58,13 @@ function validate_gstin(doctype) {
                 frappe.throw(__("GSTIN/UIN should be 15 characters long"));
             }
 
-            if (TCS_REGEX.test(gstin)){
-                frappe.throw(__("e-Commerce Operator (TCS) GSTIN is not allowed"));
+            gstin = india_compliance.validate_gstin(gstin);
+
+            if (TCS_REGEX.test(gstin)) {
+                frappe.throw(__("e-Commerce Operator (TCS) GSTIN is not allowed to be set in Party/Address"));
             }
 
-            frm.doc.gstin = gstin.trim().toUpperCase();
+            frm.doc.gstin = gstin;
             frm.refresh_field("gstin");
 
             if (!frm.fields_dict.pan) return;
@@ -139,7 +141,6 @@ async function set_gstin_options(frm) {
     field.df.ignore_validation = true;
     field.set_data(await india_compliance.get_gstin_options(frm.doc.name, frm.doctype));
 }
-
 
 function set_gst_category(doctype) {
     frappe.ui.form.on(doctype, {

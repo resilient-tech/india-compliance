@@ -172,13 +172,7 @@ def validate_gstin(
     if not (is_transporter_id and gstin.startswith("88")):
         validate_gstin_check_digit(gstin, label)
 
-    if not is_tcs_gstin and TCS.match(gstin):
-        frappe.throw(
-            _("e-Commerce Operator (TCS) GSTIN is not allowed"),
-            title=_("GSTIN Not Allowed"),
-        )
-
-    elif is_tcs_gstin and not TCS.match(gstin):
+    if is_tcs_gstin and not TCS.match(gstin):
         frappe.throw(
             _("Invalid format for e-Commerce Operator (TCS) GSTIN"),
             title=_("Invalid GSTIN"),
@@ -214,6 +208,13 @@ def validate_gst_category(gst_category, gstin):
             _(
                 "GST Category cannot be Unregistered for party with GSTIN",
             )
+        )
+
+    if TCS.match(gstin):
+        frappe.throw(
+            _(
+                "e-Commerce Operator (TCS) GSTIN is not allowed for transaction / party / address"
+            ),
         )
 
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
@@ -315,6 +316,9 @@ def guess_gst_category(
 
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"
+
+    # eg: e-Commerce Operator (TCS)
+    return "Registered Regular"
 
 
 def get_data_file_path(file_name):
