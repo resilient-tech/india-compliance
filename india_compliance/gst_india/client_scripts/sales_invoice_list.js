@@ -94,10 +94,13 @@ async function bulk_e_waybill_print(docnames) {
         callback: function (r) {
             if (r.message) {
                 if (r.message.invalid_log.length > 1) {
+                    const invalid_docs = r.message.invalid_log.map(
+                        doc => `${doc.link} - ${doc.reason}`
+                    );
                     frappe.msgprint(
                         __(
-                            "Cannot print e-Waybill for following documents:<br><br><strong>{0}</strong>",
-                            [r.message.invalid_log.join("<br>")]
+                            "Cannot print e-Waybill for following documents:<br><br>{0}",
+                            [invalid_docs.join("<br>")]
                         )
                     );
                 }

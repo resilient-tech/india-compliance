@@ -669,16 +669,14 @@ def get_valid_and_invalid_e_waybill_log(
     """
     frappe.has_permission("e-Waybill Log", "print", throw=True)
 
-    if isinstance(docs, str):
-        docs = json.loads(docs)
+    docs = json.loads(docs) if isinstance(docs, str) else docs
 
-    valid_log = []
-    invalid_log = []
+    valid_log, invalid_log = [], []
 
-    e_waybills = {
+    e_waybill_map = {
         doc.name: doc.ewaybill
         for doc in frappe.get_all(
-            "Sales Invoice", filters={"name": ["in", docs]}, fields=["name", "ewaybill"]
+            doctype, filters={"name": ["in", docs]}, fields=["name", "ewaybill"]
         )
     }
 
@@ -686,25 +684,23 @@ def get_valid_and_invalid_e_waybill_log(
         log.name: log
         for log in frappe.get_all(
             "e-Waybill Log",
-            filters={"name": ["in", e_waybills.values()]},
-            fields=[
-                "name",
-                "is_latest_data",
-            ],
+            filters={"name": ["in", e_waybill_map.values()]},
+            fields=["name", "is_latest_data"],
         )
     }
 
     for docname in docs:
-        e_waybill_no = e_waybills.get(docname)
+        form_link = f"""<strong>{get_link_to_form(doctype, docname)}</strong>"""
+        e_waybill_no = e_waybill_map.get(docname)
 
         if not e_waybill_no:
-            invalid_log.append(docname)
+            invalid_log.append({"link": form_link, "reason": "Has no e-Waybill No."})
             continue
 
         log = e_waybill_log.get(e_waybill_no)
 
         if not log:
-            invalid_log.append(docname)
+            invalid_log.append({"link": form_link, "reason": "Has no e-Waybill Log"})
             continue
 
         if log.is_latest_data:
@@ -715,7 +711,9 @@ def get_valid_and_invalid_e_waybill_log(
             fetch_e_waybill_data(doctype=doctype, docname=docname, attach=False)
             valid_log.append(e_waybill_no)
         except Exception:
-            invalid_log.append(docname)
+            invalid_log.append(
+                {"link": form_link, "reason": "Cannot fetch latest data"}
+            )
 
     if not valid_log:
         frappe.throw(_("No Valid e-Waybill log found."))
