@@ -97,9 +97,10 @@ def get_ewaybill_barcode(ewaybill):
     Code128(str(ewaybill), writer=ImageWriter()).write(
         stream,
         {
-            "module_width": 0.4,
-            "text_distance": 2,
-            "font_size": 20,
+            "module_width": 0.5,
+            "module_height": 16.0,
+            "text_distance": 6,
+            "font_size": 12,
         },
     )
     barcode_base64 = base64.b64encode(stream.getbuffer()).decode()
