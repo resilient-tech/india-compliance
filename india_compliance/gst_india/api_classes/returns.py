@@ -110,7 +110,12 @@ class ReturnsAuthenticate(BaseAPI):
             endpoint="authenticate",
         )
 
-    def refresh_auth_token(self, auth_token):
+    def refresh_auth_token(self):
+        auth_token = self.get_auth_token()
+
+        if not auth_token:
+            return
+
         return super().post(
             json={
                 "action": "REFRESHTOKEN",
@@ -158,8 +163,12 @@ class ReturnsAuthenticate(BaseAPI):
             return
 
         if json.get("app_key"):
-            json["app_key"] = encrypt_using_public_key(
-                self.app_key, self.get_public_certificate()
+            json["app_key"] = (
+                aes_encrypt_data(self.app_key, self.session_key)
+                if json.get("action") == "REFRESHTOKEN"
+                else encrypt_using_public_key(
+                    self.app_key, self.get_public_certificate()
+                )
             )
 
         if json.get("otp"):
