@@ -675,7 +675,6 @@ def get_valid_and_invalid_e_waybill_log(
     valid_log = []
     invalid_log = []
 
-    # get e-waybill nos from sales invoice
     e_waybills = {
         doc.name: doc.ewaybill
         for doc in frappe.get_all(
