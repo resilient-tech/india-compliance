@@ -220,18 +220,21 @@ def get_tax_accounts(
 
     invoice_numbers = [d.parent for d in item_list]
 
-    tax_details = frappe.db.sql(
-        f"""
-            select
-                parent, account_head, item_wise_tax_detail,
-                base_tax_amount_after_discount_amount
-            from `tab{tax_doctype}`
-            where
-                parenttype = "Sales Invoice" and docstatus = 1
-                and parent in ({", ".join(frappe.db.escape(invoice) for invoice in invoice_numbers)})
-                and account_head in ({", ".join(frappe.db.escape(account) for account in output_gst_accounts)})
-        """,
-    )
+    doctype = frappe.qb.DocType(tax_doctype)
+
+    tax_details = (
+        frappe.qb.from_(doctype)
+        .select(
+            doctype.parent,
+            doctype.account_head,
+            doctype.item_wise_tax_detail,
+            doctype.base_tax_amount_after_discount_amount,
+        )
+        .where(doctype.parenttype == "Sales Invoice")
+        .where(doctype.docstatus == 1)
+        .where(doctype.parent.isin(invoice_numbers))
+        .where(doctype.account_head.isin(output_gst_accounts))
+    ).run()
 
     for parent, account_head, item_wise_tax_detail, tax_amount in tax_details:
         if not item_wise_tax_detail:
