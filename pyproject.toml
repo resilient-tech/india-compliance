@@ -7,7 +7,7 @@ description = "ERPNext app to simplify compliance with Indian Rules and Regulati
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-    "python-barcode~=0.13.1",
+    "python-barcode~=0.15.1",
     "titlecase~=2.3",
     "pycryptodome~=3.19.0",
 
