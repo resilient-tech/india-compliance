@@ -398,7 +398,7 @@ def validate_items(doc):
 
     for row in doc.items:
         # Collect data to validate that non-GST items are not used with GST items
-        if row.is_non_gst:
+        if row.gst_treatment == "Non-GST":
             non_gst_items.append(row.idx)
             continue
 

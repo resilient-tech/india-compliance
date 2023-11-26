@@ -21,7 +21,7 @@ from india_compliance.gst_india.setup.property_setters import get_property_sette
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
-ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code", "is_nil_exempt", "is_non_gst"))
+ITEM_VARIANT_FIELDNAMES = frozenset(("gst_hsn_code",))
 
 
 def after_install():

@@ -1167,7 +1167,7 @@ class GSTR1DocumentIssuedSummary:
                 .else_(0)
                 .as_("same_gstin_billing"),
                 self.sales_invoice.is_opening,
-                self.sales_invoice_item.is_non_gst,
+                self.sales_invoice_item.gst_treatment,
             )
             .where(self.sales_invoice.company == self.filters.company)
             .where(
@@ -1303,7 +1303,7 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
                     doc
                 )
-            elif doc.is_non_gst:
+            elif doc.gst_treatment == "Non-GST":
                 nature_of_document["Excluded from Report (Has Non GST Item)"].append(
                     doc
                 )

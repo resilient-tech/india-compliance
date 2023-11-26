@@ -39,6 +39,8 @@ NEW_TEMPLATES = {
     "is_non_gst": "Is Non GST",
 }
 
+# TODO: Remove field from item variant settings
+
 
 def execute():
     update_transactions()

@@ -250,7 +250,7 @@ class GSTR3BReport(Document):
             )
             amount = flt(d.taxable_value, 2)
 
-            if d.is_non_gst != 1:
+            if d.gst_treatment != "Non-GST":
                 if is_intra_state:
                     inward_nil_exempt_details["gst"]["intra"] += amount
                 else:
