@@ -1,7 +1,6 @@
 import click
 
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.utils import get_datetime, random_string
 
 from india_compliance.gst_india.overrides.transaction import get_valid_accounts
@@ -23,60 +22,6 @@ TRANSACTION_DOCTYPES = (
     "POS Invoice Item",
 )
 
-CUSTOM_FIELDS_TO_CREATE = {
-    TRANSACTION_DOCTYPES: [
-        {
-            "fieldname": "is_nil_rated",
-            "label": "Is Nil Rated",
-            "fieldtype": "Check",
-            "fetch_from": "item_tax_template.is_nil_rated",
-            "insert_after": "gst_hsn_code",
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "is_exempted",
-            "label": "Is Exempted",
-            "fieldtype": "Check",
-            "fetch_from": "item_tax_template.is_exempted",
-            "insert_after": "is_nil_rated",
-            "print_hide": 1,
-        },
-        {
-            "fieldname": "is_non_gst",
-            "label": "Is Non GST",
-            "fieldtype": "Check",
-            "fetch_from": "item_tax_template.is_non_gst",
-            "insert_after": "is_exempted",
-            "print_hide": 1,
-        },
-    ],
-    "Item Tax Template": [
-        {
-            "fieldname": "tax_rate",
-            "label": "Tax Rate",
-            "fieldtype": "Float",
-            "insert_after": "column_break_3",
-        },
-        {
-            "fieldname": "is_nil_rated",
-            "label": "Is Nil Rated",
-            "fieldtype": "Check",
-            "insert_after": "tax_rate",
-        },
-        {
-            "fieldname": "is_exempted",
-            "label": "Is Exempted",
-            "fieldtype": "Check",
-            "insert_after": "is_nil_rated",
-        },
-        {
-            "fieldname": "is_non_gst",
-            "label": "Is Non GST ",
-            "fieldtype": "Check",
-            "insert_after": "is_exempted",
-        },
-    ],
-}
 FIELDS_TO_DELETE = {
     "Item": [
         {
@@ -96,9 +41,6 @@ NEW_TEMPLATES = {
 
 
 def execute():
-    if not frappe.flags.in_install:
-        create_custom_fields(CUSTOM_FIELDS_TO_CREATE)
-
     update_transactions()
     templates = update_item_tax_template()
     update_items(templates)

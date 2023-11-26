@@ -17,26 +17,21 @@ def validate(doc, method=None):
 
 
 def validate_zero_tax_options(doc):
-    if not (doc.is_nil_rated or doc.is_exempted or doc.is_non_gst):
+    if doc.gst_treatment != "Taxable":
+        doc.gst_rate = 0
         return
 
-    if doc.is_nil_rated + doc.is_exempted + doc.is_non_gst > 1:
+    if doc.gst_rate == 0:
         frappe.throw(
-            _("Only one of Nil Rated, Exempted and Non GST can be selected at a time"),
-            title=_("Invalid Options Selected"),
-        )
-
-    if doc.gst_rate != 0:
-        frappe.throw(
-            _("Tax Rate should be 0 for Nil Rated / Exempted / Non GST template"),
-            title=_("Invalid Tax Rate"),
+            _("GST Rate cannot be zero for <strong>Taxable</strong> GST Treatment"),
+            title=_("Invalid GST Rate"),
         )
 
 
 def validate_tax_rates(doc):
     if doc.gst_rate < 0 or doc.gst_rate > 100:
         frappe.throw(
-            _("Tax Rate should be between 0 and 100"), title=_("Invalid Tax Rate")
+            _("GST Rate should be between 0 and 100"), title=_("Invalid GST Rate")
         )
 
     if not doc.taxes:
@@ -58,11 +53,11 @@ def validate_tax_rates(doc):
 
     # throw
     message = (
-        "Plese make sure account taxes are in sync with tax rate mentioned."
+        "Plese make sure account tax rates are in sync with GST rate mentioned."
         " Following rows have inconsistant tax rates: <br><br>"
     )
 
     for idx, tax_rate in invalid_tax_rates.items():
-        message += f"Row #{idx} - {rounded(tax_rate, 2)} <br>"
+        message += f"Row #{idx} - should be {rounded(tax_rate, 2)}% <br>"
 
     frappe.throw(_(message), title=_("Invalid Tax Rates"))

@@ -150,6 +150,14 @@ def validate_mandatory_fields(doc, fields, error_message=None):
         )
 
 
+@frappe.whitelist()
+def get_valid_gst_accounts(company):
+    if not is_indian_registered_company(company):
+        return
+
+    return get_valid_accounts(company, True, True)
+
+
 def get_valid_accounts(company, for_sales=False, for_purchase=False):
     all_valid_accounts = []
     intra_state_accounts = []
@@ -230,7 +238,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         )
 
     # Sales / Purchase Validations
-
     if is_sales_transaction:
         if is_export_without_payment_of_gst(doc) and (
             idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
@@ -325,8 +332,8 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
+    used_accounts = set(row.account_head for row in rows_to_validate)
     if not is_inter_state:
-        used_accounts = set(row.account_head for row in rows_to_validate)
         if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
             _throw(
                 _(
@@ -344,6 +351,22 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             ),
             title=_("Invalid Reference Row"),
         )
+
+    for row in doc.items:
+        if not row.item_tax_template:
+            continue
+
+        for account in used_accounts:
+            if account in row.item_tax_rate:
+                continue
+
+            frappe.msgprint(
+                _(
+                    "Item Row #{0}: GST Account {1} is missing in Item Tax Template {2}"
+                ).format(row.idx, bold(account), bold(row.item_tax_template)),
+                title=_("Invalid Item Tax Template"),
+                indicator="orange",
+            )
 
     return all_valid_accounts
 
@@ -877,7 +900,57 @@ def is_export_without_payment_of_gst(doc):
     return is_overseas_doc(doc) and not doc.is_export_with_gst
 
 
+def set_item_gst_rate(doc):
+    """
+    GST Rate is usually fetched from Item Tax Template.
+
+    This function will calculate and set GST Rate in items where
+    Item Tax Template is not set.
+    """
+
+    if doc.doctype in SALES_DOCTYPES:
+        account_type = "Output"
+    else:
+        account_type = "Input"
+
+    gst_account_dict = get_gst_accounts_by_type(doc.company, account_type)
+    tax_rate_multiplier = 1
+    item_wise_tax_detail = frappe._dict()
+
+    for row in doc.get("taxes", []):
+        if row.account_head not in [
+            gst_account_dict.cgst_account,
+            gst_account_dict.igst_account,
+        ]:
+            continue
+
+        if row.account_head == gst_account_dict.cgst_account:
+            tax_rate_multiplier = 2
+
+        item_wise_tax_detail.update(frappe.parse_json(row.item_wise_tax_detail))
+
+    for item in doc.get("items", []):
+        # fetched from item tax template
+        if item.item_tax_template:
+            continue
+
+        if not item.gst_treatment:
+            item.gst_treatment = "Taxable"
+
+        if item.gst_treatment != "Taxable":
+            item.gst_rate = 0
+            continue
+
+        if item.item_code not in item_wise_tax_detail:
+            continue
+
+        item.gst_rate = item_wise_tax_detail[item.item_code][0] * tax_rate_multiplier
+
+
 def set_reverse_charge_as_per_gst_settings(doc):
+    if doc.doctype in SALES_DOCTYPES:
+        return
+
     gst_settings = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
@@ -980,6 +1053,7 @@ def validate_transaction(doc, method=None):
 
 def before_validate(doc, method=None):
     set_reverse_charge_as_per_gst_settings(doc)
+    set_item_gst_rate(doc)
 
 
 def ignore_gst_validations(doc):

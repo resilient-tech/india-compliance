@@ -221,11 +221,11 @@ class GSTR3BReport(Document):
         inward_nil_exempt = frappe.db.sql(
             """
             SELECT p.place_of_supply, p.supplier_address,
-            i.taxable_value, i.is_nil_rated, i.is_exempted, i.is_non_gst
+            i.taxable_value, i.gst_treatment
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
             and p.is_opening = 'No'
-            and (i.is_nil_rated = 1 or i.is_exempted = 1 or i.is_non_gst = 1 or p.gst_category = 'Registered Composition') and
+            and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) = %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
             """,
@@ -306,7 +306,7 @@ class GSTR3BReport(Document):
             f"""
             SELECT
                 item_code, parent, taxable_value, item_tax_rate,
-                is_nil_rated, is_exempted, is_non_gst
+                gst_treatment, gst_rate
             FROM
                 `tab{doctype} Item`
             WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
@@ -319,12 +319,16 @@ class GSTR3BReport(Document):
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
             self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
 
+            is_nil_rated = d.gst_treatment == "Nil-Rated"
+            is_exempted = d.gst_treatment == "Exempted"
+            is_non_gst = d.gst_treatment == "Non-GST"
+
             if (
-                d.is_nil_rated or d.is_exempted
+                is_nil_rated or is_exempted
             ) and d.item_code not in self.is_nil_or_exempt:
                 self.is_nil_or_exempt.append(d.item_code)
 
-            if d.is_non_gst and d.item_code not in self.is_non_gst:
+            if is_non_gst and d.item_code not in self.is_non_gst:
                 self.is_non_gst.append(d.item_code)
 
     def get_outward_tax_details(self, doctype):

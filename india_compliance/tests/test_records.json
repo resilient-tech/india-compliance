@@ -90,7 +90,7 @@
             ],
             "taxes": [
                 {
-                    "item_tax_template": "Non GST - _TIRC"
+                    "item_tax_template": "Non-GST - _TIRC"
                 }
             ]
         },
@@ -114,10 +114,10 @@
             ],
             "taxes": [
                 {
-                    "item_tax_template": "Nil Rated - _TIRC"
+                    "item_tax_template": "Nil-Rated - _TIRC"
                 },
                 {
-                    "item_tax_template": "Nil Rated - _TIUC"
+                    "item_tax_template": "Nil-Rated - _TIUC"
                 }
             ]
         },

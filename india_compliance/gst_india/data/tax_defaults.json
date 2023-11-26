@@ -33,7 +33,8 @@
             "item_tax_templates": [
                 {
                     "title": "GST 18%",
-                    "tax_rate": 18,
+                    "gst_rate": 18,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -96,7 +97,8 @@
                 },
                 {
                     "title": "GST 5%",
-                    "tax_rate": 5,
+                    "gst_rate": 5,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -159,7 +161,8 @@
                 },
                 {
                     "title": "GST 12%",
-                    "tax_rate": 12,
+                    "gst_rate": 12,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -222,7 +225,8 @@
                 },
                 {
                     "title": "GST 28%",
-                    "tax_rate": 28,
+                    "gst_rate": 28,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -284,9 +288,9 @@
                     ]
                 },
                 {
-                    "title": "Nil Rated",
-                    "tax_rate": 0,
-                    "is_nil_rated": 1,
+                    "title": "Nil-Rated",
+                    "gst_rate": 0,
+                    "gst_treatment": "Nil-Rated",
                     "taxes": [
                         {
                             "tax_type": {
@@ -349,8 +353,8 @@
                 },
                 {
                     "title": "Exempted",
-                    "tax_rate": 0,
-                    "is_exempted": 1,
+                    "gst_rate": 0,
+                    "gst_treatment": "Exempted",
                     "taxes": [
                         {
                             "tax_type": {
@@ -412,9 +416,9 @@
                     ]
                 },
                 {
-                    "title": "Non GST",
-                    "tax_rate": 0,
-                    "is_non_gst": 1,
+                    "title": "Non-GST",
+                    "gst_rate": 0,
+                    "gst_treatment": "Non-GST",
                     "taxes": [
                         {
                             "tax_type": {
