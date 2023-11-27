@@ -169,7 +169,7 @@
                         <td>
                             <span class="classfont">
                                 <strong>
-                                    {{ frappe.format(data.totInvValue, {'fieldtype':'Currency'}) }}</strong>
+                                    {{ frappe.utils.fmt_money(data.totInvValue, currency="INR") }}</strong>
                             </span>
                         </td>
                     </tr>
