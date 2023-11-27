@@ -352,7 +352,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             title=_("Invalid Reference Row"),
         )
 
-    for row in doc.items:
+    for row in doc.get("items", []):
         if not row.item_tax_template:
             continue
 
@@ -918,6 +918,9 @@ def set_item_gst_rate(doc):
     item_wise_tax_detail = frappe._dict()
 
     for row in doc.get("taxes", []):
+        if not row.item_wise_tax_detail:
+            continue
+
         if row.account_head not in [
             gst_account_dict.cgst_account,
             gst_account_dict.igst_account,
@@ -1052,6 +1055,9 @@ def validate_transaction(doc, method=None):
 
 
 def before_validate(doc, method=None):
+    if ignore_gst_validations(doc):
+        return False
+
     set_reverse_charge_as_per_gst_settings(doc)
     set_item_gst_rate(doc)
 
