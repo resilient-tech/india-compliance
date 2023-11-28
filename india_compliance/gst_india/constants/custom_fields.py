@@ -295,8 +295,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "gst_treatment",
             "label": "GST Treatment",
-            "fieldtype": "Select",
-            "default": "Taxable",
+            "fieldtype": "Autocomplete",
             "options": "Taxable\nNil-Rated\nExempted\nNon-GST",
             "fetch_from": "item_tax_template.gst_treatment",
             "insert_after": "item_tax_template",
@@ -688,7 +687,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "gst_treatment",
             "label": "GST Treatment",
-            "fieldtype": "Select",
+            "fieldtype": "Autocomplete",
             "default": "Taxable",
             "options": "Taxable\nNil-Rated\nExempted\nNon-GST",
             "insert_after": "column_break_3",

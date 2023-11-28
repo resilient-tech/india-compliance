@@ -163,12 +163,12 @@ def get_valid_accounts(company, for_sales=False, for_purchase=False):
     intra_state_accounts = []
     inter_state_accounts = []
 
-    account_types = set()
+    account_types = []
     if for_sales:
-        account_types.add("Output")
+        account_types.append("Output")
 
     if for_purchase:
-        account_types.update(("Input", "Reverse Charge"))
+        account_types.extend(["Input", "Reverse Charge"])
 
     for account_type in account_types:
         accounts = get_gst_accounts_by_type(company, account_type)
@@ -352,7 +352,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             title=_("Invalid Reference Row"),
         )
 
-    for row in doc.get("items", []):
+    for row in doc.get("items") or []:
         if not row.item_tax_template:
             continue
 
