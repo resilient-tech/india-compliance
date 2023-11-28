@@ -25,6 +25,10 @@ from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
 )
+from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
+    validate_mandatory_fields,
+)
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
     is_api_enabled,
@@ -396,6 +400,14 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     return True
 
 
+def validate_hsn_codes_for_e_invoice(doc):
+    _validate_hsn_codes(
+        doc,
+        valid_hsn_length=[6, 8],
+        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+    )
+
+
 def get_e_invoice_applicability_date(doc, settings=None, throw=True):
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
@@ -471,6 +483,14 @@ class EInvoiceData(GSTTransactionData):
     def validate_transaction(self):
         super().validate_transaction()
         validate_e_invoice_applicability(self.doc, self.settings)
+
+        validate_mandatory_fields(
+            self.doc,
+            "customer_address",
+            _("{0} is a mandatory field for generating e-Invoices"),
+        )
+
+        validate_hsn_codes_for_e_invoice(self.doc)
 
         if len(self.doc.items) > ITEM_LIMIT:
             frappe.throw(
