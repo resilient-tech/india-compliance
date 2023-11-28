@@ -294,7 +294,7 @@ def update_vehicle_info(*, doctype, docname, values):
     values = frappe.parse_json(values)
     doc.db_set(
         {
-            "vehicle_no": values.vehicle_no.replace(" ", ""),
+            "vehicle_no": values.get("vehicle_no", "").replace(" ", ""),
             "lr_no": values.lr_no,
             "lr_date": values.lr_date,
             "mode_of_transport": values.mode_of_transport,
@@ -458,7 +458,7 @@ def extend_validity(*, doctype, docname, values):
 
     doc.db_set(
         {
-            "vehicle_no": values.vehicle_no.replace(" ", ""),
+            "vehicle_no": values.get("vehicle_no", "").replace(" ", ""),
             "lr_no": values.lr_no,
             "mode_of_transport": values.mode_of_transport,
         }
