@@ -11,6 +11,7 @@ from erpnext.controllers.taxes_and_totals import (
 )
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gstin.gstin import (
     _validate_gstin_info,
     get_gstin_status,
@@ -980,6 +981,19 @@ def validate_transaction(doc, method=None):
 
 def before_validate(doc, method=None):
     set_reverse_charge_as_per_gst_settings(doc)
+
+
+def after_mapping(target_doc, method=None, source_doc=None):
+    # Copy e-Waybill fields only from DN to SI
+    if not source_doc or source_doc.doctype not in (
+        "Delivery Note",
+        "Purchase Receipt",
+    ):
+        return
+
+    for field in E_WAYBILL_INV_FIELDS:
+        fieldname = field.get("fieldname")
+        target_doc.set(fieldname, source_doc.get(fieldname))
 
 
 def ignore_gst_validations(doc):

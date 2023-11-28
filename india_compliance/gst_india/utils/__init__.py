@@ -210,6 +210,13 @@ def validate_gst_category(gst_category, gstin):
             )
         )
 
+    if TCS.match(gstin):
+        frappe.throw(
+            _(
+                "e-Commerce Operator (TCS) GSTIN is not allowed for transaction / party / address"
+            ),
+        )
+
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
     if not valid_gstin_format.match(gstin):
         frappe.throw(
@@ -309,6 +316,9 @@ def guess_gst_category(
 
     if GSTIN_FORMATS["Overseas"].match(gstin):
         return "Overseas"
+
+    # eg: e-Commerce Operator (TCS)
+    return "Registered Regular"
 
 
 def get_data_file_path(file_name):

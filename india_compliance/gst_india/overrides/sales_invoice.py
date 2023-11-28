@@ -5,10 +5,12 @@ from frappe.utils import flt, fmt_money
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
-    _validate_hsn_codes,
     ignore_gst_validations,
     validate_mandatory_fields,
     validate_transaction,
+)
+from india_compliance.gst_india.overrides.unreconcile_payment import (
+    reverse_gst_adjusted_against_payment_entry,
 )
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
@@ -19,6 +21,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
     validate_e_invoice_applicability,
+    validate_hsn_codes_for_e_invoice,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
@@ -115,14 +118,6 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
         doc.einvoice_status = "Pending"
 
 
-def validate_hsn_codes_for_e_invoice(doc):
-    _validate_hsn_codes(
-        doc,
-        valid_hsn_length=[6, 8],
-        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
-    )
-
-
 def validate_port_address(doc):
     if (
         doc.gst_category != "Overseas"
@@ -185,6 +180,26 @@ def on_submit(doc, method=None):
             queue="short",
             doctype=doc.doctype,
             docname=doc.name,
+        )
+
+
+def before_cancel(doc, method=None):
+    payment_references = frappe.get_all(
+        "Payment Entry Reference",
+        filters={
+            "reference_doctype": doc.doctype,
+            "reference_name": doc.name,
+            "docstatus": 1,
+        },
+        fields=["name as voucher_detail_no", "parent as payment_name"],
+    )
+
+    if not payment_references:
+        return
+
+    for reference in payment_references:
+        reverse_gst_adjusted_against_payment_entry(
+            reference.voucher_detail_no, reference.payment_name
         )
 
 
@@ -304,3 +319,4 @@ def set_and_validate_advances_with_gst(doc):
     doc.total_advance = allocated_amount_with_taxes
     doc.set_payment_schedule()
     doc.outstanding_amount -= tax_amount
+    frappe.flags.gst_excess_allocation_validated = True
