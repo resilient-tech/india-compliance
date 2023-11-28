@@ -120,6 +120,7 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Purchase Order": {
         "validate": (
@@ -148,6 +149,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
         ),
         "before_cancel": "india_compliance.gst_india.overrides.sales_invoice.before_cancel",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Sales Order": {
         "validate": (

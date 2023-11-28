@@ -4,6 +4,8 @@ from parameterized import parameterized_class
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_TAXABLE_VALUE
@@ -631,3 +633,19 @@ def get_lead(first_name):
     lead.insert(ignore_permissions=True)
 
     return lead.name
+
+
+class TestSpecificTransactions(FrappeTestCase):
+    def test_copy_e_waybill_fields_from_dn_to_si(self):
+        "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
+        dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
+        si = make_sales_invoice(dn.name)
+
+        self.assertEqual(si.vehicle_no, dn.vehicle_no)
+
+    def test_copy_e_waybill_fields_from_si_to_return(self):
+        "Make sure e-Waybill fields are not copied from Sales Invoice to Sales Returns"
+        si = create_transaction(doctype="Sales Invoice", vehicle_no="GJ01AA1111")
+        si_return = make_sales_return(si.name)
+
+        self.assertEqual(si_return.vehicle_no, None)
