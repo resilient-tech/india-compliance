@@ -28,7 +28,7 @@ def validate_filters(filters=None):
     if not filters.from_date or not filters.to_date:
         frappe.throw(
             _(
-                "From Date & To Date is mandatory for generating e-Invoice Summary"
+                "From Date & To Date is mandatory for generating Bill of Entry Summary"
                 " Report"
             ),
             title=_("Invalid Filter"),
