@@ -6,6 +6,7 @@
 Simple, yet powerful compliance solutions for Indian businesses
 
 [![Server Tests](https://github.com/resilient-tech/india-compliance/actions/workflows/server-tests.yml/badge.svg)](https://github.com/resilient-tech/india-compliance/actions/workflows/server-tests.yml)
+[![Codecov](https://codecov.io/gh/resilient-tech/india-compliance/branch/develop/graph/badge.svg)](https://codecov.io/gh/resilient-tech/india-compliance)
 
 </div>
 
