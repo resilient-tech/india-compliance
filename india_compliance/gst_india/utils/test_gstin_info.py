@@ -122,3 +122,70 @@ class TestGstinInfo(unittest.TestCase):
                 },
             },
         )
+
+    def test_tcs_gstin_info(self):
+        self.mock_public_api.return_value = Mock()
+        self.mock_public_api.return_value.get_gstin_info.return_value = frappe._dict(
+            {
+                "ntcrbs": "SPO",
+                "stjCd": "KA003",
+                "lgnm": "FLIPKART INDIA PRIVATE LIMITED",
+                "stj": "State - Karnataka,Division - DGSTO-4, Bengaluru, LOCAL GST Office - LGSTO 015 - Bengaluru",
+                "dty": "Tax Collector (Electronic Commerce Operator)",
+                "cxdt": "",
+                "gstin": "29AABCF8078M1C8",
+                "lstupdt": "",
+                "rgdt": "29/06/2020",
+                "ctb": "Private Limited Company",
+                "pradr": {
+                    "addr": {
+                        "bnm": "EMBASSY TECH VILLAGE OUTER RING ROAD",
+                        "st": "DEVARABEESANAHALLI VILLAGE VARTHUR HOBLI",
+                        "loc": "BENGALURU",
+                        "bno": "ALYSSA, BEGONIA AND CLOVER",
+                        "dst": "Bengaluru Rural",
+                        "lt": "",
+                        "locality": "",
+                        "pncd": "560103",
+                        "landMark": "",
+                        "stcd": "Karnataka",
+                        "geocodelvl": "",
+                        "flno": "",
+                        "lg": "",
+                    }
+                },
+                "tradeNam": "FLIPKART INDIA PRIVATE LIMITED",
+                "sts": "Active",
+                "ctjCd": "YT0802",
+                "ctj": "Commissionerate - BENGALURU EAST,Division - EAST DIVISION-8,Range - RANGE-BED8 (Jurisdictional Office)",
+                "einvoiceStatus": "No",
+            }
+        )
+        gstin_info = get_gstin_info("29AABCF8078M1C8")
+        self.assertDictEqual(
+            gstin_info,
+            {
+                "gstin": "29AABCF8078M1C8",
+                "business_name": "Flipkart India Private Limited",
+                "gst_category": "",
+                "status": "Active",
+                "all_addresses": [
+                    {
+                        "address_line1": "Alyssa, Begonia and Clover, Embassy Tech Village Outer Ring Road",
+                        "address_line2": "Devarabeesanahalli Village Varthur Hobli, Bengaluru",
+                        "city": "Bengaluru Rural",
+                        "state": "Karnataka",
+                        "pincode": "560103",
+                        "country": "India",
+                    }
+                ],
+                "permanent_address": {
+                    "address_line1": "Alyssa, Begonia and Clover, Embassy Tech Village Outer Ring Road",
+                    "address_line2": "Devarabeesanahalli Village Varthur Hobli, Bengaluru",
+                    "city": "Bengaluru Rural",
+                    "state": "Karnataka",
+                    "pincode": "560103",
+                    "country": "India",
+                },
+            },
+        )
