@@ -92,9 +92,7 @@ doc_events = {
     },
     "Delivery Note": {
         "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
@@ -124,6 +122,7 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
         "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
@@ -135,6 +134,7 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
     },
     "Purchase Receipt": {
         "validate": (
@@ -143,16 +143,15 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
         "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
     },
     "Sales Invoice": {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
         "on_update_after_submit": (
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
@@ -160,12 +159,10 @@ doc_events = {
         "before_cancel": "india_compliance.gst_india.overrides.sales_invoice.before_cancel",
     },
     "Sales Order": {
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
     },
     "Supplier": {
         "validate": [
@@ -186,20 +183,16 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.unreconcile_payment.before_submit",
     },
     "POS Invoice": {
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
     },
     "Quotation": {
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
     },
     "Supplier Quotation": {
         "before_validate": (
@@ -208,6 +201,7 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.before_save",
     },
     "Accounts Settings": {
         "validate": "india_compliance.audit_trail.overrides.accounts_settings.validate"

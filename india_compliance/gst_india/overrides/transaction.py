@@ -1055,10 +1055,13 @@ def validate_transaction(doc, method=None):
 
 
 def before_validate(doc, method=None):
+    set_reverse_charge_as_per_gst_settings(doc)
+
+
+def before_save(doc, method=None):
     if ignore_gst_validations(doc):
         return False
 
-    set_reverse_charge_as_per_gst_settings(doc)
     set_item_gst_rate(doc)
 
 
