@@ -5,12 +5,11 @@ from frappe.utils import flt, fmt_money
 from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
-    _validate_hsn_codes,
     ignore_gst_validations,
     validate_mandatory_fields,
     validate_transaction,
 )
-from india_compliance.gst_india.overrides.unreconcile_payments import (
+from india_compliance.gst_india.overrides.unreconcile_payment import (
     reverse_gst_adjusted_against_payment_entry,
 )
 from india_compliance.gst_india.utils import (
@@ -22,6 +21,7 @@ from india_compliance.gst_india.utils import (
 from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
     validate_e_invoice_applicability,
+    validate_hsn_codes_for_e_invoice,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
@@ -116,14 +116,6 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
 
     if doc.docstatus == 1 and not doc.irn:
         doc.einvoice_status = "Pending"
-
-
-def validate_hsn_codes_for_e_invoice(doc):
-    _validate_hsn_codes(
-        doc,
-        valid_hsn_length=[6, 8],
-        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
-    )
 
 
 def validate_port_address(doc):

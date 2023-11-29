@@ -47,6 +47,10 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/purchase_invoice.js",
     ],
+    "Purchase Receipt": [
+        "gst_india/client_scripts/e_waybill_actions.js",
+        "gst_india/client_scripts/purchase_receipt.js",
+    ],
     "Sales Invoice": [
         "gst_india/client_scripts/e_invoice_actions.js",
         "gst_india/client_scripts/e_waybill_actions.js",
@@ -116,6 +120,7 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Purchase Order": {
         "validate": (
@@ -144,6 +149,7 @@ doc_events = {
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
         ),
         "before_cancel": "india_compliance.gst_india.overrides.sales_invoice.before_cancel",
+        "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Sales Order": {
         "validate": (
@@ -165,8 +171,8 @@ doc_events = {
     "Tax Withholding Category": {
         "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
     },
-    "Unreconcile Payments": {
-        "before_submit": "india_compliance.gst_india.overrides.unreconcile_payments.before_submit",
+    "Unreconcile Payment": {
+        "before_submit": "india_compliance.gst_india.overrides.unreconcile_payment.before_submit",
     },
     "POS Invoice": {
         "validate": (
@@ -174,6 +180,11 @@ doc_events = {
         ),
     },
     "Quotation": {
+        "validate": (
+            "india_compliance.gst_india.overrides.transaction.validate_transaction"
+        ),
+    },
+    "Supplier Quotation": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
@@ -251,6 +262,9 @@ override_doctype_dashboards = {
     ),
     "Purchase Invoice": (
         "india_compliance.gst_india.overrides.purchase_invoice.get_dashboard_data"
+    ),
+    "Purchase Receipt": (
+        "india_compliance.gst_india.overrides.purchase_receipt.get_dashboard_data"
     ),
 }
 
