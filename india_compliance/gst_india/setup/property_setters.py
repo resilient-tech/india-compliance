@@ -100,6 +100,9 @@ def get_property_setters():
             "property": "default_email_template",
             "value": "Purchase Reconciliation",
         },
+        *TRANSPORTER_NAME_PROPERTIES,
+        *LR_NO_PROPERTIES,
+        *LR_DATE_PROPERTIES,
     ]
 
 
@@ -120,3 +123,102 @@ def get_options_property_setter(doctype, fieldname, new_options, prepend=True):
         "property": "options",
         "value": options,
     }
+
+
+TRANSPORTER_NAME_PROPERTIES = [
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "transporter_name",
+        "property": "fieldtype",
+        "property_type": "Select",
+        "value": "Small Text",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "transporter_name",
+        "property": "fetch_from",
+        "property_type": "Small Text",
+        "value": "transporter.supplier_name",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "transporter_name",
+        "property": "no_copy",
+        "property_type": "Check",
+        "value": "1",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "transporter_name",
+        "property": "print_hide",
+        "property_type": "Check",
+        "value": "1",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "transporter_name",
+        "property": "read_only",
+        "property_type": "Check",
+        "value": "1",
+    },
+]
+
+LR_NO_PROPERTIES = [
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "lr_no",
+        "property": "label",
+        "property_type": "Data",
+        "value": "Transport Receipt No",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "lr_no",
+        "property": "print_hide",
+        "property_type": "Check",
+        "value": "1",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "lr_no",
+        "property": "length",
+        "property_type": "Int",
+        "value": "30",
+    },
+]
+
+
+LR_DATE_PROPERTIES = [
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "lr_date",
+        "property": "label",
+        "property_type": "Data",
+        "value": "Transport Receipt Date",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "lr_date",
+        "property": "print_hide",
+        "property_type": "Check",
+        "value": "1",
+    },
+    {
+        "doctype_or_field": "DocField",
+        "doctype": "Purchase Receipt",
+        "fieldname": "lr_date",
+        "property": "default",
+        "property_type": "Text",
+        "value": "Today",
+    },
+]
