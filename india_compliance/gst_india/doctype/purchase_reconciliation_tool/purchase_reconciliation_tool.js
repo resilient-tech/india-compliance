@@ -1053,6 +1053,7 @@ class ImportDialog {
     constructor(frm, for_download = true) {
         this.frm = frm;
         this.for_download = for_download;
+        this.company_gstin = frm.doc.company_gstin;
         this.init_dialog();
         this.dialog.show();
     }
@@ -1151,7 +1152,7 @@ class ImportDialog {
             for_download: this.for_download,
         });
 
-        if (!message) return;
+        if (!message || this.company_gstin == "All") return;
         this.dialog.fields_dict.history.html(
             frappe.render_template("gstr_download_history", message)
         );
@@ -1179,22 +1180,55 @@ class ImportDialog {
     }
 
     async download_gstr(only_missing = true, otp = null) {
-        let method;
-        const args = { date_range: this.date_range, otp };
-        if (this.return_type === ReturnType.GSTR2A) {
-            method = "download_gstr_2a";
-            args.force = !only_missing;
-        } else {
-            method = "download_gstr_2b";
-        }
+        const company_gstins = await this.authenticate_company_gstin();
+
+        const args = {
+            return_type: this.return_type,
+            company_gstin: company_gstins,
+            date_range: this.date_range,
+            force: !only_missing,
+            otp
+        };
 
         this.frm.events.show_progress(this.frm, "download");
-        const { message } = await this.frm.call(method, args);
-        if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
-            const otp = await india_compliance.get_gstin_otp(message.error_type, this.frm.doc.company_gstin);
-            if (otp) this.download_gstr(only_missing, otp);
-            return;
+        await this.frm.call("download_gstr", args);
+    }
+
+    async authenticate_company_gstin() {
+        const { message: gstin_authentication_status } = await this.frm.call(
+            "validate_company_gstin_authentication",
+            { company_gstin: this.company_gstin == "All" ? null : this.company_gstin }
+        );
+
+        if (!Object.keys(gstin_authentication_status).length) {
+            frappe.throw(__("Please set GSTIN credentials in GST Settings"));
         }
+
+        for (let gstin of Object.keys(gstin_authentication_status)) {
+            if (gstin_authentication_status[gstin]) continue;
+
+            do {
+                await frappe.call({
+                    method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.resend_otp",
+                    args: { company_gstin: gstin },
+                })
+
+                const otp = await india_compliance.get_gstin_otp("otp_requested", gstin);
+
+                const { message } = await frappe.call({
+                    method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.authenticate_otp",
+                    args: { otp },
+                })
+
+                if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
+                    continue;
+                } else {
+                    gstin_authentication_status[gstin] = true;
+                }
+            } while (!gstin_authentication_status[gstin])
+        }
+
+        return Object.keys(gstin_authentication_status);
     }
 
     upload_gstr(period, file_path) {
@@ -1222,6 +1256,25 @@ class ImportDialog {
                     this.setup_dialog_actions();
                     this.return_type = this.dialog.get_value("return_type");
                 },
+            },
+            {
+                label: "Company GSTIN",
+                fieldname: "company_gstin",
+                fieldtype: "Autocomplete",
+                default: this.frm.doc.company_gstin,
+                get_query: async () => {
+                    let { message: gstin_list } = await frappe.call({
+                        method: "india_compliance.gst_india.utils.get_gstin_list",
+                        args: { party: this.frm.doc.company },
+                    });
+
+                    gstin_list.unshift("All");
+                    this.dialog.fields_dict.company_gstin.set_data(gstin_list);
+                },
+                onchange: () => {
+                    this.company_gstin = this.dialog.get_value("company_gstin");
+                    this.fetch_import_history();
+                }
             },
             {
                 fieldtype: "Column Break",

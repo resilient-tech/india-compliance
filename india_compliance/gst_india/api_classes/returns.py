@@ -151,6 +151,9 @@ class ReturnsAuthenticate(BaseAPI):
                 values,
             )
 
+            # cache of parent doctype GST Settings is not cleared by default so clear it manually
+            frappe.clear_document_cache("GST Settings")
+
         return response
 
     def encrypt_request(self, json):

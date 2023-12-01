@@ -156,7 +156,7 @@ Object.assign(india_compliance, {
 
     get_gstin_otp(error_type, company_gstin) {
         let description =
-            "An OTP has been sent to your registered mobile/email for further authentication. Please provide OTP.";
+            `An OTP has been sent to the registered mobile/email for GSTIN ${company_gstin} for further authentication. Please provide OTP.`;
         if (error_type === "invalid_otp")
             description = "Invalid OTP was provided. Please try again.";
 
