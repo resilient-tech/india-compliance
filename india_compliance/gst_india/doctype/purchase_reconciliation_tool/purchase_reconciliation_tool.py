@@ -79,26 +79,23 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def download_gstr(
-        self, return_type, company_gstin, date_range, force=False, otp=None
+        self, return_type, company_gstin_list, date_range, force=False, otp=None
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return_type = ReturnType(return_type)
 
-        if isinstance(company_gstin, str):
-            company_gstin = [company_gstin]
-
-        for gstin in company_gstin:
+        for company_gstin in company_gstin_list:
             if return_type == ReturnType.GSTR2A:
-                self.download_gstr_2a(date_range, force, otp)
+                self.download_gstr_2a(date_range, company_gstin, force, otp)
 
             if return_type == ReturnType.GSTR2B:
-                self.download_gstr_2b(date_range, otp)
+                self.download_gstr_2b(date_range, company_gstin, otp)
 
         return True
 
     @frappe.whitelist()
-    def download_gstr_2a(self, date_range, force=False, otp=None):
+    def download_gstr_2a(self, date_range, company_gstin, force=False, otp=None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return_type = ReturnType.GSTR2A
@@ -106,17 +103,17 @@ class PurchaseReconciliationTool(Document):
         if not force:
             periods = self.get_periods_to_download(return_type, periods)
 
-        return download_gstr_2a(self.company_gstin, periods, otp)
+        return download_gstr_2a(company_gstin, periods, otp)
 
     @frappe.whitelist()
-    def download_gstr_2b(self, date_range, otp=None):
+    def download_gstr_2b(self, date_range, company_gstin, otp=None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return_type = ReturnType.GSTR2B
         periods = self.get_periods_to_download(
             return_type, BaseUtil.get_periods(date_range, return_type)
         )
-        return download_gstr_2b(self.company_gstin, periods, otp)
+        return download_gstr_2b(company_gstin, periods, otp)
 
     def get_periods_to_download(self, return_type, periods):
         existing_periods = get_import_history(

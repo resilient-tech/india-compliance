@@ -1180,11 +1180,11 @@ class ImportDialog {
     }
 
     async download_gstr(only_missing = true, otp = null) {
-        const company_gstins = await this.authenticate_company_gstin();
+        const company_gstin_list = await this.authenticate_company_gstin();
 
         const args = {
             return_type: this.return_type,
-            company_gstin: company_gstins,
+            company_gstin_list: company_gstin_list,
             date_range: this.date_range,
             force: !only_missing,
             otp
@@ -1217,7 +1217,7 @@ class ImportDialog {
 
                 const { message } = await frappe.call({
                     method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.authenticate_otp",
-                    args: { otp },
+                    args: { company_gstin: gstin, otp: otp },
                 })
 
                 if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
