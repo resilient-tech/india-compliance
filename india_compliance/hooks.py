@@ -107,6 +107,7 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
     },
     "Payment Entry": {
+        "onload": "india_compliance.gst_india.overrides.payment_entry.onload",
         "validate": "india_compliance.gst_india.overrides.payment_entry.validate",
         "on_submit": "india_compliance.gst_india.overrides.payment_entry.on_submit",
         "on_update_after_submit": "india_compliance.gst_india.overrides.payment_entry.on_update_after_submit",

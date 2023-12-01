@@ -1,3 +1,5 @@
+import json
+
 import frappe
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
@@ -12,6 +14,40 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_transaction as validate_transaction_for_advance_payment,
 )
 from india_compliance.gst_india.utils import get_all_gst_accounts
+
+
+@frappe.whitelist()
+def get_reconciliation_status_for_invoice_list(invoice_list):
+    if not invoice_list:
+        return
+
+    if isinstance(invoice_list, str):
+        invoice_list = json.loads(invoice_list)
+
+    original_list = frappe.db.get_list(
+        "Purchase Invoice",
+        filters={"name": ["in", invoice_list]},
+        fields=("name", "reconciliation_status"),
+    )
+    transformed_dict = {
+        item["name"]: item["reconciliation_status"] for item in original_list
+    }
+    return transformed_dict
+
+
+def onload(doc, method=None):
+    if not doc.references:
+        return
+
+    invoice_list = [
+        x.reference_name
+        for x in doc.references
+        if x.reference_doctype == "Purchase Invoice"
+    ]
+
+    transformed_dict = get_reconciliation_status_for_invoice_list(invoice_list)
+
+    doc.set_onload("reconciliation_status_dict", transformed_dict)
 
 
 def validate(doc, method=None):
