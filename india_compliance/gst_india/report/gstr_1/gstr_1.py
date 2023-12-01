@@ -400,7 +400,7 @@ class Gstr1Report:
 
         items = frappe.db.sql(
             """
-			select item_code, item_name, parent, taxable_value, item_tax_rate, gst_treatment, gst_rate
+			select item_code, item_name, parent, taxable_value, item_tax_rate, gst_treatment
             from `tab%s Item`
 			where parent in (%s)
 		"""

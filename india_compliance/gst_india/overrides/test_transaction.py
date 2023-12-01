@@ -8,7 +8,7 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_retu
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
-from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_TAXABLE_VALUE
+from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_GST_DETAILS
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -301,7 +301,7 @@ class TestTransaction(FrappeTestCase):
         frappe.db.set_value("Address", address, "gstin", gstin)
 
     def test_taxable_value_with_charges(self):
-        if self.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
+        if self.doctype not in DOCTYPES_WITH_GST_DETAILS:
             return
 
         doc = create_transaction(**self.transaction_details, do_not_save=True)
@@ -327,7 +327,7 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual({"taxable_value": 120}, doc.items[0])  # 100 + 20
 
     def test_taxable_value_with_charges_after_tax(self):
-        if self.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
+        if self.doctype not in DOCTYPES_WITH_GST_DETAILS:
             return
 
         doc = create_transaction(

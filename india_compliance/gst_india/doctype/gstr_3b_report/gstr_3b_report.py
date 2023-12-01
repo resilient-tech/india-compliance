@@ -306,7 +306,7 @@ class GSTR3BReport(Document):
             f"""
             SELECT
                 item_code, parent, taxable_value, item_tax_rate,
-                gst_treatment, gst_rate
+                gst_treatment
             FROM
                 `tab{doctype} Item`
             WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
