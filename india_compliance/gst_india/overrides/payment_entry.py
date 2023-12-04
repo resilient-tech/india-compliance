@@ -1,5 +1,3 @@
-import json
-
 import frappe
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
