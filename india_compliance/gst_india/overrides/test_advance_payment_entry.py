@@ -261,8 +261,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
                 {"amount": -100.0, "against_voucher_no": invoice_doc.name},
                 {"amount": -18.0, "against_voucher_no": invoice_doc.name},
                 {"amount": -100.0, "against_voucher_no": payment_doc.name},
-                {"amount": 400.0, "against_voucher_no": payment_doc.name},
-                {"amount": 100.0, "against_voucher_no": payment_doc.name},
+                {"amount": 500.0, "against_voucher_no": payment_doc.name},
             ],
         )
 
