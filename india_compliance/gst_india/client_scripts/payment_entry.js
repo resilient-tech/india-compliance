@@ -49,8 +49,8 @@ function override_get_outstanding_documents(frm) {
 
             const invoice_list = frappe.last_response && frappe.last_response.message
                 ? frappe.last_response.message
-                    .filter((r) => r.voucher_type === "Purchase Invoice")
-                    .map((r) => r.voucher_no)
+                    .filter(r => r.voucher_type === "Purchase Invoice")
+                    .map(r => r.voucher_no)
                 : [];
 
             frappe.call({
@@ -68,8 +68,8 @@ function override_get_outstanding_documents(frm) {
     frm.events.get_outstanding_documents = new_fn;
     const handlers = frappe.ui.form.handlers[frm.doctype];
     handlers["get_outstanding_documents"] = handlers["get_outstanding_documents"].map(
-        (fn) => fn === old_fn ? new_fn : fn,
-    )
+        fn => (fn === old_fn ? new_fn : fn),
+    );
 }
 
 frappe.ui.form.on("Payment Entry Reference", {
@@ -82,7 +82,7 @@ frappe.ui.form.on("Payment Entry Reference", {
             .then(response => {
                 if (!response.message) return;
 
-                reconciliation_status_dict = {};
+                const reconciliation_status_dict = {};
                 reconciliation_status_dict[row.reference_name] = response.message.reconciliation_status;
 
                 add_warning_indicator(frm, reconciliation_status_dict, row.reference_name);
@@ -94,9 +94,9 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
     if (!reconciliation_status_dict) return;
 
     let rows = frm.fields_dict.references.grid.grid_rows
-        .filter((r) => r.doc.reference_doctype === "Purchase Invoice");
+        .filter(r => r.doc.reference_doctype === "Purchase Invoice");
 
-    if (name) rows = rows.filter((r) => r.doc.reference_name === name);
+    if (name) rows = rows.filter(r => r.doc.reference_name === name);
 
     for (const row of rows) {
 
@@ -131,7 +131,7 @@ async function update_gst_details(frm, method) {
     // wait for GSTINs to get fetched
     await frappe.after_ajax();
 
-    args = {
+    const args = {
         doctype: frm.doc.doctype,
         party_details: {
             customer: frm.doc.party,
