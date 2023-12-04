@@ -22,7 +22,6 @@ from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
     IMPORT_CATEGORY,
     GSTRCategory,
-    ReturnsAPI,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
@@ -94,7 +93,6 @@ class PurchaseReconciliationTool(Document):
 
         return True
 
-    @frappe.whitelist()
     def download_gstr_2a(self, date_range, company_gstin, force=False, otp=None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -105,7 +103,6 @@ class PurchaseReconciliationTool(Document):
 
         return download_gstr_2a(company_gstin, periods, otp)
 
-    @frappe.whitelist()
     def download_gstr_2b(self, date_range, company_gstin, otp=None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -460,47 +457,6 @@ class PurchaseReconciliationTool(Document):
 
         return data
 
-    @frappe.whitelist()
-    def validate_company_gstin_authentication(self, company_gstin):
-        """
-        Checks the validity of the company's GSTIN authentication.
-
-        Args:
-            company_gstin (str): The GSTIN of the company to validate.
-
-        Returns:
-            dict: A dictionary where the keys are the GSTINs and the values are booleans indicating whether the authentication is valid.
-        """
-        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
-        credentials = self.get_company_gstin_credentials(company_gstin)
-
-        gstin_authentication_status = {
-            credential.gstin: (
-                credential.session_expiry
-                and credential.auth_token
-                and credential.session_expiry
-                > frappe.utils.now_datetime()
-                + frappe.utils.datetime.timedelta(minutes=30)
-            )
-            for credential in credentials
-        }
-
-        return gstin_authentication_status
-
-    def get_company_gstin_credentials(self, company_gstin=None):
-        filters = (
-            {"service": "Returns", "gstin": company_gstin}
-            if company_gstin
-            else {"service": "Returns", "company": self.company}
-        )
-
-        return frappe.get_all(
-            "GST Credential",
-            filters=filters,
-            fields=["gstin", "session_expiry", "auth_token"],
-        )
-
 
 def get_import_history(
     company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
@@ -570,23 +526,6 @@ def parse_params(fun):
         return fun(*args, **kwargs)
 
     return wrapper
-
-
-@frappe.whitelist()
-def resend_otp(company_gstin):
-    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
-    return ReturnsAPI(company_gstin).request_otp()
-
-
-@frappe.whitelist()
-def authenticate_otp(company_gstin, otp):
-    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
-    api = ReturnsAPI(company_gstin)
-    response = api.autheticate_with_otp(otp)
-
-    return api.process_response(response)
 
 
 class BuildExcel:

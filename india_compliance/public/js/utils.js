@@ -158,7 +158,7 @@ Object.assign(india_compliance, {
         let description =
             `An OTP has been sent to the registered mobile/email for GSTIN ${company_gstin} for further authentication. Please provide OTP.`;
         if (error_type === "invalid_otp")
-            description = "Invalid OTP was provided. Please try again.";
+            description = `Invalid OTP was provided for GSTIN ${company_gstin}. Please try again.`;
 
         return new Promise(resolve => {
             const prompt = new frappe.ui.Dialog({
@@ -180,7 +180,7 @@ Object.assign(india_compliance, {
                 secondary_action_label: __("Resend OTP"),
                 secondary_action() {
                     frappe.call({
-                        method: "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.resend_otp",
+                        method: "india_compliance.gst_india.utils.gstr.gstr.request_otp",
                         args: { company_gstin },
                         callback: function () {
                             frappe.show_alert({
