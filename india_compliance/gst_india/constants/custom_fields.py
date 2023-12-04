@@ -305,7 +305,7 @@ CUSTOM_FIELDS = {
             "no_copy": 1,
         },
     ],
-    # Taxable Value and GST Details
+    # Taxable Value
     (
         "Delivery Note Item",
         "Sales Invoice Item",
@@ -323,6 +323,9 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "no_copy": 1,
         },
+    ],
+    # GST Details
+    ("Sales Invoice Item", "Purchase Invoice Item",): [
         {
             "fieldtype": "Section Break",
             "label": "GST Details",

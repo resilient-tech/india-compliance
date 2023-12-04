@@ -33,7 +33,7 @@ from india_compliance.income_tax_india.overrides.tax_withholding_category import
     get_tax_withholding_accounts,
 )
 
-DOCTYPES_WITH_GST_DETAILS = {
+DOCTYPES_WITH_TAXABLE_VALUE = {
     "Purchase Receipt",
     "Purchase Invoice",
     "Delivery Note",
@@ -41,9 +41,14 @@ DOCTYPES_WITH_GST_DETAILS = {
     "POS Invoice",
 }
 
+DOCTYPES_WITH_GST_DETAIL = {
+    "Purchase Invoice",
+    "Sales Invoice",
+}
+
 
 def update_taxable_values(doc, valid_accounts):
-    if doc.doctype not in DOCTYPES_WITH_GST_DETAILS:
+    if doc.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
         return
 
     total_charges = 0
@@ -1171,9 +1176,8 @@ def before_validate(doc, method=None):
     set_reverse_charge_as_per_gst_settings(doc)
 
 
-def before_save(doc, method=None):
-    # TODO: Should this be called even in before_submit? Handels cases where submit is directly called without insert or save.
-    if doc.doctype in DOCTYPES_WITH_GST_DETAILS:
+def update_gst_details(doc, method=None):
+    if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
 
     if ignore_gst_validations(doc):
