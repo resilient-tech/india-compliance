@@ -933,9 +933,12 @@ class ItemGSTDetails:
 
             self.update_item_count()
             self.set_item_wise_tax_details()
+            self.set_tax_amount_precisions(doctype)
 
-            for item in doc.items:
-                response.setdefault(item.name, self.get_item_tax_detail(item))
+            for item in doc.get("items"):
+                response.setdefault(item.name, frappe._dict()).update(
+                    self.get_item_tax_detail(item)
+                )
 
         return response
 
@@ -950,6 +953,7 @@ class ItemGSTDetails:
         self.set_gst_accounts(doc.doctype, doc.company)
         self.update_item_count()
         self.set_item_wise_tax_details()
+        self.set_tax_amount_precisions(doc.doctype)
         self.update_item_tax_details()
 
     def set_gst_accounts(self, doctype, company):
@@ -963,7 +967,7 @@ class ItemGSTDetails:
 
     def update_item_count(self):
         self.item_count = frappe._dict()
-        for item in self.doc.items:
+        for item in self.doc.get("items"):
             key = item.item_code or item.item_name
             self.item_count.setdefault(key, 0)
             self.item_count[key] += 1
@@ -1009,16 +1013,16 @@ class ItemGSTDetails:
 
             # update item taxes
             for item_name in set(old.keys()):
-                tax_details.setdefault(item_name, item_defaults.copy())
+                item_taxes = tax_details.setdefault(item_name, item_defaults.copy())
 
-                tax_details[item_name]["count"] = self.item_count[item_name]
-                tax_details[item_name][f"{tax}_rate"] = old[item_name][0]
-                tax_details[item_name][f"{tax}_amount"] += old[item_name][1]
+                item_taxes["count"] = self.item_count[item_name]
+                item_taxes[f"{tax}_rate"] = old[item_name][0]
+                item_taxes[f"{tax}_amount"] += old[item_name][1]
 
         self.item_tax_details = tax_details
 
     def update_item_tax_details(self):
-        for item in self.doc.items:
+        for item in self.doc.get("items"):
             item.update(self.get_item_tax_detail(item))
 
     def get_item_tax_detail(self, item):
@@ -1046,7 +1050,7 @@ class ItemGSTDetails:
                 continue
 
             tax_amount_field = f"{tax}_amount"
-            precision = item.precision(tax_amount_field)
+            precision = self.precision.get(tax_amount_field)
 
             multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value
             tax_amount = flt(tax_rate * multiplier, precision)
@@ -1058,6 +1062,20 @@ class ItemGSTDetails:
             response.update({tax_amount_field: tax_amount})
 
         return response
+
+    def set_tax_amount_precisions(self, doctype):
+        item_doctype = f"{doctype} Item"
+        meta = frappe.get_meta(item_doctype)
+
+        self.precision = frappe._dict()
+
+        for tax_type in GST_TAX_TYPES:
+            field = f"{tax_type}_amount"
+            if not meta.has_field(field):
+                continue
+
+            precision = meta.get_field(field).precision
+            self.precision.update({field: precision})
 
 
 def set_gst_treatment_for_item(doc):
