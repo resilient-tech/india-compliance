@@ -21,18 +21,20 @@ def get_reconciliation_status_for_invoice_list(invoice_list):
     if not invoice_list:
         return
 
-    if isinstance(invoice_list, str):
-        invoice_list = json.loads(invoice_list)
+    # Performing a check whether the user has permission to create a Payment Entry in the first place
+    frappe.has_permission("Payment Entry", "create", throw=True)
 
-    original_list = frappe.db.get_list(
-        "Purchase Invoice",
-        filters={"name": ["in", invoice_list]},
-        fields=("name", "reconciliation_status"),
+    invoice_list = frappe.parse_json(invoice_list)
+
+    reconciliation_status_dict = dict(
+        frappe.get_all(
+            "Purchase Invoice",
+            filters={"name": ["in", invoice_list]},
+            fields=("name", "reconciliation_status"),
+            as_list=True,
+        )
     )
-    transformed_dict = {
-        item["name"]: item["reconciliation_status"] for item in original_list
-    }
-    return transformed_dict
+    return reconciliation_status_dict
 
 
 def onload(doc, method=None):
@@ -45,9 +47,11 @@ def onload(doc, method=None):
         if x.reference_doctype == "Purchase Invoice"
     ]
 
-    transformed_dict = get_reconciliation_status_for_invoice_list(invoice_list)
+    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
+        invoice_list
+    )
 
-    doc.set_onload("reconciliation_status_dict", transformed_dict)
+    doc.set_onload("reconciliation_status_dict", reconciliation_status_dict)
 
 
 def validate(doc, method=None):

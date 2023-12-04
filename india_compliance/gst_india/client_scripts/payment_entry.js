@@ -6,7 +6,6 @@ const WARNING_ICON = `
 
 
 frappe.ui.form.on("Payment Entry", {
-
     setup(frm) {
         override_get_outstanding_documents(frm);
     },
