@@ -1,14 +1,12 @@
 const WARNING_ICON = `
-    <span class='warning-icon link-btn mb-auto mt-auto' style='display: block; z-index: 1; top: 5px; width: 24px; height: 24px'>
+    <span class='warning-icon link-btn mb-auto mt-auto' title='2A/2B Status: Unreconciled' style='display: block; z-index: 1; top: 5px; width: 24px; height: 24px'>
         <div>${frappe.utils.icon('solid-warning', "md")}</div>
     </span>
 `;
 
 
 frappe.ui.form.on("Payment Entry", {
-    setup(frm) {
-        override_get_outstanding_documents(frm);
-    },
+    setup: override_get_outstanding_documents,
 
     refresh(frm) {
         add_warning_indicator(frm, frm.doc.__onload?.reconciliation_status_dict);
@@ -34,9 +32,7 @@ frappe.ui.form.on("Payment Entry", {
         );
     },
 
-    customer_address(frm) {
-        update_gst_details(frm);
-    },
+    customer_address: update_gst_details
 });
 
 function override_get_outstanding_documents(frm) {
@@ -46,22 +42,14 @@ function override_get_outstanding_documents(frm) {
     const new_fn = function () {
         old_fn(...arguments);
         frappe.after_ajax(() => {
+            response = frappe?.last_response?.message || [];
 
-            const invoice_list = frappe.last_response && frappe.last_response.message
-                ? frappe.last_response.message
-                    .filter(r => r.voucher_type === "Purchase Invoice")
-                    .map(r => r.voucher_no)
-                : [];
+            const reconciliation_status_dict = response.reduce((acc, d) => {
+                acc[d.voucher_no] = d.reconciliation_status;
+                return acc;
+            }, {});
 
-            frappe.call({
-                method: "india_compliance.gst_india.overrides.payment_entry.get_reconciliation_status_for_invoice_list",
-                args: {
-                    invoice_list: invoice_list
-                },
-                callback(response) {
-                    add_warning_indicator(frm, response.message)
-                },
-            });
+            add_warning_indicator(frm, reconciliation_status_dict);
         });
     }
 
@@ -96,11 +84,11 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
     let rows = frm.fields_dict.references.grid.grid_rows
         .filter(r => r.doc.reference_doctype === "Purchase Invoice");
 
+    // Add warning indicator to a particular row only
     if (name) rows = rows.filter(r => r.doc.reference_name === name);
 
     for (const row of rows) {
-
-        if (row.doc.reference_name in reconciliation_status_dict && reconciliation_status_dict[row.doc.reference_name] !== 'Unreconciled') continue;
+        if (!reconciliation_status_dict[row.doc.reference_name] || reconciliation_status_dict[row.doc.reference_name] !== 'Unreconciled') continue;
 
         const target_div = row.columns.reference_name;
         const is_warning_icon_already_present = $(target_div).find(".warning-icon").length > 0;
@@ -108,15 +96,6 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
         if (is_warning_icon_already_present) continue;
 
         $(WARNING_ICON).appendTo(target_div);
-
-        $('.warning-icon').hover(
-            function () {
-                $(this).attr('title', '2A/2B Status: Unreconciled');
-            },
-            function () {
-                $(this).removeAttr('title');
-            }
-        );
     }
 }
 

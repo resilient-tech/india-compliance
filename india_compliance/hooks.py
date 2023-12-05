@@ -450,9 +450,9 @@ scheduler_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "india_compliance.event.get_events"
-# }
+override_whitelisted_methods = {
+    "erpnext.accounts.doctype.payment_entry.payment_entry.get_outstanding_reference_documents": "india_compliance.gst_india.overrides.payment_entry.get_outstanding_reference_documents"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
