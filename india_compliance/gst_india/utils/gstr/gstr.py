@@ -1,9 +1,11 @@
 import frappe
+from frappe import _
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
     create_inward_supply,
 )
+from india_compliance.gst_india.utils import get_gstin_list
 from india_compliance.gst_india.utils.gstr import ReturnsAPI
 
 
@@ -136,9 +138,28 @@ def validate_company_gstins(company=None, company_gstin=None):
     Returns:
         dict: A dictionary where the keys are the GSTINs and the values are booleans indicating whether the authentication is valid.
     """
-    frappe.has_permission("GST Settings", throw=True)
+    frappe.has_permission("GST Settings", "write", throw=True)
 
     credentials = get_company_gstin_credentials(company, company_gstin)
+
+    if not credentials:
+        frappe.throw(
+            _("Missing GSTIN credentials for GSTIN: {gstin}.").format(
+                gstin=company_gstin
+            )
+        )
+
+    if company and not company_gstin:
+        missing_credentials = set(get_gstin_list(company)) - set(
+            credential.gstin for credential in credentials
+        )
+
+        if missing_credentials:
+            frappe.throw(
+                _("Missing GSTIN credentials for GSTIN(s): {gstins}.").format(
+                    gstins=", ".join(missing_credentials),
+                )
+            )
 
     gstin_authentication_status = {
         credential.gstin: (

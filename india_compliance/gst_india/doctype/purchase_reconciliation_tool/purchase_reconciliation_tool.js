@@ -1152,6 +1152,7 @@ class ImportDialog {
             for_download: this.for_download,
         });
 
+        // TODO: modify HTML for case: company_gstin == "All"
         if (!message || this.company_gstin == "All") return;
         this.dialog.fields_dict.history.html(
             frappe.render_template("gstr_download_history", message)
@@ -1180,11 +1181,15 @@ class ImportDialog {
     }
 
     async download_gstr(only_missing = true, otp = null) {
-        const authenticated_company_gstins = await this.authenticate_company_gstins();
+        const authenticated_company_gstins =
+            await india_compliance.authenticate_company_gstins(
+                this.frm.doc.company,
+                this.company_gstin == "All" ? null : this.company_gstin
+            );
 
         const args = {
             return_type: this.return_type,
-            company_gstin_list: authenticated_company_gstins,
+            company_gstins: authenticated_company_gstins,
             date_range: this.date_range,
             force: !only_missing,
             otp
@@ -1192,50 +1197,6 @@ class ImportDialog {
 
         this.frm.events.show_progress(this.frm, "download");
         await this.frm.call("download_gstr", args);
-    }
-
-    async authenticate_company_gstins() {
-        const { message: gstin_authentication_status } = await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr.gstr.validate_company_gstins",
-            args: { company: this.frm.doc.company, company_gstin: this.company_gstin == "All" ? null : this.company_gstin },
-        });
-
-        if (!Object.keys(gstin_authentication_status).length) {
-            frappe.throw(__("Please set GSTIN credentials in GST Settings"));
-        }
-
-        for (let gstin of Object.keys(gstin_authentication_status)) {
-            if (gstin_authentication_status[gstin]) continue;
-
-            gstin_authentication_status[gstin] = await this.authenticate_otp(gstin);
-        }
-
-        return Object.keys(gstin_authentication_status);
-    }
-
-    async authenticate_otp(gstin) {
-        await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr.gstr.request_otp",
-            args: { company_gstin: gstin },
-        });
-
-        let error_type = "otp_requested";
-
-        while (true) {
-            const otp = await india_compliance.get_gstin_otp(error_type, gstin);
-
-            const { message } = await frappe.call({
-                method: "india_compliance.gst_india.utils.gstr.gstr.authenticate_otp",
-                args: { company_gstin: gstin, otp: otp },
-            });
-
-            if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
-                error_type = message.error_type;
-                continue;
-            }
-
-            return true;
-        }
     }
 
     upload_gstr(period, file_path) {

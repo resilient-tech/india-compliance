@@ -78,13 +78,13 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def download_gstr(
-        self, return_type, company_gstin_list, date_range, force=False, otp=None
+        self, return_type, company_gstins, date_range, force=False, otp=None
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         return_type = ReturnType(return_type)
 
-        for company_gstin in company_gstin_list:
+        for company_gstin in company_gstins:
             if return_type == ReturnType.GSTR2A:
                 self.download_gstr_2a(date_range, company_gstin, force, otp)
 
@@ -94,8 +94,6 @@ class PurchaseReconciliationTool(Document):
         return True
 
     def download_gstr_2a(self, date_range, company_gstin, force=False, otp=None):
-        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
         return_type = ReturnType.GSTR2A
         periods = BaseUtil.get_periods(date_range, return_type)
         if not force:
@@ -104,8 +102,6 @@ class PurchaseReconciliationTool(Document):
         return download_gstr_2a(company_gstin, periods, otp)
 
     def download_gstr_2b(self, date_range, company_gstin, otp=None):
-        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
         return_type = ReturnType.GSTR2B
         periods = self.get_periods_to_download(
             return_type, BaseUtil.get_periods(date_range, return_type)
