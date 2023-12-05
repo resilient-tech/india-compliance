@@ -451,7 +451,9 @@ scheduler_events = {
 # ------------------------------
 #
 override_whitelisted_methods = {
-    "erpnext.accounts.doctype.payment_entry.payment_entry.get_outstanding_reference_documents": "india_compliance.gst_india.overrides.payment_entry.get_outstanding_reference_documents"
+    "erpnext.accounts.doctype.payment_entry.payment_entry.get_outstanding_reference_documents": (
+        "india_compliance.gst_india.overrides.payment_entry.get_outstanding_reference_documents"
+    )
 }
 #
 # each overriding function accepts a `data` argument;
