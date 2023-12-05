@@ -1,9 +1,8 @@
 const WARNING_ICON = `
     <span class='warning-icon link-btn mb-auto mt-auto' title='2A/2B Status: Unreconciled' style='display: block; z-index: 1; top: 5px; width: 24px; height: 24px'>
-        <div>${frappe.utils.icon('solid-warning', "md")}</div>
+        <div>${frappe.utils.icon("solid-warning", "md")}</div>
     </span>
 `;
-
 
 frappe.ui.form.on("Payment Entry", {
     setup: override_get_outstanding_documents,
@@ -32,7 +31,7 @@ frappe.ui.form.on("Payment Entry", {
         );
     },
 
-    customer_address: update_gst_details
+    customer_address: update_gst_details,
 });
 
 function override_get_outstanding_documents(frm) {
@@ -51,12 +50,12 @@ function override_get_outstanding_documents(frm) {
 
             add_warning_indicator(frm, reconciliation_status_dict);
         });
-    }
+    };
 
     frm.events.get_outstanding_documents = new_fn;
     const handlers = frappe.ui.form.handlers[frm.doctype];
     handlers["get_outstanding_documents"] = handlers["get_outstanding_documents"].map(
-        fn => (fn === old_fn ? new_fn : fn),
+        fn => (fn === old_fn ? new_fn : fn)
     );
 }
 
@@ -66,14 +65,24 @@ frappe.ui.form.on("Payment Entry Reference", {
 
         if (row.reference_doctype !== "Purchase Invoice") return;
 
-        frappe.db.get_value(row.reference_doctype, row.reference_name, 'reconciliation_status')
+        frappe.db
+            .get_value(
+                row.reference_doctype,
+                row.reference_name,
+                "reconciliation_status"
+            )
             .then(response => {
                 if (!response.message) return;
 
                 const reconciliation_status_dict = {};
-                reconciliation_status_dict[row.reference_name] = response.message.reconciliation_status;
+                reconciliation_status_dict[row.reference_name] =
+                    response.message.reconciliation_status;
 
-                add_warning_indicator(frm, reconciliation_status_dict, row.reference_name);
+                add_warning_indicator(
+                    frm,
+                    reconciliation_status_dict,
+                    row.reference_name
+                );
             });
     },
 });
@@ -81,17 +90,23 @@ frappe.ui.form.on("Payment Entry Reference", {
 function add_warning_indicator(frm, reconciliation_status_dict, name) {
     if (!reconciliation_status_dict) return;
 
-    let rows = frm.fields_dict.references.grid.grid_rows
-        .filter(r => r.doc.reference_doctype === "Purchase Invoice");
+    let rows = frm.fields_dict.references.grid.grid_rows.filter(
+        r => r.doc.reference_doctype === "Purchase Invoice"
+    );
 
     // Add warning indicator to a particular row only
     if (name) rows = rows.filter(r => r.doc.reference_name === name);
 
     for (const row of rows) {
-        if (!reconciliation_status_dict[row.doc.reference_name] || reconciliation_status_dict[row.doc.reference_name] !== 'Unreconciled') continue;
+        if (
+            !reconciliation_status_dict[row.doc.reference_name] ||
+            reconciliation_status_dict[row.doc.reference_name] !== "Unreconciled"
+        )
+            continue;
 
         const target_div = row.columns.reference_name;
-        const is_warning_icon_already_present = $(target_div).find(".warning-icon").length > 0;
+        const is_warning_icon_already_present =
+            $(target_div).find(".warning-icon").length > 0;
 
         if (is_warning_icon_already_present) continue;
 
