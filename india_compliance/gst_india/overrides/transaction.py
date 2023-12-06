@@ -33,22 +33,21 @@ from india_compliance.income_tax_india.overrides.tax_withholding_category import
     get_tax_withholding_accounts,
 )
 
-DOCTYPES_WITH_TAXABLE_VALUE = {
-    "Purchase Receipt",
-    "Purchase Invoice",
-    "Delivery Note",
-    "Sales Invoice",
-    "POS Invoice",
-}
-
 DOCTYPES_WITH_GST_DETAIL = {
-    "Purchase Invoice",
-    "Sales Invoice",
+    "Supplier Quotation Item",
+    "Purchase Order Item",
+    "Purchase Receipt Item",
+    "Purchase Invoice Item",
+    "Quotation Item",
+    "Sales Order Item",
+    "Delivery Note Item",
+    "Sales Invoice Item",
+    "POS Invoice Item",
 }
 
 
 def update_taxable_values(doc, valid_accounts):
-    if doc.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
     total_charges = 0

@@ -269,8 +269,21 @@ CUSTOM_FIELDS = {
         }
     ],
     # Transaction Item: Tax Fields
+    "Material Request Item": [
+        {
+            "fieldname": "gst_hsn_code",
+            "label": "HSN/SAC",
+            "fieldtype": "Data",
+            "fetch_from": "item_code.gst_hsn_code",
+            "insert_after": "description",
+            "allow_on_submit": 1,
+            "print_hide": 1,
+            "fetch_if_empty": 1,
+            "translatable": 0,
+        },
+    ],
+    # Taxable Value and GST Details
     (
-        "Material Request Item",
         "Supplier Quotation Item",
         "Purchase Order Item",
         "Purchase Receipt Item",
@@ -304,15 +317,6 @@ CUSTOM_FIELDS = {
             "translatable": 0,
             "no_copy": 1,
         },
-    ],
-    # Taxable Value
-    (
-        "Delivery Note Item",
-        "Sales Invoice Item",
-        "POS Invoice Item",
-        "Purchase Invoice Item",
-        "Purchase Receipt Item",
-    ): [
         {
             "fieldname": "taxable_value",
             "label": "Taxable Value",
@@ -323,9 +327,6 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "no_copy": 1,
         },
-    ],
-    # GST Details
-    ("Sales Invoice Item", "Purchase Invoice Item",): [
         {
             "fieldtype": "Section Break",
             "label": "GST Details",

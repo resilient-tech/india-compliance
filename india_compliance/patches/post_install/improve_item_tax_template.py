@@ -6,7 +6,6 @@ from frappe.utils import get_datetime, random_string
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
-    DOCTYPES_WITH_GST_DETAIL,
     ItemGSTDetails,
     get_valid_accounts,
 )
@@ -33,14 +32,13 @@ TRANSACTION_DOCTYPES = (
 
 FIELDS_TO_DELETE = {
     "Item": [
-        {
-            "fieldname": "is_nil_exempt",
-        },
-        {
-            "fieldname": "is_non_gst",
-        },
+        {"fieldname": "is_nil_exempt"},
+        {"fieldname": "is_non_gst"},
     ],
-    TRANSACTION_DOCTYPES: [{"fieldname": "is_nil_exempt"}],
+    TRANSACTION_DOCTYPES: [
+        {"fieldname": "is_nil_exempt"},
+        {"fieldname": "is_non_gst"},
+    ],
 }
 
 NEW_TEMPLATES = {
@@ -84,7 +82,7 @@ def update_transaction_gst_details(companies):
                 get_gst_accounts_by_type(company, account_type).values()
             )
 
-        for doctype in DOCTYPES_WITH_GST_DETAIL:
+        for doctype in ("Sales Invoice", "Purchase Invoice"):
             is_sales_doctype = doctype in SALES_DOCTYPES
             docs = get_docs_with_gst_accounts(doctype, gst_accounts)
             if not docs:
