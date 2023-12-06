@@ -14,7 +14,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
 def get_outstanding_reference_documents(args, validate=False):
     from erpnext.accounts.doctype.payment_entry.payment_entry import (
         get_outstanding_reference_documents,
@@ -36,9 +36,6 @@ def get_outstanding_reference_documents(args, validate=False):
 def get_reconciliation_status_for_invoice_list(invoice_list):
     if not invoice_list:
         return
-
-    # Performing a check whether the user has permission to create a Payment Entry in the first place
-    frappe.has_permission("Payment Entry", "create", throw=True)
 
     invoice_list = frappe.parse_json(invoice_list)
 

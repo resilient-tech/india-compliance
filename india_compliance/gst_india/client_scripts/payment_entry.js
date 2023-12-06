@@ -1,5 +1,9 @@
 const WARNING_ICON = `
-    <span class='warning-icon link-btn mb-auto mt-auto' title='2A/2B Status: Unreconciled' style='display: block; z-index: 1; top: 5px; width: 24px; height: 24px'>
+    <span
+        class='warning-icon link-btn mb-auto mt-auto'
+        title='2A/2B Status: Unreconciled'
+        style='display: block; z-index: 1; top: 5px; width: 24px; height: 24px;'
+    >
         <div>${frappe.utils.icon("solid-warning", "md")}</div>
     </span>
 `;
@@ -111,6 +115,7 @@ function add_warning_indicator(frm, reconciliation_status_dict, name) {
         if (is_warning_icon_already_present) continue;
 
         $(WARNING_ICON).appendTo(target_div);
+        $(target_div).find(".static-area").css("padding-right", "16px");
     }
 }
 
