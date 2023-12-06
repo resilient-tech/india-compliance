@@ -1,31 +1,27 @@
 frappe.ui.form.on("Payment Entry", {
-    company: function (frm) {
-        frappe.call({
-            method: "frappe.contacts.doctype.address.address.get_default_address",
-            args: {
-                doctype: "Company",
-                name: frm.doc.company,
-            },
-            callback: function (r) {
-                frm.set_value("company_address", r.message);
-            },
-        });
-    },
+	company: function (frm) {
+		frappe.call({
+			method: "frappe.contacts.doctype.address.address.get_default_address",
+			args: {
+				doctype: "Company",
+				name: frm.doc.company,
+			},
+			callback: function (r) {
+				frm.set_value("company_address", r.message);
+			},
+		});
+	},
 
-    party: function (frm) {
-        update_gst_details(
-            frm,
-            "india_compliance.gst_india.overrides.payment_entry.update_party_details"
-        );
-    },
+	party: function (frm) {
+		update_gst_details(
+			frm,
+			"india_compliance.gst_india.overrides.payment_entry.update_party_details"
+		);
+	},
 
-    customer_address(frm) {
-        update_gst_details(frm);
-    },
-
-    allocate_party_amount_against_ref_docs: function (frm) {
-        console.log("called from IC");
-    },
+	customer_address(frm) {
+		update_gst_details(frm);
+	},
 });
 
 async function update_gst_details(frm, method) {

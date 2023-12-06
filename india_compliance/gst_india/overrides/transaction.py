@@ -1078,7 +1078,7 @@ class ItemGSTDetails:
 
 
 def set_gst_treatment_for_item(doc):
-    for item in doc.get("items"):
+    for item in doc.items:
         if item.gst_treatment:
             continue
 
@@ -1196,9 +1196,6 @@ def before_validate(doc, method=None):
 def update_gst_details(doc, method=None):
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
-
-    if ignore_gst_validations(doc):
-        return False
 
     set_gst_treatment_for_item(doc)
 
