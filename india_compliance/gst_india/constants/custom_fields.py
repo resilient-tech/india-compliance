@@ -330,7 +330,7 @@ CUSTOM_FIELDS = {
         {
             "fieldtype": "Section Break",
             "label": "GST Details",
-            "insert_after": "base_net_amount",
+            "insert_after": "taxable_value",
             "fieldname": "gst_details_section",
             "collapsible": 1,
         },

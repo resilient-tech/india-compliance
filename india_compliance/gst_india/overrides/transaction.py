@@ -34,15 +34,15 @@ from india_compliance.income_tax_india.overrides.tax_withholding_category import
 )
 
 DOCTYPES_WITH_GST_DETAIL = {
-    "Supplier Quotation Item",
-    "Purchase Order Item",
-    "Purchase Receipt Item",
-    "Purchase Invoice Item",
-    "Quotation Item",
-    "Sales Order Item",
-    "Delivery Note Item",
-    "Sales Invoice Item",
-    "POS Invoice Item",
+    "Supplier Quotation",
+    "Purchase Order",
+    "Purchase Receipt",
+    "Purchase Invoice",
+    "Quotation",
+    "Sales Order",
+    "Delivery Note",
+    "Sales Invoice",
+    "POS Invoice",
 }
 
 

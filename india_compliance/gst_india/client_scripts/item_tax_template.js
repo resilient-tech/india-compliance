@@ -22,7 +22,7 @@ async function show_missing_accounts_banner(frm) {
 
     // show banner
     frm.dashboard.add_comment(
-        __(`<strong>Missing GST Accounts:</strong> ${missing_accounts.join(", ")}`),
+        __(`<strong>Missing GST Accounts:</strong> {0}`, [missing_accounts.join(", ")]),
         "orange",
         true
     );
