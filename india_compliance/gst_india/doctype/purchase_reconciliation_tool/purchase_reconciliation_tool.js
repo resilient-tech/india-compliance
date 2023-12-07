@@ -1147,6 +1147,7 @@ class ImportDialog {
 
     async fetch_import_history() {
         const { message } = await this.frm.call("get_import_history", {
+            company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
             for_download: this.for_download,

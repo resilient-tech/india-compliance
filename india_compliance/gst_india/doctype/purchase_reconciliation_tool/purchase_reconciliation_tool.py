@@ -97,20 +97,20 @@ class PurchaseReconciliationTool(Document):
         return_type = ReturnType.GSTR2A
         periods = BaseUtil.get_periods(date_range, return_type)
         if not force:
-            periods = self.get_periods_to_download(return_type, periods)
+            periods = self.get_periods_to_download(company_gstin, return_type, periods)
 
         return download_gstr_2a(company_gstin, periods, otp)
 
     def download_gstr_2b(self, date_range, company_gstin, otp=None):
         return_type = ReturnType.GSTR2B
         periods = self.get_periods_to_download(
-            return_type, BaseUtil.get_periods(date_range, return_type)
+            company_gstin, return_type, BaseUtil.get_periods(date_range, return_type)
         )
         return download_gstr_2b(company_gstin, periods, otp)
 
-    def get_periods_to_download(self, return_type, periods):
+    def get_periods_to_download(self, company_gstin, return_type, periods):
         existing_periods = get_import_history(
-            self.company_gstin,
+            company_gstin,
             return_type,
             periods,
             pluck="return_period",
@@ -119,7 +119,9 @@ class PurchaseReconciliationTool(Document):
         return [period for period in periods if period not in existing_periods]
 
     @frappe.whitelist()
-    def get_import_history(self, return_type, date_range, for_download=True):
+    def get_import_history(
+        self, company_gstin, return_type, date_range, for_download=True
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if not return_type:
@@ -127,7 +129,7 @@ class PurchaseReconciliationTool(Document):
 
         return_type = ReturnType(return_type)
         periods = BaseUtil.get_periods(date_range, return_type, True)
-        history = get_import_history(self.company_gstin, return_type, periods)
+        history = get_import_history(company_gstin, return_type, periods)
 
         columns = [
             "Period",
