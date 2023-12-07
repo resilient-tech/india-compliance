@@ -142,12 +142,15 @@ def validate_company_gstins(company=None, company_gstin=None):
 
     credentials = get_company_gstin_credentials(company, company_gstin)
 
-    if not credentials:
+    if company_gstin and not credentials:
         frappe.throw(
             _("Missing GSTIN credentials for GSTIN: {gstin}.").format(
                 gstin=company_gstin
             )
         )
+
+    if not credentials:
+        frappe.throw(_("Missing credentials in GST Settings"))
 
     if company and not company_gstin:
         missing_credentials = set(get_gstin_list(company)) - set(

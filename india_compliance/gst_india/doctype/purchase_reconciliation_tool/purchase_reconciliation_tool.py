@@ -88,7 +88,7 @@ class PurchaseReconciliationTool(Document):
             if return_type == ReturnType.GSTR2A:
                 self.download_gstr_2a(date_range, company_gstin, force, otp)
 
-            if return_type == ReturnType.GSTR2B:
+            elif return_type == ReturnType.GSTR2B:
                 self.download_gstr_2b(date_range, company_gstin, otp)
 
         return True
