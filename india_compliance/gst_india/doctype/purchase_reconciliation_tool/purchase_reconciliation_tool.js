@@ -116,7 +116,6 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     async onload(frm) {
-        console.log("onload called");
         if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         frm.trigger("company");
         await add_gstr2b_alert(frm);
