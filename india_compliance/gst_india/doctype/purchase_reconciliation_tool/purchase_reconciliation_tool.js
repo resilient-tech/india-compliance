@@ -10,11 +10,101 @@ const tooltip_info = {
 };
 
 const api_enabled = india_compliance.is_api_enabled();
+const ALERT_HTML = `
+    <div class="gstr2b-alert alert alert-info fade show d-flex align-items-center justify-content-between border-0" role="alert">
+        <div>
+            You have missing GSTR-2B downloads
+        </div>
+        ${
+            api_enabled
+                ? `<button
+                id="download-gstr2b-button"
+                type="button"
+                class="btn btn-primary"
+                aria-label="Download"
+                style="outline: 0px solid black !important"
+            >
+                Download 2B
+            </button>`
+                : ""
+        }
+    </div>
+`;
 
 const ReturnType = {
     GSTR2A: "GSTR2a",
     GSTR2B: "GSTR2b",
 };
+
+function remove_gstr2b_alert(alert) {
+    if (alert.length === 0) return;
+    $(alert).remove();
+}
+
+async function add_gstr2b_alert(frm) {
+    let existing_alert = frm.layout.wrapper.find(".gstr2b-alert");
+
+    if (await are_reports_missing_or_already_downloaded(frm)) {
+        remove_gstr2b_alert(existing_alert);
+        return;
+    }
+
+    if (!frm?.doc?.inward_supply_period) {
+        remove_gstr2b_alert(existing_alert);
+        frappe.throw(__("Please provide Inward Supply Period."));
+    }
+
+    // Add alert only if there is no existing alert
+    if (existing_alert.length === 0) {
+        existing_alert = $(ALERT_HTML).prependTo(frm.layout.wrapper);
+        $("#download-gstr2b-button").on("click", function () {
+            download_gstr2b(frm);
+            remove_gstr2b_alert(existing_alert);
+        });
+    }
+}
+
+async function are_reports_missing_or_already_downloaded(frm) {
+    const { message: { data: import_history } = {} } = await frm.call(
+        "get_import_history",
+        {
+            return_type: ReturnType.GSTR2B,
+            date_range: [
+                frm.doc.inward_supply_from_date,
+                frm.doc.inward_supply_to_date,
+            ],
+            for_download: true,
+        }
+    );
+
+    if (Object.keys(import_history).length === 0) return true;
+
+    const are_all_reports_downloaded = Object.values(import_history).every(reportList =>
+        reportList.every(report => report.Status === "🟢 &nbsp; Downloaded")
+    );
+    if (are_all_reports_downloaded) return true;
+    return false;
+}
+
+async function download_gstr2b(frm = null, otp = null) {
+    if (!frm || !frm.doc.company_gstin) return;
+
+    const args = {
+        date_range: [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
+        otp,
+    };
+
+    frm.events.show_progress(frm, "download");
+
+    const { message } = await frm.call("download_gstr_2b", args);
+    if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
+        const otp = await india_compliance.get_gstin_otp(
+            message.error_type,
+            frm.doc.company_gstin
+        );
+        if (otp) download_gstr2b(frm, otp);
+    }
+}
 
 frappe.ui.form.on("Purchase Reconciliation Tool", {
     async setup(frm) {
@@ -25,9 +115,11 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
 
-    onload(frm) {
+    async onload(frm) {
+        console.log("onload called");
         if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
         frm.trigger("company");
+        await add_gstr2b_alert(frm);
     },
 
     async company(frm) {
@@ -90,8 +182,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         fetch_date_range(frm, "purchase");
     },
 
-    inward_supply_period(frm) {
-        fetch_date_range(frm, "inward_supply");
+    async inward_supply_period(frm) {
+        await fetch_date_range(frm, "inward_supply");
+        await add_gstr2b_alert(frm);
     },
 
     after_save(frm) {
