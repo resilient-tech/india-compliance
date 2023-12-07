@@ -11,7 +11,7 @@ const tooltip_info = {
 
 const api_enabled = india_compliance.is_api_enabled();
 const ALERT_HTML = `
-    <div class="gstr2b-alert alert alert-info fade show d-flex align-items-center justify-content-between border-0" role="alert">
+    <div class="gstr2b-alert alert alert-primary fade show d-flex align-items-center justify-content-between border-0" role="alert">
         <div>
             You have missing GSTR-2B downloads
         </div>
@@ -20,7 +20,7 @@ const ALERT_HTML = `
                 ? `<button
                 id="download-gstr2b-button"
                 type="button"
-                class="btn btn-primary"
+                class="btn btn-dark btn-xs"
                 aria-label="Download"
                 style="outline: 0px solid black !important"
             >
@@ -55,8 +55,8 @@ async function add_gstr2b_alert(frm) {
     existing_alert = $(ALERT_HTML).prependTo(frm.layout.wrapper);
     $(existing_alert)
         .find("#download-gstr2b-button")
-        .on("click", function () {
-            download_gstr(
+        .on("click", async function () {
+            await download_gstr(
                 frm,
                 [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
                 ReturnType.GSTR2B,
@@ -105,10 +105,10 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     async company(frm) {
-        if (frm.doc.company && !frm.doc.company_gstin) {
-            const options = await set_gstin_options(frm);
-            frm.set_value("company_gstin", options[0]);
-        }
+        if (!frm.doc.company) return;
+        const options = await set_gstin_options(frm);
+
+        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
 
     refresh(frm) {
