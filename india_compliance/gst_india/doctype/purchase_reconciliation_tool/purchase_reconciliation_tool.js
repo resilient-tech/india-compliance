@@ -31,10 +31,10 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     async company(frm) {
-        if (frm.doc.company && !frm.doc.company_gstin) {
-            const options = await set_gstin_options(frm);
-            frm.set_value("company_gstin", options[0]);
-        }
+        if (!frm.doc.company) return;
+        const options = await set_gstin_options(frm);
+
+        if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
 
     refresh(frm) {
@@ -1645,6 +1645,8 @@ async function set_gstin_options(frm) {
     });
 
     if (!message) return [];
+    message.unshift("All");
+
     const gstin_field = frm.get_field("company_gstin");
     gstin_field.set_data(message);
     return message;
