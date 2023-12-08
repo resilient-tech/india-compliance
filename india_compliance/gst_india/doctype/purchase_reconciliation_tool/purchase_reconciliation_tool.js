@@ -44,7 +44,7 @@ function remove_gstr2b_alert(alert) {
 async function add_gstr2b_alert(frm) {
     let existing_alert = frm.layout.wrapper.find(".gstr2b-alert");
 
-    if (!frm.doc.inward_supply_period || !(await has_missing_2b_downloads(frm))) {
+    if (!frm.doc.inward_supply_period || !frm.doc.__onload?.has_missing_2b_documents) {
         remove_gstr2b_alert(existing_alert);
         return;
     }
@@ -64,29 +64,6 @@ async function add_gstr2b_alert(frm) {
             );
             remove_gstr2b_alert(existing_alert);
         });
-}
-
-async function has_missing_2b_downloads(frm) {
-    const { message: { data: import_history } = {} } = await frm.call(
-        "get_import_history",
-        {
-            return_type: ReturnType.GSTR2B,
-            date_range: [
-                frm.doc.inward_supply_from_date,
-                frm.doc.inward_supply_to_date,
-            ],
-            for_download: true,
-        }
-    );
-
-    if (Object.keys(import_history).length === 0) return false;
-
-    const has_missing_downloads = Object.values(import_history).some(reportList =>
-        reportList.some(report => report["Downloaded On"] === "")
-    );
-
-    if (has_missing_downloads) return true;
-    return false;
 }
 
 frappe.ui.form.on("Purchase Reconciliation Tool", {
@@ -1434,7 +1411,7 @@ async function fetch_date_range(frm, field_prefix) {
     const period = frm.doc[field_prefix + "_period"];
     if (!period) return;
 
-    const { message } = await frm.call("get_date_range", { period });
+    const { message } = await frm.call("get_date_range_and_check_missing_documents", { period });
     if (!message) return;
 
     frm.set_value(from_date_field, message[0]);
