@@ -145,8 +145,13 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
     },
 
     async inward_supply_period(frm) {
-        await fetch_date_range(frm, "inward_supply");
+        await fetch_date_range(
+            frm,
+            "inward_supply",
+            "get_date_range_and_check_missing_documents"
+        );
         add_gstr2b_alert(frm);
+
     },
 
     after_save(frm) {
@@ -1405,13 +1410,13 @@ class EmailDialog {
     }
 }
 
-async function fetch_date_range(frm, field_prefix) {
+async function fetch_date_range(frm, field_prefix, method) {
     const from_date_field = field_prefix + "_from_date";
     const to_date_field = field_prefix + "_to_date";
     const period = frm.doc[field_prefix + "_period"];
     if (!period) return;
 
-    const { message } = await frm.call("get_date_range_and_check_missing_documents", { period });
+    const { message } = await frm.call(method || "get_date_range", { period });
     if (!message) return;
 
     frm.set_value(from_date_field, message[0]);
