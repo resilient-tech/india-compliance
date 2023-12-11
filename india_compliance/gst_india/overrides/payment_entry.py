@@ -95,8 +95,7 @@ def on_update_after_submit(doc, method=None):
 
 @frappe.whitelist()
 def update_party_details(party_details, doctype, company):
-    if isinstance(party_details, str):
-        party_details = frappe.parse_json(party_details)
+    party_details = frappe.parse_json(party_details)
 
     address = get_default_address("Customer", party_details.get("customer"))
     party_details.update(customer_address=address)
