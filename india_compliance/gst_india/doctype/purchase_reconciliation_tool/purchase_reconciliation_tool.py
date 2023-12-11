@@ -30,6 +30,13 @@ from india_compliance.gst_india.utils.gstr import (
     save_gstr_2b,
 )
 
+STATUS_MAP = {
+    "Accept My Values": "Reconciled",
+    "Accept Supplier Values": "Reconciled",
+    "Pending": "Unreconciled",
+    "Ignore": "Ignored",
+}
+
 
 class PurchaseReconciliationTool(Document):
     def __init__(self, *args, **kwargs):
@@ -288,9 +295,7 @@ class PurchaseReconciliationTool(Document):
     def unlink_documents(self, data):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        if isinstance(data, str):
-            data = frappe.parse_json(data)
-
+        data = frappe.parse_json(data)
         inward_supplies = set()
         purchases = set()
         boe = set()
@@ -348,16 +353,7 @@ class PurchaseReconciliationTool(Document):
     def apply_action(self, data, action):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        if isinstance(data, str):
-            data = frappe.parse_json(data)
-
-        STATUS_MAP = {
-            "Accept My Values": "Reconciled",
-            "Accept Supplier Values": "Reconciled",
-            "Pending": "Unreconciled",
-            "Ignore": "Ignored",
-        }
-
+        data = frappe.parse_json(data)
         status = STATUS_MAP.get(action)
 
         inward_supplies = []
@@ -551,7 +547,7 @@ def download_excel_report(data, doc, is_supplier_specific=False):
 
 def parse_params(fun):
     def wrapper(*args, **kwargs):
-        args = [frappe.parse_json(arg) for arg in args]
+        args = (frappe.parse_json(arg) for arg in args)
         kwargs = {k: frappe.parse_json(v) for k, v in kwargs.items()}
         return fun(*args, **kwargs)
 
