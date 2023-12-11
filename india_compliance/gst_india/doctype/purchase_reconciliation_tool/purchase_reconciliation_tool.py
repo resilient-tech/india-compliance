@@ -49,6 +49,17 @@ class PurchaseReconciliationTool(Document):
         )
         return {field: self.get(field) for field in fields}
 
+    def onload(self):
+        date_range = [
+            self.inward_supply_from_date,
+            self.inward_supply_to_date,
+        ]
+
+        self.set_onload(
+            "has_missing_2b_documents",
+            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin),
+        )
+
     def validate(self):
         # reconcile purchases and inward supplies
         if frappe.flags.in_install or frappe.flags.in_migrate:
@@ -208,6 +219,20 @@ class PurchaseReconciliationTool(Document):
             return
 
         return get_timespan_date_range(period.lower(), self.company)
+
+    @frappe.whitelist()
+    def get_date_range_and_check_missing_documents(self, period):
+        date_range = self.get_date_range(period)
+
+        if not date_range:
+            return
+
+        self.set_onload(
+            "has_missing_2b_documents",
+            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin),
+        )
+
+        return date_range
 
     @frappe.whitelist()
     def get_invoice_details(self, purchase_name, inward_supply_name):
@@ -466,6 +491,25 @@ def get_import_history(
         fields=fields,
         pluck=pluck,
     )
+
+
+def has_missing_2b_documents(date_range, return_type: ReturnType, company_gstin):
+    periods = BaseUtil.get_periods(date_range, return_type, True)
+
+    if not periods:
+        return False
+
+    history = get_import_history(company_gstin, return_type, periods)
+
+    if not history:
+        return True
+
+    for period in periods:
+        download = next((log for log in history if log.return_period == period), None)
+        if not download or download.data_not_found or download.request_id:
+            return True
+
+    return False
 
 
 @frappe.whitelist()
