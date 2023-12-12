@@ -801,3 +801,8 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
             break
 
     return data
+
+
+@frappe.whitelist(methods=["POST"])
+def disable_item_tax_template_notification():
+    frappe.defaults.clear_user_default("needs_item_tax_template_notification")

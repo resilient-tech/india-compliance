@@ -1,8 +1,10 @@
 import click
 
 import frappe
+import frappe.defaults
 from frappe.query_builder import Case
 from frappe.utils import get_datetime, random_string
+from frappe.utils.user import get_users_with_role
 
 from india_compliance.gst_india.constants import GST_TAX_TYPES, SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
@@ -123,9 +125,9 @@ def create_or_update_item_tax_templates(companies):
             for account in companies_gst_accounts[company]
         ]
 
-        for template_name in NEW_TEMPLATES.values():
+        for new_template in NEW_TEMPLATES.values():
             if template_name := frappe.db.get_value(
-                DOCTYPE, {"company": company, "gst_treatment": template_name}
+                DOCTYPE, {"company": company, "gst_treatment": new_template}
             ):
                 templates.setdefault(template_name, []).append(template_name)
                 continue
@@ -133,16 +135,16 @@ def create_or_update_item_tax_templates(companies):
             doc = frappe.get_doc(
                 {
                     "doctype": DOCTYPE,
-                    "title": template_name,
+                    "title": new_template,
                     "company": company,
-                    "gst_treatment": template_name,
+                    "gst_treatment": new_template,
                     "tax_rate": 0,
                 }
             )
 
             doc.extend("taxes", gst_accounts)
             doc.insert(ignore_if_duplicate=True)
-            templates.setdefault(template_name, []).append(doc.name)
+            templates.setdefault(new_template, []).append(doc.name)
 
     return templates
 
@@ -240,6 +242,7 @@ def update_gst_treatment_for_transactions():
     "Disclaimer: No specific way to differentate between nil and exempted. Hence all transactions are updated to nil"
 
     show_disclaimer = False
+    show_notification = False
     for doctype in TRANSACTION_DOCTYPES:
         # GST Treatment is not required in Material Request Item
         if doctype == "Material Request Item":
@@ -250,6 +253,7 @@ def update_gst_treatment_for_transactions():
 
         if frappe.db.get_value(doctype, {"is_nil_exempt": 1}):
             show_disclaimer = True
+            show_notification = True
             (
                 query.set(table.gst_treatment, "Nil-Rated")
                 .where(table.is_nil_exempt == 1)
@@ -257,6 +261,7 @@ def update_gst_treatment_for_transactions():
             )
 
         if frappe.db.get_value(doctype, {"is_non_gst": 1}):
+            show_notification = True
             (
                 query.set(table.gst_treatment, "Non-GST")
                 .where(table.is_non_gst == 1)
@@ -264,7 +269,6 @@ def update_gst_treatment_for_transactions():
             )
 
     if show_disclaimer:
-        # TODO: Add disclaimer on login with documentation link for accounts manager
         click.secho(
             "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",
             color="yellow",
@@ -273,6 +277,12 @@ def update_gst_treatment_for_transactions():
             "All transactions that were marked as Nil or Exempt, are now marked as Nil Rated.",
             color="red",
         )
+
+    if show_notification:
+        for user in get_users_with_role("Accounts Manager"):
+            frappe.defaults.set_user_default(
+                "needs_item_tax_template_notification", 1, user=user
+            )
 
 
 def update_gst_details_for_transactions(companies):
@@ -412,4 +422,6 @@ def build_query_and_update_gst_details(gst_details, doctype):
         conditions[field] = conditions[field].else_(transaction_item[field])
         update_query = update_query.set(transaction_item[field], conditions[field])
 
-    update_query = update_query.where(transaction_item.name.isin(gst_details)).run()
+    update_query = update_query.where(
+        transaction_item.name.isin(list(gst_details.keys()))
+    ).run()
