@@ -162,10 +162,10 @@ def validate_mandatory_fields(doc, fields, error_message=None):
 @frappe.whitelist()
 def get_valid_gst_accounts(company):
     frappe.has_permission("Item Tax Template", "read", throw=True)
-    return get_valid_accounts(company, True, True, throw=False)
+    return get_valid_accounts(company, for_sales=True, for_purchase=True, throw=False)
 
 
-def get_valid_accounts(company, for_sales=False, for_purchase=False, throw=True):
+def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=True):
     all_valid_accounts = []
     intra_state_accounts = []
     inter_state_accounts = []
@@ -228,7 +228,9 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         frappe.throw(message, title=title or _("Invalid GST Account"))
 
     all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-        doc.company, is_sales_transaction, not is_sales_transaction
+        doc.company,
+        for_sales=is_sales_transaction,
+        for_purchase=not is_sales_transaction,
     )
 
     # Company GSTIN = Party GSTIN

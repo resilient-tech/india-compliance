@@ -37,15 +37,18 @@ def validate_tax_rates(doc):
     if not doc.taxes:
         return
 
-    valid_accounts = get_valid_accounts(doc.company, for_sales=True, for_purchase=True)
+    __, intra_state_accounts, inter_state_accounts = get_valid_accounts(
+        doc.company, for_sales=True, for_purchase=True
+    )
+
     invalid_tax_rates = {}
     for row in doc.taxes:
         # check intra state
-        if row.tax_type in valid_accounts[1] and doc.gst_rate != row.tax_rate * 2:
+        if row.tax_type in intra_state_accounts and doc.gst_rate != row.tax_rate * 2:
             invalid_tax_rates[row.idx] = doc.gst_rate / 2
 
         # check inter state
-        elif row.tax_type in valid_accounts[2] and doc.gst_rate != row.tax_rate:
+        elif row.tax_type in inter_state_accounts and doc.gst_rate != row.tax_rate:
             invalid_tax_rates[row.idx] = doc.gst_rate
 
     if not invalid_tax_rates:
