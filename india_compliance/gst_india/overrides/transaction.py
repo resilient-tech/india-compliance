@@ -21,6 +21,7 @@ from india_compliance.gst_india.doctype.gstin.gstin import (
 )
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
+    get_gst_accounts_by_tax_type,
     get_gst_accounts_by_type,
     get_hsn_settings,
     get_place_of_supply,
@@ -199,7 +200,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     - SEZ / Inter-State supplies should not have CGST or SGST account
     - Intra-State supplies should not have IGST account
     """
-    # TODO: Validate charge_type for cess_non_advol and other accounts
     if not doc.taxes:
         return
 
@@ -231,6 +231,9 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         doc.company,
         for_sales=is_sales_transaction,
         for_purchase=not is_sales_transaction,
+    )
+    cess_non_advol_accounts = get_gst_accounts_by_tax_type(
+        doc.company, "cess_non_advol"
     )
 
     # Company GSTIN = Party GSTIN
@@ -351,6 +354,30 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
+
+        if (
+            row.charge_type == "On Item Quantity"
+            and account_head not in cess_non_advol_accounts
+        ):
+            _throw(
+                _(
+                    "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
+                    " as it is not a Cess Non Advol Account"
+                ).format(row.idx),
+                title=_("Invalid Charge Type"),
+            )
+
+        if (
+            row.charge_type != "On Item Quantity"
+            and account_head in cess_non_advol_accounts
+        ):
+            _throw(
+                _(
+                    "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
+                    " as it is a Cess Non Advol Account"
+                ).format(row.idx),
+                title=_("Invalid Charge Type"),
+            )
 
     used_accounts = set(row.account_head for row in rows_to_validate)
     if not is_inter_state:
