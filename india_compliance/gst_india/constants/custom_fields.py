@@ -681,7 +681,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "is_non_gst",
-            "label": "Is Non GST ",
+            "label": "Is Non GST",
             "fieldtype": "Check",
             "insert_after": "is_nil_exempt",
         },
