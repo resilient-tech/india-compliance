@@ -19,6 +19,7 @@ GSTIN_STATUS = {
     "CNL": "Cancelled",
     "INA": "Inactive",
     "PRO": "Provisional",
+    "SUS": "Suspended",
 }
 
 GSTIN_BLOCK_STATUS = {"U": 0, "B": 1}
