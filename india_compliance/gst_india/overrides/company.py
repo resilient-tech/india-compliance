@@ -22,11 +22,14 @@ def make_company_fixtures(doc, method=None):
     if not frappe.flags.country_change or doc.country != "India":
         return
 
-    create_company_fixtures(doc.name)
+    create_company_fixtures(doc.name, doc.default_gst_rate)
 
 
-def create_company_fixtures(company):
-    make_default_tax_templates(company)
+def create_company_fixtures(company, tax_rate=None):
+    if not frappe.flags.in_setup_wizard:
+        # Manual Trigger in Setup Wizard with custom rate
+        make_default_tax_templates(company, tax_rate=tax_rate)
+
     make_default_customs_accounts(company)
     make_default_gst_expense_accounts(company)
 
@@ -57,12 +60,39 @@ def make_default_gst_expense_accounts(company):
 
 
 @frappe.whitelist()
-def make_default_tax_templates(company: str):
+def make_default_tax_templates(company: str, tax_rate=None):
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
-    default_taxes = frappe.get_file_json(get_data_file_path("tax_defaults.json"))
+    default_taxes = get_tax_defaults(tax_rate)
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
+
+
+def get_tax_defaults(tax_rate):
+    if not tax_rate:
+        tax_rate = 18
+
+    tax_rate = int(tax_rate)
+    default_taxes = frappe.get_file_json(get_data_file_path("tax_defaults.json"))
+    if tax_rate == 18:
+        return default_taxes
+
+    return modify_tax_defaults(default_taxes, tax_rate)
+
+
+def modify_tax_defaults(default_taxes, tax_rate):
+    # Identifying new_rate based on existing rate
+    for template_type in ("sales_tax_templates", "purchase_tax_templates"):
+        template = default_taxes["chart_of_accounts"]["*"][template_type]
+        for tax in template:
+            for row in tax.get("taxes"):
+                rate = (
+                    tax_rate if row["account_head"]["tax_rate"] == 18 else tax_rate / 2
+                )
+
+                row["account_head"]["tax_rate"] = rate
+
+    return default_taxes
 
 
 def update_gst_settings(company):

@@ -54,6 +54,15 @@ CUSTOM_FIELDS = {
         },
         *party_fields[1:],
         {
+            "fieldname": "default_gst_rate",
+            "label": "Default GST Rate (%)",
+            "fieldtype": "Select",
+            "options": "5\n12\n18\n28",
+            "default": 18,
+            "depends_on": "eval:doc.country == 'India' && doc.__islocal",
+            "insert_after": "country",
+        },
+        {
             "fieldname": "default_customs_expense_account",
             "label": "Default Customs Duty Expense Account",
             "fieldtype": "Link",

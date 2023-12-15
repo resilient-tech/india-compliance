@@ -16,6 +16,14 @@ function update_erpnext_slides_settings() {
 
     slide.fields.splice(_index, 0, company_gstin_field);
 
+    slide.fields.splice(4, 0, {
+        fieldname: "default_gst_rate",
+        fieldtype: "Select",
+        label: __("Default GST Rate (%)"),
+        options: [5, 12, 18, 28],
+        default: 18,
+    });
+
     slide.fields.push({
         fieldname: "enable_audit_trail",
         fieldtype: "Check",
