@@ -660,10 +660,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     """
 
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
-
-    if isinstance(party_details, str):
-        party_details = frappe.parse_json(party_details)
-
+    party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
     party_address_field = (

@@ -14,6 +14,59 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
+@frappe.whitelist()
+def get_outstanding_reference_documents(args, validate=False):
+    from erpnext.accounts.doctype.payment_entry.payment_entry import (
+        get_outstanding_reference_documents,
+    )
+
+    reference_documents = get_outstanding_reference_documents(args, validate)
+
+    invoice_list = [item["voucher_no"] for item in reference_documents]
+    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
+        invoice_list
+    )
+
+    for d in reference_documents:
+        d["reconciliation_status"] = reconciliation_status_dict.get(d["voucher_no"], "")
+
+    return reference_documents
+
+
+def get_reconciliation_status_for_invoice_list(invoice_list):
+    if not invoice_list:
+        return
+
+    invoice_list = frappe.parse_json(invoice_list)
+
+    reconciliation_status_dict = dict(
+        frappe.get_all(
+            "Purchase Invoice",
+            filters={"name": ["in", invoice_list]},
+            fields=("name", "reconciliation_status"),
+            as_list=True,
+        )
+    )
+    return reconciliation_status_dict
+
+
+def onload(doc, method=None):
+    if not doc.references:
+        return
+
+    invoice_list = [
+        x.reference_name
+        for x in doc.references
+        if x.reference_doctype == "Purchase Invoice"
+    ]
+
+    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
+        invoice_list
+    )
+
+    doc.set_onload("reconciliation_status_dict", reconciliation_status_dict)
+
+
 def validate(doc, method=None):
     if not doc.taxes:
         return
@@ -42,8 +95,7 @@ def on_update_after_submit(doc, method=None):
 
 @frappe.whitelist()
 def update_party_details(party_details, doctype, company):
-    if isinstance(party_details, str):
-        party_details = frappe.parse_json(party_details)
+    party_details = frappe.parse_json(party_details)
 
     address = get_default_address("Customer", party_details.get("customer"))
     party_details.update(customer_address=address)
