@@ -141,7 +141,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
-            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
+            # Fields.COMPANY_GSTIN: Rule.MISMATCH,
             Fields.BILL_NO: Rule.EXACT_MATCH,
             # Fields.PLACE_OF_SUPPLY: Rule.MISMATCH,
             # Fields.IS_REVERSE_CHARGE: Rule.MISMATCH,
@@ -157,7 +157,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
-            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
+            # Fields.COMPANY_GSTIN: Rule.MISMATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             # Fields.PLACE_OF_SUPPLY: Rule.MISMATCH,
             # Fields.IS_REVERSE_CHARGE: Rule.MISMATCH,
@@ -334,6 +334,7 @@ class InwardSupply:
             "bill_date",
             "name",
             "supplier_gstin",
+            "company_gstin",
             "is_reverse_charge",
             "place_of_supply",
         ]
@@ -460,6 +461,7 @@ class PurchaseInvoice:
         fields = [
             "name",
             "supplier_gstin",
+            "company_gstin",
             "bill_no",
             "place_of_supply",
             "is_reverse_charge",
@@ -593,7 +595,6 @@ class BillOfEntry:
         tax_fields = [
             self.query_tax_amount(account).as_(tax[:-8])
             for tax, account in gst_accounts.items()
-            if account
         ]
 
         fields = [
@@ -602,6 +603,7 @@ class BillOfEntry:
             self.BOE.total_taxable_value.as_("taxable_value"),
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
+            self.BOE.company_gstin,
             self.PI.supplier_name,
             self.PI.place_of_supply,
             self.PI.is_reverse_charge,
@@ -1144,6 +1146,8 @@ class ReconciledData(BaseReconciliation):
         default_dict = {
             "supplier_name": "",
             "supplier_gstin": "",
+            "purchase_company_gstin": "",
+            "inward_supply_company_gstin": "",
             "bill_no": "",
             "bill_date": "",
             "match_status": "",
@@ -1179,6 +1183,8 @@ class ReconciledData(BaseReconciliation):
                 "supplier_name": data.supplier_name
                 or self.guess_supplier_name(data.supplier_gstin),
                 "supplier_gstin": data.supplier_gstin or data.supplier_name,
+                "purchase_company_gstin": purchase.get("company_gstin") or "",
+                "inward_supply_company_gstin": inward_supply.get("company_gstin") or "",
                 "purchase_doctype": purchase.get("doctype"),
                 "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
