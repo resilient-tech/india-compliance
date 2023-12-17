@@ -220,11 +220,12 @@ class GSTR3BReport(Document):
     def get_inward_nil_exempt(self, state):
         inward_nil_exempt = frappe.db.sql(
             """
-            SELECT p.place_of_supply, p.supplier_address,i.taxable_value, i.is_nil_exempt, i.is_non_gst
+            SELECT p.place_of_supply, p.supplier_address,
+            i.taxable_value, i.gst_treatment
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
             and p.is_opening = 'No'
-            and (i.is_nil_exempt = 1 or i.is_non_gst = 1 or p.gst_category = 'Registered Composition') and
+            and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) = %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
             """,
@@ -244,26 +245,21 @@ class GSTR3BReport(Document):
                 d.place_of_supply = "00-" + cstr(state)
 
             supplier_state = address_state_map.get(d.supplier_address) or state
+            is_intra_state = cstr(supplier_state) == cstr(
+                d.place_of_supply.split("-")[1]
+            )
             amount = flt(d.taxable_value, 2)
 
-            if (
-                d.is_nil_exempt == 1
-                or d.get("gst_category") == "Registered Composition"
-            ) and cstr(supplier_state) == cstr(d.place_of_supply.split("-")[1]):
-                inward_nil_exempt_details["gst"]["intra"] += amount
-            elif (
-                d.is_nil_exempt == 1
-                or d.get("gst_category") == "Registered Composition"
-            ) and cstr(supplier_state) != cstr(d.place_of_supply.split("-")[1]):
-                inward_nil_exempt_details["gst"]["inter"] += amount
-            elif d.is_non_gst == 1 and cstr(supplier_state) == cstr(
-                d.place_of_supply.split("-")[1]
-            ):
-                inward_nil_exempt_details["non_gst"]["intra"] += amount
-            elif d.is_non_gst == 1 and cstr(supplier_state) != cstr(
-                d.place_of_supply.split("-")[1]
-            ):
-                inward_nil_exempt_details["non_gst"]["inter"] += amount
+            if d.gst_treatment != "Non-GST":
+                if is_intra_state:
+                    inward_nil_exempt_details["gst"]["intra"] += amount
+                else:
+                    inward_nil_exempt_details["gst"]["inter"] += amount
+            else:
+                if is_intra_state:
+                    inward_nil_exempt_details["non_gst"]["intra"] += amount
+                else:
+                    inward_nil_exempt_details["non_gst"]["inter"] += amount
 
         return inward_nil_exempt_details
 
@@ -300,7 +296,7 @@ class GSTR3BReport(Document):
 
     def get_outward_items(self, doctype):
         self.invoice_items = frappe._dict()
-        self.is_nil_exempt = []
+        self.is_nil_or_exempt = []
         self.is_non_gst = []
 
         if not self.invoice_map:
@@ -310,7 +306,7 @@ class GSTR3BReport(Document):
             f"""
             SELECT
                 item_code, parent, taxable_value, item_tax_rate,
-                is_nil_exempt, is_non_gst
+                gst_treatment
             FROM
                 `tab{doctype} Item`
             WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
@@ -323,10 +319,16 @@ class GSTR3BReport(Document):
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
             self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
 
-            if d.is_nil_exempt and d.item_code not in self.is_nil_exempt:
-                self.is_nil_exempt.append(d.item_code)
+            is_nil_rated = d.gst_treatment == "Nil-Rated"
+            is_exempted = d.gst_treatment == "Exempted"
+            is_non_gst = d.gst_treatment == "Non-GST"
 
-            if d.is_non_gst and d.item_code not in self.is_non_gst:
+            if (
+                is_nil_rated or is_exempted
+            ) and d.item_code not in self.is_nil_or_exempt:
+                self.is_nil_or_exempt.append(d.item_code)
+
+            if is_non_gst and d.item_code not in self.is_non_gst:
                 self.is_non_gst.append(d.item_code)
 
     def get_outward_tax_details(self, doctype):
@@ -372,7 +374,9 @@ class GSTR3BReport(Document):
                             if not (
                                 cgst_or_sgst
                                 or account in self.account_heads.get("iamt")
-                                or (item_code in self.is_non_gst + self.is_nil_exempt)
+                                or (
+                                    item_code in self.is_non_gst + self.is_nil_or_exempt
+                                )
                             ):
                                 continue
 
@@ -411,7 +415,7 @@ class GSTR3BReport(Document):
             else:
                 for item in items.keys():
                     if (
-                        item in self.is_nil_exempt + self.is_non_gst
+                        item in self.is_nil_or_exempt + self.is_non_gst
                         and item
                         not in self.items_based_on_tax_rate.get(invoice, {}).get(0, [])
                     ):
@@ -433,7 +437,7 @@ class GSTR3BReport(Document):
             for rate, items in items_based_on_rate.items():
                 for item_code, taxable_value in self.invoice_items.get(inv).items():
                     if item_code in items:
-                        if item_code in self.is_nil_exempt:
+                        if item_code in self.is_nil_or_exempt:
                             self.report_dict["sup_details"]["osup_nil_exmp"][
                                 "txval"
                             ] += taxable_value

@@ -400,8 +400,8 @@ class Gstr1Report:
 
         items = frappe.db.sql(
             """
-			select item_code, item_name, parent, taxable_value, item_tax_rate, is_nil_exempt,
-			is_non_gst from `tab%s Item`
+			select item_code, item_name, parent, taxable_value, item_tax_rate, gst_treatment
+            from `tab%s Item`
 			where parent in (%s)
 		"""
             % (self.doctype, ", ".join(["%s"] * len(self.invoices))),
@@ -414,14 +414,16 @@ class Gstr1Report:
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
             self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
 
-            if d.is_nil_exempt:
-                self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
-                if d.item_tax_rate:
-                    self.nil_exempt_non_gst[d.parent][0] += d.get("taxable_value", 0)
-                else:
-                    self.nil_exempt_non_gst[d.parent][1] += d.get("taxable_value", 0)
-            elif d.is_non_gst:
-                self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
+            is_nil_rated = d.gst_treatment == "Nil-Rated"
+            is_exempted = d.gst_treatment == "Exempted"
+            is_non_gst = d.gst_treatment == "Non-GST"
+
+            self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
+            if is_nil_rated:
+                self.nil_exempt_non_gst[d.parent][0] += d.get("taxable_value", 0)
+            elif is_exempted:
+                self.nil_exempt_non_gst[d.parent][1] += d.get("taxable_value", 0)
+            elif is_non_gst:
                 self.nil_exempt_non_gst[d.parent][2] += d.get("taxable_value", 0)
 
     def get_items_based_on_tax_rate(self):
@@ -1165,7 +1167,7 @@ class GSTR1DocumentIssuedSummary:
                 .else_(0)
                 .as_("same_gstin_billing"),
                 self.sales_invoice.is_opening,
-                self.sales_invoice_item.is_non_gst,
+                self.sales_invoice_item.gst_treatment,
             )
             .where(self.sales_invoice.company == self.filters.company)
             .where(
@@ -1301,7 +1303,7 @@ class GSTR1DocumentIssuedSummary:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
                     doc
                 )
-            elif doc.is_non_gst:
+            elif doc.gst_treatment == "Non-GST":
                 nature_of_document["Excluded from Report (Has Non GST Item)"].append(
                     doc
                 )
