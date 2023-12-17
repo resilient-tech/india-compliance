@@ -40,6 +40,7 @@ POST_INSTALL_PATCHES = (
     "update_payment_entry_fields",
     "update_itc_classification_field",
     "improve_item_tax_template",
+    "update_vehicle_no_field_in_purchase_receipt",
 )
 
 
