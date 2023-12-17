@@ -15,18 +15,11 @@ $(document).on("app_ready", async function () {
 			maintained in India Compliance App.
 			<br><br>
 
-			Documentation Link:
-            <a
-              href='https://www.mca.gov.in/Ministry/pdf/AccountsAmendmentRules_24032021.pdf'
-              target='_blank'
-            >MCA Notification dated 24-03-2021</a>,
-			<br>
-
 			Migration Guide:
 			<a
-				href='https://github.com/frappe/erpnext/wiki/Migrating-from-version-13-to-version-14#item-tax-template-changes'
+				href='https://docs.indiacompliance.app/docs/developer-guide/migration-guide#item-tax-templates'
 				target='_blank'
-			>Migrating from version 13 to version 14</a>
+			>Migrating Item Tax Template</a>
 			<br><br>
 
 			<strong>Breaking Change:</strong>
