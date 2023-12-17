@@ -110,7 +110,12 @@ class ReturnsAuthenticate(BaseAPI):
             endpoint="authenticate",
         )
 
-    def refresh_auth_token(self, auth_token):
+    def refresh_auth_token(self):
+        auth_token = self.get_auth_token()
+
+        if not auth_token:
+            return
+
         return super().post(
             json={
                 "action": "REFRESHTOKEN",
@@ -157,13 +162,14 @@ class ReturnsAuthenticate(BaseAPI):
         if not json:
             return
 
-        if json.get("app_key"):
-            json["app_key"] = encrypt_using_public_key(
-                self.app_key, self.get_public_certificate()
-            )
+        for key in ("app_key", "otp"):
+            if not self.auth_token:
+                json[key] = encrypt_using_public_key(
+                    json[key], self.get_public_certificate()
+                )
 
-        if json.get("otp"):
-            json["otp"] = aes_encrypt_data(json.get("otp"), self.app_key)
+            else:
+                json[key] = aes_encrypt_data(json[key], self.session_key)
 
     def get_public_certificate(self):
         certificate = self.settings.gstn_public_certificate
@@ -178,6 +184,15 @@ class ReturnsAuthenticate(BaseAPI):
             certificate = PublicCertificate().get_gstn_public_certificate()
 
         return certificate.encode()
+
+    def get_auth_token(self):
+        if not self.auth_token:
+            return None
+
+        if self.session_expiry <= now_datetime():
+            return None
+
+        return self.auth_token
 
 
 class ReturnsAPI(ReturnsAuthenticate):
@@ -332,15 +347,6 @@ class ReturnsAPI(ReturnsAuthenticate):
         )
 
         return app_key
-
-    def get_auth_token(self):
-        if not self.auth_token:
-            return None
-
-        if self.session_expiry <= now_datetime():
-            return None
-
-        return self.auth_token
 
     def download_files(self, return_period, token, otp=None):
         response = self.get(
