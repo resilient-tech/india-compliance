@@ -344,12 +344,12 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             taxable_value = invoice.taxable_value
 
             if (
-                invoice.is_nil_exempt == 1
+                invoice.gst_treatment in ["Nil-Rated", "Exempted"]
                 or invoice.get("gst_category") == "Registered Composition"
             ):
                 nature_of_supply = "Composition Scheme, Exempted, Nil Rated"
 
-            elif invoice.is_non_gst == 1:
+            elif invoice.gst_treatment == "Non-GST":
                 nature_of_supply = "Non GST Supply"
 
             if supplier_state == place_of_supply:
@@ -390,8 +390,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 purchase_invoice.place_of_supply,
                 purchase_invoice.supplier_address,
                 Sum(purchase_invoice_item.taxable_value).as_("taxable_value"),
-                purchase_invoice_item.is_nil_exempt,
-                purchase_invoice_item.is_non_gst,
+                purchase_invoice_item.gst_treatment,
                 purchase_invoice.supplier_gstin,
                 purchase_invoice.supplier_address,
             )
@@ -400,8 +399,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.name == purchase_invoice_item.parent)
                 & (
-                    (purchase_invoice_item.is_nil_exempt == 1)
-                    | (purchase_invoice_item.is_non_gst == 1)
+                    (purchase_invoice_item.gst_treatment != "Taxable")
                     | (purchase_invoice.gst_category == "Registered Composition")
                 )
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
