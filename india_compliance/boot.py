@@ -26,6 +26,7 @@ def set_bootinfo(bootinfo):
     bootinfo["ic_api_enabled_from_conf"] = bool(frappe.conf.ic_api_secret)
 
     set_trigger_for_audit_trail_notification(bootinfo)
+    set_trigger_for_item_tax_template_notification(bootinfo)
 
 
 def set_trigger_for_audit_trail_notification(bootinfo):
@@ -39,3 +40,12 @@ def set_trigger_for_audit_trail_notification(bootinfo):
         return
 
     bootinfo["needs_audit_trail_notification"] = True
+
+
+def set_trigger_for_item_tax_template_notification(bootinfo):
+    if not bootinfo.sysdefaults or not cint(
+        bootinfo.sysdefaults.get("needs_item_tax_template_notification", 0)
+    ):
+        return
+
+    bootinfo["needs_item_tax_template_notification"] = True
