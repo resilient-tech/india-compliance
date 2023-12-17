@@ -311,6 +311,7 @@ def get_advance_payment_entries_for_regional(
     against_all_orders=False,
     limit=None,
     condition=None,
+    payment_name=None,
 ):
     """
     Get Advance Payment Entries with GST Taxes
@@ -326,6 +327,7 @@ def get_advance_payment_entries_for_regional(
         against_all_orders=against_all_orders,
         limit=limit,
         condition=condition,
+        payment_name=payment_name,
     )
 
     # if not Sales Invoice and is Payment Reconciliation
