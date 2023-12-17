@@ -2,16 +2,10 @@ import frappe
 from frappe import _
 from frappe.utils import rounded
 
-from india_compliance.gst_india.overrides.transaction import (
-    get_valid_accounts,
-    is_indian_registered_company,
-)
+from india_compliance.gst_india.overrides.transaction import get_valid_accounts
 
 
 def validate(doc, method=None):
-    if not is_indian_registered_company(doc):
-        return
-
     validate_zero_tax_options(doc)
     validate_tax_rates(doc)
 
@@ -38,8 +32,11 @@ def validate_tax_rates(doc):
         return
 
     __, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-        doc.company, for_sales=True, for_purchase=True
+        doc.company, for_sales=True, for_purchase=True, throw=False
     )
+
+    if not intra_state_accounts and not inter_state_accounts:
+        return
 
     invalid_tax_rates = {}
     for row in doc.taxes:

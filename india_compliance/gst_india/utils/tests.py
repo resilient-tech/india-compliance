@@ -122,6 +122,7 @@ def _append_taxes(
     rate=9,
     charge_type="On Net Total",
     row_id=None,
+    tax_amount=None,
 ):
     if isinstance(accounts, str):
         accounts = [accounts]
@@ -143,6 +144,9 @@ def _append_taxes(
             "rate": rate,
             "cost_center": f"Main - {company_abbr}",
         }
+
+        if tax_amount:
+            tax["tax_amount"] = tax_amount
 
         if account.endswith("RCM"):
             tax["add_deduct_tax"] = "Deduct"

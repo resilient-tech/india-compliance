@@ -311,13 +311,16 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     for row in rows_to_validate:
         account_head = row.account_head
 
-        if row.charge_type == "Actual" and not row.item_wise_tax_detail:
-            _throw(
-                _(
-                    "Tax Row #{0}: Charge Type is set to Actual. However, this would not compute item taxes, and your further reporting will be affected."
-                ).format(row.idx),
-                title=_("Invalid Charge Type"),
-            )
+        if row.charge_type == "Actual":
+            item_tax_detail = frappe.parse_json(row.item_wise_tax_detail)
+            for tax_rate, tax_amount in item_tax_detail.values():
+                if tax_amount and not tax_rate:
+                    _throw(
+                        _(
+                            "Tax Row #{0}: Charge Type is set to Actual. However, this would not compute item taxes, and your further reporting will be affected."
+                        ).format(row.idx),
+                        title=_("Invalid Charge Type"),
+                    )
 
         if account_head not in all_valid_accounts:
             _throw(
@@ -1067,6 +1070,8 @@ class ItemGSTDetails:
         """
         item_key = item.item_code or item.item_name
         item_tax_detail = self.item_tax_details.get(item_key)
+        if not item_tax_detail:
+            return {}
 
         if item_tax_detail.count == 1:
             return item_tax_detail
