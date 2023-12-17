@@ -317,7 +317,8 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 if tax_amount and not tax_rate:
                     _throw(
                         _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, this would not compute item taxes, and your further reporting will be affected."
+                            "Tax Row #{0}: Charge Type is set to Actual. However,"
+                            " this would not compute item taxes, and your further reporting will be affected."
                         ).format(row.idx),
                         title=_("Invalid Charge Type"),
                     )

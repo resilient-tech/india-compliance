@@ -54,13 +54,13 @@ async function get_tax_rate_for_account(frm, account) {
     if (!gst_rate) return 0;
 
     const gst_accounts = await get_gst_accounts(frm);
-    if (!gst_accounts) return;
+    if (!gst_accounts) return null;
 
     const [_, intra_state_accounts, inter_state_accounts] = gst_accounts;
 
     if (intra_state_accounts.includes(account)) return gst_rate / 2;
     else if (inter_state_accounts.includes(account)) return gst_rate;
-    else return;
+    else return null;
 }
 
 async function get_missing_gst_accounts(frm) {

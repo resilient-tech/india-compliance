@@ -65,7 +65,7 @@ def create_item_tax_template(**data):
     if data.get("taxes"):
         doc.extend("taxes", data.get("taxes"))
 
-        return save_item_tax_template(doc)
+        return save_item_tax_template(doc, data)
 
     __, intra_state_accounts, inter_state_accounts = get_valid_accounts(
         doc.company, for_sales=True, for_purchase=True, throw=False
