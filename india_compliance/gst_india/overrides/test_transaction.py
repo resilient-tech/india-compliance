@@ -488,9 +488,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(.*Charge Type cannot be On Item Quantity as it is not a Cess Non Advol Account.*)$"
-            ),
+            re.compile(r"^(.*as it is not a Cess Non Advol Account.*)$"),
             doc.save,
         )
 
@@ -499,9 +497,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(.*Charge Type must be On Item Quantity as it is a Cess Non Advol Account.*)$"
-            ),
+            re.compile(r"^(.*as it is a Cess Non Advol Account.*)$"),
             doc.save,
         )
 
@@ -527,7 +523,9 @@ class TestTransaction(FrappeTestCase):
         )
 
         # test non gst treatment
-        doc = create_transaction(**self.transaction_details, item="_Test Non GST Item")
+        doc = create_transaction(
+            **self.transaction_details, item_code="_Test Non GST Item"
+        )
         self.assertDocumentEqual(
             {"gst_treatment": "Non-GST"},
             doc.items[0],
