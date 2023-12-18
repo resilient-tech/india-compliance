@@ -83,8 +83,11 @@ function is_gst_invoice(frm) {
         frm.doc.is_opening != "Yes" &&
         frm.doc.company_gstin &&
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&
-        !frm.doc.items.some(item => item.is_non_gst) &&
-        !frm.doc.items.every(item => item.is_nil_exempt);
+        !frm.doc.items.some(item => item.gst_treatment == "Non-GST") &&
+        !frm.doc.items.every(
+            item =>
+                item.gst_treatment == "Nil-Rated" || item.gst_treatment == "Exempted"
+        );
 
     if (frm.doc.place_of_supply === "96-Other Countries") {
         return gst_invoice_conditions && frm.doc.is_export_with_gst;
