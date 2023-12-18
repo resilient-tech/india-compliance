@@ -15,12 +15,12 @@ from india_compliance.gst_india.utils import get_all_gst_accounts
 
 
 @frappe.whitelist()
-def get_outstanding_reference_documents(args, validate=False):
+def get_outstanding_reference_documents(args):
     from erpnext.accounts.doctype.payment_entry.payment_entry import (
         get_outstanding_reference_documents,
     )
 
-    reference_documents = get_outstanding_reference_documents(args, validate)
+    reference_documents = get_outstanding_reference_documents(args)
 
     invoice_list = [item["voucher_no"] for item in reference_documents]
     reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
