@@ -35,16 +35,16 @@ class TestCompanyFixtures(FrappeTestCase):
         self.assertTrue(frappe.db.exists("Tax Category", "Reverse Charge In-State"))
 
     def test_get_tax_defaults(self):
-        tax_rate = 12
-        default_taxes = get_tax_defaults(tax_rate=tax_rate)
+        gst_rate = 12
+        default_taxes = get_tax_defaults(gst_rate)
 
         for template_type in ("sales_tax_templates", "purchase_tax_templates"):
             template = default_taxes["chart_of_accounts"]["*"][template_type]
             for tax in template:
                 for row in tax.get("taxes"):
                     expected_rate = (
-                        tax_rate
+                        gst_rate
                         if "IGST" in row["account_head"]["account_name"]
-                        else tax_rate / 2
+                        else gst_rate / 2
                     )
                     self.assertEqual(row["account_head"]["tax_rate"], expected_rate)
