@@ -27,6 +27,8 @@
   "enable_e_waybill_from_pr",
   "fetch_e_waybill_data",
   "attach_e_waybill_print",
+  "enable_retry_e_waybill_generation",
+  "is_retry_e_waybill_generation_pending",
   "column_break_10",
   "auto_generate_e_waybill",
   "e_waybill_threshold",
@@ -379,12 +381,27 @@
    "fieldname": "enable_e_waybill_from_pr",
    "fieldtype": "Check",
    "label": "Enable e-Waybill Generation from Purchase Receipt"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval: doc.enable_e_waybill",
+   "description": "Automatically Retry e-Invoice Generation for Gateway Timeout Errors",
+   "fieldname": "enable_retry_e_waybill_generation",
+   "fieldtype": "Check",
+   "label": "Enable Retry e-Waybill Generation"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_retry_e_waybill_generation_pending",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Retry e-Waybill Generation Pending"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-11-29 17:29:51.606431",
+ "modified": "2023-12-18 17:25:36.664859",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
