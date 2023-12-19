@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt
 from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -22,11 +23,14 @@ def make_company_fixtures(doc, method=None):
     if not frappe.flags.country_change or doc.country != "India":
         return
 
-    create_company_fixtures(doc.name)
+    create_company_fixtures(doc.name, doc.default_gst_rate)
 
 
-def create_company_fixtures(company):
-    make_default_tax_templates(company)
+def create_company_fixtures(company, gst_rate=None):
+    if not frappe.flags.in_setup_wizard:
+        # Manual Trigger in Setup Wizard with custom rate
+        make_default_tax_templates(company, gst_rate)
+
     make_default_customs_accounts(company)
     make_default_gst_expense_accounts(company)
 
@@ -57,12 +61,42 @@ def make_default_gst_expense_accounts(company):
 
 
 @frappe.whitelist()
-def make_default_tax_templates(company: str):
+def make_default_tax_templates(company: str, gst_rate=None):
     frappe.has_permission("Company", ptype="write", doc=company, throw=True)
 
-    default_taxes = frappe.get_file_json(get_data_file_path("tax_defaults.json"))
+    default_taxes = get_tax_defaults(gst_rate)
     from_detailed_data(company, default_taxes)
     update_gst_settings(company)
+
+
+def get_tax_defaults(gst_rate=None):
+    if not gst_rate:
+        gst_rate = 18
+
+    default_taxes = frappe.get_file_json(get_data_file_path("tax_defaults.json"))
+
+    gst_rate = flt(gst_rate, 3)
+    if gst_rate == 18:
+        return default_taxes
+
+    return modify_tax_defaults(default_taxes, gst_rate)
+
+
+def modify_tax_defaults(default_taxes, gst_rate):
+    # Identifying new_rate based on existing rate
+    for template_type in ("sales_tax_templates", "purchase_tax_templates"):
+        template = default_taxes["chart_of_accounts"]["*"][template_type]
+        for tax in template:
+            for row in tax.get("taxes"):
+                rate = (
+                    gst_rate
+                    if row["account_head"]["tax_rate"] == 18
+                    else flt(gst_rate / 2, 3)
+                )
+
+                row["account_head"]["tax_rate"] = rate
+
+    return default_taxes
 
 
 def update_gst_settings(company):
