@@ -152,6 +152,8 @@ class TestTransactionData(FrappeTestCase):
                 "party_name": "_Test Registered Customer",
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
                 "total": 100.0,
+                "total_taxable_value": 100.0,
+                "total_non_taxable_value": 0.0,
                 "rounding_adjustment": 0.0,
                 "grand_total": 100.0,
                 "grand_total_in_foreign_currency": "",
@@ -193,6 +195,8 @@ class TestTransactionData(FrappeTestCase):
                 "party_name": "_Test Registered Customer",
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
                 "total": 100.0,
+                "total_taxable_value": 100.0,
+                "total_non_taxable_value": 0.0,
                 "rounding_adjustment": -0.18,
                 "grand_total": 119.0,
                 "grand_total_in_foreign_currency": "",
@@ -255,6 +259,7 @@ class TestTransactionData(FrappeTestCase):
                     "cess_non_advol_rate": 0,
                     "tax_rate": 0.0,
                     "total_value": 100.0,
+                    "gst_treatment": "Taxable",
                 }
             ],
         )
@@ -287,6 +292,7 @@ class TestTransactionData(FrappeTestCase):
                     "cess_non_advol_rate": 0,
                     "tax_rate": 18.0,
                     "total_value": 236.0,
+                    "gst_treatment": "Taxable",
                 }
             ],
         )

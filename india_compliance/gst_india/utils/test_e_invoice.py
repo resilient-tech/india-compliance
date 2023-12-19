@@ -295,6 +295,65 @@ class TestEInvoice(FrappeTestCase):
         )
 
     @responses.activate
+    def test_generate_e_invoice_with_nil_exempted_item(self):
+        """Generate test e-Invoice for nil/exempted items Item"""
+
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"), do_not_submit=True, is_in_state=True
+        )
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
+        si.save()
+        si.submit()
+
+        # Assert if request data given in Json
+        self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
+
+        # Mock response for generating irn
+        self._mock_e_invoice_response(data=test_data)
+
+        generate_e_invoice(si.name)
+
+        # Assert if Integration Request Log generated
+        self.assertDocumentEqual(
+            {
+                "output": frappe.as_json(test_data.get("response_data"), indent=4),
+            },
+            frappe.get_doc(
+                "Integration Request",
+                {"reference_doctype": "Sales Invoice", "reference_docname": si.name},
+            ),
+        )
+
+        # Assert if Sales Doc updated
+        self.assertDocumentEqual(
+            {
+                "irn": test_data.get("response_data").get("result").get("Irn"),
+                "einvoice_status": "Generated",
+            },
+            frappe.get_doc("Sales Invoice", si.name),
+        )
+
+        self.assertDocumentEqual(
+            {"name": test_data.get("response_data").get("result").get("Irn")},
+            frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+        )
+
+        self.assertFalse(
+            frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name")
+        )
+
+    @responses.activate
     def test_credit_note_e_invoice_with_goods_item(self):
         """Generate test e-Invoice for returned Sales Invoices"""
         test_data = self.e_invoice_test_data.get("return_invoice")
@@ -557,6 +616,36 @@ class TestEInvoice(FrappeTestCase):
         )
 
         si.irn = ""
+
+        si.items = []
+        append_item(
+            si,
+            frappe._dict(
+                item_code="_Test Nil Rated Item",
+                item_name="_Test Nil Rated Item",
+                gst_hsn_code="61149090",
+                gst_treatment="Nil-Rated",
+            ),
+        )
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items*)$"
+            ),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
         frappe.db.set_single_value("GST Settings", "enable_e_invoice", 0)
 
         self.assertRaisesRegex(
