@@ -673,7 +673,6 @@ class BaseReconciliation:
         self, additional_fields=None, names=None, only_names=False
     ):
         return InwardSupply(
-            company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
@@ -683,7 +682,6 @@ class BaseReconciliation:
 
     def get_unmatched_inward_supply(self, category, amended_category):
         return InwardSupply(
-            company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
@@ -693,7 +691,6 @@ class BaseReconciliation:
 
     def query_inward_supply(self, additional_fields=None):
         query = InwardSupply(
-            company=self.company,
             company_gstin=self.company_gstin,
             from_date=self.inward_supply_from_date,
             to_date=self.inward_supply_to_date,
