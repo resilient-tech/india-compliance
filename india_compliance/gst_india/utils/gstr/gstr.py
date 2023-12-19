@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import now_datetime, add_to_date
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -138,7 +139,7 @@ def validate_company_gstins(company=None, company_gstin=None):
     Returns:
         dict: A dictionary where the keys are the GSTINs and the values are booleans indicating whether the authentication is valid.
     """
-    frappe.has_permission("GST Settings", "write", throw=True)
+    frappe.has_permission("GST Settings", throw=True)
 
     credentials = get_company_gstin_credentials(company, company_gstin)
 
@@ -169,7 +170,7 @@ def validate_company_gstins(company=None, company_gstin=None):
             credential.session_expiry
             and credential.auth_token
             and credential.session_expiry
-            > frappe.utils.now_datetime() + frappe.utils.datetime.timedelta(minutes=30)
+            > add_to_date(now_datetime(), minutes=30)
         )
         for credential in credentials
     }
@@ -195,14 +196,14 @@ def get_company_gstin_credentials(company=None, company_gstin=None):
 
 @frappe.whitelist()
 def request_otp(company_gstin):
-    frappe.has_permission("GST Settings", "write", throw=True)
+    frappe.has_permission("GST Settings", throw=True)
 
     return ReturnsAPI(company_gstin).request_otp()
 
 
 @frappe.whitelist()
 def authenticate_otp(company_gstin, otp):
-    frappe.has_permission("GST Settings", "write", throw=True)
+    frappe.has_permission("GST Settings", throw=True)
 
     api = ReturnsAPI(company_gstin)
     response = api.autheticate_with_otp(otp)

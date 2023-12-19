@@ -91,8 +91,6 @@ class PurchaseReconciliationTool(Document):
             elif return_type == ReturnType.GSTR2B:
                 self.download_gstr_2b(date_range, company_gstin, otp)
 
-        return True
-
     def download_gstr_2a(self, date_range, company_gstin, force=False, otp=None):
         return_type = ReturnType.GSTR2A
         periods = BaseUtil.get_periods(date_range, return_type)
