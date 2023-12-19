@@ -22,7 +22,6 @@ from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
     IMPORT_CATEGORY,
     GSTRCategory,
-    ReturnsAPI,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
@@ -78,29 +77,38 @@ class PurchaseReconciliationTool(Document):
             return save_gstr_2b(self.company_gstin, period, json_data)
 
     @frappe.whitelist()
-    def download_gstr_2a(self, date_range, force=False, otp=None):
+    def download_gstr(
+        self, return_type, company_gstins, date_range, force=False, otp=None
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
+        return_type = ReturnType(return_type)
+
+        for company_gstin in company_gstins:
+            if return_type == ReturnType.GSTR2A:
+                self.download_gstr_2a(date_range, company_gstin, force, otp)
+
+            elif return_type == ReturnType.GSTR2B:
+                self.download_gstr_2b(date_range, company_gstin, otp)
+
+    def download_gstr_2a(self, date_range, company_gstin, force=False, otp=None):
         return_type = ReturnType.GSTR2A
         periods = BaseUtil.get_periods(date_range, return_type)
         if not force:
-            periods = self.get_periods_to_download(return_type, periods)
+            periods = self.get_periods_to_download(company_gstin, return_type, periods)
 
-        return download_gstr_2a(self.company_gstin, periods, otp)
+        return download_gstr_2a(company_gstin, periods, otp)
 
-    @frappe.whitelist()
-    def download_gstr_2b(self, date_range, otp=None):
-        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
+    def download_gstr_2b(self, date_range, company_gstin, otp=None):
         return_type = ReturnType.GSTR2B
         periods = self.get_periods_to_download(
-            return_type, BaseUtil.get_periods(date_range, return_type)
+            company_gstin, return_type, BaseUtil.get_periods(date_range, return_type)
         )
-        return download_gstr_2b(self.company_gstin, periods, otp)
+        return download_gstr_2b(company_gstin, periods, otp)
 
-    def get_periods_to_download(self, return_type, periods):
+    def get_periods_to_download(self, company_gstin, return_type, periods):
         existing_periods = get_import_history(
-            self.company_gstin,
+            company_gstin,
             return_type,
             periods,
             pluck="return_period",
@@ -109,7 +117,9 @@ class PurchaseReconciliationTool(Document):
         return [period for period in periods if period not in existing_periods]
 
     @frappe.whitelist()
-    def get_import_history(self, return_type, date_range, for_download=True):
+    def get_import_history(
+        self, company_gstin, return_type, date_range, for_download=True
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if not return_type:
@@ -117,7 +127,7 @@ class PurchaseReconciliationTool(Document):
 
         return_type = ReturnType(return_type)
         periods = BaseUtil.get_periods(date_range, return_type, True)
-        history = get_import_history(self.company_gstin, return_type, periods)
+        history = get_import_history(company_gstin, return_type, periods)
 
         columns = [
             "Period",
@@ -512,13 +522,6 @@ def parse_params(fun):
         return fun(*args, **kwargs)
 
     return wrapper
-
-
-@frappe.whitelist()
-def resend_otp(company_gstin):
-    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
-    return ReturnsAPI(company_gstin).request_otp()
 
 
 class BuildExcel:
