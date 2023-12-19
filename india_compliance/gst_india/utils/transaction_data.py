@@ -65,6 +65,15 @@ class GSTTransactionData:
             else "base_rounded_total"
         )
 
+        total = 0
+        total_taxable_value = 0
+
+        for row in self.doc.items:
+            total += row.taxable_value
+
+            if row.gst_treatment == "Taxable":
+                total_taxable_value += row.taxable_value
+
         self.transaction_details.update(
             {
                 "company_name": self.sanitize_value(self.doc.company),
@@ -75,8 +84,10 @@ class GSTTransactionData:
                     )
                 ),
                 "date": format_date(self.doc.posting_date, self.DATE_FORMAT),
-                "total": abs(
-                    self.rounded(sum(row.taxable_value for row in self.doc.items))
+                "total": abs(self.rounded(total)),
+                "total_taxable_value": abs(self.rounded(total_taxable_value)),
+                "total_non_taxable_value": abs(
+                    self.rounded(total - total_taxable_value)
                 ),
                 "rounding_adjustment": rounding_adjustment,
                 "grand_total": abs(self.rounded(self.doc.get(grand_total_fieldname))),

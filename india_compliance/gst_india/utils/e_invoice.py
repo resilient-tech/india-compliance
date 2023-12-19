@@ -370,7 +370,7 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
             )
         )
 
-    if not validate_taxed_item(doc, throw=throw):
+    if not validate_taxable_item(doc, throw=throw):
         # e-Invoice not required for invoice wih all nill-rated/exempted items.
         return
 
@@ -412,7 +412,7 @@ def validate_hsn_codes_for_e_invoice(doc):
     )
 
 
-def validate_taxed_item(doc, throw=True):
+def validate_taxable_item(doc, throw=True):
     """
     Validates that the document contains at least one GST taxable item.
 
@@ -420,7 +420,7 @@ def validate_taxed_item(doc, throw=True):
     Otherwise, it simply returns False.
 
     """
-    # Check if there is at least one taxed item in the document
+    # Check if there is at least one taxable item in the document
     if any(item.gst_treatment == "Taxable" for item in doc.items):
         return True
 
@@ -428,7 +428,7 @@ def validate_taxed_item(doc, throw=True):
         return
 
     frappe.throw(
-        _("e-Invoice not required for invoice with all Nil-Rated/Exempted items"),
+        _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items"),
     )
 
 
@@ -500,37 +500,26 @@ class EInvoiceData(GSTTransactionData):
         self.validate_transaction()
         self.set_transaction_details()
         self.set_item_list()
-        self.update_transaction_values_for_nil_exempt()
+        self.update_other_charges()
         self.set_transporter_details()
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
     def set_item_list(self):
         self.item_list = []
-        self.total_nil_exempt_taxable_value = 0
 
         for item_details in self.get_all_item_details():
-            # nil-exempt items will be excluded and taxable value will be adjusted in other charges
-            if item_details.get("gst_treatment") in [
-                "Nil-Rated",
-                "Exempted",
-            ]:
-                self.total_nil_exempt_taxable_value += item_details.taxable_value
+            if item_details.get("gst_treatment") != "Taxable":
                 continue
 
             self.item_list.append(self.get_item_data(item_details))
 
-    def update_transaction_values_for_nil_exempt(self):
-        self.transaction_details.update(
-            {
-                "assessment_value": (
-                    self.transaction_details.total - self.total_nil_exempt_taxable_value
-                ),
-                "other_charges": (
-                    self.transaction_details.other_charges
-                    + self.total_nil_exempt_taxable_value
-                ),
-            }
+    def update_other_charges(self):
+        """
+        Non Taxable Value should be added to other charges.
+        """
+        self.transaction_details.other_charges += (
+            self.transaction_details.total_non_taxable_value
         )
 
     def validate_transaction(self):
@@ -787,7 +776,7 @@ class EInvoiceData(GSTTransactionData):
             },
             "ItemList": self.item_list,
             "ValDtls": {
-                "AssVal": self.transaction_details.assessment_value,
+                "AssVal": self.transaction_details.total_taxable_value,
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,

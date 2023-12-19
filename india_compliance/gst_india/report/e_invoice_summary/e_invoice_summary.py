@@ -6,7 +6,7 @@ from functools import reduce
 import frappe
 from frappe import _
 from frappe.query_builder import Case
-from frappe.query_builder.functions import Coalesce, Count, IfNull
+from frappe.query_builder.functions import Coalesce, IfNull
 from frappe.utils.data import get_datetime
 
 from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
@@ -177,7 +177,7 @@ def get_cancelled_active_e_invoice_query(filters, sales_invoice, query):
 
 def e_invoice_conditions(e_invoice_applicability_date):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
-    sub_query = validate_sales_invoice_item()
+    taxable_invoices = validate_sales_invoice_item()
     conditions = []
 
     conditions.append(sales_invoice.posting_date >= e_invoice_applicability_date)
@@ -190,7 +190,7 @@ def e_invoice_conditions(e_invoice_applicability_date):
             | (Coalesce(sales_invoice.billing_address_gstin, "") != "")
         )
     )
-    conditions.append(sales_invoice.name.notin(sub_query))
+    conditions.append(sales_invoice.name.isin(taxable_invoices))
 
     return reduce(lambda a, b: a & b, conditions)
 
@@ -198,28 +198,15 @@ def e_invoice_conditions(e_invoice_applicability_date):
 def validate_sales_invoice_item():
     sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 
-    non_taxed_invoices = (
+    taxable_invoices = (
         frappe.qb.from_(sales_invoice_item)
         .select(sales_invoice_item.parent)
         .where(sales_invoice_item.parenttype == "Sales Invoice")
-        .groupby(sales_invoice_item.parent)
-        .having(
-            Count("*")
-            == Count(
-                Case()
-                .when(
-                    sales_invoice_item.gst_treatment.isin(
-                        ["Exempted", "Nil-Rated", "Non-GST"]
-                    ),
-                    1,
-                )
-                .else_(None)
-            )
-        )
+        .where(sales_invoice_item.gst_treatment == "Taxable")
         .distinct()
     )
 
-    return non_taxed_invoices
+    return taxable_invoices
 
 
 def get_columns(filters=None):

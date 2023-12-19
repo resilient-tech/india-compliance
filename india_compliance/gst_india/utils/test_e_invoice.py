@@ -630,7 +630,7 @@ class TestEInvoice(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
             re.compile(
-                r"^(e-Invoice not required for invoice with all Nil-Rated/Exempted items*)$"
+                r"^(e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items*)$"
             ),
             validate_e_invoice_applicability,
             si,
