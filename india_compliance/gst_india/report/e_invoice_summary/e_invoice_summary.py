@@ -6,7 +6,7 @@ from functools import reduce
 import frappe
 from frappe import _
 from frappe.query_builder import Case
-from frappe.query_builder.functions import Coalesce, IfNull
+from frappe.query_builder.functions import Coalesce, Count, IfNull
 from frappe.utils.data import get_datetime
 
 from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
@@ -198,14 +198,28 @@ def e_invoice_conditions(e_invoice_applicability_date):
 def validate_sales_invoice_item():
     sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 
-    sub_query = (
+    non_taxed_invoices = (
         frappe.qb.from_(sales_invoice_item)
         .select(sales_invoice_item.parent)
-        .where(sales_invoice_item.gst_treatment == "Non-GST")
         .where(sales_invoice_item.parenttype == "Sales Invoice")
+        .groupby(sales_invoice_item.parent)
+        .having(
+            Count("*")
+            == Count(
+                Case()
+                .when(
+                    sales_invoice_item.gst_treatment.isin(
+                        ["Exempted", "Nil-Rated", "Non-GST"]
+                    ),
+                    1,
+                )
+                .else_(None)
+            )
+        )
         .distinct()
     )
-    return sub_query
+
+    return non_taxed_invoices
 
 
 def get_columns(filters=None):

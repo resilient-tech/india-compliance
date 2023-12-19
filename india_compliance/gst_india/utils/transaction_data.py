@@ -270,6 +270,7 @@ class GSTTransactionData:
                         row.item_name, regex=3, max_length=300
                     ),
                     "uom": get_gst_uom(row.uom, self.settings),
+                    "gst_treatment": row.gst_treatment,
                 }
             )
             self.update_item_details(item_details, row)
