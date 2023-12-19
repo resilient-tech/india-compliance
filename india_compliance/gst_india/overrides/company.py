@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt
 from erpnext.setup.setup_wizard.operations.taxes_setup import from_detailed_data
 
 from india_compliance.gst_india.utils import get_data_file_path
@@ -68,12 +69,13 @@ def make_default_tax_templates(company: str, tax_rate=None):
     update_gst_settings(company)
 
 
-def get_tax_defaults(tax_rate):
+def get_tax_defaults(tax_rate=None):
     if not tax_rate:
         tax_rate = 18
 
-    tax_rate = int(tax_rate)
     default_taxes = frappe.get_file_json(get_data_file_path("tax_defaults.json"))
+
+    tax_rate = flt(tax_rate, 3)
     if tax_rate == 18:
         return default_taxes
 
@@ -87,7 +89,9 @@ def modify_tax_defaults(default_taxes, tax_rate):
         for tax in template:
             for row in tax.get("taxes"):
                 rate = (
-                    tax_rate if row["account_head"]["tax_rate"] == 18 else tax_rate / 2
+                    tax_rate
+                    if row["account_head"]["tax_rate"] == 18
+                    else flt(tax_rate / 2, 3)
                 )
 
                 row["account_head"]["tax_rate"] = rate

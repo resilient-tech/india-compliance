@@ -115,9 +115,9 @@ def setup_tax_template(params):
         return
 
     if not params.default_gst_rate:
-        params.default_gst_rate = 18
+        params.default_gst_rate = "18.0"
 
-    make_default_tax_templates(params.company_name, int(params.default_gst_rate))
+    make_default_tax_templates(params.company_name, params.default_gst_rate)
     frappe.db.set_value(
         "Company", params.company_name, "default_gst_rate", params.default_gst_rate
     )

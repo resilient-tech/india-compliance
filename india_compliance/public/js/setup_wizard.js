@@ -19,9 +19,9 @@ function update_erpnext_slides_settings() {
     slide.fields.splice(4, 0, {
         fieldname: "default_gst_rate",
         fieldtype: "Select",
-        label: __("Default GST Rate (%)"),
-        options: [5, 12, 18, 28],
-        default: 18,
+        label: __("Default GST Rate"),
+        options: [0.0, 0.1, 0.25, 1.0, 1.5, 3.0, 5.0, 6.0, 7.5, 12.0, 18.0, 28.0],
+        default: 18.0,
     });
 
     slide.fields.push({
