@@ -201,7 +201,7 @@ def validate_sales_invoice_item():
     sub_query = (
         frappe.qb.from_(sales_invoice_item)
         .select(sales_invoice_item.parent)
-        .where(sales_invoice_item.is_non_gst == 1)
+        .where(sales_invoice_item.gst_treatment == "Non-GST")
         .where(sales_invoice_item.parenttype == "Sales Invoice")
         .distinct()
     )

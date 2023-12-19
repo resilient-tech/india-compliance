@@ -284,8 +284,20 @@
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
- "links": [],
- "modified": "2023-09-14 16:43:49.370165",
+ "links": [
+  {
+   "group": "Payment",
+   "link_doctype": "Journal Entry",
+   "link_fieldname": "reference_name",
+   "table_fieldname": "reference_name"
+  },
+  {
+   "group": "GST Logs",
+   "link_doctype": "GST Inward Supply",
+   "link_fieldname": "link_name"
+  }
+ ],
+ "modified": "2023-12-13 16:43:40.501418",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",

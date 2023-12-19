@@ -581,7 +581,7 @@ class GSTTransactionData:
 
 
 def validate_non_gst_items(doc, throw=True):
-    if doc.items[0].is_non_gst:
+    if doc.items[0].gst_treatment == "Non-GST":
         if not throw:
             return
 
