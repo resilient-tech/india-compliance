@@ -223,6 +223,7 @@ function is_e_invoice_applicable(frm) {
         (frm.doc.place_of_supply === "96-Other Countries" ||
             frm.doc.billing_address_gstin) &&
         frm.doc.items[0].gst_treatment != "Non-GST" &&
+        frm.doc.items.some(item => item.gst_treatment == "Taxable") &&
         is_valid_e_invoice_applicability_date(frm)
     );
 }
