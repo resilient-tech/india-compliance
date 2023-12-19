@@ -388,6 +388,7 @@ class TestEWaybill(FrappeTestCase):
                     "cess_non_advol_rate": 0,
                     "tax_rate": 0.0,
                     "total_value": 100.0,
+                    "gst_treatment": "Taxable",
                 }
             ],
             EWaybillData(si).get_all_item_details(),
