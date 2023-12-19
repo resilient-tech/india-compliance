@@ -195,6 +195,8 @@ class TestTransactionData(FrappeTestCase):
                 "party_name": "_Test Registered Customer",
                 "date": format_date(frappe.utils.today(), "dd/mm/yyyy"),
                 "total": 100.0,
+                "total_taxable_value": 100.0,
+                "total_non_taxable_value": 0.0,
                 "rounding_adjustment": -0.18,
                 "grand_total": 119.0,
                 "grand_total_in_foreign_currency": "",
