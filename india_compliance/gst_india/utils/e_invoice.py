@@ -166,7 +166,8 @@ def generate_e_invoice(docname, throw=True, force=False):
             result = api.generate_irn(data)
 
     except GSPServerError as e:
-        return handle_server_errors(settings, doc, e)
+        handle_server_errors(settings, doc, e)
+        return
 
     except frappe.ValidationError as e:
         doc.db_set({"einvoice_status": "Failed"})
@@ -457,7 +458,7 @@ def handle_server_errors(settings, doc, error):
 
     error_message_title = {
         GatewayTimeoutError: _("Gateway Timeout Error"),
-        GSPServerError: _("GSP GST Server Down"),
+        GSPServerError: _("GSP/GST Server Down"),
     }
 
     einvoice_status = "Failed"
@@ -480,8 +481,6 @@ def handle_server_errors(settings, doc, error):
         title=error_message_title.get(type(error)),
         indicator="yellow",
     )
-
-    return
 
 
 class EInvoiceData(GSTTransactionData):
