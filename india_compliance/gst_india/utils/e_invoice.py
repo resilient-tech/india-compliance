@@ -13,7 +13,7 @@ from frappe.utils import (
     random_string,
 )
 
-from india_compliance.exceptions import GatewayTimeoutError
+from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
@@ -90,7 +90,7 @@ def generate_e_invoices(docnames, force=False):
         try:
             generate_e_invoice(docname, throw=False, force=force)
 
-        except GatewayTimeoutError:
+        except GSPServerError:
             frappe.db.set_value(
                 "Sales Invoice",
                 {"name": ("in", docnames), "irn": ("is", "not set")},
@@ -165,27 +165,9 @@ def generate_e_invoice(docname, throw=True, force=False):
 
             result = api.generate_irn(data)
 
-    except GatewayTimeoutError as e:
-        einvoice_status = "Failed"
-
-        if settings.enable_retry_e_invoice_generation:
-            einvoice_status = "Auto-Retry"
-            settings.db_set(
-                "is_retry_e_invoice_generation_pending", 1, update_modified=False
-            )
-
-        doc.db_set({"einvoice_status": einvoice_status}, commit=True)
-
-        frappe.msgprint(
-            _(
-                "Government services are currently slow, resulting in a Gateway Timeout error."
-                " We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried every 5 minutes."
-            ),
-            _("Warning"),
-            indicator="yellow",
-        )
-
-        raise e
+    except GSPServerError as e:
+        handle_server_errors(settings, doc, e)
+        return
 
     except frappe.ValidationError as e:
         doc.db_set({"einvoice_status": "Failed"})
@@ -468,6 +450,36 @@ def get_e_invoice_info(doc):
         doc.irn,
         ("is_generated_in_sandbox_mode", "acknowledged_on"),
         as_dict=True,
+    )
+
+
+def handle_server_errors(settings, doc, error):
+    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+
+    error_message_title = {
+        GatewayTimeoutError: _("Gateway Timeout Error"),
+        GSPServerError: _("GSP/GST Server Down"),
+    }
+
+    einvoice_status = "Failed"
+
+    if settings.enable_retry_e_invoice_generation:
+        einvoice_status = "Auto-Retry"
+        settings.db_set(
+            "is_retry_e_invoice_generation_pending", 1, update_modified=False
+        )
+        error_message += (
+            " Your e-invoice generation will be automatically retried every 5 minutes."
+        )
+    else:
+        error_message += " Please try again after some time."
+
+    doc.db_set({"einvoice_status": einvoice_status}, commit=True)
+
+    frappe.msgprint(
+        msg=_(error_message),
+        title=error_message_title.get(type(error)),
+        indicator="yellow",
     )
 
 
