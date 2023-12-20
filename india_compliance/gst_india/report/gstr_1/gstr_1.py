@@ -3,15 +3,33 @@
 import json
 import re
 from datetime import date
+from io import BytesIO
 
+import openpyxl
+from openpyxl.styles import Font
+from openpyxl.utils import get_column_letter
 from pypika.terms import Case
 
 import frappe
 from frappe import _
+from frappe.desk.query_report import build_xlsx_data
+from frappe.desk.utils import provide_binary_file
 from frappe.query_builder import Criterion
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
+from frappe.utils.xlsxutils import ILLEGAL_CHARACTERS_RE, handle_html
 
+from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
+    get_columns as get_columns_hsn,
+)
+from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
+    get_conditions as get_conditions_hsn,
+)
+from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
+    get_hsn_data,
+    get_hsn_wise_json_data,
+)
+from india_compliance.gst_india.report.utils import get_company_gstin_number
 from india_compliance.gst_india.utils import (
     get_escaped_name,
     get_gst_accounts_by_type,
@@ -31,6 +49,7 @@ TYPES_OF_BUSINESS = {
     "Adjustment": "txpd",
     "NIL Rated": "nil",
     "Document Issued Summary": "doc_issue",
+    "HSN": "hsn",
 }
 
 
@@ -96,6 +115,8 @@ class Gstr1Report:
             self.get_nil_rated_invoices()
         elif self.filters.get("type_of_business") == "Document Issued Summary":
             self.get_documents_issued_data()
+        elif self.filters.get("type_of_business") == "HSN":
+            self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
         elif self.invoices:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
@@ -342,6 +363,9 @@ class Gstr1Report:
             self.data.append(row)
 
     def get_conditions(self):
+        if self.filters.get("type_of_business") == "HSN":
+            return get_conditions_hsn(self.filters)
+
         conditions = ""
 
         for opts in (
@@ -1004,7 +1028,9 @@ class Gstr1Report:
                     "width": 150,
                 },
             ]
-
+        elif self.filters.get("type_of_business") == "HSN":
+            self.columns = get_columns_hsn()
+            return
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 
 
@@ -1338,7 +1364,7 @@ class GSTR1DocumentIssuedSummary:
 def get_gstr1_json(filters, data=None):
     frappe.has_permission("GL Entry", throw=True)
 
-    report_dict = set_gst_json_defaults(filters)
+    report_dict = set_gst_defaults(filters)
     filters = json.loads(filters)
     filename = ["gstr-1"]
     gstin = report_dict["gstin"]
@@ -1360,7 +1386,7 @@ def get_gstr1_json(filters, data=None):
         report_data = data_dict.get(type_of_business) or format_data_to_dict(
             execute(filters)
         )
-        report_data = get_json(type_of_business, gstin, report_data)
+        report_data = get_json(type_of_business, gstin, report_data, filters)
 
         if not report_data:
             continue
@@ -1373,7 +1399,7 @@ def get_gstr1_json(filters, data=None):
     }
 
 
-def get_json(type_of_business, gstin, data):
+def get_json(type_of_business, gstin, data, filters):
     if data and list(data[-1].values())[0] == "Total":
         data = data[:-1]
 
@@ -1437,8 +1463,11 @@ def get_json(type_of_business, gstin, data):
     if type_of_business == "Document Issued Summary":
         return get_document_issued_summary_json(data)
 
+    if type_of_business == "HSN":
+        return get_hsn_wise_json_data(filters, data)
 
-def set_gst_json_defaults(filters):
+
+def set_gst_defaults(filters):
     if isinstance(filters, str):
         filters = json.loads(filters)
 
@@ -1826,39 +1855,6 @@ def get_rate_and_tax_details(row, gstin):
     return {"num": int(num), "itm_det": itm_det}
 
 
-def get_company_gstin_number(company, address=None, all_gstins=False):
-    gstin = ""
-    if address:
-        gstin = frappe.db.get_value("Address", address, "gstin")
-
-    if not gstin:
-        filters = [
-            ["is_your_company_address", "=", 1],
-            ["Dynamic Link", "link_doctype", "=", "Company"],
-            ["Dynamic Link", "link_name", "=", company],
-            ["Dynamic Link", "parenttype", "=", "Address"],
-            ["gstin", "!=", ""],
-        ]
-        gstin = frappe.get_all(
-            "Address",
-            filters=filters,
-            pluck="gstin",
-            order_by="is_primary_address desc",
-        )
-        if gstin and not all_gstins:
-            gstin = gstin[0]
-
-    if not gstin:
-        address = frappe.bold(address) if address else ""
-        frappe.throw(
-            _("Please set valid GSTIN No. in Company Address {} for company {}").format(
-                address, frappe.bold(company)
-            )
-        )
-
-    return gstin
-
-
 @frappe.whitelist()
 def download_json_file():
     """download json content in a file"""
@@ -1886,3 +1882,104 @@ def is_inter_state(invoice_detail):
         return True
     else:
         return False
+
+
+@frappe.whitelist()
+def get_gstr1_excel(filters, data=None, columns=None):
+    frappe.has_permission("GL Entry", throw=True)
+
+    report_dict = set_gst_defaults(filters)
+    filters = json.loads(filters)
+
+    filename = ["gstr-1"]
+    gstin = report_dict["gstin"]
+    report_types = TYPES_OF_BUSINESS
+
+    data_dict = {}
+    if data:
+        type_of_business = filters.get("type_of_business")
+        filename.append(frappe.scrub(type_of_business))
+
+        report_types = {type_of_business: TYPES_OF_BUSINESS[type_of_business]}
+        data_dict.setdefault(
+            type_of_business,
+            {
+                "result": json.loads(data),
+                "columns": json.loads(columns) if columns else [],
+            },
+        )
+
+    filename.extend([gstin, report_dict["fp"]])
+
+    for type_of_business, abbr in report_types.items():
+
+        if data_dict.get(type_of_business):
+            continue
+
+        filters["type_of_business"] = type_of_business
+        report_data = execute(filters)
+
+        data_dict.setdefault(
+            type_of_business,
+            {
+                "result": format_data_to_dict(report_data),
+                "columns": report_data[0] or [],
+            },
+        )
+
+    content = make_xlsx_gstr1(data_dict).getvalue()
+
+    provide_binary_file("_".join(filename), "xlsx", content)
+
+
+def make_xlsx_gstr1(report_data):
+    wb = openpyxl.Workbook(write_only=True)
+
+    for type_of_business, data in report_data.items():
+        visible_idx = list(range(len(data["result"])))
+
+        xlsx_data, column_widths = build_xlsx_data(
+            frappe._dict(data), visible_idx, None
+        )
+
+        ws = wb.create_sheet(type_of_business)
+        set_sheet_formatting(ws, column_widths)
+        append_data_to_sheet(ws, xlsx_data, type_of_business)
+
+    xlsx_file = BytesIO()
+    wb.save(xlsx_file)
+    return xlsx_file
+
+
+def set_sheet_formatting(ws, column_widths):
+    for i, column_width in enumerate(column_widths):
+        if column_width:
+            ws.column_dimensions[get_column_letter(i + 1)].width = column_width
+
+    row1 = ws.row_dimensions[1]
+    row1.font = Font(name="Calibri", bold=True)
+
+
+def append_data_to_sheet(ws, xlsx_data, type_of_business):
+    for row in xlsx_data:
+        clean_row = []
+        for item in row:
+            value = handle_value(item, type_of_business)
+            clean_row.append(value)
+
+        ws.append(clean_row)
+
+
+def handle_value(item, type_of_business):
+    if isinstance(item, str) and (
+        type_of_business not in ["Data Import Template", "Data Export"]
+    ):
+        value = handle_html(item)
+    else:
+        value = item
+
+    if isinstance(item, str) and next(ILLEGAL_CHARACTERS_RE.finditer(value), None):
+        # Remove illegal characters from the string
+        value = ILLEGAL_CHARACTERS_RE.sub("", value)
+
+    return value
