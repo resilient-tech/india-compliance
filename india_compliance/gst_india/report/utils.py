@@ -1,4 +1,5 @@
 import frappe
+from frappe import _
 
 
 def get_company_gstin_number(company, address=None, all_gstins=False):
