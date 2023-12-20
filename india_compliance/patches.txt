@@ -3,8 +3,8 @@ execute:import frappe; frappe.delete_doc_if_exists("DocType", "GSTIN")
 
 [post_model_sync]
 india_compliance.patches.v14.set_default_for_overridden_accounts_setting
-execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #37
-execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #5
+execute:from india_compliance.gst_india.setup import create_custom_fields; create_custom_fields() #40
+execute:from india_compliance.gst_india.setup import create_property_setters; create_property_setters() #6
 india_compliance.patches.post_install.remove_old_fields
 india_compliance.patches.post_install.update_company_gstin
 india_compliance.patches.post_install.update_custom_role_for_e_invoice_summary
@@ -35,3 +35,5 @@ india_compliance.patches.post_install.update_company_fixtures #1
 india_compliance.patches.post_install.update_itc_classification_field
 india_compliance.patches.v14.update_purchase_reco_email_template
 india_compliance.patches.v14.delete_purchase_receipt_standard_custom_fields
+india_compliance.patches.post_install.improve_item_tax_template
+india_compliance.patches.post_install.update_vehicle_no_field_in_purchase_receipt

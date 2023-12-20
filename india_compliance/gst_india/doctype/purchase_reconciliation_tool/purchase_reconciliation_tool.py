@@ -29,6 +29,13 @@ from india_compliance.gst_india.utils.gstr import (
     save_gstr_2b,
 )
 
+STATUS_MAP = {
+    "Accept My Values": "Reconciled",
+    "Accept Supplier Values": "Reconciled",
+    "Pending": "Unreconciled",
+    "Ignore": "Ignored",
+}
+
 
 class PurchaseReconciliationTool(Document):
     def __init__(self, *args, **kwargs):
@@ -47,6 +54,17 @@ class PurchaseReconciliationTool(Document):
             "include_ignored",
         )
         return {field: self.get(field) for field in fields}
+
+    def onload(self):
+        date_range = [
+            self.inward_supply_from_date,
+            self.inward_supply_to_date,
+        ]
+
+        self.set_onload(
+            "has_missing_2b_documents",
+            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin),
+        )
 
     def validate(self):
         # reconcile purchases and inward supplies
@@ -220,6 +238,20 @@ class PurchaseReconciliationTool(Document):
         return get_timespan_date_range(period.lower(), self.company)
 
     @frappe.whitelist()
+    def get_date_range_and_check_missing_documents(self, period):
+        date_range = self.get_date_range(period)
+
+        if not date_range:
+            return
+
+        self.set_onload(
+            "has_missing_2b_documents",
+            has_missing_2b_documents(date_range, ReturnType.GSTR2B, self.company_gstin),
+        )
+
+        return date_range
+
+    @frappe.whitelist()
     def get_invoice_details(self, purchase_name, inward_supply_name):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -273,9 +305,7 @@ class PurchaseReconciliationTool(Document):
     def unlink_documents(self, data):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        if isinstance(data, str):
-            data = frappe.parse_json(data)
-
+        data = frappe.parse_json(data)
         inward_supplies = set()
         purchases = set()
         boe = set()
@@ -333,16 +363,7 @@ class PurchaseReconciliationTool(Document):
     def apply_action(self, data, action):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        if isinstance(data, str):
-            data = frappe.parse_json(data)
-
-        STATUS_MAP = {
-            "Accept My Values": "Reconciled",
-            "Accept Supplier Values": "Reconciled",
-            "Pending": "Unreconciled",
-            "Ignore": "Ignored",
-        }
-
+        data = frappe.parse_json(data)
         status = STATUS_MAP.get(action)
 
         inward_supplies = []
@@ -478,6 +499,25 @@ def get_import_history(
     )
 
 
+def has_missing_2b_documents(date_range, return_type: ReturnType, company_gstin):
+    periods = BaseUtil.get_periods(date_range, return_type, True)
+
+    if not periods:
+        return False
+
+    history = get_import_history(company_gstin, return_type, periods)
+
+    if not history:
+        return True
+
+    for period in periods:
+        download = next((log for log in history if log.return_period == period), None)
+        if not download or download.data_not_found or download.request_id:
+            return True
+
+    return False
+
+
 @frappe.whitelist()
 def generate_excel_attachment(data, doc):
     frappe.has_permission("Purchase Reconciliation Tool", "email", throw=True)
@@ -517,7 +557,7 @@ def download_excel_report(data, doc, is_supplier_specific=False):
 
 def parse_params(fun):
     def wrapper(*args, **kwargs):
-        args = [frappe.parse_json(arg) for arg in args]
+        args = (frappe.parse_json(arg) for arg in args)
         kwargs = {k: frappe.parse_json(v) for k, v in kwargs.items()}
         return fun(*args, **kwargs)
 

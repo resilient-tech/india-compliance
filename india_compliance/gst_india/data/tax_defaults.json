@@ -33,6 +33,8 @@
             "item_tax_templates": [
                 {
                     "title": "GST 18%",
+                    "gst_rate": 18,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -95,6 +97,8 @@
                 },
                 {
                     "title": "GST 5%",
+                    "gst_rate": 5,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -157,6 +161,8 @@
                 },
                 {
                     "title": "GST 12%",
+                    "gst_rate": 12,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -219,6 +225,8 @@
                 },
                 {
                     "title": "GST 28%",
+                    "gst_rate": 28,
+                    "gst_treatment": "Taxable",
                     "taxes": [
                         {
                             "tax_type": {
@@ -275,6 +283,198 @@
                             "tax_type": {
                                 "account_name": "Input Tax IGST RCM",
                                 "tax_rate": 28.0
+                            }
+                        }
+                    ]
+                },
+                {
+                    "title": "Nil-Rated",
+                    "gst_rate": 0,
+                    "gst_treatment": "Nil-Rated",
+                    "taxes": [
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax SGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax CGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax IGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax SGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax CGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax IGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax SGST RCM",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax CGST RCM",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax IGST RCM",
+                                "tax_rate": 0
+                            }
+                        }
+                    ]
+                },
+                {
+                    "title": "Exempted",
+                    "gst_rate": 0,
+                    "gst_treatment": "Exempted",
+                    "taxes": [
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax SGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax CGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax IGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax SGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax CGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax IGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax SGST RCM",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax CGST RCM",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax IGST RCM",
+                                "tax_rate": 0
+                            }
+                        }
+                    ]
+                },
+                {
+                    "title": "Non-GST",
+                    "gst_rate": 0,
+                    "gst_treatment": "Non-GST",
+                    "taxes": [
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax SGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax CGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Output Tax IGST",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax SGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax CGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax IGST",
+                                "tax_rate": 0,
+                                "root_type": "Asset"
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax SGST RCM",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax CGST RCM",
+                                "tax_rate": 0
+                            }
+                        },
+                        {
+                            "tax_type": {
+                                "account_name": "Input Tax IGST RCM",
+                                "tax_rate": 0
                             }
                         }
                     ]

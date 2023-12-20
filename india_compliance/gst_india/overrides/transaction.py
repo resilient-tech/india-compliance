@@ -9,7 +9,11 @@ from erpnext.controllers.taxes_and_totals import (
     get_itemised_taxable_amount,
 )
 
-from india_compliance.gst_india.constants import SALES_DOCTYPES, STATE_NUMBERS
+from india_compliance.gst_india.constants import (
+    GST_TAX_TYPES,
+    SALES_DOCTYPES,
+    STATE_NUMBERS,
+)
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gstin.gstin import (
     _validate_gstin_info,
@@ -17,6 +21,7 @@ from india_compliance.gst_india.doctype.gstin.gstin import (
 )
 from india_compliance.gst_india.utils import (
     get_all_gst_accounts,
+    get_gst_accounts_by_tax_type,
     get_gst_accounts_by_type,
     get_hsn_settings,
     get_place_of_supply,
@@ -29,9 +34,13 @@ from india_compliance.income_tax_india.overrides.tax_withholding_category import
     get_tax_withholding_accounts,
 )
 
-DOCTYPES_WITH_TAXABLE_VALUE = {
+DOCTYPES_WITH_GST_DETAIL = {
+    "Supplier Quotation",
+    "Purchase Order",
     "Purchase Receipt",
     "Purchase Invoice",
+    "Quotation",
+    "Sales Order",
     "Delivery Note",
     "Sales Invoice",
     "POS Invoice",
@@ -39,7 +48,7 @@ DOCTYPES_WITH_TAXABLE_VALUE = {
 
 
 def update_taxable_values(doc, valid_accounts):
-    if doc.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
 
     total_charges = 0
@@ -118,7 +127,7 @@ def get_tds_amount(doc):
 
 
 def is_indian_registered_company(doc):
-    if not doc.company_gstin:
+    if not doc.get("company_gstin"):
         country, gst_category = frappe.get_cached_value(
             "Company", doc.company, ("country", "gst_category")
         )
@@ -151,23 +160,33 @@ def validate_mandatory_fields(doc, fields, error_message=None):
         )
 
 
-def get_valid_accounts(company, is_sales_transaction=False):
+@frappe.whitelist()
+def get_valid_gst_accounts(company):
+    frappe.has_permission("Item Tax Template", "read", throw=True)
+    return get_valid_accounts(company, for_sales=True, for_purchase=True, throw=False)
+
+
+def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=True):
     all_valid_accounts = []
     intra_state_accounts = []
     inter_state_accounts = []
 
-    def add_to_valid_accounts(account_type):
-        accounts = get_gst_accounts_by_type(company, account_type)
+    account_types = []
+    if for_sales:
+        account_types.append("Output")
+
+    if for_purchase:
+        account_types.extend(["Input", "Reverse Charge"])
+
+    for account_type in account_types:
+        accounts = get_gst_accounts_by_type(company, account_type, throw=throw)
+        if not accounts:
+            continue
+
         all_valid_accounts.extend(accounts.values())
         intra_state_accounts.append(accounts.cgst_account)
         intra_state_accounts.append(accounts.sgst_account)
         inter_state_accounts.append(accounts.igst_account)
-
-    if is_sales_transaction:
-        add_to_valid_accounts("Output")
-    else:
-        add_to_valid_accounts("Input")
-        add_to_valid_accounts("Reverse Charge")
 
     return all_valid_accounts, intra_state_accounts, inter_state_accounts
 
@@ -181,7 +200,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     - SEZ / Inter-State supplies should not have CGST or SGST account
     - Intra-State supplies should not have IGST account
     """
-
     if not doc.taxes:
         return
 
@@ -210,7 +228,12 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         frappe.throw(message, title=title or _("Invalid GST Account"))
 
     all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-        doc.company, is_sales_transaction
+        doc.company,
+        for_sales=is_sales_transaction,
+        for_purchase=not is_sales_transaction,
+    )
+    cess_non_advol_accounts = get_gst_accounts_by_tax_type(
+        doc.company, "cess_non_advol"
     )
 
     # Company GSTIN = Party GSTIN
@@ -230,7 +253,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         )
 
     # Sales / Purchase Validations
-
     if is_sales_transaction:
         if is_export_without_payment_of_gst(doc) and (
             idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
@@ -289,6 +311,18 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     for row in rows_to_validate:
         account_head = row.account_head
 
+        if row.charge_type == "Actual":
+            item_tax_detail = frappe.parse_json(row.item_wise_tax_detail)
+            for tax_rate, tax_amount in item_tax_detail.values():
+                if tax_amount and not tax_rate:
+                    _throw(
+                        _(
+                            "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                            " not compute item taxes, and your further reporting will be affected."
+                        ).format(row.idx),
+                        title=_("Invalid Charge Type"),
+                    )
+
         if account_head not in all_valid_accounts:
             _throw(
                 _("{0} is not a valid GST account for this transaction").format(
@@ -325,8 +359,32 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
+        if (
+            row.charge_type == "On Item Quantity"
+            and account_head not in cess_non_advol_accounts
+        ):
+            _throw(
+                _(
+                    "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
+                    " as it is not a Cess Non Advol Account"
+                ).format(row.idx),
+                title=_("Invalid Charge Type"),
+            )
+
+        if (
+            row.charge_type != "On Item Quantity"
+            and account_head in cess_non_advol_accounts
+        ):
+            _throw(
+                _(
+                    "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
+                    " as it is a Cess Non Advol Account"
+                ).format(row.idx),
+                title=_("Invalid Charge Type"),
+            )
+
+    used_accounts = set(row.account_head for row in rows_to_validate)
     if not is_inter_state:
-        used_accounts = set(row.account_head for row in rows_to_validate)
         if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
             _throw(
                 _(
@@ -344,6 +402,22 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             ),
             title=_("Invalid Reference Row"),
         )
+
+    for row in doc.get("items") or []:
+        if not row.item_tax_template:
+            continue
+
+        for account in used_accounts:
+            if account in row.item_tax_rate:
+                continue
+
+            frappe.msgprint(
+                _(
+                    "Item Row #{0}: GST Account {1} is missing in Item Tax Template {2}"
+                ).format(row.idx, bold(account), bold(row.item_tax_template)),
+                title=_("Invalid Item Tax Template"),
+                indicator="orange",
+            )
 
     return all_valid_accounts
 
@@ -375,7 +449,7 @@ def validate_items(doc):
 
     for row in doc.items:
         # Collect data to validate that non-GST items are not used with GST items
-        if row.is_non_gst:
+        if row.gst_treatment == "Non-GST":
             non_gst_items.append(row.idx)
             continue
 
@@ -659,10 +733,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     """
 
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
-
-    if isinstance(party_details, str):
-        party_details = frappe.parse_json(party_details)
-
+    party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
     party_address_field = (
@@ -877,7 +948,186 @@ def is_export_without_payment_of_gst(doc):
     return is_overseas_doc(doc) and not doc.is_export_with_gst
 
 
+class ItemGSTDetails:
+    def get(self, docs, doctype, company):
+        """
+        Return Item GST Details for a list of documents
+        """
+        self.set_gst_accounts(doctype, company)
+        response = frappe._dict()
+        for doc in docs:
+            self.doc = doc
+            if not doc.get("items") or not doc.get("taxes"):
+                continue
+
+            self.update_item_count()
+            self.set_item_wise_tax_details()
+            self.set_tax_amount_precisions(doctype)
+
+            for item in doc.get("items"):
+                response.setdefault(item.name, frappe._dict()).update(
+                    self.get_item_tax_detail(item)
+                )
+
+        return response
+
+    def update(self, doc):
+        """
+        Update Item GST Details for a single document
+        """
+        self.doc = doc
+        if not self.doc.get("items") or not self.doc.get("taxes"):
+            return
+
+        self.set_gst_accounts(doc.doctype, doc.company)
+        self.update_item_count()
+        self.set_item_wise_tax_details()
+        self.set_tax_amount_precisions(doc.doctype)
+        self.update_item_tax_details()
+
+    def set_gst_accounts(self, doctype, company):
+        if doctype in SALES_DOCTYPES:
+            account_type = "Output"
+        else:
+            account_type = "Input"
+
+        gst_account_map = get_gst_accounts_by_type(company, account_type, throw=False)
+        self.gst_account_map = {v: k for k, v in gst_account_map.items()}
+
+    def update_item_count(self):
+        self.item_count = frappe._dict()
+        for item in self.doc.get("items"):
+            key = item.item_code or item.item_name
+            self.item_count.setdefault(key, 0)
+            self.item_count[key] += 1
+
+    def set_item_wise_tax_details(self):
+        """
+        Item Tax Details complied
+        Example:
+        {
+            "Item Code 1": {
+                "count": 2,
+                "cgst_rate": 9,
+                "cgst_amount": 18,
+                "sgst_rate": 9,
+                "sgst_amount": 18,
+                ...
+            },
+            ...
+        }
+
+        Possible Exceptions Handled:
+        - There could be more than one row for same account
+        - Item count added to handle rounding errors
+        """
+        tax_details = frappe._dict()
+        item_defaults = frappe._dict(count=0)
+
+        for row in GST_TAX_TYPES:
+            item_defaults.update({f"{row}_rate": 0, f"{row}_amount": 0})
+
+        for row in self.doc.taxes:
+            if (
+                not row.tax_amount
+                or not row.item_wise_tax_detail
+                or row.account_head not in self.gst_account_map
+            ):
+                continue
+
+            account_type = self.gst_account_map[row.account_head]
+            tax = account_type[:-8]
+
+            old = frappe.parse_json(row.item_wise_tax_detail)
+
+            # update item taxes
+            for item_name in set(old.keys()):
+                item_taxes = tax_details.setdefault(item_name, item_defaults.copy())
+
+                item_taxes["count"] = self.item_count[item_name]
+
+                tax_rate, tax_amount = old[item_name]
+
+                # cases when charge type == "Actual"
+                if tax_amount and not tax_rate:
+                    continue
+
+                item_taxes[f"{tax}_rate"] = tax_rate
+                item_taxes[f"{tax}_amount"] += tax_amount
+
+        self.item_tax_details = tax_details
+
+    def update_item_tax_details(self):
+        for item in self.doc.get("items"):
+            item.update(self.get_item_tax_detail(item))
+
+    def get_item_tax_detail(self, item):
+        """
+        - get item_tax_detail as it is if
+            - only one row exists for same item
+            - it is the last item
+
+        - If count is greater than 1,
+            - Manually calculate tax_amount for item
+            - Reduce item_tax_detail with
+                - tax_amount
+                - count
+        """
+        item_key = item.item_code or item.item_name
+        item_tax_detail = self.item_tax_details.get(item_key)
+        if not item_tax_detail:
+            return {}
+
+        if item_tax_detail.count == 1:
+            return item_tax_detail
+
+        # Handle rounding errors
+        response = item_tax_detail.copy()
+        for tax in GST_TAX_TYPES:
+            if (tax_rate := item_tax_detail[f"{tax}_rate"]) == 0:
+                continue
+
+            tax_amount_field = f"{tax}_amount"
+            precision = self.precision.get(tax_amount_field)
+
+            multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value
+            tax_amount = flt(tax_rate * multiplier, precision)
+            tax_amount = max(tax_amount, item_tax_detail[tax_amount_field])
+
+            item_tax_detail[tax_amount_field] -= tax_amount
+            item_tax_detail["count"] -= 1
+
+            response.update({tax_amount_field: tax_amount})
+
+        return response
+
+    def set_tax_amount_precisions(self, doctype):
+        item_doctype = f"{doctype} Item"
+        meta = frappe.get_meta(item_doctype)
+
+        self.precision = frappe._dict()
+
+        for tax_type in GST_TAX_TYPES:
+            field = f"{tax_type}_amount"
+            if not meta.has_field(field):
+                continue
+
+            precision = meta.get_field(field).precision
+            self.precision.update({field: precision})
+
+
+def set_gst_treatment_for_item(doc):
+    for item in doc.items:
+        if item.gst_treatment:
+            continue
+
+        item.gst_treatment = "Taxable"
+
+
 def set_reverse_charge_as_per_gst_settings(doc):
+    if doc.doctype in SALES_DOCTYPES:
+        return
+
     gst_settings = frappe.get_cached_value(
         "GST Settings",
         "GST Settings",
@@ -980,6 +1230,13 @@ def validate_transaction(doc, method=None):
 
 def before_validate(doc, method=None):
     set_reverse_charge_as_per_gst_settings(doc)
+
+
+def update_gst_details(doc, method=None):
+    if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
+        ItemGSTDetails().update(doc)
+
+    set_gst_treatment_for_item(doc)
 
 
 def after_mapping(target_doc, method=None, source_doc=None):

@@ -177,7 +177,7 @@ def get_cancelled_active_e_invoice_query(filters, sales_invoice, query):
 
 def e_invoice_conditions(e_invoice_applicability_date):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
-    sub_query = validate_sales_invoice_item()
+    taxable_invoices = validate_sales_invoice_item()
     conditions = []
 
     conditions.append(sales_invoice.posting_date >= e_invoice_applicability_date)
@@ -190,7 +190,7 @@ def e_invoice_conditions(e_invoice_applicability_date):
             | (Coalesce(sales_invoice.billing_address_gstin, "") != "")
         )
     )
-    conditions.append(sales_invoice.name.notin(sub_query))
+    conditions.append(sales_invoice.name.isin(taxable_invoices))
 
     return reduce(lambda a, b: a & b, conditions)
 
@@ -198,14 +198,15 @@ def e_invoice_conditions(e_invoice_applicability_date):
 def validate_sales_invoice_item():
     sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
 
-    sub_query = (
+    taxable_invoices = (
         frappe.qb.from_(sales_invoice_item)
         .select(sales_invoice_item.parent)
-        .where(sales_invoice_item.is_non_gst == 1)
         .where(sales_invoice_item.parenttype == "Sales Invoice")
+        .where(sales_invoice_item.gst_treatment == "Taxable")
         .distinct()
     )
-    return sub_query
+
+    return taxable_invoices
 
 
 def get_columns(filters=None):

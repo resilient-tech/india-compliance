@@ -388,6 +388,7 @@ class TestEWaybill(FrappeTestCase):
                     "cess_non_advol_rate": 0,
                     "tax_rate": 0.0,
                     "total_value": 100.0,
+                    "gst_treatment": "Taxable",
                 }
             ],
             EWaybillData(si).get_all_item_details(),
@@ -479,7 +480,7 @@ class TestEWaybill(FrappeTestCase):
             {"gst_transporter_id": "05AAACG2140A1ZL", "mode_of_transport": "Road"}
         )
 
-        si.items[0].is_non_gst = 1
+        si.items[0].gst_treatment = "Non-GST"
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -487,7 +488,7 @@ class TestEWaybill(FrappeTestCase):
             EWaybillData(si).validate_applicability,
         )
 
-        si.items[0].is_non_gst = 0
+        si.items[0].gst_treatment = "Taxable"
         si.update(
             {
                 "company_gstin": "05AAACG2115R1ZN",
