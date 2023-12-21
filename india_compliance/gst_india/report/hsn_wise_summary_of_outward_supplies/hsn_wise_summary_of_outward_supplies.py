@@ -11,7 +11,6 @@ from frappe.utils import cstr, flt, getdate
 import erpnext
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
-from india_compliance.gst_india.report.utils import get_company_gstin_number
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 
@@ -302,6 +301,8 @@ def get_merged_data(columns, data):
 
 @frappe.whitelist()
 def get_json(filters, report_name, data):
+    from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
+
     filters = json.loads(filters)
     report_data = json.loads(data)
     gstin = filters.get("company_gstin") or get_company_gstin_number(filters["company"])
