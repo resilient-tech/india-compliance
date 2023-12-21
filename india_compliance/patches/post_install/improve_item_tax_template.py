@@ -240,12 +240,12 @@ def remove_old_item_variant_settings():
 def update_gst_treatment_for_transactions():
     "Disclaimer: No specific way to differentate between nil and exempted. Hence all transactions are updated to nil"
 
-    for doctype in TRANSACTION_DOCTYPES:
+    for item_doctype in TRANSACTION_DOCTYPES:
         # GST Treatment is not required in Material Request Item
-        if doctype == "Material Request Item":
+        if item_doctype == "Material Request Item":
             continue
 
-        table = frappe.qb.DocType(doctype)
+        table = frappe.qb.DocType(item_doctype)
         query = frappe.qb.update(table)
 
         (
@@ -260,7 +260,25 @@ def update_gst_treatment_for_transactions():
             .run()
         )
 
-        # TODO: Update it to taxable where it's export
+        doctype = item_doctype.replace(" Item", "")
+        if doctype not in SALES_DOCTYPES:
+            continue
+
+        doc = frappe.qb.DocType(doctype)
+
+        (
+            query.join(doc)
+            .on(doc.name == table.parent)
+            .set(table.gst_treatment, "Zero-Rated")
+            .where(
+                (doc.gst_category == "SEZ")
+                | (
+                    (doc.gst_category == "Overseas")
+                    & (doc.place_of_supply == "96-Other Countries")
+                )
+            )
+            .run()
+        )
 
     click.secho(
         "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",

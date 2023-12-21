@@ -403,7 +403,7 @@ def validate_taxable_item(doc, throw=True):
 
     """
     # Check if there is at least one taxable item in the document
-    if any(item.gst_treatment == "Taxable" for item in doc.items):
+    if any(item.gst_treatment in ("Taxable", "Zero-Rated") for item in doc.items):
         return True
 
     if not throw:
