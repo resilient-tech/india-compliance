@@ -4,7 +4,9 @@ from parameterized import parameterized_class
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import today
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+from erpnext.accounts.party import _get_party_details
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
@@ -530,6 +532,43 @@ class TestTransaction(FrappeTestCase):
             {"gst_treatment": "Non-GST"},
             doc.items[0],
         )
+
+    def test_gst_treatment_for_exports(self):
+        if not self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+        )
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+
+        # Update Customer after it's already set
+        doc_details = {
+            **self.transaction_details,
+            "customer": "_Test Foreign Customer",
+            "party_name": "_Test Foreign Customer",
+        }
+        doc = create_transaction(**doc_details, do_not_submit=True)
+        self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
+
+        party_field = "party_name" if self.doctype == "Quotation" else "customer"
+
+        customer = "_Test Registered Customer"
+        doc.update(
+            {
+                party_field: customer,
+                **_get_party_details(
+                    party=customer,
+                    company=doc.company,
+                    posting_date=today(),
+                    doctype=doc.doctype,
+                ),
+            }
+        )
+        doc.selling_price_list = "Standard Selling"
+        doc.save()
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
 
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:
