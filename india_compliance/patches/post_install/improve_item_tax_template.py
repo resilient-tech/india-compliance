@@ -260,6 +260,8 @@ def update_gst_treatment_for_transactions():
             .run()
         )
 
+        # TODO: Update it to taxable where it's export
+
     click.secho(
         "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",
         color="yellow",
