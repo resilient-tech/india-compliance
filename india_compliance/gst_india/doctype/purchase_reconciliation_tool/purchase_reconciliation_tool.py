@@ -7,6 +7,7 @@ from typing import List
 import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
+from frappe.utils import add_to_date, now_datetime
 from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
@@ -22,6 +23,7 @@ from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
     IMPORT_CATEGORY,
     GSTRCategory,
+    ReturnsAPI,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
@@ -562,6 +564,30 @@ def parse_params(fun):
         return fun(*args, **kwargs)
 
     return wrapper
+
+
+def auto_refresh_authtoken():
+    is_auto_refresh_enabled = frappe.db.get_single_value(
+        "GST Settings", "auto_refresh_auth_token"
+    )
+
+    if not is_auto_refresh_enabled:
+        return
+
+    for credential in frappe.get_all(
+        "GST Credential",
+        filters={
+            "service": "Returns",
+            "session_expiry": (">=", now_datetime()),
+        },
+        fields=["session_key", "session_expiry", "gstin", "auth_token"],
+    ):
+        if credential.session_key and credential.session_expiry < add_to_date(
+            now_datetime(), minutes=10
+        ):
+            api = ReturnsAPI(credential.gstin)
+            response = api.refresh_auth_token()
+            api.process_response(response)
 
 
 class BuildExcel:

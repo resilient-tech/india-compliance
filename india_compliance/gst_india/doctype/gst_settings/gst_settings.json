@@ -46,6 +46,7 @@
   "column_break_bydp",
   "validate_gstin_status",
   "gstin_status_refresh_interval",
+  "auto_refresh_auth_token",
   "uom_mapping_section",
   "gst_uom_map",
   "accounts_tab",
@@ -379,6 +380,13 @@
    "fieldname": "enable_e_waybill_from_pr",
    "fieldtype": "Check",
    "label": "Enable e-Waybill Generation from Purchase Receipt"
+  },
+  {
+   "default": "0",
+   "description": "Automatically refresh the authentication token for the Purchase Reconciliation Tool when it's about to expire",
+   "fieldname": "auto_refresh_auth_token",
+   "fieldtype": "Check",
+   "label": "Enable Auto Refresh of Auth Token"
   }
  ],
  "index_web_pages_for_search": 1,
