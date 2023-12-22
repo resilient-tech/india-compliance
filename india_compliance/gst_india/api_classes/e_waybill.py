@@ -22,6 +22,9 @@ class EWaybillAPI(BaseAPI):
         if not self.settings.enable_e_waybill:
             frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
 
+        if frappe.utils.scheduler.is_scheduler_disabled():
+            frappe.throw(_("Please enable Scheduler to use e-Waybill features"))
+
         if doc:
             company_gstin = doc.company_gstin
             self.default_log_values.update(

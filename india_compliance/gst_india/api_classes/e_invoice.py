@@ -30,6 +30,9 @@ class EInvoiceAPI(BaseAPI):
         if not self.settings.enable_e_invoice:
             frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
 
+        if frappe.utils.scheduler.is_scheduler_disabled():
+            frappe.throw(_("Please enable Scheduler to use e-Invoicing features"))
+
         if doc:
             company_gstin = doc.company_gstin
             self.default_log_values.update(
