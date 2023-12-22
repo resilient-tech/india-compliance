@@ -43,10 +43,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     log_and_process_e_waybill_generation,
 )
-from india_compliance.gst_india.utils.transaction_data import (
-    GSTTransactionData,
-    validate_non_gst_items,
-)
+from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 
 @frappe.whitelist()
@@ -356,9 +353,6 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         # e-Invoice not required for invoice wih all nill-rated/exempted items.
         return
 
-    if not validate_non_gst_items(doc, throw=throw):
-        return
-
     if not (doc.place_of_supply == "96-Other Countries" or doc.billing_address_gstin):
         return _throw(_("e-Invoice is not applicable for B2C invoices"))
 
@@ -403,7 +397,7 @@ def validate_taxable_item(doc, throw=True):
 
     """
     # Check if there is at least one taxable item in the document
-    if any(item.gst_treatment == "Taxable" for item in doc.items):
+    if any(item.gst_treatment in ("Taxable", "Zero-Rated") for item in doc.items):
         return True
 
     if not throw:
@@ -521,7 +515,7 @@ class EInvoiceData(GSTTransactionData):
         self.item_list = []
 
         for item_details in self.get_all_item_details():
-            if item_details.get("gst_treatment") != "Taxable":
+            if item_details.get("gst_treatment") not in ("Taxable", "Zero-Rated"):
                 continue
 
             self.item_list.append(self.get_item_data(item_details))
