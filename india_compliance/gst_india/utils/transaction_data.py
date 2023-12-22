@@ -71,7 +71,7 @@ class GSTTransactionData:
         for row in self.doc.items:
             total += row.taxable_value
 
-            if row.gst_treatment == "Taxable":
+            if row.gst_treatment in ("Taxable", "Zero-Rated"):
                 total_taxable_value += row.taxable_value
 
         self.transaction_details.update(
