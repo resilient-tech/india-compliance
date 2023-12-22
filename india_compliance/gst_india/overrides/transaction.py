@@ -1118,11 +1118,56 @@ class ItemGSTDetails:
 
 
 def set_gst_treatment_for_item(doc):
-    for item in doc.items:
-        if item.gst_treatment:
+    is_overseas = is_overseas_doc(doc)
+    is_sales_transaction = doc.doctype in SALES_DOCTYPES
+
+    default_gst_treatment = "Taxable"
+    gst_accounts = get_all_gst_accounts(doc.company)
+
+    for row in doc.taxes:
+        if row.charge_type in ("Actual", "On Item Quantity"):
             continue
 
-        item.gst_treatment = "Taxable"
+        if row.account_head not in gst_accounts:
+            continue
+
+        if row.rate == 0:
+            default_gst_treatment = "Nil-Rated"
+
+        break
+
+    item_templates = set()
+    gst_treatments = set()
+    gst_treatment_map = {}
+
+    for item in doc.items:
+        item_templates.add(item.item_tax_template)
+        gst_treatments.add(item.gst_treatment)
+
+    if "Zero-Rated" in gst_treatments and not is_overseas:
+        # doc changed from overseas to local sale post validate
+        _gst_treatments = frappe.get_all(
+            "Item Tax Template",
+            filters={"name": ("in", item_templates)},
+            fields=["name", "gst_treatment"],
+        )
+        gst_treatment_map = {row.name: row.gst_treatment for row in _gst_treatments}
+
+    for item in doc.items:
+        if not item.gst_treatment or not item.item_tax_template:
+            item.gst_treatment = default_gst_treatment
+
+        if not is_sales_transaction:
+            continue
+
+        if is_overseas:
+            # IGST sec 16(2) - ITC can be claimed for exempt supply
+            item.gst_treatment = "Zero-Rated"
+
+        elif item.gst_treatment == "Zero-Rated":
+            item.gst_treatment = (
+                gst_treatment_map.get(item.item_tax_template) or default_gst_treatment
+            )
 
 
 def set_reverse_charge_as_per_gst_settings(doc):

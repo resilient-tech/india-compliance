@@ -202,7 +202,7 @@ def validate_sales_invoice_item():
         frappe.qb.from_(sales_invoice_item)
         .select(sales_invoice_item.parent)
         .where(sales_invoice_item.parenttype == "Sales Invoice")
-        .where(sales_invoice_item.gst_treatment == "Taxable")
+        .where(sales_invoice_item.gst_treatment.isin(["Taxable", "Zero-Rated"]))
         .distinct()
     )
 
