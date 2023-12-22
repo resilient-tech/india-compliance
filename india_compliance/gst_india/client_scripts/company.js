@@ -26,7 +26,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         frappe.call({
             method: "india_compliance.gst_india.overrides.company.make_default_tax_templates",
-            args: { company: frm.doc.name },
+            args: { company: frm.doc.name, gst_rate: frm.doc.default_gst_rate},
             callback: function () {
                 frappe.msgprint(__("Default Tax Templates created"));
             },

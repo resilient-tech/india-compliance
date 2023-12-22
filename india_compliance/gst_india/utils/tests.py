@@ -106,9 +106,8 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
             "uom": data.uom,
             "rate": data.rate or 100,
             "cost_center": f"Main - {company_abbr}",
-            "is_nil_exempt": data.is_nil_exempt,
-            "is_non_gst": data.is_non_gst,
             "item_tax_template": data.item_tax_template,
+            "gst_treatment": data.gst_treatment,
             "gst_hsn_code": data.gst_hsn_code,
             "warehouse": f"Stores - {company_abbr}",
             "expense_account": f"Cost of Goods Sold - {company_abbr}",
@@ -123,6 +122,7 @@ def _append_taxes(
     rate=9,
     charge_type="On Net Total",
     row_id=None,
+    tax_amount=None,
 ):
     if isinstance(accounts, str):
         accounts = [accounts]
@@ -144,6 +144,9 @@ def _append_taxes(
             "rate": rate,
             "cost_center": f"Main - {company_abbr}",
         }
+
+        if tax_amount:
+            tax["tax_amount"] = tax_amount
 
         if account.endswith("RCM"):
             tax["add_deduct_tax"] = "Deduct"

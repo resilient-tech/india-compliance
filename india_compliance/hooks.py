@@ -37,6 +37,7 @@ doctype_js = {
         "gst_india/client_scripts/delivery_note.js",
     ],
     "Item": "gst_india/client_scripts/item.js",
+    "Item Tax Template": "gst_india/client_scripts/item_tax_template.js",
     "Expense Claim": [
         "gst_india/client_scripts/journal_entry.js",
         "gst_india/client_scripts/expense_claim.js",
@@ -94,6 +95,8 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
         ),
         "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
@@ -106,6 +109,9 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.gl_entry.validate",
     },
     "Item": {"validate": "india_compliance.gst_india.overrides.item.validate"},
+    "Item Tax Template": {
+        "validate": "india_compliance.gst_india.overrides.item_tax_template.validate"
+    },
     "Journal Entry": {
         "validate": "india_compliance.gst_india.overrides.journal_entry.validate",
     },
@@ -121,7 +127,11 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
-        "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        ],
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
@@ -133,6 +143,8 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Purchase Receipt": {
         "validate": (
@@ -141,7 +153,11 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
-        "before_submit": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        ],
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
     },
@@ -151,6 +167,8 @@ doc_events = {
         ),
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
         "on_update_after_submit": (
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
@@ -162,6 +180,8 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Supplier": {
         "validate": [
@@ -185,16 +205,25 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Quotation": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Supplier Quotation": {
+        "before_validate": (
+            "india_compliance.gst_india.overrides.transaction.before_validate"
+        ),
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
+        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Accounts Settings": {
         "validate": "india_compliance.audit_trail.overrides.accounts_settings.validate"
