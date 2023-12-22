@@ -471,6 +471,48 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
     )
 
 
+def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
+    """
+    :param company: Company to get GST Accounts for
+    :param tax_type: Tax Type to get GST Accounts for eg: "cgst"
+
+    Returns a list of accounts:
+    """
+    if not company:
+        frappe.throw(_("Please set Company first"))
+
+    tax_type = tax_type.lower()
+    field = f"{tax_type}_account"
+
+    if field not in GST_ACCOUNT_FIELDS:
+        frappe.throw(_("Invalid Tax Type"))
+
+    settings = frappe.get_cached_doc("GST Settings", "GST Settings")
+    accounts_list = []
+
+    has_account_settings = False
+    for row in settings.gst_accounts:
+        if row.company != company:
+            continue
+
+        has_account_settings = True
+        if gst_account := row.get(field):
+            accounts_list.append(gst_account)
+
+    if accounts_list:
+        return accounts_list
+
+    if has_account_settings or not throw:
+        return accounts_list
+
+    frappe.throw(
+        _(
+            "Could not retrieve GST Accounts of type {0} from GST Settings for"
+            " Company {1}"
+        ).format(frappe.bold(tax_type), frappe.bold(company)),
+    )
+
+
 @frappe.whitelist()
 def get_all_gst_accounts(company):
     """
@@ -759,3 +801,8 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
             break
 
     return data
+
+
+@frappe.whitelist(methods=["POST"])
+def disable_item_tax_template_notification():
+    frappe.defaults.clear_user_default("needs_item_tax_template_notification")
