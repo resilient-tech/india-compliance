@@ -3,7 +3,7 @@ import re
 from parameterized import parameterized_class
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import today
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
 from erpnext.accounts.party import _get_party_details
@@ -533,6 +533,7 @@ class TestTransaction(FrappeTestCase):
             doc.items[0],
         )
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gst_treatment_for_exports(self):
         if not self.is_sales_doctype:
             return
