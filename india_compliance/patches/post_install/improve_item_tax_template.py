@@ -417,7 +417,7 @@ def build_query_and_update_gst_details(gst_details, doctype):
     # Update item conditions (WHEN)
     for item_name, row in gst_details.items():
         for field in conditions:
-            if not row[field]:
+            if not row.get(field):
                 continue
 
             conditions[field] = conditions[field].when(
