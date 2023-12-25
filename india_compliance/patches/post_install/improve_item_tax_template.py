@@ -118,6 +118,7 @@ def create_or_update_item_tax_templates(companies):
 
     # create new templates for nil rated, exempted, non gst
     templates = {}
+    show_notification = False
     for company in companies_with_templates:
         gst_accounts = [
             {"tax_type": account, "tax_rate": 0}
@@ -144,6 +145,21 @@ def create_or_update_item_tax_templates(companies):
             doc.extend("taxes", gst_accounts)
             doc.insert(ignore_if_duplicate=True)
             templates.setdefault(new_template, []).append(doc.name)
+            show_notification = True
+    if show_notification:
+        click.secho(
+            "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",
+            color="yellow",
+        )
+        click.secho(
+            "All transactions that were marked as Nil or Exempt, are now marked as Nil Rated.",
+            color="red",
+        )
+
+        for user in get_users_with_role("Accounts Manager"):
+            frappe.defaults.set_user_default(
+                "needs_item_tax_template_notification", 1, user=user
+            )
 
     return templates
 
@@ -278,20 +294,6 @@ def update_gst_treatment_for_transactions():
                 )
             )
             .run()
-        )
-
-    click.secho(
-        "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",
-        color="yellow",
-    )
-    click.secho(
-        "All transactions that were marked as Nil or Exempt, are now marked as Nil Rated.",
-        color="red",
-    )
-
-    for user in get_users_with_role("Accounts Manager"):
-        frappe.defaults.set_user_default(
-            "needs_item_tax_template_notification", 1, user=user
         )
 
 
