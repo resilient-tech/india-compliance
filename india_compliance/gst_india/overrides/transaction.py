@@ -1090,9 +1090,10 @@ class ItemGSTDetails:
             tax_amount_field = f"{tax}_amount"
             precision = self.precision.get(tax_amount_field)
 
-            multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value
+            multiplier = (
+                item.qty if tax == "cess_non_advol" else item.taxable_value / 100
+            )
             tax_amount = flt(tax_rate * multiplier, precision)
-            tax_amount = max(tax_amount, item_tax_detail[tax_amount_field])
 
             item_tax_detail[tax_amount_field] -= tax_amount
             item_tax_detail["count"] -= 1
