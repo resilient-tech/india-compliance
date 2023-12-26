@@ -13,10 +13,10 @@ from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
-    get_columns as get_columns_hsn,
+    get_columns as get_hsn_columns,
 )
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
-    get_conditions as get_conditions_hsn,
+    get_conditions as get_hsn_conditions,
 )
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_hsn_data,
@@ -357,7 +357,7 @@ class Gstr1Report:
 
     def get_conditions(self):
         if self.filters.get("type_of_business") == "HSN":
-            return get_conditions_hsn(self.filters)
+            return get_hsn_conditions(self.filters)
 
         conditions = ""
 
@@ -1022,7 +1022,7 @@ class Gstr1Report:
                 },
             ]
         elif self.filters.get("type_of_business") == "HSN":
-            self.columns = get_columns_hsn()
+            self.columns = get_hsn_columns()
             return
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 
@@ -1935,7 +1935,7 @@ def get_gstr1_excel(filters, data=None, columns=None):
         create_excel_sheet(excel, type_of_business, headers, data)
 
     else:
-        for type_of_business, abbr in report_types.items():
+        for type_of_business in report_types:
             filters["type_of_business"] = type_of_business
             report_data = execute(filters)
 
