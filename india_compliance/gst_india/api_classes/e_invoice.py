@@ -3,7 +3,7 @@ import re
 import frappe
 from frappe import _
 
-from india_compliance.gst_india.api_classes.base import BaseAPI
+from india_compliance.gst_india.api_classes.base import BaseAPI, check_scheduler_status
 from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 
@@ -112,23 +112,3 @@ class EInvoiceAPI(BaseAPI):
 
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
-
-
-def check_scheduler_status():
-    """
-    Throw an error if scheduler is disabled
-    """
-
-    if (
-        not frappe.conf.developer_mode
-        and frappe.utils.scheduler.is_scheduler_disabled()
-    ):
-        frappe.throw(
-            _(
-                "The Scheduler is currently disabled, which needs to be enabled to use e-Invoicing and e-Waybill features. "
-                "Please get in touch with your server administrator to resolve this issue.<br><br>"
-                "For more information, refer to the following documentation: {0}"
-            ).format(
-                '<a href="https://frappeframework.com/docs/user/en/bench/resources/bench-commands-cheatsheet#scheduler" target="_blank">Frappe Scheduler Documentation</a>'
-            )
-        )
