@@ -30,8 +30,7 @@ class EInvoiceAPI(BaseAPI):
         if not self.settings.enable_e_invoice:
             frappe.throw(_("Please enable e-Invoicing in GST Settings first"))
 
-        if frappe.utils.scheduler.is_scheduler_disabled():
-            frappe.throw(_("Please enable Scheduler to use e-Invoicing features"))
+        check_scheduler_status()
 
         if doc:
             company_gstin = doc.company_gstin
@@ -113,3 +112,23 @@ class EInvoiceAPI(BaseAPI):
 
     def sync_gstin_info(self, gstin):
         return self.get(endpoint="master/syncgstin", params={"gstin": gstin})
+
+
+def check_scheduler_status():
+    """
+    Throw an error if scheduler is disabled
+    """
+
+    if (
+        not frappe.conf.developer_mode
+        and frappe.utils.scheduler.is_scheduler_disabled()
+    ):
+        frappe.throw(
+            _(
+                "The Scheduler is currently disabled, which needs to be enabled to use e-Invoicing and e-Waybill features. "
+                "Please get in touch with your server administrator to resolve this issue.<br><br>"
+                "For more information, refer to the following documentation: {0}"
+            ).format(
+                '<a href="https://frappeframework.com/docs/user/en/bench/resources/bench-commands-cheatsheet#scheduler" target="_blank">Frappe Scheduler Documentation</a>'
+            )
+        )

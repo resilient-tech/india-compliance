@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BaseAPI
+from india_compliance.gst_india.api_classes.e_invoice import check_scheduler_status
 from india_compliance.gst_india.constants import DISTANCE_REGEX
 
 
@@ -22,8 +23,7 @@ class EWaybillAPI(BaseAPI):
         if not self.settings.enable_e_waybill:
             frappe.throw(_("Please enable e-Waybill features in GST Settings first"))
 
-        if frappe.utils.scheduler.is_scheduler_disabled():
-            frappe.throw(_("Please enable Scheduler to use e-Waybill features"))
+        check_scheduler_status()
 
         if doc:
             company_gstin = doc.company_gstin
