@@ -1047,7 +1047,7 @@ class ItemGSTDetails:
 
                 count = self.item_count.get(item_name, 0)
                 if not count:
-                    # Do not commute if Item is not present in Item table
+                    # Do not compute if Item is not present in Item table
                     # There can be difference in Item Table and Item Wise Tax Details
                     continue
 
