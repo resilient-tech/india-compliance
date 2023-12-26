@@ -12,11 +12,22 @@ from frappe.query_builder import Criterion
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
+from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
+    get_columns as get_hsn_columns,
+)
+from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
+    get_conditions as get_hsn_conditions,
+)
+from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
+    get_hsn_data,
+    get_hsn_wise_json_data,
+)
 from india_compliance.gst_india.utils import (
     get_escaped_name,
     get_gst_accounts_by_type,
     is_overseas_transaction,
 )
+from india_compliance.gst_india.utils.exporter import ExcelExporter
 
 B2C_LIMIT = 2_50_000
 
@@ -31,6 +42,7 @@ TYPES_OF_BUSINESS = {
     "Adjustment": "txpd",
     "NIL Rated": "nil",
     "Document Issued Summary": "doc_issue",
+    "HSN": "hsn",
 }
 
 
@@ -96,6 +108,8 @@ class Gstr1Report(object):
             self.get_nil_rated_invoices()
         elif self.filters.get("type_of_business") == "Document Issued Summary":
             self.get_documents_issued_data()
+        elif self.filters.get("type_of_business") == "HSN":
+            self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
         elif self.invoices:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
@@ -154,20 +168,7 @@ class Gstr1Report(object):
 
         for invoice, details in getattr(self, "nil_exempt_non_gst", {}).items():
             invoice_detail = self.invoices.get(invoice)
-            if invoice_detail.get("gst_category") in (
-                "Registered Regular",
-                "Deemed Export",
-                "SEZ",
-            ):
-                if is_inter_state(invoice_detail):
-                    nil_exempt_output[0]["nil_rated"] += details[0]
-                    nil_exempt_output[0]["exempted"] += details[1]
-                    nil_exempt_output[0]["non_gst"] += details[2]
-                else:
-                    nil_exempt_output[1]["nil_rated"] += details[0]
-                    nil_exempt_output[1]["exempted"] += details[1]
-                    nil_exempt_output[1]["non_gst"] += details[2]
-            else:
+            if invoice_detail.get("gst_category") in ("Unregistered", "Overseas"):
                 if is_inter_state(invoice_detail):
                     nil_exempt_output[2]["nil_rated"] += details[0]
                     nil_exempt_output[2]["exempted"] += details[1]
@@ -176,6 +177,15 @@ class Gstr1Report(object):
                     nil_exempt_output[3]["nil_rated"] += details[0]
                     nil_exempt_output[3]["exempted"] += details[1]
                     nil_exempt_output[3]["non_gst"] += details[2]
+            else:
+                if is_inter_state(invoice_detail):
+                    nil_exempt_output[0]["nil_rated"] += details[0]
+                    nil_exempt_output[0]["exempted"] += details[1]
+                    nil_exempt_output[0]["non_gst"] += details[2]
+                else:
+                    nil_exempt_output[1]["nil_rated"] += details[0]
+                    nil_exempt_output[1]["exempted"] += details[1]
+                    nil_exempt_output[1]["non_gst"] += details[2]
 
         self.data = nil_exempt_output
 
@@ -342,6 +352,9 @@ class Gstr1Report(object):
             self.data.append(row)
 
     def get_conditions(self):
+        if self.filters.get("type_of_business") == "HSN":
+            return get_hsn_conditions(self.filters)
+
         conditions = ""
 
         for opts in (
@@ -412,7 +425,9 @@ class Gstr1Report(object):
         for d in items:
             d.item_code = d.item_code or d.item_name
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
-            self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
+            if d.gst_treatment in ("Taxable", "Zero-Rated"):
+                self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
+                continue
 
             is_nil_rated = d.gst_treatment == "Nil-Rated"
             is_exempted = d.gst_treatment == "Exempted"
@@ -1006,7 +1021,9 @@ class Gstr1Report(object):
                     "width": 150,
                 },
             ]
-
+        elif self.filters.get("type_of_business") == "HSN":
+            self.columns = get_hsn_columns()
+            return
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 
 
@@ -1340,8 +1357,9 @@ class GSTR1DocumentIssuedSummary:
 def get_gstr1_json(filters, data=None):
     frappe.has_permission("GL Entry", throw=True)
 
-    report_dict = set_gst_json_defaults(filters)
+    report_dict = set_gst_defaults(filters)
     filters = json.loads(filters)
+
     filename = ["gstr-1"]
     gstin = report_dict["gstin"]
     report_types = TYPES_OF_BUSINESS
@@ -1362,7 +1380,7 @@ def get_gstr1_json(filters, data=None):
         report_data = data_dict.get(type_of_business) or format_data_to_dict(
             execute(filters)
         )
-        report_data = get_json(type_of_business, gstin, report_data)
+        report_data = get_json(type_of_business, gstin, report_data, filters)
 
         if not report_data:
             continue
@@ -1375,7 +1393,7 @@ def get_gstr1_json(filters, data=None):
     }
 
 
-def get_json(type_of_business, gstin, data):
+def get_json(type_of_business, gstin, data, filters):
     if data and list(data[-1].values())[0] == "Total":
         data = data[:-1]
 
@@ -1439,8 +1457,11 @@ def get_json(type_of_business, gstin, data):
     if type_of_business == "Document Issued Summary":
         return get_document_issued_summary_json(data)
 
+    if type_of_business == "HSN":
+        return get_hsn_wise_json_data(filters, data)
 
-def set_gst_json_defaults(filters):
+
+def set_gst_defaults(filters):
     if isinstance(filters, str):
         filters = json.loads(filters)
 
@@ -1888,3 +1909,46 @@ def is_inter_state(invoice_detail):
         return True
     else:
         return False
+
+
+@frappe.whitelist()
+def get_gstr1_excel(filters, data=None, columns=None):
+    frappe.has_permission("GL Entry", throw=True)
+
+    report_dict = set_gst_defaults(filters)
+    filters = json.loads(filters)
+
+    filename = ["GSTR-1"]
+    gstin = report_dict["gstin"]
+    report_types = TYPES_OF_BUSINESS
+
+    excel = ExcelExporter()
+    excel.remove_sheet("Sheet")
+
+    if data:
+        type_of_business = filters.get("type_of_business")
+        filename.append(type_of_business)
+
+        headers = json.loads(columns) if columns else []
+        data = json.loads(data)[:-1]
+
+        create_excel_sheet(excel, type_of_business, headers, data)
+
+    else:
+        for type_of_business in report_types:
+            filters["type_of_business"] = type_of_business
+            report_data = execute(filters)
+
+            headers = report_data[0] or []
+            data = format_data_to_dict(report_data)
+
+            create_excel_sheet(excel, type_of_business, headers, data)
+
+    filename.extend([gstin, report_dict["fp"]])
+    excel.export("_".join(filename))
+
+
+def create_excel_sheet(excel, sheet_name, headers, data):
+    excel.create_sheet(
+        sheet_name=sheet_name, headers=headers, data=data, add_totals=False
+    )

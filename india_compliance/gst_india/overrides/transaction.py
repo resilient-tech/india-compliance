@@ -1045,7 +1045,13 @@ class ItemGSTDetails:
             for item_name in set(old.keys()):
                 item_taxes = tax_details.setdefault(item_name, item_defaults.copy())
 
-                item_taxes["count"] = self.item_count[item_name]
+                count = self.item_count.get(item_name, 0)
+                if not count:
+                    # Do not compute if Item is not present in Item table
+                    # There can be difference in Item Table and Item Wise Tax Details
+                    continue
+
+                item_taxes["count"] = count
 
                 tax_rate, tax_amount = old[item_name]
 
@@ -1091,9 +1097,10 @@ class ItemGSTDetails:
             tax_amount_field = f"{tax}_amount"
             precision = self.precision.get(tax_amount_field)
 
-            multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value
+            multiplier = (
+                item.qty if tax == "cess_non_advol" else item.taxable_value / 100
+            )
             tax_amount = flt(tax_rate * multiplier, precision)
-            tax_amount = max(tax_amount, item_tax_detail[tax_amount_field])
 
             item_tax_detail[tax_amount_field] -= tax_amount
             item_tax_detail["count"] -= 1
