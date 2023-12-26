@@ -146,6 +146,7 @@ def create_or_update_item_tax_templates(companies):
             doc.insert(ignore_if_duplicate=True)
             templates.setdefault(new_template, []).append(doc.name)
             show_notification = True
+
     if show_notification:
         click.secho(
             "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",
@@ -332,6 +333,7 @@ def update_gst_details_for_transactions(companies):
                 )
 
                 build_query_and_update_gst_details(gst_details, doctype)
+                frappe.db.commit()
 
 
 def get_docs_with_gst_accounts(doctype, gst_accounts):
