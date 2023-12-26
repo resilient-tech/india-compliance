@@ -11,7 +11,6 @@ from frappe.utils import cstr, flt, getdate
 import erpnext
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
-from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 
@@ -24,6 +23,12 @@ def execute(filters=None):
     columns = get_columns()
     output_gst_accounts_dict = get_gst_accounts_by_type(filters.company, "Output")
 
+    data = get_hsn_data(filters, columns, output_gst_accounts_dict)
+
+    return columns, data
+
+
+def get_hsn_data(filters, columns, output_gst_accounts_dict):
     output_gst_accounts = set()
     non_cess_accounts = set()
     for account_type, account_name in output_gst_accounts_dict.items():
@@ -84,7 +89,7 @@ def execute(filters=None):
     if data:
         data = get_merged_data(columns, data)  # merge same hsn code data
 
-    return columns, data
+    return data
 
 
 def validate_filters(filters):
@@ -296,6 +301,8 @@ def get_merged_data(columns, data):
 
 @frappe.whitelist()
 def get_json(filters, report_name, data):
+    from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
+
     filters = json.loads(filters)
     report_data = json.loads(data)
     gstin = filters.get("company_gstin") or get_company_gstin_number(filters["company"])
