@@ -93,20 +93,17 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
             )
 
     def test_get_document_issued_summary_json(self):
-        report_data = format_data_to_dict(
-            execute(
-                {
-                    "company": "_Test Indian Registered Company",
-                    "company_gstin": "24AAQCA8719H1ZC",
-                    "from_date": getdate(),
-                    "to_date": getdate(),
-                    "type_of_business": "Document Issued Summary",
-                }
-            )
-        )
+        filters = {
+            "company": "_Test Indian Registered Company",
+            "company_gstin": "24AAQCA8719H1ZC",
+            "from_date": getdate(),
+            "to_date": getdate(),
+            "type_of_business": "Document Issued Summary",
+        }
+        report_data = format_data_to_dict(execute(filters))
 
         report_json = get_json(
-            "Document Issued Summary", "24AAQCA8719H1ZC", report_data
+            "Document Issued Summary", "24AAQCA8719H1ZC", report_data, filters
         )
 
         self.assertDictEqual(report_json, JSON_OUTPUT)
