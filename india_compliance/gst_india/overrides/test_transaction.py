@@ -523,6 +523,24 @@ class TestTransaction(FrappeTestCase):
             },
             doc.items[0],
         )
+        append_item(doc, frappe._dict(rate=300))
+        doc.save()
+
+        # test same item multiple times
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Taxable",
+                "igst_rate": 0,
+                "cgst_rate": 9,
+                "sgst_rate": 9,
+                "cess_non_advol_rate": 20,
+                "igst_amount": 0,
+                "cgst_amount": 27,
+                "sgst_amount": 27,
+                "cess_non_advol_amount": 20,
+            },
+            doc.items[1],
+        )
 
         # test non gst treatment
         doc = create_transaction(
@@ -794,4 +812,4 @@ def create_tax_accounts(account_name):
             "parent_account": parent_account,
             **defaults,
         }
-    ).save()
+    ).insert(ignore_if_duplicate=True)
