@@ -154,20 +154,7 @@ class Gstr1Report:
 
         for invoice, details in getattr(self, "nil_exempt_non_gst", {}).items():
             invoice_detail = self.invoices.get(invoice)
-            if invoice_detail.get("gst_category") in (
-                "Registered Regular",
-                "Deemed Export",
-                "SEZ",
-            ):
-                if is_inter_state(invoice_detail):
-                    nil_exempt_output[0]["nil_rated"] += details[0]
-                    nil_exempt_output[0]["exempted"] += details[1]
-                    nil_exempt_output[0]["non_gst"] += details[2]
-                else:
-                    nil_exempt_output[1]["nil_rated"] += details[0]
-                    nil_exempt_output[1]["exempted"] += details[1]
-                    nil_exempt_output[1]["non_gst"] += details[2]
-            else:
+            if invoice_detail.get("gst_category") in ("Unregistered", "Overseas"):
                 if is_inter_state(invoice_detail):
                     nil_exempt_output[2]["nil_rated"] += details[0]
                     nil_exempt_output[2]["exempted"] += details[1]
@@ -176,6 +163,15 @@ class Gstr1Report:
                     nil_exempt_output[3]["nil_rated"] += details[0]
                     nil_exempt_output[3]["exempted"] += details[1]
                     nil_exempt_output[3]["non_gst"] += details[2]
+            else:
+                if is_inter_state(invoice_detail):
+                    nil_exempt_output[0]["nil_rated"] += details[0]
+                    nil_exempt_output[0]["exempted"] += details[1]
+                    nil_exempt_output[0]["non_gst"] += details[2]
+                else:
+                    nil_exempt_output[1]["nil_rated"] += details[0]
+                    nil_exempt_output[1]["exempted"] += details[1]
+                    nil_exempt_output[1]["non_gst"] += details[2]
 
         self.data = nil_exempt_output
 
@@ -412,7 +408,9 @@ class Gstr1Report:
         for d in items:
             d.item_code = d.item_code or d.item_name
             self.invoice_items.setdefault(d.parent, {}).setdefault(d.item_code, 0.0)
-            self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
+            if d.gst_treatment in ("Taxable", "Zero-Rated"):
+                self.invoice_items[d.parent][d.item_code] += d.get("taxable_value", 0)
+                continue
 
             is_nil_rated = d.gst_treatment == "Nil-Rated"
             is_exempted = d.gst_treatment == "Exempted"
