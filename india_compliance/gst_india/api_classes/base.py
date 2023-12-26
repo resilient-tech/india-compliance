@@ -278,10 +278,10 @@ def check_scheduler_status():
     Throw an error if scheduler is disabled
     """
 
-    if (
-        not frappe.conf.developer_mode
-        and frappe.utils.scheduler.is_scheduler_disabled()
-    ):
+    if frappe.flags.in_test or frappe.conf.developer_mode:
+        return
+
+    if frappe.utils.scheduler.is_scheduler_disabled():
         frappe.throw(
             _(
                 "The Scheduler is currently disabled, which needs to be enabled to use e-Invoicing and e-Waybill features. "
