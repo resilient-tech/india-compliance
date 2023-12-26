@@ -1045,7 +1045,13 @@ class ItemGSTDetails:
             for item_name in set(old.keys()):
                 item_taxes = tax_details.setdefault(item_name, item_defaults.copy())
 
-                item_taxes["count"] = self.item_count[item_name]
+                count = self.item_count.get(item_name, 0)
+                if not count:
+                    # Do not commute if Item is not present in Item table
+                    # There can be difference in Item Table and Item Wise Tax Details
+                    continue
+
+                item_taxes["count"] = count
 
                 tax_rate, tax_amount = old[item_name]
 
