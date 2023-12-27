@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import now_datetime, add_to_date
+from frappe.utils import add_to_date, now_datetime
 
 from india_compliance.gst_india.constants import STATE_NUMBERS
 from india_compliance.gst_india.doctype.gst_inward_supply.gst_inward_supply import (
@@ -169,8 +169,7 @@ def validate_company_gstins(company=None, company_gstin=None):
         credential.gstin: (
             credential.session_expiry
             and credential.auth_token
-            and credential.session_expiry
-            > add_to_date(now_datetime(), minutes=30)
+            and credential.session_expiry > add_to_date(now_datetime(), minutes=30)
         )
         for credential in credentials
     }
