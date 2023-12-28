@@ -1119,12 +1119,19 @@ class ItemGSTDetails:
 class ItemGSTTreatment:
     def set(self, doc):
         self.doc = doc
-
-        is_overseas = is_overseas_doc(doc)
         is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
-        if is_overseas and is_sales_transaction:
+        if is_overseas_doc(doc) and is_sales_transaction:
             self.set_for_overseas()
+            return
+
+        self.gst_accounts = get_all_gst_accounts(self.doc.company)
+        has_gst_accounts = any(
+            row.account_head in self.gst_accounts for row in self.doc.taxes
+        )
+
+        if not has_gst_accounts:
+            self.set_for_no_taxes()
             return
 
         self.update_gst_treatment_map()
@@ -1133,6 +1140,11 @@ class ItemGSTTreatment:
     def set_for_overseas(self):
         for item in self.doc.items:
             item.gst_treatment = "Zero-Rated"
+
+    def set_for_no_taxes(self):
+        for item in self.doc.items:
+            if item.gst_treatment not in ("Exempted", "Non-GST"):
+                item.gst_treatment = "Nil-Rated"
 
     def update_gst_treatment_map(self):
         item_templates = set()
@@ -1155,26 +1167,14 @@ class ItemGSTTreatment:
         self.gst_treatment_map = gst_treatment_map
 
     def set_default_treatment(self):
-        self.gst_accounts = get_all_gst_accounts(self.doc.company)
         default_treatment = self.get_default_treatment()
-        is_gst_account_used = any(
-            row.account_head in self.gst_accounts for row in self.doc.taxes
-        )
 
         for item in self.doc.items:
-            if item.gst_treatment == "Exempted" and item.item_tax_template:
-                continue
-
             if item.gst_treatment == "Zero-Rated":
                 item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
 
             if not item.gst_treatment or not item.item_tax_template:
                 item.gst_treatment = default_treatment
-
-            if item.gst_treatment in ("Taxable", "Zero-Rated") and (
-                not self.doc.taxes or not is_gst_account_used
-            ):
-                item.gst_treatment = "Nil-Rated"
 
     def get_default_treatment(self):
         default = "Taxable"
