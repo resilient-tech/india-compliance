@@ -77,7 +77,7 @@ function setup_e_waybill_actions(doctype) {
                 return;
             }
 
-            if (!india_compliance.is_api_enabled()){
+            if (!india_compliance.is_api_enabled()) {
                 if (frappe.perm.has_perm(frm.doctype, 0, "cancel", frm.doc.name)) {
                     frm.add_custom_button(
                         __("Mark as Cancelled"),
@@ -106,8 +106,7 @@ function setup_e_waybill_actions(doctype) {
             }
 
             if (
-                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
-                can_extend_e_waybill(frm)
+                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
             ) {
                 frm.add_custom_button(
                     __("Extend Validity"),
@@ -799,10 +798,26 @@ function show_update_transporter_dialog(frm) {
     d.show();
 }
 
+function get_hours(date, hours) {
+    return moment(date).add(hours, "hours").format(frappe.defaultDatetimeFormat);
+}
+
+function get_secondary_btn_text(frm, valid_upto_plus_one_hr) {
+    const extension_scheduled = frm.doc.__onload?.e_waybill_info?.extension_scheduled;
+    if(extension_scheduled) return `Already scheduled for ${valid_upto_plus_one_hr}`
+    return `Schedule for ${valid_upto_plus_one_hr}`
+}
+
+
 async function show_extend_validity_dialog(frm) {
     const destination_address = await get_source_destination_address(frm, "destination_address");
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
+
+    const can_extend_waybill = can_extend_e_waybill(frm);
+
+    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
+    const valid_upto_plus_one_hr = get_hours(valid_upto, 1);
 
     const d = new frappe.ui.Dialog({
         title: __("Extend Validity"),
@@ -963,7 +978,29 @@ async function show_extend_validity_dialog(frm) {
             });
             d.hide();
         },
+        secondary_action_label: !can_extend_waybill ? __(get_secondary_btn_text(frm, valid_upto_plus_one_hr)) : null,
+        secondary_action: !can_extend_waybill ? () => {
+            frappe.call({
+                method: "india_compliance.gst_india.utils.e_waybill.schedule_ewaybill_for_extension",
+                args: {
+                    doctype: frm.doctype,
+                    docname: frm.docname,
+                    values: d.get_values() || {},
+                    scheduled_time: valid_upto_plus_one_hr,
+                },
+                callback: () => {
+                    if (frm.doc.__onload && frm.doc.__onload.e_waybill_info) {
+                        frm.doc.__onload.e_waybill_info.extension_scheduled = 1;
+                    }
+                    frm.refresh();
+                },
+            })
+            d.hide();
+        } : null,
     });
+    if (!can_extend_waybill) {
+        d.get_primary_btn().addClass("disabled");
+    }
     d.show();
 }
 
@@ -995,10 +1032,6 @@ function auto_generate_e_waybill(frm) {
 }
 
 function can_extend_e_waybill(frm) {
-    function get_hours(date, hours) {
-        return moment(date).add(hours, "hours").format(frappe.defaultDatetimeFormat);
-    }
-
     const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
     const extend_after = get_hours(valid_upto, -8);
     const extend_before = get_hours(valid_upto, 8);

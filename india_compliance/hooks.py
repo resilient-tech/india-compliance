@@ -315,6 +315,9 @@ scheduler_events = {
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_generation",
             "india_compliance.gst_india.utils.gstr.download_queued_request",
         ],
+        "0 1 * * *": [
+            "india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"
+        ],
     }
 }
 
