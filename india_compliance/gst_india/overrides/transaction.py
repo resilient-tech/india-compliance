@@ -1155,7 +1155,12 @@ class ItemGSTTreatment:
         self.gst_treatment_map = gst_treatment_map
 
     def set_default_treatment(self):
+        self.gst_accounts = get_all_gst_accounts(self.doc.company)
         default_treatment = self.get_default_treatment()
+        is_gst_account_used = any(
+            row.account_head in self.gst_accounts for row in self.doc.taxes
+        )
+
         for item in self.doc.items:
             if item.gst_treatment == "Exempted" and item.item_tax_template:
                 continue
@@ -1166,18 +1171,19 @@ class ItemGSTTreatment:
             if not item.gst_treatment or not item.item_tax_template:
                 item.gst_treatment = default_treatment
 
-    def get_default_treatment(self):
-        if not self.doc.taxes:
-            return "Nil-Rated"
+            if item.gst_treatment in ("Taxable", "Zero-Rated") and (
+                not self.doc.taxes or not is_gst_account_used
+            ):
+                item.gst_treatment = "Nil-Rated"
 
+    def get_default_treatment(self):
         default = "Taxable"
-        gst_accounts = get_all_gst_accounts(self.doc.company)
 
         for row in self.doc.taxes:
             if row.charge_type in ("Actual", "On Item Quantity"):
                 continue
 
-            if row.account_head not in gst_accounts:
+            if row.account_head not in self.gst_accounts:
                 continue
 
             if row.rate == 0:
