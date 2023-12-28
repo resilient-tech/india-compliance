@@ -41,6 +41,7 @@ POST_INSTALL_PATCHES = (
     "update_itc_classification_field",
     "improve_item_tax_template",
     "update_vehicle_no_field_in_purchase_receipt",
+    "update_gst_treatment_for_taxable_nil_transaction_item",  # it should be always after improve item tax template
 )
 
 
