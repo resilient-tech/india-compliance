@@ -961,7 +961,6 @@ class ItemGSTDetails:
             if not doc.get("items") or not doc.get("taxes"):
                 continue
 
-            self.update_item_count()
             self.set_item_wise_tax_details()
             self.set_tax_amount_precisions(doctype)
 
@@ -977,11 +976,10 @@ class ItemGSTDetails:
         Update Item GST Details for a single document
         """
         self.doc = doc
-        if not self.doc.get("items") or not self.doc.get("taxes"):
+        if not self.doc.get("items"):
             return
 
         self.set_gst_accounts(doc.doctype, doc.company)
-        self.update_item_count()
         self.set_item_wise_tax_details()
         self.set_tax_amount_precisions(doc.doctype)
         self.update_item_tax_details()
@@ -994,13 +992,6 @@ class ItemGSTDetails:
 
         gst_account_map = get_gst_accounts_by_type(company, account_type, throw=False)
         self.gst_account_map = {v: k for k, v in gst_account_map.items()}
-
-    def update_item_count(self):
-        self.item_count = frappe._dict()
-        for item in self.doc.get("items"):
-            key = item.item_code or item.item_name
-            self.item_count.setdefault(key, 0)
-            self.item_count[key] += 1
 
     def set_item_wise_tax_details(self):
         """
@@ -1028,6 +1019,11 @@ class ItemGSTDetails:
         for row in GST_TAX_TYPES:
             item_defaults.update({f"{row}_rate": 0, f"{row}_amount": 0})
 
+        for row in self.doc.get("items"):
+            key = row.item_code or row.item_name
+            tax_details.setdefault(key, item_defaults.copy())
+            tax_details[key]["count"] += 1
+
         for row in self.doc.taxes:
             if (
                 not row.tax_amount
@@ -1045,13 +1041,10 @@ class ItemGSTDetails:
             for item_name in set(old.keys()):
                 item_taxes = tax_details.setdefault(item_name, item_defaults.copy())
 
-                count = self.item_count.get(item_name, 0)
-                if not count:
+                if not item_taxes.count:
                     # Do not compute if Item is not present in Item table
                     # There can be difference in Item Table and Item Wise Tax Details
                     continue
-
-                item_taxes["count"] = count
 
                 tax_rate, tax_amount = old[item_name]
 
@@ -1124,57 +1117,82 @@ class ItemGSTDetails:
             self.precision.update({field: precision})
 
 
-def set_gst_treatment_for_item(doc):
-    is_overseas = is_overseas_doc(doc)
-    is_sales_transaction = doc.doctype in SALES_DOCTYPES
+class ItemGSTTreatment:
+    def set(self, doc):
+        self.doc = doc
+        is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
-    default_gst_treatment = "Taxable"
-    gst_accounts = get_all_gst_accounts(doc.company)
+        if is_overseas_doc(doc) and is_sales_transaction:
+            self.set_for_overseas()
+            return
 
-    for row in doc.taxes:
-        if row.charge_type in ("Actual", "On Item Quantity"):
-            continue
-
-        if row.account_head not in gst_accounts:
-            continue
-
-        if row.rate == 0:
-            default_gst_treatment = "Nil-Rated"
-
-        break
-
-    item_templates = set()
-    gst_treatments = set()
-    gst_treatment_map = {}
-
-    for item in doc.items:
-        item_templates.add(item.item_tax_template)
-        gst_treatments.add(item.gst_treatment)
-
-    if "Zero-Rated" in gst_treatments and not is_overseas:
-        # doc changed from overseas to local sale post validate
-        _gst_treatments = frappe.get_all(
-            "Item Tax Template",
-            filters={"name": ("in", item_templates)},
-            fields=["name", "gst_treatment"],
+        self.gst_accounts = get_all_gst_accounts(self.doc.company)
+        has_gst_accounts = any(
+            row.account_head in self.gst_accounts for row in self.doc.taxes
         )
-        gst_treatment_map = {row.name: row.gst_treatment for row in _gst_treatments}
 
-    for item in doc.items:
-        if not item.gst_treatment or not item.item_tax_template:
-            item.gst_treatment = default_gst_treatment
+        if not has_gst_accounts:
+            self.set_for_no_taxes()
+            return
 
-        if not is_sales_transaction:
-            continue
+        self.update_gst_treatment_map()
+        self.set_default_treatment()
 
-        if is_overseas:
-            # IGST sec 16(2) - ITC can be claimed for exempt supply
+    def set_for_overseas(self):
+        for item in self.doc.items:
             item.gst_treatment = "Zero-Rated"
 
-        elif item.gst_treatment == "Zero-Rated":
-            item.gst_treatment = (
-                gst_treatment_map.get(item.item_tax_template) or default_gst_treatment
+    def set_for_no_taxes(self):
+        for item in self.doc.items:
+            if item.gst_treatment not in ("Exempted", "Non-GST"):
+                item.gst_treatment = "Nil-Rated"
+
+    def update_gst_treatment_map(self):
+        item_templates = set()
+        gst_treatments = set()
+        gst_treatment_map = {}
+
+        for item in self.doc.items:
+            item_templates.add(item.item_tax_template)
+            gst_treatments.add(item.gst_treatment)
+
+        if "Zero-Rated" in gst_treatments:
+            # doc changed from overseas to local sale post validate
+            _gst_treatments = frappe.get_all(
+                "Item Tax Template",
+                filters={"name": ("in", item_templates)},
+                fields=["name", "gst_treatment"],
             )
+            gst_treatment_map = {row.name: row.gst_treatment for row in _gst_treatments}
+
+        self.gst_treatment_map = gst_treatment_map
+
+    def set_default_treatment(self):
+        default_treatment = self.get_default_treatment()
+
+        for item in self.doc.items:
+            if item.gst_treatment == "Zero-Rated":
+                item.gst_treatment = self.gst_treatment_map.get(item.item_tax_template)
+
+            if not item.gst_treatment or not item.item_tax_template:
+                item.gst_treatment = default_treatment
+
+    def get_default_treatment(self):
+        default = "Taxable"
+
+        for row in self.doc.taxes:
+            if row.charge_type in ("Actual", "On Item Quantity"):
+                continue
+
+            if row.account_head not in self.gst_accounts:
+                continue
+
+            if row.rate == 0:
+                default = "Nil-Rated"
+
+            break
+
+        return default
 
 
 def set_reverse_charge_as_per_gst_settings(doc):
@@ -1289,7 +1307,7 @@ def update_gst_details(doc, method=None):
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
 
-    set_gst_treatment_for_item(doc)
+    ItemGSTTreatment().set(doc)
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
