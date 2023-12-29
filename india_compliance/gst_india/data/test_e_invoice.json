@@ -27,30 +27,30 @@
             },
             "ItemList": [
                 {
-                    "AssAmt": 100000,
+                    "AssAmt": 100000.0,
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
                     "CesRt": 0,
-                    "CgstAmt": 0,
+                    "CgstAmt": 9000.0,
                     "Discount": 0,
-                    "GstRt": 0,
+                    "GstRt": 18,
                     "HsnCd": "61149090",
                     "IgstAmt": 0,
                     "IsServc": "N",
                     "PrdDesc": "Test Trading Goods 1",
-                    "Qty": 1000,
-                    "SgstAmt": 0,
+                    "Qty": 1000.0,
+                    "SgstAmt": 9000.0,
                     "SlNo": "1",
-                    "TotAmt": 100000,
-                    "TotItemVal": 100000,
+                    "TotAmt": 100000.0,
+                    "TotItemVal": 118000.0  ,
                     "Unit": "NOS",
-                    "UnitPrice": 100
+                    "UnitPrice": 100.0
                 }
             ],
             "PayDtls": {
                 "CrDay": 0,
                 "PaidAmt": 0,
-                "PaymtDue": 100000
+                "PaymtDue": 118000.0
             },
             "SellerDtls": {
                 "Addr1": "Test Address - 1",
@@ -67,15 +67,15 @@
                 "TaxSch": "GST"
             },
             "ValDtls": {
-                "AssVal": 100000,
+                "AssVal": 100000.0,
                 "CesVal": 0,
-                "CgstVal": 0,
+                "CgstVal": 9000.0,
                 "Discount": 0,
                 "IgstVal": 0,
-                "OthChrg": 0,
-                "RndOffAmt": 0,
-                "SgstVal": 0,
-                "TotInvVal": 100000
+                "OthChrg": 0.0,
+                "RndOffAmt": 0.0,
+                "SgstVal": 9000.0,
+                "TotInvVal": 118000.0
             },
             "Version": "1.1"
         },
@@ -131,18 +131,18 @@
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
                     "CesRt": 0,
-                    "CgstAmt": 0,
+                    "CgstAmt": 9.0,
                     "Discount": 0,
-                    "GstRt": 0.0,
+                    "GstRt": 18.0,
                     "HsnCd": "999900",
                     "IgstAmt": 0,
                     "IsServc": "Y",
                     "PrdDesc": "Test Service Item",
                     "Qty": 1.0,
-                    "SgstAmt": 0,
+                    "SgstAmt": 9.0,
                     "SlNo": "1",
                     "TotAmt": 100.0,
-                    "TotItemVal": 100.0,
+                    "TotItemVal": 118.0,
                     "Unit": "NOS",
                     "UnitPrice": 100.0
                 }
@@ -150,7 +150,7 @@
             "PayDtls": {
                 "CrDay": 0,
                 "PaidAmt": 0,
-                "PaymtDue": 100.0
+                "PaymtDue": 118.0
             },
             "SellerDtls": {
                 "Addr1": "Test Address - 1",
@@ -169,13 +169,13 @@
             "ValDtls": {
                 "AssVal": 100.0,
                 "CesVal": 0,
-                "CgstVal": 0,
+                "CgstVal": 9.0,
                 "Discount": 0,
                 "IgstVal": 0,
                 "OthChrg": 0.0,
                 "RndOffAmt": 0.0,
-                "SgstVal": 0,
-                "TotInvVal": 100.0
+                "SgstVal": 9.0,
+                "TotInvVal": 118.0
             },
             "Version": "1.1"
         },
@@ -474,18 +474,18 @@
                     "CesAmt": 0,
                     "CesNonAdvlAmt": 0,
                     "CesRt": 0,
-                    "CgstAmt": 0,
+                    "CgstAmt": 9.0,
                     "Discount": 0,
-                    "GstRt": 0.0,
+                    "GstRt": 18.0,
                     "HsnCd": "61149090",
                     "IgstAmt": 0,
                     "IsServc": "N",
                     "PrdDesc": "Test Trading Goods 1",
                     "Qty": 0.0,
-                    "SgstAmt": 0,
+                    "SgstAmt": 9.0,
                     "SlNo": "1",
                     "TotAmt": 100.0,
-                    "TotItemVal": 100.0,
+                    "TotItemVal": 118.0,
                     "Unit": "NOS",
                     "UnitPrice": 100.0
                 }
@@ -493,7 +493,7 @@
             "PayDtls": {
                 "CrDay": 0,
                 "PaidAmt": 0,
-                "PaymtDue": 100.0
+                "PaymtDue": 118.0
             },
             "SellerDtls": {
                 "Addr1": "Test Address - 1",
@@ -512,13 +512,13 @@
             "ValDtls": {
                 "AssVal": 100.0,
                 "CesVal": 0,
-                "CgstVal": 0,
+                "CgstVal": 9.0,
                 "Discount": 0,
                 "IgstVal": 0,
                 "OthChrg": 0.0,
                 "RndOffAmt": 0.0,
-                "SgstVal": 0,
-                "TotInvVal": 100.0
+                "SgstVal": 9.0,
+                "TotInvVal": 118.0
             },
             "Version": "1.1"
         },
