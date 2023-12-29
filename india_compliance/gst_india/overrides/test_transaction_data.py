@@ -140,7 +140,10 @@ class TestTransactionData(FrappeTestCase):
 
     def test_set_transaction_details(self):
         """Check transaction data"""
-        doc = create_sales_invoice(do_not_submit=True)
+        doc = create_sales_invoice(
+            do_not_submit=True,
+            is_in_state=True,
+        )
 
         gst_transaction_data = GSTTransactionData(doc)
         gst_transaction_data.set_transaction_details()
@@ -155,13 +158,13 @@ class TestTransactionData(FrappeTestCase):
                 "total_taxable_value": 100.0,
                 "total_non_taxable_value": 0.0,
                 "rounding_adjustment": 0.0,
-                "grand_total": 100.0,
+                "grand_total": 118.0,
                 "grand_total_in_foreign_currency": "",
                 "discount_amount": 0,
                 "company_gstin": "24AAQCA8719H1ZC",
                 "name": doc.name,
-                "total_cgst_amount": 0,
-                "total_sgst_amount": 0,
+                "total_cgst_amount": 9.0,
+                "total_sgst_amount": 9.0,
                 "total_igst_amount": 0,
                 "total_cess_amount": 0,
                 "total_cess_non_advol_amount": 0,
@@ -259,7 +262,7 @@ class TestTransactionData(FrappeTestCase):
                     "cess_non_advol_rate": 0,
                     "tax_rate": 0.0,
                     "total_value": 100.0,
-                    "gst_treatment": "Taxable",
+                    "gst_treatment": "Nil-Rated",
                 }
             ],
         )
