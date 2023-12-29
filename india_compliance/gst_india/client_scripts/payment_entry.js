@@ -45,7 +45,7 @@ function override_get_outstanding_documents(frm) {
     const new_fn = function () {
         old_fn(...arguments);
         frappe.after_ajax(() => {
-            response = frappe?.last_response?.message || [];
+            const response = frappe?.last_response?.message || [];
 
             const reconciliation_status_dict = response.reduce((acc, d) => {
                 acc[d.voucher_no] = d.reconciliation_status;
