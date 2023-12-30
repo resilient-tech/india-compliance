@@ -28,23 +28,12 @@ def get_setup_wizard_stages(params=None):
         },
         {
             "status": _("Wrapping up"),
-            "fail_msg": _("Failed to Update Company GSTIN"),
+            "fail_msg": _("Failed to Setup Company Taxes"),
             "tasks": [
                 {
-                    "fn": setup_company_gstin_details,
+                    "fn": setup_company_taxes,
                     "args": params,
-                    "fail_msg": _("Failed to Update Company GSTIN"),
-                }
-            ],
-        },
-        {
-            "status": _("Wrapping up"),
-            "fail_msg": _("Failed to Create Tax Template"),
-            "tasks": [
-                {
-                    "fn": setup_tax_template,
-                    "args": params,
-                    "fail_msg": _("Failed to Create Tax Template"),
+                    "fail_msg": _("Failed to Setup Company Taxes"),
                 }
             ],
         },
@@ -59,7 +48,7 @@ def configure_audit_trail(params):
         enable_audit_trail()
 
 
-def setup_company_gstin_details(params):
+def setup_company_taxes(params):
     if not params.company_gstin:
         return
 
@@ -72,6 +61,7 @@ def setup_company_gstin_details(params):
 
     update_company_info(params, gstin_info.gst_category)
     create_address(gstin_info, params)
+    setup_tax_template(params)
 
 
 def update_company_info(params, gst_category=None):
