@@ -956,6 +956,10 @@ class ItemGSTDetails:
         """
         self.set_gst_accounts(doctype, company)
         response = frappe._dict()
+
+        if not self.gst_account_map:
+            return response
+
         for doc in docs:
             self.doc = doc
             if not doc.get("items") or not doc.get("taxes"):
@@ -980,6 +984,9 @@ class ItemGSTDetails:
             return
 
         self.set_gst_accounts(doc.doctype, doc.company)
+        if not self.gst_account_map:
+            return
+
         self.set_item_wise_tax_details()
         self.set_tax_amount_precisions(doc.doctype)
         self.update_item_tax_details()
