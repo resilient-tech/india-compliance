@@ -101,9 +101,6 @@ def can_fetch_gstin_info():
 
 
 def setup_tax_template(params):
-    if not (params.company_name and frappe.db.exists("Company", params.company_name)):
-        return
-
     if not params.default_gst_rate:
         params.default_gst_rate = "18.0"
 
