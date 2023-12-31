@@ -953,7 +953,7 @@ class ItemGSTDetails:
         """
         Return Item GST Details for a list of documents
         """
-        self.set_gst_accounts(doctype, company)
+        self.set_gst_accounts_and_item_defaults(doctype, company)
         self.set_tax_amount_precisions(doctype)
 
         response = frappe._dict()
@@ -969,9 +969,7 @@ class ItemGSTDetails:
             self.set_item_wise_tax_details()
 
             for item in doc.get("items"):
-                response.setdefault(item.name, frappe._dict()).update(
-                    self.get_item_tax_detail(item)
-                )
+                response[item.name] = self.get_item_tax_detail(item)
 
         return response
 
@@ -983,7 +981,7 @@ class ItemGSTDetails:
         if not self.doc.get("items"):
             return
 
-        self.set_gst_accounts(doc.doctype, doc.company)
+        self.set_gst_accounts_and_item_defaults(doc.doctype, doc.company)
         if not self.gst_account_map:
             return
 
@@ -991,7 +989,7 @@ class ItemGSTDetails:
         self.set_tax_amount_precisions(doc.doctype)
         self.update_item_tax_details()
 
-    def set_gst_accounts(self, doctype, company):
+    def set_gst_accounts_and_item_defaults(self, doctype, company):
         if doctype in SALES_DOCTYPES:
             account_type = "Output"
         else:
@@ -999,6 +997,14 @@ class ItemGSTDetails:
 
         gst_account_map = get_gst_accounts_by_type(company, account_type, throw=False)
         self.gst_account_map = {v: k for k, v in gst_account_map.items()}
+
+        item_defaults = frappe._dict(count=0)
+
+        for row in GST_TAX_TYPES:
+            item_defaults[f"{row}_rate"] = 0
+            item_defaults[f"{row}_amount"] = 0
+
+        self.item_defaults = item_defaults
 
     def set_item_wise_tax_details(self):
         """
@@ -1021,14 +1027,11 @@ class ItemGSTDetails:
         - Item count added to handle rounding errors
         """
         tax_details = frappe._dict()
-        item_defaults = frappe._dict(count=0)
-
-        for row in GST_TAX_TYPES:
-            item_defaults.update({f"{row}_rate": 0, f"{row}_amount": 0})
 
         for row in self.doc.get("items"):
             key = row.item_code or row.item_name
-            tax_details.setdefault(key, item_defaults.copy())
+            if key not in tax_details:
+                tax_details[key] = self.item_defaults.copy()
             tax_details[key]["count"] += 1
 
         for row in self.doc.taxes:
