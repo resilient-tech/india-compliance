@@ -1125,8 +1125,7 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-            precision = field.precision
-            self.precision[fieldname] = precision
+            self.precision[fieldname] = field.precision
 
 
 class ItemGSTTreatment:
