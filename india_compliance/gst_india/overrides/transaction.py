@@ -953,7 +953,9 @@ class ItemGSTDetails:
         """
         Return Item GST Details for a list of documents
         """
-        self.set_gst_accounts(doctype, company)
+        self.set_gst_accounts_and_item_defaults(doctype, company)
+        self.set_tax_amount_precisions(doctype)
+
         response = frappe._dict()
 
         if not self.gst_account_map:
@@ -965,12 +967,9 @@ class ItemGSTDetails:
                 continue
 
             self.set_item_wise_tax_details()
-            self.set_tax_amount_precisions(doctype)
 
             for item in doc.get("items"):
-                response.setdefault(item.name, frappe._dict()).update(
-                    self.get_item_tax_detail(item)
-                )
+                response[item.name] = self.get_item_tax_detail(item)
 
         return response
 
@@ -982,7 +981,7 @@ class ItemGSTDetails:
         if not self.doc.get("items"):
             return
 
-        self.set_gst_accounts(doc.doctype, doc.company)
+        self.set_gst_accounts_and_item_defaults(doc.doctype, doc.company)
         if not self.gst_account_map:
             return
 
@@ -990,7 +989,7 @@ class ItemGSTDetails:
         self.set_tax_amount_precisions(doc.doctype)
         self.update_item_tax_details()
 
-    def set_gst_accounts(self, doctype, company):
+    def set_gst_accounts_and_item_defaults(self, doctype, company):
         if doctype in SALES_DOCTYPES:
             account_type = "Output"
         else:
@@ -998,6 +997,14 @@ class ItemGSTDetails:
 
         gst_account_map = get_gst_accounts_by_type(company, account_type, throw=False)
         self.gst_account_map = {v: k for k, v in gst_account_map.items()}
+
+        item_defaults = frappe._dict(count=0)
+
+        for row in GST_TAX_TYPES:
+            item_defaults[f"{row}_rate"] = 0
+            item_defaults[f"{row}_amount"] = 0
+
+        self.item_defaults = item_defaults
 
     def set_item_wise_tax_details(self):
         """
@@ -1020,14 +1027,11 @@ class ItemGSTDetails:
         - Item count added to handle rounding errors
         """
         tax_details = frappe._dict()
-        item_defaults = frappe._dict(count=0)
-
-        for row in GST_TAX_TYPES:
-            item_defaults.update({f"{row}_rate": 0, f"{row}_amount": 0})
 
         for row in self.doc.get("items"):
             key = row.item_code or row.item_name
-            tax_details.setdefault(key, item_defaults.copy())
+            if key not in tax_details:
+                tax_details[key] = self.item_defaults.copy()
             tax_details[key]["count"] += 1
 
         for row in self.doc.taxes:
@@ -1040,26 +1044,27 @@ class ItemGSTDetails:
 
             account_type = self.gst_account_map[row.account_head]
             tax = account_type[:-8]
+            tax_rate_field = f"{tax}_rate"
+            tax_amount_field = f"{tax}_amount"
 
-            old = frappe.parse_json(row.item_wise_tax_detail)
+            old = json.loads(row.item_wise_tax_detail)
 
             # update item taxes
-            for item_name in set(old.keys()):
-                item_taxes = tax_details.setdefault(item_name, item_defaults.copy())
-
-                if not item_taxes.count:
+            for item_name in old:
+                if item_name not in tax_details:
                     # Do not compute if Item is not present in Item table
                     # There can be difference in Item Table and Item Wise Tax Details
                     continue
 
+                item_taxes = tax_details[item_name]
                 tax_rate, tax_amount = old[item_name]
 
                 # cases when charge type == "Actual"
                 if tax_amount and not tax_rate:
                     continue
 
-                item_taxes[f"{tax}_rate"] = tax_rate
-                item_taxes[f"{tax}_amount"] += tax_amount
+                item_taxes[tax_rate_field] = tax_rate
+                item_taxes[tax_amount_field] += tax_amount
 
         self.item_tax_details = tax_details
 
@@ -1115,12 +1120,12 @@ class ItemGSTDetails:
         self.precision = frappe._dict()
 
         for tax_type in GST_TAX_TYPES:
-            field = f"{tax_type}_amount"
-            if not meta.has_field(field):
+            fieldname = f"{tax_type}_amount"
+            field = meta.get_field(fieldname)
+            if not field:
                 continue
 
-            precision = meta.get_field(field).precision
-            self.precision.update({field: precision})
+            self.precision[fieldname] = field.precision
 
 
 class ItemGSTTreatment:
