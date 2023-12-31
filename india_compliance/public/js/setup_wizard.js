@@ -20,8 +20,21 @@ function update_erpnext_slides_settings() {
         fieldname: "default_gst_rate",
         fieldtype: "Select",
         label: __("Default GST Rate"),
-        options: [0.0, 0.1, 0.25, 1.0, 1.5, 3.0, 5.0, 6.0, 7.5, 12.0, 18.0, 28.0],
-        default: 18.0,
+        options: [
+            "0.0",
+            "0.1",
+            "0.25",
+            "1.0",
+            "1.5",
+            "3.0",
+            "5.0",
+            "6.0",
+            "7.5",
+            "12.0",
+            "18.0",
+            "28.0",
+        ],
+        default: "18.0",
     });
 
     slide.fields.push({
@@ -56,7 +69,7 @@ async function autofill_company_info(slide) {
 
     if (gstin_info.business_name) {
         await slide.get_field("company_name").set_value(gstin_info.business_name);
-        slide.get_input("company_name").trigger("change");
+        slide.get_input("company_name").trigger("input");
     }
 
     set_gstin_description(gstin_field, gstin_info.status);
