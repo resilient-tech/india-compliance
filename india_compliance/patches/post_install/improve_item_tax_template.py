@@ -52,6 +52,9 @@ NEW_TEMPLATES = {
 
 
 def execute():
+    if not frappe.db.has_column("Item", "is_nil_exempt"):
+        return
+
     companies = get_indian_companies()
     templates = create_or_update_item_tax_templates(companies)
     update_items_with_templates(templates)
@@ -86,12 +89,17 @@ def create_or_update_item_tax_templates(companies):
         if not gst_accounts or not doc.taxes:
             continue
 
+        _, intra_state_accounts, inter_state_accounts = get_valid_accounts(
+            doc.company, for_sales=True, for_purchase=True, throw=False
+        )
+
+        # All GST Accounts not configured
+        if not intra_state_accounts or not inter_state_accounts:
+            continue
+
         gst_rates = set()
         companies_with_templates.add(doc.company)
         companies_gst_accounts[doc.company] = gst_accounts
-        _, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-            doc.company, for_sales=True, for_purchase=True
-        )
 
         for row in doc.taxes:
             if row.tax_type in intra_state_accounts:
@@ -303,7 +311,7 @@ def update_gst_details_for_transactions(companies):
         gst_accounts = []
         for account_type in ["Input", "Output"]:
             gst_accounts.extend(
-                get_gst_accounts_by_type(company, account_type).values()
+                get_gst_accounts_by_type(company, account_type, throw=False).values()
             )
 
         if not gst_accounts:
@@ -331,6 +339,9 @@ def update_gst_details_for_transactions(companies):
                 gst_details = ItemGSTDetails().get(
                     complied_docs.values(), doctype, company
                 )
+
+                if not gst_details:
+                    continue
 
                 build_query_and_update_gst_details(gst_details, doctype)
                 frappe.db.commit()
