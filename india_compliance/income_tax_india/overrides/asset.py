@@ -106,7 +106,17 @@ def cancel_depreciation_entries(asset, date):
 
     start_date_of_fiscal_year = get_fiscal_year(date)[1]
 
+    fb_for_income_tax_map = dict(
+        frappe.db.get_all("Finance Book", ["name", "for_income_tax"], as_list=True)
+    )
+
     for d in asset.get("schedules"):
+        if not d.finance_book:
+            return
+
+        if not fb_for_income_tax_map[d.finance_book]:
+            continue
+
         if getdate(d.schedule_date) < getdate(start_date_of_fiscal_year):
             continue
 
