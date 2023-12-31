@@ -20,7 +20,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Check",
             "insert_after": "finance_book_name",
             "description": (
-                "If the asset is put to use for less than 180 days, the first"
+                "If the asset is put to use for less than 180 days in the first year, the first year's"
                 " Depreciation Rate will be reduced by 50%."
             ),
         }
