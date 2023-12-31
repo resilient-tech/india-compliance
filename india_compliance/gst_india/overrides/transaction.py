@@ -1044,6 +1044,8 @@ class ItemGSTDetails:
 
             account_type = self.gst_account_map[row.account_head]
             tax = account_type[:-8]
+            tax_rate_field = f"{tax}_rate"
+            tax_amount_field = f"{tax}_amount"
 
             old = json.loads(row.item_wise_tax_detail)
 
@@ -1061,8 +1063,8 @@ class ItemGSTDetails:
                 if tax_amount and not tax_rate:
                     continue
 
-                item_taxes[f"{tax}_rate"] = tax_rate
-                item_taxes[f"{tax}_amount"] += tax_amount
+                item_taxes[tax_rate_field] = tax_rate
+                item_taxes[tax_amount_field] += tax_amount
 
         self.item_tax_details = tax_details
 
