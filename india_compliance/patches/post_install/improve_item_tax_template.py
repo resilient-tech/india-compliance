@@ -20,7 +20,7 @@ from india_compliance.patches.post_install.update_e_invoice_fields_and_logs impo
     delete_custom_fields,
 )
 
-TRANSACTION_DOCTYPES = (
+TRANSACTION_ITEM_DOCTYPES = (
     "Material Request Item",
     "Supplier Quotation Item",
     "Purchase Order Item",
@@ -38,7 +38,7 @@ FIELDS_TO_DELETE = {
         {"fieldname": "is_nil_exempt"},
         {"fieldname": "is_non_gst"},
     ],
-    TRANSACTION_DOCTYPES: [
+    TRANSACTION_ITEM_DOCTYPES: [
         {"fieldname": "is_nil_exempt"},
         {"fieldname": "is_non_gst"},
     ],
@@ -72,21 +72,24 @@ def get_indian_companies():
 
 def create_or_update_item_tax_templates(companies):
     if not companies:
-        return {}
+        return
 
     DOCTYPE = "Item Tax Template"
-    item_templates = frappe.get_all(DOCTYPE, pluck="name")
+    item_tax_templates = frappe.get_all(DOCTYPE, pluck="name")
     companies_with_templates = set()
-    companies_gst_accounts = frappe._dict()
+    company_wise_gst_accounts = frappe._dict()
 
     # update tax rates
-    for template_name in item_templates:
+    for template_name in item_tax_templates:
         doc = frappe.get_doc(DOCTYPE, template_name)
-        if doc.company not in companies:
+        if doc.company not in companies or not doc.taxes:
             continue
 
-        gst_accounts = get_all_gst_accounts(doc.company)
-        if not gst_accounts or not doc.taxes:
+        if doc.company not in company_wise_gst_accounts:
+            company_wise_gst_accounts[doc.company] = get_all_gst_accounts(doc.company)
+
+        gst_accounts = company_wise_gst_accounts[doc.company]
+        if not gst_accounts:
             continue
 
         _, intra_state_accounts, inter_state_accounts = get_valid_accounts(
@@ -99,7 +102,6 @@ def create_or_update_item_tax_templates(companies):
 
         gst_rates = set()
         companies_with_templates.add(doc.company)
-        companies_gst_accounts[doc.company] = gst_accounts
 
         for row in doc.taxes:
             if row.tax_type in intra_state_accounts:
@@ -107,6 +109,7 @@ def create_or_update_item_tax_templates(companies):
             elif row.tax_type in inter_state_accounts:
                 gst_rates.add(row.tax_rate)
 
+        # Invalid template
         if len(gst_rates) != 1:
             continue
 
@@ -130,7 +133,7 @@ def create_or_update_item_tax_templates(companies):
     for company in companies_with_templates:
         gst_accounts = [
             {"tax_type": account, "tax_rate": 0}
-            for account in companies_gst_accounts[company]
+            for account in company_wise_gst_accounts[company]
         ]
 
         for new_template in NEW_TEMPLATES.values():
@@ -204,8 +207,8 @@ def update_items_with_templates(templates):
     )
 
     item_wise_templates = frappe._dict()
-    for item in item_templates:
-        item_wise_templates.setdefault(item.item, set()).add(item.item_tax_template)
+    for row in item_templates:
+        item_wise_templates.setdefault(row.item, set()).add(row.item_tax_template)
 
     fields = (
         "name",
@@ -265,7 +268,7 @@ def remove_old_item_variant_settings():
 def update_gst_treatment_for_transactions():
     "Disclaimer: No specific way to differentate between nil and exempted. Hence all transactions are updated to nil"
 
-    for item_doctype in TRANSACTION_DOCTYPES:
+    for item_doctype in TRANSACTION_ITEM_DOCTYPES:
         # GST Treatment is not required in Material Request Item
         if item_doctype == "Material Request Item":
             continue
