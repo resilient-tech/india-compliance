@@ -326,8 +326,8 @@ def update_gst_details_for_transactions(companies):
             chunk_size = 5000
             total_docs = len(docs)
 
-            for i in range(0, total_docs, chunk_size):
-                chunk = docs[i : i + chunk_size]
+            for index in range(0, total_docs, chunk_size):
+                chunk = docs[index : index + chunk_size]
 
                 taxes = get_taxes_for_docs(chunk, doctype, is_sales_doctype)
                 items = get_items_for_docs(chunk, doctype)
@@ -352,11 +352,11 @@ def get_docs_with_gst_accounts(doctype, gst_accounts):
 
     return (
         frappe.qb.from_(gl_entry)
-        .select("voucher_no")
+        .select(gl_entry.voucher_no)
         .where(gl_entry.voucher_type == doctype)
         .where(gl_entry.account.isin(gst_accounts))
         .where(gl_entry.is_cancelled == 0)
-        .groupby("voucher_no")
+        .distinct()
         .run(pluck=True)
     )
 
@@ -406,12 +406,16 @@ def compile_docs(taxes, items):
     response = frappe._dict()
 
     for tax in taxes:
-        doc = response.setdefault(tax.parent, frappe._dict({"taxes": [], "items": []}))
-        doc.get("taxes").append(tax)
+        if tax.parent not in response:
+            response[tax.parent] = frappe._dict(taxes=[], items=[])
+
+        response[tax.parent]["taxes"].append(tax)
 
     for item in items:
-        doc = response.setdefault(item.parent, frappe._dict({"taxes": [], "items": []}))
-        doc.get("items").append(item)
+        if item.parent not in response:
+            response[item.parent] = frappe._dict(taxes=[], items=[])
+
+        response[item.parent]["items"].append(item)
 
     return response
 

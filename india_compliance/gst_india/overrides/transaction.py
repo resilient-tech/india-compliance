@@ -954,6 +954,8 @@ class ItemGSTDetails:
         Return Item GST Details for a list of documents
         """
         self.set_gst_accounts(doctype, company)
+        self.set_tax_amount_precisions(doctype)
+
         response = frappe._dict()
 
         if not self.gst_account_map:
@@ -965,7 +967,6 @@ class ItemGSTDetails:
                 continue
 
             self.set_item_wise_tax_details()
-            self.set_tax_amount_precisions(doctype)
 
             for item in doc.get("items"):
                 response.setdefault(item.name, frappe._dict()).update(
@@ -1041,17 +1042,16 @@ class ItemGSTDetails:
             account_type = self.gst_account_map[row.account_head]
             tax = account_type[:-8]
 
-            old = frappe.parse_json(row.item_wise_tax_detail)
+            old = json.loads(row.item_wise_tax_detail)
 
             # update item taxes
-            for item_name in set(old.keys()):
-                item_taxes = tax_details.setdefault(item_name, item_defaults.copy())
-
-                if not item_taxes.count:
+            for item_name in old:
+                if item_name not in tax_details:
                     # Do not compute if Item is not present in Item table
                     # There can be difference in Item Table and Item Wise Tax Details
                     continue
 
+                item_taxes = tax_details[item_name]
                 tax_rate, tax_amount = old[item_name]
 
                 # cases when charge type == "Actual"
@@ -1115,12 +1115,13 @@ class ItemGSTDetails:
         self.precision = frappe._dict()
 
         for tax_type in GST_TAX_TYPES:
-            field = f"{tax_type}_amount"
-            if not meta.has_field(field):
+            fieldname = f"{tax_type}_amount"
+            field = meta.get_field(fieldname)
+            if not field:
                 continue
 
-            precision = meta.get_field(field).precision
-            self.precision.update({field: precision})
+            precision = field.precision
+            self.precision[fieldname] = precision
 
 
 class ItemGSTTreatment:
