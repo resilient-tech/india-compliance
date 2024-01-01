@@ -13,7 +13,7 @@ from frappe.utils import (
     random_string,
 )
 
-from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
+from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
@@ -42,6 +42,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
+    generate_e_waybills,
     log_and_process_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.transaction_data import (
@@ -120,10 +121,10 @@ def generate_e_invoice(docname, throw=True, force=False):
     try:
         if (
             not force
-            and settings.enable_retry_e_invoice_generation
-            and settings.is_retry_e_invoice_generation_pending
+            and settings.enable_retry_einv_ewb_generation
+            and settings.is_retry_einv_ewb_generation_pending
         ):
-            raise GatewayTimeoutError
+            raise GSPServerError
 
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
@@ -426,23 +427,40 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         )
 
 
-def retry_e_invoice_generation():
+def retry_e_invoice_e_waybill_generation():
     settings = frappe.get_cached_doc("GST Settings")
+
     if (
-        not settings.enable_retry_e_invoice_generation
-        or not settings.is_retry_e_invoice_generation_pending
+        not settings.enable_retry_einv_ewb_generation
+        or not settings.is_retry_einv_ewb_generation_pending
     ):
         return
 
-    settings.db_set("is_retry_e_invoice_generation_pending", 0, update_modified=False)
+    settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
 
     queued_sales_invoices = frappe.db.get_all(
-        "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
+        "Sales Invoice",
+        or_filters={"einvoice_status": "Auto-Retry", "e_waybill_status": "Auto-Retry"},
+        fields=["name", "einvoice_status", "e_waybill_status"],
     )
     if not queued_sales_invoices:
         return
 
-    generate_e_invoices(queued_sales_invoices, force=True)
+    queued_for_e_invoice = [
+        sales_invoice.name
+        for sales_invoice in queued_sales_invoices
+        if sales_invoice.einvoice_status == "Auto-Retry"
+    ]
+
+    queued_for_e_waybill = [
+        sales_invoice.name
+        for sales_invoice in queued_sales_invoices
+        if sales_invoice.e_waybill_status == "Auto-Retry"
+    ]
+
+    generate_e_invoices(queued_for_e_invoice, force=True)
+
+    generate_e_waybills("Sales Invoice", queued_for_e_waybill, force=True)
 
 
 def get_e_invoice_info(doc):

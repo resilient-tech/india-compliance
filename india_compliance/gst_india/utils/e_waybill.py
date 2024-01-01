@@ -14,7 +14,7 @@ from frappe.utils import (
 )
 from frappe.utils.file_manager import save_file
 
-from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
+from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
@@ -143,10 +143,10 @@ def _generate_e_waybill(doc, throw=True, force=False):
     try:
         if (
             not force
-            and settings.enable_retry_e_waybill_generation
-            and settings.is_retry_e_waybill_generation_pending
+            and settings.enable_retry_einv_ewb_generation
+            and settings.is_retry_einv_ewb_generation_pending
         ):
-            raise GatewayTimeoutError
+            raise GSPServerError
 
         # Via e-Invoice API if not Return or Debit Note
         # Handles following error when generating e-Waybill using IRN:
@@ -160,32 +160,12 @@ def _generate_e_waybill(doc, throw=True, force=False):
         api = EWaybillAPI if not with_irn else EInvoiceAPI
         result = api(doc).generate_e_waybill(data)
 
-        if result.error_code == "604":
-            error_message = (
-                result.message
-                + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
-            )
-            frappe.throw(error_message, title=_("API Request Failed"))
-
         if result.error_code == "4002":
             result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
 
-        log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
-
-        if not frappe.request:
-            return
-
-        frappe.msgprint(
-            _("e-Waybill generated successfully")
-            if result.validUpto or result.EwbValidTill
-            else _("e-Waybill (Part A) generated successfully"),
-            indicator="green",
-            alert=True,
-        )
-        return send_updated_doc(doc)
-
     except GSPServerError as e:
         handle_server_errors(settings, doc, "e-Waybill", e)
+        return
 
     except frappe.ValidationError as e:
         if throw:
@@ -201,6 +181,28 @@ def _generate_e_waybill(doc, throw=True, force=False):
             indicator="yellow",
         )
         return
+
+    if result.error_code == "604":
+        error_message = (
+            result.message
+            + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
+        )
+        frappe.throw(error_message, title=_("API Request Failed"))
+
+    log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
+
+    if not frappe.request:
+        return
+
+    frappe.msgprint(
+        _("e-Waybill generated successfully")
+        if result.validUpto or result.EwbValidTill
+        else _("e-Waybill (Part A) generated successfully"),
+        indicator="green",
+        alert=True,
+    )
+
+    return send_updated_doc(doc)
 
 
 def log_and_process_e_waybill_generation(doc, result, *, with_irn=False):
@@ -517,25 +519,6 @@ def extend_validity(*, doctype, docname, values):
     )
 
     return send_updated_doc(doc)
-
-
-def retry_e_waybill_generation():
-    settings = frappe.get_cached_doc("GST Settings")
-    if (
-        not settings.enable_retry_e_waybill_generation
-        or not settings.is_retry_e_waybill_generation_pending
-    ):
-        return
-
-    settings.db_set("is_retry_e_waybill_generation_pending", 0, update_modified=False)
-
-    queued_sales_invoices = frappe.db.get_all(
-        "Sales Invoice", filters={"e_waybill_status": "Auto-Retry"}, pluck="name"
-    )
-    if not queued_sales_invoices:
-        return
-
-    generate_e_waybills("Sales Invoice", queued_sales_invoices, force=True)
 
 
 #######################################################################################
