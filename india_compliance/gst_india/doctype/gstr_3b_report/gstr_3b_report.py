@@ -24,33 +24,64 @@ from india_compliance.gst_india.utils import (
 
 class GSTR3BReport(Document):
     def validate(self):
+        self.json_output = ""
+        self.missing_field_invoices = ""
+        self.generation_status = "In Process"
+
+        if self.enqueue_report:
+            frappe.msgprint(_("Intiated report generation in background"), alert=True)
+            frappe.enqueue_doc("GSTR 3B Report", self.name, "get_data", queue="long")
+            return
+
         self.get_data()
 
     def get_data(self):
-        self.report_dict = json.loads(get_json("gstr_3b_report_template"))
+        try:
+            self.report_dict = json.loads(get_json("gstr_3b_report_template"))
 
-        self.gst_details = self.get_company_gst_details()
-        self.report_dict["gstin"] = self.gst_details.get("gstin")
-        self.report_dict["ret_period"] = get_period(self.month, self.year)
-        self.month_no = get_period(self.month)
-        self.account_heads = self.get_account_heads()
+            self.gst_details = self.get_company_gst_details()
+            self.report_dict["gstin"] = self.gst_details.get("gstin")
+            self.report_dict["ret_period"] = get_period(self.month, self.year)
+            self.month_no = get_period(self.month)
+            self.account_heads = self.get_account_heads()
 
-        self.get_outward_supply_details("Sales Invoice")
-        self.set_outward_taxable_supplies()
+            self.get_outward_supply_details("Sales Invoice")
+            self.set_outward_taxable_supplies()
 
-        self.get_outward_supply_details("Purchase Invoice", reverse_charge=True)
-        self.set_supplies_liable_to_reverse_charge()
+            self.get_outward_supply_details("Purchase Invoice", reverse_charge=True)
+            self.set_supplies_liable_to_reverse_charge()
 
-        itc_details = self.get_itc_details()
-        self.set_itc_details(itc_details)
-        self.get_itc_reversal_entries()
-        inward_nil_exempt = self.get_inward_nil_exempt(
-            self.gst_details.get("gst_state")
+            itc_details = self.get_itc_details()
+            self.set_itc_details(itc_details)
+            self.get_itc_reversal_entries()
+            inward_nil_exempt = self.get_inward_nil_exempt(
+                self.gst_details.get("gst_state")
+            )
+            self.set_inward_nil_exempt(inward_nil_exempt)
+
+            self.missing_field_invoices = self.get_missing_field_invoices()
+            self.json_output = frappe.as_json(self.report_dict)
+            self.generation_status = "Generated"
+
+            if self.enqueue_report:
+                self.db_set(
+                    {
+                        "json_output": self.json_output,
+                        "missing_field_invoices": self.missing_field_invoices,
+                        "generation_status": self.generation_status,
+                    }
+                )
+        except Exception:
+            frappe.log_error(
+                title=_("Error generating GSTR3b"),
+                message=frappe.get_traceback(),
+            )
+            self.status = "Failed"
+            self.db_set({"status": self.status})
+
+        frappe.publish_realtime(
+            "gstr3b_report_generation", doctype=self.doctype, docname=self.name
         )
-        self.set_inward_nil_exempt(inward_nil_exempt)
-
-        self.missing_field_invoices = self.get_missing_field_invoices()
-        self.json_output = frappe.as_json(self.report_dict)
 
     def set_inward_nil_exempt(self, inward_nil_exempt):
         self.report_dict["inward_sup"]["isup_details"][0]["inter"] = flt(
