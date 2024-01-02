@@ -49,6 +49,8 @@ class TestEWaybill(FrappeTestCase):
                 "fetch_e_waybill_data": 0,
                 "auto_generate_e_waybill": 0,
                 "attach_e_waybill_print": 0,
+                "enable_retry_einv_ewb_generation": 1,
+                "is_retry_einv_ewb_generation_pending": 0,
             },
         )
 
@@ -814,6 +816,38 @@ class TestEWaybill(FrappeTestCase):
             frappe.get_doc("e-Waybill Log", {"reference_name": return_note.name}),
         )
 
+    @responses.activate
+    def test_gst_error_retry_enabled(self):
+        """Test to check if e-waybill status is set to Auto Retry on GST Server Error when Retry e-Invoice / e-Waybill Generation is enabled"""
+        self._generate_e_waybill(test_data=self.e_waybill_test_data.gsp_gst_down_error)
+
+        doc = load_doc("Sales Invoice", self.sales_invoice.name, "submit")
+
+        self.assertEqual(doc.e_waybill_status, "Auto-Retry")
+
+        self.assertEqual(
+            frappe.get_cached_value(
+                "GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"
+            ),
+            1,
+        )
+
+    @change_settings("GST Settings", {"enable_retry_einv_ewb_generation": 0})
+    @responses.activate
+    def test_gst_error_retry_disabled(self):
+        """Test to check if e-waybill status is set to Auto Retry on GST Server Error when Retry e-Invoice / e-Waybill Generation is disabled"""
+        self._generate_e_waybill(test_data=self.e_waybill_test_data.gsp_gst_down_error)
+
+        doc = load_doc("Sales Invoice", self.sales_invoice.name, "submit")
+
+        self.assertEqual(doc.e_waybill_status, "Failed")
+        self.assertEqual(
+            frappe.get_cached_value(
+                "GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"
+            ),
+            0,
+        )
+
     # helper functions
     def _generate_e_waybill(
         self, doctype="Sales Invoice", docname=None, test_data=None
@@ -885,7 +919,7 @@ def update_dates_for_test_data(test_data):
             continue
 
         response_request = value.get("request_data")
-        response_result = value.get("response_data").get("result")
+        response_result = value.get("response_data").get("result", {})
 
         for k, v in response_result.items():
             if k == "ewayBillDate":
