@@ -130,6 +130,9 @@ class Worksheet:
 
         for row in self.parse_data(data):
             for idx, val in enumerate(row, 1):
+                if idx > len(self.headers):
+                    break
+
                 cell = self.ws.cell(row=self.row_dimension, column=idx)
                 self.apply_format(row=self.row_dimension, column=idx, **kwargs)
                 cell.value = val
@@ -311,6 +314,6 @@ class Worksheet:
     def get_column_index(self, column_name):
         """Get column index / position from column name"""
 
-        for (idx, field) in enumerate(self.headers, 1):
+        for idx, field in enumerate(self.headers, 1):
             if field["fieldname"] == column_name:
                 return idx

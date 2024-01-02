@@ -2,6 +2,7 @@ import frappe
 
 from india_compliance.gst_india.constants import (
     GST_CATEGORIES,
+    GST_TAX_RATES,
     PORT_CODES,
     STATE_NUMBERS,
 )
@@ -53,6 +54,17 @@ CUSTOM_FIELDS = {
             "insert_after": "parent_company",
         },
         *party_fields[1:],
+        {
+            "fieldname": "default_gst_rate",
+            "label": "Default GST Rate",
+            "fieldtype": "Select",
+            "options": "\n".join(str(f) for f in GST_TAX_RATES),
+            "description": "Sales / Purchase Taxes and Charges Template will be created based on this GST Rate",
+            "default": "18.0",
+            "depends_on": "eval:doc.country == 'India' && doc.__islocal",
+            "insert_after": "country",
+            "translatable": 0,
+        },
         {
             "fieldname": "default_customs_expense_account",
             "label": "Default Customs Duty Expense Account",
@@ -309,8 +321,9 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_treatment",
             "label": "GST Treatment",
             "fieldtype": "Autocomplete",
-            "options": "Taxable\nNil-Rated\nExempted\nNon-GST",
+            "options": "Taxable\nZero-Rated\nNil-Rated\nExempted\nNon-GST",
             "fetch_from": "item_tax_template.gst_treatment",
+            "fetch_if_empty": 1,
             "insert_after": "item_tax_template",
             "print_hide": 1,
             "read_only": 1,

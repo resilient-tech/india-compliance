@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 
 from india_compliance.audit_trail.utils import enable_audit_trail
+from india_compliance.gst_india.overrides.company import make_default_tax_templates
 from india_compliance.gst_india.overrides.party import validate_pan
 from india_compliance.gst_india.utils import guess_gst_category, is_api_enabled
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
@@ -27,12 +28,12 @@ def get_setup_wizard_stages(params=None):
         },
         {
             "status": _("Wrapping up"),
-            "fail_msg": _("Failed to Update Company GSTIN"),
+            "fail_msg": _("Failed to Setup Company Taxes"),
             "tasks": [
                 {
-                    "fn": setup_company_gstin_details,
+                    "fn": setup_company_taxes,
                     "args": params,
-                    "fail_msg": _("Failed to Update Company GSTIN"),
+                    "fail_msg": _("Failed to Setup Company Taxes"),
                 }
             ],
         },
@@ -47,7 +48,7 @@ def configure_audit_trail(params):
         enable_audit_trail()
 
 
-def setup_company_gstin_details(params):
+def setup_company_taxes(params):
     if not params.company_gstin:
         return
 
@@ -60,6 +61,7 @@ def setup_company_gstin_details(params):
 
     update_company_info(params, gstin_info.gst_category)
     create_address(gstin_info, params)
+    setup_tax_template(params)
 
 
 def update_company_info(params, gst_category=None):
@@ -95,4 +97,14 @@ def create_address(gstin_info: dict, params: dict) -> None:
 def can_fetch_gstin_info():
     return is_api_enabled() and not frappe.get_cached_value(
         "GST Settings", None, "sandbox_mode"
+    )
+
+
+def setup_tax_template(params):
+    if not params.default_gst_rate:
+        params.default_gst_rate = "18.0"
+
+    make_default_tax_templates(params.company_name, params.default_gst_rate)
+    frappe.db.set_value(
+        "Company", params.company_name, "default_gst_rate", params.default_gst_rate
     )

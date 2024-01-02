@@ -45,10 +45,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     generate_e_waybills,
     log_and_process_e_waybill_generation,
 )
-from india_compliance.gst_india.utils.transaction_data import (
-    GSTTransactionData,
-    validate_non_gst_items,
-)
+from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 
 @frappe.whitelist()
@@ -354,7 +351,8 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
             )
         )
 
-    if not validate_non_gst_items(doc, throw=throw):
+    if not validate_taxable_item(doc, throw=throw):
+        # e-Invoice not required for invoice wih all nill-rated/exempted items.
         return
 
     if not (doc.place_of_supply == "96-Other Countries" or doc.billing_address_gstin):
@@ -389,6 +387,26 @@ def validate_hsn_codes_for_e_invoice(doc):
         doc,
         valid_hsn_length=[6, 8],
         message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+    )
+
+
+def validate_taxable_item(doc, throw=True):
+    """
+    Validates that the document contains at least one GST taxable item.
+
+    If all items are Nil-Rated or Exempted and throw is True, it raises an exception.
+    Otherwise, it simply returns False.
+
+    """
+    # Check if there is at least one taxable item in the document
+    if any(item.gst_treatment in ("Taxable", "Zero-Rated") for item in doc.items):
+        return True
+
+    if not throw:
+        return
+
+    frappe.throw(
+        _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items"),
     )
 
 
@@ -477,9 +495,27 @@ class EInvoiceData(GSTTransactionData):
         self.validate_transaction()
         self.set_transaction_details()
         self.set_item_list()
+        self.update_other_charges()
         self.set_transporter_details()
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
+
+    def set_item_list(self):
+        self.item_list = []
+
+        for item_details in self.get_all_item_details():
+            if item_details.get("gst_treatment") not in ("Taxable", "Zero-Rated"):
+                continue
+
+            self.item_list.append(self.get_item_data(item_details))
+
+    def update_other_charges(self):
+        """
+        Non Taxable Value should be added to other charges.
+        """
+        self.transaction_details.other_charges += (
+            self.transaction_details.total_non_taxable_value
+        )
 
     def validate_transaction(self):
         super().validate_transaction()
@@ -735,7 +771,7 @@ class EInvoiceData(GSTTransactionData):
             },
             "ItemList": self.item_list,
             "ValDtls": {
-                "AssVal": self.transaction_details.total,
+                "AssVal": self.transaction_details.total_taxable_value,
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,

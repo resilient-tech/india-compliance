@@ -3,8 +3,10 @@ import re
 from parameterized import parameterized_class
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.utils import today
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+from erpnext.accounts.party import _get_party_details
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
@@ -521,6 +523,24 @@ class TestTransaction(FrappeTestCase):
             },
             doc.items[0],
         )
+        append_item(doc, frappe._dict(rate=300))
+        doc.save()
+
+        # test same item multiple times
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Taxable",
+                "igst_rate": 0,
+                "cgst_rate": 9,
+                "sgst_rate": 9,
+                "cess_non_advol_rate": 20,
+                "igst_amount": 0,
+                "cgst_amount": 27,
+                "sgst_amount": 27,
+                "cess_non_advol_amount": 20,
+            },
+            doc.items[1],
+        )
 
         # test non gst treatment
         doc = create_transaction(
@@ -530,6 +550,44 @@ class TestTransaction(FrappeTestCase):
             {"gst_treatment": "Non-GST"},
             doc.items[0],
         )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_gst_treatment_for_exports(self):
+        if not self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+        )
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+
+        # Update Customer after it's already set
+        doc_details = {
+            **self.transaction_details,
+            "customer": "_Test Foreign Customer",
+            "party_name": "_Test Foreign Customer",
+        }
+        doc = create_transaction(**doc_details, do_not_submit=True)
+        self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
+
+        party_field = "party_name" if self.doctype == "Quotation" else "customer"
+
+        customer = "_Test Registered Customer"
+        doc.update(
+            {
+                party_field: customer,
+                **_get_party_details(
+                    party=customer,
+                    company=doc.company,
+                    posting_date=today(),
+                    doctype=doc.doctype,
+                ),
+            }
+        )
+        doc.selling_price_list = "Standard Selling"
+        doc.save()
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
 
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:
@@ -754,4 +812,4 @@ def create_tax_accounts(account_name):
             "parent_account": parent_account,
             **defaults,
         }
-    ).save()
+    ).insert(ignore_if_duplicate=True)
