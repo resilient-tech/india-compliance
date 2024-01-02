@@ -586,8 +586,8 @@ def extend_scheduled_e_waybills():
         except Exception:
             frappe.log_error(
                 title=_(
-                    f"Failed to Extend Validity of Scheduled e-Waybill #{e_waybill_data.e_waybill_number}"
-                ),
+                    "Failed to Extend Validity of Scheduled e-Waybill #{ewb_no}"
+                ).format(ewb_no=e_waybill_data.e_waybill_number),
                 message=frappe.get_traceback(),
             )
 
@@ -641,7 +641,9 @@ def schedule_ewaybill_for_extension(doctype, docname, values, scheduled_time):
     frappe.db.set_value("e-Waybill Log", values.ewaybill, values_to_update)
 
     frappe.msgprint(
-        _(f"e-Waybill successfully scheduled for extension at {scheduled_time}"),
+        _("e-Waybill successfully scheduled for extension at {scheduled_time}").format(
+            scheduled_time=scheduled_time
+        ),
         indicator="green",
         alert=True,
     )
