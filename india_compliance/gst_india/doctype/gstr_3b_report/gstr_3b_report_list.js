@@ -10,7 +10,7 @@ frappe.listview_settings["GSTR 3B Report"] = {
         return [
             __(doc.generation_status),
             colors[doc.generation_status],
-            "generation_status,=," + doc.status,
+            "generation_status,=," + doc.generation_status,
         ];
     },
 };

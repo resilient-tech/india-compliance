@@ -71,17 +71,17 @@ class GSTR3BReport(Document):
                         "generation_status": self.generation_status,
                     }
                 )
-        except Exception:
-            frappe.log_error(
-                title=_("Error generating GSTR3b"),
-                message=frappe.get_traceback(),
-            )
-            self.status = "Failed"
-            self.db_set({"status": self.status})
 
-        frappe.publish_realtime(
-            "gstr3b_report_generation", doctype=self.doctype, docname=self.name
-        )
+        except Exception as e:
+            self.generation_status = "Failed"
+            self.db_set({"generation_status": self.generation_status})
+            frappe.db.commit()
+            raise e
+
+        finally:
+            frappe.publish_realtime(
+                "gstr3b_report_generation", doctype=self.doctype, docname=self.name
+            )
 
     def set_inward_nil_exempt(self, inward_nil_exempt):
         self.report_dict["inward_sup"]["isup_details"][0]["inter"] = flt(
