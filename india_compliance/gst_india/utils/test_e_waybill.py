@@ -820,12 +820,16 @@ class TestEWaybill(FrappeTestCase):
     @responses.activate
     def test_gst_error_retry_enabled(self):
         """Test to check if e-waybill status is set to Auto Retry on GST Server Error when Retry e-Invoice / e-Waybill Generation is enabled"""
-        self._generate_e_waybill(test_data=self.e_waybill_test_data.gsp_gst_down_error)
+        sales_invoice = _create_sales_invoice(self.e_waybill_test_data)
 
-        doc = load_doc("Sales Invoice", self.sales_invoice.name, "submit")
+        self._generate_e_waybill(
+            docname=sales_invoice.name,
+            test_data=self.e_waybill_test_data.gsp_gst_down_error,
+        )
 
-        self.assertEqual(doc.e_waybill_status, "Auto-Retry")
+        sales_invoice = load_doc("Sales Invoice", sales_invoice.name, "submit")
 
+        self.assertEqual(sales_invoice.e_waybill_status, "Auto-Retry")
         self.assertEqual(
             frappe.get_cached_value(
                 "GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"
@@ -837,11 +841,16 @@ class TestEWaybill(FrappeTestCase):
     @responses.activate
     def test_gst_error_retry_disabled(self):
         """Test to check if e-waybill status is set to Auto Retry on GST Server Error when Retry e-Invoice / e-Waybill Generation is disabled"""
-        self._generate_e_waybill(test_data=self.e_waybill_test_data.gsp_gst_down_error)
+        sales_invoice = _create_sales_invoice(self.e_waybill_test_data)
 
-        doc = load_doc("Sales Invoice", self.sales_invoice.name, "submit")
+        self._generate_e_waybill(
+            docname=sales_invoice.name,
+            test_data=self.e_waybill_test_data.gsp_gst_down_error,
+        )
 
-        self.assertEqual(doc.e_waybill_status, "Failed")
+        sales_invoice = load_doc("Sales Invoice", sales_invoice.name, "submit")
+
+        self.assertEqual(sales_invoice.e_waybill_status, "Failed")
         self.assertEqual(
             frappe.get_cached_value(
                 "GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"
