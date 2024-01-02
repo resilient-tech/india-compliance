@@ -431,6 +431,7 @@ def build_query_and_update_gst_details(gst_details, doctype):
     transaction_item = frappe.qb.DocType(f"{doctype} Item")
 
     update_query = frappe.qb.update(transaction_item)
+    execute_query = False
 
     # Initialize CASE queries
     conditions = frappe._dict()
@@ -460,7 +461,9 @@ def build_query_and_update_gst_details(gst_details, doctype):
         # ELSE
         conditions[field] = conditions[field].else_(transaction_item[field])
         update_query = update_query.set(transaction_item[field], conditions[field])
+        execute_query = True
 
-    update_query = update_query.where(
-        transaction_item.name.isin(list(gst_details.keys()))
-    ).run()
+    if execute_query:
+        update_query = update_query.where(
+            transaction_item.name.isin(list(gst_details.keys()))
+        ).run()
