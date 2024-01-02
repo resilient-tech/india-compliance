@@ -22,22 +22,12 @@
   "cancel_remark",
   "extension_details_section",
   "extension_scheduled",
-  "ewaybill",
-  "vehicle_no",
-  "remaining_distance",
   "consignment_status",
-  "mode_of_transport",
   "transit_type",
-  "lr_no",
+  "extension_reason_code",
+  "extension_remark",
   "column_break_grbd",
-  "address_line1",
-  "address_line2",
-  "address_line3",
-  "current_place",
-  "current_pincode",
-  "current_state",
-  "reason",
-  "remark",
+  "address",
   "section_break_31",
   "is_latest_data",
   "data"
@@ -151,33 +141,9 @@
    "read_only": 1
   },
   {
-   "fieldname": "ewaybill",
-   "fieldtype": "Data",
-   "label": "e-Waybill",
-   "read_only": 1
-  },
-  {
-   "fieldname": "vehicle_no",
-   "fieldtype": "Data",
-   "label": "Vehicle No",
-   "read_only": 1
-  },
-  {
-   "fieldname": "remaining_distance",
-   "fieldtype": "Data",
-   "label": "Remaining Distance (in km)",
-   "read_only": 1
-  },
-  {
    "fieldname": "consignment_status",
    "fieldtype": "Data",
    "label": "Consignment Status",
-   "read_only": 1
-  },
-  {
-   "fieldname": "mode_of_transport",
-   "fieldtype": "Data",
-   "label": "Mode Of Transport",
    "read_only": 1
   },
   {
@@ -187,62 +153,8 @@
    "read_only": 1
   },
   {
-   "fieldname": "lr_no",
-   "fieldtype": "Data",
-   "label": "Transport Receipt No",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break1",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "address_line1",
-   "fieldtype": "Data",
-   "label": "Address Line1",
-   "read_only": 1
-  },
-  {
-   "fieldname": "address_line2",
-   "fieldtype": "Data",
-   "label": "Address Line2",
-   "read_only": 1
-  },
-  {
-   "fieldname": "address_line3",
-   "fieldtype": "Data",
-   "label": "Address Line3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "current_place",
-   "fieldtype": "Data",
-   "label": "Current Place",
-   "read_only": 1
-  },
-  {
-   "fieldname": "current_pincode",
-   "fieldtype": "Data",
-   "label": "Current Pincode",
-   "read_only": 1
-  },
-  {
-   "fieldname": "current_state",
-   "fieldtype": "Data",
-   "label": "Current State",
-   "read_only": 1
-  },
-  {
-   "fieldname": "reason",
-   "fieldtype": "Data",
-   "label": "Reason",
-   "read_only": 1
-  },
-  {
-   "fieldname": "remark",
-   "fieldtype": "Data",
-   "label": "Remark",
-   "read_only": 1
   },
   {
    "fieldname": "column_break_grbd",
@@ -254,6 +166,23 @@
    "fieldtype": "Check",
    "label": "Extension Scheduled",
    "read_only": 1
+  },
+  {
+   "fieldname": "extension_remark",
+   "fieldtype": "Data",
+   "label": "Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "JSON",
+   "label": "Address"
+  },
+  {
+   "fieldname": "extension_reason_code",
+   "fieldtype": "Data",
+   "label": "Reason",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -263,7 +192,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2023-12-27 18:39:58.760379",
+ "modified": "2024-01-01 15:57:26.649289",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

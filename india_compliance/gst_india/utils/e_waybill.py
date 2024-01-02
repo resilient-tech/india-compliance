@@ -8,6 +8,7 @@ from frappe.utils import (
     add_days,
     add_to_date,
     format_date,
+    get_date_str,
     get_datetime,
     get_fullname,
     get_link_to_form,
@@ -125,87 +126,6 @@ def generate_e_waybills(doctype, docnames):
         finally:
             # each e-Waybill needs to be committed individually
             frappe.db.commit()  # nosemgrep
-
-
-def extend_scheduled_e_waybills():
-    e_waybills_to_extend = frappe.get_all(
-        "e-Waybill Log",
-        filters={
-            "extension_scheduled": 1,
-            "valid_upto": [
-                "between",
-                (add_days(get_datetime(), -1), get_datetime()),
-            ],
-        },
-        fields=[
-            "name",
-            "reference_name",
-            "valid_upto",
-            "ewaybill",
-            "vehicle_no",
-            "remaining_distance",
-            "consignment_status",
-            "mode_of_transport",
-            "transit_type",
-            "lr_no",
-            "address_line1",
-            "address_line2",
-            "address_line3",
-            "current_place",
-            "current_pincode",
-            "current_state",
-            "reason",
-            "remark",
-        ],
-    )
-
-    for e_waybill in e_waybills_to_extend:
-        extend_validity(
-            doctype="Sales Invoice",
-            docname=e_waybill["reference_name"],
-            values=e_waybill,
-        )
-
-
-def validate_data_before_schedule(doc, values):
-    e_waybill_data = EWaybillData(doc)
-
-    e_waybill_data.validate_if_e_waybill_is_set()
-    e_waybill_data.validate_mode_of_transport()
-    e_waybill_data.validate_transit_type(values)
-    e_waybill_data.validate_remaining_distance(values)
-
-
-@frappe.whitelist()
-def schedule_ewaybill_for_extension(doctype, docname, values, scheduled_time):
-    doc = load_doc(doctype, docname, "submit")
-    values = frappe.parse_json(values)
-
-    validate_data_before_schedule(doc, values)
-
-    update_dict = {
-        "extension_scheduled": 1,
-        "ewaybill": values.ewaybill,
-        "vehicle_no": values.vehicle_no,
-        "remaining_distance": values.remaining_distance,
-        "consignment_status": values.consignment_status,
-        "mode_of_transport": values.mode_of_transport,
-        "transit_type": values.transit_type,
-        "lr_no": values.lr_no,
-        "address_line1": values.address_line1,
-        "address_line2": values.address_line2,
-        "address_line3": values.address_line3,
-        "current_place": values.current_place,
-        "current_pincode": values.current_pincode,
-        "current_state": values.current_state,
-        "reason": values.reason,
-        "remark": values.remark,
-    }
-
-    frappe.db.set_value("e-Waybill Log", values.ewaybill, update_dict)
-
-    # ewb = frappe.get_doc('e-Waybill Log', values.ewaybill)
-    # ewb.add_comment(text=f'Scheduled for extension at {scheduled_time}')
 
 
 @frappe.whitelist()
@@ -585,6 +505,183 @@ def extend_validity(*, doctype, docname, values):
     )
 
     return send_updated_doc(doc)
+
+
+def get_e_waybills_to_extend():
+    e_waybill = frappe.qb.DocType("e-Waybill Log")
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+
+    return (
+        frappe.qb.from_(e_waybill)
+        .where(
+            e_waybill.is_cancelled.eq(0)
+            & e_waybill.extension_scheduled.eq(1)
+            & e_waybill.valid_upto.between(
+                get_date_str(add_days(get_datetime(), -1)), get_date_str(get_datetime())
+            )
+        )
+        .join(sales_invoice)
+        .on(sales_invoice.ewaybill == e_waybill.name)
+        .select(
+            e_waybill.reference_name,
+            e_waybill.e_waybill_number,
+            e_waybill.consignment_status,
+            e_waybill.transit_type,
+            e_waybill.address,
+            e_waybill.extension_reason_code,
+            e_waybill.extension_remark,
+            sales_invoice.vehicle_no,
+            sales_invoice.distance,
+            sales_invoice.mode_of_transport,
+            sales_invoice.lr_no,
+        )
+        .run(as_dict=True)
+    )
+
+
+def build_ewaybill_extension_data(e_waybill_data):
+    address = json.loads(e_waybill_data.address)
+
+    return {
+        "ewaybill": e_waybill_data.e_waybill_number,
+        "vehicle_no": e_waybill_data.vehicle_no,
+        "remaining_distance": e_waybill_data.distance,
+        "consignment_status": e_waybill_data.consignment_status,
+        "mode_of_transport": e_waybill_data.mode_of_transport,
+        "transit_type": e_waybill_data.transit_type,
+        "lr_no": e_waybill_data.lr_no,
+        "address_line1": address["address_line1"],
+        "address_line2": address["address_line2"],
+        "address_line3": address["address_line3"],
+        "current_place": address["current_place"],
+        "current_pincode": address["current_pincode"],
+        "current_state": address["current_state"],
+        "reason": e_waybill_data.extension_reason_code,
+        "remark": e_waybill_data.extension_remark,
+    }
+
+
+def extend_scheduled_e_waybills():
+    e_waybills_to_extend = get_e_waybills_to_extend()
+
+    if not e_waybills_to_extend:
+        return
+
+    for e_waybill_data in e_waybills_to_extend:
+        try:
+            values = build_ewaybill_extension_data(e_waybill_data)
+
+            extend_validity(
+                doctype="Sales Invoice",
+                docname=e_waybill_data.reference_name,
+                values=values,
+            )
+
+            frappe.db.set_value(
+                "e-Waybill Log",
+                e_waybill_data.e_waybill_number,
+                {"extension_scheduled": 0},
+            )
+
+        except Exception:
+            frappe.log_error(
+                title=_(
+                    f"Failed to Extend Validity of Scheduled e-Waybill #{e_waybill_data.e_waybill_number}"
+                ),
+                message=frappe.get_traceback(),
+            )
+
+
+def validate_data_before_schedule(doc, values):
+    e_waybill_data = EWaybillData(doc)
+
+    e_waybill_data.validate_if_e_waybill_is_set()
+    e_waybill_data.validate_mode_of_transport()
+    e_waybill_data.validate_transit_type(values)
+    e_waybill_data.validate_remaining_distance(values)
+
+
+@frappe.whitelist()
+def schedule_ewaybill_for_extension(doctype, docname, values, scheduled_time):
+    values = frappe.parse_json(values)
+    if not values:
+        return
+
+    doc = load_doc(doctype, docname, "submit")
+    doc.db_set(
+        {
+            "vehicle_no": values.vehicle_no.replace(" ", ""),
+            "lr_no": values.lr_no,
+            "mode_of_transport": values.mode_of_transport,
+        }
+    )
+
+    validate_data_before_schedule(doc, values)
+
+    address = json.dumps(
+        {
+            "address_line1": values.address_line1,
+            "address_line2": values.address_line2,
+            "address_line3": values.address_line3,
+            "current_place": values.current_place,
+            "current_pincode": values.current_pincode,
+            "current_state": values.current_state,
+        }
+    )
+
+    values_to_update = {
+        "extension_scheduled": 1,
+        "consignment_status": values.consignment_status,
+        "transit_type": values.transit_type,
+        "address": address,
+        "extension_reason_code": values.reason,
+        "extension_remark": values.remark,
+    }
+
+    frappe.db.set_value("e-Waybill Log", values.ewaybill, values_to_update)
+
+    frappe.msgprint(
+        _(f"e-Waybill successfully scheduled for extension at {scheduled_time}"),
+        indicator="green",
+        alert=True,
+    )
+
+    add_comment(values, scheduled_time)
+
+
+def add_comment(values, scheduled_time):
+    values_in_comment = {
+        "Transit Type": values.transit_type,
+        "Vehicle No": values.vehicle_no,
+        "LR No": values.lr_no,
+        "Mode of Transport": values.mode_of_transport,
+        "Remaining Distance": values.remaining_distance,
+        "Current Place": values.current_place,
+        "Current Pincode": values.current_pincode,
+        "Reason": values.reason,
+        "Remark": values.remark,
+    }
+
+    comment = _(
+        "e-Waybill has been scheduled for extension for {time} by {user}.<br><br> Details: <br>"
+    ).format(user=frappe.bold(get_fullname()), time=frappe.bold(scheduled_time))
+
+    for key, value in values_in_comment.items():
+        if value:
+            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+
+    comment_doc = frappe.get_doc(
+        {
+            "doctype": "Comment",
+            "comment_type": "Comment",
+            "comment_email": frappe.session.user,
+            "comment_by": get_fullname(),
+            "reference_doctype": "e-Waybill Log",
+            "reference_name": values.ewaybill,
+            "content": comment,
+        }
+    )
+    comment_doc.insert(ignore_permissions=True)
 
 
 #######################################################################################

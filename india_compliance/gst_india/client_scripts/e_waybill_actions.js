@@ -108,11 +108,15 @@ function setup_e_waybill_actions(doctype) {
             if (
                 frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
             ) {
-                frm.add_custom_button(
+                const can_extend = can_extend_e_waybill(frm);
+                let btn = frm.add_custom_button(
                     __("Extend Validity"),
-                    () => show_extend_validity_dialog(frm),
+                    can_extend ? () => show_extend_validity_dialog(frm) : null,
                     "e-Waybill"
                 );
+                if(!can_extend) {
+                    btn.addClass('disabled');
+                }
             }
 
             if (frappe.model.can_print("e-Waybill Log")) {
@@ -798,26 +802,16 @@ function show_update_transporter_dialog(frm) {
     d.show();
 }
 
-function get_hours(date, hours) {
-    return moment(date).add(hours, "hours").format(frappe.defaultDatetimeFormat);
-}
-
-function get_secondary_btn_text(frm, valid_upto_plus_one_hr) {
-    const extension_scheduled = frm.doc.__onload?.e_waybill_info?.extension_scheduled;
-    if(extension_scheduled) return `Already scheduled for ${valid_upto_plus_one_hr}`
-    return `Schedule for ${valid_upto_plus_one_hr}`
-}
-
-
 async function show_extend_validity_dialog(frm) {
     const destination_address = await get_source_destination_address(frm, "destination_address");
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
 
-    const can_extend_waybill = can_extend_e_waybill(frm);
+    const can_extend_now = can_extend_e_waybill_now(frm);
 
+    const extension_already_scheduled = frm.doc.__onload?.e_waybill_info?.extension_scheduled;
     const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
-    const valid_upto_plus_one_hr = get_hours(valid_upto, 1);
+    const scheduled_time = get_hours(valid_upto, 1, "DD-MM-YYYY HH:mm A");
 
     const d = new frappe.ui.Dialog({
         title: __("Extend Validity"),
@@ -978,30 +972,69 @@ async function show_extend_validity_dialog(frm) {
             });
             d.hide();
         },
-        secondary_action_label: !can_extend_waybill ? __(get_secondary_btn_text(frm, valid_upto_plus_one_hr)) : null,
-        secondary_action: !can_extend_waybill ? () => {
-            frappe.call({
-                method: "india_compliance.gst_india.utils.e_waybill.schedule_ewaybill_for_extension",
-                args: {
-                    doctype: frm.doctype,
-                    docname: frm.docname,
-                    values: d.get_values() || {},
-                    scheduled_time: valid_upto_plus_one_hr,
-                },
-                callback: () => {
-                    if (frm.doc.__onload && frm.doc.__onload.e_waybill_info) {
-                        frm.doc.__onload.e_waybill_info.extension_scheduled = 1;
-                    }
-                    frm.refresh();
-                },
-            })
-            d.hide();
-        } : null,
+        secondary_action_label: !can_extend_now ? __('Schedule') : null,
+        secondary_action: !can_extend_now ? () => schedule_e_waybill_extension(frm, d, scheduled_time) : null,
     });
-    if (!can_extend_waybill) {
+    if (!can_extend_now) {
         d.get_primary_btn().addClass("disabled");
     }
+    if (extension_already_scheduled) {
+        display_extension_scheduled_message(d, scheduled_time);
+        prefill_data_from_e_waybill_log(frm, d);
+    }
     d.show();
+}
+
+function schedule_e_waybill_extension(frm, dialog, scheduled_time) {
+    const values = dialog.get_values();
+    if (values) {
+        frappe.call({
+            method: "india_compliance.gst_india.utils.e_waybill.schedule_ewaybill_for_extension",
+            args: {
+                doctype: frm.doctype,
+                docname: frm.docname,
+                values,
+                scheduled_time,
+            },
+            callback: () => {
+                if (frm.doc.__onload && frm.doc.__onload.e_waybill_info) {
+                    frm.doc.__onload.e_waybill_info.extension_scheduled = 1;
+                }
+                frm.refresh();
+            },
+        });
+    }
+    dialog.hide();
+}
+
+function display_extension_scheduled_message(dialog, scheduled_time) {
+    const message = `<div>Already scheduled for ${scheduled_time}</div>`;
+    $(message).prependTo(dialog.footer);
+}
+
+function prefill_data_from_e_waybill_log(frm, dialog) {
+    frappe.db.get_value('e-Waybill Log', frm.doc.ewaybill, [
+        "consignment_status", "transit_type", "extension_reason_code", "extension_remark", "address",
+    ]).then(response => {
+        const values = response.message;
+        const address = JSON.parse(values.address);
+
+        const prefill_data = {
+            "consignment_status": values.consignment_status,
+            "transit_type": values.transit_type,
+            "lr_no": values.lr_no,
+            "address_line1": address.address_line1,
+            "address_line2": address.address_line2,
+            "address_line3": address.address_line3,
+            "current_place": address.current_place,
+            "current_pincode": address.current_pincode,
+            "current_state": address.current_state,
+            "reason": values.extension_reason_code,
+            "remark": values.extension_remark,
+        };
+
+        dialog.set_values(prefill_data);
+    });
 }
 
 function is_e_waybill_valid(frm) {
@@ -1032,18 +1065,21 @@ function auto_generate_e_waybill(frm) {
 }
 
 function can_extend_e_waybill(frm) {
+    if (frm.doc.gst_transporter_id != frm.doc.company_gstin) return true;
+    return false;
+}
+
+function get_hours(date, hours, date_time_format=frappe.defaultDatetimeFormat) {
+    return moment(date).add(hours, "hours").format(date_time_format);
+}
+
+function can_extend_e_waybill_now(frm) {
     const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
     const extend_after = get_hours(valid_upto, -8);
     const extend_before = get_hours(valid_upto, 8);
     const now = frappe.datetime.now_datetime();
 
-    if (
-        extend_after < now &&
-        now < extend_before &&
-        frm.doc.gst_transporter_id != frm.doc.company_gstin
-    )
-        return true;
-
+    if (extend_after < now && now < extend_before) return true;
     return false;
 }
 
