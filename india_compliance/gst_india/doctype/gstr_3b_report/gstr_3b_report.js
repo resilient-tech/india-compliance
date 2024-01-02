@@ -44,6 +44,10 @@ frappe.ui.form.on('GSTR 3B Report', {
 		let current_year = new Date().getFullYear();
 		let options = [current_year, current_year-1, current_year-2];
 		frm.set_df_property('year', 'options', options);
+
+		frappe.realtime.on("gstr3b_report_generation", function(){
+			frm.reload_doc();
+		});
 	},
 
 	setup: function(frm) {
