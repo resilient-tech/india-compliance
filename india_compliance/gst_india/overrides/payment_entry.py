@@ -22,13 +22,20 @@ def get_outstanding_reference_documents(args, validate=False):
 
     reference_documents = get_outstanding_reference_documents(args, validate)
 
-    invoice_list = [item["voucher_no"] for item in reference_documents]
-    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
-        invoice_list
-    )
+    invoice_list = [
+        item["voucher_no"]
+        for item in reference_documents
+        if item["voucher_type"] == "Purchase Invoice"
+    ]
+    if invoice_list:
+        reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
+            invoice_list
+        )
 
-    for d in reference_documents:
-        d["reconciliation_status"] = reconciliation_status_dict.get(d["voucher_no"], "")
+        for d in reference_documents:
+            d["reconciliation_status"] = reconciliation_status_dict.get(
+                d["voucher_no"], ""
+            )
 
     return reference_documents
 

@@ -44,16 +44,20 @@ function override_get_outstanding_documents(frm) {
 
     const new_fn = function () {
         old_fn(...arguments);
-        frappe.after_ajax(() => {
-            const response = frappe?.last_response?.message || [];
+        if (frm.doc.party_type == "Supplier") {
+            frappe.after_ajax(() => {
+                const response = frappe?.last_response?.message || [];
 
-            const reconciliation_status_dict = response.reduce((acc, d) => {
-                acc[d.voucher_no] = d.reconciliation_status;
-                return acc;
-            }, {});
+                if (!Array.isArray(response)) return;
 
-            add_warning_indicator(frm, reconciliation_status_dict);
-        });
+                const reconciliation_status_dict = response.reduce((acc, d) => {
+                    acc[d.voucher_no] = d.reconciliation_status;
+                    return acc;
+                }, {});
+
+                add_warning_indicator(frm, reconciliation_status_dict);
+            });
+        }
     };
 
     frm.events.get_outstanding_documents = new_fn;
