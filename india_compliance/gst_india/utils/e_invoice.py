@@ -13,7 +13,7 @@ from frappe.utils import (
     random_string,
 )
 
-from india_compliance.exceptions import GatewayTimeoutError
+from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
@@ -24,6 +24,10 @@ from india_compliance.gst_india.constants import (
 from india_compliance.gst_india.constants.e_invoice import (
     CANCEL_REASON_CODES,
     ITEM_LIMIT,
+)
+from india_compliance.gst_india.overrides.transaction import (
+    _validate_hsn_codes,
+    validate_mandatory_fields,
 )
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
@@ -39,10 +43,7 @@ from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
     log_and_process_e_waybill_generation,
 )
-from india_compliance.gst_india.utils.transaction_data import (
-    GSTTransactionData,
-    validate_non_gst_items,
-)
+from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 
 @frappe.whitelist()
@@ -86,7 +87,7 @@ def generate_e_invoices(docnames, force=False):
         try:
             generate_e_invoice(docname, throw=False, force=force)
 
-        except GatewayTimeoutError:
+        except GSPServerError:
             frappe.db.set_value(
                 "Sales Invoice",
                 {"name": ("in", docnames), "irn": ("is", "not set")},
@@ -161,27 +162,9 @@ def generate_e_invoice(docname, throw=True, force=False):
 
             result = api.generate_irn(data)
 
-    except GatewayTimeoutError as e:
-        einvoice_status = "Failed"
-
-        if settings.enable_retry_e_invoice_generation:
-            einvoice_status = "Auto-Retry"
-            settings.db_set(
-                "is_retry_e_invoice_generation_pending", 1, update_modified=False
-            )
-
-        doc.db_set({"einvoice_status": einvoice_status}, commit=True)
-
-        frappe.msgprint(
-            _(
-                "Government services are currently slow, resulting in a Gateway Timeout error."
-                " We apologize for the inconvenience caused. Your e-invoice generation will be automatically retried every 5 minutes."
-            ),
-            _("Warning"),
-            indicator="yellow",
-        )
-
-        raise e
+    except GSPServerError as e:
+        handle_server_errors(settings, doc, e)
+        return
 
     except frappe.ValidationError as e:
         doc.db_set({"einvoice_status": "Failed"})
@@ -366,7 +349,8 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
             )
         )
 
-    if not validate_non_gst_items(doc, throw=throw):
+    if not validate_taxable_item(doc, throw=throw):
+        # e-Invoice not required for invoice wih all nill-rated/exempted items.
         return
 
     if not (doc.place_of_supply == "96-Other Countries" or doc.billing_address_gstin):
@@ -394,6 +378,34 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         )
 
     return True
+
+
+def validate_hsn_codes_for_e_invoice(doc):
+    _validate_hsn_codes(
+        doc,
+        valid_hsn_length=[6, 8],
+        message=_("Since HSN/SAC Code is mandatory for generating e-Invoices.<br>"),
+    )
+
+
+def validate_taxable_item(doc, throw=True):
+    """
+    Validates that the document contains at least one GST taxable item.
+
+    If all items are Nil-Rated or Exempted and throw is True, it raises an exception.
+    Otherwise, it simply returns False.
+
+    """
+    # Check if there is at least one taxable item in the document
+    if any(item.gst_treatment in ("Taxable", "Zero-Rated") for item in doc.items):
+        return True
+
+    if not throw:
+        return
+
+    frappe.throw(
+        _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items"),
+    )
 
 
 def get_e_invoice_applicability_date(doc, settings=None, throw=True):
@@ -459,18 +471,74 @@ def get_e_invoice_info(doc):
     )
 
 
+def handle_server_errors(settings, doc, error):
+    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+
+    error_message_title = {
+        GatewayTimeoutError: _("Gateway Timeout Error"),
+        GSPServerError: _("GSP/GST Server Down"),
+    }
+
+    einvoice_status = "Failed"
+
+    if settings.enable_retry_e_invoice_generation:
+        einvoice_status = "Auto-Retry"
+        settings.db_set(
+            "is_retry_e_invoice_generation_pending", 1, update_modified=False
+        )
+        error_message += (
+            " Your e-invoice generation will be automatically retried every 5 minutes."
+        )
+    else:
+        error_message += " Please try again after some time."
+
+    doc.db_set({"einvoice_status": einvoice_status}, commit=True)
+
+    frappe.msgprint(
+        msg=_(error_message),
+        title=error_message_title.get(type(error)),
+        indicator="yellow",
+    )
+
+
 class EInvoiceData(GSTTransactionData):
     def get_data(self):
         self.validate_transaction()
         self.set_transaction_details()
         self.set_item_list()
+        self.update_other_charges()
         self.set_transporter_details()
         self.set_party_address_details()
         return self.sanitize_data(self.get_invoice_data())
 
+    def set_item_list(self):
+        self.item_list = []
+
+        for item_details in self.get_all_item_details():
+            if item_details.get("gst_treatment") not in ("Taxable", "Zero-Rated"):
+                continue
+
+            self.item_list.append(self.get_item_data(item_details))
+
+    def update_other_charges(self):
+        """
+        Non Taxable Value should be added to other charges.
+        """
+        self.transaction_details.other_charges += (
+            self.transaction_details.total_non_taxable_value
+        )
+
     def validate_transaction(self):
         super().validate_transaction()
         validate_e_invoice_applicability(self.doc, self.settings)
+
+        validate_mandatory_fields(
+            self.doc,
+            "customer_address",
+            _("{0} is a mandatory field for generating e-Invoices"),
+        )
+
+        validate_hsn_codes_for_e_invoice(self.doc)
 
         if len(self.doc.items) > ITEM_LIMIT:
             frappe.throw(
@@ -714,7 +782,7 @@ class EInvoiceData(GSTTransactionData):
             },
             "ItemList": self.item_list,
             "ValDtls": {
-                "AssVal": self.transaction_details.total,
+                "AssVal": self.transaction_details.total_taxable_value,
                 "CgstVal": self.transaction_details.total_cgst_amount,
                 "SgstVal": self.transaction_details.total_sgst_amount,
                 "IgstVal": self.transaction_details.total_igst_amount,

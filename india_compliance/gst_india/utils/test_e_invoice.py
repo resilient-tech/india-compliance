@@ -53,7 +53,10 @@ class TestEInvoice(FrappeTestCase):
     def test_request_data_for_different_shipping_dispatch_address(self):
         test_data = self.e_invoice_test_data.goods_item_with_ewaybill
         si = create_sales_invoice(
-            **test_data.get("kwargs"), qty=1000, do_not_submit=True
+            **test_data.get("kwargs"),
+            qty=1000,
+            do_not_submit=True,
+            is_in_state=True,
         )
 
         self.assertDictEqual(
@@ -182,7 +185,7 @@ class TestEInvoice(FrappeTestCase):
     @change_settings("Selling Settings", {"allow_multiple_items": 1})
     def test_validate_transaction(self):
         """Validation test for more than 1000 items in sales invoice"""
-        si = create_sales_invoice(do_not_submit=True)
+        si = create_sales_invoice(do_not_submit=True, is_in_state=True)
         item_row = si.get("items")[0]
 
         for _ in range(0, 1000):
@@ -211,7 +214,11 @@ class TestEInvoice(FrappeTestCase):
         """Generate test e-Invoice for goods item"""
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            is_in_state=True,
+        )
 
         # Assert if request data given in Json
         self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
@@ -255,7 +262,69 @@ class TestEInvoice(FrappeTestCase):
     def test_generate_e_invoice_with_service_item(self):
         """Generate test e-Invoice for Service Item"""
         test_data = self.e_invoice_test_data.get("service_item")
-        si = create_sales_invoice(**test_data.get("kwargs"))
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            is_in_state=True,
+        )
+
+        # Assert if request data given in Json
+        self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
+
+        # Mock response for generating irn
+        self._mock_e_invoice_response(data=test_data)
+
+        generate_e_invoice(si.name)
+
+        # Assert if Integration Request Log generated
+        self.assertDocumentEqual(
+            {
+                "output": frappe.as_json(test_data.get("response_data"), indent=4),
+            },
+            frappe.get_doc(
+                "Integration Request",
+                {"reference_doctype": "Sales Invoice", "reference_docname": si.name},
+            ),
+        )
+
+        # Assert if Sales Doc updated
+        self.assertDocumentEqual(
+            {
+                "irn": test_data.get("response_data").get("result").get("Irn"),
+                "einvoice_status": "Generated",
+            },
+            frappe.get_doc("Sales Invoice", si.name),
+        )
+
+        self.assertDocumentEqual(
+            {"name": test_data.get("response_data").get("result").get("Irn")},
+            frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
+        )
+
+        self.assertFalse(
+            frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name")
+        )
+
+    @responses.activate
+    def test_generate_e_invoice_with_nil_exempted_item(self):
+        """Generate test e-Invoice for nil/exempted items Item"""
+
+        test_data = self.e_invoice_test_data.get("nil_exempted_item")
+        si = create_sales_invoice(
+            **test_data.get("kwargs"), do_not_submit=True, is_in_state=True
+        )
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
+        si.save()
+        si.submit()
 
         # Assert if request data given in Json
         self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
@@ -377,10 +446,15 @@ class TestEInvoice(FrappeTestCase):
         si = create_sales_invoice(
             customer_address=test_data.get("kwargs").get("customer_address"),
             shipping_address_name=test_data.get("kwargs").get("shipping_address_name"),
+            is_in_state=True,
         )
 
         test_data.get("kwargs").update({"return_against": si.name})
-        debit_note = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True)
+        debit_note = create_sales_invoice(
+            **test_data.get("kwargs"),
+            do_not_submit=True,
+            is_in_state=True,
+        )
 
         debit_note.items[0].qty = 0
         debit_note.save()
@@ -438,7 +512,7 @@ class TestEInvoice(FrappeTestCase):
 
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -482,7 +556,11 @@ class TestEInvoice(FrappeTestCase):
         """Test for mark e-Invoice as cancelled"""
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            is_in_state=True,
+        )
 
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
@@ -514,6 +592,7 @@ class TestEInvoice(FrappeTestCase):
             customer="_Test Registered Customer",
             gst_category="Registered Regular",
             do_not_submit=True,
+            is_in_state=True,
         )
 
         si.billing_address_gstin = "24AAQCA8719H1ZC"
@@ -557,6 +636,36 @@ class TestEInvoice(FrappeTestCase):
         )
 
         si.irn = ""
+
+        si.items = []
+        append_item(
+            si,
+            frappe._dict(
+                item_code="_Test Nil Rated Item",
+                item_name="_Test Nil Rated Item",
+                gst_hsn_code="61149090",
+                gst_treatment="Nil-Rated",
+            ),
+        )
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items*)$"
+            ),
+            validate_e_invoice_applicability,
+            si,
+        )
+
+        append_item(
+            si,
+            frappe._dict(
+                rate=10,
+                item_tax_template="GST 12% - _TIRC",
+                uom="Nos",
+                gst_hsn_code="61149090",
+                gst_treatment="Taxable",
+            ),
+        )
         frappe.db.set_single_value("GST Settings", "enable_e_invoice", 0)
 
         self.assertRaisesRegex(
@@ -623,7 +732,7 @@ class TestEInvoice(FrappeTestCase):
     def test_invoice_update_after_submit(self):
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, is_in_state=True)
         self._mock_e_invoice_response(data=test_data)
         generate_e_invoice(si.name)
 
@@ -642,7 +751,11 @@ class TestEInvoice(FrappeTestCase):
     def test_e_invoice_for_duplicate_irn(self):
         test_data = self.e_invoice_test_data.get("goods_item_with_ewaybill")
 
-        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000)
+        si = create_sales_invoice(
+            **test_data.get("kwargs"),
+            qty=1000,
+            is_in_state=True,
+        )
 
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)

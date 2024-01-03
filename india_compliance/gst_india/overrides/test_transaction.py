@@ -3,10 +3,14 @@ import re
 from parameterized import parameterized_class
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.utils import today
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+from erpnext.accounts.party import _get_party_details
+from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
-from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_TAXABLE_VALUE
+from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_GST_DETAIL
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -34,6 +38,7 @@ class TestTransaction(FrappeTestCase):
     def setUpClass(cls):
         frappe.db.savepoint("before_test_transaction")
         cls.is_sales_doctype = cls.doctype in SALES_DOCTYPES
+        create_cess_accounts()
 
     @classmethod
     def tearDownClass(cls):
@@ -299,7 +304,7 @@ class TestTransaction(FrappeTestCase):
         frappe.db.set_value("Address", address, "gstin", gstin)
 
     def test_taxable_value_with_charges(self):
-        if self.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
 
         doc = create_transaction(**self.transaction_details, do_not_save=True)
@@ -325,7 +330,7 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual({"taxable_value": 120}, doc.items[0])  # 100 + 20
 
     def test_taxable_value_with_charges_after_tax(self):
-        if self.doctype not in DOCTYPES_WITH_TAXABLE_VALUE:
+        if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
 
         doc = create_transaction(
@@ -466,6 +471,123 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(.*purchase is from a Supplier without GSTIN.*)$"),
             doc.insert,
         )
+
+    def test_invalid_charge_type_as_actual(self):
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+        _append_taxes(doc, ["CGST", "SGST"], charge_type="Actual", tax_amount=9)
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(.*Charge Type is set to Actual. However, this would not compute item taxes.*)$"
+            ),
+            doc.save,
+        )
+
+    def test_invalid_charge_type_for_cess_non_advol(self):
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+        _append_taxes(doc, ["CGST", "SGST"], charge_type="On Item Quantity")
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*as it is not a Cess Non Advol Account.*)$"),
+            doc.save,
+        )
+
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+        _append_taxes(doc, ["CGST", "SGST", "Cess Non Advol"])
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*as it is a Cess Non Advol Account.*)$"),
+            doc.save,
+        )
+
+    def test_gst_details_set_correctly(self):
+        doc = create_transaction(
+            **self.transaction_details, rate=200, is_in_state=True, do_not_save=True
+        )
+        _append_taxes(doc, "Cess Non Advol", charge_type="On Item Quantity", rate=20)
+        doc.insert()
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Taxable",
+                "igst_rate": 0,
+                "cgst_rate": 9,
+                "sgst_rate": 9,
+                "cess_non_advol_rate": 20,
+                "igst_amount": 0,
+                "cgst_amount": 18,
+                "sgst_amount": 18,
+                "cess_non_advol_amount": 20,
+            },
+            doc.items[0],
+        )
+        append_item(doc, frappe._dict(rate=300))
+        doc.save()
+
+        # test same item multiple times
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Taxable",
+                "igst_rate": 0,
+                "cgst_rate": 9,
+                "sgst_rate": 9,
+                "cess_non_advol_rate": 20,
+                "igst_amount": 0,
+                "cgst_amount": 27,
+                "sgst_amount": 27,
+                "cess_non_advol_amount": 20,
+            },
+            doc.items[1],
+        )
+
+        # test non gst treatment
+        doc = create_transaction(
+            **self.transaction_details, item_code="_Test Non GST Item"
+        )
+        self.assertDocumentEqual(
+            {"gst_treatment": "Non-GST"},
+            doc.items[0],
+        )
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_gst_treatment_for_exports(self):
+        if not self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+        )
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+
+        # Update Customer after it's already set
+        doc_details = {
+            **self.transaction_details,
+            "customer": "_Test Foreign Customer",
+            "party_name": "_Test Foreign Customer",
+        }
+        doc = create_transaction(**doc_details, do_not_submit=True)
+        self.assertEqual(doc.items[0].gst_treatment, "Zero-Rated")
+
+        party_field = "party_name" if self.doctype == "Quotation" else "customer"
+
+        customer = "_Test Registered Customer"
+        doc.update(
+            {
+                party_field: customer,
+                **_get_party_details(
+                    party=customer,
+                    company=doc.company,
+                    posting_date=today(),
+                    doctype=doc.doctype,
+                ),
+            }
+        )
+        doc.selling_price_list = "Standard Selling"
+        doc.save()
+        self.assertEqual(doc.items[0].gst_treatment, "Taxable")
 
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:
@@ -631,3 +753,63 @@ def get_lead(first_name):
     lead.insert(ignore_permissions=True)
 
     return lead.name
+
+
+class TestSpecificTransactions(FrappeTestCase):
+    def test_copy_e_waybill_fields_from_dn_to_si(self):
+        "Make sure e-Waybill fields are copied from Delivery Note to Sales Invoice"
+        dn = create_transaction(doctype="Delivery Note", vehicle_no="GJ01AA1111")
+        si = make_sales_invoice(dn.name)
+
+        self.assertEqual(si.vehicle_no, dn.vehicle_no)
+
+    def test_copy_e_waybill_fields_from_si_to_return(self):
+        "Make sure e-Waybill fields are not copied from Sales Invoice to Sales Returns"
+        si = create_transaction(doctype="Sales Invoice", vehicle_no="GJ01AA1111")
+        si_return = make_sales_return(si.name)
+
+        self.assertEqual(si_return.vehicle_no, None)
+
+
+def create_cess_accounts():
+    input_cess_non_advol_account = create_tax_accounts("Input Tax Cess Non Advol")
+    output_cess_non_advol_account = create_tax_accounts("Output Tax Cess Non Advol")
+    input_cess_account = create_tax_accounts("Input Tax Cess")
+    output_cess_account = create_tax_accounts("Output Tax Cess")
+
+    settings = frappe.get_doc("GST Settings")
+    for row in settings.gst_accounts:
+        if row.company != "_Test Indian Registered Company":
+            continue
+
+        if row.account_type == "Input":
+            row.cess_account = input_cess_account.name
+            row.cess_non_advol_account = input_cess_non_advol_account.name
+
+        if row.account_type == "Output":
+            row.cess_account = output_cess_account.name
+            row.cess_non_advol_account = output_cess_non_advol_account.name
+
+    settings.save()
+
+
+def create_tax_accounts(account_name):
+    defaults = {
+        "company": "_Test Indian Registered Company",
+        "doctype": "Account",
+        "account_type": "Tax",
+        "is_group": 0,
+    }
+
+    if "Input" in account_name:
+        parent_account = "Tax Assets - _TIRC"
+    else:
+        parent_account = "Duties and Taxes - _TIRC"
+
+    return frappe.get_doc(
+        {
+            "account_name": account_name,
+            "parent_account": parent_account,
+            **defaults,
+        }
+    ).insert(ignore_if_duplicate=True)

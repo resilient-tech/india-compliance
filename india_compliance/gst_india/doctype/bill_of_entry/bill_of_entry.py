@@ -26,6 +26,7 @@ class BillofEntry(Document):
     get_value_in_transaction_currency = (
         AccountsController.get_value_in_transaction_currency
     )
+    get_voucher_subtype = AccountsController.get_voucher_subtype
 
     def onload(self):
         if self.docstatus != 1:
