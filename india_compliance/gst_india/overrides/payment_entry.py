@@ -27,15 +27,15 @@ def get_outstanding_reference_documents(args, validate=False):
         for item in reference_documents
         if item["voucher_type"] == "Purchase Invoice"
     ]
-    if invoice_list:
-        reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
-            invoice_list
-        )
+    if not invoice_list:
+        return reference_documents
 
-        for d in reference_documents:
-            d["reconciliation_status"] = reconciliation_status_dict.get(
-                d["voucher_no"], ""
-            )
+    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
+        invoice_list
+    )
+
+    for d in reference_documents:
+        d["reconciliation_status"] = reconciliation_status_dict.get(d["voucher_no"], "")
 
     return reference_documents
 
