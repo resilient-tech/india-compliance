@@ -77,6 +77,10 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
 def create_test_items():
     """Create Sales Invoices for testing GSTR1 Document Issued Summary."""
 
+    invoices_for_outward_supply = JSON_OUTPUT["doc_det"][0]["docs"]
+    debit_notes = JSON_OUTPUT["doc_det"][1]["docs"]
+    credit_notes = JSON_OUTPUT["doc_det"][2]["docs"]
+
     # Sales Invoices
     sales_invoices = create_sales_invoices(3)
     create_sales_invoices(1)[0].cancel()
@@ -84,7 +88,7 @@ def create_test_items():
         0
     ].save()
 
-    JSON_OUTPUT["doc_det"][0]["docs"].append(
+    invoices_for_outward_supply.append(
         {
             "num": 1,
             "to": sales_invoice.name,
@@ -102,7 +106,7 @@ def create_test_items():
         1, is_return=1, qty=-1, do_not_save=True, do_not_submit=True
     )[0].save()
 
-    JSON_OUTPUT["doc_det"][2]["docs"].append(
+    credit_notes.append(
         {
             "num": 1,
             "to": sales_invoice.name,
@@ -120,7 +124,7 @@ def create_test_items():
     # Debit Notes
     sales_invoices = create_sales_invoices(5, is_debit_note=1)
 
-    JSON_OUTPUT["doc_det"][1]["docs"].append(
+    debit_notes.append(
         {
             "num": 1,
             "to": sales_invoices[-1].name,
@@ -145,7 +149,7 @@ def create_test_items():
     # Sales Invoices
     sales_invoices = create_sales_invoices(5)
 
-    JSON_OUTPUT["doc_det"][0]["docs"].append(
+    invoices_for_outward_supply.append(
         {
             "num": 2,
             "to": sales_invoices[-1].name,
