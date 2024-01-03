@@ -130,9 +130,6 @@ class Worksheet:
 
         for row in self.parse_data(data):
             for idx, val in enumerate(row, 1):
-                if idx > len(self.headers):
-                    break
-
                 cell = self.ws.cell(row=self.row_dimension, column=idx)
                 self.apply_format(row=self.row_dimension, column=idx, **kwargs)
                 cell.value = val
@@ -279,7 +276,7 @@ class Worksheet:
                     out.append(row.get("label"))
                 else:
                     # eg: [{"fieldname1": "value1", "fieldname2": "value2"}] => ["value1", "value2"]. for data.
-                    out.append(list(row.values()))
+                    out.append([row.get(field["fieldname"]) for field in self.headers])
 
             if row.get("label"):
                 return [out]
