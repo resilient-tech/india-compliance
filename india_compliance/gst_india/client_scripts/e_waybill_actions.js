@@ -876,6 +876,13 @@ async function show_extend_validity_dialog(frm) {
                     "eval: ['Rail', 'Air', 'Ship'].includes(doc.mode_of_transport) && doc.consignment_status === 'In Movement'",
             },
             {
+                label: "Transport Receipt Date",
+                fieldname: "lr_date",
+                fieldtype: "Date",
+                default: frm.doc.lr_date || "Today",
+                mandatory_depends_on: "eval:doc.lr_no",
+            },
+            {
                 fieldtype: "Section Break",
             },
             {

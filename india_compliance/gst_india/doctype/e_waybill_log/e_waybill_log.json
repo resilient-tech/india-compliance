@@ -23,6 +23,7 @@
   "extension_details_section",
   "extension_scheduled",
   "consignment_status",
+  "remaining_distance",
   "transit_type",
   "extension_reason_code",
   "extension_remark",
@@ -183,6 +184,12 @@
    "fieldtype": "Data",
    "label": "Reason",
    "read_only": 1
+  },
+  {
+   "fieldname": "remaining_distance",
+   "fieldtype": "Float",
+   "label": "Remaining Distance",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -192,7 +199,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2024-01-01 15:57:26.649289",
+ "modified": "2024-01-03 14:09:21.524469",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
