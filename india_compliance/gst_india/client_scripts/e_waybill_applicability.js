@@ -115,6 +115,7 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
             !gst_settings.auto_generate_e_waybill ||
             !this.is_e_waybill_generatable() ||
             !has_e_waybill_threshold_met(this.frm) ||
+            frm.doc.items.every(item => item.gst_treatment == "Non-GST") ||
             is_e_invoice_applicable(this.frm)
         )
             return false;
@@ -160,7 +161,6 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
         );
     }
 }
-
 
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable(show_message = false) {
@@ -208,6 +208,7 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
         );
     }
 
+<<<<<<< HEAD
     is_e_waybill_generatable(show_message = false) {
         let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
 
@@ -230,5 +231,9 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
         return (
             super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_from_dn
         );
+=======
+    is_e_waybill_generatable() {
+        return this.is_e_waybill_applicable() && this.frm.doc.customer_address;
+>>>>>>> ff22beec (fix: allow gst items with non-gst items)
     }
 }
