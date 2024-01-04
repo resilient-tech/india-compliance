@@ -474,13 +474,12 @@ def extend_validity(*, doctype, docname, values, scheduled=False):
 
     doc.db_set("distance", values.remaining_distance)
     extended_validity_date = parse_datetime(result.validUpto, day_first=True)
-    # TODO update vales in comment from data
     values_in_comment = {
         "Transit Type": values.transit_type,
-        "Vehicle No": values.vehicle_no,
-        "LR No": values.lr_no,
-        "LR Date": values.lr_date,
-        "Mode of Transport": values.mode_of_transport,
+        "Vehicle No": doc.vehicle_no,
+        "LR No": doc.lr_no,
+        "LR Date": doc.lr_date,
+        "Mode of Transport": doc.mode_of_transport,
         "GST Vehicle Type": values.gst_vehicle_type,
         "Valid Upto": extended_validity_date,
         "Remaining Distance": values.remaining_distance,
@@ -505,8 +504,9 @@ def extend_validity(*, doctype, docname, values, scheduled=False):
             "updated_on": parse_datetime(result.updatedDate, day_first=True),
             "valid_upto": extended_validity_date,
             "is_latest_data": 0,
+            "extension_scheduled": 0,
         },
-        fetch=values.update_e_waybill_data,
+        fetch=scheduled or values.update_e_waybill_data,
         comment=comment,
     )
 
@@ -627,30 +627,6 @@ def schedule_ewaybill_for_extension(doctype, docname, values, scheduled_time):
         }
     )
 
-    values_to_update = {
-        "extension_scheduled": 1,
-        "consignment_status": values.consignment_status,
-        "transit_type": values.transit_type,
-        "address": address,
-        "extension_reason_code": values.reason,
-        "extension_remark": values.remark,
-        "remaining_distance": values.remaining_distance,
-    }
-
-    frappe.db.set_value("e-Waybill Log", values.ewaybill, values_to_update)
-
-    frappe.msgprint(
-        _("e-Waybill successfully scheduled for extension at {scheduled_time}").format(
-            scheduled_time=scheduled_time
-        ),
-        indicator="green",
-        alert=True,
-    )
-
-    add_comment(values, scheduled_time)
-
-
-def add_comment(values, scheduled_time):
     values_in_comment = {
         "Transit Type": values.transit_type,
         "Vehicle No": values.vehicle_no,
@@ -672,18 +648,29 @@ def add_comment(values, scheduled_time):
         if value:
             comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
 
-    comment_doc = frappe.get_doc(
+    log_and_process_e_waybill(
+        doc,
         {
-            "doctype": "Comment",
-            "comment_type": "Comment",
-            "comment_email": frappe.session.user,
-            "comment_by": get_fullname(),
-            "reference_doctype": "e-Waybill Log",
-            "reference_name": values.ewaybill,
-            "content": comment,
-        }
+            "e_waybill_number": doc.ewaybill,
+            "extension_scheduled": 1,
+            "consignment_status": values.consignment_status,
+            "transit_type": values.transit_type,
+            "address": address,
+            "extension_reason_code": values.reason,
+            "extension_remark": values.remark,
+            "remaining_distance": values.remaining_distance,
+        },
+        fetch=False,
+        comment=comment,
     )
-    comment_doc.insert(ignore_permissions=True)
+
+    frappe.msgprint(
+        _("e-Waybill successfully scheduled for extension at {scheduled_time}").format(
+            scheduled_time=scheduled_time
+        ),
+        indicator="green",
+        alert=True,
+    )
 
 
 #######################################################################################

@@ -177,7 +177,8 @@
   {
    "fieldname": "address",
    "fieldtype": "JSON",
-   "label": "Address"
+   "label": "Address",
+   "read_only": 1
   },
   {
    "fieldname": "extension_reason_code",
@@ -199,7 +200,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2024-01-03 14:09:21.524469",
+ "modified": "2024-01-04 11:35:30.160495",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

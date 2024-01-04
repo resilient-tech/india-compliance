@@ -835,6 +835,7 @@ async function show_extend_validity_dialog(frm) {
                 fieldname: "remaining_distance",
                 fieldtype: "Float",
                 default: frm.doc.distance,
+                reqd: 1,
             },
             {
                 fieldtype: "Column Break",
