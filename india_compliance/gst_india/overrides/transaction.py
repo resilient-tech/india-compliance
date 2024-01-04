@@ -427,20 +427,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     return all_valid_accounts
 
 
-def validate_tax_accounts_for_non_gst(doc):
-    """GST Tax Accounts should not be charged for Non GST Items"""
-    accounts_list = get_all_gst_accounts(doc.company)
-
-    for row in doc.taxes:
-        if row.account_head in accounts_list and row.tax_amount:
-            frappe.throw(
-                _("Row #{0}: Cannot charge GST for Non GST Items").format(
-                    row.idx, row.account_head
-                ),
-                title=_("Invalid Taxes"),
-            )
-
-
 def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 
@@ -468,13 +454,14 @@ def validate_items(doc):
         if row.item_tax_template != item_tax_templates[row.item_code]:
             items_with_duplicate_taxes.append(bold(row.item_code))
 
-    if not has_gst_items:
-        update_taxable_values(doc, [])
-        validate_tax_accounts_for_non_gst(doc)
-
-        return False
-
-    if non_gst_items:
+    if (
+        non_gst_items
+        and has_gst_items
+        and not frappe.get_cached_value(
+            "GST Settings", "GST Settings", "allow_gst_and_non_gst_items"
+        )
+    ):
+        # Validate that non-GST items are not used with GST items based on GST Settings
         frappe.throw(
             _(
                 "Items not covered under GST cannot be clubbed with items for which GST"
@@ -1205,6 +1192,8 @@ def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
 
+    validate_items(doc)
+
     if doc.place_of_supply:
         validate_place_of_supply(doc)
     else:
@@ -1287,12 +1276,7 @@ def after_mapping(target_doc, method=None, source_doc=None):
 
 
 def ignore_gst_validations(doc):
-    if (
-        not is_indian_registered_company(doc)
-        or doc.get("is_opening") == "Yes"
-        # If there are no GST items, then no need to proceed further
-        or validate_items(doc) is False
-    ):
+    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
         return True
 
 

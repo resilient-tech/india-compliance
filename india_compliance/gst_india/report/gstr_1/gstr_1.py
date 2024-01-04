@@ -1316,7 +1316,6 @@ class GSTR1DocumentIssuedSummary:
         nature_of_document = {
             "Excluded from Report (Same GSTIN Billing)": [],
             "Excluded from Report (Is Opening Entry)": [],
-            "Excluded from Report (Has Non GST Item)": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
@@ -1329,10 +1328,6 @@ class GSTR1DocumentIssuedSummary:
                 )
             elif doc.same_gstin_billing:
                 nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
-                    doc
-                )
-            elif doc.gst_treatment == "Non-GST":
-                nature_of_document["Excluded from Report (Has Non GST Item)"].append(
                     doc
                 )
             elif doc.is_return:
