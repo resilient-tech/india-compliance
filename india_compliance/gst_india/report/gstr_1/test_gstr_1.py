@@ -118,8 +118,17 @@ def create_test_items():
     )
 
     # Sales Invoices with Non GST Items
-    # Excluded from Document Issued Summary
-    create_sales_invoices(3, item_code="_Test Non GST Item")
+    sales_invoices = create_sales_invoices(3, item_code="_Test Non GST Item")
+    invoices_for_outward_supply.append(
+        {
+            "num": 2,
+            "to": sales_invoices[-1].name,
+            "from": sales_invoices[0].name,
+            "totnum": 3,
+            "cancel": 0,
+            "net_issue": 3,
+        }
+    )
 
     # Debit Notes
     sales_invoices = create_sales_invoices(5, is_debit_note=1)
@@ -151,7 +160,7 @@ def create_test_items():
 
     invoices_for_outward_supply.append(
         {
-            "num": 2,
+            "num": 3,
             "to": sales_invoices[-1].name,
             "from": sales_invoices[0].name,
             "totnum": 5,
