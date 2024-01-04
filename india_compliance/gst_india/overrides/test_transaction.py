@@ -88,6 +88,7 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual({"gst_category": "Unregistered", "taxes": []}, doc)
 
     def test_transaction_with_gst_and_non_gst_items(self):
+        frappe.db.set_single_value("GST Settings", "allow_gst_and_non_gst_items", 0)
         doc = create_transaction(**self.transaction_details, do_not_save=True)
 
         append_item(doc, frappe._dict(item_code="_Test Non GST Item"))
@@ -97,6 +98,8 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(Items not covered under GST cannot be clubbed.*)$"),
             doc.insert,
         )
+        frappe.db.set_single_value("GST Settings", "allow_gst_and_non_gst_items", 1)
+        doc.insert()
 
     def test_transaction_for_items_with_duplicate_taxes(self):
         # Should not allow same item in invoice with multiple taxes

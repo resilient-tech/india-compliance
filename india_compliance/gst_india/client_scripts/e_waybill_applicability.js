@@ -52,6 +52,7 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
             !gst_settings.auto_generate_e_waybill ||
             !this.is_e_waybill_generatable() ||
             !has_e_waybill_threshold_met(this.frm) ||
+            frm.doc.items.every(item => item.gst_treatment == "Non-GST") ||
             is_e_invoice_applicable(this.frm)
         )
             return false;
@@ -74,7 +75,6 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 }
 
-
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable() {
         return super.is_e_waybill_applicable() && gst_settings.enable_e_waybill_from_pr;
@@ -95,9 +95,6 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable() {
-        return (
-            this.is_e_waybill_applicable() &&
-            this.frm.doc.customer_address
-        );
+        return this.is_e_waybill_applicable() && this.frm.doc.customer_address;
     }
 }
