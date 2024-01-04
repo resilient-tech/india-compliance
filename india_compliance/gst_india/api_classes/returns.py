@@ -337,6 +337,9 @@ class ReturnsAPI(ReturnsAuthenticate):
         if not self.auth_token:
             return None
 
+        if not self.session_expiry:
+            return None
+
         if self.session_expiry <= now_datetime():
             return None
 
