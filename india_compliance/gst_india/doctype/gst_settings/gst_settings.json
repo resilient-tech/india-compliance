@@ -46,11 +46,36 @@
   "column_break_bydp",
   "validate_gstin_status",
   "gstin_status_refresh_interval",
-  "auto_refresh_auth_token",
   "uom_mapping_section",
   "gst_uom_map",
   "accounts_tab",
   "gst_accounts",
+  "purchase_reconciliation_tab",
+  "purchase_reconciliation_section",
+  "enable_auto_reconciliation",
+  "inward_supply_period",
+  "column_break_zlfe",
+  "apply_auto_purchase_reconciliation_for_selected_companies",
+  "auto_purchase_reconciliation_enabled_companies",
+  "gst_categories_section",
+  "b2b",
+  "b2ba",
+  "cdnr",
+  "cdnra",
+  "column_break_brkt",
+  "isd",
+  "isda",
+  "impg",
+  "impgsez",
+  "auto_reconciliation_days_section",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "column_break_fghn",
+  "friday",
+  "saturday",
+  "sunday",
   "credentials_tab",
   "credentials",
   "api_secret",
@@ -382,17 +407,161 @@
    "label": "Enable e-Waybill Generation from Purchase Receipt"
   },
   {
+   "fieldname": "purchase_reconciliation_section",
+   "fieldtype": "Section Break"
+  },
+  {
    "default": "0",
-   "description": "Automatically refresh the authentication token for the Purchase Reconciliation Tool when it's about to expire",
-   "fieldname": "auto_refresh_auth_token",
+   "fieldname": "enable_auto_reconciliation",
    "fieldtype": "Check",
-   "label": "Enable Auto Refresh of Auth Token"
+   "label": "Enable Auto Reconciliation"
+  },
+  {
+   "fieldname": "column_break_zlfe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchase_reconciliation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Purchase Reconciliation"
+  },
+  {
+   "depends_on": "eval: doc.enable_auto_reconciliation",
+   "fieldname": "auto_reconciliation_days_section",
+   "fieldtype": "Section Break",
+   "label": "Auto Reconciliation Days"
+  },
+  {
+   "default": "0",
+   "fieldname": "monday",
+   "fieldtype": "Check",
+   "label": "Monday"
+  },
+  {
+   "default": "0",
+   "fieldname": "tuesday",
+   "fieldtype": "Check",
+   "label": "Tuesday"
+  },
+  {
+   "default": "1",
+   "fieldname": "wednesday",
+   "fieldtype": "Check",
+   "label": "Wednesday"
+  },
+  {
+   "default": "0",
+   "fieldname": "thursday",
+   "fieldtype": "Check",
+   "label": "Thursday"
+  },
+  {
+   "fieldname": "column_break_fghn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "friday",
+   "fieldtype": "Check",
+   "label": "Friday"
+  },
+  {
+   "default": "0",
+   "fieldname": "saturday",
+   "fieldtype": "Check",
+   "label": "Saturday"
+  },
+  {
+   "default": "1",
+   "fieldname": "sunday",
+   "fieldtype": "Check",
+   "label": "Sunday"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: doc.enable_auto_reconciliation",
+   "fieldname": "apply_auto_purchase_reconciliation_for_selected_companies",
+   "fieldtype": "Check",
+   "label": " Apply auto Purchase Reconciliation for Selected Companies"
+  },
+  {
+   "depends_on": "eval: doc.enable_auto_reconciliation && doc.apply_auto_purchase_reconciliation_for_selected_companies",
+   "fieldname": "auto_purchase_reconciliation_enabled_companies",
+   "fieldtype": "Table MultiSelect",
+   "label": "Auto Purchase Reconciliation enabled Companies",
+   "options": "Auto Purchase Reconciliation enabled Companies"
+  },
+  {
+   "default": "2",
+   "depends_on": "eval: doc.enable_auto_reconciliation",
+   "description": "The Inward Supply data for the specified number of months will be used for reconciliation starting from the provided date.",
+   "fieldname": "inward_supply_period",
+   "fieldtype": "Int",
+   "label": "Inward Supply Period in months"
+  },
+  {
+   "depends_on": "eval: doc.enable_auto_reconciliation",
+   "fieldname": "gst_categories_section",
+   "fieldtype": "Section Break",
+   "label": "GST Categories"
+  },
+  {
+   "default": "1",
+   "fieldname": "b2b",
+   "fieldtype": "Check",
+   "label": "B2B"
+  },
+  {
+   "default": "0",
+   "fieldname": "b2ba",
+   "fieldtype": "Check",
+   "label": "B2BA"
+  },
+  {
+   "default": "1",
+   "fieldname": "cdnr",
+   "fieldtype": "Check",
+   "label": "CDNR"
+  },
+  {
+   "default": "0",
+   "fieldname": "cdnra",
+   "fieldtype": "Check",
+   "label": "CDNRA"
+  },
+  {
+   "fieldname": "column_break_brkt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "isd",
+   "fieldtype": "Check",
+   "label": "ISD"
+  },
+  {
+   "default": "0",
+   "fieldname": "isda",
+   "fieldtype": "Check",
+   "label": "ISDA"
+  },
+  {
+   "default": "0",
+   "fieldname": "impg",
+   "fieldtype": "Check",
+   "label": "IMPG"
+  },
+  {
+   "default": "0",
+   "fieldname": "impgsez",
+   "fieldtype": "Check",
+   "label": "IMPGSEZ"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-11-29 17:29:51.606431",
+ "modified": "2024-01-05 14:57:36.389447",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
