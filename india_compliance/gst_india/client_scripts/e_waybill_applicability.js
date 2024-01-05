@@ -115,7 +115,6 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
             !gst_settings.auto_generate_e_waybill ||
             !this.is_e_waybill_generatable() ||
             !has_e_waybill_threshold_met(this.frm) ||
-            frm.doc.items.every(item => item.gst_treatment == "Non-GST") ||
             is_e_invoice_applicable(this.frm)
         )
             return false;
