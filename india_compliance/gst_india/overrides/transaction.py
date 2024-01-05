@@ -430,17 +430,8 @@ def validate_items(doc):
 
     item_tax_templates = frappe._dict()
     items_with_duplicate_taxes = []
-    non_gst_items = []
-    has_gst_items = False
 
     for row in doc.items:
-        # Collect data to validate that non-GST items are not used with GST items
-        if row.gst_treatment == "Non-GST":
-            non_gst_items.append(row.idx)
-            continue
-
-        has_gst_items = True
-
         # Different Item Tax Templates should not be used for the same Item Code
         if row.item_code not in item_tax_templates:
             item_tax_templates[row.item_code] = row.item_tax_template
@@ -448,23 +439,6 @@ def validate_items(doc):
 
         if row.item_tax_template != item_tax_templates[row.item_code]:
             items_with_duplicate_taxes.append(bold(row.item_code))
-
-    if (
-        non_gst_items
-        and has_gst_items
-        and not frappe.get_cached_value(
-            "GST Settings", "GST Settings", "allow_gst_and_non_gst_items"
-        )
-    ):
-        # Validate that non-GST items are not used with GST items based on GST Settings
-        frappe.throw(
-            _(
-                "Items not covered under GST cannot be clubbed with items for which GST"
-                " is applicable. Please create another document for items in the"
-                " following row numbers:<br>{0}"
-            ).format(", ".join(bold(row_no) for row_no in non_gst_items)),
-            title=_("Invalid Items"),
-        )
 
     if items_with_duplicate_taxes:
         frappe.throw(
@@ -953,7 +927,7 @@ class ItemGSTDetails:
             if not doc.get("items") or not doc.get("taxes"):
                 continue
 
-            self.set_item_wise_tax_details()
+            self.set_item_wise_tax_details(throw=False)
 
             for item in doc.get("items"):
                 response[item.name] = self.get_item_tax_detail(item)
@@ -993,7 +967,7 @@ class ItemGSTDetails:
 
         self.item_defaults = item_defaults
 
-    def set_item_wise_tax_details(self):
+    def set_item_wise_tax_details(self, throw=True):
         """
         Item Tax Details complied
         Example:
@@ -1014,9 +988,13 @@ class ItemGSTDetails:
         - Item count added to handle rounding errors
         """
         tax_details = frappe._dict()
+        non_taxable_items = set()
 
         for row in self.doc.get("items"):
             key = row.item_code or row.item_name
+            if row.gst_treatment not in ["Taxable", "Zero-Rated"]:
+                non_taxable_items.add(key)
+
             if key not in tax_details:
                 tax_details[key] = self.item_defaults.copy()
             tax_details[key]["count"] += 1
@@ -1045,6 +1023,18 @@ class ItemGSTDetails:
 
                 item_taxes = tax_details[item_name]
                 tax_rate, tax_amount = old[item_name]
+
+                # validating tax account not used for non-taxable-items
+                if item_name in non_taxable_items and (tax_amount or tax_rate):
+                    if not throw:
+                        continue
+
+                    frappe.throw(
+                        _("Cannot charge GST for Non-Taxable Item : {0}").format(
+                            item_name
+                        ),
+                        title=_("Invalid Taxes"),
+                    )
 
                 # cases when charge type == "Actual"
                 if tax_amount and not tax_rate:
@@ -1304,10 +1294,10 @@ def before_validate(doc, method=None):
 
 
 def update_gst_details(doc, method=None):
+    ItemGSTTreatment().set(doc)
+
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
-
-    ItemGSTTreatment().set(doc)
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
