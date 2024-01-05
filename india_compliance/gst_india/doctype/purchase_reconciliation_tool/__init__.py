@@ -32,6 +32,7 @@ class Fields(Enum):
     SGST = "sgst"
     IGST = "igst"
     CESS = "cess"
+    TOTAL_GST = "total_gst"
 
 
 class Rule(Enum):
@@ -188,9 +189,7 @@ PAN_RULES = (
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
             Fields.TAXABLE_VALUE: Rule.ROUNDING_DIFFERENCE,
-            Fields.CGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.SGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.IGST: Rule.ROUNDING_DIFFERENCE,
+            Fields.TOTAL_GST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
     },
@@ -203,9 +202,7 @@ PAN_RULES = (
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
             Fields.TAXABLE_VALUE: Rule.ROUNDING_DIFFERENCE,
-            Fields.CGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.SGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.IGST: Rule.ROUNDING_DIFFERENCE,
+            Fields.TOTAL_GST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
     },
@@ -233,9 +230,7 @@ PAN_RULES = (
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
             Fields.TAXABLE_VALUE: Rule.ROUNDING_DIFFERENCE,
-            Fields.CGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.SGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.IGST: Rule.ROUNDING_DIFFERENCE,
+            Fields.TOTAL_GST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
     },
@@ -748,7 +743,7 @@ class Reconciler(BaseReconciliation):
         # GSTIN Level matching
         purchases = self.get_unmatched_purchase_or_bill_of_entry(category)
         inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
-        self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies, category)
+        self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
 
         # In case of IMPG GST in not available in 2A. So skip PAN level matching.
         if category == "IMPG":
@@ -877,6 +872,10 @@ class Reconciler(BaseReconciliation):
     def get_amount_difference(self, purchase, inward_supply, field):
         if field == "cess":
             BaseUtil.update_cess_amount(purchase)
+
+        if field == "total_gst":
+            BaseUtil.update_total_gst_amount(purchase)
+            BaseUtil.update_total_gst_amount(inward_supply)
 
         return abs(purchase.get(field, 0) - inward_supply.get(field, 0))
 
@@ -1275,7 +1274,14 @@ class BaseUtil:
 
     @staticmethod
     def update_cess_amount(doc):
-        doc.cess = doc.get("cess", 0) + doc.get("cess_non_advol", 0)
+        if doc.get("cess_non_advol"):
+            doc.cess = doc.get("cess", 0) + doc.get("cess_non_advol", 0)
+            doc.cess_non_advol = 0
+
+    @staticmethod
+    def update_total_gst_amount(doc):
+        if not doc.get("total_gst"):
+            doc.total_gst = doc.cgst + doc.sgst + doc.igst
 
     @staticmethod
     def get_periods(date_range, return_type: ReturnType, reversed_order=False):
