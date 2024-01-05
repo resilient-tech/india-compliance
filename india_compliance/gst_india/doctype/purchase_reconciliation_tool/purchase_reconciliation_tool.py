@@ -637,12 +637,14 @@ def auto_reconcile():
 
 
 def is_reconciliation_enabled(gst_settings):
+    """Returns True if auto reconciliation is enabled for the current day"""
     return gst_settings.enable_auto_reconciliation and gst_settings.get(
         frappe.utils.getdate().strftime("%A").lower()
     )
 
 
 def get_reconciliation_company_list(gst_settings):
+    """Returns list of companies for which auto reconciliation is enabled"""
     if gst_settings.apply_auto_purchase_reconciliation_for_selected_companies:
         return set(
             company.company
@@ -662,6 +664,7 @@ def get_gst_categories(gst_settings):
 def is_valid_company_credentials(
     company_credentials, gst_settings, purchase_reconciliation_company_list
 ):
+    """Returns True if reconciliation is enabled for the company and the session is valid"""
     return (
         company_credentials.service == "Returns"
         and company_credentials.session_expiry >= now_datetime()
