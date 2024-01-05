@@ -16,7 +16,6 @@
   "min_hsn_digits",
   "enable_rcm_for_unregistered_supplier",
   "rcm_threshold",
-  "allow_gst_and_non_gst_items",
   "api_section",
   "enable_api",
   "enable_retry_einv_ewb_generation",
@@ -365,6 +364,7 @@
    "fieldname": "enable_e_waybill_from_pr",
    "fieldtype": "Check",
    "label": "Enable e-Waybill Generation from Purchase Receipt"
+<<<<<<< HEAD
   },
   {
    "default": "0",
@@ -386,16 +386,22 @@
    "fieldtype": "Check",
    "label": "Allow GST items with Non-GST Items in Transactions"
 >>>>>>> ff22beec (fix: allow gst items with non-gst items)
+=======
+>>>>>>> 5bc14e51 (fix: treat non-gst as nil rated)
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
 <<<<<<< HEAD
+<<<<<<< HEAD
  "modified": "2024-01-11 11:06:33.171137",
 =======
  "modified": "2024-01-03 12:29:42.446536",
 >>>>>>> ff22beec (fix: allow gst items with non-gst items)
+=======
+ "modified": "2024-01-05 11:06:33.171136",
+>>>>>>> 5bc14e51 (fix: treat non-gst as nil rated)
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
