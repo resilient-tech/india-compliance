@@ -65,7 +65,6 @@ def is_b2b_invoice(doc):
         or doc.gst_category in ["Registered Composition", "Unregistered", "Overseas"]
         or doc.supplier_gstin == doc.company_gstin
         or doc.is_opening == "Yes"
-        or all(row for row in doc.items if row.gst_treatment == "Non-GST")
     )
 
 

@@ -173,7 +173,6 @@ def on_submit(doc, method=None):
         and is_e_waybill_applicable(doc, gst_settings)
         and not doc.is_debit_note
         and not doc.is_return
-        and not all(row for row in doc.items if row.gst_treatment == "Non-GST")
     ):
         frappe.enqueue(
             "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
