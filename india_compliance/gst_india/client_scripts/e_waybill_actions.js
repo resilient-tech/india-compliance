@@ -106,7 +106,8 @@ function setup_e_waybill_actions(doctype) {
             }
 
             if (
-                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
+                frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name) &&
+                !has_extend_validity_expired(frm)
             ) {
                 const can_extend = can_extend_e_waybill(frm);
                 let btn = frm.add_custom_button(
@@ -114,8 +115,8 @@ function setup_e_waybill_actions(doctype) {
                     can_extend ? () => show_extend_validity_dialog(frm) : null,
                     "e-Waybill"
                 );
-                if(!can_extend) {
-                    btn.addClass('disabled');
+                if (!can_extend) {
+                    btn.addClass("disabled");
                 }
             }
 
@@ -241,38 +242,46 @@ function show_generate_e_waybill_dialog(frm) {
         );
 
         frm.refresh();
-        india_compliance.trigger_file_download(ewb_data, get_e_waybill_file_name(frm.doc.name));
+        india_compliance.trigger_file_download(
+            ewb_data,
+            get_e_waybill_file_name(frm.doc.name)
+        );
     };
 
     const api_enabled = india_compliance.is_api_enabled();
 
-    const d = get_generate_e_waybill_dialog({
-        title: __("Generate e-Waybill"),
-        primary_action_label: get_primary_action_label_for_generation(frm.doc),
-        primary_action(values) {
-            d.hide();
-            if (api_enabled) {
-                generate_action(values);
-            } else {
-                json_action(values);
-            }
-        },
-        secondary_action_label:
-            api_enabled && frm.doc.doctype ? __("Download JSON") : null,
-        secondary_action: api_enabled
-            ? () => {
+    const d = get_generate_e_waybill_dialog(
+        {
+            title: __("Generate e-Waybill"),
+            primary_action_label: get_primary_action_label_for_generation(frm.doc),
+            primary_action(values) {
                 d.hide();
-                json_action(d.get_values());
-            }
-            : null,
-    }, frm);
+                if (api_enabled) {
+                    generate_action(values);
+                } else {
+                    json_action(values);
+                }
+            },
+            secondary_action_label:
+                api_enabled && frm.doc.doctype ? __("Download JSON") : null,
+            secondary_action: api_enabled
+                ? () => {
+                    d.hide();
+                    json_action(d.get_values());
+                }
+                : null,
+        },
+        frm
+    );
 
     d.show();
 
     //Alert if E-waybill cannot be generated using api
     if (!is_e_waybill_generatable(frm)) {
         const address = frm.doc.customer_address || frm.doc.supplier_address;
-        const reason = !address ? "<strong>party address</strong> is missing." : "party <strong>GSTIN is same</strong> as company GSTIN.";
+        const reason = !address
+            ? "<strong>party address</strong> is missing."
+            : "party <strong>GSTIN is same</strong> as company GSTIN.";
         $(`
             <div class="alert alert-warning" role="alert">
                 e-Waybill cannot be generated as ${reason}
@@ -803,15 +812,17 @@ function show_update_transporter_dialog(frm) {
 }
 
 async function show_extend_validity_dialog(frm) {
-    const destination_address = await get_source_destination_address(frm, "destination_address");
+    const { valid_upto, extension_scheduled } = frm.doc.__onload?.e_waybill_info || {};
+    if (!valid_upto) return;
+
+    const scheduled_time = get_hours(valid_upto, 1, "DD-MM-YYYY HH:mm A");
+    const can_extend_now = can_extend_e_waybill_now(valid_upto);
+    const destination_address = await get_source_destination_address(
+        frm,
+        "destination_address"
+    );
     const is_in_movement = "eval: doc.consignment_status === 'In Movement'";
     const is_in_transit = "eval: doc.consignment_status === 'In Transit'";
-
-    const can_extend_now = can_extend_e_waybill_now(frm);
-
-    const extension_already_scheduled = frm.doc.__onload?.e_waybill_info?.extension_scheduled;
-    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
-    const scheduled_time = get_hours(valid_upto, 1, "DD-MM-YYYY HH:mm A");
 
     const d = new frappe.ui.Dialog({
         title: __("Extend Validity"),
@@ -980,13 +991,15 @@ async function show_extend_validity_dialog(frm) {
             });
             d.hide();
         },
-        secondary_action_label: !can_extend_now ? __('Schedule') : null,
-        secondary_action: !can_extend_now ? () => schedule_e_waybill_extension(frm, d, scheduled_time) : null,
     });
     if (!can_extend_now) {
         d.get_primary_btn().addClass("disabled");
+        d.set_secondary_action(() =>
+            schedule_e_waybill_extension(frm, d, scheduled_time)
+        );
+        d.set_secondary_action_label(__("Schedule"));
     }
-    if (extension_already_scheduled) {
+    if (extension_scheduled) {
         display_extension_scheduled_message(d, scheduled_time);
         prefill_data_from_e_waybill_log(frm, d);
     }
@@ -1005,10 +1018,9 @@ function schedule_e_waybill_extension(frm, dialog, scheduled_time) {
                 scheduled_time,
             },
             callback: () => {
-                if (frm.doc.__onload && frm.doc.__onload.e_waybill_info) {
+                if (frm.doc.__onload?.e_waybill_info) {
                     frm.doc.__onload.e_waybill_info.extension_scheduled = 1;
                 }
-                frm.refresh();
             },
         });
     }
@@ -1021,28 +1033,35 @@ function display_extension_scheduled_message(dialog, scheduled_time) {
 }
 
 function prefill_data_from_e_waybill_log(frm, dialog) {
-    frappe.db.get_value('e-Waybill Log', frm.doc.ewaybill, [
-        "consignment_status", "transit_type", "extension_reason_code", "extension_remark", "address",
-    ]).then(response => {
-        const values = response.message;
-        const address = JSON.parse(values.address);
+    frappe.db
+        .get_value("e-Waybill Log", frm.doc.ewaybill, [
+            "consignment_status",
+            "transit_type",
+            "extension_reason_code",
+            "extension_remark",
+            "address",
+            "remaining_distance",
+        ])
+        .then(response => {
+            const values = response.message;
+            const address = JSON.parse(values.address);
 
-        const prefill_data = {
-            "consignment_status": values.consignment_status,
-            "transit_type": values.transit_type,
-            "lr_no": values.lr_no,
-            "address_line1": address.address_line1,
-            "address_line2": address.address_line2,
-            "address_line3": address.address_line3,
-            "current_place": address.current_place,
-            "current_pincode": address.current_pincode,
-            "current_state": address.current_state,
-            "reason": values.extension_reason_code,
-            "remark": values.extension_remark,
-        };
+            const prefill_data = {
+                consignment_status: values.consignment_status,
+                transit_type: values.transit_type,
+                lr_no: values.lr_no,
+                address_line1: address.address_line1,
+                address_line2: address.address_line2,
+                address_line3: address.address_line3,
+                current_place: address.current_place,
+                current_pincode: address.current_pincode,
+                current_state: address.current_state,
+                reason: values.extension_reason_code,
+                remark: values.extension_remark,
+            };
 
-        dialog.set_values(prefill_data);
-    });
+            dialog.set_values(prefill_data);
+        });
 }
 
 function is_e_waybill_valid(frm) {
@@ -1077,17 +1096,25 @@ function can_extend_e_waybill(frm) {
     return false;
 }
 
-function get_hours(date, hours, date_time_format=frappe.defaultDatetimeFormat) {
+function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
     return moment(date).add(hours, "hours").format(date_time_format);
 }
 
-function can_extend_e_waybill_now(frm) {
-    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
+function can_extend_e_waybill_now(valid_upto) {
     const extend_after = get_hours(valid_upto, -8);
     const extend_before = get_hours(valid_upto, 8);
     const now = frappe.datetime.now_datetime();
 
     if (extend_after < now && now < extend_before) return true;
+    return false;
+}
+
+function has_extend_validity_expired(frm) {
+    const valid_upto = frm.doc.__onload?.e_waybill_info?.valid_upto;
+    const extend_before = get_hours(valid_upto, 8);
+    const now = frappe.datetime.now_datetime();
+
+    if (now > extend_before) return true;
     return false;
 }
 
@@ -1220,11 +1247,11 @@ function show_sandbox_mode_indicator() {
             `
             <div class="sidebar-menu ic-sandbox-mode">
                 <p><label class="indicator-pill no-indicator-dot yellow" title="${__(
-                "Your site has enabled Sandbox Mode in GST Settings."
-            )}">${__("Sandbox Mode")}</label></p>
+                    "Your site has enabled Sandbox Mode in GST Settings."
+                )}">${__("Sandbox Mode")}</label></p>
                 <p><a class="small text-muted" href="/app/gst-settings" target="_blank">${__(
-                "Sandbox Mode is enabled for GST APIs."
-            )}</a></p>
+                    "Sandbox Mode is enabled for GST APIs."
+                )}</a></p>
             </div>
             `
         );
