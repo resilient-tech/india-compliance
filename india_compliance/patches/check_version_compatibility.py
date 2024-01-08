@@ -35,6 +35,9 @@ def execute():
                 " Compliance.\n"
             )
 
+        if IC_VERSION.major == 16:
+            continue
+
         app_branch = get_app_branch(app_name.lower())
         required_versions = app["required_versions"]
 
