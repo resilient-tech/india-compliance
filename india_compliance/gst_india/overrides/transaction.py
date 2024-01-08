@@ -927,7 +927,7 @@ class ItemGSTDetails:
             if not doc.get("items") or not doc.get("taxes"):
                 continue
 
-            self.set_item_wise_tax_details(throw=False)
+            self.set_item_wise_tax_details()
 
             for item in doc.get("items"):
                 response[item.name] = self.get_item_tax_detail(item)
@@ -967,7 +967,7 @@ class ItemGSTDetails:
 
         self.item_defaults = item_defaults
 
-    def set_item_wise_tax_details(self, throw=True):
+    def set_item_wise_tax_details(self):
         """
         Item Tax Details complied
         Example:
@@ -988,12 +988,9 @@ class ItemGSTDetails:
         - Item count added to handle rounding errors
         """
         tax_details = frappe._dict()
-        non_taxable_items = set()
 
         for row in self.doc.get("items"):
             key = row.item_code or row.item_name
-            if row.gst_treatment not in ["Taxable", "Zero-Rated"]:
-                non_taxable_items.add(key)
 
             if key not in tax_details:
                 tax_details[key] = self.item_defaults.copy()
@@ -1023,18 +1020,6 @@ class ItemGSTDetails:
 
                 item_taxes = tax_details[item_name]
                 tax_rate, tax_amount = old[item_name]
-
-                # validating tax account not used for non-taxable-items
-                if item_name in non_taxable_items and (tax_amount or tax_rate):
-                    if not throw:
-                        continue
-
-                    frappe.throw(
-                        _("Cannot charge GST for Non-Taxable Item : {0}").format(
-                            item_name
-                        ),
-                        title=_("Invalid Taxes"),
-                    )
 
                 # cases when charge type == "Actual"
                 if tax_amount and not tax_rate:
@@ -1295,9 +1280,32 @@ def before_validate(doc, method=None):
 
 def update_gst_details(doc, method=None):
     ItemGSTTreatment().set(doc)
-
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
+        validate_non_taxable_items(doc)
+
+
+def validate_non_taxable_items(doc):
+    if not doc.items or not doc.taxes:
+        return
+
+    non_taxable_items_with_tax = []
+    for item in doc.items:
+        if item.gst_treatment in ("Taxable", "Zero-Rated"):
+            continue
+
+        if item.igst_amount or item.cgst_amount or item.sgst_amount:
+            non_taxable_items_with_tax.append(item.idx)
+
+    if non_taxable_items_with_tax:
+        frappe.throw(
+            _(
+                "Cannot charge GST on Non-Taxable Items.<br>"
+                "Please select the correct Item Tax Template for"
+                "following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in non_taxable_items_with_tax)),
+            title=_("Invalid Items"),
+        )
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
