@@ -1254,7 +1254,7 @@ def validate_non_taxable_items(doc):
             _(
                 "Cannot charge GST on Non-Taxable Items.<br>"
                 "Please select the correct Item Tax Template for"
-                "following row numbers:<br>{0}"
+                " following row numbers:<br>{0}"
             ).format(", ".join(bold(row_no) for row_no in non_taxable_items_with_tax)),
             title=_("Invalid Items"),
         )
