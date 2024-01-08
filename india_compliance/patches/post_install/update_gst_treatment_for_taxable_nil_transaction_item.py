@@ -37,6 +37,10 @@ def update_nil_rated_items():
     nil_rated_templates = frappe.get_all(
         "Item Tax Template", filters={"gst_treatment": "Nil-Rated"}, pluck="name"
     )
+
+    if not nil_rated_templates:
+        return
+
     for dt in DOCTYPES:
         doctype = frappe.qb.DocType(dt)
 
