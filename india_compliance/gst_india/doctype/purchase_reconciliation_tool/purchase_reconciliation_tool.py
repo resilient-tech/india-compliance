@@ -639,7 +639,7 @@ def auto_reconcile():
 def is_reconciliation_enabled(gst_settings):
     """Returns True if auto reconciliation is enabled for the current day"""
     return gst_settings.enable_auto_reconciliation and gst_settings.get(
-        frappe.utils.getdate().strftime("%A").lower()
+        "reconcile_on_" + frappe.utils.getdate().strftime("%A").lower()
     )
 
 
@@ -657,7 +657,7 @@ def get_gst_categories(gst_settings):
     return [
         category.value
         for action, category in ACTIONS.items()
-        if getattr(gst_settings, category.value.lower())
+        if getattr(gst_settings, "reconcile_for_" + category.value.lower())
     ]
 
 

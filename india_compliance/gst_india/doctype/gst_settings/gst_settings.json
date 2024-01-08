@@ -58,24 +58,28 @@
   "apply_auto_purchase_reconciliation_for_selected_companies",
   "auto_purchase_reconciliation_enabled_companies",
   "gst_categories_section",
-  "b2b",
-  "b2ba",
-  "cdnr",
-  "cdnra",
+  "reconcile_for_b2b",
+  "reconcile_for_b2ba",
+  "column_break_notc",
+  "reconcile_for_cdnr",
+  "reconcile_for_cdnra",
+  "column_break_jpws",
+  "reconcile_for_isd",
+  "reconcile_for_isda",
   "column_break_brkt",
-  "isd",
-  "isda",
-  "impg",
-  "impgsez",
+  "reconcile_for_impg",
+  "reconcile_for_impgsez",
   "auto_reconciliation_days_section",
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
+  "reconcile_on_monday",
+  "reconcile_on_friday",
   "column_break_fghn",
-  "friday",
-  "saturday",
-  "sunday",
+  "reconcile_on_tuesday",
+  "reconcile_on_saturday",
+  "column_break_koqs",
+  "reconcile_on_wednesday",
+  "reconcile_on_sunday",
+  "column_break_sdge",
+  "reconcile_on_thursday",
   "credentials_tab",
   "credentials",
   "api_secret",
@@ -421,6 +425,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "fieldname": "purchase_reconciliation_tab",
    "fieldtype": "Tab Break",
    "label": "Purchase Reconciliation"
@@ -432,50 +437,8 @@
    "label": "Auto Reconciliation Days"
   },
   {
-   "default": "0",
-   "fieldname": "monday",
-   "fieldtype": "Check",
-   "label": "Monday"
-  },
-  {
-   "default": "0",
-   "fieldname": "tuesday",
-   "fieldtype": "Check",
-   "label": "Tuesday"
-  },
-  {
-   "default": "1",
-   "fieldname": "wednesday",
-   "fieldtype": "Check",
-   "label": "Wednesday"
-  },
-  {
-   "default": "0",
-   "fieldname": "thursday",
-   "fieldtype": "Check",
-   "label": "Thursday"
-  },
-  {
    "fieldname": "column_break_fghn",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "friday",
-   "fieldtype": "Check",
-   "label": "Friday"
-  },
-  {
-   "default": "0",
-   "fieldname": "saturday",
-   "fieldtype": "Check",
-   "label": "Saturday"
-  },
-  {
-   "default": "1",
-   "fieldname": "sunday",
-   "fieldtype": "Check",
-   "label": "Sunday"
   },
   {
    "default": "0",
@@ -506,54 +469,112 @@
    "label": "GST Categories"
   },
   {
+   "fieldname": "column_break_brkt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_notc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_jpws",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_koqs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_sdge",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_monday",
+   "fieldtype": "Check",
+   "label": "Monday"
+  },
+  {
    "default": "1",
-   "fieldname": "b2b",
+   "fieldname": "reconcile_on_friday",
+   "fieldtype": "Check",
+   "label": "Friday"
+  },
+  {
+   "default": "1",
+   "fieldname": "reconcile_on_tuesday",
+   "fieldtype": "Check",
+   "label": "Tuesday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_saturday",
+   "fieldtype": "Check",
+   "label": "Saturday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_wednesday",
+   "fieldtype": "Check",
+   "label": "Wednesday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_sunday",
+   "fieldtype": "Check",
+   "label": "Sunday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_thursday",
+   "fieldtype": "Check",
+   "label": "Thursday"
+  },
+  {
+   "default": "1",
+   "fieldname": "reconcile_for_b2b",
    "fieldtype": "Check",
    "label": "B2B"
   },
   {
    "default": "0",
-   "fieldname": "b2ba",
+   "fieldname": "reconcile_for_b2ba",
    "fieldtype": "Check",
    "label": "B2BA"
   },
   {
    "default": "1",
-   "fieldname": "cdnr",
+   "fieldname": "reconcile_for_cdnr",
    "fieldtype": "Check",
    "label": "CDNR"
   },
   {
    "default": "0",
-   "fieldname": "cdnra",
+   "fieldname": "reconcile_for_cdnra",
    "fieldtype": "Check",
    "label": "CDNRA"
   },
   {
-   "fieldname": "column_break_brkt",
-   "fieldtype": "Column Break"
-  },
-  {
    "default": "0",
-   "fieldname": "isd",
+   "fieldname": "reconcile_for_isd",
    "fieldtype": "Check",
    "label": "ISD"
   },
   {
    "default": "0",
-   "fieldname": "isda",
+   "fieldname": "reconcile_for_isda",
    "fieldtype": "Check",
    "label": "ISDA"
   },
   {
    "default": "0",
-   "fieldname": "impg",
+   "fieldname": "reconcile_for_impg",
    "fieldtype": "Check",
    "label": "IMPG"
   },
   {
    "default": "0",
-   "fieldname": "impgsez",
+   "fieldname": "reconcile_for_impgsez",
    "fieldtype": "Check",
    "label": "IMPGSEZ"
   }
@@ -561,7 +582,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-01-05 14:57:36.389447",
+ "modified": "2024-01-05 18:55:33.122962",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
