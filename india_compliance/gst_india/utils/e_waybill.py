@@ -521,6 +521,22 @@ def extend_validity(*, doctype, docname, values):
     return send_updated_doc(doc)
 
 
+def generate_pending_e_waybills():
+    doctypes = ["Sales Invoice"]
+
+    for doctype in doctypes:
+        queued_docs = frappe.get_all(
+            doctype,
+            filters={"e_waybill_status": "Auto-Retry"},
+            pluck="name",
+        )
+
+        if not queued_docs:
+            continue
+
+        generate_e_waybills(doctype, queued_docs, force=True)
+
+
 #######################################################################################
 ### e-Waybill Fetch, Print and Attach Functions ##############################################
 #######################################################################################

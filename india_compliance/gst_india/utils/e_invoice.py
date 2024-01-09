@@ -42,7 +42,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
-    generate_e_waybills,
+    generate_pending_e_waybills,
     log_and_process_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -456,29 +456,21 @@ def retry_e_invoice_e_waybill_generation():
 
     settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
 
+    generate_pending_e_invoices()
+    generate_pending_e_waybills()
+
+
+def generate_pending_e_invoices():
     queued_sales_invoices = frappe.db.get_all(
         "Sales Invoice",
-        or_filters={"einvoice_status": "Auto-Retry", "e_waybill_status": "Auto-Retry"},
-        fields=["name", "einvoice_status", "e_waybill_status"],
+        filters={"einvoice_status": "Auto-Retry"},
+        pluck="name",
     )
+
     if not queued_sales_invoices:
         return
 
-    queued_for_e_invoice = [
-        sales_invoice.name
-        for sales_invoice in queued_sales_invoices
-        if sales_invoice.einvoice_status == "Auto-Retry"
-    ]
-
-    queued_for_e_waybill = [
-        sales_invoice.name
-        for sales_invoice in queued_sales_invoices
-        if sales_invoice.e_waybill_status == "Auto-Retry"
-    ]
-
-    generate_e_invoices(queued_for_e_invoice, force=True)
-
-    generate_e_waybills("Sales Invoice", queued_for_e_waybill, force=True)
+    generate_e_invoices(queued_sales_invoices, force=True)
 
 
 def get_e_invoice_info(doc):
