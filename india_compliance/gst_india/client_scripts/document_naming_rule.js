@@ -1,5 +1,4 @@
-{% include "india_compliance/gst_india/client_scripts/document_naming_settings.js" %}
-
+frappe.require("assets/india_compliance/js/transaction.js");
 
 frappe.ui.form.on("Document Naming Rule", {
     document_type(frm) {

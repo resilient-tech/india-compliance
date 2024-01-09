@@ -17,4 +17,4 @@ export const GSTIN_REGEX = new RegExp(
     [NORMAL, GOVT_DEPTID, NRI_ID, OIDAR, UNBODY].join("|")
 );
 
-export const GST_INVOICE_NUMBER_FORMAT = new RegExp("^[^\\W_][A-Za-z0-9-\\/]{0,15}$");
+export const GST_INVOICE_NUMBER_FORMAT = new RegExp("^[^\\W_][A-Za-z0-9\\-\\/]{0,15}$");
