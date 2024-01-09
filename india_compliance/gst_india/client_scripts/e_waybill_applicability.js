@@ -74,7 +74,6 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     }
 }
 
-
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable() {
         return super.is_e_waybill_applicable() && gst_settings.enable_e_waybill_from_pr;
@@ -95,9 +94,6 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable() {
-        return (
-            this.is_e_waybill_applicable() &&
-            this.frm.doc.customer_address
-        );
+        return this.is_e_waybill_applicable() && this.frm.doc.customer_address;
     }
 }
