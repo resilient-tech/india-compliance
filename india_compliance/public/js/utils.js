@@ -4,6 +4,7 @@ import {
     OVERSEAS_REGEX,
     UNBODY_REGEX,
     TDS_REGEX,
+    GST_INVOICE_NUMBER_FORMAT,
 } from "./regex_constants";
 
 frappe.provide("india_compliance");
@@ -236,6 +237,24 @@ Object.assign(india_compliance, {
                 2A/2B Status:&nbsp;<strong>${frm.doc.reconciliation_status}</strong>
             </div>`
         );
+    },
+
+    validate_invoice_number(invoice_number) {
+        if (invoice_number.length > 16) {
+            frappe.throw(
+                __("GST Invoice Number cannot exceed 16 characters"),
+                __("Invalid GST Invoice Number")
+            );
+        }
+
+        if (!GST_INVOICE_NUMBER_FORMAT.test(invoice_number)) {
+            frappe.throw(
+                __(
+                    "GST Invoice Number should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/)"
+                ),
+                __("Invalid GST Invoice Number")
+            );
+        }
     },
 
     trigger_file_download(file_content, file_name) {

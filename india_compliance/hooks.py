@@ -61,6 +61,7 @@ doctype_js = {
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
     "Document Naming Settings": "gst_india/client_scripts/document_naming_settings.js",
+    "Document Naming Rule": "gst_india/client_scripts/document_naming_rule.js",
 }
 
 doctype_list_js = {
