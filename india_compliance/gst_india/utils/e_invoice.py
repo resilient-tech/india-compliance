@@ -457,6 +457,10 @@ def retry_e_invoice_e_waybill_generation():
     settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
 
     generate_pending_e_invoices()
+
+    if frappe.flags.gsp_gst_server_error:
+        return
+
     generate_pending_e_waybills()
 
 
