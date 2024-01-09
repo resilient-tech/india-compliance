@@ -10,7 +10,10 @@ from erpnext.accounts.party import _get_party_details
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
-from india_compliance.gst_india.overrides.transaction import DOCTYPES_WITH_GST_DETAIL
+from india_compliance.gst_india.overrides.transaction import (
+    DOCTYPES_WITH_GST_DETAIL,
+    validate_non_taxable_items,
+)
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -88,14 +91,29 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual({"gst_category": "Unregistered", "taxes": []}, doc)
 
     def test_transaction_with_gst_and_non_gst_items(self):
+        # allowing taxable items with non-taxable items
         doc = create_transaction(**self.transaction_details, do_not_save=True)
 
         append_item(doc, frappe._dict(item_code="_Test Non GST Item"))
 
+        doc.insert()
+
+    def test_non_taxable_items_with_tax(self):
+        doc = create_transaction(
+            **self.transaction_details,
+            is_in_state=True,
+            item_tax_template="GST 28% - _TIRC",
+            do_not_submit=True,
+        )
+
+        for item in doc.items:
+            item.gst_treatment = "Nil-Rated"
+
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(Items not covered under GST cannot be clubbed.*)$"),
-            doc.insert,
+            re.compile(r"^(Cannot charge GST on Non-Taxable Items.*)$"),
+            validate_non_taxable_items,
+            doc,
         )
 
     def test_transaction_for_items_with_duplicate_taxes(self):

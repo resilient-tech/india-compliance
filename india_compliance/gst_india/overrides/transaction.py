@@ -422,20 +422,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     return all_valid_accounts
 
 
-def validate_tax_accounts_for_non_gst(doc):
-    """GST Tax Accounts should not be charged for Non GST Items"""
-    accounts_list = get_all_gst_accounts(doc.company)
-
-    for row in doc.taxes:
-        if row.account_head in accounts_list and row.tax_amount:
-            frappe.throw(
-                _("Row #{0}: Cannot charge GST for Non GST Items").format(
-                    row.idx, row.account_head
-                ),
-                title=_("Invalid Taxes"),
-            )
-
-
 def validate_items(doc):
     """Validate Items for a GST Compliant Invoice"""
 
@@ -444,17 +430,8 @@ def validate_items(doc):
 
     item_tax_templates = frappe._dict()
     items_with_duplicate_taxes = []
-    non_gst_items = []
-    has_gst_items = False
 
     for row in doc.items:
-        # Collect data to validate that non-GST items are not used with GST items
-        if row.gst_treatment == "Non-GST":
-            non_gst_items.append(row.idx)
-            continue
-
-        has_gst_items = True
-
         # Different Item Tax Templates should not be used for the same Item Code
         if row.item_code not in item_tax_templates:
             item_tax_templates[row.item_code] = row.item_tax_template
@@ -462,22 +439,6 @@ def validate_items(doc):
 
         if row.item_tax_template != item_tax_templates[row.item_code]:
             items_with_duplicate_taxes.append(bold(row.item_code))
-
-    if not has_gst_items:
-        update_taxable_values(doc, [])
-        validate_tax_accounts_for_non_gst(doc)
-
-        return False
-
-    if non_gst_items:
-        frappe.throw(
-            _(
-                "Items not covered under GST cannot be clubbed with items for which GST"
-                " is applicable. Please create another document for items in the"
-                " following row numbers:<br>{0}"
-            ).format(", ".join(bold(row_no) for row_no in non_gst_items)),
-            title=_("Invalid Items"),
-        )
 
     if items_with_duplicate_taxes:
         frappe.throw(
@@ -1030,6 +991,7 @@ class ItemGSTDetails:
 
         for row in self.doc.get("items"):
             key = row.item_code or row.item_name
+
             if key not in tax_details:
                 tax_details[key] = self.item_defaults.copy()
             tax_details[key]["count"] += 1
@@ -1264,6 +1226,8 @@ def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
 
+    validate_items(doc)
+
     if doc.place_of_supply:
         validate_place_of_supply(doc)
     else:
@@ -1315,10 +1279,33 @@ def before_validate(doc, method=None):
 
 
 def update_gst_details(doc, method=None):
+    ItemGSTTreatment().set(doc)
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
+        validate_non_taxable_items(doc)
 
-    ItemGSTTreatment().set(doc)
+
+def validate_non_taxable_items(doc):
+    if not doc.items or not doc.taxes:
+        return
+
+    non_taxable_items_with_tax = []
+    for item in doc.items:
+        if item.gst_treatment in ("Taxable", "Zero-Rated"):
+            continue
+
+        if item.igst_amount or item.cgst_amount or item.sgst_amount:
+            non_taxable_items_with_tax.append(item.idx)
+
+    if non_taxable_items_with_tax:
+        frappe.throw(
+            _(
+                "Cannot charge GST on Non-Taxable Items.<br>"
+                "Please select the correct Item Tax Template for"
+                " following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in non_taxable_items_with_tax)),
+            title=_("Invalid Items"),
+        )
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
@@ -1335,10 +1322,5 @@ def after_mapping(target_doc, method=None, source_doc=None):
 
 
 def ignore_gst_validations(doc):
-    if (
-        not is_indian_registered_company(doc)
-        or doc.get("is_opening") == "Yes"
-        # If there are no GST items, then no need to proceed further
-        or validate_items(doc) is False
-    ):
+    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
         return True
