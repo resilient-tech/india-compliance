@@ -14,6 +14,9 @@ from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.utils import load_doc
+from india_compliance.gst_india.utils.e_invoice import (
+    retry_e_invoice_e_waybill_generation,
+)
 from india_compliance.gst_india.utils.e_waybill import (
     EWaybillData,
     cancel_e_waybill,
@@ -22,11 +25,6 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_transporter,
     update_vehicle_info,
 )
-
-from india_compliance.gst_india.utils.e_invoice import (
-    retry_e_invoice_e_waybill_generation,
-)
-
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -850,7 +848,9 @@ class TestEWaybill(FrappeTestCase):
         self.assertEqual(sales_invoice.e_waybill_status, "Generated")
         self.assertEqual(
             sales_invoice.ewaybill,
-            str(retry_ewb_test_date.get("response_data").get("result").get("ewayBillNo")),
+            str(
+                retry_ewb_test_date.get("response_data").get("result").get("ewayBillNo")
+            ),
         )
 
     @change_settings("GST Settings", {"enable_retry_einv_ewb_generation": 0})
