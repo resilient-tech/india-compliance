@@ -3,8 +3,13 @@ setup_e_waybill_actions(DOCTYPE);
 
 frappe.ui.form.on(DOCTYPE, {
     refresh(frm) {
-        if (gst_settings.enable_e_waybill && gst_settings.enable_e_waybill_from_pr)
-            show_sandbox_mode_indicator();
+        if (
+            frm.doc.exclude_from_gst ||
+            !gst_settings.enable_e_waybill ||
+            !gst_settings.enable_e_waybill_from_pr
+        )
+            return;
+        show_sandbox_mode_indicator();
     },
 
     after_save(frm) {

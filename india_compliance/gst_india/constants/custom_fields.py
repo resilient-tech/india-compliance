@@ -99,6 +99,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "read_only": 1,
             "translatable": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "gst_category",
@@ -113,6 +114,7 @@ CUSTOM_FIELDS = {
             "fetch_from": "supplier_address.gst_category",
             "translatable": 0,
             "fetch_if_empty": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "company_gstin",
@@ -123,6 +125,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "read_only": 1,
             "translatable": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "place_of_supply",
@@ -134,6 +137,7 @@ CUSTOM_FIELDS = {
             "read_only": 0,
             "translatable": 0,
             "fetch_from": "",
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "is_reverse_charge",
@@ -142,6 +146,7 @@ CUSTOM_FIELDS = {
             "insert_after": "apply_tds",
             "print_hide": 1,
             "default": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
     ],
     # Sales - Export with GST Payment
@@ -152,7 +157,7 @@ CUSTOM_FIELDS = {
         "fieldtype": "Check",
         "insert_after": "is_reverse_charge",
         "print_hide": 1,
-        "depends_on": 'eval:doc.gst_category == "SEZ" || (doc.gst_category == "Overseas" && doc.place_of_supply == "96-Other Countries")',
+        "depends_on": 'eval: doc.exclude_from_gst == 0 && (doc.gst_category == "SEZ" || (doc.gst_category == "Overseas" && doc.place_of_supply == "96-Other Countries"))',
         "default": 0,
         "translatable": 0,
     },
@@ -165,6 +170,7 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_vehicle_type",
             "print_hide": 1,
             "collapsible": 1,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "ecommerce_gstin",
@@ -174,6 +180,7 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_section",
             "print_hide": 1,
             "translatable": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "gst_col_break",
@@ -193,6 +200,7 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "length": 15,
             "translatable": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "gst_category",
@@ -207,6 +215,7 @@ CUSTOM_FIELDS = {
             "fetch_from": "customer_address.gst_category",
             "translatable": 0,
             "fetch_if_empty": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "place_of_supply",
@@ -219,6 +228,7 @@ CUSTOM_FIELDS = {
             "length": 50,
             "translatable": 0,
             "fetch_from": "",
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "company_gstin",
@@ -230,6 +240,7 @@ CUSTOM_FIELDS = {
             "read_only": 1,
             "length": 15,
             "translatable": 0,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
     ],
     # Sales Shipping Fields
@@ -241,7 +252,7 @@ CUSTOM_FIELDS = {
             "options": port_code_options,
             "insert_after": "gst_col_break",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
+            "depends_on": "eval: doc.exclude_from_gst == 0 && (doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries')",
             "length": 15,
             "translatable": 0,
         },
@@ -251,7 +262,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Data",
             "insert_after": "port_code",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
+            "depends_on": "eval: doc.exclude_from_gst == 0 && (doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries')",
             "length": 50,
             "translatable": 0,
         },
@@ -261,7 +272,7 @@ CUSTOM_FIELDS = {
             "fieldtype": "Date",
             "insert_after": "shipping_bill_number",
             "print_hide": 1,
-            "depends_on": "eval:doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries'",
+            "depends_on": "eval: doc.exclude_from_gst == 0 && (doc.gst_category == 'Overseas' && doc.place_of_supply == '96-Other Countries')",
         },
     ],
     ("Journal Entry", "GL Entry"): [
@@ -321,7 +332,7 @@ CUSTOM_FIELDS = {
             "fieldname": "gst_treatment",
             "label": "GST Treatment",
             "fieldtype": "Autocomplete",
-            "options": "Taxable\nZero-Rated\nNil-Rated\nExempted\nNon-GST",
+            "options": "Taxable\nZero-Rated\nNil-Rated\nExempted\nNon-GST\nExcluded",
             "fetch_from": "item_tax_template.gst_treatment",
             "fetch_if_empty": 1,
             "insert_after": "item_tax_template",
@@ -348,6 +359,7 @@ CUSTOM_FIELDS = {
             "insert_after": "taxable_value",
             "fieldname": "gst_details_section",
             "collapsible": 1,
+            "depends_on": "eval: doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "igst_rate",
@@ -464,6 +476,7 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_hsn_code",
             "fetch_if_empty": 1,
             "print_hide": 1,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
     ],
     "Sales Invoice": [
@@ -479,8 +492,8 @@ CUSTOM_FIELDS = {
             ),
             "insert_after": "shipping_address",
             "depends_on": (
-                "eval:doc.company_gstin && doc.gst_category === 'Overseas' &&"
-                " doc.place_of_supply == '96-Other Countries' && gst_settings.enable_e_waybill"
+                "eval:doc.exclude_from_gst == 0 && (doc.company_gstin && doc.gst_category === 'Overseas' &&"
+                " doc.place_of_supply == '96-Other Countries' && gst_settings.enable_e_waybill)"
             ),
         },
         {
@@ -521,6 +534,7 @@ CUSTOM_FIELDS = {
             "insert_after": "gst_vehicle_type",
             "print_hide": 1,
             "collapsible": 1,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
         {
             "fieldname": "itc_classification",
@@ -847,6 +861,7 @@ reverse_charge_field = frappe._dict(
     fieldtype="Check",
     print_hide=1,
     default=0,
+    depends_on="eval:doc.exclude_from_gst == 0",
 )
 
 # POS Invoice excluded, since it isn't designed for reverse charge transactions
@@ -860,6 +875,28 @@ SALES_REVERSE_CHARGE_FIELDS = {
     ),
     "Sales Invoice": reverse_charge_field.copy().update(insert_after="is_debit_note"),
 }
+
+exclude_from_gst_field = frappe._dict(
+    fieldname="exclude_from_gst",
+    label="Exclude from GST Reporting",
+    fieldtype="Check",
+    print_hide=1,
+    default=0,
+    insert_after="company",
+)
+
+EXCLUDE_FROM_GST_FIELDS = {
+    "Quotation": exclude_from_gst_field,
+    "Sales Order": exclude_from_gst_field,
+    "Delivery Note": exclude_from_gst_field,
+    "Sales Invoice": exclude_from_gst_field.copy().update(insert_after="is_pos"),
+    "POS Invoice": exclude_from_gst_field.copy().update(insert_after="is_pos"),
+    "Purchase Invoice": exclude_from_gst_field,
+    "Purchase Receipt": exclude_from_gst_field,
+    "Purchase Order": exclude_from_gst_field,
+    "Supplier Quotation": exclude_from_gst_field,
+}
+
 
 E_INVOICE_FIELDS = {
     "Sales Invoice": [
@@ -886,6 +923,7 @@ E_INVOICE_FIELDS = {
             "print_hide": 1,
             "read_only": 1,
             "translatable": 1,
+            "depends_on": "eval:doc.exclude_from_gst == 0",
         },
     ]
 }
@@ -1088,7 +1126,7 @@ e_waybill_status_field = {
     "no_copy": 1,
     "translatable": 1,
     "allow_on_submit": 1,
-    "depends_on": "eval:doc.docstatus === 1 && !doc.ewaybill",
+    "depends_on": "eval:doc.docstatus === 1 && !doc.ewaybill && doc.exclude_from_gst == 0",
     "read_only_depends_on": "eval:doc.ewaybill",
 }
 

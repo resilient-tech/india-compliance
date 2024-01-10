@@ -321,6 +321,7 @@ class Gstr1Report:
 				{select_columns}
 			from `tab{doctype}` si
 			where docstatus = 1 {where_conditions}
+            and exclude_from_gst = 0
 			and is_opening = 'No'
 			order by posting_date desc
 			""".format(
@@ -1184,6 +1185,7 @@ class GSTR1DocumentIssuedSummary:
                 .else_(0)
                 .as_("same_gstin_billing"),
                 self.sales_invoice.is_opening,
+                self.sales_invoice.exclude_from_gst,
                 self.sales_invoice_item.gst_treatment,
             )
             .where(self.sales_invoice.company == self.filters.company)
@@ -1303,20 +1305,15 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data):
         nature_of_document = {
-            "Excluded from Report (Same GSTIN Billing)": [],
-            "Excluded from Report (Is Opening Entry)": [],
+            "Excluded from Report (Out of Scope of GST)": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
         }
 
         for doc in data:
-            if doc.is_opening == "Yes":
-                nature_of_document["Excluded from Report (Is Opening Entry)"].append(
-                    doc
-                )
-            elif doc.same_gstin_billing:
-                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
+            if doc.exclude_from_gst:
+                nature_of_document["Excluded from Report (Out of Scope of GST)"].append(
                     doc
                 )
             elif doc.is_return:

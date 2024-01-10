@@ -14,6 +14,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     CUSTOM_FIELDS,
     E_INVOICE_FIELDS,
     E_WAYBILL_FIELDS,
+    EXCLUDE_FROM_GST_FIELDS,
     HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
@@ -287,6 +288,7 @@ def get_all_custom_fields():
         SALES_REVERSE_CHARGE_FIELDS,
         E_INVOICE_FIELDS,
         E_WAYBILL_FIELDS,
+        EXCLUDE_FROM_GST_FIELDS,
     ):
         for doctypes, fields in custom_fields.items():
             if isinstance(fields, dict):

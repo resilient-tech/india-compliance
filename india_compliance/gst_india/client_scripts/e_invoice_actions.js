@@ -216,6 +216,7 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
 
 function is_e_invoice_applicable(frm) {
     return (
+        !frm.doc.exclude_from_gst &&
         india_compliance.is_e_invoice_enabled() &&
         frm.doc.docstatus == 1 &&
         frm.doc.company_gstin &&

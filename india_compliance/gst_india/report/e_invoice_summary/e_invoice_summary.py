@@ -124,6 +124,7 @@ def get_data(filters=None):
             ]
         )
         .where(sales_invoice.company == filters.get("company"))
+        .where(sales_invoice.exclude_from_gst == 0)
         .where(conditions)
     )
 

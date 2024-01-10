@@ -6,9 +6,7 @@ from erpnext.assets.doctype.asset.asset import (
     is_cwip_accounting_enabled,
 )
 
-from india_compliance.gst_india.overrides.transaction import (
-    is_indian_registered_company,
-)
+from india_compliance.gst_india.overrides.transaction import ignore_gst_validations
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -360,7 +358,7 @@ DOCTYPE_MAPPING = {
 
 
 def update_valuation_rate(doc, method=None):
-    if doc.get("is_opening") == "Yes" or not is_indian_registered_company(doc):
+    if ignore_gst_validations:
         return
 
     if doc.doctype in DOCTYPE_MAPPING:
@@ -368,7 +366,7 @@ def update_valuation_rate(doc, method=None):
 
 
 def update_regional_gl_entries(gl_entries, doc):
-    if doc.get("is_opening") == "Yes" or not is_indian_registered_company(doc):
+    if ignore_gst_validations:
         return gl_entries
 
     if doc.doctype in DOCTYPE_MAPPING:

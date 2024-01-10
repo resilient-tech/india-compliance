@@ -951,14 +951,6 @@ class ItemGSTDetails:
         self.update_item_tax_details()
 
     def set_gst_accounts_and_item_defaults(self, doctype, company):
-        if doctype in SALES_DOCTYPES:
-            account_type = "Output"
-        else:
-            account_type = "Input"
-
-        gst_account_map = get_gst_accounts_by_type(company, account_type, throw=False)
-        self.gst_account_map = {v: k for k, v in gst_account_map.items()}
-
         item_defaults = frappe._dict(count=0)
 
         for row in GST_TAX_TYPES:
@@ -966,6 +958,17 @@ class ItemGSTDetails:
             item_defaults[f"{row}_amount"] = 0
 
         self.item_defaults = item_defaults
+
+        if self.doc.exclude_from_gst:
+            self.set_for_excluded_from_gst()
+
+        if doctype in SALES_DOCTYPES:
+            account_type = "Output"
+        else:
+            account_type = "Input"
+
+        gst_account_map = get_gst_accounts_by_type(company, account_type, throw=False)
+        self.gst_account_map = {v: k for k, v in gst_account_map.items()}
 
     def set_item_wise_tax_details(self):
         """
@@ -1089,10 +1092,19 @@ class ItemGSTDetails:
 
             self.precision[fieldname] = field.precision
 
+    def set_for_excluded_from_gst(self):
+        for item in self.doc.items:
+            item.update(self.item_defaults)
+            item.taxable_value = 0
+
 
 class ItemGSTTreatment:
     def set(self, doc):
         self.doc = doc
+        if self.doc.exclude_from_gst:
+            self.set_for_excluded_from_gst()
+            return
+
         is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
         if is_overseas_doc(doc) and is_sales_transaction:
@@ -1119,6 +1131,10 @@ class ItemGSTTreatment:
         for item in self.doc.items:
             if item.gst_treatment not in ("Exempted", "Non-GST"):
                 item.gst_treatment = "Nil-Rated"
+
+    def set_for_excluded_from_gst(self):
+        for item in self.doc.items:
+            item.gst_treatment = "Excluded"
 
     def update_gst_treatment_map(self):
         item_templates = set()
@@ -1184,6 +1200,7 @@ def set_reverse_charge_as_per_gst_settings(doc):
         or not doc.gst_category == "Unregistered"
         or doc.grand_total <= gst_settings.rcm_threshold
         or doc.get("is_opening") == "Yes"
+        or doc.exclude_from_gst == 0
     ):
         return
 
@@ -1222,8 +1239,25 @@ def validate_gstin(gstin, transaction_date):
     _validate_gstin_info(gstin_doc, transaction_date, throw=True)
 
 
+def validate_non_gst_accounts(doc, gst_accounts=None):
+    """GST Tax Accounts should not be charged for Out of Scope Invoices"""
+    if not gst_accounts:
+        gst_accounts = get_all_gst_accounts(doc.company)
+
+    for row in doc.taxes:
+        if row.account_head in gst_accounts and row.tax_amount:
+            frappe.throw(
+                _("Row #{0}: Cannot charge GST for Non GST Items").format(
+                    row.idx, row.account_head
+                ),
+                title=_("Invalid Taxes"),
+            )
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
+        validate_non_gst_accounts(doc)
+        doc.exclude_from_gst = 1
         return False
 
     validate_items(doc)
@@ -1281,8 +1315,28 @@ def before_validate(doc, method=None):
 def update_gst_details(doc, method=None):
     ItemGSTTreatment().set(doc)
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
+        validate_gst_accounts_for_taxable(doc)
         ItemGSTDetails().update(doc)
         validate_non_taxable_items(doc)
+
+
+def validate_gst_accounts_for_taxable(doc):
+    if frappe.flags.in_test:
+        return
+
+    is_taxable_invoice = any(
+        item.taxable_value != 0 and item.gst_treatment == "Taxable"
+        for item in doc.items
+    )
+
+    if not is_taxable_invoice:
+        return
+
+    gst_accounts = get_all_gst_accounts(doc.company)
+    has_gst_accounts = any(tax.account_head in gst_accounts for tax in doc.taxes)
+
+    if not has_gst_accounts:
+        frappe.throw(_("No GST Accounts has been charged"))
 
 
 def validate_non_taxable_items(doc):
@@ -1322,5 +1376,9 @@ def after_mapping(target_doc, method=None, source_doc=None):
 
 
 def ignore_gst_validations(doc):
-    if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
+    if (
+        doc.get("exclude_from_gst") == 1
+        or not is_indian_registered_company(doc)
+        or doc.get("is_opening") == "Yes"
+    ):
         return True

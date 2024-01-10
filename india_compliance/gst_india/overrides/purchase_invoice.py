@@ -41,6 +41,8 @@ def onload(doc, method=None):
 
 def validate(doc, method=None):
     if validate_transaction(doc) is False:
+        doc.reconciliation_status = "Not Applicable"
+        update_itc_totals(doc)
         return
 
     set_ineligibility_reason(doc)
@@ -65,6 +67,7 @@ def is_b2b_invoice(doc):
         or doc.gst_category in ["Registered Composition", "Unregistered", "Overseas"]
         or doc.supplier_gstin == doc.company_gstin
         or doc.is_opening == "Yes"
+        or doc.exclude_from_gst == 0
     )
 
 
@@ -78,6 +81,9 @@ def update_itc_totals(doc, method=None):
     doc.itc_state_tax = 0
     doc.itc_central_tax = 0
     doc.itc_cess_amount = 0
+
+    if doc.exclude_from_gst:
+        return
 
     if doc.ineligibility_reason == "ITC restricted due to PoS rules":
         return

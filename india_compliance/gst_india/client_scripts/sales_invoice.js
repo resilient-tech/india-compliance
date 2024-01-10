@@ -80,6 +80,7 @@ function set_e_waybill_status_options(frm) {
 function is_gst_invoice(frm) {
     const gst_invoice_conditions =
         !frm.is_dirty() &&
+        !frm.doc.exclude_from_gst &&
         frm.doc.is_opening != "Yes" &&
         frm.doc.company_gstin &&
         frm.doc.company_gstin != frm.doc.billing_address_gstin &&

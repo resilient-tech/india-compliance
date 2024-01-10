@@ -53,6 +53,7 @@ def onload(doc, method=None):
 
 def validate(doc, method=None):
     if validate_transaction(doc) is False:
+        doc.e_waybill_status = "Not Applicable"
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings")
@@ -213,6 +214,7 @@ def is_e_waybill_applicable(doc, gst_settings=None):
         and not doc.ewaybill
         and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
         and are_goods_supplied(doc)
+        and not doc.exclude_from_gst
     )
 
 

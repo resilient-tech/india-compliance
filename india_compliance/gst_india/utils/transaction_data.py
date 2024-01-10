@@ -238,6 +238,14 @@ class GSTTransactionData:
                 title=_("Invalid Document State"),
             )
 
+        if self.doc.exclude_from_gst:
+            frappe.throw(
+                msg=_(
+                    "Cannot generate e-Waybill or e-Invoice for Excluded from GST transactions"
+                ),
+                title=_("Invalid Document"),
+            )
+
         posting_date = getdate(self.doc.posting_date)
 
         if posting_date > getdate():
