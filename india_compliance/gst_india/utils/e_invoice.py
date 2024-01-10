@@ -458,9 +458,6 @@ def retry_e_invoice_e_waybill_generation():
 
     generate_pending_e_invoices()
 
-    if frappe.flags.gsp_gst_server_error:
-        return
-
     generate_pending_e_waybills()
 
 
@@ -474,7 +471,7 @@ def generate_pending_e_invoices():
     if not queued_sales_invoices:
         return
 
-    generate_e_invoices(queued_sales_invoices, force=True)
+    generate_e_invoices(queued_sales_invoices)
 
 
 def get_e_invoice_info(doc):

@@ -534,7 +534,7 @@ def generate_pending_e_waybills():
         if not queued_docs:
             continue
 
-        generate_e_waybills(doctype, queued_docs, force=True)
+        generate_e_waybills(doctype, queued_docs)
 
 
 #######################################################################################

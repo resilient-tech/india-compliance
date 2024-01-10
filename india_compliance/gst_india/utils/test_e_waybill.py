@@ -22,6 +22,11 @@ from india_compliance.gst_india.utils.e_waybill import (
     update_transporter,
     update_vehicle_info,
 )
+
+from india_compliance.gst_india.utils.e_invoice import (
+    retry_e_invoice_e_waybill_generation,
+)
+
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
@@ -835,6 +840,25 @@ class TestEWaybill(FrappeTestCase):
                 "GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"
             ),
             1,
+        )
+
+        retry_ewb_test_date = self.e_waybill_test_data.goods_item_with_ewaybill
+
+        self._mock_e_waybill_response(
+            data=retry_ewb_test_date.get("response_data"),
+            match_list=[
+                matchers.query_string_matcher(retry_ewb_test_date.get("params")),
+                matchers.json_params_matcher(retry_ewb_test_date.get("request_data")),
+            ],
+        )
+
+        retry_e_invoice_e_waybill_generation()
+        sales_invoice = load_doc("Sales Invoice", sales_invoice.name, "submit")
+
+        self.assertEqual(sales_invoice.e_waybill_status, "Generated")
+        self.assertEqual(
+            sales_invoice.ewaybill,
+            str(retry_ewb_test_date.get("response_data").get("result").get("ewayBillNo")),
         )
 
     @change_settings("GST Settings", {"enable_retry_einv_ewb_generation": 0})

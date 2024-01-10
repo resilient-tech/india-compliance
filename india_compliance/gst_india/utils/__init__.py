@@ -839,8 +839,6 @@ def handle_server_errors(settings, doc, document_type, error):
 
     doc.db_set({document_status_field: document_status}, commit=True)
 
-    frappe.flags.gsp_gst_server_error = True
-
     frappe.msgprint(
         msg=_(error_message),
         title=error_message_title.get(type(error)),
