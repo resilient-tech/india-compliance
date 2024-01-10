@@ -317,7 +317,7 @@ def get_json(filters, report_name, data):
 
     gst_json = {"version": "GST3.1.2", "hash": "hash", "gstin": gstin, "fp": fp}
 
-    gst_json["hsn"] = {"data": get_hsn_wise_json_data(filters, report_data)}
+    gst_json["hsn"] = get_hsn_wise_json_data(filters, report_data)
 
     return {"report_name": report_name, "data": gst_json}
 
@@ -378,4 +378,4 @@ def get_hsn_wise_json_data(filters, report_data):
         data.append(row)
         count += 1
 
-    return data
+    return {"data": data}
