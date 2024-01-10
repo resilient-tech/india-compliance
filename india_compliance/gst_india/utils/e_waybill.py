@@ -1067,7 +1067,6 @@ class EWaybillData(GSTTransactionData):
         - Required fields
         - Atleast one item with HSN for goods is required
         - Basic transporter details must be present
-        - Transaction does not have any non-GST items
         - Sales Invoice with same company and billing gstin
         """
 
@@ -1095,8 +1094,6 @@ class EWaybillData(GSTTransactionData):
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
-
-        self.validate_non_gst_items()
 
         if (
             self.doc.doctype == "Sales Invoice"

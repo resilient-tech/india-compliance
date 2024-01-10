@@ -15,52 +15,17 @@ JSON_OUTPUT = {
         {
             "doc_num": 1,
             "doc_typ": "Invoices for outward supply",
-            "docs": [
-                {
-                    "num": 1,
-                    "to": "SINV-23-00005",
-                    "from": "SINV-23-00001",
-                    "totnum": 5,
-                    "cancel": 2,
-                    "net_issue": 3,
-                },
-                {
-                    "num": 2,
-                    "to": "SINV-23-00025",
-                    "from": "SINV-23-00021",
-                    "totnum": 5,
-                    "cancel": 0,
-                    "net_issue": 5,
-                },
-            ],
+            "docs": [],
         },
         {
             "doc_num": 4,
             "doc_typ": "Debit Note",
-            "docs": [
-                {
-                    "num": 1,
-                    "to": "SINV-23-00018",
-                    "from": "SINV-23-00014",
-                    "totnum": 5,
-                    "cancel": 0,
-                    "net_issue": 5,
-                }
-            ],
+            "docs": [],
         },
         {
             "doc_num": 5,
             "doc_typ": "Credit Note",
-            "docs": [
-                {
-                    "num": 1,
-                    "to": "SINV-23-00010",
-                    "from": "SINV-23-00006",
-                    "totnum": 5,
-                    "cancel": 2,
-                    "net_issue": 3,
-                }
-            ],
+            "docs": [],
         },
     ]
 }
@@ -112,24 +77,72 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
 def create_test_items():
     """Create Sales Invoices for testing GSTR1 Document Issued Summary."""
 
-    # Sales Invoices
-    create_sales_invoices(3)
-    create_sales_invoices(1)[0].cancel()
-    create_sales_invoices(1, do_not_save=True, do_not_submit=True)[0].save()
+    invoices_for_outward_supply = JSON_OUTPUT["doc_det"][0]["docs"]
+    debit_notes = JSON_OUTPUT["doc_det"][1]["docs"]
+    credit_notes = JSON_OUTPUT["doc_det"][2]["docs"]
 
-    # Credit Notes
-    create_sales_invoices(3, is_return=1, qty=-1)
-    create_sales_invoices(1, is_return=1, qty=-1)[0].cancel()
-    create_sales_invoices(1, is_return=1, qty=-1, do_not_save=True, do_not_submit=True)[
+    # Sales Invoices
+    sales_invoices = create_sales_invoices(3)
+    create_sales_invoices(1)[0].cancel()
+    sales_invoice = create_sales_invoices(1, do_not_save=True, do_not_submit=True)[
         0
     ].save()
 
+    invoices_for_outward_supply.append(
+        {
+            "num": 1,
+            "to": sales_invoice.name,
+            "from": sales_invoices[0].name,
+            "totnum": 5,
+            "cancel": 2,
+            "net_issue": 3,
+        }
+    )
+
+    # Credit Notes
+    sales_invoices = create_sales_invoices(3, is_return=1, qty=-1)
+    create_sales_invoices(1, is_return=1, qty=-1)[0].cancel()
+    sales_invoice = create_sales_invoices(
+        1, is_return=1, qty=-1, do_not_save=True, do_not_submit=True
+    )[0].save()
+
+    credit_notes.append(
+        {
+            "num": 1,
+            "to": sales_invoice.name,
+            "from": sales_invoices[0].name,
+            "totnum": 5,
+            "cancel": 2,
+            "net_issue": 3,
+        }
+    )
+
     # Sales Invoices with Non GST Items
-    # Excluded from Document Issued Summary
-    create_sales_invoices(3, item_code="_Test Non GST Item")
+    sales_invoices = create_sales_invoices(3, item_code="_Test Non GST Item")
+    invoices_for_outward_supply.append(
+        {
+            "num": 2,
+            "to": sales_invoices[-1].name,
+            "from": sales_invoices[0].name,
+            "totnum": 3,
+            "cancel": 0,
+            "net_issue": 3,
+        }
+    )
 
     # Debit Notes
-    create_sales_invoices(5, is_debit_note=1)
+    sales_invoices = create_sales_invoices(5, is_debit_note=1)
+
+    debit_notes.append(
+        {
+            "num": 1,
+            "to": sales_invoices[-1].name,
+            "from": sales_invoices[0].name,
+            "totnum": 5,
+            "cancel": 0,
+            "net_issue": 5,
+        }
+    )
 
     # Opening Entry
     # Excluded from Document Issued Summary
@@ -143,7 +156,18 @@ def create_test_items():
     sales_invoice.submit()
 
     # Sales Invoices
-    create_sales_invoices(5)
+    sales_invoices = create_sales_invoices(5)
+
+    invoices_for_outward_supply.append(
+        {
+            "num": 3,
+            "to": sales_invoices[-1].name,
+            "from": sales_invoices[0].name,
+            "totnum": 5,
+            "cancel": 0,
+            "net_issue": 5,
+        }
+    )
 
 
 def create_sales_invoices(count, **kwargs):

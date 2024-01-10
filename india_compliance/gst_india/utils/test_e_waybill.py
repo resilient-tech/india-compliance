@@ -487,14 +487,6 @@ class TestEWaybill(FrappeTestCase):
             {"gst_transporter_id": "05AAACG2140A1ZL", "mode_of_transport": "Road"}
         )
 
-        si.items[0].gst_treatment = "Non-GST"
-
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(.*transactions with non-GST items)$"),
-            EWaybillData(si).validate_applicability,
-        )
-
         si.items[0].gst_treatment = "Taxable"
         si.update(
             {

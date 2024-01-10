@@ -10,10 +10,7 @@ from india_compliance.gst_india.utils.tests import (
     append_item,
     create_sales_invoice,
 )
-from india_compliance.gst_india.utils.transaction_data import (
-    GSTTransactionData,
-    validate_non_gst_items,
-)
+from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
 
 
 class TestTransactionData(FrappeTestCase):
@@ -58,15 +55,6 @@ class TestTransactionData(FrappeTestCase):
             frappe.exceptions.ValidationError,
             re.compile(r"^(L/R No. is required to generate.*)$"),
             GSTTransactionData(doc).validate_mode_of_transport,
-        )
-
-    def test_validate_non_gst_items(self):
-        doc = create_sales_invoice(item_code="_Test Non GST Item", do_not_submit=True)
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(.*transactions with non-GST items)$"),
-            validate_non_gst_items,
-            doc,
         )
 
     def test_check_missing_address_fields(self):

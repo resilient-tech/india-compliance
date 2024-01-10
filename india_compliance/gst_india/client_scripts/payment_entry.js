@@ -44,8 +44,12 @@ function override_get_outstanding_documents(frm) {
 
     const new_fn = function () {
         old_fn(...arguments);
+        if (frm.doc.party_type != "Supplier") return;
+
         frappe.after_ajax(() => {
             const response = frappe?.last_response?.message || [];
+
+            if (!Array.isArray(response)) return;
 
             const reconciliation_status_dict = response.reduce((acc, d) => {
                 acc[d.voucher_no] = d.reconciliation_status;
