@@ -5,10 +5,10 @@ class EwaybillApplicability {
 
     is_e_waybill_applicable() {
         if (
+            this.frm.doc.exclude_from_gst ||
             // Is Indian Registered Company
             !this.frm.doc.company_gstin ||
             !gst_settings.enable_e_waybill ||
-            this.frm.doc.exclude_from_gst ||
             this.frm.doc.is_opening === "Yes"
         )
             return false;
