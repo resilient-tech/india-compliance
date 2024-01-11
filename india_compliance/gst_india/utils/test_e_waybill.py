@@ -840,6 +840,7 @@ class TestEWaybill(FrappeTestCase):
                 matchers.query_string_matcher(retry_ewb_test_date.get("params")),
                 matchers.json_params_matcher(retry_ewb_test_date.get("request_data")),
             ],
+            replace=True,
         )
 
         retry_e_invoice_e_waybill_generation()
@@ -878,7 +879,15 @@ class TestEWaybill(FrappeTestCase):
     def _generate_e_waybill(
         self, doctype="Sales Invoice", docname=None, test_data=None
     ):
-        """Generate e-waybill"""
+        """
+        Mocks response for generate_e_waybill and get_e_waybill.
+        Calls generate_e_waybill function.
+
+        Args:
+            doctype (str, optional): Defaults to "Sales Invoice".
+            docname (str, optional): Defaults to None.
+            test_data (dict, optional): Defaults to None.
+        """
 
         if not test_data:
             test_data = self.e_waybill_test_data.goods_item_with_ewaybill
@@ -915,15 +924,32 @@ class TestEWaybill(FrappeTestCase):
 
         generate_e_waybill(doctype=doctype, docname=docname, values=values)
 
-    def _mock_e_waybill_response(self, data, match_list, method="POST", api=None):
-        """Mock e-waybill response for given data and match_list"""
+    def _mock_e_waybill_response(
+        self, data, match_list, method="POST", api=None, replace=False
+    ):
+        """
+        Mock e-waybill response for given data and match_list
+
+        Args:
+            data (dict): Expected Response data
+            match_list (list): List of matchers. Response will be mocked only if all matchers are satisfied.
+                eg, [
+                    matchers.query_string_matcher(params),
+                    matchers.json_params_matcher(request_data),
+                ]
+
+            method (str, optional): HTTP method. Defaults to "POST".
+            api (str, optional): API name. Defaults to None.
+            replace (bool, optional): Replace existing mock response. Defaults to False.
+
+        """
         base_api = "/test/ewb/ewayapi/"
         api = base_api if not api else f"{base_api}{api}"
         url = BASE_URL + api
 
         response_method = responses.GET if method == "GET" else responses.POST
-
-        responses.add(
+        # responses.add or responses.replace
+        getattr(responses, "replace" if replace else "add")(
             response_method,
             url,
             json=data,
