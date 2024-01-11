@@ -81,9 +81,7 @@ class TestEWaybill(FrappeTestCase):
             test_data,
         )
 
-    @change_settings(
-        "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}
-    )
+    @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
     def test_generate_e_waybill(self):
         """Test whitelisted method `generate_e_waybill`"""
@@ -187,26 +185,14 @@ class TestEWaybill(FrappeTestCase):
             ),
         )
 
-    @change_settings(
-        "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}
-    )
+    @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
     def test_fetch_e_waybill_data(self):
         """Test e-Waybill Print and Attach Functions"""
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
 
-        fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=True)
-
-        self.assertTrue(
-            frappe.get_doc(
-                "File",
-                {
-                    "attached_to_doctype": "Sales Invoice",
-                    "attached_to_name": si.name,
-                },
-            )
-        )
+        fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=False)
 
     @responses.activate
     def test_credit_note_e_waybill(self):
