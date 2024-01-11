@@ -14,6 +14,7 @@ from frappe.utils import (
 )
 from frappe.utils.file_manager import save_file
 
+from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.constants import STATE_NUMBERS
@@ -29,6 +30,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     UPDATE_VEHICLE_REASON_CODES,
 )
 from india_compliance.gst_india.utils import (
+    handle_server_errors,
     is_foreign_doc,
     load_doc,
     parse_datetime,
@@ -104,7 +106,7 @@ def enqueue_bulk_e_waybill_generation(doctype, docnames):
     return rq_job.id
 
 
-def generate_e_waybills(doctype, docnames):
+def generate_e_waybills(doctype, docnames, force=False):
     """
     Bulk generate e-Waybill for the given documents.
     """
@@ -112,7 +114,7 @@ def generate_e_waybills(doctype, docnames):
     for docname in docnames:
         try:
             doc = load_doc(doctype, docname, "submit")
-            _generate_e_waybill(doc)
+            _generate_e_waybill(doc, force=force)
         except Exception:
             frappe.log_error(
                 title=_("e-Waybill generation failed for {0} {1}").format(
@@ -127,16 +129,25 @@ def generate_e_waybills(doctype, docnames):
 
 
 @frappe.whitelist()
-def generate_e_waybill(*, doctype, docname, values=None):
+def generate_e_waybill(*, doctype, docname, values=None, force=False):
     doc = load_doc(doctype, docname, "submit")
     if values:
         update_transaction(doc, frappe.parse_json(values))
 
-    _generate_e_waybill(doc, throw=True if values else False)
+    _generate_e_waybill(doc, throw=True if values else False, force=force)
 
 
-def _generate_e_waybill(doc, throw=True):
+def _generate_e_waybill(doc, throw=True, force=False):
+    settings = frappe.get_cached_doc("GST Settings")
+
     try:
+        if (
+            not force
+            and settings.enable_retry_einv_ewb_generation
+            and settings.is_retry_einv_ewb_generation_pending
+        ):
+            raise GSPServerError
+
         # Via e-Invoice API if not Return or Debit Note
         # Handles following error when generating e-Waybill using IRN:
         # 4010: E-way Bill cannot generated for Debit Note, Credit Note and Services
@@ -145,6 +156,16 @@ def _generate_e_waybill(doc, throw=True):
         )
 
         data = EWaybillData(doc).get_data(with_irn=with_irn)
+
+        api = EWaybillAPI if not with_irn else EInvoiceAPI
+        result = api(doc).generate_e_waybill(data)
+
+        if result.error_code == "4002":
+            result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
+
+    except GSPServerError as e:
+        handle_server_errors(settings, doc, "e-Waybill", e)
+        return
 
     except frappe.ValidationError as e:
         if throw:
@@ -161,18 +182,12 @@ def _generate_e_waybill(doc, throw=True):
         )
         return
 
-    api = EWaybillAPI if not with_irn else EInvoiceAPI
-    result = api(doc).generate_e_waybill(data)
-
     if result.error_code == "604":
         error_message = (
             result.message
             + """<br/><br/> Try to fetch active e-waybills by Date if already generated."""
         )
         frappe.throw(error_message, title=_("API Request Failed"))
-
-    if result.error_code == "4002":
-        result = api(doc).get_e_waybill_by_irn(doc.get("irn"))
 
     log_and_process_e_waybill_generation(doc, result, with_irn=with_irn)
 
@@ -186,6 +201,7 @@ def _generate_e_waybill(doc, throw=True):
         indicator="green",
         alert=True,
     )
+
     return send_updated_doc(doc)
 
 
@@ -503,6 +519,22 @@ def extend_validity(*, doctype, docname, values):
     )
 
     return send_updated_doc(doc)
+
+
+def generate_pending_e_waybills():
+    doctypes = ["Sales Invoice"]
+
+    for doctype in doctypes:
+        queued_docs = frappe.get_all(
+            doctype,
+            filters={"e_waybill_status": "Auto-Retry"},
+            pluck="name",
+        )
+
+        if not queued_docs:
+            continue
+
+        generate_e_waybills(doctype, queued_docs)
 
 
 #######################################################################################
@@ -1035,7 +1067,6 @@ class EWaybillData(GSTTransactionData):
         - Required fields
         - Atleast one item with HSN for goods is required
         - Basic transporter details must be present
-        - Transaction does not have any non-GST items
         - Sales Invoice with same company and billing gstin
         """
 
@@ -1063,8 +1094,6 @@ class EWaybillData(GSTTransactionData):
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
-
-        self.validate_non_gst_items()
 
         if (
             self.doc.doctype == "Sales Invoice"
