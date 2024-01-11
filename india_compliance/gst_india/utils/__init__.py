@@ -29,6 +29,7 @@ from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
+    GST_INVOICE_NUMBER_FORMAT,
     GSTIN_FORMATS,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -807,6 +808,25 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
 @frappe.whitelist(methods=["POST"])
 def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
+
+
+def validate_invoice_number(doc):
+    """Validate GST invoice number requirements."""
+
+    if len(doc.name) > 16:
+        frappe.throw(
+            _("GST Invoice Number cannot exceed 16 characters"),
+            title=_("Invalid GST Invoice Number"),
+        )
+
+    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
+        frappe.throw(
+            _(
+                "GST Invoice Number should start with an alphanumeric character and can"
+                " only contain alphanumeric characters, dash (-) and slash (/)"
+            ),
+            title=_("Invalid GST Invoice Number"),
+        )
 
 
 def handle_server_errors(settings, doc, document_type, error):

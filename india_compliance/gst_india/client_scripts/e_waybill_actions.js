@@ -213,6 +213,7 @@ function fetch_e_waybill_data(frm, args, callback) {
 }
 
 function show_generate_e_waybill_dialog(frm) {
+    india_compliance.validate_invoice_number(frm.doc.name);
     const generate_action = values => {
         frappe.call({
             method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",

@@ -2,7 +2,7 @@ import unittest
 
 import frappe
 
-from india_compliance.gst_india.overrides.sales_invoice import validate_invoice_number
+from india_compliance.gst_india.utils import validate_invoice_number
 
 
 class TestSalesInvoice(unittest.TestCase):
