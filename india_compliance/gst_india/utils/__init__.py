@@ -837,7 +837,7 @@ def handle_server_errors(settings, doc, document_type, error):
     else:
         error_message += " Please try again after some time."
 
-    doc.db_set({document_status_field: document_status}, commit=True)
+    doc.db_set({document_status_field: document_status})
 
     frappe.msgprint(
         msg=_(error_message),

@@ -368,23 +368,23 @@
   {
    "default": "0",
    "depends_on": "eval: india_compliance.is_api_enabled(doc)",
-   "description": "Automatically Retry e-Invoice and e-Waybill Generation for GSP / GST Server Errors",
+   "description": "Automatically Retry e-Invoice and e-Waybill Generation for GSP/GST Server Errors",
    "fieldname": "enable_retry_einv_ewb_generation",
    "fieldtype": "Check",
-   "label": "Enable Retry e-Invoice / e-Waybill Generation"
+   "label": "Enable Retry e-Invoice/e-Waybill Generation"
   },
   {
    "default": "0",
    "fieldname": "is_retry_einv_ewb_generation_pending",
    "fieldtype": "Check",
    "hidden": 1,
-   "label": "is Retry e-Invoice / e-Waybill Pending"
+   "label": "Is Retry e-Invoice/e-Waybill Pending"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-01-10 11:06:33.171136",
+ "modified": "2024-01-10 11:06:33.171137",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
