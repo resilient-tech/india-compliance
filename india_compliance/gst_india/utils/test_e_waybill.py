@@ -78,9 +78,7 @@ class TestEWaybill(FrappeTestCase):
             test_data,
         )
 
-    @change_settings(
-        "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}
-    )
+    @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
     def test_generate_e_waybill(self):
         """Test whitelisted method `generate_e_waybill`"""
@@ -187,14 +185,13 @@ class TestEWaybill(FrappeTestCase):
             ),
         )
 
-    @change_settings(
-        "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}
-    )
+    @change_settings("GST Settings", {"fetch_e_waybill_data": 1})
     @responses.activate
     def _test_fetch_e_waybill_data(self):
         """Test e-Waybill Print and Attach Functions"""
         self._generate_e_waybill()
 
+<<<<<<< HEAD
         # Mock GET response for get_e_waybill
         get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
 
@@ -222,6 +219,9 @@ class TestEWaybill(FrappeTestCase):
                 },
             )
         )
+=======
+        fetch_e_waybill_data(doctype="Sales Invoice", docname=si.name, attach=False)
+>>>>>>> 6c966fbd (test: remove test for pdf generation with e-Waybill (#1589))
 
     @responses.activate
     def test_credit_note_e_waybill(self):
