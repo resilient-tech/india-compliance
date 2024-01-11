@@ -807,8 +807,6 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
 @frappe.whitelist(methods=["POST"])
 def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
-<<<<<<< HEAD
-=======
 
 
 def validate_invoice_number(doc):
@@ -828,41 +826,3 @@ def validate_invoice_number(doc):
             ),
             title=_("Invalid GST Invoice Number"),
         )
-
-
-def handle_server_errors(settings, doc, document_type, error):
-    if not doc.doctype == "Sales Invoice":
-        return
-
-    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
-
-    error_message_title = {
-        GatewayTimeoutError: _("Gateway Timeout Error"),
-        GSPServerError: _("GSP/GST Server Down"),
-    }
-
-    document_status_field = (
-        "einvoice_status" if document_type == "e-Invoice" else "e_waybill_status"
-    )
-
-    document_status = "Failed"
-
-    if settings.enable_retry_einv_ewb_generation:
-        document_status = "Auto-Retry"
-        settings.db_set(
-            "is_retry_einv_ewb_generation_pending", 1, update_modified=False
-        )
-        error_message += (
-            " Your {0} generation will be automatically retried every 5 minutes."
-        ).format(document_type)
-    else:
-        error_message += " Please try again after some time."
-
-    doc.db_set({document_status_field: document_status})
-
-    frappe.msgprint(
-        msg=_(error_message),
-        title=error_message_title.get(type(error)),
-        indicator="yellow",
-    )
->>>>>>> 0fff620c (fix: validate invoice no for e-waybill and e-invoice (#1573))
