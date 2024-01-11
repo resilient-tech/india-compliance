@@ -68,7 +68,6 @@ class TestEWaybill(FrappeTestCase):
     @classmethod
     def setUp(cls):
         cls.sales_invoice = _create_sales_invoice(cls.e_waybill_test_data)
-        update_dates_for_test_data(cls.e_waybill_test_data)
 
     def test_get_data(self):
         e_waybill_data = EWaybillData(self.sales_invoice).get_data()
@@ -194,23 +193,9 @@ class TestEWaybill(FrappeTestCase):
         "GST Settings", {"fetch_e_waybill_data": 1, "attach_e_waybill_print": 1}
     )
     @responses.activate
-    def _test_fetch_e_waybill_data(self):
+    def test_fetch_e_waybill_data(self):
         """Test e-Waybill Print and Attach Functions"""
         self._generate_e_waybill()
-
-        # Mock GET response for get_e_waybill
-        get_e_waybill_test_data = self.e_waybill_test_data.get("get_e_waybill")
-
-        self._mock_e_waybill_response(
-            data=get_e_waybill_test_data.get("response_data"),
-            match_list=[
-                matchers.query_string_matcher(
-                    get_e_waybill_test_data.get("request_data")
-                ),
-            ],
-            method="GET",
-            api="getewaybill",
-        )
 
         fetch_e_waybill_data(
             doctype="Sales Invoice", docname=self.sales_invoice.name, attach=True
