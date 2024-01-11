@@ -24,6 +24,7 @@ frappe.ui.form.on("Sales Invoice", {
             frm.add_custom_button(
                 __("Generate"),
                 () => {
+                    india_compliance.validate_invoice_number(frm.doc.name);
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },

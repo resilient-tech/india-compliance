@@ -2,7 +2,6 @@ import frappe
 from frappe import _, bold
 from frappe.utils import flt, fmt_money
 
-from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
@@ -17,6 +16,7 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
+    validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
@@ -65,25 +65,6 @@ def validate(doc, method=None):
     validate_port_address(doc)
     set_and_validate_advances_with_gst(doc)
     set_e_waybill_status(doc, gst_settings)
-
-
-def validate_invoice_number(doc):
-    """Validate GST invoice number requirements."""
-
-    if len(doc.name) > 16:
-        frappe.throw(
-            _("GST Invoice Number cannot exceed 16 characters"),
-            title=_("Invalid GST Invoice Number"),
-        )
-
-    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
-        frappe.throw(
-            _(
-                "GST Invoice Number should start with an alphanumeric character and can"
-                " only contain alphanumeric characters, dash (-) and slash (/)"
-            ),
-            title=_("Invalid GST Invoice Number"),
-        )
 
 
 def validate_credit_debit_note(doc):

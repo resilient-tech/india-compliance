@@ -17,6 +17,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_gst_uom,
     get_validated_country_code,
+    validate_invoice_number,
     validate_pincode,
 )
 
@@ -238,6 +239,7 @@ class GSTTransactionData:
                 title=_("Invalid Document State"),
             )
 
+        validate_invoice_number(self.doc)
         if self.doc.exclude_from_gst:
             frappe.throw(
                 msg=_(
