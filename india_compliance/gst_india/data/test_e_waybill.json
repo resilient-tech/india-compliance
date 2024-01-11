@@ -162,6 +162,83 @@
             "success": true
         }
     },
+    "goods_with_taxes": {
+        "request_data": {
+            "userGstin": "05AAACG2115R1ZN",
+            "supplyType": "O",
+            "subSupplyType": 1,
+            "docType": "INV",
+            "docNo": "test_invoice_no",
+            "docDate": "11/01/2024",
+            "transactionType": 1,
+            "fromTrdName": "_Test Indian Registered Company",
+            "fromGstin": "05AAACG2115R1ZN",
+            "fromAddr1": "Test Address - 1",
+            "fromPlace": "Test City",
+            "fromPincode": 380015,
+            "fromStateCode": 24,
+            "actFromStateCode": 24,
+            "toTrdName": "_Test Registered Customer",
+            "toGstin": "05AAACG2140A1ZL",
+            "toAddr1": "Test Address - 3",
+            "toPlace": "Test City",
+            "toPincode": 380015,
+            "toStateCode": 24,
+            "actToStateCode": 24,
+            "totalValue": 15.2,
+            "cgstValue": 0.91,
+            "sgstValue": 0.91,
+            "igstValue": 0,
+            "cessValue": 0,
+            "TotNonAdvolVal": 0,
+            "OthValue": -0.02,
+            "totInvValue": 17.0,
+            "transMode": 1,
+            "transDistance": 1,
+            "vehicleNo": "GJ05DL9009",
+            "vehicleType": "R",
+            "itemList": [
+                {
+                    "itemNo": 1,
+                    "productDesc": "Test Trading Goods 1",
+                    "hsnCode": "61149090",
+                    "qtyUnit": "NOS",
+                    "quantity": 1.0,
+                    "taxableAmount": 7.6,
+                    "sgstRate": 6.0,
+                    "cgstRate": 6.0,
+                    "igstRate": 0,
+                    "cessRate": 0,
+                    "cessNonAdvol": 0
+                },
+                {
+                    "itemNo": 2,
+                    "productDesc": "Test Trading Goods 1",
+                    "hsnCode": "61149090",
+                    "qtyUnit": "NOS",
+                    "quantity": 1.0,
+                    "taxableAmount": 7.6,
+                    "sgstRate": 6.0,
+                    "cgstRate": 6.0,
+                    "igstRate": 0,
+                    "cessRate": 0,
+                    "cessNonAdvol": 0
+                }
+            ],
+            "mainHsnCode": "61149090"
+        },
+        "params": "action=GENEWAYBILL",
+        "response_data": {
+            "message": "E-Way Bill is generated successfully",
+            "result": {
+                "alert": "",
+                "ewayBillDate": "05/10/2022 12:39:00 PM",
+                "ewayBillNo": 301002999920,
+                "validUpto": "06/10/2022 11:59:00 PM"
+            },
+            "success": true
+        }
+    },
     "credit_note": {
         "request_data": {
             "userGstin": "05AAACG2115R1ZN",
@@ -922,7 +999,7 @@
         },
         "params": "action=GENEWAYBILL",
         "response_data": {
-            "message":"EWB : GSPGSTDOWN",
+            "message": "EWB : GSPGSTDOWN",
             "success": false
         }
     }
