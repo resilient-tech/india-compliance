@@ -13,7 +13,7 @@ from frappe.utils import (
     random_string,
 )
 
-from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
+from india_compliance.exceptions import GSPServerError
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
 from india_compliance.gst_india.constants import (
     CURRENCY_CODES,
@@ -31,6 +31,7 @@ from india_compliance.gst_india.overrides.transaction import (
 )
 from india_compliance.gst_india.utils import (
     are_goods_supplied,
+    handle_server_errors,
     is_api_enabled,
     is_foreign_doc,
     is_overseas_doc,
@@ -41,6 +42,7 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.e_waybill import (
     _cancel_e_waybill,
+    generate_pending_e_waybills,
     log_and_process_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -116,10 +118,10 @@ def generate_e_invoice(docname, throw=True, force=False):
     try:
         if (
             not force
-            and settings.enable_retry_e_invoice_generation
-            and settings.is_retry_e_invoice_generation_pending
+            and settings.enable_retry_einv_ewb_generation
+            and settings.is_retry_einv_ewb_generation_pending
         ):
-            raise GatewayTimeoutError
+            raise GSPServerError
 
         data = EInvoiceData(doc).get_data()
         api = EInvoiceAPI(doc)
@@ -163,7 +165,7 @@ def generate_e_invoice(docname, throw=True, force=False):
             result = api.generate_irn(data)
 
     except GSPServerError as e:
-        handle_server_errors(settings, doc, e)
+        handle_server_errors(settings, doc, "e-Invoice", e)
         return
 
     except frappe.ValidationError as e:
@@ -443,23 +445,33 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         )
 
 
-def retry_e_invoice_generation():
+def retry_e_invoice_e_waybill_generation():
     settings = frappe.get_cached_doc("GST Settings")
+
     if (
-        not settings.enable_retry_e_invoice_generation
-        or not settings.is_retry_e_invoice_generation_pending
+        not settings.enable_retry_einv_ewb_generation
+        or not settings.is_retry_einv_ewb_generation_pending
     ):
         return
 
-    settings.db_set("is_retry_e_invoice_generation_pending", 0, update_modified=False)
+    settings.db_set("is_retry_einv_ewb_generation_pending", 0, update_modified=False)
 
+    generate_pending_e_invoices()
+
+    generate_pending_e_waybills()
+
+
+def generate_pending_e_invoices():
     queued_sales_invoices = frappe.db.get_all(
-        "Sales Invoice", filters={"einvoice_status": "Auto-Retry"}, pluck="name"
+        "Sales Invoice",
+        filters={"einvoice_status": "Auto-Retry"},
+        pluck="name",
     )
+
     if not queued_sales_invoices:
         return
 
-    generate_e_invoices(queued_sales_invoices, force=True)
+    generate_e_invoices(queued_sales_invoices)
 
 
 def get_e_invoice_info(doc):
@@ -468,36 +480,6 @@ def get_e_invoice_info(doc):
         doc.irn,
         ("is_generated_in_sandbox_mode", "acknowledged_on"),
         as_dict=True,
-    )
-
-
-def handle_server_errors(settings, doc, error):
-    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
-
-    error_message_title = {
-        GatewayTimeoutError: _("Gateway Timeout Error"),
-        GSPServerError: _("GSP/GST Server Down"),
-    }
-
-    einvoice_status = "Failed"
-
-    if settings.enable_retry_e_invoice_generation:
-        einvoice_status = "Auto-Retry"
-        settings.db_set(
-            "is_retry_e_invoice_generation_pending", 1, update_modified=False
-        )
-        error_message += (
-            " Your e-invoice generation will be automatically retried every 5 minutes."
-        )
-    else:
-        error_message += " Please try again after some time."
-
-    doc.db_set({"einvoice_status": einvoice_status}, commit=True)
-
-    frappe.msgprint(
-        msg=_(error_message),
-        title=error_message_title.get(type(error)),
-        indicator="yellow",
     )
 
 
