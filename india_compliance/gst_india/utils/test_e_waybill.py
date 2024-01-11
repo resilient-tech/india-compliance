@@ -65,10 +65,9 @@ class TestEWaybill(FrappeTestCase):
             )
         )
 
-        cls.sales_invoice = _create_sales_invoice(cls.e_waybill_test_data)
-
     @classmethod
     def setUp(cls):
+        cls.sales_invoice = _create_sales_invoice(cls.e_waybill_test_data)
         update_dates_for_test_data(cls.e_waybill_test_data)
 
     def test_get_data(self):
