@@ -22,13 +22,10 @@
   "cancel_remark",
   "extension_details_section",
   "extension_scheduled",
-  "consignment_status",
-  "remaining_distance",
-  "transit_type",
+  "extension_data",
+  "column_break_grbd",
   "extension_reason_code",
   "extension_remark",
-  "column_break_grbd",
-  "address",
   "section_break_31",
   "is_latest_data",
   "data"
@@ -142,18 +139,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "consignment_status",
-   "fieldtype": "Data",
-   "label": "Consignment Status",
-   "read_only": 1
-  },
-  {
-   "fieldname": "transit_type",
-   "fieldtype": "Data",
-   "label": "Transit Type",
-   "read_only": 1
-  },
-  {
    "fieldname": "column_break1",
    "fieldtype": "Column Break"
   },
@@ -175,21 +160,15 @@
    "read_only": 1
   },
   {
-   "fieldname": "address",
-   "fieldtype": "JSON",
-   "label": "Address",
-   "read_only": 1
-  },
-  {
    "fieldname": "extension_reason_code",
    "fieldtype": "Data",
    "label": "Reason",
    "read_only": 1
   },
   {
-   "fieldname": "remaining_distance",
-   "fieldtype": "Float",
-   "label": "Remaining Distance",
+   "fieldname": "extension_data",
+   "fieldtype": "JSON",
+   "label": "Extension Data",
    "read_only": 1
   }
  ],
@@ -200,7 +179,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2024-01-04 11:35:30.160495",
+ "modified": "2024-01-05 18:29:58.234535",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",

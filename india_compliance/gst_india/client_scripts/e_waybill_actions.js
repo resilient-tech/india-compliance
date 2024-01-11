@@ -1035,27 +1035,26 @@ function display_extension_scheduled_message(dialog, scheduled_time) {
 function prefill_data_from_e_waybill_log(frm, dialog) {
     frappe.db
         .get_value("e-Waybill Log", frm.doc.ewaybill, [
-            "consignment_status",
-            "transit_type",
+            "extension_data",
             "extension_reason_code",
             "extension_remark",
-            "address",
-            "remaining_distance",
         ])
         .then(response => {
             const values = response.message;
-            const address = JSON.parse(values.address);
+            const extension_data = JSON.parse(values.extension_data);
 
             const prefill_data = {
-                consignment_status: values.consignment_status,
-                transit_type: values.transit_type,
-                lr_no: values.lr_no,
-                address_line1: address.address_line1,
-                address_line2: address.address_line2,
-                address_line3: address.address_line3,
-                current_place: address.current_place,
-                current_pincode: address.current_pincode,
-                current_state: address.current_state,
+                consignment_status: extension_data.consignment_status,
+                transit_type: extension_data.transit_type,
+                lr_no: frm.doc.lr_no,
+                lr_date: frm.doc.lr_date,
+                remaining_distance: extension_data.remaining_distance,
+                address_line1: extension_data.address_line1,
+                address_line2: extension_data.address_line2,
+                address_line3: extension_data.address_line3,
+                current_place: extension_data.current_place,
+                current_pincode: extension_data.current_pincode,
+                current_state: extension_data.current_state,
                 reason: values.extension_reason_code,
                 remark: values.extension_remark,
             };
