@@ -16,3 +16,5 @@ export const TDS_REGEX = new RegExp(TDS);
 export const GSTIN_REGEX = new RegExp(
     [NORMAL, GOVT_DEPTID, NRI_ID, OIDAR, UNBODY].join("|")
 );
+
+export const GST_INVOICE_NUMBER_FORMAT = new RegExp("^[^\\W_][A-Za-z\\d\\-/]{0,15}$");
