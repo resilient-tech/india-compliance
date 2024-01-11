@@ -277,9 +277,7 @@ function show_gst_invoice_no_banner(frm) {
         return;
 
     frm.dashboard.set_headline_alert(
-        `GST Invoice Number cannot exceed 14 characters and
-            should start with an alphanumeric character.
-            It can only contain alphanumeric characters, dash (-) and slash (/).`,
+        `Naming Series should <strong>not</strong> exceed 16 characters for GST. <a href="https://docs.indiacompliance.app/docs/miscellaneous/transaction_validations#document-name" target="_blank">Know more</a>`,
         "blue"
     );
 }
