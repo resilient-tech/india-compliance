@@ -18,15 +18,12 @@ VERSIONS_TO_COMPARE = [
     {
         "app_name": "ERPNext",
         "current_version": version.parse(erpnext.__version__),
-        "required_versions": {"version-14": "14.55.0", "version-15": "15.7.0"},
+        "required_versions": {"version-14": "14.55.0", "version-15": "15.9.0"},
     },
 ]
 
 
 def execute():
-    if IC_VERSION.major == 16:
-        return
-
     for app in VERSIONS_TO_COMPARE:
         app_name = app["app_name"]
         app_version = app["current_version"]
@@ -37,6 +34,9 @@ def execute():
                 f" {IC_VERSION.major} of {app_name} to use the current version of India"
                 " Compliance.\n"
             )
+
+        if IC_VERSION.major == 16:
+            continue
 
         app_branch = get_app_branch(app_name.lower())
         required_versions = app["required_versions"]

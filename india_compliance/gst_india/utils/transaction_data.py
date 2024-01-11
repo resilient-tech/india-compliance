@@ -17,6 +17,7 @@ from india_compliance.gst_india.utils import (
     get_gst_accounts_by_type,
     get_gst_uom,
     get_validated_country_code,
+    validate_invoice_number,
     validate_pincode,
 )
 
@@ -238,6 +239,7 @@ class GSTTransactionData:
                 title=_("Invalid Document State"),
             )
 
+        validate_invoice_number(self.doc)
         posting_date = getdate(self.doc.posting_date)
 
         if posting_date > getdate():
@@ -256,9 +258,6 @@ class GSTTransactionData:
                 msg=_("Posting Date cannot be greater than LR Date"),
                 title=_("Invalid Data"),
             )
-
-    def validate_non_gst_items(self):
-        validate_non_gst_items(self.doc)
 
     def get_all_item_details(self):
         all_item_details = []
@@ -590,19 +589,6 @@ class GSTTransactionData:
             return
 
         return value[:max_length]
-
-
-def validate_non_gst_items(doc, throw=True):
-    if doc.items[0].gst_treatment == "Non-GST":
-        if not throw:
-            return
-
-        frappe.throw(
-            _("This action cannot be performed for transactions with non-GST items"),
-            title=_("Invalid Data"),
-        )
-
-    return True
 
 
 def validate_unique_hsn_and_uom(doc):

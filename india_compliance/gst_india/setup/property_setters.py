@@ -25,6 +25,11 @@ def get_property_setters():
             ["PINV-.YY.-", "PRET-.YY.-", ""],
         ),
         get_options_property_setter(
+            "Purchase Receipt",
+            "naming_series",
+            ["PR-.YY.-", "PRRET-.YY.-", ""],
+        ),
+        get_options_property_setter(
             "Journal Entry Account",
             "reference_type",
             ["Bill of Entry"],
