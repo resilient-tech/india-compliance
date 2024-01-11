@@ -203,7 +203,7 @@ def set_default_gst_settings():
         "archive_party_info_days": 7,
         "validate_gstin_status": 1,
         "gstin_status_refresh_interval": 30,
-        "enable_retry_e_invoice_generation": 1,
+        "enable_retry_einv_ewb_generation": 1,
     }
 
     if frappe.conf.developer_mode:
