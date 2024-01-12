@@ -8,8 +8,8 @@ from frappe.utils import (
     add_days,
     add_to_date,
     format_date,
-    get_date_str,
     get_datetime,
+    get_datetime_str,
     get_fullname,
     get_link_to_form,
     random_string,
@@ -509,7 +509,8 @@ def get_e_waybills_to_extend():
             e_waybill.is_cancelled.eq(0)
             & e_waybill.extension_scheduled.eq(1)
             & e_waybill.valid_upto.between(
-                get_date_str(add_days(get_datetime(), -1)), get_date_str(get_datetime())
+                get_datetime_str(add_days(get_datetime(), -1)),
+                get_datetime_str(get_datetime()),
             )
         )
         .select(
