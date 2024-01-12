@@ -336,13 +336,8 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
         if throw:
             frappe.throw(error)
 
-    if doc.company_gstin == doc.billing_address_gstin:
-        return _throw(
-            _(
-                "e-Invoice is not applicable for invoices with same company and billing"
-                " GSTIN"
-            )
-        )
+    if doc.exclude_from_gst:
+        return _throw(_("Cannot generate e-Invoice for transactions excluded from GST"))
 
     if doc.irn:
         return _throw(

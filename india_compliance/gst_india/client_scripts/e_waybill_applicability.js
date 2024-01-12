@@ -5,7 +5,6 @@ class EwaybillApplicability {
 
     is_e_waybill_applicable() {
         if (
-            this.frm.doc.exclude_from_gst ||
             // Is Indian Registered Company
             !this.frm.doc.company_gstin ||
             !gst_settings.enable_e_waybill ||
@@ -36,6 +35,10 @@ class EwaybillApplicability {
 }
 
 class SalesInvoiceEwaybill extends EwaybillApplicability {
+    is_e_waybill_applicable() {
+        return this.frm.doc.exclude_from_gst && super.is_e_waybill_applicable();
+    }
+
     is_e_waybill_generatable() {
         return (
             this.is_e_waybill_applicable() &&
@@ -63,7 +66,11 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
 
 class PurchaseInvoiceEwaybill extends EwaybillApplicability {
     is_e_waybill_applicable() {
-        return super.is_e_waybill_applicable() && gst_settings.enable_e_waybill_from_pi;
+        return (
+            this.frm.doc.exclude_from_gst &&
+            super.is_e_waybill_applicable() &&
+            gst_settings.enable_e_waybill_from_pi
+        );
     }
 
     is_e_waybill_generatable() {

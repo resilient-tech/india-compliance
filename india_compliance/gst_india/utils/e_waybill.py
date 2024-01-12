@@ -1070,6 +1070,14 @@ class EWaybillData(GSTTransactionData):
         - Sales Invoice with same company and billing gstin
         """
 
+        if (
+            self.doc.doctype in ("Delivery Note", "Purchase Receipt")
+            and self.doc.exclude_from_gst
+        ):
+            frappe.throw(
+                _("Cannot generate e-Invoice for transactions excluded from GST")
+            )
+
         address = ADDRESS_FIELDS.get(self.doc.doctype)
         for key in ("bill_from", "bill_to"):
             if not self.doc.get(address[key]):
@@ -1094,18 +1102,6 @@ class EWaybillData(GSTTransactionData):
 
         if not self.doc.gst_transporter_id:
             self.validate_mode_of_transport()
-
-        if (
-            self.doc.doctype == "Sales Invoice"
-            and self.doc.company_gstin == self.doc.billing_address_gstin
-        ):
-            frappe.throw(
-                _(
-                    "e-Waybill cannot be generated because billing GSTIN is same as"
-                    " company GSTIN"
-                ),
-                title=_("Invalid Data"),
-            )
 
     def validate_bill_no_for_purchase(self):
         if (

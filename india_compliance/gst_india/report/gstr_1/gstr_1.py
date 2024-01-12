@@ -322,7 +322,6 @@ class Gstr1Report:
 			from `tab{doctype}` si
 			where docstatus = 1 {where_conditions}
             and exclude_from_gst = 0
-			and is_opening = 'No'
 			order by posting_date desc
 			""".format(
                 select_columns=self.select_columns,
@@ -403,8 +402,6 @@ class Gstr1Report:
 
         elif self.filters.get("type_of_business") == "NIL Rated":
             conditions += """ AND IFNULL(place_of_supply, '') != '96-Other Countries' and IFNULL(gst_category, '') != 'Overseas'"""
-
-        conditions += " AND IFNULL(billing_address_gstin, '') != company_gstin"
 
         return conditions
 
@@ -1176,15 +1173,6 @@ class GSTR1DocumentIssuedSummary:
                 self.sales_invoice.is_return,
                 self.sales_invoice.is_debit_note,
                 self.sales_invoice.amended_from,
-                Case()
-                .when(
-                    IfNull(self.sales_invoice.billing_address_gstin, "")
-                    == self.sales_invoice.company_gstin,
-                    1,
-                )
-                .else_(0)
-                .as_("same_gstin_billing"),
-                self.sales_invoice.is_opening,
                 self.sales_invoice.exclude_from_gst,
                 self.sales_invoice_item.gst_treatment,
             )

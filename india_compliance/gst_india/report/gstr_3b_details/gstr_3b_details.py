@@ -152,7 +152,6 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
             .where(
                 (purchase_invoice.docstatus == 1)
                 & (purchase_invoice.exclude_from_gst == 0)
-                & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
@@ -398,7 +397,6 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             .where(
                 (purchase_invoice.docstatus == 1)
                 & (purchase_invoice.exclude_from_gst == 0)
-                & (purchase_invoice.is_opening == "No")
                 & (purchase_invoice.name == purchase_invoice_item.parent)
                 & (
                     (purchase_invoice_item.gst_treatment != "Taxable")

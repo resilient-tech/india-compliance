@@ -53,7 +53,8 @@ def onload(doc, method=None):
 
 def validate(doc, method=None):
     if validate_transaction(doc) is False:
-        doc.e_waybill_status = "Not Applicable"
+        set_e_waybill_status(doc)
+        validate_fields_and_set_status_for_e_invoice(doc)
         return
 
     gst_settings = frappe.get_cached_doc("GST Settings")
@@ -190,12 +191,12 @@ def is_e_waybill_applicable(doc, gst_settings=None):
         gst_settings = frappe.get_cached_doc("GST Settings")
 
     return bool(
-        gst_settings.enable_e_waybill
+        not doc.exclude_from_gst
+        and gst_settings.enable_e_waybill
         and doc.company_gstin != doc.billing_address_gstin
         and not doc.ewaybill
         and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
         and are_goods_supplied(doc)
-        and not doc.exclude_from_gst
     )
 
 
