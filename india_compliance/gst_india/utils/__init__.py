@@ -810,7 +810,6 @@ def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
 
 
-<<<<<<< HEAD
 def validate_invoice_number(doc):
     """Validate GST invoice number requirements."""
 
@@ -828,7 +827,8 @@ def validate_invoice_number(doc):
             ),
             title=_("Invalid GST Invoice Number"),
         )
-=======
+
+
 def handle_server_errors(settings, doc, document_type, error):
     if not doc.doctype == "Sales Invoice":
         return
@@ -864,4 +864,3 @@ def handle_server_errors(settings, doc, document_type, error):
         title=error_message_title.get(type(error)),
         indicator="yellow",
     )
->>>>>>> 83b14340 (fix: retry e-waybill creation (#1447))
