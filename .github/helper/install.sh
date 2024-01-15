@@ -11,9 +11,6 @@ fi
 
 cd ~ || exit
 
-<<<<<<< HEAD
-sudo apt update && sudo apt install redis-server
-=======
 echo "Setting Up System Dependencies..."
 
 sudo apt update
@@ -32,7 +29,6 @@ install_whktml() {
 }
 install_whktml &
 wkpid=$!
->>>>>>> 128936dc (fix: retry e-waybill creation (#1447))
 
 pip install frappe-bench
 
@@ -55,9 +51,6 @@ GRANT ALL PRIVILEGES ON \`test_resilient\`.* TO 'test_resilient'@'localhost';
 UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root';
 FLUSH PRIVILEGES;
 "
-
-wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
-sudo apt install ./wkhtmltox_0.12.6-1.focal_amd64.deb
 
 cd ~/frappe-bench || exit
 
