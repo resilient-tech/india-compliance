@@ -384,11 +384,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2023-11-29 17:29:51.606431",
-=======
- "modified": "2024-01-10 11:06:33.171137",
->>>>>>> 83b14340 (fix: retry e-waybill creation (#1447))
+ "modified": "2024-01-11 11:06:33.171137",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
