@@ -312,7 +312,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         account_head = row.account_head
 
         if row.charge_type == "Actual":
-            item_tax_detail = frappe.parse_json(row.item_wise_tax_detail)
+            item_tax_detail = frappe.parse_json(row.get("item_wise_tax_detail") or {})
             for tax_rate, tax_amount in item_tax_detail.values():
                 if tax_amount and not tax_rate:
                     _throw(
