@@ -220,7 +220,8 @@ function show_generate_e_waybill_dialog(frm) {
             args: {
                 doctype: frm.doctype,
                 docname: frm.doc.name,
-                values,
+                values: values,
+                force: true,
             },
             callback: () => {
                 return frm.refresh();
