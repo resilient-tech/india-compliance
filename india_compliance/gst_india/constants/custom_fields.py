@@ -146,7 +146,6 @@ CUSTOM_FIELDS = {
             "insert_after": "apply_tds",
             "print_hide": 1,
             "default": 0,
-            "depends_on": "eval:!doc.exclude_from_gst",
         },
     ],
     # Sales - Export with GST Payment
@@ -886,15 +885,19 @@ exclude_from_gst_field = frappe._dict(
 )
 
 EXCLUDE_FROM_GST_FIELDS = {
-    "Quotation": exclude_from_gst_field,
-    "Sales Order": exclude_from_gst_field,
-    "Delivery Note": exclude_from_gst_field,
-    "Sales Invoice": exclude_from_gst_field.copy().update(insert_after="is_pos"),
+    (
+        "Quotation",
+        "Sales Order",
+        "Delivery Note",
+        "Sales Invoice",
+    ): exclude_from_gst_field.copy().update(insert_after="is_export_with_gst"),
+    (
+        "Purchase Invoice",
+        "Purchase Receipt",
+        "Purchase Order",
+        "Supplier Quotation",
+    ): exclude_from_gst_field.copy().update(insert_after="is_reverse_charge"),
     "POS Invoice": exclude_from_gst_field.copy().update(insert_after="is_pos"),
-    "Purchase Invoice": exclude_from_gst_field,
-    "Purchase Receipt": exclude_from_gst_field,
-    "Purchase Order": exclude_from_gst_field,
-    "Supplier Quotation": exclude_from_gst_field,
 }
 
 
