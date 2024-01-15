@@ -5,6 +5,7 @@ from frappe.utils import (
     add_months,
     cint,
     date_diff,
+    month_diff,
     flt,
     get_last_day,
     getdate,
@@ -21,6 +22,7 @@ def get_wdv_or_dd_depr_amount(
     asset,
     fb_row,
     depreciable_value,
+    yearly_opening_wdv,
     schedule_idx,
     prev_depreciation_amount,
     has_wdv_or_dd_non_yearly_pro_rata,
@@ -38,13 +40,6 @@ def get_wdv_or_dd_depr_amount(
             schedule_idx,
             prev_depreciation_amount,
             has_wdv_or_dd_non_yearly_pro_rata,
-        )
-
-    if not fb_row.daily_prorata_based:
-        frappe.throw(
-            _(
-                "Please tick the 'Depreciate based on daily pro-rata' checkbox in the finance book row"
-            )
         )
 
     asset_depr_schedule.flags.wdv_it_act_applied = True
@@ -73,36 +68,43 @@ def get_wdv_or_dd_depr_amount(
     previous_schedule_date = add_months(
         schedule_date, -1 * cint(fb_row.frequency_of_depreciation)
     )
+    # previous_schedule_date is available_for_use_date-1 for the first schedule
     if is_last_day:
         previous_schedule_date = get_last_day(previous_schedule_date)
-
+    
     if fb_row.frequency_of_depreciation == 12:
         if schedule_date < start_date_of_next_fiscal_year:
-            return flt(asset.gross_purchase_amount) * (flt(rate_of_depreciation) / 100)
+            depreciation_amount = flt(asset.gross_purchase_amount) * (flt(rate_of_depreciation) / 100)
         else:
-            return (
-                flt(depreciable_value)
-                * (flt(fb_row.rate_of_depreciation) / 100)
-                * (date_diff(schedule_date, previous_schedule_date) / 365)
-            )
+            depreciation_amount = flt(yearly_opening_wdv) * (flt(fb_row.rate_of_depreciation) / 100)
     elif fb_row.frequency_of_depreciation == 1:
+        if fb_row.daily_prorata_based:
+            if schedule_date >= start_date_of_next_fiscal_year:
+                num_days_asset_used_in_fiscal_year = 365
+            fraction = date_diff(schedule_date, previous_schedule_date) / num_days_asset_used_in_fiscal_year
+        else:
+            if schedule_date >= start_date_of_next_fiscal_year:
+                fraction = 1/12
+            else:
+                no_of_months = month_diff(get_fiscal_year(asset.available_for_use_date)[2], asset.available_for_use_date)
+                fraction = 1/no_of_months
+    
         if schedule_date < start_date_of_next_fiscal_year:
-            return (
+            depreciation_amount = (
                 flt(asset.gross_purchase_amount)
                 * (flt(rate_of_depreciation) / 100)
-                * (
-                    date_diff(schedule_date, previous_schedule_date)
-                    / num_days_asset_used_in_fiscal_year
-                )
+                * fraction
             )
         else:
-            return (
-                flt(depreciable_value)
+            depreciation_amount = (
+                flt(yearly_opening_wdv)
                 * (flt(fb_row.rate_of_depreciation) / 100)
-                * (date_diff(schedule_date, previous_schedule_date) / 365)
+                * fraction
             )
     else:
         frappe.throw(_("Only monthly and yearly depreciations allowed yet."))
+
+    return depreciation_amount
 
 
 def cancel_depreciation_entries(asset_doc, date):
