@@ -18,6 +18,8 @@
   "rcm_threshold",
   "api_section",
   "enable_api",
+  "enable_retry_einv_ewb_generation",
+  "is_retry_einv_ewb_generation_pending",
   "column_break_rk3h",
   "sandbox_mode",
   "e_waybill_section",
@@ -35,8 +37,6 @@
   "auto_generate_e_invoice",
   "generate_e_waybill_with_e_invoice",
   "apply_e_invoice_only_for_selected_companies",
-  "enable_retry_e_invoice_generation",
-  "is_retry_e_invoice_generation_pending",
   "column_break_17",
   "e_invoice_applicable_from",
   "e_invoice_applicable_companies",
@@ -347,21 +347,6 @@
   },
   {
    "default": "1",
-   "depends_on": "eval: doc.enable_e_invoice",
-   "description": "Automatically Retry e-Invoice Generation for Gateway Timeout Errors",
-   "fieldname": "enable_retry_e_invoice_generation",
-   "fieldtype": "Check",
-   "label": "Enable Retry e-Invoice Generation"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_retry_e_invoice_generation_pending",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Is Retry e-Invoice Generation Pending"
-  },
-  {
-   "default": "1",
    "description": "Ensures valid GSTIN in transactions by refreshing status periodically from government database",
    "fieldname": "validate_gstin_status",
    "fieldtype": "Check",
@@ -379,12 +364,27 @@
    "fieldname": "enable_e_waybill_from_pr",
    "fieldtype": "Check",
    "label": "Enable e-Waybill Generation from Purchase Receipt"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "description": "Automatically Retry e-Invoice and e-Waybill Generation for GSP/GST Server Errors",
+   "fieldname": "enable_retry_einv_ewb_generation",
+   "fieldtype": "Check",
+   "label": "Enable Retry e-Invoice/e-Waybill Generation"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_retry_einv_ewb_generation_pending",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Retry e-Invoice/e-Waybill Pending"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-11-29 17:29:51.606431",
+ "modified": "2024-01-11 11:06:33.171137",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
