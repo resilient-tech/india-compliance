@@ -1234,7 +1234,10 @@ def set_taxable_value_for_excluded_transaction(doc):
 
 
 def is_same_gstin_billing(doc):
-    is_sales_transaction = doc.doctype in (SALES_DOCTYPES, "Payment Entry")
+    is_sales_transaction = is_sales_transaction = (
+        doc.doctype in SALES_DOCTYPES or doc.doctype == "Payment Entry"
+    )
+
     party_gstin = (
         doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
     )

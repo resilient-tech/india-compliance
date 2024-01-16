@@ -1293,7 +1293,7 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data):
         nature_of_document = {
-            "Excluded from Report (Out of Scope of GST)": [],
+            "Excluded from Report (Excluded from GST)": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
@@ -1301,7 +1301,7 @@ class GSTR1DocumentIssuedSummary:
 
         for doc in data:
             if doc.exclude_from_gst:
-                nature_of_document["Excluded from Report (Out of Scope of GST)"].append(
+                nature_of_document["Excluded from Report (Excluded from GST)"].append(
                     doc
                 )
             elif doc.is_return:

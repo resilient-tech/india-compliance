@@ -1070,7 +1070,10 @@ class EWaybillData(GSTTransactionData):
         - Sales Invoice with same company and billing gstin
         """
 
-        if self.doc.exclude_from_gst:
+        if self.doc.exclude_from_gst and self.doc.doctype not in (
+            "Delivery Note",
+            "Purchase Receipt",
+        ):
             frappe.throw(
                 _("Cannot generate e-waybill for transactions excluded from GST")
             )
