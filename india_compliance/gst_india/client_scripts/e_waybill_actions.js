@@ -33,13 +33,39 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
-            if (
-                frm.doc.docstatus != 1 ||
-                frm.is_dirty() ||
-                frm.doc.e_waybill_status === "Not Applicable" ||
-                !is_e_waybill_applicable(frm)
-            )
+            if (!gst_settings.enable_e_waybill || frm.is_dirty()) return;
+
+            if (frm.doc.docstatus == 0) {
+                frm.add_custom_button(
+                    __("Applicability Status"),
+                    () =>
+                        show_e_waybill_applicability_status(
+                            frm,
+                            is_e_waybill_applicable(frm, true)
+                        ),
+                    "e-Waybill"
+                );
                 return;
+            }
+
+            if (frm.doc.docstatus == 1 && !is_e_waybill_applicable(frm, true)) {
+                // without condition of e_waybill_threshold
+                let is_e_waybill_generatable = is_e_waybill_applicable(frm);
+
+                // E-waybill status is Not Applicable but e-waybill is generatable
+                if (frm.doc.e_waybill_status === "Not Applicable" && is_e_waybill_generatable) {
+                    frm.ewb_message +="<br> To generate e-Waybill, change e-Waybill Status to Pending.";
+                }
+
+                if (frm.doc.e_waybill_status === "Not Applicable" || !is_e_waybill_generatable) {
+                    frm.add_custom_button(
+                        __("Applicability Status"),
+                        () => show_e_waybill_applicability_status(frm, false),
+                        "e-Waybill"
+                    );
+                    return;
+                }
+            }
 
             if (!frm.doc.ewaybill) {
                 if (frm.doc.e_waybill_status === "Pending") {
@@ -984,8 +1010,8 @@ function has_e_waybill_threshold_met(frm) {
     if (Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold)
         return true;
 }
-function is_e_waybill_applicable(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable();
+function is_e_waybill_applicable(frm, show_message) {
+    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
 }
 
 function is_e_waybill_generatable(frm) {
@@ -1102,6 +1128,18 @@ function get_transit_type(dialog) {
         if (dialog.mode_of_transport === "Road") return "Road";
         else return "Others";
     }
+}
+
+function show_e_waybill_applicability_status(frm, is_e_waybill_applicable) {
+    if (is_e_waybill_applicable) {
+        frm.ewb_message = __("Please submit the doc to generate e-Waybill.");
+    }
+
+    frappe.msgprint({
+        title: is_e_waybill_applicable ? __("E-Waybill is Applicable") : __("E-Waybill is Not Applicable"),
+        message: frm.ewb_message,
+        indicator: is_e_waybill_applicable ? "green" : "red",
+    });
 }
 
 /********
