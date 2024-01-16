@@ -1,7 +1,7 @@
 import frappe
+from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
-from frappe.query_builder.functions import IfNull
 
 DOCTYPES = ["Sales Invoice", "Purchase Invoice"]
 

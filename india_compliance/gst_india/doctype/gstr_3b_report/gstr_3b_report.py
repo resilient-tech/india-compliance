@@ -255,7 +255,6 @@ class GSTR3BReport(Document):
             i.taxable_value, i.gst_treatment
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
-            and p.is_opening = 'No'
             and p.exclude_from_gst = 0
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) = %s and year(p.posting_date) = %s
