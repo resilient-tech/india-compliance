@@ -274,7 +274,7 @@ class PurchaseReconciliationTool(Document):
             "GST Inward Supply", link_doc, pluck="name"
         ):
             self._unlink_documents((pur_linked_with))
-            inward_supplies.append(pur_linked_with)
+            inward_supplies.extend(pur_linked_with)
 
         link_doc["match_status"] = "Manual Match"
 
