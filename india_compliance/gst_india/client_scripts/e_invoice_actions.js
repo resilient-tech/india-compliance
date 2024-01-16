@@ -49,6 +49,8 @@ frappe.ui.form.on("Sales Invoice", {
             return;
         }
 
+        if (frm.doc.docstatus != 1) return;
+
         if (
             !frm.doc.irn &&
             frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)

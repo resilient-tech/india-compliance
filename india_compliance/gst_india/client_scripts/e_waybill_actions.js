@@ -67,6 +67,8 @@ function setup_e_waybill_actions(doctype) {
                 }
             }
 
+            if(frm.doc.docstatus != 1) return;
+
             if (!frm.doc.ewaybill) {
                 if (frm.doc.e_waybill_status === "Pending") {
                     frm.dashboard.add_comment(
