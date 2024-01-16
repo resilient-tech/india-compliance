@@ -190,7 +190,6 @@ def get_items(filters):
         WHERE
             `tabSales Invoice`.docstatus = 1
             AND `tabSales Invoice`.exclude_from_gst = 0
-            AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '')
             AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
         GROUP BY
             `tabSales Invoice Item`.parent,

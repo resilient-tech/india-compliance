@@ -40,11 +40,7 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
     }
 
     is_e_waybill_generatable() {
-        return (
-            this.is_e_waybill_applicable() &&
-            this.frm.doc.customer_address &&
-            this.frm.doc.company_gstin !== this.frm.doc.billing_address_gstin
-        );
+        return this.is_e_waybill_applicable() && this.frm.doc.customer_address;
     }
 
     auto_generate_e_waybill() {

@@ -183,9 +183,6 @@ def e_invoice_conditions(e_invoice_applicability_date):
 
     conditions.append(sales_invoice.posting_date >= e_invoice_applicability_date)
     conditions.append(
-        sales_invoice.company_gstin != sales_invoice.billing_address_gstin
-    )
-    conditions.append(
         (
             (Coalesce(sales_invoice.place_of_supply, "") == "96-Other Countries")
             | (Coalesce(sales_invoice.billing_address_gstin, "") != "")

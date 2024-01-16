@@ -193,7 +193,6 @@ def is_e_waybill_applicable(doc, gst_settings=None):
     return bool(
         not doc.exclude_from_gst
         and gst_settings.enable_e_waybill
-        and doc.company_gstin != doc.billing_address_gstin
         and not doc.ewaybill
         and abs(doc.base_grand_total) >= gst_settings.e_waybill_threshold
         and are_goods_supplied(doc)

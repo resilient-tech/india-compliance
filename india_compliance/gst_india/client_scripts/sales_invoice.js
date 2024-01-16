@@ -30,14 +30,8 @@ frappe.ui.form.on(DOCTYPE, {
 
     refresh(frm) {
         set_e_waybill_status_options(frm);
-        gst_invoice_warning(frm);
 
-        if (
-            frm.doc.exclude_from_gst ||
-            !gst_settings.enable_e_waybill ||
-            !gst_settings.enable_e_waybill
-        )
-            return;
+        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill) return;
         show_sandbox_mode_indicator();
     },
 
@@ -67,18 +61,4 @@ function set_e_waybill_status_options(frm) {
         options.push(frm.doc.e_waybill_status);
     }
     set_field_options("e_waybill_status", options);
-}
-
-async function _get_account_options(company) {
-    if (!frappe.flags.gst_accounts) {
-        frappe.flags.gst_accounts = {};
-    }
-
-    if (!frappe.flags.gst_accounts[company]) {
-        frappe.flags.gst_accounts[company] = await india_compliance.get_account_options(
-            company
-        );
-    }
-
-    return frappe.flags.gst_accounts[company];
 }

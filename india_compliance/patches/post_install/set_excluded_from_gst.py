@@ -19,8 +19,8 @@ def execute():
             .set(doc.exclude_from_gst, 1)
             .where(
                 (doc.is_opening == "Yes")
-                | (IfNull(doc.company_gstin, "") == "")  # India registerd cmpany
-                | (IfNull(doc.company_gstin, "") == doc[party_gstin_field])
+                | (IfNull(doc.company_gstin, "") == "")  # India registerd company
+                | (IfNull(doc.company_gstin, "") == IfNull(doc[party_gstin_field], ""))
             )
             .where(doc.docstatus != 0)
             .run()
