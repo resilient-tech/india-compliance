@@ -8,6 +8,7 @@ class EwaybillApplicability {
             // Is Indian Registered Company
             !this.frm.doc.company_gstin ||
             !gst_settings.enable_e_waybill ||
+            // for DN / PR
             this.frm.doc.is_opening === "Yes"
         )
             return false;

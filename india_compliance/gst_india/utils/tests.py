@@ -70,6 +70,15 @@ def create_transaction(**data):
     append_item(transaction, data, company_abbr)
 
     # Append taxes
+    if (
+        not data.is_in_state
+        and not data.is_out_state
+        and not data.is_in_state_rcm
+        and not data.is_out_state_rcm
+        and not data.exclude_from_gst
+    ):
+        data.is_in_state = True
+
     if data.is_in_state or data.is_in_state_rcm:
         _append_taxes(transaction, ["CGST", "SGST"], company_abbr, rate=9)
 
