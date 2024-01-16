@@ -311,7 +311,7 @@ function show_e_invoice_applicability_status(frm, is_e_invoice_applicable) {
     }
 
     frappe.msgprint({
-        title: is_e_invoice_applicable ? __("E-Invoice is Applicable") : __("E-Invoice is Not Applicable"),
+        title: is_e_invoice_applicable ? __("e-Invoice is Applicable") : __("e-Invoice is Not Applicable"),
         message: frm.einv_message,
         indicator: is_e_invoice_applicable ? "green" : "red",
     });

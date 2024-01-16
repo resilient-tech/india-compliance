@@ -20,7 +20,7 @@ class EwaybillApplicability {
         if (this.frm.doc.is_opening === "Yes") {
             if (show_message)
                 message_list.push(
-                    "E-Waybill cannot be generated for transaction with 'Is Opening Entry' is set to Yes."
+                    "e-Waybill cannot be generated for transaction with 'Is Opening Entry' is set to Yes."
                 );
             is_applicable = false;
         }
@@ -67,6 +67,10 @@ class EwaybillApplicability {
     auto_generate_e_waybill() {
         return false;
     }
+
+    is_e_waybill_api_enabled() {
+        return gst_settings.enable_api && gst_settings.enable_e_waybill;
+    }
 }
 
 class SalesInvoiceEwaybill extends EwaybillApplicability {
@@ -96,8 +100,8 @@ class SalesInvoiceEwaybill extends EwaybillApplicability {
 }
 
 class PurchaseInvoiceEwaybill extends EwaybillApplicability {
-    is_e_waybill_applicable() {
-        return super.is_e_waybill_applicable() && gst_settings.enable_e_waybill_from_pi;
+    is_e_waybill_applicable(show_message = false) {
+        return super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_pi;
     }
 
     is_e_waybill_generatable() {
@@ -106,12 +110,16 @@ class PurchaseInvoiceEwaybill extends EwaybillApplicability {
             this.frm.doc.supplier_address &&
             this.frm.doc.company_gstin !== this.frm.doc.supplier_gstin
         );
+    }
+
+    is_e_waybill_api_enabled() {
+        return super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_from_pi;
     }
 }
 
 class PurchaseReceiptEwaybill extends EwaybillApplicability {
-    is_e_waybill_applicable() {
-        return super.is_e_waybill_applicable() && gst_settings.enable_e_waybill_from_pr;
+    is_e_waybill_applicable(show_message = false) {
+        return super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_pr;
     }
 
     is_e_waybill_generatable() {
@@ -121,14 +129,22 @@ class PurchaseReceiptEwaybill extends EwaybillApplicability {
             this.frm.doc.company_gstin !== this.frm.doc.supplier_gstin
         );
     }
+
+    is_e_waybill_api_enabled() {
+        return super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_from_pr;
+    }
 }
 
 class DeliveryNoteEwaybill extends EwaybillApplicability {
-    is_e_waybill_applicable() {
-        return super.is_e_waybill_applicable() && gst_settings.enable_e_waybill_from_dn;
+    is_e_waybill_applicable(show_message = false) {
+        return super.is_e_waybill_applicable(show_message) && gst_settings.enable_e_waybill_from_dn;
     }
 
     is_e_waybill_generatable() {
         return this.is_e_waybill_applicable() && this.frm.doc.customer_address;
+    }
+
+    is_e_waybill_api_enabled() {
+        return super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_from_dn;
     }
 }

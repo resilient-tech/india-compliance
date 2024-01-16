@@ -33,7 +33,7 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
-            if (!gst_settings.enable_e_waybill || frm.is_dirty()) return;
+            if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
 
             if (frm.doc.docstatus == 0) {
                 frm.add_custom_button(
@@ -1016,6 +1016,10 @@ function is_e_waybill_applicable(frm, show_message) {
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
 }
 
+function is_e_waybill_api_enabled(frm) {
+    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_api_enabled();
+}
+
 function is_e_waybill_generatable(frm) {
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable();
 }
@@ -1138,7 +1142,7 @@ function show_e_waybill_applicability_status(frm, is_e_waybill_applicable) {
     }
 
     frappe.msgprint({
-        title: is_e_waybill_applicable ? __("E-Waybill is Applicable") : __("E-Waybill is Not Applicable"),
+        title: is_e_waybill_applicable ? __("e-Waybill is Applicable") : __("e-Waybill is Not Applicable"),
         message: frm.ewb_message,
         indicator: is_e_waybill_applicable ? "green" : "red",
     });
