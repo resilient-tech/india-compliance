@@ -20,6 +20,12 @@
   "column_break_2",
   "cancel_reason_code",
   "cancel_remark",
+  "extension_details_section",
+  "extension_scheduled",
+  "extension_data",
+  "column_break_grbd",
+  "extension_reason_code",
+  "extension_remark",
   "section_break_31",
   "is_latest_data",
   "data"
@@ -124,6 +130,47 @@
    "fieldname": "is_generated_in_sandbox_mode",
    "fieldtype": "Check",
    "label": "Is Generated in Sandbox Mode"
+  },
+  {
+   "depends_on": "eval: doc.extension_scheduled == 1",
+   "fieldname": "extension_details_section",
+   "fieldtype": "Section Break",
+   "label": "Extension Details",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_grbd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "extension_scheduled",
+   "fieldtype": "Check",
+   "label": "Extension Scheduled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "extension_remark",
+   "fieldtype": "Data",
+   "label": "Remark",
+   "read_only": 1
+  },
+  {
+   "fieldname": "extension_reason_code",
+   "fieldtype": "Data",
+   "label": "Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "extension_data",
+   "fieldtype": "JSON",
+   "hidden": 1,
+   "label": "Extension Data",
+   "read_only": 1
   }
  ],
  "in_create": 1,
@@ -133,7 +180,7 @@
    "link_fieldname": "ewaybill"
   }
  ],
- "modified": "2023-07-27 15:06:06.480699",
+ "modified": "2024-01-17 14:46:29.964817",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "e-Waybill Log",
