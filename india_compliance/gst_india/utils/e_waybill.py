@@ -490,7 +490,7 @@ def extend_validity(*, doctype, docname, values, scheduled=False):
 
     doc.db_set("distance", values.remaining_distance)
 
-    create_e_waybill_comment(
+    update_e_waybill_log_for_extention(
         values=values,
         fetch=scheduled or values.update_e_waybill_data,
         doc=doc,
@@ -518,30 +518,10 @@ def get_e_waybills_to_extend():
             e_waybill.reference_doctype,
             e_waybill.e_waybill_number,
             e_waybill.extension_data,
-            e_waybill.extension_reason_code,
-            e_waybill.extension_remark,
             e_waybill.name,
         )
         .run(as_dict=True)
     )
-
-
-def build_ewaybill_extension_data(e_waybill_data):
-    extension_data = json.loads(e_waybill_data.extension_data)
-
-    return {
-        "remaining_distance": extension_data["remaining_distance"],
-        "consignment_status": extension_data["consignment_status"],
-        "transit_type": extension_data["transit_type"],
-        "address_line1": extension_data["address_line1"],
-        "address_line2": extension_data["address_line2"],
-        "address_line3": extension_data["address_line3"],
-        "current_place": extension_data["current_place"],
-        "current_state": extension_data["current_state"],
-        "current_pincode": extension_data["current_pincode"],
-        "reason": e_waybill_data.extension_reason_code,
-        "remark": e_waybill_data.extension_remark,
-    }
 
 
 def extend_scheduled_e_waybills():
@@ -556,12 +536,12 @@ def extend_scheduled_e_waybills():
         )
 
         try:
-            values = build_ewaybill_extension_data(e_waybill_data)
+            extension_data = json.loads(e_waybill_data.extension_data)
 
             extend_validity(
                 doctype=e_waybill_data.reference_doctype,
                 docname=e_waybill_data.reference_name,
-                values=values,
+                values=extension_data,
                 scheduled=True,
             )
 
@@ -601,7 +581,7 @@ def schedule_ewaybill_for_extension(doctype, docname, values, scheduled_time):
 
     validate_data_before_schedule(doc, values)
 
-    create_e_waybill_comment(
+    update_e_waybill_log_for_extention(
         values=values,
         fetch=False,
         doc=doc,
@@ -618,90 +598,6 @@ def schedule_ewaybill_for_extension(doctype, docname, values, scheduled_time):
     )
 
     return send_updated_doc(doc)
-
-
-def create_e_waybill_comment(
-    values, doc, result=None, scheduled=False, scheduled_time=None, fetch=False
-):
-    if not doc or not values:
-        return
-
-    if not scheduled and not result:
-        return
-
-    values_in_comment = {
-        "Transit Type": values.transit_type,
-        "Vehicle No": values.vehicle_no,
-        "LR No": values.lr_no,
-        "LR Date": values.lr_date,
-        "Mode of Transport": values.mode_of_transport,
-        "Remaining Distance": values.remaining_distance,
-        "Current Place": values.current_place,
-        "Current Pincode": values.current_pincode,
-        "Reason": values.reason,
-        "Remark": values.remark,
-    }
-
-    if scheduled:
-        comment_prefix = f"e-Waybill has been scheduled for extension for {frappe.bold(scheduled_time)}"
-        extension_data = json.dumps(
-            {
-                "consignment_status": values.consignment_status,
-                "transit_type": values.transit_type,
-                "address_line1": values.address_line1,
-                "address_line2": values.address_line2,
-                "address_line3": values.address_line3,
-                "current_place": values.current_place,
-                "current_pincode": values.current_pincode,
-                "current_state": values.current_state,
-                "remaining_distance": values.remaining_distance,
-            }
-        )
-
-        log_data = {
-            "e_waybill_number": doc.ewaybill,
-            "extension_scheduled": 1,
-            "extension_data": extension_data,
-            "extension_reason_code": values.reason,
-            "extension_remark": values.remark,
-        }
-
-    else:
-        comment_prefix = "e-Waybill has been extended"
-        extended_validity_date = parse_datetime(result.validUpto, day_first=True)
-
-        values_in_comment.update(
-            {
-                "LR No": doc.lr_no,
-                "LR Date": doc.lr_date,
-                "GST Vehicle Type": values.gst_vehicle_type,
-                "Valid Upto": extended_validity_date,
-            }
-        )
-
-        log_data = {
-            "name": doc.ewaybill,
-            "updated_on": parse_datetime(result.updatedDate, day_first=True),
-            "valid_upto": extended_validity_date,
-            "is_latest_data": 0,
-            "extension_scheduled": 0,
-        }
-
-    comment = _("{prefix} by {user}.<br><br> New Details are: <br>").format(
-        prefix=comment_prefix,
-        user=frappe.bold(get_fullname()),
-    )
-
-    for key, value in values_in_comment.items():
-        if value:
-            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
-
-    log_and_process_e_waybill(
-        doc,
-        log_data,
-        fetch=fetch,
-        comment=comment,
-    )
 
 
 def generate_pending_e_waybills():
@@ -996,6 +892,81 @@ def _log_and_process_e_waybill(doc, log_data, fetch=False, comment=None):
         return
 
     attach_e_waybill_pdf(doc, log)
+
+
+def update_e_waybill_log_for_extention(
+    values, doc, result=None, scheduled=False, scheduled_time=None, fetch=False
+):
+    if not doc or not values:
+        return
+
+    if not scheduled and not result:
+        return
+
+    values_in_comment = {
+        "Transit Type": values.transit_type,
+        "Vehicle No": values.vehicle_no,
+        "LR No": values.lr_no,
+        "LR Date": values.lr_date,
+        "Mode of Transport": values.mode_of_transport,
+        "Remaining Distance": values.remaining_distance,
+        "Current Place": values.current_place,
+        "Current Pincode": values.current_pincode,
+        "Consignment Status": values.consignment_status,
+        "Reason": values.reason,
+        "Remark": values.remark,
+    }
+
+    if scheduled:
+        comment_prefix = (
+            f"e-Waybill extention has been scheduled for {frappe.bold(scheduled_time)}"
+        )
+        extension_data = json.dumps(values, indent=4)
+
+        log_data = {
+            "e_waybill_number": doc.ewaybill,
+            "extension_scheduled": 1,
+            "extension_data": extension_data,
+            "extension_reason_code": values.reason,
+            "extension_remark": values.remark,
+        }
+
+    else:
+        comment_prefix = "e-Waybill has been extended"
+        extended_validity_date = parse_datetime(result.validUpto, day_first=True)
+
+        values_in_comment.update(
+            {
+                "LR No": doc.lr_no,
+                "LR Date": doc.lr_date,
+                "GST Vehicle Type": values.gst_vehicle_type,
+                "Valid Upto": extended_validity_date,
+            }
+        )
+
+        log_data = {
+            "name": doc.ewaybill,
+            "updated_on": parse_datetime(result.updatedDate, day_first=True),
+            "valid_upto": extended_validity_date,
+            "is_latest_data": 0,
+            "extension_scheduled": 0,
+        }
+
+    comment = _("{prefix} by {user}.<br><br> New Details are: <br>").format(
+        prefix=comment_prefix,
+        user=frappe.bold(get_fullname()),
+    )
+
+    for key, value in values_in_comment.items():
+        if value:
+            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+
+    log_and_process_e_waybill(
+        doc,
+        log_data,
+        fetch=fetch,
+        comment=comment,
+    )
 
 
 def update_transaction(doc, values):
