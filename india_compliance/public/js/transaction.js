@@ -28,6 +28,7 @@ function fetch_gst_details(doctype) {
         "company_gstin",
         "place_of_supply",
         "is_reverse_charge",
+        "exclude_from_gst",
     ];
 
     // we are using address below to prevent multiple event triggers
@@ -69,6 +70,10 @@ async function update_gst_details(frm, event) {
         company: frm.doc.company,
     };
 
+    if (event === "exclude_from_gst") {
+        args.update_taxes = 1;
+    }
+
     // wait for GSTINs to get fetched
     await frappe.after_ajax();
 
@@ -93,6 +98,7 @@ async function update_gst_details(frm, event) {
         "company_gstin",
         "place_of_supply",
         "is_reverse_charge",
+        "exclude_from_gst",
     ];
 
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
@@ -116,7 +122,9 @@ async function update_gst_details(frm, event) {
 
 india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
     frappe.call({
-        method: method || "india_compliance.gst_india.overrides.transaction.get_gst_details",
+        method:
+            method ||
+            "india_compliance.gst_india.overrides.transaction.get_gst_details",
         args,
         async callback(r) {
             if (!r.message) return;
@@ -126,13 +134,18 @@ india_compliance.fetch_and_update_gst_details = function (frm, args, method) {
             frm.__updating_gst_details = false;
         },
     });
-}
+};
 
 function validate_overseas_gst_category(doctype) {
     frappe.ui.form.on(doctype, {
         gst_category(frm) {
             const { enable_overseas_transactions } = gst_settings;
-            if (!is_overseas_transaction(frm) || enable_overseas_transactions) return;
+            if (
+                frm.doc.exclude_from_gst ||
+                !is_overseas_transaction(frm) ||
+                enable_overseas_transactions
+            )
+                return;
 
             frappe.throw(
                 __("Please enable SEZ / Overseas transactions in GST Settings first")
@@ -171,8 +184,7 @@ function set_and_validate_gstin_status(doctype) {
 
     frappe.ui.form.on(doctype, {
         refresh(frm) {
-            if (frm.doc[gstin_field_name])
-                _set_gstin_status(frm, gstin_field_name);
+            if (frm.doc[gstin_field_name]) _set_gstin_status(frm, gstin_field_name);
         },
 
         [gstin_field_name](frm) {
@@ -192,6 +204,8 @@ function set_and_validate_gstin_status(doctype) {
 }
 
 async function _set_and_validate_gstin_status(frm, gstin_field_name) {
+    if (frm.doc.exclude_from_gst) return;
+
     const gstin_doc = await _set_gstin_status(frm, gstin_field_name);
     if (!gstin_doc) return;
 
@@ -199,21 +213,28 @@ async function _set_and_validate_gstin_status(frm, gstin_field_name) {
 }
 
 async function _set_gstin_status(frm, gstin_field_name) {
+    if (frm.doc.exclude_from_gst) return;
+
     const gstin_field = frm.get_field(gstin_field_name);
     const gstin = gstin_field.value;
     const date_field =
         frm.get_field("posting_date") || frm.get_field("transaction_date");
 
-
     let gstin_doc = frm._gstin_doc?.[gstin];
     if (!gstin_doc) {
-        gstin_doc = await india_compliance.set_gstin_status(gstin_field, date_field.value);
+        gstin_doc = await india_compliance.set_gstin_status(
+            gstin_field,
+            date_field.value
+        );
 
         frm._gstin_doc = frm._gstin_doc || {};
         frm._gstin_doc[gstin] = gstin_doc;
     } else {
         gstin_field.set_description(
-            india_compliance.get_gstin_status_desc(gstin_doc?.status, gstin_doc?.last_updated_on)
+            india_compliance.get_gstin_status_desc(
+                gstin_doc?.status,
+                gstin_doc?.last_updated_on
+            )
         );
     }
 

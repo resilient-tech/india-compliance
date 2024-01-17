@@ -195,7 +195,7 @@ class GSTR3BReport(Document):
             sum(itc_cess_amount) as itc_cess_amount
             FROM `tabPurchase Invoice`
             WHERE docstatus = 1
-            and is_opening = 'No'
+            and exclude_from_gst = 0
             and month(posting_date) = %s and year(posting_date) = %s and company = %s
             and company_gstin = %s
             GROUP BY itc_classification
@@ -255,7 +255,7 @@ class GSTR3BReport(Document):
             i.taxable_value, i.gst_treatment
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
-            and p.is_opening = 'No'
+            and p.exclude_from_gst = 0
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) = %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
@@ -312,11 +312,11 @@ class GSTR3BReport(Document):
             frappe.qb.from_(invoice)
             .select(*fields)
             .where(invoice.docstatus == 1)
+            .where(invoice.exclude_from_gst == 0)
             .where(Extract(DatePart.month, invoice.posting_date).eq(self.month_no))
             .where(Extract(DatePart.year, invoice.posting_date).eq(self.year))
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
-            .where(invoice.is_opening == "No")
         )
 
         if reverse_charge:
@@ -622,7 +622,8 @@ class GSTR3BReport(Document):
             docnames = frappe.db.sql(
                 f"""
                     SELECT name FROM `tab{doctype}`
-                    WHERE docstatus = 1 and is_opening = 'No'
+                    WHERE docstatus = 1
+                    and exclude_from_gst = 0
                     and month(posting_date) = %s and year(posting_date) = %s
                     and company = %s and place_of_supply IS NULL
                     and gst_category != 'Overseas'

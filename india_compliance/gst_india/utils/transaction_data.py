@@ -240,6 +240,7 @@ class GSTTransactionData:
             )
 
         validate_invoice_number(self.doc)
+
         posting_date = getdate(self.doc.posting_date)
 
         if posting_date > getdate():

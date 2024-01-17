@@ -321,7 +321,7 @@ class Gstr1Report:
 				{select_columns}
 			from `tab{doctype}` si
 			where docstatus = 1 {where_conditions}
-			and is_opening = 'No'
+            and exclude_from_gst = 0
 			order by posting_date desc
 			""".format(
                 select_columns=self.select_columns,
@@ -402,8 +402,6 @@ class Gstr1Report:
 
         elif self.filters.get("type_of_business") == "NIL Rated":
             conditions += """ AND IFNULL(place_of_supply, '') != '96-Other Countries' and IFNULL(gst_category, '') != 'Overseas'"""
-
-        conditions += " AND IFNULL(billing_address_gstin, '') != company_gstin"
 
         return conditions
 
@@ -1175,15 +1173,7 @@ class GSTR1DocumentIssuedSummary:
                 self.sales_invoice.is_return,
                 self.sales_invoice.is_debit_note,
                 self.sales_invoice.amended_from,
-                Case()
-                .when(
-                    IfNull(self.sales_invoice.billing_address_gstin, "")
-                    == self.sales_invoice.company_gstin,
-                    1,
-                )
-                .else_(0)
-                .as_("same_gstin_billing"),
-                self.sales_invoice.is_opening,
+                self.sales_invoice.exclude_from_gst,
                 self.sales_invoice_item.gst_treatment,
             )
             .where(self.sales_invoice.company == self.filters.company)
@@ -1303,20 +1293,15 @@ class GSTR1DocumentIssuedSummary:
 
     def seperate_data_by_nature_of_document(self, data):
         nature_of_document = {
-            "Excluded from Report (Same GSTIN Billing)": [],
-            "Excluded from Report (Is Opening Entry)": [],
+            "Excluded from Report (Excluded from GST)": [],
             "Invoices for outward supply": [],
             "Debit Note": [],
             "Credit Note": [],
         }
 
         for doc in data:
-            if doc.is_opening == "Yes":
-                nature_of_document["Excluded from Report (Is Opening Entry)"].append(
-                    doc
-                )
-            elif doc.same_gstin_billing:
-                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
+            if doc.exclude_from_gst:
+                nature_of_document["Excluded from Report (Excluded from GST)"].append(
                     doc
                 )
             elif doc.is_return:

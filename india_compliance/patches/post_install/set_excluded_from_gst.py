@@ -1,0 +1,27 @@
+import frappe
+from frappe.query_builder.functions import IfNull
+
+from india_compliance.gst_india.constants import SALES_DOCTYPES
+
+DOCTYPES = ["Sales Invoice", "Purchase Invoice"]
+
+
+def execute():
+    for doctype in DOCTYPES:
+        party_gstin_field = (
+            "billing_address_gstin" if doctype in SALES_DOCTYPES else "supplier_gstin"
+        )
+
+        doc = frappe.qb.DocType(doctype)
+
+        (
+            frappe.qb.update(doc)
+            .set(doc.exclude_from_gst, 1)
+            .where(
+                (doc.is_opening == "Yes")
+                | (IfNull(doc.company_gstin, "") == "")  # India registerd company
+                | (IfNull(doc.company_gstin, "") == IfNull(doc[party_gstin_field], ""))
+            )
+            .where(doc.docstatus != 0)
+            .run()
+        )

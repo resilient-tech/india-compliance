@@ -23,8 +23,8 @@ def execute():
             AND posting_date >= '2021-04-01'
             AND docstatus = 1
             AND IFNULL(irn, '') = ''
-            AND IFNULL(billing_address_gstin, '') != IFNULL(company_gstin, '')
             AND IFNULL(gst_category, '') in ('Registered Regular', 'SEZ', 'Overseas', 'Deemed Export')
+            AND exclude_from_gst = 0
     """
     )
 

@@ -124,6 +124,7 @@ def get_data(filters=None):
             ]
         )
         .where(sales_invoice.company == filters.get("company"))
+        .where(sales_invoice.exclude_from_gst == 0)
         .where(conditions)
     )
 
@@ -181,9 +182,6 @@ def e_invoice_conditions(e_invoice_applicability_date):
     conditions = []
 
     conditions.append(sales_invoice.posting_date >= e_invoice_applicability_date)
-    conditions.append(
-        sales_invoice.company_gstin != sales_invoice.billing_address_gstin
-    )
     conditions.append(
         (
             (Coalesce(sales_invoice.place_of_supply, "") == "96-Other Countries")

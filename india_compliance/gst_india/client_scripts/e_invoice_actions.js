@@ -217,10 +217,10 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
 
 function is_e_invoice_applicable(frm) {
     return (
+        !frm.doc.exclude_from_gst &&
         india_compliance.is_e_invoice_enabled() &&
         frm.doc.docstatus == 1 &&
         frm.doc.company_gstin &&
-        frm.doc.company_gstin != frm.doc.billing_address_gstin &&
         (frm.doc.place_of_supply === "96-Other Countries" ||
             frm.doc.billing_address_gstin) &&
         frm.doc.items.some(item =>

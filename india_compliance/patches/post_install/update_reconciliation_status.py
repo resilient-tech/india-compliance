@@ -20,8 +20,7 @@ def execute():
                     ["Registered Composition", "Unregistered", "Overseas"]
                 )
             )
-            | (IfNull(PI.supplier_gstin, "") == PI.company_gstin)
-            | (IfNull(PI.is_opening, "") == "Yes")
+            | (PI.exclude_from_gst == 1)
             | (PI_ITEM.is_non_gst == 1)
         )
         .run()
