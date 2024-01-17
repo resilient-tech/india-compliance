@@ -3,6 +3,7 @@ import json
 import random
 import re
 
+import pytz
 import responses
 import time_machine
 from responses import matchers
@@ -23,6 +24,8 @@ from india_compliance.gst_india.utils.e_waybill import (
     cancel_e_waybill,
     fetch_e_waybill_data,
     generate_e_waybill,
+    get_e_waybills_to_extend,
+    schedule_ewaybill_for_extension,
     update_transporter,
     update_vehicle_info,
 )
@@ -609,6 +612,47 @@ class TestEWaybill(FrappeTestCase):
                 EWaybillData(doc).get_extend_validity_data(values),
             )
 
+    @responses.activate
+    def test_schedule_e_waybill_for_extension(self):
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name, force=True)
+        doc = load_doc("Sales Invoice", si.name, "submit")
+
+        valid_upto = frappe.db.get_value("e-Waybill Log", doc.ewaybill, "valid_upto")
+        scheduled_time = add_to_date(valid_upto, hours=1)
+
+        extend_validity_data = self.e_waybill_test_data.get("extend_validity")
+        values = frappe._dict(extend_validity_data.get("values"))
+
+        schedule_ewaybill_for_extension(
+            doctype="Sales Invoice",
+            docname=si.name,
+            values=values,
+            scheduled_time=scheduled_time,
+        )
+
+        extension_scheduled = frappe.db.get_value(
+            "e-Waybill Log", doc.ewaybill, "extension_scheduled"
+        )
+        self.assertEqual(
+            extension_scheduled,
+            1,
+            "e-waybill should be scheduled for extension",
+        )
+
+        with time_machine.travel(
+            scheduled_time.replace().astimezone(pytz.utc), tick=False
+        ):
+            e_waybills_to_extend = get_e_waybills_to_extend()
+
+            self.assertTrue(
+                any(
+                    doc.ewaybill == ewaybill.get("e_waybill_number")
+                    for ewaybill in e_waybills_to_extend
+                ),
+                "e-Waybill not found in list of scheduled e-Waybills",
+            )
+
     def test_validate_doctype_for_e_waybill(self):
         """Validate if doctype is supported for e-waybill"""
         purchase_order = create_transaction(doctype="Purchase Order")
@@ -860,7 +904,7 @@ class TestEWaybill(FrappeTestCase):
 
     # helper functions
     def _generate_e_waybill(
-        self, docname=None, doctype="Sales Invoice", test_data=None
+        self, docname=None, doctype="Sales Invoice", test_data=None, force=False
     ):
         """
         Mocks response for generate_e_waybill and get_e_waybill.
@@ -902,7 +946,7 @@ class TestEWaybill(FrappeTestCase):
             frappe._dict(test_data.get("values")) if test_data.get("values") else None
         )
 
-        generate_e_waybill(doctype=doctype, docname=docname, values=values)
+        generate_e_waybill(doctype=doctype, docname=docname, values=values, force=force)
 
     def _mock_e_waybill_response(
         self, data, match_list, method="POST", api=None, replace=False
