@@ -890,14 +890,23 @@ EXCLUDE_FROM_GST_FIELDS = {
         "Sales Order",
         "Delivery Note",
         "Sales Invoice",
-    ): exclude_from_gst_field.copy().update(insert_after="is_export_with_gst"),
+    ): exclude_from_gst_field.copy().update(
+        insert_after="is_export_with_gst",
+        read_only_depends_on="eval: !doc.company_gstin || (doc.company_gstin === doc.billing_address_gstin)",
+    ),
     (
         "Purchase Invoice",
         "Purchase Receipt",
         "Purchase Order",
         "Supplier Quotation",
-    ): exclude_from_gst_field.copy().update(insert_after="is_reverse_charge"),
-    "POS Invoice": exclude_from_gst_field.copy().update(insert_after="is_pos"),
+    ): exclude_from_gst_field.copy().update(
+        insert_after="is_reverse_charge",
+        read_only_depends_on="eval: !doc.company_gstin || (doc.company_gstin === doc.supplier_gstin)",
+    ),
+    "POS Invoice": exclude_from_gst_field.copy().update(
+        insert_after="is_pos",
+        read_only_depends_on="eval: !doc.company_gstin || (doc.company_gstin === doc.billing_address_gstin)",
+    ),
 }
 
 

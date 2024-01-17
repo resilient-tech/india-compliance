@@ -665,7 +665,9 @@ def update_party_details(party_details, doctype, company):
 
 
 @frappe.whitelist()
-def get_gst_details(party_details, doctype, company, *, update_place_of_supply=False):
+def get_gst_details(
+    party_details, doctype, company, *, update_place_of_supply=False, update_taxes=False
+):
     """
     This function does not check for permissions since it returns insensitive data
     based on already sensitive input (party details)
@@ -679,6 +681,16 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     is_sales_transaction = doctype in SALES_DOCTYPES or doctype == "Payment Entry"
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
+    is_excluded_transaction = 0
+
+    if party_details.exclude_from_gst:
+        if update_taxes:
+            gst_details.taxes_and_charges = party_details.taxes_and_charges or ""
+            gst_details.taxes = []
+
+            return gst_details
+
+        return party_details
 
     party_address_field = (
         "customer_address" if is_sales_transaction else "supplier_address"
@@ -720,8 +732,17 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     if doctype == "Payment Entry":
         return gst_details
 
+    if not source_gstin:
+        is_excluded_transaction = 1
+
+    if destination_gstin and destination_gstin == source_gstin:  # Internal transfer
+        is_excluded_transaction = 1
+
+    if is_excluded_transaction:
+        gst_details.update({"exclude_from_gst": is_excluded_transaction})
+
     if (
-        (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
+        is_excluded_transaction
         or (
             is_sales_transaction
             and (

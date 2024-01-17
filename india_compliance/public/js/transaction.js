@@ -28,6 +28,7 @@ function fetch_gst_details(doctype) {
         "company_gstin",
         "place_of_supply",
         "is_reverse_charge",
+        "exclude_from_gst",
     ];
 
     // we are using address below to prevent multiple event triggers
@@ -46,7 +47,6 @@ function fetch_gst_details(doctype) {
 
 async function update_gst_details(frm, event) {
     if (
-        frm.doc.exclude_from_gst ||
         frm.updating_party_details ||
         !frm.doc.company ||
         (event === "place_of_supply" && frm.__updating_gst_details)
@@ -69,6 +69,10 @@ async function update_gst_details(frm, event) {
         doctype: frm.doc.doctype,
         company: frm.doc.company,
     };
+
+    if (event === "exclude_from_gst") {
+        args.update_taxes = 1;
+    }
 
     // wait for GSTINs to get fetched
     await frappe.after_ajax();
@@ -94,6 +98,7 @@ async function update_gst_details(frm, event) {
         "company_gstin",
         "place_of_supply",
         "is_reverse_charge",
+        "exclude_from_gst",
     ];
 
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
@@ -208,6 +213,8 @@ async function _set_and_validate_gstin_status(frm, gstin_field_name) {
 }
 
 async function _set_gstin_status(frm, gstin_field_name) {
+    if (frm.doc.exclude_from_gst) return;
+
     const gstin_field = frm.get_field(gstin_field_name);
     const gstin = gstin_field.value;
     const date_field =
