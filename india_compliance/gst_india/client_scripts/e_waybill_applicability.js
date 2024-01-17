@@ -10,29 +10,27 @@ class EwaybillApplicability {
         let message_list = [];
 
         if (!this.frm.doc.company_gstin) {
-            if (show_message)
-                message_list.push(
-                    "Company GSTIN is not set. Ensure its set in Company Address."
-                );
             is_applicable = false;
+            message_list.push(
+                "Company GSTIN is not set. Ensure its set in Company Address."
+            );
         }
 
         if (this.frm.doc.is_opening === "Yes") {
-            if (show_message)
-                message_list.push(
-                    "e-Waybill cannot be generated for transaction with 'Is Opening Entry' is set to Yes."
-                );
             is_applicable = false;
+            message_list.push(
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' is set to Yes."
+            );
         }
 
         if (show_message && !has_e_waybill_threshold_met(this.frm)) {
+            is_applicable = false;
             message_list.push(
                 `The total invoice value is less than the threshold amount of ${format_currency(
                     gst_settings.e_waybill_threshold,
                     "INR"
                 )}.`
             );
-            is_applicable = false;
         }
 
         // at least one item is not a service
@@ -48,13 +46,22 @@ class EwaybillApplicability {
             }
         }
 
-        if (!item_applicable && show_message)
+        if (!item_applicable)
             message_list.push("All items are service items (HSN code starts with 99).");
 
-        if(show_message) {
+        let is_invalid_invoice_number = india_compliance.validate_invoice_number(
+            this.frm.doc.name
+        );
+
+        if (is_invalid_invoice_number.length > 0) {
+            is_applicable = false;
+            message_list.push(...is_invalid_invoice_number);
+        }
+
+        if (show_message) {
             this.frm.ewb_message = message_list
-            .map(message => `<li>${message}</li>`)
-            .join("");
+                .map(message => `<li>${message}</li>`)
+                .join("");
         }
 
         return is_applicable && item_applicable;

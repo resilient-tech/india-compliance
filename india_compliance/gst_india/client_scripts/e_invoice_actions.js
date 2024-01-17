@@ -58,7 +58,6 @@ frappe.ui.form.on("Sales Invoice", {
             frm.add_custom_button(
                 __("Generate"),
                 () => {
-                    india_compliance.validate_invoice_number(frm.doc.name);
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
@@ -262,18 +261,14 @@ function is_e_invoice_applicable(frm, show_message = false) {
 
     if (!frm.doc.company_gstin) {
         e_invoice_applicability = false;
-        if (show_message)
-            message_list.push(
-                "Company GSTIN is not set. Ensure its set in Company Address."
-            );
+        message_list.push(
+            "Company GSTIN is not set. Ensure its set in Company Address."
+        );
     }
 
     if (frm.doc.company_gstin == frm.doc.billing_address_gstin) {
         e_invoice_applicability = false;
-        if (show_message)
-            message_list.push(
-                "Company GSTIN and Billing Address GSTIN cannot be same."
-            );
+        message_list.push("Company GSTIN and Billing Address GSTIN cannot be same.");
     }
 
     if (
@@ -281,10 +276,7 @@ function is_e_invoice_applicable(frm, show_message = false) {
         !frm.doc.billing_address_gstin
     ) {
         e_invoice_applicability = false;
-        if (show_message)
-            message_list.push(
-                "Billing Address GSTIN is required for B2B categorization"
-            );
+        message_list.push("Billing Address GSTIN is required for B2B categorization");
     }
 
     if (
@@ -293,14 +285,24 @@ function is_e_invoice_applicable(frm, show_message = false) {
         )
     ) {
         e_invoice_applicability = false;
-        if (show_message)
-            message_list.push(
-                "At least one item must be taxable or transaction is categorized as export."
-            );
+        message_list.push(
+            "At least one item must be taxable or transaction is categorized as export."
+        );
+    }
+
+    let is_invalid_invoice_number = india_compliance.validate_invoice_number(
+        frm.doc.name
+    );
+
+    if (is_invalid_invoice_number.length > 0) {
+        e_invoice_applicability = false;
+        message_list.push(...is_invalid_invoice_number);
     }
 
     if (show_message)
-        frm.einv_message = message_list.map(message => `<li>${__(message)}</li>`).join("");
+        frm.einv_message = message_list
+            .map(message => `<li>${__(message)}</li>`)
+            .join("");
 
     return e_invoice_applicability;
 }
