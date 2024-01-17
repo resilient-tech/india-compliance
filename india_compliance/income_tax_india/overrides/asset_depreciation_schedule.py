@@ -65,12 +65,14 @@ def get_wdv_or_dd_depr_amount(
     if is_last_day:
         schedule_date = get_last_day(schedule_date)
 
-    previous_schedule_date = add_months(
-        schedule_date, -1 * cint(fb_row.frequency_of_depreciation)
-    )
-    # previous_schedule_date is available_for_use_date-1 for the first schedule
-    if is_last_day:
-        previous_schedule_date = get_last_day(previous_schedule_date)
+    if schedule_idx == 0:
+        previous_schedule_date = add_days(asset.available_for_use_date, -1)
+    else:
+        previous_schedule_date = add_months(
+            schedule_date, -1 * cint(fb_row.frequency_of_depreciation)
+        )
+        if is_last_day:
+            previous_schedule_date = get_last_day(previous_schedule_date)
     
     if fb_row.frequency_of_depreciation == 12:
         if schedule_date < start_date_of_next_fiscal_year:
