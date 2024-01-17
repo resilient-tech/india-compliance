@@ -448,7 +448,10 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 def retry_e_invoice_e_waybill_generation():
     settings = frappe.get_cached_doc("GST Settings")
 
-    if (not frappe.flags.in_test and settings.sandbox_mode) or not (
+    if not frappe.flags.in_test and settings.sandbox_mode:
+        return
+
+    if not (
         settings.enable_retry_einv_ewb_generation
         and settings.is_retry_einv_ewb_generation_pending
     ):
