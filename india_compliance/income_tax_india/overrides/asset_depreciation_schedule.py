@@ -40,6 +40,7 @@ def get_wdv_or_dd_depr_amount(
             schedule_idx,
             prev_depreciation_amount,
             has_wdv_or_dd_non_yearly_pro_rata,
+            asset_depr_schedule
         )
 
     asset_depr_schedule.flags.wdv_it_act_applied = True
