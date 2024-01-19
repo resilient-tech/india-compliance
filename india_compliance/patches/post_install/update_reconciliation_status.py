@@ -22,7 +22,7 @@ def execute():
             )
             | (IfNull(PI.supplier_gstin, "") == PI.company_gstin)
             | (IfNull(PI.is_opening, "") == "Yes")
-            | (PI_ITEM.is_non_gst == 1)
+            | (PI_ITEM.gst_treatment == "Non-GST")
         )
         .run()
     )
