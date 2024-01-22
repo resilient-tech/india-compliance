@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import date_diff, format_date, get_datetime
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import (
     is_api_enabled,
@@ -52,6 +53,10 @@ def get_gstin_status(
     if not gstin:
         return
 
+    # Transporter ID
+    if gstin[:2] == "88":
+        return validate_transporter_id(gstin)
+
     if not int(force_update) and not is_status_refresh_required(
         gstin, transaction_date
     ):
@@ -81,10 +86,12 @@ def create_or_update_gstin_status(
     gstin=None,
     response=None,
     transaction_date=None,
+    is_transporter_id=0,
     callback=None,
 ):
     doctype = "GSTIN"
-    response = _get_gstin_info(gstin=gstin, response=response)
+    if not is_transporter_id:
+        response = _get_gstin_info(gstin=gstin, response=response)
 
     if not response:
         return
@@ -236,4 +243,35 @@ def get_formatted_response(response):
             ),
             "status": response.sts,
         }
+    )
+
+
+def validate_transporter_id(transporter_id):
+    if not frappe.get_cached_value("GST Settings", None, "validate_gstin_status"):
+        return
+
+    if frappe.db.exists("GSTIN", {"gstin": transporter_id, "is_transporter_id": 1}):
+        return frappe.get_doc("GSTIN", transporter_id)
+
+    company_gstin = get_company_gstin()
+    if not company_gstin:
+        return
+
+    try:
+        response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(
+            transporter_id
+        )
+    except Exception:
+        return
+
+    response = frappe._dict(
+        {
+            "gstin": transporter_id,
+            "is_transporter_id": 1,
+            "status": "Active",
+        }
+    )
+
+    return create_or_update_gstin_status(
+        gstin=transporter_id, response=response, is_transporter_id=1
     )
