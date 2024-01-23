@@ -5,9 +5,10 @@ from frappe import _, bold
 from frappe.utils import cint, flt
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
-    get_itemised_tax,
-    get_itemised_taxable_amount,
+    get_rounded_tax_amount,
+    update_itemised_tax_data,
 )
+from erpnext.utilities.regional import temporary_flag
 
 from india_compliance.gst_india.constants import (
     GST_TAX_TYPES,
@@ -590,6 +591,36 @@ def validate_overseas_gst_category(doc, method=None):
         frappe.throw(_("Cannot set GST Category to SEZ / Overseas in POS Invoice"))
 
 
+def set_item_wise_tax_breakup(doc, method=None):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    doc.other_charges_calculation = get_itemised_tax_breakup_html(doc)
+
+
+def get_itemised_tax_breakup_html(doc):
+    if not doc.taxes:
+        return
+
+    tax_accounts = ["IGST"] if is_inter_state_supply(doc) else ["CGST", "SGST"]
+
+    with temporary_flag("company", doc.company):
+        headers = get_itemised_tax_breakup_header(doc.doctype + " Item", tax_accounts)
+        itemised_tax_data = get_itemised_tax_breakup_data(doc)
+        get_rounded_tax_amount(itemised_tax_data, doc.precision("tax_amount", "taxes"))
+        update_itemised_tax_data(doc)
+
+    return frappe.render_template(
+        "templates/includes/itemised_tax_breakup.html",
+        dict(
+            headers=headers,
+            itemised_tax_data=itemised_tax_data,
+            tax_accounts=tax_accounts,
+            doc=doc,
+        ),
+    )
+
+
 def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
     if is_hsn_wise_breakup_needed(item_doctype):
         return [_("HSN/SAC"), _("Taxable Amount")] + tax_accounts
@@ -598,13 +629,50 @@ def get_itemised_tax_breakup_header(item_doctype, tax_accounts):
 
 
 def get_itemised_tax_breakup_data(doc):
-    itemised_tax = get_itemised_tax(doc.taxes)
+    itemised_tax = get_itemised_tax(doc.items)
     taxable_amounts = get_itemised_taxable_amount(doc.items)
 
     if is_hsn_wise_breakup_needed(doc.doctype + " Item"):
         return get_hsn_wise_breakup(doc, itemised_tax, taxable_amounts)
 
     return get_item_wise_breakup(itemised_tax, taxable_amounts)
+
+
+def get_itemised_tax(items):
+    itemised_tax = frappe._dict()
+    for item in items:
+        item_code = item.item_code or item.item_name
+        itemised_tax.setdefault(item_code, frappe._dict())
+        itemised_tax[item_code]["CGST"] = frappe._dict(
+            dict(
+                tax_rate=flt(item.cgst_rate),
+                tax_amount=flt(item.cgst_amount),
+            )
+        )
+        itemised_tax[item_code]["SGST"] = frappe._dict(
+            dict(
+                tax_rate=flt(item.sgst_rate),
+                tax_amount=flt(item.sgst_amount),
+            )
+        )
+        itemised_tax[item_code]["IGST"] = frappe._dict(
+            dict(
+                tax_rate=flt(item.igst_rate),
+                tax_amount=flt(item.igst_amount),
+            )
+        )
+
+    return itemised_tax
+
+
+def get_itemised_taxable_amount(items):
+    itemised_taxable_amount = frappe._dict()
+    for item in items:
+        item_code = item.item_code or item.item_name
+        itemised_taxable_amount.setdefault(item_code, 0)
+        itemised_taxable_amount[item_code] += item.taxable_value
+
+    return itemised_taxable_amount
 
 
 def get_item_wise_breakup(itemised_tax, taxable_amounts):

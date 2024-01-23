@@ -94,7 +94,10 @@ doc_events = {
     },
     "Delivery Note": {
         "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
@@ -126,7 +129,10 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
             "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
@@ -142,7 +148,10 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Purchase Receipt": {
@@ -152,7 +161,10 @@ doc_events = {
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
             "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
@@ -163,7 +175,10 @@ doc_events = {
     "Sales Invoice": {
         "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "on_submit": "india_compliance.gst_india.overrides.sales_invoice.on_submit",
         "on_update_after_submit": (
@@ -176,7 +191,10 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Supplier": {
@@ -201,14 +219,20 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Quotation": {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Supplier Quotation": {
@@ -218,7 +242,10 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
-        "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_save": [
+            "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.transaction.set_item_wise_tax_breakup",
+        ],
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Accounts Settings": {
@@ -239,6 +266,8 @@ regional_overrides = {
     "India": {
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_header": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_header",
         "erpnext.controllers.taxes_and_totals.get_itemised_tax_breakup_data": "india_compliance.gst_india.overrides.transaction.get_itemised_tax_breakup_data",
+        "erpnext.controllers.taxes_and_totals.get_itemised_taxable_amount": "india_compliance.gst_india.overrides.transaction.get_itemised_taxable_amount",
+        "erpnext.controllers.taxes_and_totals.get_itemised_tax": "india_compliance.gst_india.overrides.transaction.get_itemised_tax",
         "erpnext.controllers.taxes_and_totals.get_regional_round_off_accounts": (
             "india_compliance.gst_india.overrides.transaction.get_regional_round_off_accounts"
         ),
