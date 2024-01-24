@@ -350,12 +350,18 @@ class PurchaseInvoice:
 
         elif names:
             query = query.where(
-                (self.PI.posting_date[self.from_date : self.to_date])
+                (
+                    (self.PI.posting_date[self.from_date : self.to_date])
+                    & (IfNull(self.PI.reconciliation_status, "") == "Unreconciled")
+                )
                 | (self.PI.name.isin(names))
             )
 
         else:
-            query = query.where(self.PI.posting_date[self.from_date : self.to_date])
+            query = query.where(
+                (self.PI.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.PI.reconciliation_status, "") == "Unreconciled")
+            )
 
         return query.run(as_dict=True)
 
@@ -510,12 +516,18 @@ class BillOfEntry:
 
         elif names:
             query = query.where(
-                (self.BOE.posting_date[self.from_date : self.to_date])
+                (
+                    (self.BOE.posting_date[self.from_date : self.to_date])
+                    & (IfNull(self.BOE.reconciliation_status, "") == "Unreconciled")
+                )
                 | (self.BOE.name.isin(names))
             )
 
         else:
-            query = query.where(self.BOE.posting_date[self.from_date : self.to_date])
+            query = query.where(
+                (self.BOE.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.BOE.reconciliation_status, "") == "Unreconciled")
+            )
 
         return query.run(as_dict=True)
 
