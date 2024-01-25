@@ -757,6 +757,7 @@ async function show_update_vehicle_info_dialog(frm) {
 }
 
 function show_update_transporter_dialog(frm) {
+    frappe.ui.form.ControlData.trigger_change_on_input_event = false;
     const d = new frappe.ui.Dialog({
         title: __("Update Transporter"),
         fields: [
@@ -818,6 +819,7 @@ function show_update_transporter_dialog(frm) {
         },
     });
 
+    frappe.ui.form.ControlData.trigger_change_on_input_event = true;
     d.show();
 }
 

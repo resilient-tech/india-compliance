@@ -260,19 +260,17 @@ def validate_transporter_id(transporter_id):
     if not company_gstin:
         return
 
-    gst_transporter_id_status = "Active"
-    try:
-        EWaybillAPI(company_gstin=company_gstin).get_transporter_details(transporter_id)
-    except Exception as e:
-        if str(e) == "Could not retrieve transporter details from gstin":
-            gst_transporter_id_status = "Inactive"
-        else:
-            raise e
+    response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(
+        transporter_id
+    )
+
+    if not response:
+        return
 
     return frappe._dict(
         {
             "gstin": transporter_id,
             "is_transporter_id": 1,
-            "status": gst_transporter_id_status,
+            "status": "Active" if response.status else "Inactive",
         }
     )
