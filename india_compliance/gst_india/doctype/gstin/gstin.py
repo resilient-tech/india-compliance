@@ -53,10 +53,6 @@ def get_gstin_status(
     if not gstin:
         return
 
-    # Transporter ID
-    if gstin[:2] == "88":
-        return validate_transporter_id(gstin)
-
     if not int(force_update) and not is_status_refresh_required(
         gstin, transaction_date
     ):
@@ -86,11 +82,13 @@ def create_or_update_gstin_status(
     gstin=None,
     response=None,
     transaction_date=None,
-    is_transporter_id=0,
     callback=None,
 ):
     doctype = "GSTIN"
-    if not is_transporter_id:
+
+    if gstin[:2] == "88":
+        response = validate_transporter_id(gstin)
+    else:
         response = _get_gstin_info(gstin=gstin, response=response)
 
     if not response:
@@ -208,6 +206,11 @@ def get_company_gstin():
 def is_status_refresh_required(gstin, transaction_date):
     settings = frappe.get_cached_doc("GST Settings")
 
+    is_transporter_id = gstin[:2] == "88"
+
+    if is_transporter_id:
+        transaction_date = get_datetime()
+
     if (
         not settings.validate_gstin_status
         or not is_api_enabled(settings)
@@ -221,7 +224,10 @@ def is_status_refresh_required(gstin, transaction_date):
         "GSTIN", gstin, ["last_updated_on", "status"], as_dict=True
     )
 
-    if not doc or doc.status not in ("Active", "Cancelled"):
+    if not doc:
+        return True
+
+    if not is_transporter_id and doc.status not in ("Active", "Cancelled"):
         return True
 
     days_since_last_update = date_diff(get_datetime(), doc.get("last_updated_on"))
@@ -250,28 +256,23 @@ def validate_transporter_id(transporter_id):
     if not frappe.get_cached_value("GST Settings", None, "validate_gstin_status"):
         return
 
-    if frappe.db.exists("GSTIN", {"gstin": transporter_id, "is_transporter_id": 1}):
-        return frappe.get_doc("GSTIN", transporter_id)
-
     company_gstin = get_company_gstin()
     if not company_gstin:
         return
 
+    gst_transporter_id_status = "Active"
     try:
-        response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(
-            transporter_id
-        )
-    except Exception:
-        return
+        EWaybillAPI(company_gstin=company_gstin).get_transporter_details(transporter_id)
+    except Exception as e:
+        if str(e) == "Could not retrieve transporter details from gstin":
+            gst_transporter_id_status = "Inactive"
+        else:
+            raise e
 
-    response = frappe._dict(
+    return frappe._dict(
         {
             "gstin": transporter_id,
             "is_transporter_id": 1,
-            "status": "Active",
+            "status": gst_transporter_id_status,
         }
-    )
-
-    return create_or_update_gstin_status(
-        gstin=transporter_id, response=response, is_transporter_id=1
     )

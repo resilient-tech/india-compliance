@@ -470,7 +470,9 @@ function get_generate_e_waybill_dialog(opts, frm) {
     }
 
     opts.fields = fields;
+    frappe.ui.form.ControlData.trigger_change_on_input_event = false;
     const d = new frappe.ui.Dialog(opts);
+    frappe.ui.form.ControlData.trigger_change_on_input_event = true;
 
     return d;
 }
@@ -790,8 +792,8 @@ function show_update_transporter_dialog(frm) {
                         frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
-                onchange: () => {
-                    validate_gst_transporter_id(d);
+                onchange: async () => {
+                    await validate_gst_transporter_id(d);
                 }
             },
             {

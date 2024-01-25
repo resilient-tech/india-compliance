@@ -101,8 +101,7 @@ Object.assign(india_compliance, {
             !this.is_api_enabled() ||
             gst_settings.sandbox_mode ||
             !gst_settings.validate_gstin_status ||
-            field.$wrapper.find(".refresh-gstin").length ||
-            field.df.fieldname === "gst_transporter_id"
+            field.$wrapper.find(".refresh-gstin").length
         )
             return;
 
