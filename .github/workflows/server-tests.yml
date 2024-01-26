@@ -51,7 +51,11 @@ jobs:
             - name: Setup Node
               uses: actions/setup-node@v3
               with:
+<<<<<<< HEAD
                   node-version: 16
+=======
+                  node-version: 20
+>>>>>>> 3d79a613 (ci: bump node version)
                   check-latest: true
 
             - name: Add to Hosts
@@ -100,7 +104,7 @@ jobs:
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
               env:
                   TYPE: server
-            
+
             - name: Show bench output
               if: ${{ always() }}
               run: cat ~/frappe-bench/bench_start.log || true

@@ -21,7 +21,11 @@ jobs:
 
             - uses: actions/setup-node@v3
               with:
+<<<<<<< HEAD
                   node-version: 16
+=======
+                  node-version: 20
+>>>>>>> 3d79a613 (ci: bump node version)
                   check-latest: true
 
             - name: Check commit titles
