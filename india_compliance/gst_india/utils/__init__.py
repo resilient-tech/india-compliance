@@ -24,10 +24,12 @@ from frappe.utils.file_manager import get_file_path
 from erpnext.accounts.party import get_default_contact
 from erpnext.accounts.utils import get_fiscal_year
 
+from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
+    GST_INVOICE_NUMBER_FORMAT,
     GSTIN_FORMATS,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -806,3 +808,59 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
 @frappe.whitelist(methods=["POST"])
 def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
+
+
+def validate_invoice_number(doc):
+    """Validate GST invoice number requirements."""
+
+    if len(doc.name) > 16:
+        frappe.throw(
+            _("GST Invoice Number cannot exceed 16 characters"),
+            title=_("Invalid GST Invoice Number"),
+        )
+
+    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
+        frappe.throw(
+            _(
+                "GST Invoice Number should start with an alphanumeric character and can"
+                " only contain alphanumeric characters, dash (-) and slash (/)"
+            ),
+            title=_("Invalid GST Invoice Number"),
+        )
+
+
+def handle_server_errors(settings, doc, document_type, error):
+    if not doc.doctype == "Sales Invoice":
+        return
+
+    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+
+    error_message_title = {
+        GatewayTimeoutError: _("Gateway Timeout Error"),
+        GSPServerError: _("GSP/GST Server Down"),
+    }
+
+    document_status_field = (
+        "einvoice_status" if document_type == "e-Invoice" else "e_waybill_status"
+    )
+
+    document_status = "Failed"
+
+    if settings.enable_retry_einv_ewb_generation:
+        document_status = "Auto-Retry"
+        settings.db_set(
+            "is_retry_einv_ewb_generation_pending", 1, update_modified=False
+        )
+        error_message += (
+            " Your {0} generation will be automatically retried every 5 minutes."
+        ).format(document_type)
+    else:
+        error_message += " Please try again after some time."
+
+    doc.db_set({document_status_field: document_status})
+
+    frappe.msgprint(
+        msg=_(error_message),
+        title=error_message_title.get(type(error)),
+        indicator="yellow",
+    )

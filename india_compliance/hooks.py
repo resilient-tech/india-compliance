@@ -60,6 +60,8 @@ doctype_js = {
     "Supplier": "gst_india/client_scripts/supplier.js",
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",
+    "Document Naming Settings": "gst_india/client_scripts/document_naming_settings.js",
+    "Document Naming Rule": "gst_india/client_scripts/document_naming_rule.js",
 }
 
 doctype_list_js = {
@@ -261,8 +263,11 @@ regional_overrides = {
         "erpnext.accounts.party.get_regional_address_details": (
             "india_compliance.gst_india.overrides.transaction.update_party_details"
         ),
-        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_updated_rate_of_depreciation_for_wdv_and_dd": (
-            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_updated_rate_of_depreciation_for_wdv_and_dd"
+        "erpnext.assets.doctype.asset_depreciation_schedule.asset_depreciation_schedule.get_wdv_or_dd_depr_amount": (
+            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.get_wdv_or_dd_depr_amount"
+        ),
+        "erpnext.assets.doctype.asset.depreciation.cancel_depreciation_entries": (
+            "india_compliance.income_tax_india.overrides.asset_depreciation_schedule.cancel_depreciation_entries"
         ),
     }
 }
@@ -344,8 +349,11 @@ audit_trail_doctypes = [
 scheduler_events = {
     "cron": {
         "*/5 * * * *": [
-            "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_generation",
+            "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation",
             "india_compliance.gst_india.utils.gstr.download_queued_request",
+        ],
+        "0 1 * * *": [
+            "india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"
         ],
     }
 }

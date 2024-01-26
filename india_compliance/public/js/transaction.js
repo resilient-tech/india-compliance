@@ -266,3 +266,30 @@ function validate_gstin_status(gstin_doc, frm, gstin_field_name) {
             title: __("Invalid GSTIN Status"),
         });
 }
+
+function show_gst_invoice_no_banner(frm) {
+    frm.dashboard.clear_headline();
+    if (
+        !is_invoice_no_validation_required(
+            frm.doc.transaction_type || frm.doc.document_type
+        )
+    )
+        return;
+
+    frm.dashboard.set_headline_alert(
+        `Naming Series should <strong>not</strong> exceed 16 characters for GST. <a href="https://docs.indiacompliance.app/docs/miscellaneous/transaction_validations#document-name" target="_blank">Know more</a>`,
+        "blue"
+    );
+}
+
+function is_invoice_no_validation_required(transaction_type) {
+    return (
+        transaction_type === "Sales Invoice" ||
+        (transaction_type === "Purchase Invoice" &&
+            gst_settings.enable_e_waybill_from_pi) ||
+        (transaction_type === "Delivery Note" &&
+            gst_settings.enable_e_waybill_from_dn) ||
+        (transaction_type === "Purchase Receipt" &&
+            gst_settings.enable_e_waybill_from_pr)
+    );
+}
