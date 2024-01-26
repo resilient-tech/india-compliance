@@ -5,14 +5,15 @@ from frappe.utils import (
     add_months,
     cint,
     date_diff,
-    month_diff,
     flt,
     get_last_day,
     getdate,
+    month_diff,
 )
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.assets.doctype.asset.asset import get_default_wdv_or_dd_depr_amount
 from erpnext.assets.doctype.asset.depreciation import is_last_day_of_the_month
+
 
 def get_wdv_or_dd_depr_amount(
     asset,
@@ -95,7 +96,7 @@ def get_wdv_or_dd_depr_amount(
                     asset.available_for_use_date,
                 )
                 fraction = 1 / no_of_months
-        
+
         if schedule_date < start_date_of_next_fiscal_year:
             depreciation_amount = (
                 flt(asset.gross_purchase_amount)
@@ -110,8 +111,9 @@ def get_wdv_or_dd_depr_amount(
             )
     else:
         frappe.throw(_("Only monthly and yearly depreciations allowed yet."))
-    
+
     return depreciation_amount
+
 
 def cancel_depreciation_entries(asset, date):
     # Once the asset is sold during the current year, depreciation booked during the year of sale has to be cancelled as per Income Tax Act
