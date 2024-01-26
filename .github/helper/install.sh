@@ -11,7 +11,24 @@ fi
 
 cd ~ || exit
 
-sudo apt update && sudo apt install redis-server
+echo "Setting Up System Dependencies..."
+
+sudo apt update
+
+sudo apt remove mysql-server mysql-client
+sudo apt install libcups2-dev redis-server mariadb-client-10.6
+
+install_whktml() {
+    if [ "$(lsb_release -rs)" = "22.04" ]; then
+        wget -O /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.jammy_amd64.deb
+        sudo apt install /tmp/wkhtmltox.deb
+    else
+        echo "Please update this script to support wkhtmltopdf for $(lsb_release -ds)"
+        exit 1
+    fi
+}
+install_whktml &
+wkpid=$!
 
 pip install frappe-bench
 
@@ -35,9 +52,6 @@ UPDATE mysql.user SET Password=PASSWORD('travis') WHERE User='root';
 FLUSH PRIVILEGES;
 "
 
-wget https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
-sudo apt install ./wkhtmltox_0.12.6-1.focal_amd64.deb
-
 cd ~/frappe-bench || exit
 
 sed -i 's/watch:/# watch:/g' Procfile
@@ -48,6 +62,8 @@ sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 bench get-app erpnext --branch "$BRANCH_TO_CLONE" --resolve-deps
 bench get-app india_compliance "${GITHUB_WORKSPACE}"
 bench setup requirements --dev
+
+wait $wkpid
 
 bench use test_site
 bench start &
