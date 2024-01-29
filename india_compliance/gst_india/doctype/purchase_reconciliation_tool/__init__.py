@@ -352,7 +352,7 @@ class PurchaseInvoice:
             query = query.where(
                 (
                     (self.PI.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.PI.reconciliation_status, "") == "Unreconciled")
+                    & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
                 )
                 | (self.PI.name.isin(names))
             )
@@ -360,7 +360,7 @@ class PurchaseInvoice:
         else:
             query = query.where(
                 (self.PI.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.PI.reconciliation_status, "") == "Unreconciled")
+                & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
             )
 
         return query.run(as_dict=True)
@@ -518,7 +518,7 @@ class BillOfEntry:
             query = query.where(
                 (
                     (self.BOE.posting_date[self.from_date : self.to_date])
-                    & (IfNull(self.BOE.reconciliation_status, "") == "Unreconciled")
+                    & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
                 )
                 | (self.BOE.name.isin(names))
             )
@@ -526,7 +526,7 @@ class BillOfEntry:
         else:
             query = query.where(
                 (self.BOE.posting_date[self.from_date : self.to_date])
-                & (IfNull(self.BOE.reconciliation_status, "") == "Unreconciled")
+                & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
             )
 
         return query.run(as_dict=True)
@@ -564,6 +564,7 @@ class BillOfEntry:
             .join(self.PI)
             .on(self.BOE.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
+            .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
             .groupby(self.BOE.name)
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
