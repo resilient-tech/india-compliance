@@ -270,7 +270,6 @@ def validate_transporter_id(transporter_id):
     return frappe._dict(
         {
             "gstin": transporter_id,
-            "is_transporter_id": 1,
             "status": "Active" if response.status else "Inactive",
         }
     )

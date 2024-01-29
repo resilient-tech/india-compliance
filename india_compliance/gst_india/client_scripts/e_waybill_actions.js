@@ -470,6 +470,9 @@ function get_generate_e_waybill_dialog(opts, frm) {
     }
 
     opts.fields = fields;
+
+    // HACK!
+    // To prevent triggering of change event on input twice
     frappe.ui.form.ControlData.trigger_change_on_input_event = false;
     const d = new frappe.ui.Dialog(opts);
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
@@ -818,7 +821,8 @@ function show_update_transporter_dialog(frm) {
             d.hide();
         },
     });
-
+    // HACK!
+    // To prevent triggering of change event on input twice
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
     d.show();
 }
