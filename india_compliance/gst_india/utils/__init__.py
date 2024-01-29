@@ -405,7 +405,8 @@ def get_place_of_supply(party_details, doctype):
                 party_details.customer_address,
                 ("gst_state_number", "gst_state"),
             )
-            return f"{gst_state_number}-{gst_state}"
+            if gst_state_number and gst_state:
+                return f"{gst_state_number}-{gst_state}"
 
         party_gstin = party_details.billing_address_gstin or party_details.company_gstin
     else:
