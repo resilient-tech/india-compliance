@@ -18,11 +18,8 @@
 dec2438be2d63eff24da45d6c936ec846d8ab0df
 
 # refactor window.ic => window.india_compliance
-<<<<<<< HEAD
 0907e8a6105c42293e7c7a2eb51024f9f6040baf
-=======
 38a53480c70a2c820049f023cbabbdaa3ea8aad6
 
 # updated black in pre-commit
 d8c2469651974cc82a2bb50c93e22f723cbb5b42
->>>>>>> a962fa1b (chore: ignore formatting changes)
