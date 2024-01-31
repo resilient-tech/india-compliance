@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.query_builder.functions import Sum
-from frappe.utils import cstr, flt, getdate
+from frappe.utils import flt, getdate
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.accounts.utils import create_payment_ledger_entry
 from erpnext.controllers.accounts_controller import get_advance_payment_entries
@@ -107,6 +107,17 @@ def update_party_details(party_details, doctype, company):
     address = get_default_address("Customer", party_details.get("customer"))
     party_details.update(customer_address=address)
 
+    # update gst details
+    if address:
+        party_details.update(
+            frappe.db.get_value(
+                "Address",
+                address,
+                ["gstin as billing_address_gstin"],
+                as_dict=1,
+            )
+        )
+
     # Update address for update
     response = {
         "customer_address": address,  # should be set first as gst_category and gstin is fetched from address
@@ -114,23 +125,6 @@ def update_party_details(party_details, doctype, company):
     }
 
     return response
-
-
-def update_place_of_supply(doc):
-    country = frappe.get_cached_value("Company", doc.company, "country")
-    if country != "India":
-        return
-
-    address = frappe.db.get_value(
-        "Address",
-        doc.get("customer_address"),
-        ["gst_state", "gst_state_number"],
-        as_dict=1,
-    )
-    if address and address.gst_state and address.gst_state_number:
-        doc.place_of_supply = (
-            cstr(address.gst_state_number) + "-" + cstr(address.gst_state)
-        )
 
 
 def make_gst_revesal_entry_from_advance_payment(doc):
