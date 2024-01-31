@@ -197,9 +197,11 @@ def _generate_e_waybill(doc, throw=True, force=False):
         return
 
     frappe.msgprint(
-        _("e-Waybill generated successfully")
-        if result.validUpto or result.EwbValidTill
-        else _("e-Waybill (Part A) generated successfully"),
+        (
+            _("e-Waybill generated successfully")
+            if result.validUpto or result.EwbValidTill
+            else _("e-Waybill (Part A) generated successfully")
+        ),
         indicator="green",
         alert=True,
     )
@@ -1560,9 +1562,11 @@ class EWaybillData(GSTTransactionData):
             self.transaction_details.update(
                 {
                     "company_gstin": REGISTERED_GSTIN,
-                    "name": random_string(6).lstrip("0")
-                    if not frappe.flags.in_test
-                    else "test_invoice_no",
+                    "name": (
+                        random_string(6).lstrip("0")
+                        if not frappe.flags.in_test
+                        else "test_invoice_no"
+                    ),
                 }
             )
 
