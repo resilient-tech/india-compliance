@@ -285,6 +285,7 @@ jinja = {
         "india_compliance.gst_india.utils.jinja.get_ewaybill_barcode",
         "india_compliance.gst_india.utils.jinja.get_e_invoice_item_fields",
         "india_compliance.gst_india.utils.jinja.get_e_invoice_amount_fields",
+        "india_compliance.gst_india.utils.jinja.get_gst_tax_breakup",
     ],
 }
 

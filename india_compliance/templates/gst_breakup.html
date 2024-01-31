@@ -1,0 +1,43 @@
+{% set tax_breakup_data =  _dict(json.loads(get_gst_tax_breakup(doc))) %}
+<div class="tax-break-up" style="overflow-x: auto;">
+	<table class="table table-bordered table-hover">
+		<thead>
+			<tr>
+				{% for key in tax_breakup_data.headers %}
+					{% if loop.first %}
+						<th class="text-left">{{ key }}</th>
+					{% else %}
+						<th class="text-right">{{ key }}</th>
+					{% endif %}
+				{% endfor%}
+			</tr>
+		</thead>
+		<tbody>
+			{% for row in tax_breakup_data.data %}
+				<tr>
+					<td>{{ row.item }}</td>
+					<td class="text-right">
+						{% if doc.get('is_return') %}
+							{{ frappe.utils.fmt_money(row.taxable_amount |abs, None, doc.currency) }}
+						{% else %}
+							{{ frappe.utils.fmt_money(row.taxable_amount, None, doc.currency) }}
+						{% endif %}
+					</td>
+					{% set taxes = list(row.taxes.values()) %}
+					{% for tax in taxes %}
+                        <td class="text-right">
+                            {% if tax.tax_rate or not tax.tax_amount %}
+                                ({{ tax.tax_rate }}%)
+                            {% endif %}
+                            {% if doc.get('is_return') %}
+                                {{ frappe.utils.fmt_money((tax.tax_amount / doc.conversion_rate)|abs, None, doc.currency) }}
+                            {% else %}
+                                {{ frappe.utils.fmt_money(tax.tax_amount / doc.conversion_rate, None, doc.currency) }}
+                            {% endif %}
+                        </td>
+					{% endfor %}
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
