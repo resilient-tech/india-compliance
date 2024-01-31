@@ -183,14 +183,16 @@ class PurchaseReconciliationTool(Document):
                     status = status.replace("Downloaded", "Uploaded")
 
                 _dict = {
-                    "Classification": category.value
-                    if return_type is ReturnType.GSTR2A
-                    else "ALL",
+                    "Classification": (
+                        category.value if return_type is ReturnType.GSTR2A else "ALL"
+                    ),
                     "Status": status,
-                    columns[-1]: "✅ &nbsp;"
-                    + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
-                    if download
-                    else "",
+                    columns[-1]: (
+                        "✅ &nbsp;"
+                        + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
+                        if download
+                        else ""
+                    ),
                 }
                 if _dict not in data[period]:
                     data[period].append(_dict)
