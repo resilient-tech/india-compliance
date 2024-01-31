@@ -35,7 +35,9 @@ frappe.ui.form.on("Payment Entry", {
         );
     },
 
-    customer_address: update_gst_details,
+    customer_address(frm) {
+        update_gst_details(frm);
+    },
 });
 
 function override_get_outstanding_documents(frm) {
