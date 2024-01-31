@@ -617,9 +617,9 @@ class EInvoiceData(GSTTransactionData):
 
         self.transaction_details.update(
             {
-                "payee_name": self.sanitize_value(self.doc.company)
-                if paid_amount
-                else "",
+                "payee_name": (
+                    self.sanitize_value(self.doc.company) if paid_amount else ""
+                ),
                 "mode_of_payment": self.get_mode_of_payment(),
                 "paid_amount": paid_amount,
                 "credit_days": credit_days,
