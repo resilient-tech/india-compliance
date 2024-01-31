@@ -340,9 +340,11 @@ class GSTTransactionData:
 
             # considers senarios where same item is there multiple times
             tax_amount = self.get_progressive_item_tax_amount(
-                tax_rate * item.qty
-                if row.charge_type == "On Item Quantity"
-                else tax_rate * item.taxable_value / 100,
+                (
+                    tax_rate * item.qty
+                    if row.charge_type == "On Item Quantity"
+                    else tax_rate * item.taxable_value / 100
+                ),
                 tax,
             )
 

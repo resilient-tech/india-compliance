@@ -950,9 +950,9 @@ class ReconciledData(BaseReconciliation):
         reconciliation_data = [
             frappe._dict(
                 {
-                    "_inward_supply": inward_supplies[0]
-                    if inward_supplies
-                    else frappe._dict(),
+                    "_inward_supply": (
+                        inward_supplies[0] if inward_supplies else frappe._dict()
+                    ),
                     "_purchase_invoice": purchases.get(purchase_name, frappe._dict()),
                 }
             )
