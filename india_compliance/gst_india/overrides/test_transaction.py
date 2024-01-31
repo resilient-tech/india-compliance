@@ -642,9 +642,9 @@ class TestTransaction(FrappeTestCase):
 
     def test_invalid_gst_account_instate(self):
         if self.is_sales_doctype:
-            self.transaction_details.customer = (
-                self.transaction_details.party_name
-            ) = "_Test Registered Composition Customer"
+            self.transaction_details.customer = self.transaction_details.party_name = (
+                "_Test Registered Composition Customer"
+            )
         else:
             self.transaction_details.supplier = "_Test Registered InterState Supplier"
 
