@@ -233,7 +233,7 @@ export default {
       this.$router.replace({ name: "home" });
     },
 
-    initCashFree(orderToken) {
+    initCashFree(paymentSessionId) {
       const style = getComputedStyle(document.body);
       const primaryColor = style.getPropertyValue("--primary");
       const cardBg = style.getPropertyValue("--card-bg");
@@ -241,7 +241,7 @@ export default {
 
       const dropConfig = {
         components: ["card", "netbanking", "app", "upi"],
-        orderToken,
+        paymentSessionId,
         onSuccess: async data => {
           if (data.order && data.order.status == "PAID") {
             const response = await verify_payment(data.order.orderId);
@@ -276,9 +276,9 @@ export default {
         },
       };
 
-      const cashfree = new Cashfree();
+      const cashfree = new Cashfree(paymentSessionId);
       const paymentElement = document.getElementById("payment-gateway");
-      cashfree.initialiseDropin(paymentElement, dropConfig);
+      cashfree.drop(paymentElement, dropConfig);
 
       document.querySelector("#payment-gateway iframe").setAttribute("scrolling", "no");
     },
@@ -288,18 +288,18 @@ export default {
     this.orderDetails = this.$store.state.account.orderDetails;
     this.$store.dispatch("resetOrder");
 
-    if (!this.orderDetails || !this.orderDetails.token) {
+    if (!this.orderDetails || !this.orderDetails.payment_session_id) {
       return this.redirectToHome("Invalid order details", "red");
     }
 
     const script = document.createElement("script");
     script.setAttribute(
       "src",
-      "https://sdk.cashfree.com/js/ui/1.0.26/dropinClient.prod.js"
+      "https://sdk.cashfree.com/js/ui/2.0.0/cashfree.prod.js"
     );
     document.head.appendChild(script);
     script.onload = async () => {
-      this.initCashFree(this.orderDetails.token);
+      this.initCashFree(this.orderDetails.payment_session_id);
       await this.$store.dispatch("fetchDetails", "billing");
       this.isLoading = false;
       this.billingDetails = this.$store.state.account.billingDetails;

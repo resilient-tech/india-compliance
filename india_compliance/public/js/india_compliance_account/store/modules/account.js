@@ -67,9 +67,9 @@ export default {
                 return false;
             }
 
-            if (!response.success || !response.message?.order_token) return false;
+            if (!response.success || !response.message?.payment_session_id) return false;
 
-            orderDetails.token = response.message.order_token;
+            orderDetails.payment_session_id = response.message.payment_session_id;
             commit("SET_ORDER_DETAILS", orderDetails);
             return true;
         },
