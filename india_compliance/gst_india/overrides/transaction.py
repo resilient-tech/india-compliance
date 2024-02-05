@@ -47,6 +47,18 @@ DOCTYPES_WITH_GST_DETAIL = {
 }
 
 
+def set_gst_breakup(doc, method=None):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    if not frappe.get_meta(doc.doctype).get_field("custom_gst_breakup_table"):
+        return
+
+    doc.custom_gst_breakup_table = frappe.render_template(
+        "templates/gst_breakup.html", dict(doc=doc)
+    )
+
+
 def update_taxable_values(doc, valid_accounts):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return

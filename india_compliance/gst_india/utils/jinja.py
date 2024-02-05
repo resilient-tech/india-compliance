@@ -50,6 +50,8 @@ E_INVOICE_AMOUNT_FIELDS = {
     "TotInvVal": "Total Value",
 }
 
+cess_headers = ["CESS", "CESS Non Advol"]
+
 
 def add_spacing(string, interval):
     """
@@ -195,7 +197,7 @@ def has_non_zero_cess(items):
         any(
             getattr(item, f"{scrub(tax_type)}_rate", 0) != 0
             or getattr(item, f"{scrub(tax_type)}_amount", 0) != 0
-            for tax_type in ["CESS", "CESS Non Advol"]
+            for tax_type in cess_headers
         )
         for item in items
     )
@@ -209,8 +211,8 @@ def get_itemised_tax_breakup_data(doc, applicable_tax_accounts, headers, is_hsn)
     item_tax_data = frappe._dict()
 
     if has_non_zero_cess(doc.items):
-        applicable_tax_accounts += ["CESS", "CESS Non Advol"]
-        headers += ["CESS", "CESS Non Advol"]
+        applicable_tax_accounts += cess_headers
+        headers += cess_headers
 
     for item in doc.items:
         add_item_tax_data(

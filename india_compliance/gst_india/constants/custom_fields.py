@@ -143,6 +143,21 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
             "default": 0,
         },
+        {
+            "fieldname": "custom_gst_breakup",
+            "label": "GST Breakup",
+            "fieldtype": "Section Break",
+            "insert_after": "other_charges_calculation",
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "custom_gst_breakup_table",
+            "label": "GST Breakup Table",
+            "fieldtype": "Long Text",
+            "insert_after": "custom_gst_breakup",
+            "is_virtual": 1,
+            "read_only": 1,
+        },
     ],
     # Sales - Export with GST Payment
     # POS Invoice excluded, since it isn't designed for exports
@@ -230,6 +245,21 @@ CUSTOM_FIELDS = {
             "read_only": 1,
             "length": 15,
             "translatable": 0,
+        },
+        {
+            "fieldname": "custom_gst_breakup",
+            "label": "GST Breakup",
+            "fieldtype": "Section Break",
+            "insert_after": "other_charges_calculation",
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "custom_gst_breakup_table",
+            "label": "GST Breakup Table",
+            "fieldtype": "Long Text",
+            "insert_after": "custom_gst_breakup",
+            "is_virtual": 1,
+            "read_only": 1,
         },
     ],
     # Sales Shipping Fields
