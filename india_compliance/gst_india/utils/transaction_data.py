@@ -281,8 +281,19 @@ class GSTTransactionData:
                     ),
                     "uom": get_gst_uom(row.uom, self.settings),
                     "gst_treatment": row.gst_treatment,
+                    "cgst_amount": row.cgst_amount,
+                    "cgst_rate": row.cgst_rate,
+                    "sgst_amount": row.sgst_amount,
+                    "sgst_rate": row.sgst_rate,
+                    "igst_amount": row.igst_amount,
+                    "igst_rate": row.igst_rate,
+                    "cess_amount": row.cess_amount,
+                    "cess_rate": row.cess_rate,
+                    "cess_non_advol_amount": row.cess_non_advol_amount,
+                    "cess_non_advol_rate": row.cess_non_advol_rate,
                 }
             )
+
             self.update_item_details(item_details, row)
             self.update_item_tax_details(item_details, row)
             all_item_details.append(item_details)
@@ -322,38 +333,6 @@ class GSTTransactionData:
         pass
 
     def update_item_tax_details(self, item_details, item):
-        for tax in GST_TAX_TYPES:
-            item_details.update({f"{tax}_amount": 0, f"{tax}_rate": 0})
-
-        for row in self.doc.taxes:
-            if not row.tax_amount or row.account_head not in self.gst_accounts:
-                continue
-
-            # Remove '_account' from 'cgst_account'
-            tax = self.gst_accounts[row.account_head][:-8]
-            tax_rate = self.rounded(
-                frappe.parse_json(row.item_wise_tax_detail).get(
-                    item.item_code or item.item_name
-                )[0],
-                3,
-            )
-
-            # considers senarios where same item is there multiple times
-            tax_amount = self.get_progressive_item_tax_amount(
-                (
-                    tax_rate * item.qty
-                    if row.charge_type == "On Item Quantity"
-                    else tax_rate * item.taxable_value / 100
-                ),
-                tax,
-            )
-
-            item_details.update(
-                {
-                    f"{tax}_rate": tax_rate,
-                    f"{tax}_amount": tax_amount,
-                }
-            )
 
         tax_rate = sum(
             self.rounded(item_details.get(f"{tax}_rate", 0), 3)
