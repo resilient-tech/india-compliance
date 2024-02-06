@@ -1,3 +1,5 @@
+const CASHFREE_API_VERSION = "v4";
+
 export async function get_details(type) {
     return india_compliance.gst_api.call(`account.get_${type}_details`, {
         method: "GET",
@@ -16,7 +18,7 @@ export async function update_billing_details(new_billing_details) {
 export async function create_order(credits, amount) {
     return india_compliance.gst_api.call("account.create_order", {
         method: "POST",
-        body: { credits, amount },
+        body: { credits, amount, cashfree_api_version: CASHFREE_API_VERSION },
         with_api_secret: true,
     });
 }
@@ -24,7 +26,7 @@ export async function create_order(credits, amount) {
 export async function verify_payment(orderId) {
     return india_compliance.gst_api.call("account.verify_payment", {
         method: "POST",
-        body: { order_id: orderId },
+        body: { order_id: orderId, cashfree_api_version: CASHFREE_API_VERSION },
         with_api_secret: true,
     });
 }
