@@ -66,7 +66,7 @@ def get_hsn_data(filters, columns, output_gst_accounts_dict):
         item_tax = itemised_tax.get((d.parent, d.item_code), {})
         for tax in tax_columns:
             tax_data = item_tax.get(tax, {})
-            total_tax += flt(tax_data.get("tax_amount", 0))
+            total_tax += flt(tax_data.get("tax_amount", 0), 2)
             if tax in non_cess_accounts:
                 tax_rate += flt(tax_data.get("tax_rate", 0))
 
@@ -74,14 +74,14 @@ def get_hsn_data(filters, columns, output_gst_accounts_dict):
             d.gst_hsn_code,
             d.description,
             d.uqc,
-            d.stock_qty,
+            flt(d.stock_qty, 2),
             tax_rate,
-            d.taxable_value + total_tax,
-            d.taxable_value,
+            flt(d.taxable_value, 2) + total_tax,
+            flt(d.taxable_value, 2),
         ]
 
         for tax in tax_columns:
-            row.append(item_tax.get(tax, {}).get("tax_amount", 0))
+            row.append(flt(item_tax.get(tax, {}).get("tax_amount", 0), 2))
 
         data.append(row)
         added_item.add(key)
