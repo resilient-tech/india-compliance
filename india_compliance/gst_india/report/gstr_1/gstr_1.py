@@ -170,22 +170,22 @@ class Gstr1Report(object):
             invoice_detail = self.invoices.get(invoice)
             if invoice_detail.get("gst_category") in ("Unregistered", "Overseas"):
                 if is_inter_state(invoice_detail):
-                    nil_exempt_output[2]["nil_rated"] += details[0]
-                    nil_exempt_output[2]["exempted"] += details[1]
-                    nil_exempt_output[2]["non_gst"] += details[2]
+                    nil_exempt_output[2]["nil_rated"] += flt(details[0], 2)
+                    nil_exempt_output[2]["exempted"] += flt(details[1], 2)
+                    nil_exempt_output[2]["non_gst"] += flt(details[2], 2)
                 else:
-                    nil_exempt_output[3]["nil_rated"] += details[0]
-                    nil_exempt_output[3]["exempted"] += details[1]
-                    nil_exempt_output[3]["non_gst"] += details[2]
+                    nil_exempt_output[3]["nil_rated"] += flt(details[0], 2)
+                    nil_exempt_output[3]["exempted"] += flt(details[1], 2)
+                    nil_exempt_output[3]["non_gst"] += flt(details[2], 2)
             else:
                 if is_inter_state(invoice_detail):
-                    nil_exempt_output[0]["nil_rated"] += details[0]
-                    nil_exempt_output[0]["exempted"] += details[1]
-                    nil_exempt_output[0]["non_gst"] += details[2]
+                    nil_exempt_output[0]["nil_rated"] += flt(details[0], 2)
+                    nil_exempt_output[0]["exempted"] += flt(details[1], 2)
+                    nil_exempt_output[0]["non_gst"] += flt(details[2], 2)
                 else:
-                    nil_exempt_output[1]["nil_rated"] += details[0]
-                    nil_exempt_output[1]["exempted"] += details[1]
-                    nil_exempt_output[1]["non_gst"] += details[2]
+                    nil_exempt_output[1]["nil_rated"] += flt(details[0], 2)
+                    nil_exempt_output[1]["exempted"] += flt(details[1], 2)
+                    nil_exempt_output[1]["non_gst"] += flt(details[2], 2)
 
         self.data = nil_exempt_output
 
@@ -227,14 +227,16 @@ class Gstr1Report(object):
                             "posting_date": invoice_details.get(
                                 "posting_date"
                             ).strftime("%d-%m-%Y"),
-                            "invoice_value": invoice_details.get("base_grand_total"),
+                            "invoice_value": flt(
+                                invoice_details.get("base_grand_total"), 2
+                            ),
                         },
                     )
 
                     row = b2c_output.get(default_key)
                     row["taxable_value"] += sum(
                         [
-                            net_amount
+                            flt(net_amount, 2)
                             for item_code, net_amount in self.invoice_items.get(
                                 inv
                             ).items()
@@ -243,7 +245,7 @@ class Gstr1Report(object):
                     )
                     row["cess_amount"] += sum(
                         [
-                            cess
+                            flt(cess, 2)
                             for item_code, cess in self.invoice_cess.get(
                                 inv, {}
                             ).items()
@@ -280,13 +282,13 @@ class Gstr1Report(object):
                 and fieldname == "invoice_value"
             ):
                 row.append(
-                    abs(invoice_details.base_rounded_total)
-                    or abs(invoice_details.base_grand_total)
+                    flt(abs(invoice_details.base_rounded_total), 2)
+                    or flt(abs(invoice_details.base_grand_total), 2)
                 )
             elif fieldname == "invoice_value":
                 row.append(
-                    invoice_details.base_rounded_total
-                    or invoice_details.base_grand_total
+                    flt(invoice_details.base_rounded_total, 2)
+                    or flt(invoice_details.base_grand_total, 2)
                 )
             elif fieldname in ("posting_date", "shipping_bill_date"):
                 row.append(formatdate(invoice_details.get(fieldname), "dd-MMM-YY"))
@@ -300,8 +302,10 @@ class Gstr1Report(object):
 
         for item_code, net_amount in self.invoice_items.get(invoice).items():
             if item_code in items:
-                taxable_value += abs(net_amount)
-                cess_amount += self.invoice_cess.get(invoice, {}).get(item_code, 0.0)
+                taxable_value += flt(abs(net_amount), 2)
+                cess_amount += flt(
+                    self.invoice_cess.get(invoice, {}).get(item_code, 0.0), 2
+                )
 
         row += [tax_rate or 0, taxable_value]
 
@@ -435,11 +439,17 @@ class Gstr1Report(object):
 
             self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
             if is_nil_rated:
-                self.nil_exempt_non_gst[d.parent][0] += d.get("taxable_value", 0)
+                self.nil_exempt_non_gst[d.parent][0] += flt(
+                    d.get("taxable_value", 0), 2
+                )
             elif is_exempted:
-                self.nil_exempt_non_gst[d.parent][1] += d.get("taxable_value", 0)
+                self.nil_exempt_non_gst[d.parent][1] += flt(
+                    d.get("taxable_value", 0), 2
+                )
             elif is_non_gst:
-                self.nil_exempt_non_gst[d.parent][2] += d.get("taxable_value", 0)
+                self.nil_exempt_non_gst[d.parent][2] += flt(
+                    d.get("taxable_value", 0), 2
+                )
 
     def get_items_based_on_tax_rate(self):
         tax_details = frappe.db.sql(
@@ -1127,12 +1137,13 @@ class GSTR11A11BData:
     def process_data(self, records):
         data = {}
         for entry in records:
-            tax_rate = round(((entry.tax_amount / entry.taxable_value) * 100))
+            taxable_value = flt(entry.taxable_value, 2)
+            tax_rate = round(((entry.tax_amount / taxable_value) * 100))
 
             data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
 
-            data[(entry.place_of_supply, tax_rate)][0] += entry.taxable_value
-            data[(entry.place_of_supply, tax_rate)][1] += entry.cess_amount
+            data[(entry.place_of_supply, tax_rate)][0] += taxable_value
+            data[(entry.place_of_supply, tax_rate)][1] += flt(entry.cess_amount, 2)
 
         return data
 
