@@ -70,14 +70,15 @@ def get_hsn_data(filters, columns, output_gst_accounts_dict):
             if tax in non_cess_accounts:
                 tax_rate += flt(tax_data.get("tax_rate", 0))
 
+        d.taxable_value = flt(d.taxable_value, 2)
         row = [
             d.gst_hsn_code,
             d.description,
             d.uqc,
             flt(d.stock_qty, 2),
             tax_rate,
-            flt(d.taxable_value, 2) + total_tax,
-            flt(d.taxable_value, 2),
+            flt(d.taxable_value + total_tax, 2),
+            d.taxable_value,
         ]
 
         for tax in tax_columns:
