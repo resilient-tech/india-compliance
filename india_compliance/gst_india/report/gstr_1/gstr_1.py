@@ -1646,6 +1646,7 @@ def get_export_json(res):
 
         for items in invoice_wise_items.values():
             invoice = get_basic_invoice_detail(items[0])
+            invoice.update(get_shipping_bill_details(items[0]))
             invoice_items = invoice.setdefault("itms", [])
 
             for item in items:
@@ -1822,6 +1823,17 @@ def get_basic_invoice_detail(row):
         "inum": row["invoice_number"],
         "idt": getdate(row["posting_date"]).strftime("%d-%m-%Y"),
         "val": flt(row["invoice_value"], 2),
+    }
+
+
+def get_shipping_bill_details(row):
+    if not row.get("shipping_bill_number"):
+        return {}
+
+    return {
+        "sbpcode": row["port_code"],
+        "sbnum": row["shipping_bill_number"],
+        "sbdt": getdate(row["shipping_bill_date"]).strftime("%d-%m-%Y"),
     }
 
 
