@@ -428,7 +428,7 @@ def get_e_invoice_applicability_date(doc, settings=None, throw=True):
     return e_invoice_applicable_from
 
 
-def validate_if_e_invoice_can_be_cancelled(doc):
+def validate_if_e_invoice_can_be_cancelled(doc, throw=True):
     if not doc.irn:
         frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
 
@@ -440,9 +440,11 @@ def validate_if_e_invoice_can_be_cancelled(doc):
         or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
         < get_datetime()
     ):
-        frappe.throw(
-            _("e-Invoice can only be cancelled upto 24 hours after it is generated")
-        )
+        if throw:
+            frappe.throw(
+                _("e-Invoice can only be cancelled upto 24 hours after it is generated")
+            )
+        return False
 
 
 def retry_e_invoice_e_waybill_generation():

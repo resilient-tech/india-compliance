@@ -1,6 +1,7 @@
 import frappe
 from frappe import _, bold
 from frappe.utils import flt, fmt_money
+from frappe.desk.form.load import run_onload
 
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
@@ -22,6 +23,7 @@ from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
     validate_e_invoice_applicability,
     validate_hsn_codes_for_e_invoice,
+    validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
@@ -97,6 +99,17 @@ def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
 
     if doc.docstatus == 1 and not doc.irn:
         doc.einvoice_status = "Pending"
+
+
+def update_status_for_cancelled_invoice(doc, method=None):
+    if not doc.irn:
+        return
+
+    run_onload(doc)  # to set e_invoice_info
+    if not validate_if_e_invoice_can_be_cancelled(doc, throw=False):
+        frappe.db.set_value(
+            "Sales Invoice", doc.name, "einvoice_status", "Pending Cancellation"
+        )
 
 
 def validate_port_address(doc):

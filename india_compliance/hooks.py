@@ -171,6 +171,7 @@ doc_events = {
         ),
         "before_cancel": "india_compliance.gst_india.overrides.sales_invoice.before_cancel",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
+        "on_cancel": "india_compliance.gst_india.overrides.sales_invoice.update_status_for_cancelled_invoice",
     },
     "Sales Order": {
         "validate": (

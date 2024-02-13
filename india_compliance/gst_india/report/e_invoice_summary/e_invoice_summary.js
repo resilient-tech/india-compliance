@@ -40,7 +40,7 @@ frappe.query_reports["e-Invoice Summary"] = {
             fieldtype: "Select",
             fieldname: "status",
             label: __("e-Invoice Status"),
-            options: "\nPending\nGenerated\nCancelled\nFailed\nNot Applicable",
+            options: "\nPending\nGenerated\nCancelled\nFailed\nNot Applicable\nPending Cancellation",
         },
         {
             fieldtype: "Select",

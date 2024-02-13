@@ -155,23 +155,8 @@ def get_data(filters=None):
 
 def get_cancelled_active_e_invoice_query(filters, sales_invoice, query):
     query = query.where(
-        (sales_invoice.docstatus == 2) & (IfNull(sales_invoice.irn, "") != "")
+        (sales_invoice.einvoice_status == "Pending Cancellation")
     )
-
-    valid_irns = frappe.get_all(
-        "Sales Invoice",
-        pluck="irn",
-        filters={
-            "docstatus": 1,
-            "company": filters.get("company"),
-            # logical optimization
-            "posting_date": [">=", filters.get("from_date")],
-            "irn": ["is", "set"],
-        },
-    )
-
-    if valid_irns:
-        query = query.where(sales_invoice.irn.notin(valid_irns))
     return query
 
 
