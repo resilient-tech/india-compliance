@@ -1,9 +1,46 @@
 frappe.require("assets/india_compliance/js/quick_entry.js");
 update_erpnext_slides_settings();
 
+frappe.setup.on("before_load", function () {
+    if (!frappe.setup.slides.length) return;
+
+    const first_slide = frappe.setup.slides[0];
+    const _onload = first_slide.onload;
+
+    first_slide.onload = function (slide) {
+        _onload.call(this, slide);
+
+        const country_input = frappe.wizard
+            ? frappe.wizard.slide_dict[0].get_input("country")
+            : null;
+        if (country_input) {
+            country_input.on("change", event => {
+                toggle_india_specific_fields(event.target.value);
+            });
+        }
+    };
+});
+
+function toggle_india_specific_fields(country) {
+    const india_specific_fields = [
+        "company_gstin",
+        "default_gst_rate",
+        "enable_audit_trail",
+    ];
+    const value = country && country.toLowerCase() !== "india" ? 1 : 0;
+    const slide = frappe.wizard.slide_dict[2];
+
+    slide?.form?.fields_list?.map(fieldobj => {
+        if (india_specific_fields.includes(fieldobj.df.fieldname)) {
+            fieldobj.df.hidden = value;
+            fieldobj.refresh();
+        }
+    });
+}
+
 function update_erpnext_slides_settings() {
     const slide =
-        erpnext.setup.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
+        erpnext.setup?.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
     if (!slide) return;
 
     company_gstin_field = {
@@ -56,7 +93,7 @@ function update_erpnext_slides_settings() {
     slide.onload = function (slide) {
         _onload.call(this, slide);
 
-        slide.get_input("company_gstin").on("change", async function () {
+        slide.get_input("company_gstin")?.on?.("change", async function () {
             autofill_company_info(slide);
         });
     };
