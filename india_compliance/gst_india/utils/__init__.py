@@ -847,7 +847,9 @@ def handle_server_errors(settings, doc, document_type, error):
 
     document_status = "Failed"
 
-    if settings.enable_retry_einv_ewb_generation:
+    if settings.enable_retry_einv_ewb_generation and (
+        not settings.sandbox_mode or frappe.flags.in_test
+    ):
         document_status = "Auto-Retry"
         settings.db_set(
             "is_retry_einv_ewb_generation_pending", 1, update_modified=False
