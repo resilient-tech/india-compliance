@@ -154,9 +154,7 @@ def get_data(filters=None):
 
 
 def get_cancelled_active_e_invoice_query(filters, sales_invoice, query):
-    query = query.where(
-        (sales_invoice.einvoice_status == "Pending Cancellation")
-    )
+    query = query.where((sales_invoice.einvoice_status == "Pending Cancellation"))
     return query
 
 
