@@ -1932,14 +1932,19 @@ def get_gstr1_excel(filters, data=None, columns=None):
     excel = ExcelExporter()
     excel.remove_sheet("Sheet")
 
-    if data:
+    if data and columns:
         type_of_business = filters.get("type_of_business")
         filename.append(type_of_business)
 
-        headers = json.loads(columns) if columns else []
+        gstr1 = Gstr1Report(filters)
+        gstr1.get_columns()
+        headers = json.loads(columns)
         data = json.loads(data)[:-1]
+        
+        if len(headers) != len(gstr1.columns):
+            data = clean_data(gstr1.columns, data)
 
-        create_excel_sheet(excel, type_of_business, headers, data)
+        create_excel_sheet(excel, type_of_business, gstr1.columns, data)
 
     else:
         for type_of_business in report_types:
@@ -1959,3 +1964,9 @@ def create_excel_sheet(excel, sheet_name, headers, data):
     excel.create_sheet(
         sheet_name=sheet_name, headers=headers, data=data, add_totals=False
     )
+
+
+def clean_data(columns, data):
+    valid_keys = [column["fieldname"] for column in columns]
+    cleaned_data = [{key: value for key, value in item.items() if key in valid_keys} for item in data]
+    return cleaned_data
