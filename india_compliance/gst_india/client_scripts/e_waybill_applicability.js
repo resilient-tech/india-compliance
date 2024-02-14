@@ -19,35 +19,37 @@ class EwaybillApplicability {
         if (this.frm.doc.is_opening === "Yes") {
             is_applicable = false;
             message_list.push(
-                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' is set to Yes."
+                "e-Waybill cannot be generated for transaction with 'Is Opening Entry' set to Yes."
             );
         }
 
-        if (show_message && !has_e_waybill_threshold_met(this.frm)) {
+        if (show_message && this.frm.doctype == "Sales Invoice" && !has_e_waybill_threshold_met(this.frm)) {
             is_applicable = false;
             message_list.push(
                 `The total invoice value is less than the threshold amount of ${format_currency(
                     gst_settings.e_waybill_threshold,
                     "INR"
-                )}.`
+                )} as per GST Settings.`
             );
         }
 
         // at least one item is not a service
-        let item_applicable = false;
+        let has_goods_item = false;
         for (const item of this.frm.doc.items) {
             if (
                 item.gst_hsn_code &&
                 !item.gst_hsn_code.startsWith("99") &&
                 item.qty !== 0
             ) {
-                item_applicable = true;
+                has_goods_item = true;
                 break;
             }
         }
 
-        if (!item_applicable)
+        if (!has_goods_item) {
+            is_applicable = false;
             message_list.push("All items are service items (HSN code starts with 99).");
+        }
 
         let is_invalid_invoice_number = india_compliance.validate_invoice_number(
             this.frm.doc.name
@@ -64,7 +66,7 @@ class EwaybillApplicability {
                 .join("");
         }
 
-        return is_applicable && item_applicable;
+        return is_applicable;
     }
 
     is_e_waybill_generatable() {
