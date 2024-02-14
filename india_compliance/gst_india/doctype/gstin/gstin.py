@@ -86,7 +86,7 @@ def create_or_update_gstin_status(
 ):
     doctype = "GSTIN"
 
-    if gstin[:2] == "88":
+    if gstin and gstin[:2] == "88":
         response = validate_transporter_id(gstin)
     else:
         response = _get_gstin_info(gstin=gstin, response=response)
