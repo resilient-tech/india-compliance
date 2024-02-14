@@ -22,6 +22,8 @@ frappe.setup.on("before_load", function () {
 });
 
 function toggle_india_specific_fields(country) {
+    if (!country) return;
+
     const india_specific_fields = [
         "company_gstin",
         "default_gst_rate",
@@ -87,11 +89,11 @@ function update_erpnext_slides_settings() {
         ),
     });
 
-    if (!can_fetch_gstin_info()) return;
-
     const _onload = slide.onload;
     slide.onload = function (slide) {
         _onload.call(this, slide);
+
+        toggle_india_specific_fields(frappe.wizard.values.country);
 
         slide.get_input("company_gstin")?.on?.("change", async function () {
             autofill_company_info(slide);
@@ -102,6 +104,15 @@ function update_erpnext_slides_settings() {
 async function autofill_company_info(slide) {
     const gstin = slide.get_input("company_gstin").val();
     const gstin_field = slide.get_field("company_gstin");
+
+    set_gstin_description(gstin_field);
+
+    if (!india_compliance.validate_gstin(gstin)) {
+        set_gstin_description(gstin_field, "Invalid GSTIN");
+    }
+
+    if (!can_fetch_gstin_info()) return;
+
     const gstin_info = await get_gstin_info(gstin, false);
 
     if (gstin_info.business_name) {

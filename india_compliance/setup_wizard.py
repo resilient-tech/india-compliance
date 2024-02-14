@@ -4,7 +4,11 @@ from frappe import _
 from india_compliance.audit_trail.utils import enable_audit_trail
 from india_compliance.gst_india.overrides.company import make_default_tax_templates
 from india_compliance.gst_india.overrides.party import validate_pan
-from india_compliance.gst_india.utils import guess_gst_category, is_api_enabled
+from india_compliance.gst_india.utils import (
+    guess_gst_category,
+    is_api_enabled,
+    validate_gstin,
+)
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 # Setup Wizard
@@ -54,6 +58,11 @@ def setup_company_taxes(params):
 
     if not (params.company_name and frappe.db.exists("Company", params.company_name)):
         return
+
+    try:
+        validate_gstin(params.company_gstin)
+    except Exception:
+        params.company_gstin = ""
 
     gstin_info = frappe._dict()
     if can_fetch_gstin_info():
