@@ -1,48 +1,688 @@
 {
-    "Payment to Contractors (Single / Aggregate)": [
-        ["TDS - 194C - Company", 2, 30000, 100000],
-        ["TDS - 194C - Individual", 1, 30000, 100000],
-        ["TDS - 194C - No PAN / Invalid PAN", 20, 30000, 100000]
-    ],
-    "Insurance Commission": [
-        ["TDS - 194D - Company", 5, 15000, 0],
-        ["TDS - 194D - Company Assessee", 10, 15000, 0],
-        ["TDS - 194D - Individual", 5, 15000, 0],
-        ["TDS - 194D - No PAN / Invalid PAN", 20, 15000, 0]
-    ],
-    "Non-exempt payments made under a life insurance policy": [
-        ["TDS - 194DA - Company", 1, 100000, 0],
-        ["TDS - 194DA - Individual", 1, 100000, 0],
-        ["TDS - 194DA - No PAN / Invalid PAN", 20, 100000, 0]
-    ],
-    "Commission / Brokerage": [
-        ["TDS - 194H - Company", 5, 15000, 0],
-        ["TDS - 194H - Individual", 5, 15000, 0],
-        ["TDS - 194H - No PAN / Invalid PAN", 20, 15000, 0]
-    ],
-    "Rent": [
-        ["TDS - 194I - Rent - Company", 10, 180000, 0],
-        ["TDS - 194I - Rent - Individual", 10, 180000, 0],
-        ["TDS - 194I - Rent - No PAN / Invalid PAN", 20, 180000, 0]
-    ],
-    "Rent-Plant / Machinery": [
-        ["TDS - 194I - Rent/Machinery - Company", 2, 180000, 0],
-        ["TDS - 194I - Rent/Machinery - Individual", 2, 180000, 0],
-        ["TDS - 194I - Rent/Machinery - No PAN / Invalid PAN", 20, 180000, 0]
-    ],
-    "Professional Fees": [
-        ["TDS - 194J - Professional Fees - Company", 10, 30000, 0],
-        ["TDS - 194J - Professional Fees - Individual", 10, 30000, 0],
-        ["TDS - 194J - Professional Fees - No PAN / Invalid PAN", 20, 30000, 0]
-    ],
-    "Director Fees": [
-        ["TDS - 194J - Director Fees - Company", 10, 0, 0],
-        ["TDS - 194J - Director Fees - Individual", 10, 0, 0],
-        ["TDS - 194J - Director Fees - No PAN / Invalid PAN", 20, 0, 0]
-    ],
-    "Dividends": [
-        ["TDS - 194 - Dividends - Company", 10, 2500, 0],
-        ["TDS - 194 - Dividends - Individual", 10, 2500, 0],
-        ["TDS - 194 - Dividends - No PAN / Invalid PAN", 20, 2500, 0]
-    ]
-}
+    "2023": {
+      "Payment to Contractors (Single / Aggregate)": [
+        {
+          "section": "194C",
+          "entity_type": "Company",
+          "tax_withholding_rate": 2,
+          "single_threshold": 30000,
+          "cumulative_threshold": 100000
+        },
+        {
+          "section": "194C",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 1,
+          "single_threshold": 30000,
+          "cumulative_threshold": 100000
+        },
+        {
+          "section": "194C",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 30000,
+          "cumulative_threshold": 100000
+        }
+      ],
+      "Insurance Commission": [
+        {
+          "section": "194D",
+          "entity_type": "Company",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194D",
+          "entity_type": "Company Assessee",
+          "tax_withholding_rate": 10,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194D",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194D",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Non-exempt payments made under a life insurance policy": [
+        {
+          "section": "194DA",
+          "entity_type": "Company",
+          "tax_withholding_rate": 1,
+          "single_threshold": 100000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194DA",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 1,
+          "single_threshold": 100000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194DA",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 100000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Commission / Brokerage": [
+        {
+          "section": "194H",
+          "entity_type": "Company",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194H",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194H",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Rent on plant / machinery": [
+        {
+          "section": "194I(a)",
+          "entity_type": "Company",
+          "tax_withholding_rate": 2,
+          "single_threshold": 180000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(a)",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 2,
+          "single_threshold": 180000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(a)",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 180000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Rent on land / building / furniture / fitting": [
+        {
+          "section": "194I(b)",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 180000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(b)",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 180000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(b)",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 180000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Professional Fees": [
+        {
+          "section": "194JB",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JB",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JB",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Technical Fees": [
+        {
+          "section": "194JA",
+          "entity_type": "Company",
+          "tax_withholding_rate": 2,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JA",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 2,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JA",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Dividends": [
+        {
+          "section": "194",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 2500,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 2500,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 2500,
+          "cumulative_threshold": 0
+        }
+      ]
+    },
+    "2024": {
+      "Interest on Securities": [
+        {
+          "section": "193",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 10000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "193",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 10000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "193",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 30,
+          "single_threshold": 10000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Dividends": [
+        {
+          "section": "194",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 5000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 5000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 5000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Income from horse race winnings": [
+        {
+          "section": "194BB",
+          "entity_type": "Company",
+          "tax_withholding_rate": 30,
+          "single_threshold": 0,
+          "cumulative_threshold": 10000
+        },
+        {
+          "section": "194BB",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 30,
+          "single_threshold": 0,
+          "cumulative_threshold": 10000
+        },
+        {
+          "section": "194BB",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 30,
+          "single_threshold": 0,
+          "cumulative_threshold": 10000
+        }
+      ],
+      "Payment of amount standing to the credit of a person under National Savings Scheme (NSS)": [
+        {
+          "section": "194EE",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 2500,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194EE",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 2500,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194EE",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 2500,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Interest from other than interest on securities": [
+        {
+          "section": "194A",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 5000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194A",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 5000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194A",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 5000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Income from lottery winnings, card games, crossword puzzles, and other games of any type": [
+        {
+          "section": "194B",
+          "entity_type": "Company",
+          "tax_withholding_rate": 30,
+          "single_threshold": 0,
+          "cumulative_threshold": 10000
+        },
+        {
+          "section": "194B",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 30,
+          "single_threshold": 0,
+          "cumulative_threshold": 10000
+        },
+        {
+          "section": "194B",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 30,
+          "single_threshold": 0,
+          "cumulative_threshold": 10000
+        }
+      ],
+      "Payment to Contractors (Single / Aggregate)": [
+        {
+          "section": "194C",
+          "entity_type": "Company",
+          "tax_withholding_rate": 2,
+          "single_threshold": 30000,
+          "cumulative_threshold": 100000
+        },
+        {
+          "section": "194C",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 1,
+          "single_threshold": 30000,
+          "cumulative_threshold": 100000
+        },
+        {
+          "section": "194C",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 30000,
+          "cumulative_threshold": 100000
+        }
+      ],
+      "Insurance Commission": [
+        {
+          "section": "194D",
+          "entity_type": "Company",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194D",
+          "entity_type": "Company Assessee",
+          "tax_withholding_rate": 10,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194D",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194D",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Payment for the repurchase of the unit by Unit Trust of India (UTI) or a Mutual Fund": [
+        {
+          "section": "194F",
+          "entity_type": "Company",
+          "tax_withholding_rate": 20,
+          "single_threshold": 0,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194F",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 20,
+          "single_threshold": 0,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194F",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 0,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Payments or commission on sale of lottery tickets": [
+        {
+          "section": "194G",
+          "entity_type": "Company",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194G",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194G",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Commission / Brokerage": [
+        {
+          "section": "194H",
+          "entity_type": "Company",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194H",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 5,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194H",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 15000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Rent on plant / machinery": [
+        {
+          "section": "194I(a)",
+          "entity_type": "Company",
+          "tax_withholding_rate": 2,
+          "single_threshold": 240000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(a)",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 2,
+          "single_threshold": 240000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(a)",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 240000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Rent on land / building / furniture / fitting": [
+        {
+          "section": "194I(b)",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 240000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(b)",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 240000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194I(b)",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 240000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Technical Fees": [
+        {
+          "section": "194JA",
+          "entity_type": "Company",
+          "tax_withholding_rate": 2,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JA",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 2,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JA",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Professional services": [
+        {
+          "section": "194JB",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JB",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194JB",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 30000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Payment in respect of compensation on acquiring certain immovable property": [
+        {
+          "section": "194LA",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 250000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194LA",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 250000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194LA",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 250000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Non-exempt payments made under a life insurance policy": [
+        {
+          "section": "194DA",
+          "entity_type": "Company",
+          "tax_withholding_rate": 5,
+          "single_threshold": 100000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194DA",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 5,
+          "single_threshold": 100000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194DA",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 100000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Premature EPF withdrawal": [
+        {
+          "section": "192A",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 50000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "192A",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 50000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "192A",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 50000,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Payment to a unitholder in respect of units of an investment fund": [
+        {
+          "section": "194LBB",
+          "entity_type": "Company",
+          "tax_withholding_rate": 10,
+          "single_threshold": 0,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194LBB",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 10,
+          "single_threshold": 0,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194LBB",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 0,
+          "cumulative_threshold": 0
+        }
+      ],
+      "Payment for transfer of immovable property other than agricultural land": [
+        {
+          "section": "194IA",
+          "entity_type": "Company",
+          "tax_withholding_rate": 1,
+          "single_threshold": 5000000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194IA",
+          "entity_type": "Individual",
+          "tax_withholding_rate": 1,
+          "single_threshold": 5000000,
+          "cumulative_threshold": 0
+        },
+        {
+          "section": "194IA",
+          "entity_type": "No PAN / Invalid PAN",
+          "tax_withholding_rate": 20,
+          "single_threshold": 5000000,
+          "cumulative_threshold": 0
+        }
+      ]
+    }
+  }
+  
