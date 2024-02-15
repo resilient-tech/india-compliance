@@ -37,6 +37,7 @@ def after_install():
 
 
 def create_custom_fields():
+    print("create custom fields")
     # Validation ignored for faster creation
     # Will not fail if a core field with same name already exists (!)
     # Will update a custom field if it already exists
