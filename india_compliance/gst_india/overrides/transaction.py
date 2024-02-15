@@ -30,6 +30,7 @@ from india_compliance.gst_india.utils import (
     join_list_with_custom_separators,
     validate_gst_category,
 )
+from india_compliance.gst_india.utils import validate_gstin as _validate_gstin
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
@@ -1268,10 +1269,20 @@ def validate_transaction(doc, method=None):
 
     validate_gstin(gstin, doc.get("posting_date") or doc.get("transaction_date"))
 
+    validate_ecommerce_gstin(doc)
+
     validate_gst_category(doc.gst_category, gstin)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+
+
+def validate_ecommerce_gstin(doc):
+    if not doc.get("ecommerce_gstin"):
+        return
+    doc.ecommerce_gstin = _validate_gstin(
+        doc.ecommerce_gstin, label="E-commerce GSTIN", is_tcs_gstin=True
+    )
 
 
 def before_validate(doc, method=None):
