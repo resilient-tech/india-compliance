@@ -41,6 +41,7 @@ def execute():
         WHERE IFNULL(einvoice_status, '') = '' AND IFNULL(irn_cancelled, 0) = 1"""
     )
 
+    update_status_for_cancelled_invoice()
     set_not_applicable_status()
 
 
@@ -55,8 +56,7 @@ def set_not_applicable_status():
 
 
 def update_status_for_cancelled_invoice():
-
-    sales_invoice = frappe.qb.Doctype("Sales Invoice")
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
     frappe.qb.update(sales_invoice).set(
         "einvoice_status", "Pending Cancellation"
     ).where((sales_invoice.docstatus == 2) & (sales_invoice.irn != "")).run()

@@ -21,9 +21,9 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
+    if_e_invoice_can_be_cancelled,
     validate_e_invoice_applicability,
     validate_hsn_codes_for_e_invoice,
-    validate_if_e_invoice_can_be_cancelled,
 )
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
@@ -106,10 +106,8 @@ def update_status_for_cancelled_invoice(doc, method=None):
         return
 
     run_onload(doc)  # to set e_invoice_info
-    if not validate_if_e_invoice_can_be_cancelled(doc, throw=False):
-        frappe.db.set_value(
-            "Sales Invoice", doc.name, "einvoice_status", "Pending Cancellation"
-        )
+    if not if_e_invoice_can_be_cancelled(doc, throw=False):
+        doc.db_set("einvoice_status", "Pending Cancellation")
 
 
 def validate_port_address(doc):
