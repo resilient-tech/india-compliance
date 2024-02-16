@@ -321,6 +321,18 @@ class TestTransaction(FrappeTestCase):
 
         frappe.db.set_value("Address", address, "gstin", gstin)
 
+    def test_ecommerce_gstin(self):
+        doc = create_transaction(**self.transaction_details, do_not_submit=True)
+        doc.ecommerce_gstin = "123456789012@ab"
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Invalid E-commerce GSTIN! The check digit validation has failed. Please ensure you've typed the E-commerce GSTIN correctly.*)$"
+            ),
+            doc.save,
+        )
+
     def test_taxable_value_with_charges(self):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
