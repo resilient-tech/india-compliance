@@ -31,7 +31,12 @@ CUSTOM_FIELDS = {
             "fieldname": "section",
             "insert_after": "round_off_tax_amount",
             "fieldtype": "Select",
-            "options": "193\n194\n194BB\n194EE\n194A\n194B\n194C\n194D\n194F\n194G\n194H\n194I\n194JA\n194JB\n194LA\n194I(a)\n194I(b)\n194LBA\n194DA\n192A\n194LBB\n194IA\n194N",
+            "options": (
+                "193\n194\n194BB\n194EE\n194A\n194B\n194C\n"
+                "194D\n194F\n194G\n194H\n194I\n194JA\n194JB\n"
+                "194LA\n194I(a)\n194I(b)\n194LBA\n194DA\n"
+                "192A\n194LBB\n194IA\n194N"
+            ),
             "sort_options": 1,
         },
         {
