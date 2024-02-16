@@ -29,6 +29,7 @@ from india_compliance.gst_india.utils import (
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
+    validate_gstin,
 )
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
@@ -1247,7 +1248,7 @@ def set_reverse_charge(doc):
         doc.set("taxes", template)
 
 
-def validate_gstin(gstin, transaction_date):
+def validate_gstin_status(gstin, transaction_date):
     settings = frappe.get_cached_doc("GST Settings")
     if not settings.validate_gstin_status:
         return
@@ -1302,12 +1303,23 @@ def validate_transaction(doc, method=None):
         validate_reverse_charge_transaction(doc)
         gstin = doc.supplier_gstin
 
-    validate_gstin(gstin, doc.get("posting_date") or doc.get("transaction_date"))
+    validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
+
+    validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+
+
+def validate_ecommerce_gstin(doc):
+    if not doc.get("ecommerce_gstin"):
+        return
+
+    doc.ecommerce_gstin = validate_gstin(
+        doc.ecommerce_gstin, label="E-commerce GSTIN", is_tcs_gstin=True
+    )
 
 
 def before_validate(doc, method=None):
