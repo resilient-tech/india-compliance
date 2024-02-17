@@ -32,9 +32,6 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     : "",
                 collapsible: 0,
             },
-
-            // check boxes for Preferred Address
-
             {
                 fieldname: "is_primary_address",
                 label: "Preferred Billing Address",
@@ -82,7 +79,6 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                     india_compliance.set_state_options(this.dialog);
                 },
             },
-
         ];
     }
 
