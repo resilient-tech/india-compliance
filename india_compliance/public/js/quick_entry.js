@@ -24,13 +24,19 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
                 fieldtype: "Section Break",
                 description: this.api_enabled
                     ? __(
-                          `When you enter a GSTIN, the permanent address linked to it is
+                        `When you enter a GSTIN, the permanent address linked to it is
                         autofilled.<br>
                         Change the {0} to autofill other addresses.`,
-                          [frappe.meta.get_label("Address", "pincode")]
-                      )
+                        [frappe.meta.get_label("Address", "pincode")]
+                    )
                     : "",
                 collapsible: 0,
+            },
+            {
+                fieldname: "is_primary_address",
+                label: "Preferred Billing Address",
+                fieldtype: "Check",
+                default: 0,
             },
             {
                 // set as _pincode so that frappe.ui.form.Layout doesn't override it
@@ -48,6 +54,12 @@ class GSTQuickEntryForm extends frappe.ui.form.QuickEntryForm {
             },
             {
                 fieldtype: "Column Break",
+            },
+            {
+                fieldname: "is_shipping_address",
+                label: "Preferred Shipping Address",
+                fieldtype: "Check",
+                default: 0,
             },
             {
                 fieldname: "city",
@@ -163,6 +175,7 @@ class PartyQuickEntryForm extends GSTQuickEntryForm {
 
     update_doc() {
         const doc = super.update_doc();
+
         // to prevent clash with ERPNext
         doc._address_line1 = doc.address_line1;
         delete doc.address_line1;
@@ -268,6 +281,7 @@ class AddressQuickEntryForm extends GSTQuickEntryForm {
 
     update_doc() {
         const doc = super.update_doc();
+
         if (doc.link_doctype && doc.link_name) {
             const link = frappe.model.add_child(doc, "Dynamic Link", "links");
             link.link_doctype = doc.link_doctype;
