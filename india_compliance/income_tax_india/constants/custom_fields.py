@@ -28,9 +28,9 @@ CUSTOM_FIELDS = {
     "Tax Withholding Category": [
         {
             "label": "Section",
-            "fieldname": "section",
+            "fieldname": "tds_section",
             "insert_after": "round_off_tax_amount",
-            "fieldtype": "Select",
+            "fieldtype": "Autocomplete",
             "options": (
                 "193\n194\n194BB\n194EE\n194A\n194B\n194C\n"
                 "194D\n194F\n194G\n194H\n194I\n194JA\n194JB\n"

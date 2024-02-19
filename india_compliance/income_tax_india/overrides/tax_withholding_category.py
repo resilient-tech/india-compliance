@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import get_link_to_form
 
 
 def on_change(doc, method=None):
@@ -16,3 +17,14 @@ def get_tax_withholding_accounts(company):
     return frappe.cache.hget(
         "tax_withholding_accounts", company, generator=_get_tax_withholding_accounts
     )
+
+
+def validate(doc, method=None):
+    name = frappe.db.exists(
+        "Tax Withholding Category",
+        {"tds_section": doc.tds_section, "entity_type": doc.entity_type},
+    )
+    if name:
+        frappe.throw(
+            f'{get_link_to_form("Tax Withholding Category",name)} already exists for the TDS section - {doc.tds_section} and entity type - {doc.entity_type}.'
+        )
