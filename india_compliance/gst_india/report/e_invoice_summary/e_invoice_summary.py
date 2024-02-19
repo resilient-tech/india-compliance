@@ -1,12 +1,10 @@
 # Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-from functools import reduce
-
 import frappe
 from frappe import _
 from frappe.query_builder import Case
-from frappe.query_builder.functions import Coalesce, IfNull
+from frappe.query_builder.functions import IfNull
 from frappe.utils.data import get_datetime
 
 from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
@@ -96,8 +94,6 @@ def get_data(filters=None):
     if not settings.enable_e_invoice or not e_invoice_applicability_date:
         return []
 
-    conditions = e_invoice_conditions(e_invoice_applicability_date)
-
     query = (
         frappe.qb.from_(sales_invoice)
         .left_join(e_invoice_log)
@@ -124,7 +120,7 @@ def get_data(filters=None):
             ]
         )
         .where(sales_invoice.company == filters.get("company"))
-        .where(conditions)
+        .where(sales_invoice.einvoice_status != "Not Applicable")
     )
 
     if filters.get("status"):
@@ -156,40 +152,6 @@ def get_data(filters=None):
 def get_cancelled_active_e_invoice_query(filters, sales_invoice, query):
     query = query.where((sales_invoice.einvoice_status == "Pending Cancellation"))
     return query
-
-
-def e_invoice_conditions(e_invoice_applicability_date):
-    sales_invoice = frappe.qb.DocType("Sales Invoice")
-    taxable_invoices = validate_sales_invoice_item()
-    conditions = []
-
-    conditions.append(sales_invoice.posting_date >= e_invoice_applicability_date)
-    conditions.append(
-        sales_invoice.company_gstin != sales_invoice.billing_address_gstin
-    )
-    conditions.append(
-        (
-            (Coalesce(sales_invoice.place_of_supply, "") == "96-Other Countries")
-            | (Coalesce(sales_invoice.billing_address_gstin, "") != "")
-        )
-    )
-    conditions.append(sales_invoice.name.isin(taxable_invoices))
-
-    return reduce(lambda a, b: a & b, conditions)
-
-
-def validate_sales_invoice_item():
-    sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
-
-    taxable_invoices = (
-        frappe.qb.from_(sales_invoice_item)
-        .select(sales_invoice_item.parent)
-        .where(sales_invoice_item.parenttype == "Sales Invoice")
-        .where(sales_invoice_item.gst_treatment.isin(["Taxable", "Zero-Rated"]))
-        .distinct()
-    )
-
-    return taxable_invoices
 
 
 def get_columns(filters=None):
