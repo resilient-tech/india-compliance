@@ -18,10 +18,7 @@ from india_compliance.gst_india.constants.e_waybill import (
     TRANSPORT_MODES,
     TRANSPORT_TYPES,
 )
-from india_compliance.gst_india.overrides.transaction import (
-    is_hsn_wise_breakup_needed,
-    is_inter_state_supply,
-)
+from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.utils import as_ist
 
 E_INVOICE_ITEM_FIELDS = {
@@ -264,3 +261,10 @@ def add_item_tax_data(
         row_tax.tax_amount += flt(
             getattr(item, f"{scrub(tax_type)}_amount", 0), precision
         )
+
+
+def is_hsn_wise_breakup_needed(doctype):
+    if frappe.get_meta(doctype).has_field("gst_hsn_code") and frappe.get_cached_value(
+        "GST Settings", None, "hsn_wise_tax_breakup"
+    ):
+        return True

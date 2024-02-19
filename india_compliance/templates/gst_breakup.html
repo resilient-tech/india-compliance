@@ -18,9 +18,9 @@
 					<td>{{ row.item }}</td>
 					<td class="text-right">
 						{% if doc.get('is_return') %}
-							{{ frappe.utils.fmt_money(row.taxable_amount |abs, None, doc.currency) }}
+							{{ frappe.utils.fmt_money(row.taxable_amount |abs, None, "INR") }}
 						{% else %}
-							{{ frappe.utils.fmt_money(row.taxable_amount, None, doc.currency) }}
+							{{ frappe.utils.fmt_money(row.taxable_amount, None, "INR") }}
 						{% endif %}
 					</td>
 					{% set taxes = list(row.taxes.values()) %}
@@ -30,9 +30,9 @@
                                 ({{ tax.tax_rate }}%)
                             {% endif %}
                             {% if doc.get('is_return') %}
-                                {{ frappe.utils.fmt_money((tax.tax_amount / doc.conversion_rate)|abs, None, doc.currency) }}
+								{{ frappe.utils.fmt_money((tax.tax_amount / doc.conversion_rate)|abs, None, "INR") }}
                             {% else %}
-                                {{ frappe.utils.fmt_money(tax.tax_amount / doc.conversion_rate, None, doc.currency) }}
+								{{ frappe.utils.fmt_money(tax.tax_amount / doc.conversion_rate, None, "INR") }}
                             {% endif %}
                         </td>
 					{% endfor %}

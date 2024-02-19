@@ -157,6 +157,8 @@ CUSTOM_FIELDS = {
             "insert_after": "custom_gst_breakup",
             "is_virtual": 1,
             "read_only": 1,
+            "allow_on_submit": 1,
+            "translatable": 0,
         },
     ],
     # Sales - Export with GST Payment
@@ -260,6 +262,8 @@ CUSTOM_FIELDS = {
             "insert_after": "custom_gst_breakup",
             "is_virtual": 1,
             "read_only": 1,
+            "allow_on_submit": 1,
+            "translatable": 0,
         },
     ],
     # Sales Shipping Fields
