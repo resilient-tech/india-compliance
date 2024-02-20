@@ -1,10 +1,15 @@
 import base64
+import json
 from datetime import datetime
 from io import BytesIO
 
 import pyqrcode
 from barcode import Code128
 from barcode.writer import ImageWriter
+
+import frappe
+from frappe import scrub
+from frappe.utils import flt
 
 from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
@@ -147,3 +152,103 @@ def get_e_invoice_amount_fields(data, doc):
         mandatory_fields.update(("CgstVal", "SgstVal"))
 
     return get_fields_to_display(data, E_INVOICE_AMOUNT_FIELDS, mandatory_fields)
+
+
+def get_gst_breakup(doc):
+    gst_breakup_data = GSTBreakup(doc).get()
+    return json.dumps(gst_breakup_data)
+
+
+class GSTBreakup:
+    """
+    Returns GST breakup data for the given document
+    Output could contain HSN/SAC wise breakup or Item wise breakup as per the GST Settings
+
+    example output:
+    [
+        {
+            "HSN/SAC": "1234",
+            "Taxable Amount": 1000,
+            "CGST": {
+                "tax_rate": 9,
+                "tax_amount": 90
+            },
+            "SGST": {
+                "tax_rate": 9,
+                "tax_amount": 90
+            }
+        }
+    ]
+    """
+
+    CESS_HEADERS = ["CESS", "CESS Non Advol"]
+
+    def __init__(self, doc):
+        self.doc = doc
+        self.tax_headers = ["IGST"] if is_inter_state_supply(doc) else ["CGST", "SGST"]
+        self.precision = doc.precision("tax_amount", "taxes")
+
+        if self.has_non_zero_cess():
+            self.tax_headers += self.CESS_HEADERS
+
+        self.needs_hsn_wise_breakup = self.is_hsn_wise_breakup_needed()
+
+    def get(self):
+        self.gst_breakup_data = {}
+
+        for item in self.doc.items:
+            gst_breakup_row = self.get_default_item_tax_row(item)
+            gst_breakup_row["Taxable Amount"] += flt(item.taxable_value, self.precision)
+
+            for tax_type in self.tax_headers:
+                _tax_type = scrub(tax_type)
+                tax_details = gst_breakup_row.setdefault(
+                    tax_type,
+                    {
+                        "tax_rate": flt(item.get(f"{_tax_type}_rate", 0)),
+                        "tax_amount": 0,
+                    },
+                )
+
+                tax_details["tax_amount"] += flt(
+                    item.get(f"{_tax_type}_amount", 0), self.precision
+                )
+
+        return list(self.gst_breakup_data.values())
+
+    def has_non_zero_cess(self):
+        if not self.doc.items:
+            return False
+
+        return any(
+            any(
+                getattr(item, f"{scrub(tax_type)}_amount", 0) != 0
+                for tax_type in self.CESS_HEADERS
+            )
+            for item in self.doc.items
+        )
+
+    def get_default_item_tax_row(self, item):
+        if self.needs_hsn_wise_breakup:
+            hsn_code = item.gst_hsn_code
+            tax_rates = [item.cgst_rate, item.sgst_rate, item.igst_rate]
+            tax_rate = next((rate for rate in tax_rates if rate != 0), 0)
+
+            return self.gst_breakup_data.setdefault(
+                (hsn_code, tax_rate), {"HSN/SAC": hsn_code, "Taxable Amount": 0}
+            )
+
+        else:
+            item_code = item.item_code or item.item_name
+            return self.gst_breakup_data.setdefault(
+                item_code, {"Item": item_code, "Taxable Amount": 0}
+            )
+
+    def is_hsn_wise_breakup_needed(self):
+        if not frappe.get_meta(self.doc.doctype + " Item").has_field("gst_hsn_code"):
+            return False
+
+        if not frappe.get_cached_value("GST Settings", None, "hsn_wise_tax_breakup"):
+            return False
+
+        return True

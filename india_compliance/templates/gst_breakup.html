@@ -1,0 +1,50 @@
+{% set tax_breakup_data = json.loads(get_gst_breakup(doc)) %}
+{% if tax_breakup_data %}
+<div class="tax-break-up" style="overflow-x: auto">
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                {% for key in tax_breakup_data[0].keys() %}
+                    {% if key in ["HSN/SAC", "Item"] %}
+                        <th class="text-left">{{ key }}</th>
+                    {% else %}
+                        <th class="text-right">{{ key }}</th>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% set is_doc_return = doc.get('is_return') %}
+            {% for row in tax_breakup_data %}
+                <tr>
+                    {% for key, value in row.items() %}
+                        {% if key in ["HSN/SAC", "Item"] %}
+                            <td class="text-left">{{ value }}</td>
+                        {% elif key == "Taxable Amount" %}
+                            <td class="text-right">
+                                {% if doc.get('is_return') %}
+                                    {{ frappe.utils.fmt_money(value |abs, None, "INR") }}
+                                {% else %}
+                                    {{ frappe.utils.fmt_money(value, None, "INR") }}
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td class="text-right">
+                                {% if value.tax_rate or not value.tax_amount %}
+                                    ({{ value.tax_rate }}%)
+                                {% endif %}
+
+                                {% if doc.get('is_return') %}
+                                    {{ frappe.utils.fmt_money(value.tax_amount |abs, None, "INR") }}
+                                {% else %}
+                                    {{ frappe.utils.fmt_money(value.tax_amount, None, "INR") }}
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
