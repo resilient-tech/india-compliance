@@ -46,8 +46,6 @@ E_INVOICE_AMOUNT_FIELDS = {
     "TotInvVal": "Total Value",
 }
 
-cess_headers = ["CESS", "CESS Non Advol"]
-
 
 def add_spacing(string, interval):
     """
@@ -156,94 +154,101 @@ def get_e_invoice_amount_fields(data, doc):
     return get_fields_to_display(data, E_INVOICE_AMOUNT_FIELDS, mandatory_fields)
 
 
-def get_gst_tax_breakup(doc):
-    if not doc:
-        return
-
-    applicable_tax_accounts = (
-        ["IGST"] if is_inter_state_supply(doc) else ["CGST", "SGST"]
-    )
-
-    if has_non_zero_cess(doc.items):
-        applicable_tax_accounts += cess_headers
-
-    return calculate_gst_breakup_data(doc, applicable_tax_accounts)
+def get_gst_breakup(doc):
+    gst_breakup_data = GSTBreakup(doc).get()
+    return json.dumps(gst_breakup_data)
 
 
-def has_non_zero_cess(items):
-    if not items:
-        return False
+class GSTBreakup:
+    """
+    Returns GST breakup data for the given document
+    Output could contain HSN/SAC wise breakup or Item wise breakup as per the GST Settings
 
-    return any(
-        any(
-            getattr(item, f"{scrub(tax_type)}_rate", 0) != 0
-            or getattr(item, f"{scrub(tax_type)}_amount", 0) != 0
-            for tax_type in cess_headers
-        )
-        for item in items
-    )
+    example output:
+    [
+        {
+            "HSN/SAC": "1234",
+            "Taxable Amount": 1000,
+            "CGST": {
+                "tax_rate": 9,
+                "tax_amount": 90
+            },
+            "SGST": {
+                "tax_rate": 9,
+                "tax_amount": 90
+            }
+        }
+    ]
+    """
 
+    CESS_HEADERS = ["CESS", "CESS Non Advol"]
 
-def calculate_gst_breakup_data(doc, applicable_tax_accounts):
-    if not doc:
-        return
+    def __init__(self, doc):
+        self.doc = doc
+        self.tax_headers = ["IGST"] if is_inter_state_supply(doc) else ["CGST", "SGST"]
+        self.precision = doc.precision("tax_amount", "taxes")
 
-    item_tax_data = frappe._dict()
-    is_hsn_wise_breakup = is_hsn_wise_breakup_needed(doc.doctype + " Item")
-    tax_precision = doc.precision("tax_amount", "taxes")
+        if self.has_non_zero_cess():
+            self.tax_headers += self.CESS_HEADERS
 
-    for item in doc.items:
-        add_item_tax_data(
-            applicable_tax_accounts=applicable_tax_accounts,
-            item_tax_data=item_tax_data,
-            item=item,
-            is_hsn_wise_breakup=is_hsn_wise_breakup,
-            precision=tax_precision,
-        )
+        self.needs_hsn_wise_breakup = self.is_hsn_wise_breakup_needed()
 
-    return json.dumps(list(item_tax_data.values()))
+    def get(self):
+        self.gst_breakup_data = {}
 
+        for item in self.doc.items:
+            gst_breakup_row = self.get_default_item_tax_row(item)
+            gst_breakup_row["Taxable Amount"] += flt(item.taxable_value, self.precision)
 
-def add_item_tax_data(
-    item, item_tax_data, applicable_tax_accounts, precision, is_hsn_wise_breakup=False
-):
-    if not item:
-        return
+            for tax_type in self.tax_headers:
+                _tax_type = scrub(tax_type)
+                tax_details = gst_breakup_row.setdefault(
+                    tax_type,
+                    {
+                        "tax_rate": flt(item.get(f"{_tax_type}_rate", 0)),
+                        "tax_amount": 0,
+                    },
+                )
 
-    row = get_existing_row_or_default(item_tax_data, item, is_hsn_wise_breakup)
-    row["Taxable Amount"] += flt(item.taxable_value, precision)
+                tax_details["tax_amount"] += flt(
+                    item.get(f"{_tax_type}_amount", 0), self.precision
+                )
 
-    for tax_type in applicable_tax_accounts:
-        row_tax = row.setdefault(
-            tax_type, frappe._dict({"tax_rate": 0, "tax_amount": 0})
-        )
-        row_tax.tax_rate = flt(getattr(item, f"{scrub(tax_type)}_rate", 0))
-        row_tax.tax_amount += flt(
-            getattr(item, f"{scrub(tax_type)}_amount", 0), precision
-        )
+        return list(self.gst_breakup_data.values())
 
+    def has_non_zero_cess(self):
+        if not self.doc.items:
+            return False
 
-def get_existing_row_or_default(item_tax_data, item, is_hsn_wise_breakup):
-    if is_hsn_wise_breakup:
-        hsn_code = item.gst_hsn_code
-        taxes = [item.cgst_rate, item.sgst_rate, item.igst_rate]
-        tax_rate = next((rate for rate in taxes if rate != 0), 0)
-
-        return item_tax_data.setdefault(
-            (hsn_code, tax_rate),
-            frappe._dict({"HSN/SAC": hsn_code, "Taxable Amount": 0}),
+        return any(
+            any(
+                getattr(item, f"{scrub(tax_type)}_amount", 0) != 0
+                for tax_type in self.CESS_HEADERS
+            )
+            for item in self.doc.items
         )
 
-    else:
-        key = item.item_code or item.item_name
-        return item_tax_data.setdefault(
-            key,
-            frappe._dict({"Item": key, "Taxable Amount": 0}),
-        )
+    def get_default_item_tax_row(self, item):
+        if self.needs_hsn_wise_breakup:
+            hsn_code = item.gst_hsn_code
+            tax_rates = [item.cgst_rate, item.sgst_rate, item.igst_rate]
+            tax_rate = next((rate for rate in tax_rates if rate != 0), 0)
 
+            return self.gst_breakup_data.setdefault(
+                (hsn_code, tax_rate), {"HSN/SAC": hsn_code, "Taxable Amount": 0}
+            )
 
-def is_hsn_wise_breakup_needed(doctype):
-    if frappe.get_meta(doctype).has_field("gst_hsn_code") and frappe.get_cached_value(
-        "GST Settings", None, "hsn_wise_tax_breakup"
-    ):
+        else:
+            item_code = item.item_code or item.item_name
+            return self.gst_breakup_data.setdefault(
+                item_code, {"Item": item_code, "Taxable Amount": 0}
+            )
+
+    def is_hsn_wise_breakup_needed(self):
+        if not frappe.get_meta(self.doc.doctype + " Item").has_field("gst_hsn_code"):
+            return False
+
+        if not frappe.get_cached_value("GST Settings", None, "hsn_wise_tax_breakup"):
+            return False
+
         return True
