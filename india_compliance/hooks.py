@@ -93,17 +93,13 @@ doc_events = {
         ),
     },
     "Delivery Note": {
-<<<<<<< HEAD
         "on_trash": (
             "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
         ),
-        "onload": "india_compliance.gst_india.overrides.delivery_note.onload",
-=======
         "onload": [
             "india_compliance.gst_india.overrides.delivery_note.onload",
             "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
         ],
->>>>>>> 19b00fe7 (fix: gst breakup table independent of tax breakup from erpnext (#1644))
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "validate": (
@@ -176,17 +172,13 @@ doc_events = {
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
     },
     "Sales Invoice": {
-<<<<<<< HEAD
         "on_trash": (
             "india_compliance.gst_india.overrides.transaction.ignore_logs_on_trash"
         ),
-        "onload": "india_compliance.gst_india.overrides.sales_invoice.onload",
-=======
         "onload": [
             "india_compliance.gst_india.overrides.sales_invoice.onload",
             "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
         ],
->>>>>>> 19b00fe7 (fix: gst breakup table independent of tax breakup from erpnext (#1644))
         "validate": "india_compliance.gst_india.overrides.sales_invoice.validate",
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
