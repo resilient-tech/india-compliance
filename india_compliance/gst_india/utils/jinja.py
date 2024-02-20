@@ -8,9 +8,8 @@ from barcode import Code128
 from barcode.writer import ImageWriter
 
 import frappe
-from frappe import _, scrub
+from frappe import scrub
 from frappe.utils import flt
-from erpnext.utilities.regional import temporary_flag
 
 from india_compliance.gst_india.constants.e_waybill import (
     SUB_SUPPLY_TYPES,
@@ -161,29 +160,14 @@ def get_gst_tax_breakup(doc):
     if not doc:
         return
 
-    tax_breakup_data = frappe._dict()
-    is_hsn = is_hsn_wise_breakup_needed(doc.doctype + " Item")
-
     applicable_tax_accounts = (
         ["IGST"] if is_inter_state_supply(doc) else ["CGST", "SGST"]
     )
 
-    with temporary_flag("company", doc.company):
-        tax_breakup_data.headers = get_itemised_tax_breakup_header(
-            is_hsn, applicable_tax_accounts
-        )
-        tax_breakup_data.data = get_itemised_tax_breakup_data(
-            doc, applicable_tax_accounts, tax_breakup_data.headers, is_hsn
-        )
+    if has_non_zero_cess(doc.items):
+        applicable_tax_accounts += cess_headers
 
-    return json.dumps(tax_breakup_data)
-
-
-def get_itemised_tax_breakup_header(is_hsn, applicable_tax_accounts):
-    if is_hsn:
-        return [_("HSN/SAC"), _("Taxable Amount")] + applicable_tax_accounts
-    else:
-        return [_("Item"), _("Taxable Amount")] + applicable_tax_accounts
+    return calculate_gst_breakup_data(doc, applicable_tax_accounts)
 
 
 def has_non_zero_cess(items):
@@ -200,66 +184,61 @@ def has_non_zero_cess(items):
     )
 
 
-def get_itemised_tax_breakup_data(doc, applicable_tax_accounts, headers, is_hsn):
+def calculate_gst_breakup_data(doc, applicable_tax_accounts):
     if not doc:
         return
 
-    tax_precision = doc.precision("tax_amount", "taxes")
     item_tax_data = frappe._dict()
-
-    if has_non_zero_cess(doc.items):
-        applicable_tax_accounts += cess_headers
-        headers += cess_headers
+    is_hsn_wise_breakup = is_hsn_wise_breakup_needed(doc.doctype + " Item")
+    tax_precision = doc.precision("tax_amount", "taxes")
 
     for item in doc.items:
         add_item_tax_data(
             applicable_tax_accounts=applicable_tax_accounts,
             item_tax_data=item_tax_data,
             item=item,
-            is_hsn=is_hsn,
+            is_hsn_wise_breakup=is_hsn_wise_breakup,
             precision=tax_precision,
         )
 
-    return list(item_tax_data.values())
-
-
-def get_item_key_and_label(item, is_hsn):
-    if is_hsn:
-        hsn_code = item.gst_hsn_code
-        taxes = [item.cgst_rate, item.sgst_rate, item.igst_rate]
-        tax_rate = next((rate for rate in taxes if rate != 0), 0)
-        return (hsn_code, tax_rate), hsn_code
-
-    else:
-        key = item.item_code or item.item_name
-        return key, key
+    return json.dumps(list(item_tax_data.values()))
 
 
 def add_item_tax_data(
-    item, item_tax_data, applicable_tax_accounts, precision, is_hsn=False
+    item, item_tax_data, applicable_tax_accounts, precision, is_hsn_wise_breakup=False
 ):
     if not item:
         return
 
-    item_key, item_label = get_item_key_and_label(item, is_hsn)
-
-    row = item_tax_data.setdefault(
-        item_key,
-        frappe._dict({"item": item_label, "taxable_amount": 0}),
-    )
-
-    row.taxable_amount += flt(item.taxable_value, precision)
-    row_taxes = row.setdefault("taxes", frappe._dict())
+    row = get_existing_row_or_default(item_tax_data, item, is_hsn_wise_breakup)
+    row["Taxable Amount"] += flt(item.taxable_value, precision)
 
     for tax_type in applicable_tax_accounts:
-        row_tax = row_taxes.setdefault(
+        row_tax = row.setdefault(
             tax_type, frappe._dict({"tax_rate": 0, "tax_amount": 0})
         )
-        if tax_type not in row:
-            row_tax.tax_rate = flt(getattr(item, f"{scrub(tax_type)}_rate", 0))
-
+        row_tax.tax_rate = flt(getattr(item, f"{scrub(tax_type)}_rate", 0))
         row_tax.tax_amount += flt(
             getattr(item, f"{scrub(tax_type)}_amount", 0), precision
+        )
+
+
+def get_existing_row_or_default(item_tax_data, item, is_hsn_wise_breakup):
+    if is_hsn_wise_breakup:
+        hsn_code = item.gst_hsn_code
+        taxes = [item.cgst_rate, item.sgst_rate, item.igst_rate]
+        tax_rate = next((rate for rate in taxes if rate != 0), 0)
+
+        return item_tax_data.setdefault(
+            (hsn_code, tax_rate),
+            frappe._dict({"HSN/SAC": hsn_code, "Taxable Amount": 0}),
+        )
+
+    else:
+        key = item.item_code or item.item_name
+        return item_tax_data.setdefault(
+            key,
+            frappe._dict({"Item": key, "Taxable Amount": 0}),
         )
 
 
