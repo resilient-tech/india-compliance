@@ -41,12 +41,12 @@ frappe.ui.form.on("GST Settings", {
             frappe.call({
                 method: 'india_compliance.patches.post_install.add_einvoice_status_field.after_changing_gst_settings_change_status',
                 args: {
-                    company: checked == 1 ? frm.doc.e_invoice_applicable_companies[i].company : "",
-                    e_invoice_applicable_from: checked == 1 ? frm.doc.e_invoice_applicable_companies[i].applicable_from :
+                    company: checked === 1 ? frm.doc.e_invoice_applicable_companies[i].company : "",
+                    e_invoice_applicable_from: checked === 1 ? frm.doc.e_invoice_applicable_companies[i].applicable_from :
                         frm.doc.e_invoice_applicable_from
                 }
             })
-            if(checked == 0) break;
+            if(checked === 0) break;
         }
     },
 });
