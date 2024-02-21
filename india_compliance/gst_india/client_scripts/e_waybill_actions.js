@@ -33,13 +33,28 @@ function setup_e_waybill_actions(doctype) {
             if (frm.doc.__onload?.e_waybill_info?.is_generated_in_sandbox_mode)
                 frm.get_field("ewaybill").set_description("Generated in Sandbox Mode");
 
+            if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
+
+            if(frm.doc.docstatus === 2) return;
+
+            const is_ewb_generatable = is_e_waybill_generatable(frm, true);
+
             if (
-                frm.doc.docstatus != 1 ||
-                frm.is_dirty() ||
-                frm.doc.e_waybill_status === "Not Applicable" ||
-                !is_e_waybill_applicable(frm)
-            )
+                frm.doc.docstatus === 0 ||
+                !is_ewb_generatable ||
+                frm.doc.e_waybill_status === "Not Applicable"
+            ) {
+                if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
+                    frm._ewb_message = "To generate e-Waybill, change e-Waybill Status to Pending.";
+                }
+
+                frm.add_custom_button(
+                    __("Applicability Status"),
+                    () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
+                    "e-Waybill"
+                );
                 return;
+            }
 
             if (!frm.doc.ewaybill) {
                 if (frm.doc.e_waybill_status === "Pending") {
@@ -217,7 +232,6 @@ function fetch_e_waybill_data(frm, args, callback) {
 }
 
 function show_generate_e_waybill_dialog(frm) {
-    india_compliance.validate_invoice_number(frm.doc.name);
     const generate_action = values => {
         frappe.call({
             method: "india_compliance.gst_india.utils.e_waybill.generate_e_waybill",
@@ -1060,12 +1074,16 @@ function has_e_waybill_threshold_met(frm) {
     if (Math.abs(frm.doc.base_grand_total) >= gst_settings.e_waybill_threshold)
         return true;
 }
-function is_e_waybill_applicable(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable();
+function is_e_waybill_applicable(frm, show_message) {
+    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
 }
 
-function is_e_waybill_generatable(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable();
+function is_e_waybill_api_enabled(frm) {
+    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_api_enabled();
+}
+
+function is_e_waybill_generatable(frm, show_message) {
+    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
 function auto_generate_e_waybill(frm) {
@@ -1185,6 +1203,18 @@ function get_transit_type(dialog) {
         if (dialog.mode_of_transport === "Road") return "Road";
         else return "Others";
     }
+}
+
+function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
+    if (frm.doc.docstatus === 0 && is_ewb_generatable) {
+        frm._ewb_message = __("Please submit the doc to generate e-Waybill.");
+    }
+
+    frappe.msgprint({
+        title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
+        message: frm._ewb_message,
+        indicator: is_ewb_generatable ? "green" : "red",
+    });
 }
 
 /********
