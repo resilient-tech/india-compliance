@@ -44,7 +44,7 @@ CUSTOM_FIELDS = {
             "fieldname": "entity_type",
             "insert_after": "tax_on_excess_amount",
             "fieldtype": "Select",
-            "options": "Individual\nCompany\nCompany Assessee\nNo PAN / Invalid PAN",
+            "options": "\nIndividual\nCompany\nCompany Assessee\nNo PAN / Invalid PAN",
         },
     ],
 }
