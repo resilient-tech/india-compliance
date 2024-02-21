@@ -994,6 +994,8 @@ class ItemGSTDetails:
         if item_tax_detail.count == 1:
             return item_tax_detail
 
+        item_tax_detail["count"] -= 1
+
         # Handle rounding errors
         response = item_tax_detail.copy()
         for tax in GST_TAX_TYPES:
@@ -1012,7 +1014,6 @@ class ItemGSTDetails:
 
             response.update({tax_amount_field: tax_amount})
 
-        item_tax_detail["count"] -= 1
         return response
 
     def set_tax_amount_precisions(self, doctype):
