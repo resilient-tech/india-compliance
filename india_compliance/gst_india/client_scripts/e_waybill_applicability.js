@@ -208,12 +208,6 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
         );
     }
 
-<<<<<<< HEAD
-    is_e_waybill_generatable() {
-        return (
-            this.is_e_waybill_applicable() &&
-            this.frm.doc.customer_address
-=======
     is_e_waybill_generatable(show_message = false) {
         let is_ewb_generatable = this.is_e_waybill_applicable(show_message);
 
@@ -235,7 +229,6 @@ class DeliveryNoteEwaybill extends EwaybillApplicability {
     is_e_waybill_api_enabled() {
         return (
             super.is_e_waybill_api_enabled() && gst_settings.enable_e_waybill_from_dn
->>>>>>> 275418e3 (fix: better ux for e-Invoice and e-Waybill applicability (#1607))
         );
     }
 }
