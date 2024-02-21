@@ -22,6 +22,7 @@ frappe.setup.on("before_load", function () {
 });
 
 function toggle_india_specific_fields(country) {
+    console.log(country);
     if (!country) return;
 
     const india_specific_fields = [
@@ -105,10 +106,11 @@ async function autofill_company_info(slide) {
     const gstin = slide.get_input("company_gstin").val();
     const gstin_field = slide.get_field("company_gstin");
 
-    set_gstin_description(gstin_field);
+    gstin_field.$input.css("border", "none");
 
     if (!india_compliance.validate_gstin(gstin)) {
-        set_gstin_description(gstin_field, "Invalid GSTIN");
+        gstin_field.$input.css("border", "1px solid red");
+        return;
     }
 
     if (!can_fetch_gstin_info()) return;
@@ -119,8 +121,6 @@ async function autofill_company_info(slide) {
         await slide.get_field("company_name").set_value(gstin_info.business_name);
         slide.get_input("company_name").trigger("input");
     }
-
-    set_gstin_description(gstin_field, gstin_info.status);
 }
 
 function can_fetch_gstin_info() {
