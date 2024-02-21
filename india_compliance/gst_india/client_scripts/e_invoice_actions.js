@@ -237,7 +237,7 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
 }
 
 function is_e_invoice_generatable(frm, show_message = false) {
-    const is_einv_applicable = is_e_invoice_applicable(frm, show_message);
+    let is_einv_applicable = is_e_invoice_applicable(frm, show_message);
     if (!show_message) return is_einv_applicable;
 
     let is_invalid_invoice_number = india_compliance.validate_invoice_number(
