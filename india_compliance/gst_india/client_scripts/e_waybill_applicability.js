@@ -3,41 +3,6 @@ class EwaybillApplicability {
         this.frm = frm;
     }
 
-    can_generate_e_waybill() {
-        let is_ewb_applicable = this.is_e_waybill_generatable(true);
-        let message_list = [];
-
-        if (
-            this.frm.doctype == "Sales Invoice" &&
-            !has_e_waybill_threshold_met(this.frm)
-        ) {
-            is_ewb_applicable = false;
-            message_list.push(
-                `The total invoice value is less than the threshold amount of ${format_currency(
-                    gst_settings.e_waybill_threshold,
-                    "INR"
-                )} as per GST Settings.`
-            );
-        }
-
-        let is_invalid_invoice_number = india_compliance.validate_invoice_number(
-            this.frm.doc.name
-        );
-
-        if (is_invalid_invoice_number.length > 0) {
-            is_ewb_applicable = false;
-            message_list.push(...is_invalid_invoice_number);
-        }
-
-        if (!is_ewb_applicable) {
-            this.frm._ewb_message += message_list
-                .map(message => `<li>${message}</li>`)
-                .join("");
-        }
-
-        return is_ewb_applicable;
-    }
-
     is_e_waybill_applicable(show_message = false) {
         if (!gst_settings.enable_e_waybill) return false;
 
@@ -86,7 +51,25 @@ class EwaybillApplicability {
     }
 
     is_e_waybill_generatable(show_message = false) {
-        return this.is_e_waybill_applicable(show_message);
+        let is_ewb_applicable = this.is_e_waybill_applicable(show_message);
+        let message_list = [];
+
+        let is_invalid_invoice_number = india_compliance.validate_invoice_number(
+            this.frm.doc.name
+        );
+
+        if (is_invalid_invoice_number.length > 0) {
+            is_ewb_applicable = false;
+            message_list.push(...is_invalid_invoice_number);
+        }
+
+        if (!is_ewb_applicable) {
+            this.frm._ewb_message += message_list
+                .map(message => `<li>${message}</li>`)
+                .join("");
+        }
+
+        return is_ewb_applicable;
     }
 
     auto_generate_e_waybill() {

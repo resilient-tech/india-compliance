@@ -21,27 +21,17 @@ frappe.ui.form.on("Sales Invoice", {
         )
             return;
 
-        if (frm.doc.docstatus == 0) {
+        if(frm.doc.docstatus === 2) return;
+
+        const is_einv_applicable = is_e_invoice_applicable(frm, true);
+
+        if (frm.doc.docstatus === 0 || !is_einv_applicable) {
             frm.add_custom_button(
                 __("Applicability Status"),
                 () =>
                     show_e_invoice_applicability_status(
                         frm,
-                        is_e_invoice_applicable(frm, true)
-                    ),
-                "e-Invoice"
-            );
-
-            return;
-        }
-
-        if (!is_e_invoice_applicable(frm, true)) {
-            frm.add_custom_button(
-                __("Applicability Status"),
-                () =>
-                    show_e_invoice_applicability_status(
-                        frm,
-                        false,
+                        is_einv_applicable
                     ),
                 "e-Invoice"
             );
@@ -307,15 +297,15 @@ function is_e_invoice_applicable(frm, show_message = false) {
     return is_einv_applicable;
 }
 
-function show_e_invoice_applicability_status(frm, is_e_invoice_applicable) {
-    if (is_e_invoice_applicable) {
+function show_e_invoice_applicability_status(frm, is_einv_applicable) {
+    if (frm.doc.docstatus == 0 && is_einv_applicable) {
         frm._einv_message = __("Please submit the doc to generate e-Invoice.");
     }
 
     frappe.msgprint({
-        title: is_e_invoice_applicable ? __("e-Invoice can be generated") : __("e-Invoice cannot be generated"),
+        title: is_einv_applicable ? __("e-Invoice can be generated") : __("e-Invoice cannot be generated"),
         message: frm._einv_message,
-        indicator: is_e_invoice_applicable ? "green" : "red",
+        indicator: is_einv_applicable ? "green" : "red",
     });
 }
 

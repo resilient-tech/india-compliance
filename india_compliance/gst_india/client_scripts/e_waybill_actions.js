@@ -35,39 +35,26 @@ function setup_e_waybill_actions(doctype) {
 
             if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
 
-            if (frm.doc.docstatus == 0) {
+            if(frm.doc.docstatus === 2) return;
+
+            const is_ewb_generatable = is_e_waybill_generatable(frm, true);
+
+            if (
+                frm.doc.docstatus === 0 ||
+                !is_ewb_generatable ||
+                frm.doc.e_waybill_status === "Not Applicable"
+            ) {
+                if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
+                    frm._ewb_message = "To generate e-Waybill, change e-Waybill Status to Pending.";
+                }
+
                 frm.add_custom_button(
                     __("Applicability Status"),
-                    () =>
-                        show_e_waybill_applicability_status(
-                            frm,
-                            can_generate_e_waybill(frm)
-                        ),
+                    () => show_e_waybill_generatable_status(frm, is_ewb_generatable),
                     "e-Waybill"
                 );
                 return;
             }
-
-            if (frm.doc.docstatus == 1 && !can_generate_e_waybill(frm)) {
-                // without condition of e_waybill_threshold
-                let is_ewb_generatable = is_e_waybill_generatable(frm);
-
-                // E-waybill status is Not Applicable but e-waybill is generatable
-                if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
-                    frm._ewb_message +="<br> To generate e-Waybill, change e-Waybill Status to Pending.";
-                }
-
-                if (frm.doc.e_waybill_status === "Not Applicable" || !is_ewb_generatable) {
-                    frm.add_custom_button(
-                        __("Applicability Status"),
-                        () => show_e_waybill_applicability_status(frm, false),
-                        "e-Waybill"
-                    );
-                    return;
-                }
-            }
-
-            if(frm.doc.docstatus != 1) return;
 
             if (!frm.doc.ewaybill) {
                 if (frm.doc.e_waybill_status === "Pending") {
@@ -1015,16 +1002,12 @@ function is_e_waybill_applicable(frm, show_message) {
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_applicable(show_message);
 }
 
-function can_generate_e_waybill(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).can_generate_e_waybill();
-}
-
 function is_e_waybill_api_enabled(frm) {
     return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_api_enabled();
 }
 
-function is_e_waybill_generatable(frm) {
-    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable();
+function is_e_waybill_generatable(frm, show_message) {
+    return new E_WAYBILL_CLASS[frm.doctype](frm).is_e_waybill_generatable(show_message);
 }
 
 function auto_generate_e_waybill(frm) {
@@ -1139,15 +1122,15 @@ function get_transit_type(dialog) {
     }
 }
 
-function show_e_waybill_applicability_status(frm, is_e_waybill_applicable) {
-    if (is_e_waybill_applicable) {
+function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
+    if (frm.doc.docstatus === 0 && is_ewb_generatable) {
         frm._ewb_message = __("Please submit the doc to generate e-Waybill.");
     }
 
     frappe.msgprint({
-        title: is_e_waybill_applicable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
+        title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
         message: frm._ewb_message,
-        indicator: is_e_waybill_applicable ? "green" : "red",
+        indicator: is_ewb_generatable ? "green" : "red",
     });
 }
 
