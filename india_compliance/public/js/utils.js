@@ -240,21 +240,19 @@ Object.assign(india_compliance, {
     },
 
     validate_invoice_number(invoice_number) {
+        // returns a list of error messages if invoice number is invalid
+        let message_list = [];
         if (invoice_number.length > 16) {
-            frappe.throw(
-                __("GST Invoice Number cannot exceed 16 characters"),
-                __("Invalid GST Invoice Number")
-            );
+            message_list.push("GST Invoice Number cannot exceed 16 characters");
         }
 
         if (!GST_INVOICE_NUMBER_FORMAT.test(invoice_number)) {
-            frappe.throw(
-                __(
-                    "GST Invoice Number should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/)"
-                ),
-                __("Invalid GST Invoice Number")
+            message_list.push(
+                "GST Invoice Number should start with an alphanumeric character and can only contain alphanumeric characters, dash (-) and slash (/)."
             );
         }
+
+        return message_list;
     },
 
     trigger_file_download(file_content, file_name) {
