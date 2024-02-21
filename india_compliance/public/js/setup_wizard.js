@@ -10,9 +10,7 @@ frappe.setup.on("before_load", function () {
     first_slide.onload = function (slide) {
         _onload.call(this, slide);
 
-        const country_input = frappe.wizard
-            ? frappe.wizard.slide_dict[0].get_input("country")
-            : null;
+        const country_input = frappe.wizard?.slide_dict[0].get_input("country");
         if (country_input) {
             country_input.on("change", event => {
                 toggle_india_specific_fields(event.target.value);
@@ -22,7 +20,6 @@ frappe.setup.on("before_load", function () {
 });
 
 function toggle_india_specific_fields(country) {
-    console.log(country);
     if (!country) return;
 
     const india_specific_fields = [
@@ -30,14 +27,16 @@ function toggle_india_specific_fields(country) {
         "default_gst_rate",
         "enable_audit_trail",
     ];
-    const value = country && country.toLowerCase() !== "india" ? 1 : 0;
-    const slide = frappe.wizard.slide_dict[2];
 
-    slide?.form?.fields_list?.map(fieldobj => {
-        if (india_specific_fields.includes(fieldobj.df.fieldname)) {
-            fieldobj.df.hidden = value;
-            fieldobj.refresh();
-        }
+    const hide_field = country && country.toLowerCase() !== "india" ? 1 : 0;
+
+    Object.values(frappe.wizard.slide_dict || {}).forEach(slide => {
+        slide.form?.fields_list?.forEach(fieldobj => {
+            if (india_specific_fields.includes(fieldobj.df.fieldname)) {
+                fieldobj.df.hidden = hide_field;
+                fieldobj.refresh();
+            }
+        });
     });
 }
 
@@ -96,7 +95,7 @@ function update_erpnext_slides_settings() {
 
         toggle_india_specific_fields(frappe.wizard.values.country);
 
-        slide.get_input("company_gstin")?.on?.("change", async function () {
+        slide.get_input("company_gstin")?.on("change", async function () {
             autofill_company_info(slide);
         });
     };
