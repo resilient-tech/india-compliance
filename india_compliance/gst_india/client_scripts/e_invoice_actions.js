@@ -23,23 +23,21 @@ frappe.ui.form.on("Sales Invoice", {
 
         if(frm.doc.docstatus === 2) return;
 
-        const is_einv_applicable = is_e_invoice_applicable(frm, true);
+        const is_einv_generatable = is_e_invoice_generatable(frm, true);
 
-        if (frm.doc.docstatus === 0 || !is_einv_applicable) {
+        if (frm.doc.docstatus === 0 || !is_einv_generatable) {
             frm.add_custom_button(
                 __("Applicability Status"),
                 () =>
                     show_e_invoice_applicability_status(
                         frm,
-                        is_einv_applicable
+                        is_einv_generatable
                     ),
                 "e-Invoice"
             );
 
             return;
         }
-
-        if (frm.doc.docstatus != 1) return;
 
         if (
             !frm.doc.irn &&
@@ -238,6 +236,24 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
     return fields;
 }
 
+function is_e_invoice_generatable(frm, show_message = false) {
+    const is_einv_applicable = is_e_invoice_applicable(frm, show_message);
+    if (!show_message) return is_einv_applicable;
+
+    let is_invalid_invoice_number = india_compliance.validate_invoice_number(
+        frm.doc.name
+    );
+
+    if (is_invalid_invoice_number.length > 0) {
+        is_einv_applicable = false;
+        frm._einv_message += is_invalid_invoice_number
+            .map(message => `<li>${__(message)}</li>`)
+            .join("");
+    }
+
+    return is_einv_applicable;
+}
+
 function is_e_invoice_applicable(frm, show_message = false) {
     if (
         !india_compliance.is_e_invoice_enabled() ||
@@ -280,15 +296,7 @@ function is_e_invoice_applicable(frm, show_message = false) {
         );
     }
 
-    let is_invalid_invoice_number = india_compliance.validate_invoice_number(
-        frm.doc.name
-    );
-
-    if (is_invalid_invoice_number.length > 0) {
-        is_einv_applicable = false;
-        message_list.push(...is_invalid_invoice_number);
-    }
-
+    frm._einv_message = "";
     if (show_message)
         frm._einv_message = message_list
             .map(message => `<li>${__(message)}</li>`)

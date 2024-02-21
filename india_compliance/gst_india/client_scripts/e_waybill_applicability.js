@@ -41,6 +41,7 @@ class EwaybillApplicability {
             message_list.push("All items are service items (HSN code starts with 99).");
         }
 
+        this.frm._ewb_message = "";
         if (show_message) {
             this.frm._ewb_message = message_list
                 .map(message => `<li>${message}</li>`)
