@@ -1009,10 +1009,10 @@ class ItemGSTDetails:
             tax_amount = flt(tax_rate * multiplier, precision)
 
             item_tax_detail[tax_amount_field] -= tax_amount
-            item_tax_detail["count"] -= 1
 
             response.update({tax_amount_field: tax_amount})
 
+        item_tax_detail["count"] -= 1
         return response
 
     def set_tax_amount_precisions(self, doctype):
