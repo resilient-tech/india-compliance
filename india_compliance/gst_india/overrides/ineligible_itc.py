@@ -368,14 +368,11 @@ class PurchaseInvoice(IneligibleITC):
         :param item: Item Row
         :return: bool
         """
-        if self.doc.update_stock:
-            if item.get("is_fixed_asset"):
-                return False
+        if item.get("is_fixed_asset"):
+            return False
 
-            if item.get("_is_stock_item"):
-                return False
-
-            return True
+        if item.get("_is_stock_item"):
+            return False
 
         account_root = frappe.db.get_value("Account", item.expense_account, "root_type")
         if account_root in ["Asset", "Liability", "Equity"]:
