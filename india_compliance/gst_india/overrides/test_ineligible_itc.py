@@ -224,9 +224,13 @@ class TestIneligibleITC(FrappeTestCase):
             "doctype": "Purchase Receipt",
             "items": SAMPLE_ITEM_LIST,
             "is_in_state": 1,
+            "do_not_submit": 1,
         }
 
         doc = create_transaction(**transaction_details)
+        # Changing expense account for stock item does not change accounting
+        doc.items[1].expense_account = "Office Rent - _TIRC"
+        doc.submit()
 
         self.assertGLEntry(
             doc.name,
@@ -271,6 +275,8 @@ class TestIneligibleITC(FrappeTestCase):
         # Create Purchase Invoice
         doc = make_purchase_invoice(doc.name)
         doc.bill_no = "BILL-03"
+        # Changing expense account for stock item does not change accounting
+        doc.items[1].expense_account = "Office Rent - _TIRC"
         doc.submit()
 
         self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
@@ -456,6 +462,58 @@ class TestIneligibleITC(FrappeTestCase):
                 },
                 {"account": "Creditors - _TIRC", "debit": 5610.0, "credit": 0.0},
             ],
+        )
+
+        self.assertStockValues(
+            doc.name,
+            outgoing_rates={"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42},
+        )
+
+    def test_purchase_receipt_returns(self):
+        transaction_details = {
+            "doctype": "Purchase Receipt",
+            "items": SAMPLE_ITEM_LIST,
+            "is_in_state": 1,
+        }
+
+        doc = create_transaction(**transaction_details)
+        doc = make_return_doc("Purchase Receipt", doc.name)
+        doc.submit()
+
+        self.assertGLEntry(
+            doc.name,
+            [
+                {
+                    "account": "GST Expense - _TIRC",
+                    "debit": 190.08,  # 10.26 + 179.82
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Asset Received But Not Billed - _TIRC",
+                    "debit": 1999.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "CWIP Account - _TIRC",
+                    "debit": 0.0,
+                    "credit": 2178.82,  # 1999 + 179.82
+                },
+                {
+                    "account": "Stock Received But Not Billed - _TIRC",
+                    "debit": 257.0,
+                    "credit": 0.0,
+                },
+                {
+                    "account": "Stock In Hand - _TIRC",
+                    "debit": 0.0,
+                    "credit": 267.26,  # 257 + 10.26
+                },
+            ],
+        )
+
+        self.assertStockValues(
+            doc.name,
+            outgoing_rates={"Test Stock Item": 20, "Test Ineligible Stock Item": 22.42},
         )
 
     @toggle_perpetual_inventory()
@@ -728,14 +786,24 @@ class TestIneligibleITC(FrappeTestCase):
             )
             self.assertEqual(asset_purchase_value, value)
 
-    def assertStockValues(self, docname, incoming_rates):
-        for item, value in incoming_rates.items():
-            incoming_rate = frappe.db.get_value(
-                "Stock Ledger Entry",
-                {"voucher_no": docname, "item_code": item},
-                "incoming_rate",
-            )
-            self.assertEqual(incoming_rate, value)
+    def assertStockValues(self, docname, incoming_rates=None, outgoing_rates=None):
+        if incoming_rates:
+            for item, value in incoming_rates.items():
+                incoming_rate = frappe.db.get_value(
+                    "Stock Ledger Entry",
+                    {"voucher_no": docname, "item_code": item, "is_cancelled": 0},
+                    "incoming_rate",
+                )
+                self.assertEqual(incoming_rate, value)
+
+        if outgoing_rates:
+            for item, value in outgoing_rates.items():
+                outgoing_rate = frappe.db.get_value(
+                    "Stock Ledger Entry",
+                    {"voucher_no": docname, "item_code": item, "is_cancelled": 0},
+                    "outgoing_rate",
+                )
+                self.assertEqual(outgoing_rate, value)
 
 
 def create_test_items():
