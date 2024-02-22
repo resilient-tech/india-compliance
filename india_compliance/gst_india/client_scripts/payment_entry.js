@@ -9,7 +9,23 @@ const WARNING_ICON = `
 `;
 
 frappe.ui.form.on("Payment Entry", {
-    setup: override_get_outstanding_documents,
+    setup(frm) {
+        frm.set_query("customer_address", function () {
+            if (!frm.doc.party) {
+                frappe.throw(__("Please set Party"));
+            }
+
+            return {
+                query: "frappe.contacts.doctype.address.address.address_query",
+                filters: {
+                    link_doctype: frm.doc.party_type,
+                    link_name: frm.doc.party,
+                },
+            };
+        });
+
+        override_get_outstanding_documents(frm);
+    },
 
     refresh(frm) {
         add_warning_indicator(frm, frm.doc.__onload?.reconciliation_status_dict);
