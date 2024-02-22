@@ -48,11 +48,7 @@ def get_docs_with_gst_accounts_and_same_item_multiple_times(doctype, gst_account
         .select(item_doctype.parent)
         .groupby(item_doctype.parent, item_doctype.item_code)
         .having(Count((item_doctype.item_code)) > 2)
-        .run(pluck=True)
     )
-
-    if not invoices_with_same_item_multiple_times:
-        return []
 
     return (
         frappe.qb.from_(gl_entry)
