@@ -12,6 +12,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
+from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -901,6 +902,18 @@ class TestEWaybill(FrappeTestCase):
             ),
             0,
         )
+
+    @responses.activate
+    def test_print_e_waybill(self):
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        ewl = frappe.get_doc("e-Waybill Log", {"reference_name": si.name})
+        data = frappe.as_json(ewl)
+        get_html_and_style(data)
+        ewl.data = None
+        ewl.is_latest_data = 0
+        data = frappe.as_json(ewl)
+        get_html_and_style(data)
 
     # helper functions
     def _generate_e_waybill(
