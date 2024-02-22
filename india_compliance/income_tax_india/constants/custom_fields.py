@@ -1,3 +1,8 @@
+from india_compliance.income_tax_india.constants import TDS_ENTITY_TYPE, TDS_SECTIONS
+
+tds_section_options = "\n" + "\n".join(sorted(TDS_SECTIONS))
+tds_entity_type_options = "\n" + "\n".join(sorted(TDS_ENTITY_TYPE))
+
 party_fields = [
     {
         "fieldname": "pan",
@@ -31,20 +36,18 @@ CUSTOM_FIELDS = {
             "fieldname": "tds_section",
             "insert_after": "round_off_tax_amount",
             "fieldtype": "Autocomplete",
-            "options": (
-                "193\n194\n194BB\n194EE\n194A\n194B\n194C\n"
-                "194D\n194F\n194G\n194H\n194I\n194JA\n194JB\n"
-                "194LA\n194I(a)\n194I(b)\n194LBA\n194DA\n"
-                "192A\n194LBB\n194IA\n194N"
-            ),
-            "sort_options": 1,
+            "options": tds_section_options,
+            "translatable": 0,
+            "mandatory_depends_on": "eval:doc.entity_type",
         },
         {
             "label": "Entity",
             "fieldname": "entity_type",
             "insert_after": "tax_on_excess_amount",
             "fieldtype": "Select",
-            "options": "\nIndividual\nCompany\nCompany Assessee\nNo PAN / Invalid PAN",
+            "options": tds_entity_type_options,
+            "translatable": 0,
+            "mandatory_depends_on": "eval:doc.tds_section",
         },
     ],
 }

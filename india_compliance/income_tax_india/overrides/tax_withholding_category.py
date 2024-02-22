@@ -20,8 +20,10 @@ def get_tax_withholding_accounts(company):
 
 
 def validate(doc, method=None):
+    if not doc.tds_section or doc.entity_type:
+        return
 
-    name = frappe.db.exists(
+    existing_doc = frappe.db.exists(
         "Tax Withholding Category",
         {
             "tds_section": doc.tds_section,
@@ -30,9 +32,9 @@ def validate(doc, method=None):
         },
     )
 
-    if not name:
+    if not existing_doc:
         return
 
     frappe.throw(
-        f'{get_link_to_form("Tax Withholding Category",name)} already exists for the TDS section - {doc.tds_section} and entity type - {doc.entity_type}.'
+        f'{get_link_to_form("Tax Withholding Category",existing_doc)} already exists for the TDS section - {doc.tds_section} and Entity type - {doc.entity_type}.'
     )

@@ -50,30 +50,34 @@ def set_tax_withholding_category(company):
             doc.flags.ignore_mandatory = True
             doc.insert()
         else:
-            doc = frappe.get_doc("Tax Withholding Category", name, for_update=True)
+            update_existing_tax_withholding_category(accounts, rule, name)
 
-            if accounts and not doc.get("accounts"):
-                doc.append("accounts", accounts[0])
 
-            for rate in rule.get("rates"):
-                if not next(
-                    (
-                        row
-                        for row in doc.get("rates")
-                        if row.get("from_date") <= getdate(rate.get("from_date"))
-                        and row.get("to_date") >= getdate(rate.get("to_date"))
-                    ),
-                    None,
-                ):
-                    doc.append("rates", rate)
+def update_existing_tax_withholding_category(accounts, rule, name):
+    doc = frappe.get_doc("Tax Withholding Category", name, for_update=True)
 
-            doc.tds_section = rule.get("tds_section")
-            doc.entity_type = rule.get("entity_type")
-            doc.flags.ignore_permissions = True
-            doc.flags.ignore_validate = True
-            doc.flags.ignore_mandatory = True
-            doc.flags.ignore_links = True
-            doc.save()
+    if accounts and not doc.get("accounts"):
+        doc.append("accounts", accounts[0])
+
+    for rate in rule["rates"]:
+        if not next(
+            (
+                row
+                for row in doc.get("rates")
+                if getdate(row.get("from_date")) <= getdate(rate.get("from_date"))
+                and getdate(row.get("to_date")) >= getdate(rate.get("to_date"))
+            ),
+            None,
+        ):
+            doc.append("rates", rate)
+
+    doc.tds_section = rule.get("tds_section")
+    doc.entity_type = rule.get("entity_type")
+    doc.flags.ignore_permissions = True
+    doc.flags.ignore_validate = True
+    doc.flags.ignore_mandatory = True
+    doc.flags.ignore_links = True
+    doc.save()
 
 
 def get_tds_details(accounts):
