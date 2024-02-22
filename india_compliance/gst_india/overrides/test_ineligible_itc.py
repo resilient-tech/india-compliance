@@ -732,7 +732,7 @@ class TestIneligibleITC(FrappeTestCase):
         for item, value in incoming_rates.items():
             incoming_rate = frappe.db.get_value(
                 "Stock Ledger Entry",
-                {"voucher_no": docname, "item_code": item},
+                {"voucher_no": docname, "item_code": item, "is_cancelled": 0},
                 "incoming_rate",
             )
             self.assertEqual(incoming_rate, value)
