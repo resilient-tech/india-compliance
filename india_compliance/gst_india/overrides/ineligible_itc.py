@@ -47,7 +47,7 @@ class IneligibleITC:
             if item._ineligible_tax_amount:
                 self.doc._has_ineligible_itc_items = True
 
-            if item.item_code in stock_items:
+            if item.item_code in stock_items and self.is_perpetual:
                 item._is_stock_item = True
 
             if item.get("_is_stock_item") or item.get("is_fixed_asset"):
@@ -153,9 +153,7 @@ class IneligibleITC:
 
         expense_account = self.get_item_expense_account(item)
         against_account = self.get_against_account(item)
-        remarks = self.doc.get("remarks") or _("Accounting Entry for {0}").format(
-            "Asset" if item.is_fixed_asset else "Stock"
-        )
+        remarks = item.get("_remarks")
 
         self.gl_entries.append(
             self.doc.get_gl_dict(
@@ -164,12 +162,66 @@ class IneligibleITC:
                     self.dr_or_cr: ineligible_item_tax_amount,
                     f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
                     "cost_center": item.cost_center or self.cost_center,
-                    "against_account": against_account,
+                    "against": against_account,
                     "remarks": remarks,
                 },
                 item=item,
             )
         )
+
+    def reverse_stock_adjustment_entry(self, item):
+        """
+        Stock Adjustment Entry for returned items is booked in ERPNext
+        Steps as Followed by ERPNext:
+        - Identify Stock Value for each item from Purchase Invoice
+        - Book SLE accordingly as per original Purchase Invoice
+        - Identify Stock Value difference and book it against default expense account
+
+        Reference:
+        - Purchase Invoice: erpnext.accounts.doctype.purchase_invoice.purchase_invoice.PurchaseInvoice.make_stock_adjustment_entry
+        - Purchase Receipt: erpnext.stock.doctype.purchase_receipt.purchase_receipt.PurchaseReceipt.make_item_gl_entries.make_divisional_loss_gl_entry
+
+        This method reverses the Stock Adjustment Entry
+        """
+        stock_account = self.get_item_expense_account(item)
+        cogs_account = self.doc.get_company_default("default_expense_account")
+
+        ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
+
+        self.gl_entries.append(
+            self.doc.get_gl_dict(
+                {
+                    "account": stock_account,
+                    self.cr_or_dr: ineligible_item_tax_amount,
+                    f"{self.cr_or_dr}_in_account_currency": ineligible_item_tax_amount,
+                    "cost_center": item.cost_center or self.cost_center,
+                    "remarks": item.get("_remarks"),
+                }
+            )
+        )
+
+        for entry in self.gl_entries:
+            if entry.get("account") != cogs_account:
+                continue
+
+            entry[self.cr_or_dr] -= ineligible_item_tax_amount
+            entry[f"{self.cr_or_dr}_in_account_currency"] -= ineligible_item_tax_amount
+            break
+
+        else:
+            # FALLBACK: If COGS Account not found in GL Entries
+            self.gl_entries.append(
+                self.doc.get_gl_dict(
+                    {
+                        "account": cogs_account,
+                        self.dr_or_cr: ineligible_item_tax_amount,
+                        f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                        "cost_center": item.cost_center or self.cost_center,
+                        "against": stock_account,
+                        "remarks": item.get("_remarks"),
+                    }
+                )
+            )
 
     def get_item_expense_account(self, item):
         if item.get("is_fixed_asset"):
@@ -177,10 +229,8 @@ class IneligibleITC:
             item.expense_account = expense_account
             self.update_asset_valuation_rate(item)
 
-        elif (
-            item.get("_is_stock_item")
-            and self.is_perpetual
-            and self.warehouse_account_map.get(item.warehouse)
+        elif item.get("_is_stock_item") and self.warehouse_account_map.get(
+            item.warehouse
         ):
             expense_account = self.warehouse_account_map[item.warehouse]["account"]
 
@@ -258,11 +308,21 @@ class IneligibleITC:
 
 
 class PurchaseReceipt(IneligibleITC):
+
+    def update_valuation_rate(self):
+        for item in self.doc.items:
+            item._remarks = self.doc.get("remarks") or _(
+                "Accounting Entry for {0}"
+            ).format("Asset" if item.is_fixed_asset else "Stock")
+
+        super().update_valuation_rate()
+
     def update_item_gl_entries(self, item):
-        if (item.get("_is_stock_item") and self.is_perpetual) or item.get(
-            "is_fixed_asset"
-        ):
+        if (item.get("_is_stock_item")) or item.get("is_fixed_asset"):
             self.make_gst_expense_entry(item)
+
+        if self.doc.is_return and item.get("_is_stock_item"):
+            self.reverse_stock_adjustment_entry(item)
 
     def is_eligibility_restricted_due_to_pos(self):
         return self.doc.place_of_supply[:2] != self.doc.company_gstin[:2]
@@ -276,11 +336,29 @@ class PurchaseReceipt(IneligibleITC):
 
 
 class PurchaseInvoice(IneligibleITC):
+
+    def update_valuation_rate(self):
+        for item in self.doc.items:
+            item._remarks = self.doc.get("remarks") or _(
+                "Accounting Entry for {0}"
+            ).format("Asset" if item.is_fixed_asset else "Stock")
+
+        super().update_valuation_rate()
+
+    def update_stock_ledger_entries(self):
+        if not self.doc.update_stock:
+            return
+
+        super().update_stock_ledger_entries()
+
     def update_item_gl_entries(self, item):
         if self.doc.update_stock or self.is_expense_item(item):
             self.make_gst_expense_entry(item)
 
         self.reverse_input_taxes_entry(item)
+
+        if self.doc.is_return and item.get("_is_stock_item"):
+            self.reverse_stock_adjustment_entry(item)
 
     def is_expense_item(self, item):
         """
@@ -294,7 +372,7 @@ class PurchaseInvoice(IneligibleITC):
             if item.get("is_fixed_asset"):
                 return False
 
-            if item.get("_is_stock_item") and self.is_perpetual:
+            if item.get("_is_stock_item"):
                 return False
 
             return True
@@ -350,10 +428,7 @@ class BillOfEntry(IneligibleITC):
         return
 
     def update_item_gl_entries(self, item):
-        if not (
-            (item.get("_is_stock_item") and self.is_perpetual)
-            or item.get("is_fixed_asset")
-        ):
+        if not ((item.get("_is_stock_item")) or item.get("is_fixed_asset")):
             self.make_gst_expense_entry(item)
 
         self.reverse_input_taxes_entry(item)
