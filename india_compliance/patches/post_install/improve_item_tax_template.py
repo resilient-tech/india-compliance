@@ -326,32 +326,34 @@ def update_gst_details_for_transactions(companies):
             if not docs:
                 continue
 
-            chunk_size = 100
-            total_docs = len(docs)
+            _update_gst_details(company, doctype, is_sales_doctype, docs)
 
-            with click.progressbar(
-                range(0, total_docs, chunk_size),
-                label=f"Updating {total_docs} {doctype}s",
-            ) as bar:
-                for index in bar:
-                    chunk = docs[index : index + chunk_size]
 
-                    taxes = get_taxes_for_docs(chunk, doctype, is_sales_doctype)
-                    items = get_items_for_docs(chunk, doctype)
-                    complied_docs = compile_docs(taxes, items)
+def _update_gst_details(company, doctype, is_sales_doctype, docs):
+    chunk_size = 100
+    total_docs = len(docs)
 
-                    if not complied_docs:
-                        continue
+    with click.progressbar(
+        range(0, total_docs, chunk_size),
+        label=f"Updating {total_docs} {doctype}s",
+    ) as bar:
+        for index in bar:
+            chunk = docs[index : index + chunk_size]
 
-                    gst_details = ItemGSTDetails().get(
-                        complied_docs.values(), doctype, company
-                    )
+            taxes = get_taxes_for_docs(chunk, doctype, is_sales_doctype)
+            items = get_items_for_docs(chunk, doctype)
+            complied_docs = compile_docs(taxes, items)
 
-                    if not gst_details:
-                        continue
+            if not complied_docs:
+                continue
 
-                    build_query_and_update_gst_details(gst_details, doctype)
-                    frappe.db.commit()
+            gst_details = ItemGSTDetails().get(complied_docs.values(), doctype, company)
+
+            if not gst_details:
+                continue
+
+            build_query_and_update_gst_details(gst_details, doctype)
+            frappe.db.commit()
 
 
 def get_docs_with_gst_accounts(doctype, gst_accounts):
