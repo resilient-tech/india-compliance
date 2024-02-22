@@ -51,3 +51,17 @@ class TestPropertySetter(FrappeTestCase):
             re.compile(r"^(Cannot change the Track Changes property for*)"),
             doc.save,
         )
+
+    def test_property_setter_where_frm_is_new_and_doc_not_protected(self):
+        frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 1)
+        doc = frappe.get_doc(
+            "Property Setter",
+            {
+                "doctype_or_field": "DocField",
+                "doc_type": "Purchase Receipt",
+                "field_name": "in_words",
+                "property": "print_hide",
+                "value": 0,
+            },
+        )
+        doc.save()
