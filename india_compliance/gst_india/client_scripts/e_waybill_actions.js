@@ -1137,7 +1137,7 @@ async function update_gst_tranporter_id(dialog) {
 function validate_gst_transporter_id(dialog) {
     const gst_transporter_id_field = dialog.get_field("gst_transporter_id");
 
-    india_compliance.set_gstin_status(gst_transporter_id_field, null);
+    india_compliance.set_gstin_status(gst_transporter_id_field, frappe.datetime.now_datetime());
 }
 
 function update_generation_dialog(dialog, doc) {

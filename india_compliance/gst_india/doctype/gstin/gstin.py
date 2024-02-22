@@ -208,9 +208,6 @@ def is_status_refresh_required(gstin, transaction_date):
 
     is_transporter_id = gstin[:2] == "88"
 
-    if is_transporter_id:
-        transaction_date = get_datetime()
-
     if (
         not settings.validate_gstin_status
         or not is_api_enabled(settings)
@@ -253,7 +250,7 @@ def get_formatted_response(response):
 
 
 def validate_transporter_id(transporter_id):
-    if not frappe.get_cached_value("GST Settings", None, "validate_gstin_status"):
+    if not frappe.get_cached_value("GST Settings", None, "enable_e_waybill"):
         return
 
     company_gstin = get_company_gstin()

@@ -52,7 +52,7 @@ Object.assign(india_compliance, {
         return in_list(frappe.boot.sales_doctypes, doctype) ? "Customer" : "Supplier";
     },
 
-    async set_gstin_status(field, transaction_date=null, force_update = 0) {
+    async set_gstin_status(field, transaction_date, force_update = 0) {
         const gstin = field.value;
         if (!gstin || gstin.length !== 15) return field.set_description("");
 
