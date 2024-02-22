@@ -224,9 +224,13 @@ class TestIneligibleITC(FrappeTestCase):
             "doctype": "Purchase Receipt",
             "items": SAMPLE_ITEM_LIST,
             "is_in_state": 1,
+            "do_not_submit": 1,
         }
 
         doc = create_transaction(**transaction_details)
+        # Changing expense account for stock item does not change accounting
+        doc.items[1].expense_account = "Office Rent - _TIRC"
+        doc.submit()
 
         self.assertGLEntry(
             doc.name,
@@ -271,6 +275,8 @@ class TestIneligibleITC(FrappeTestCase):
         # Create Purchase Invoice
         doc = make_purchase_invoice(doc.name)
         doc.bill_no = "BILL-03"
+        # Changing expense account for stock item does not change accounting
+        doc.items[1].expense_account = "Office Rent - _TIRC"
         doc.submit()
 
         self.assertEqual(doc.ineligibility_reason, "Ineligible As Per Section 17(5)")
