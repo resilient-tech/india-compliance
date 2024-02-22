@@ -31,6 +31,9 @@ def before_tests():
                 "email": "test@example.com",
                 "password": "test",
                 "chart_of_accounts": "Standard",
+                "company_gstin": "29MUMB22923F1D",
+                "default_gst_rate": "18.0",
+                "enable_audit_trail": 0,
             }
         )
 
