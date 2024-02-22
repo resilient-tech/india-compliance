@@ -4,7 +4,6 @@
 import frappe
 from frappe import _
 from frappe.query_builder import Case
-from frappe.query_builder.functions import IfNull
 from frappe.utils.data import get_datetime
 
 from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
@@ -129,27 +128,15 @@ def get_data(filters=None):
     if filters.get("customer"):
         query = query.where(sales_invoice.customer == filters.get("customer"))
 
-    if not filters.get("exceptions"):
-        data = query.where(sales_invoice.docstatus == 1).run(as_dict=True)
-        cancelled_active_e_invoices = get_cancelled_active_e_invoice_query(
-            filters, sales_invoice, query
-        ).run(as_dict=True)
+    data = query.where(sales_invoice.docstatus == 1).run(as_dict=True)
+    cancelled_active_e_invoices = get_cancelled_active_e_invoice_query(
+        sales_invoice, query
+    ).run(as_dict=True)
 
-        return sorted(data + cancelled_active_e_invoices, key=lambda x: x.posting_date)
-
-    if filters.get("exceptions") == "e-Invoice Not Generated":
-        query = query.where(
-            ((IfNull(sales_invoice.irn, "") == "") & (sales_invoice.docstatus == 1))
-        )
-
-    if filters.get("exceptions") == "Invoice Cancelled but not e-Invoice":
-        # invoice is cancelled but irn is not cancelled
-        query = get_cancelled_active_e_invoice_query(filters, sales_invoice, query)
-
-    return query.run(as_dict=True)
+    return sorted(data + cancelled_active_e_invoices, key=lambda x: x.posting_date)
 
 
-def get_cancelled_active_e_invoice_query(filters, sales_invoice, query):
+def get_cancelled_active_e_invoice_query(sales_invoice, query):
     query = query.where((sales_invoice.einvoice_status == "Pending Cancellation"))
     return query
 

@@ -12,7 +12,6 @@ def get_pending_e_invoices_count(filters=None):
         return 0
 
     default_filters = get_default_filters(filters)
-    default_filters["exceptions"] = "e-Invoice Not Generated"
 
     return get_e_invoice_summary_count(default_filters)
 
@@ -23,7 +22,6 @@ def get_active_e_invoice_count_for_cancelled_invoices(filters=None):
         return 0
 
     default_filters = get_default_filters(filters)
-    default_filters["exceptions"] = "Invoice Cancelled but not e-Invoice"
 
     return get_e_invoice_summary_count(default_filters)
 
