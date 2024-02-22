@@ -20,7 +20,7 @@ def get_tax_withholding_accounts(company):
 
 
 def validate(doc, method=None):
-    if not doc.tds_section or doc.entity_type:
+    if not (doc.tds_section or doc.entity_type):
         return
 
     existing_doc = frappe.db.exists(
