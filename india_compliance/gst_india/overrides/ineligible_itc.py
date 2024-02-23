@@ -325,7 +325,10 @@ class PurchaseReceipt(IneligibleITC):
             self.reverse_stock_adjustment_entry(item)
 
     def is_eligibility_restricted_due_to_pos(self):
-        return self.doc.place_of_supply[:2] != self.doc.company_gstin[:2]
+        return (
+            self.doc.place_of_supply not in ["96-Other Countries", "97-Other Territory"]
+            and self.doc.place_of_supply[:2] != self.doc.company_gstin[:2]
+        )
 
     def get_against_account(self, item):
         if item.is_fixed_asset:
