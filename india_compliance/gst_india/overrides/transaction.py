@@ -45,11 +45,7 @@ DOCTYPES_WITH_GST_DETAIL = {
 
 
 def set_gst_breakup(doc, method=None):
-    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
-        return
-
-    doc_meta = frappe.get_meta(doc.doctype)
-    if not (doc_meta and doc_meta.get_field("custom_gst_breakup_table")):
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
     doc.custom_gst_breakup_table = frappe.render_template(
