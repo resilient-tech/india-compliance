@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.query_builder.functions import IfNull
 from frappe.utils import getdate
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS, GST_PARTY_TYPES
@@ -18,6 +19,7 @@ from india_compliance.gst_india.page.india_compliance_account import (
 )
 from india_compliance.gst_india.utils import can_enable_api, is_api_enabled
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
+from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 E_INVOICE_START_DATE = "2021-01-01"
@@ -39,6 +41,18 @@ class GSTSettings(Document):
         self.validate_credentials()
         self.clear_api_auth_session()
         self.update_retry_e_invoice_e_waybill_scheduled_job()
+        self.update_e_invoice_status()
+
+    def update_e_invoice_status(self):
+        if not (
+            self.has_value_changed("enable_e_invoice")
+            or self.has_value_changed("e_invoice_applicable_from")
+            or self.has_value_changed("apply_e_invoice_only_for_selected_companies")
+            or not self.is_child_table_same("e_invoice_applicable_companies")
+        ):
+            return
+
+        frappe.enqueue(update_e_invoice_status, queue="long", timeout=6000)
 
     def clear_api_auth_session(self):
         if self.has_value_changed("api_secret") and self.api_secret:
@@ -285,3 +299,83 @@ def update_gst_category():
         )
 
     frappe.db.set_global("has_missing_gst_category", None)
+
+
+def update_e_invoice_status():
+    """
+    - Update e-Invoice status based on Applicability
+    - Update "Pending" and "Not Applicable" Status
+    """
+
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    if not gst_settings.enable_e_invoice:
+        return update_not_applicable_status()
+
+    if not gst_settings.apply_e_invoice_only_for_selected_companies:
+        e_invoice_applicability_date = get_e_invoice_applicability_date(
+            {}, gst_settings, throw=False
+        )
+        update_pending_status(e_invoice_applicability_date)
+        update_not_applicable_status(e_invoice_applicability_date)
+        return
+
+    companies = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
+
+    for company in companies:
+        e_invoice_applicability_date = get_e_invoice_applicability_date(
+            frappe._dict({"company": company}), gst_settings, throw=False
+        )
+
+        update_pending_status(e_invoice_applicability_date, company)
+        update_not_applicable_status(e_invoice_applicability_date, company)
+
+
+def update_pending_status(e_invoice_applicability_date, company=None):
+    if not e_invoice_applicability_date:
+        return
+
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+    sales_invoice_item = frappe.qb.DocType("Sales Invoice Item")
+
+    query = (
+        frappe.qb.update(sales_invoice)
+        .join(sales_invoice_item)
+        .on(sales_invoice_item.parent == sales_invoice.name)
+        .set(sales_invoice.einvoice_status, "Pending")
+        .where(
+            IfNull(sales_invoice.billing_address_gstin, "")
+            != IfNull(sales_invoice.company_gstin, "")
+        )
+        .where(IfNull(sales_invoice.irn, "") == "")
+        .where(sales_invoice_item.gst_treatment.isin(("Taxable", "Zero-Rated")))
+        .where(
+            (IfNull(sales_invoice.place_of_supply, "") == "96-Other Countries")
+            | (IfNull(sales_invoice.billing_address_gstin, "") != "")
+        )
+        .where(sales_invoice.posting_date >= e_invoice_applicability_date)
+        .where(sales_invoice.docstatus == 1)
+        .where(IfNull(sales_invoice.company_gstin, "") != "")
+        .where(sales_invoice.is_opening != "Yes")
+    )
+
+    if company:
+        query = query.where(sales_invoice.company == company)
+
+    query.run()
+
+
+def update_not_applicable_status(e_invoice_applicability_date=None, company=None):
+    sales_invoice = frappe.qb.DocType("Sales Invoice")
+    query = (
+        frappe.qb.update(sales_invoice)
+        .set(sales_invoice.einvoice_status, "Not Applicable")
+        .where(IfNull(sales_invoice.einvoice_status, "") == "Pending")
+        .where(sales_invoice.docstatus == 1)
+    )
+    if e_invoice_applicability_date:
+        query = query.where(sales_invoice.posting_date < e_invoice_applicability_date)
+
+    if company:
+        company = query.where(sales_invoice.company == company)
+
+    query.run()

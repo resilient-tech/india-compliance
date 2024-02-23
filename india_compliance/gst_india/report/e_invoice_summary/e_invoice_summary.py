@@ -4,6 +4,7 @@
 import frappe
 from frappe import _
 from frappe.query_builder import Case
+from frappe.query_builder.functions import IfNull
 from frappe.utils.data import get_datetime
 
 from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
@@ -13,28 +14,9 @@ def execute(filters=None):
     validate_filters(filters)
 
     columns = get_columns(filters)
-    data = get_data_for_all_companies(filters)
+    data = get_data(filters)
 
     return columns, data
-
-
-def get_data_for_all_companies(filters):
-    data = []
-
-    indian_companies = []
-
-    if filters.get("company"):
-        indian_companies.append(filters.get("company"))
-    else:
-        indian_companies = frappe.get_all(
-            "Company", filters={"country": "India"}, pluck="name"
-        )
-
-    for company in indian_companies:
-        filters.company = company
-        data.extend(get_data(filters))
-
-    return sorted(data, key=lambda x: x.posting_date, reverse=True)
 
 
 def validate_filters(filters=None):
@@ -87,11 +69,6 @@ def validate_filters(filters=None):
 def get_data(filters=None):
     sales_invoice = frappe.qb.DocType("Sales Invoice")
     e_invoice_log = frappe.qb.DocType("e-Invoice Log")
-    settings = frappe.get_cached_doc("GST Settings")
-    e_invoice_applicability_date = get_e_invoice_applicability_date(filters, settings)
-
-    if not settings.enable_e_invoice or not e_invoice_applicability_date:
-        return []
 
     query = (
         frappe.qb.from_(sales_invoice)
@@ -118,9 +95,13 @@ def get_data(filters=None):
                 filters.get("from_date") : filters.get("to_date")
             ]
         )
-        .where(sales_invoice.company == filters.get("company"))
-        .where(sales_invoice.einvoice_status != "Not Applicable")
+        .where(IfNull(sales_invoice.einvoice_status, "") != "")
+        .where(sales_invoice.docstatus != 0)
+        .where(sales_invoice.is_opening != "Yes")
     )
+
+    if filters.get("company"):
+        query = query.where(sales_invoice.company == filters.get("company"))
 
     if filters.get("status"):
         query = query.where(sales_invoice.einvoice_status == filters.get("status"))
@@ -128,17 +109,7 @@ def get_data(filters=None):
     if filters.get("customer"):
         query = query.where(sales_invoice.customer == filters.get("customer"))
 
-    data = query.where(sales_invoice.docstatus == 1).run(as_dict=True)
-    cancelled_active_e_invoices = get_cancelled_active_e_invoice_query(
-        sales_invoice, query
-    ).run(as_dict=True)
-
-    return sorted(data + cancelled_active_e_invoices, key=lambda x: x.posting_date)
-
-
-def get_cancelled_active_e_invoice_query(sales_invoice, query):
-    query = query.where((sales_invoice.einvoice_status == "Pending Cancellation"))
-    return query
+    return query.run(as_dict=True)
 
 
 def get_columns(filters=None):
@@ -160,7 +131,7 @@ def get_columns(filters=None):
             "fieldtype": "Data",
             "fieldname": "einvoice_status",
             "label": _("e-Invoice Status"),
-            "width": 90,
+            "width": 130,
         },
         {
             "fieldtype": "Link",

@@ -57,6 +57,8 @@ frappe.query_reports["e-Invoice Summary"] = {
             value = `<span class="bold"  style="color: var(--text-on-red)">${value}</span>`;
         else if (value == "Not Applicable")
             value = `<span class="bold"  style="color: var(--text-on-grey)">${value}</span>`;
+        else if (value == "Pending Cancellation")
+            value = `<span class="bold"  style="color: var(--text-on-red)">${value}</span>`;
 
         return value;
     },

@@ -428,11 +428,7 @@ def get_e_invoice_applicability_date(doc, settings=None, throw=True):
     return e_invoice_applicable_from
 
 
-def validate_if_e_invoice_can_be_cancelled(doc):
-    return if_e_invoice_can_be_cancelled(doc, throw=True)
-
-
-def if_e_invoice_can_be_cancelled(doc, throw=False):
+def validate_if_e_invoice_can_be_cancelled(doc, throw=True):
     if not doc.irn:
         if throw:
             frappe.throw(_("IRN not found"), title=_("Error Cancelling e-Invoice"))
