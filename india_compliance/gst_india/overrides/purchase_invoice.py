@@ -213,7 +213,10 @@ def set_ineligibility_reason(doc):
             doc.ineligibility_reason = "Ineligible As Per Section 17(5)"
             break
 
-    if doc.place_of_supply[:2] != doc.company_gstin[:2]:
+    if (
+        doc.place_of_supply not in ["96-Other Countries", "97-Other Territory"]
+        and doc.place_of_supply[:2] != doc.company_gstin[:2]
+    ):
         doc.ineligibility_reason = "ITC restricted due to PoS rules"
 
     if doc.ineligibility_reason:
