@@ -454,9 +454,12 @@ def validate_if_e_invoice_can_be_cancelled(doc, throw=True):
 def retry_e_invoice_e_waybill_generation():
     settings = frappe.get_cached_doc("GST Settings")
 
-    if (
-        not settings.enable_retry_einv_ewb_generation
-        or not settings.is_retry_einv_ewb_generation_pending
+    if settings.sandbox_mode and not frappe.flags.in_test:
+        return
+
+    if not (
+        settings.enable_retry_einv_ewb_generation
+        and settings.is_retry_einv_ewb_generation_pending
     ):
         return
 
@@ -727,12 +730,6 @@ class EInvoiceData(GSTTransactionData):
                     self.transaction_details.place_of_supply = "36"
                 else:
                     self.transaction_details.place_of_supply = "02"
-
-        if self.doc.is_return:
-            self.dispatch_address, self.shipping_address = (
-                self.shipping_address,
-                self.dispatch_address,
-            )
 
         invoice_data = {
             "Version": "1.1",
