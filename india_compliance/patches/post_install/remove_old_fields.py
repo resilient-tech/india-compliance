@@ -19,3 +19,19 @@ def execute():
     delete_old_fields("pan_details", "Company")
     delete_old_fields("export_type", ("Customer", "Supplier"))
     delete_old_fields("company_address", "Journal Entry")
+
+    # Field renamed post release
+    delete_old_fields(
+        ("custom_gst_breakup", "custom_gst_breakup_table"),
+        (
+            "Supplier Quotation",
+            "Purchase Order",
+            "Purchase Receipt",
+            "Purchase Invoice",
+            "Quotation",
+            "Sales Order",
+            "Delivery Note",
+            "Sales Invoice",
+            "POS Invoice",
+        ),
+    )
