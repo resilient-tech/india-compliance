@@ -13,6 +13,7 @@ class eWaybillLog(Document):
     def before_print(self, print_settings=None):
         if self.data and self.is_latest_data:
             return
+
         doc = frappe.get_doc(self.reference_doctype, self.reference_name)
         _fetch_e_waybill_data(doc, self)
         send_updated_doc(self)
