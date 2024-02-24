@@ -904,14 +904,18 @@ class TestEWaybill(FrappeTestCase):
 
     @responses.activate
     def test_print_e_waybill(self):
+        """
+        Fetch latest e-waybill data and generate html and style for e-waybill print
+        """
         si = self.create_sales_invoice_for("goods_item_with_ewaybill")
         self._generate_e_waybill(si.name)
-        ewl = frappe.get_doc("e-Waybill Log", {"reference_name": si.name})
-        data = frappe.as_json(ewl)
+        e_waybill_log = frappe.get_doc("e-Waybill Log", {"reference_name": si.name})
+        data = frappe.as_json(e_waybill_log)
         get_html_and_style(data)
-        ewl.data = None
-        ewl.is_latest_data = 0
-        data = frappe.as_json(ewl)
+
+        e_waybill_log.data = None
+        e_waybill_log.is_latest_data = 0
+        data = frappe.as_json(e_waybill_log)
         get_html_and_style(data)
 
     # helper functions
