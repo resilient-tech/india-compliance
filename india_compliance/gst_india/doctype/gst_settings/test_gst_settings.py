@@ -48,6 +48,7 @@ class TestGSTSettings(FrappeTestCase):
                     ),
                     doc.save,
                 )
+                break
 
     @change_settings(
         "GST Settings",
