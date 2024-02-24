@@ -62,7 +62,7 @@ def setup_company_taxes(params):
     try:
         validate_gstin(params.company_gstin)
     except frappe.ValidationError:
-        params.company_gstin = ""
+        params.company_gstin = None
 
     gstin_info = frappe._dict()
     if can_fetch_gstin_info():

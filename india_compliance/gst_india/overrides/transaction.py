@@ -44,15 +44,11 @@ DOCTYPES_WITH_GST_DETAIL = {
 }
 
 
-def set_gst_breakup(doc, method=None):
-    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+def set_gst_breakup(doc, method=None, print_settings=None):
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
-    doc_meta = frappe.get_meta(doc.doctype)
-    if not (doc_meta and doc_meta.get_field("custom_gst_breakup_table")):
-        return
-
-    doc.custom_gst_breakup_table = frappe.render_template(
+    doc.gst_breakup_table = frappe.render_template(
         "templates/gst_breakup.html", dict(doc=doc)
     )
 
@@ -994,6 +990,8 @@ class ItemGSTDetails:
         if item_tax_detail.count == 1:
             return item_tax_detail
 
+        item_tax_detail["count"] -= 1
+
         # Handle rounding errors
         response = item_tax_detail.copy()
         for tax in GST_TAX_TYPES:
@@ -1009,7 +1007,6 @@ class ItemGSTDetails:
             tax_amount = flt(tax_rate * multiplier, precision)
 
             item_tax_detail[tax_amount_field] -= tax_amount
-            item_tax_detail["count"] -= 1
 
             response.update({tax_amount_field: tax_amount})
 
@@ -1020,6 +1017,7 @@ class ItemGSTDetails:
         meta = frappe.get_meta(item_doctype)
 
         self.precision = frappe._dict()
+        default_precision = cint(frappe.db.get_default("float_precision")) or 3
 
         for tax_type in GST_TAX_TYPES:
             fieldname = f"{tax_type}_amount"
@@ -1027,7 +1025,7 @@ class ItemGSTDetails:
             if not field:
                 continue
 
-            self.precision[fieldname] = field.precision
+            self.precision[fieldname] = field.precision or default_precision
 
 
 class ItemGSTTreatment:
