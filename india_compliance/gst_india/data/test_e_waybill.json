@@ -70,7 +70,8 @@
     },
     "goods_item_with_ewaybill": {
         "kwargs": {
-            "vehicle_no": "GJ07DL9009"
+            "vehicle_no": "GJ07DL9009",
+            "is_in_state": 1
         },
         "request_data": {
             "OthValue": 0.0,
@@ -78,7 +79,7 @@
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
-            "cgstValue": 0,
+            "cgstValue": 9.0,
             "docDate": "05/10/2022",
             "docNo": "test_invoice_no",
             "docType": "INV",
@@ -93,19 +94,19 @@
                 {
                     "cessNonAdvol": 0,
                     "cessRate": 0,
-                    "cgstRate": 0,
+                    "cgstRate": 9.0,
                     "hsnCode": "61149090",
                     "igstRate": 0,
                     "itemNo": 1,
                     "productDesc": "Test Trading Goods 1",
                     "qtyUnit": "NOS",
                     "quantity": 1.0,
-                    "sgstRate": 0,
+                    "sgstRate": 9.0,
                     "taxableAmount": 100.0
                 }
             ],
             "mainHsnCode": "61149090",
-            "sgstValue": 0,
+            "sgstValue": 9.0,
             "subSupplyType": 1,
             "supplyType": "O",
             "toAddr1": "Test Address - 3",
@@ -114,7 +115,7 @@
             "toPlace": "Test City",
             "toStateCode": 24,
             "toTrdName": "_Test Registered Customer",
-            "totInvValue": 100.0,
+            "totInvValue": 118.0,
             "totalValue": 100.0,
             "transDistance": 10,
             "transMode": 1,
@@ -1020,7 +1021,7 @@
             "actFromStateCode": 24,
             "actToStateCode": 24,
             "cessValue": 0,
-            "cgstValue": 0,
+            "cgstValue": 9.0,
             "docDate": "05/10/2022",
             "docNo": "test_invoice_no",
             "docType": "INV",
@@ -1035,19 +1036,19 @@
                 {
                     "cessNonAdvol": 0,
                     "cessRate": 0,
-                    "cgstRate": 0,
+                    "cgstRate": 9.0,
                     "hsnCode": "61149090",
                     "igstRate": 0,
                     "itemNo": 1,
                     "productDesc": "Test Trading Goods 1",
                     "qtyUnit": "NOS",
                     "quantity": 1.0,
-                    "sgstRate": 0,
+                    "sgstRate": 9.0,
                     "taxableAmount": 100.0
                 }
             ],
             "mainHsnCode": "61149090",
-            "sgstValue": 0,
+            "sgstValue": 9.0,
             "subSupplyType": 1,
             "supplyType": "O",
             "toAddr1": "Test Address - 3",
@@ -1056,7 +1057,7 @@
             "toPlace": "Test City",
             "toStateCode": 24,
             "toTrdName": "_Test Registered Customer",
-            "totInvValue": 100.0,
+            "totInvValue": 118.0,
             "totalValue": 100.0,
             "transDistance": 10,
             "transMode": 1,
