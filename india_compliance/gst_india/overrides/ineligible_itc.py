@@ -35,6 +35,9 @@ class IneligibleITC:
         self.doc._has_ineligible_itc_items = False
         stock_items = self.doc.get_stock_items()
 
+        if frappe.flags.through_repost_accounting_ledger and self.doc.docstatus == 1:
+            self.doc.update_valuation_rate()
+
         for item in self.doc.items:
             if (
                 not self.is_eligibility_restricted_due_to_pos()
@@ -73,7 +76,9 @@ class IneligibleITC:
 
     def update_gl_entries(self, gl_entries):
         self.update_valuation_rate()
-        self.update_stock_ledger_entries()
+
+        if not frappe.flags.through_repost_accounting_ledger:
+            self.update_stock_ledger_entries()
 
         self.gl_entries = gl_entries
 
@@ -152,6 +157,9 @@ class IneligibleITC:
         )
 
         expense_account = self.get_item_expense_account(item)
+        if not expense_account:
+            return
+
         against_account = self.get_against_account(item)
         remarks = item.get("_remarks")
 
@@ -184,7 +192,7 @@ class IneligibleITC:
         This method reverses the Stock Adjustment Entry
         """
         stock_account = self.get_item_expense_account(item)
-        cogs_account = self.doc.get_company_default("default_expense_account")
+        cogs_account = self.company.default_expense_account
 
         ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
 
@@ -228,6 +236,11 @@ class IneligibleITC:
             expense_account = _get_asset_account(item.asset_category, self.doc.company)
             item.expense_account = expense_account
             self.update_asset_valuation_rate(item)
+
+        elif (
+            item.get("_is_stock_item") and frappe.flags.through_repost_accounting_ledger
+        ):
+            expense_account = None
 
         elif item.get("_is_stock_item") and self.warehouse_account_map.get(
             item.warehouse

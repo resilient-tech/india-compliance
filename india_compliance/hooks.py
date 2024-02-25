@@ -166,6 +166,9 @@ doc_events = {
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
         ],
     },
+    "Repost Accounting Ledger": {
+        "before_submit": "india_compliance.gst_india.overrides.repost_accounting_ledger.before_submit",
+    },
     "Sales Invoice": {
         "onload": [
             "india_compliance.gst_india.overrides.sales_invoice.onload",
