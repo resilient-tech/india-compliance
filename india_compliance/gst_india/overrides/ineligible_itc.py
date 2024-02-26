@@ -77,13 +77,13 @@ class IneligibleITC:
     def update_gl_entries(self, gl_entries):
         self.update_valuation_rate()
 
+        if not self.doc.get("_has_ineligible_itc_items"):
+            return gl_entries
+
         if not frappe.flags.through_repost_accounting_ledger:
             self.update_stock_ledger_entries()
 
         self.gl_entries = gl_entries
-
-        if not self.doc.get("_has_ineligible_itc_items"):
-            return gl_entries
 
         if not self.company.default_gst_expense_account:
             frappe.throw(
