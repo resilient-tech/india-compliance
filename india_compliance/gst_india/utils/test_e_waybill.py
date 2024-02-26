@@ -910,6 +910,20 @@ class TestEWaybill(FrappeTestCase):
         data = frappe.as_json(e_waybill_log)
         get_html_and_style(data)
 
+    @responses.activate
+    def test_e_waybill_for_non_taxable_items(self):
+        """
+        Test to generate e-waybill for non taxable items
+        """
+        si = self.create_sales_invoice_for("non_taxable_goods_item")
+        test_data = self.e_waybill_test_data.non_taxable_goods_item
+        self._generate_e_waybill(si.name, test_data=test_data)
+
+        self.assertDocumentEqual(
+            {"name": test_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
+        )
+
     # helper functions
     def _generate_e_waybill(
         self, docname=None, doctype="Sales Invoice", test_data=None, force=False
