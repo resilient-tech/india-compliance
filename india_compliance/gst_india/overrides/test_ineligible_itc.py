@@ -163,6 +163,19 @@ class TestIneligibleITC(FrappeTestCase):
             {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
         )  # 999 + 179.82
 
+        if not frappe.db.exists(
+            "Repost Allowed Types",
+            {
+                "document_type": "Purchase Invoice",
+                "parent": "Repost Accounting Ledger Settings",
+            },
+        ):
+            settings = frappe.get_single("Repost Accounting Ledger Settings")
+            settings.append(
+                "allowed_types", {"document_type": "Purchase Invoice", "allowed": 1}
+            )
+            settings.save()
+
         doc.items[4].expense_account = "Office Rent - _TIRC"
         doc.items[5].expense_account = "Office Rent - _TIRC"
 
