@@ -31,12 +31,7 @@ india_compliance.patches.post_install.add_einvoice_status_field
 execute:import frappe; frappe.db.set_single_value("GST Settings", "gstin_status_refresh_interval", 30)
 execute:from india_compliance.gst_india.setup import create_email_template; create_email_template()
 india_compliance.patches.post_install.update_payment_entry_fields
-<<<<<<< HEAD
-india_compliance.patches.post_install.update_company_fixtures #1
-=======
-india_compliance.patches.v15.remove_ignore_reconciliation_field
-india_compliance.patches.post_install.update_company_fixtures #2
->>>>>>> cea0a670 (fix: update tds details in tax withholding category (#1688))
+india_compliance.patches.post_install.update_company_fixtures #3
 india_compliance.patches.post_install.update_itc_classification_field
 india_compliance.patches.v14.update_purchase_reco_email_template
 india_compliance.patches.v14.delete_purchase_receipt_standard_custom_fields
