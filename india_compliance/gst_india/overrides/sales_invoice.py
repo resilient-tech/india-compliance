@@ -113,7 +113,7 @@ def update_e_invoice_status_for_cancelled_invoice(doc):
 
     run_onload(doc)  # to set e_invoice_info
     if not validate_if_e_invoice_can_be_cancelled(doc, throw=False):
-        doc.db_set("einvoice_status", "Pending Cancellation")
+        doc.einvoice_status = "Pending Cancellation"
 
 
 def validate_port_address(doc):

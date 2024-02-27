@@ -44,10 +44,22 @@ class GSTSettings(Document):
         self.update_e_invoice_status()
 
     def update_e_invoice_status(self):
+        previous_doc = self.get_doc_before_save()
+
+        fields_to_check = (
+            "enable_e_invoice",
+            "e_invoice_applicable_from",
+            "apply_e_invoice_only_for_selected_companies",
+        )
+
+        has_value_changed = False
+        for field in fields_to_check:
+            if previous_doc.get(field) != self.get(field):
+                has_value_changed = True
+                break
+
         if not (
-            self.has_value_changed("enable_e_invoice")
-            or self.has_value_changed("e_invoice_applicable_from")
-            or self.has_value_changed("apply_e_invoice_only_for_selected_companies")
+            has_value_changed
             or not self.is_child_table_same("e_invoice_applicable_companies")
         ):
             return
@@ -312,9 +324,7 @@ def update_e_invoice_status():
         return update_not_applicable_status()
 
     if not gst_settings.apply_e_invoice_only_for_selected_companies:
-        e_invoice_applicability_date = get_e_invoice_applicability_date(
-            {}, gst_settings, throw=False
-        )
+        e_invoice_applicability_date = gst_settings.e_invoice_applicable_from
         update_pending_status(e_invoice_applicability_date)
         update_not_applicable_status(e_invoice_applicability_date)
         return
