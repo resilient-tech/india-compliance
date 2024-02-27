@@ -139,6 +139,9 @@ class IneligibleITC:
             )
         )
 
+        if not self.is_debit_entry_required(item):
+            return
+
         expense_account = self.get_item_expense_account(item)
         if not expense_account:
             return
@@ -146,20 +149,19 @@ class IneligibleITC:
         against_account = self.get_against_account(item)
         remarks = item.get("_remarks")
 
-        if self.is_debit_entry_required(item):
-            self.gl_entries.append(
-                self.doc.get_gl_dict(
-                    args={
-                        "account": expense_account,
-                        self.dr_or_cr: ineligible_item_tax_amount,
-                        f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
-                        "cost_center": item.cost_center or self.cost_center,
-                        "against": against_account,
-                        "remarks": remarks,
-                    },
-                    item=item,
-                )
+        self.gl_entries.append(
+            self.doc.get_gl_dict(
+                args={
+                    "account": expense_account,
+                    self.dr_or_cr: ineligible_item_tax_amount,
+                    f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                    "cost_center": item.cost_center or self.cost_center,
+                    "against": against_account,
+                    "remarks": remarks,
+                },
+                item=item,
             )
+        )
 
     def reverse_stock_adjustment_entry(self, item):
         """
