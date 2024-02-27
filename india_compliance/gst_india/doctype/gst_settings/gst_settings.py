@@ -333,7 +333,7 @@ def update_e_invoice_status():
 
     for company in companies:
         e_invoice_applicability_date = get_e_invoice_applicability_date(
-            frappe._dict({"company": company}), gst_settings, throw=False
+            company, gst_settings, throw=False
         )
 
         update_pending_status(e_invoice_applicability_date, company)

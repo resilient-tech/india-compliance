@@ -47,7 +47,9 @@ def validate_filters(filters=None):
     if not filters.get("company"):
         return
 
-    e_invoice_applicability_date = get_e_invoice_applicability_date(filters, settings)
+    e_invoice_applicability_date = get_e_invoice_applicability_date(
+        filters.get("company"), settings
+    )
 
     if not e_invoice_applicability_date:
         frappe.throw(
