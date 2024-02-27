@@ -11,6 +11,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, get_datetime, now_datetime, today
 from frappe.utils.data import format_date
+from frappe.www.printview import get_html_and_style
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
@@ -891,6 +892,36 @@ class TestEWaybill(FrappeTestCase):
                 "GST Settings", "GST Settings", "is_retry_einv_ewb_generation_pending"
             ),
             0,
+        )
+
+    @responses.activate
+    def test_print_e_waybill(self):
+        """
+        Fetch latest e-waybill data and generate html and style for e-waybill print
+        """
+        si = self.create_sales_invoice_for("goods_item_with_ewaybill")
+        self._generate_e_waybill(si.name)
+        e_waybill_log = frappe.get_doc("e-Waybill Log", {"reference_name": si.name})
+        data = frappe.as_json(e_waybill_log)
+        get_html_and_style(data)
+
+        e_waybill_log.data = None
+        e_waybill_log.is_latest_data = 0
+        data = frappe.as_json(e_waybill_log)
+        get_html_and_style(data)
+
+    @responses.activate
+    def test_e_waybill_for_non_taxable_items(self):
+        """
+        Test to generate e-waybill for non taxable items
+        """
+        si = self.create_sales_invoice_for("non_taxable_goods_item")
+        test_data = self.e_waybill_test_data.non_taxable_goods_item
+        self._generate_e_waybill(si.name, test_data=test_data)
+
+        self.assertDocumentEqual(
+            {"name": test_data.get("response_data").get("result").get("ewayBillNo")},
+            frappe.get_doc("e-Waybill Log", {"reference_name": si.name}),
         )
 
     # helper functions
