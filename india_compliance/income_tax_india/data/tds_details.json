@@ -1,48 +1,1303 @@
-{
-    "Payment to Contractors (Single / Aggregate)": [
-        ["TDS - 194C - Company", 2, 30000, 100000],
-        ["TDS - 194C - Individual", 1, 30000, 100000],
-        ["TDS - 194C - No PAN / Invalid PAN", 20, 30000, 100000]
-    ],
-    "Insurance Commission": [
-        ["TDS - 194D - Company", 5, 15000, 0],
-        ["TDS - 194D - Company Assessee", 10, 15000, 0],
-        ["TDS - 194D - Individual", 5, 15000, 0],
-        ["TDS - 194D - No PAN / Invalid PAN", 20, 15000, 0]
-    ],
-    "Non-exempt payments made under a life insurance policy": [
-        ["TDS - 194DA - Company", 1, 100000, 0],
-        ["TDS - 194DA - Individual", 1, 100000, 0],
-        ["TDS - 194DA - No PAN / Invalid PAN", 20, 100000, 0]
-    ],
-    "Commission / Brokerage": [
-        ["TDS - 194H - Company", 5, 15000, 0],
-        ["TDS - 194H - Individual", 5, 15000, 0],
-        ["TDS - 194H - No PAN / Invalid PAN", 20, 15000, 0]
-    ],
-    "Rent": [
-        ["TDS - 194I - Rent - Company", 10, 180000, 0],
-        ["TDS - 194I - Rent - Individual", 10, 180000, 0],
-        ["TDS - 194I - Rent - No PAN / Invalid PAN", 20, 180000, 0]
-    ],
-    "Rent-Plant / Machinery": [
-        ["TDS - 194I - Rent/Machinery - Company", 2, 180000, 0],
-        ["TDS - 194I - Rent/Machinery - Individual", 2, 180000, 0],
-        ["TDS - 194I - Rent/Machinery - No PAN / Invalid PAN", 20, 180000, 0]
-    ],
-    "Professional Fees": [
-        ["TDS - 194J - Professional Fees - Company", 10, 30000, 0],
-        ["TDS - 194J - Professional Fees - Individual", 10, 30000, 0],
-        ["TDS - 194J - Professional Fees - No PAN / Invalid PAN", 20, 30000, 0]
-    ],
-    "Director Fees": [
-        ["TDS - 194J - Director Fees - Company", 10, 0, 0],
-        ["TDS - 194J - Director Fees - Individual", 10, 0, 0],
-        ["TDS - 194J - Director Fees - No PAN / Invalid PAN", 20, 0, 0]
-    ],
-    "Dividends": [
-        ["TDS - 194 - Dividends - Company", 10, 2500, 0],
-        ["TDS - 194 - Dividends - Individual", 10, 2500, 0],
-        ["TDS - 194 - Dividends - No PAN / Invalid PAN", 20, 2500, 0]
+[
+  {
+    "name": "TDS - 194C - Company",
+    "category_name": "Payment to Contractors (Single / Aggregate)",
+    "round_off_tax_amount": 0,
+    "tds_section": "194C",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-04-01",
+        "tax_withholding_rate": 2,
+        "single_threshold": 30000,
+        "cumulative_threshold": 100000
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 30000,
+        "cumulative_threshold": 100000
+      }
     ]
-}
+  },
+  {
+    "name": "TDS - 194C - Individual",
+    "category_name": "Payment to Contractors (Single / Aggregate)",
+    "round_off_tax_amount": 0,
+    "tds_section": "194C",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-04-01",
+        "tax_withholding_rate": 1,
+        "single_threshold": 30000,
+        "cumulative_threshold": 100000
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 1,
+        "single_threshold": 30000,
+        "cumulative_threshold": 100000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194C - No PAN / Invalid PAN",
+    "category_name": "Payment to Contractors (Single / Aggregate)",
+    "round_off_tax_amount": 0,
+    "tds_section": "194C",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-04-01",
+        "tax_withholding_rate": 20,
+        "single_threshold": 30000,
+        "cumulative_threshold": 100000
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 30000,
+        "cumulative_threshold": 100000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194D - Company",
+    "category_name": "Insurance Commission",
+    "round_off_tax_amount": 0,
+    "tds_section": "194D",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194D - Company Assessee",
+    "category_name": "Insurance Commission",
+    "round_off_tax_amount": 0,
+    "tds_section": "194D",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company Assessee",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194D - Individual",
+    "category_name": "Insurance Commission",
+    "round_off_tax_amount": 0,
+    "tds_section": "194D",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194D - No PAN / Invalid PAN",
+    "category_name": "Insurance Commission",
+    "round_off_tax_amount": 0,
+    "tds_section": "194D",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194DA - Company",
+    "category_name": "Non-exempt payments made under a life insurance policy",
+    "round_off_tax_amount": 0,
+    "tds_section": "194DA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 1,
+        "single_threshold": 100000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 100000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194DA - Individual",
+    "category_name": "Non-exempt payments made under a life insurance policy",
+    "round_off_tax_amount": 0,
+    "tds_section": "194DA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 1,
+        "single_threshold": 100000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 100000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194DA - No PAN / Invalid PAN",
+    "category_name": "Non-exempt payments made under a life insurance policy",
+    "round_off_tax_amount": 0,
+    "tds_section": "194DA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 100000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 100000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194H - Company",
+    "category_name": "Commission / Brokerage",
+    "round_off_tax_amount": 0,
+    "tds_section": "194H",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194H - Individual",
+    "category_name": "Commission / Brokerage",
+    "round_off_tax_amount": 0,
+    "tds_section": "194H",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194H - No PAN / Invalid PAN",
+    "category_name": "Commission / Brokerage",
+    "round_off_tax_amount": 0,
+    "tds_section": "194H",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194I(a) - Company",
+    "category_name": "Rent on plant / machinery",
+    "round_off_tax_amount": 0,
+    "tds_section": "194I(a)",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 180000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 240000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194I(a) - Individual",
+    "category_name": "Rent on plant / machinery",
+    "round_off_tax_amount": 0,
+    "tds_section": "194I(a)",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 180000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 240000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194I(a) - No PAN / Invalid PAN",
+    "category_name": "Rent on plant / machinery",
+    "round_off_tax_amount": 0,
+    "tds_section": "194I(a)",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 180000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 240000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194I(b) - Company",
+    "category_name": "Rent on land / building / furniture / fitting",
+    "round_off_tax_amount": 0,
+    "tds_section": "194I(b)",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 180000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 240000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194I(b) - Individual",
+    "category_name": "Rent on land / building / furniture / fitting",
+    "round_off_tax_amount": 0,
+    "tds_section": "194I(b)",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 180000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 240000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194I(b) - No PAN / Invalid PAN",
+    "category_name": "Rent on land / building / furniture / fitting",
+    "round_off_tax_amount": 0,
+    "tds_section": "194I(b)",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 180000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 240000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194JB - Company",
+    "category_name": "Professional Fees",
+    "round_off_tax_amount": 0,
+    "tds_section": "194JB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194JB - Individual",
+    "category_name": "Professional Fees",
+    "round_off_tax_amount": 0,
+    "tds_section": "194JB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194JB - No PAN / Invalid PAN",
+    "category_name": "Professional Fees",
+    "round_off_tax_amount": 0,
+    "tds_section": "194JB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194JA - Company",
+    "category_name": "Technical Fees",
+    "round_off_tax_amount": 0,
+    "tds_section": "194JA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194JA - Individual",
+    "category_name": "Technical Fees",
+    "round_off_tax_amount": 0,
+    "tds_section": "194JA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 2,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194JA - No PAN / Invalid PAN",
+    "category_name": "Technical Fees",
+    "round_off_tax_amount": 0,
+    "tds_section": "194JA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 30000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194 - Company",
+    "category_name": "Dividends",
+    "round_off_tax_amount": 0,
+    "tds_section": "194",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 2500,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 5000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194 - Individual",
+    "category_name": "Dividends",
+    "round_off_tax_amount": 0,
+    "tds_section": "194",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 2500,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 5000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2025-04-01",
+        "to_date": "2026-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 5000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194 - No PAN / Invalid PAN",
+    "category_name": "Dividends",
+    "round_off_tax_amount": 0,
+    "tds_section": "194",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 2500,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 5000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 193 - Company",
+    "category_name": "Interest on Securities",
+    "round_off_tax_amount": 0,
+    "tds_section": "193",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 10000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 193 - Individual",
+    "category_name": "Interest on Securities",
+    "round_off_tax_amount": 0,
+    "tds_section": "193",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 10000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 193 - No PAN / Invalid PAN",
+    "category_name": "Interest on Securities",
+    "round_off_tax_amount": 0,
+    "tds_section": "193",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 30,
+        "single_threshold": 10000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194BB - Company",
+    "category_name": "Income from horse race winnings",
+    "round_off_tax_amount": 0,
+    "tds_section": "194BB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 30,
+        "single_threshold": 0,
+        "cumulative_threshold": 10000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194BB - Individual",
+    "category_name": "Income from horse race winnings",
+    "round_off_tax_amount": 0,
+    "tds_section": "194BB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 30,
+        "single_threshold": 0,
+        "cumulative_threshold": 10000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194BB - No PAN / Invalid PAN",
+    "category_name": "Income from horse race winnings",
+    "round_off_tax_amount": 0,
+    "tds_section": "194BB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 30,
+        "single_threshold": 0,
+        "cumulative_threshold": 10000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194EE - Company",
+    "category_name": "Payment of amount standing to the credit of a person under National Savings Scheme (NSS)",
+    "round_off_tax_amount": 0,
+    "tds_section": "194EE",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 2500,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194EE - Individual",
+    "category_name": "Payment of amount standing to the credit of a person under National Savings Scheme (NSS)",
+    "round_off_tax_amount": 0,
+    "tds_section": "194EE",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 2500,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194EE - No PAN / Invalid PAN",
+    "category_name": "Payment of amount standing to the credit of a person under National Savings Scheme (NSS)",
+    "round_off_tax_amount": 0,
+    "tds_section": "194EE",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 2500,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194A - Company",
+    "category_name": "Interest from other than interest on securities",
+    "round_off_tax_amount": 0,
+    "tds_section": "194A",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 5000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194A - Individual",
+    "category_name": "Interest from other than interest on securities",
+    "round_off_tax_amount": 0,
+    "tds_section": "194A",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 5000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194A - No PAN / Invalid PAN",
+    "category_name": "Interest from other than interest on securities",
+    "round_off_tax_amount": 0,
+    "tds_section": "194A",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 5000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194B - Company",
+    "category_name": "Income from lottery winnings, card games, crossword puzzles, and other games of any type",
+    "round_off_tax_amount": 0,
+    "tds_section": "194B",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 30,
+        "single_threshold": 0,
+        "cumulative_threshold": 10000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194B - Individual",
+    "category_name": "Income from lottery winnings, card games, crossword puzzles, and other games of any type",
+    "round_off_tax_amount": 0,
+    "tds_section": "194B",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 30,
+        "single_threshold": 0,
+        "cumulative_threshold": 10000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194B - No PAN / Invalid PAN",
+    "category_name": "Income from lottery winnings, card games, crossword puzzles, and other games of any type",
+    "round_off_tax_amount": 0,
+    "tds_section": "194B",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 30,
+        "single_threshold": 0,
+        "cumulative_threshold": 10000
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194F - Company",
+    "category_name": "Payment for the repurchase of the unit by Unit Trust of India (UTI) or a Mutual Fund",
+    "round_off_tax_amount": 0,
+    "tds_section": "194F",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 0,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194F - Individual",
+    "category_name": "Payment for the repurchase of the unit by Unit Trust of India (UTI) or a Mutual Fund",
+    "round_off_tax_amount": 0,
+    "tds_section": "194F",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 0,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194F - No PAN / Invalid PAN",
+    "category_name": "Payment for the repurchase of the unit by Unit Trust of India (UTI) or a Mutual Fund",
+    "round_off_tax_amount": 0,
+    "tds_section": "194F",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 0,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194G - Company",
+    "category_name": "Payments or commission on sale of lottery tickets",
+    "round_off_tax_amount": 0,
+    "tds_section": "194G",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194G - Individual",
+    "category_name": "Payments or commission on sale of lottery tickets",
+    "round_off_tax_amount": 0,
+    "tds_section": "194G",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194G - No PAN / Invalid PAN",
+    "category_name": "Payments or commission on sale of lottery tickets",
+    "round_off_tax_amount": 0,
+    "tds_section": "194G",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194LA - Company",
+    "category_name": "Payment in respect of compensation on acquiring certain immovable property",
+    "round_off_tax_amount": 0,
+    "tds_section": "194LA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 250000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194LA - Individual",
+    "category_name": "Payment in respect of compensation on acquiring certain immovable property",
+    "round_off_tax_amount": 0,
+    "tds_section": "194LA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 250000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194LA - No PAN / Invalid PAN",
+    "category_name": "Payment in respect of compensation on acquiring certain immovable property",
+    "round_off_tax_amount": 0,
+    "tds_section": "194LA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 250000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 192A - Company",
+    "category_name": "Premature EPF withdrawal",
+    "round_off_tax_amount": 0,
+    "tds_section": "192A",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 50000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 192A - Individual",
+    "category_name": "Premature EPF withdrawal",
+    "round_off_tax_amount": 0,
+    "tds_section": "192A",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 50000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 192A - No PAN / Invalid PAN",
+    "category_name": "Premature EPF withdrawal",
+    "round_off_tax_amount": 0,
+    "tds_section": "192A",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 50000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194LBB - Company",
+    "category_name": "Payment to a unitholder in respect of units of an investment fund",
+    "round_off_tax_amount": 0,
+    "tds_section": "194LBB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 0,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194LBB - Individual",
+    "category_name": "Payment to a unitholder in respect of units of an investment fund",
+    "round_off_tax_amount": 0,
+    "tds_section": "194LBB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 10,
+        "single_threshold": 0,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194LBB - No PAN / Invalid PAN",
+    "category_name": "Payment to a unitholder in respect of units of an investment fund",
+    "round_off_tax_amount": 0,
+    "tds_section": "194LBB",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 0,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194IA - Company",
+    "category_name": "Payment for transfer of immovable property other than agricultural land",
+    "round_off_tax_amount": 0,
+    "tds_section": "194IA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 1,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194IA - Individual",
+    "category_name": "Payment for transfer of immovable property other than agricultural land",
+    "round_off_tax_amount": 0,
+    "tds_section": "194IA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 1,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194IA - No PAN / Invalid PAN",
+    "category_name": "Payment for transfer of immovable property other than agricultural land",
+    "round_off_tax_amount": 0,
+    "tds_section": "194IA",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      }
+    ]
+  }
+]

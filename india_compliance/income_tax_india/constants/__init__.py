@@ -1,0 +1,27 @@
+TDS_SECTIONS = [
+    "193",
+    "194",
+    "194BB",
+    "194EE",
+    "194A",
+    "194B",
+    "194C",
+    "194D",
+    "194F",
+    "194G",
+    "194H",
+    "194I",
+    "194JA",
+    "194JB",
+    "194LA",
+    "194I(a)",
+    "194I(b)",
+    "194LBA",
+    "194DA",
+    "192A",
+    "194LBB",
+    "194IA",
+    "194N",
+]
+
+TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]
