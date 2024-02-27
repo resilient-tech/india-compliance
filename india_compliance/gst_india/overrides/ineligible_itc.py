@@ -61,7 +61,10 @@ class IneligibleITC:
     def update_gl_entries(self, gl_entries):
         self.gl_entries = gl_entries
 
-        if frappe.flags.through_repost_accounting_ledger:
+        if (
+            frappe.flags.through_repost_accounting_ledger
+            or frappe.flags.through_repost_item_valuation
+        ):
             self.doc.update_valuation_rate()
             self.update_valuation_rate()
 
@@ -183,7 +186,10 @@ class IneligibleITC:
         ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
 
         for entry in self.gl_entries:
-            if entry.get("account") != stock_account:
+            if (
+                entry.get("account") != stock_account
+                or entry.get("cost_center") != item.cost_center
+            ):
                 continue
 
             entry[self.dr_or_cr] -= ineligible_item_tax_amount
@@ -205,7 +211,10 @@ class IneligibleITC:
             )
 
         for entry in self.gl_entries:
-            if entry.get("account") != cogs_account:
+            if (
+                entry.get("account") != cogs_account
+                or entry.get("cost_center") != item.cost_center
+            ):
                 continue
 
             entry[self.cr_or_dr] -= ineligible_item_tax_amount
