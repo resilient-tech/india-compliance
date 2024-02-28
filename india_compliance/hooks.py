@@ -156,11 +156,12 @@ doc_events = {
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
     "Purchase Receipt": {
-        "onload": "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
+        "onload": [
+            "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
+            "india_compliance.gst_india.overrides.purchase_receipt.onload",
+        ],
         "before_print": "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
-        "validate": (
-            "india_compliance.gst_india.overrides.transaction.validate_transaction"
-        ),
+        "validate": "india_compliance.gst_india.overrides.purchase_receipt.validate",
         "before_validate": (
             "india_compliance.gst_india.overrides.transaction.before_validate"
         ),
