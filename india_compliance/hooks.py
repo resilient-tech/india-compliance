@@ -173,9 +173,6 @@ doc_events = {
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
     },
-    "Repost Accounting Ledger": {
-        "before_submit": "india_compliance.gst_india.overrides.repost_accounting_ledger.before_submit",
-    },
     "Sales Invoice": {
         "onload": [
             "india_compliance.gst_india.overrides.sales_invoice.onload",
