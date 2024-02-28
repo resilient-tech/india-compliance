@@ -1,6 +1,10 @@
+from india_compliance.gst_india.overrides.purchase_invoice import (
+    set_ineligibility_reason,
+)
 from india_compliance.gst_india.overrides.sales_invoice import (
     update_dashboard_with_gst_logs,
 )
+from india_compliance.gst_india.overrides.transaction import validate_transaction
 
 
 def get_dashboard_data(data):
@@ -10,3 +14,17 @@ def get_dashboard_data(data):
         "e-Waybill Log",
         "Integration Request",
     )
+
+
+def onload(doc, method=None):
+    if validate_transaction(doc) is False:
+        return
+
+    set_ineligibility_reason(doc, show_alert=False)
+
+
+def validate(doc, method=None):
+    if validate_transaction(doc) is False:
+        return
+
+    set_ineligibility_reason(doc)

@@ -632,6 +632,26 @@ CUSTOM_FIELDS = {
             "print_hide": 1,
         },
     ],
+    "Purchase Receipt": [
+        {
+            "fieldname": "gst_section",
+            "label": "GST Details",
+            "fieldtype": "Section Break",
+            "insert_after": "gst_vehicle_type",
+            "print_hide": 1,
+            "collapsible": 1,
+        },
+        {
+            "fieldname": "ineligibility_reason",
+            "label": "Reason for Ineligibility",
+            "fieldtype": "Data",
+            "insert_after": "gst_section",
+            "read_only": 1,
+            "print_hide": 1,
+            "translatable": 0,
+            "is_virtual": 1,
+        },
+    ],
     "Supplier": [
         {
             "fieldname": "gst_transporter_id",

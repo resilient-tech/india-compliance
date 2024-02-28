@@ -320,10 +320,14 @@ class IneligibleITC:
         )
 
     def is_eligibility_restricted_due_to_pos(self):
-        return False
+        return self.doc.get("ineligibility_reason") == "ITC restricted due to PoS rules"
 
 
 class PurchaseReceipt(IneligibleITC):
+
+    def __init__(self, doc):
+        doc.run_method("onload")
+        super().__init__(doc)
 
     def update_valuation_rate(self):
         for item in self.doc.items:
@@ -339,12 +343,6 @@ class PurchaseReceipt(IneligibleITC):
 
         if item.get("_is_stock_item"):
             self.reverse_stock_adjustment_entry(item)
-
-    def is_eligibility_restricted_due_to_pos(self):
-        return (
-            self.doc.place_of_supply not in ["96-Other Countries", "97-Other Territory"]
-            and self.doc.place_of_supply[:2] != self.doc.company_gstin[:2]
-        )
 
     def get_against_account(self, item):
         if item.is_fixed_asset:
@@ -393,9 +391,6 @@ class PurchaseInvoice(IneligibleITC):
             return False
 
         return True
-
-    def is_eligibility_restricted_due_to_pos(self):
-        return self.doc.get("ineligibility_reason") == "ITC restricted due to PoS rules"
 
 
 class BillOfEntry(IneligibleITC):
@@ -468,6 +463,9 @@ class BillOfEntry(IneligibleITC):
                 "amount": total_gst_expense,
             },
         )
+
+    def is_eligibility_restricted_due_to_pos(self):
+        return False
 
 
 DOCTYPE_MAPPING = {

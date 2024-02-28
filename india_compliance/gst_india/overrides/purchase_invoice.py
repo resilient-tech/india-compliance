@@ -205,7 +205,7 @@ def get_tax_amount(taxes, account_head):
     )
 
 
-def set_ineligibility_reason(doc):
+def set_ineligibility_reason(doc, show_alert=True):
     doc.ineligibility_reason = ""
 
     for item in doc.items:
@@ -219,7 +219,7 @@ def set_ineligibility_reason(doc):
     ):
         doc.ineligibility_reason = "ITC restricted due to PoS rules"
 
-    if doc.ineligibility_reason:
+    if show_alert and doc.ineligibility_reason:
         frappe.msgprint(
             _("ITC Ineligible: {0}").format(frappe.bold(doc.ineligibility_reason)),
             alert=True,
