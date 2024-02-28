@@ -325,6 +325,10 @@ class IneligibleITC:
 
 class PurchaseReceipt(IneligibleITC):
 
+    def __init__(self, doc):
+        doc.run_method("onload")
+        super().__init__(doc)
+
     def update_valuation_rate(self):
         for item in self.doc.items:
             item._remarks = self.doc.get("remarks") or _(
@@ -346,10 +350,6 @@ class PurchaseReceipt(IneligibleITC):
 
         elif item.get("_is_stock_item"):
             return self.doc.get_company_default("stock_received_but_not_billed")
-
-    def is_eligibility_restricted_due_to_pos(self):
-        self.doc.run_method("onload")
-        super().is_eligibility_restricted_due_to_pos()
 
 
 class PurchaseInvoice(IneligibleITC):
