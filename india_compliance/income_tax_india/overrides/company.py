@@ -16,7 +16,7 @@ def create_company_fixtures(company):
     create_tds_account(company)
 
     # create records for Tax Withholding Category
-    set_tax_withholding_category(company)
+    create_or_update_tax_withholding_category(company)
 
 
 def create_tds_account(company):
@@ -25,7 +25,7 @@ def create_tds_account(company):
     )
 
 
-def set_tax_withholding_category(company):
+def create_or_update_tax_withholding_category(company):
     accounts = []
     abbr = frappe.get_value("Company", company, "abbr")
     tds_account = frappe.get_value("Account", "TDS Payable - {0}".format(abbr), "name")
@@ -33,79 +33,94 @@ def set_tax_withholding_category(company):
     if company and tds_account:
         accounts.append({"company": company, "account": tds_account})
 
-    fiscal_year_details = get_current_fiscal_year()
-    docs = get_tds_details(accounts, fiscal_year_details)
+    categories = get_tds_category_details(accounts)
 
-    for d in docs:
-        if not frappe.db.exists("Tax Withholding Category", d.get("name")):
-            doc = frappe.get_doc(d)
-            doc.flags.ignore_validate = True
-            doc.flags.ignore_permissions = True
-            doc.flags.ignore_mandatory = True
-            doc.insert()
+    for category_doc in categories:
+        existing_category_name = frappe.get_value(
+            "Tax Withholding Category",
+            {
+                "tds_section": category_doc.get("tds_section"),
+                "entity_type": category_doc.get("entity_type"),
+            },
+        )
+
+        if not existing_category_name:
+            doc = frappe.get_doc(category_doc)
+            doc.insert(ignore_if_duplicate=True)
+
         else:
-            doc = frappe.get_doc(
-                "Tax Withholding Category", d.get("name"), for_update=True
+            update_existing_tax_withholding_category(
+                category_doc, existing_category_name, company
             )
 
-            if accounts:
-                doc.append("accounts", accounts[0])
 
-            # if fiscal year doesn't match with any of the already entered data,
-            # append rate row
-            if not next(
-                (
-                    row
-                    for row in doc.get("rates")
-                    if row.get("from_date") <= fiscal_year_details[0]
-                    and row.get("to_date") >= fiscal_year_details[1]
-                ),
-                None,
-            ):
-                doc.append("rates", d.get("rates")[0])
+def update_existing_tax_withholding_category(category_doc, category_name, company):
+    doc = frappe.get_doc("Tax Withholding Category", category_name)
 
-            doc.flags.ignore_permissions = True
-            doc.flags.ignore_validate = True
-            doc.flags.ignore_mandatory = True
-            doc.flags.ignore_links = True
-            doc.save()
+    # add company account if not present for the category
+    for row in doc.get("accounts"):
+        if row.company == company:
+            break
+
+    else:
+        accounts = category_doc.get("accounts")
+        if accounts:
+            doc.append("accounts", accounts[0])
+
+    # add rates if not present for the dates
+    largest_date = None
+    for doc_row in doc.get("rates"):
+        if not largest_date:
+            largest_date = getdate(doc_row.get("to_date"))
+
+        if getdate(doc_row.get("to_date")) > largest_date:
+            largest_date = getdate(doc_row.get("to_date"))
+
+    for cat_row in category_doc["rates"]:
+        if largest_date and getdate(cat_row.get("from_date")) < largest_date:
+            continue
+
+        doc.append("rates", cat_row)
+
+    doc.save()
 
 
-def get_tds_details(accounts, fiscal_year_details):
+def get_tds_category_details(accounts):
     tds_details = []
     tds_rules = frappe.get_file_json(
         frappe.get_app_path(
             "india_compliance", "income_tax_india", "data", "tds_details.json"
         )
     )
+    for rule in tds_rules:
+        tds_details.append(
+            {
+                "name": rule.get("name"),
+                "category_name": rule.get("category_name"),
+                "doctype": "Tax Withholding Category",
+                "accounts": accounts,
+                "tds_section": rule.get("tds_section"),
+                "entity_type": rule.get("entity_type"),
+                "round_off_tax_amount": rule.get("round_off_tax_amount"),
+                "consider_party_ledger_amount": rule.get(
+                    "consider_party_ledger_amount"
+                ),
+                "tax_on_excess_amount": rule.get("tax_on_excess_amount"),
+                "rates": get_prospective_tds_rates(rule["rates"]),
+            }
+        )
 
-    for category in tds_rules:
-        for rule in tds_rules[category]:
-            tds_details.append(
-                {
-                    "name": rule[0],
-                    "category_name": category,
-                    "doctype": "Tax Withholding Category",
-                    "accounts": accounts,
-                    "rates": [
-                        {
-                            "from_date": fiscal_year_details[0],
-                            "to_date": fiscal_year_details[1],
-                            "tax_withholding_rate": rule[1],
-                            "single_threshold": rule[2],
-                            "cumulative_threshold": rule[3],
-                        }
-                    ],
-                }
-            )
     return tds_details
 
 
-def get_current_fiscal_year():
+def get_prospective_tds_rates(rates):
+    """
+    Ensure TDS rules are not created for the historical rates
+    """
+    rate_list = []
     today = getdate()
-    start_date_year = today.year if today.month >= 4 else today.year - 1
+    for row in rates:
+        if today <= getdate(row["to_date"]):
+            rate_list.append(row)
 
-    return (
-        getdate(f"{start_date_year}-04-01"),
-        getdate(f"{start_date_year + 1}-03-31"),
-    )
+    return rate_list
