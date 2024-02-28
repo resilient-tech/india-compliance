@@ -8,6 +8,9 @@ from erpnext.controllers.sales_and_purchase_return import make_return_doc
 from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
     make_purchase_invoice,
 )
+from erpnext.stock.doctype.repost_item_valuation.repost_item_valuation import (
+    repost_entries,
+)
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -163,6 +166,81 @@ class TestIneligibleITC(FrappeTestCase):
             {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
         )  # 999 + 179.82
 
+        # Repost Accounting Ledger
+        if not frappe.db.exists(
+            "Repost Allowed Types",
+            {
+                "document_type": "Purchase Invoice",
+                "parent": "Repost Accounting Ledger Settings",
+            },
+        ):
+            settings = frappe.get_single("Repost Accounting Ledger Settings")
+            settings.append(
+                "allowed_types", {"document_type": "Purchase Invoice", "allowed": 1}
+            )
+            settings.save()
+
+        doc.items[4].expense_account = "Office Rent - _TIRC"
+        doc.items[5].expense_account = "Office Rent - _TIRC"
+
+        doc.save()
+        doc.repost_accounting_entries()
+
+        expected_entries = [
+            {"account": "Round Off - _TIRC", "debit": 0.28, "credit": 0.0},
+            {
+                "account": "GST Expense - _TIRC",
+                "debit": 369.72,
+                "credit": 369.72,
+            },  # 179.64 + 179.82 + 10.26
+            {
+                "account": "Input Tax SGST - _TIRC",
+                "debit": 427.86,
+                "credit": 184.86,  # 369.72 / 2
+            },
+            {
+                "account": "Input Tax CGST - _TIRC",
+                "debit": 427.86,
+                "credit": 184.86,
+            },
+            {
+                "account": "Office Rent - _TIRC",
+                "debit": 2677.64,  # 500 * 3 + 499 * 2 + 179.64
+                "credit": 0.0,
+            },
+            {
+                "account": "CWIP Account - _TIRC",
+                "debit": 2178.82,
+                "credit": 0.0,
+            },  # 1000 + 999 + 179.82
+            {
+                "account": "Stock In Hand - _TIRC",
+                "debit": 267.26,
+                "credit": 0.0,
+            },  # 20 * 5 + 19 * 3 + 100 * 1 + 10.26
+            {"account": "Creditors - _TIRC", "debit": 0.0, "credit": 5610.0},
+        ]
+
+        self.assertGLEntry(doc.name, expected_entries)
+
+        # Repost Item Valuation
+        repost_doc = frappe.get_doc(
+            {
+                "doctype": "Repost Item Valuation",
+                "voucher_type": "Purchase Invoice",
+                "voucher_no": doc.name,
+                "status": "Queued",
+            }
+        )
+        repost_doc.save()
+        repost_doc.submit()
+
+        repost_entries()
+
+        status = frappe.db.get_value("Repost Item Valuation", repost_doc.name, "status")
+        self.assertEqual(status, "Completed")
+        self.assertGLEntry(doc.name, expected_entries)
+
     def test_purchase_invoice_with_ineligible_pos(self):
         transaction_details = {
             "doctype": "Purchase Invoice",
@@ -271,6 +349,21 @@ class TestIneligibleITC(FrappeTestCase):
             doc.name,
             {"Test Fixed Asset": 1000, "Test Ineligible Fixed Asset": 1178.82},
         )
+
+        repost_doc = frappe.get_doc(
+            {
+                "doctype": "Repost Item Valuation",
+                "voucher_type": "Purchase Receipt",
+                "voucher_no": doc.name,
+            }
+        )
+        repost_doc.save()
+        repost_doc.submit()
+
+        repost_entries()
+
+        status = frappe.db.get_value("Repost Item Valuation", repost_doc.name, "status")
+        self.assertEqual(status, "Completed")
 
         # Create Purchase Invoice
         doc = make_purchase_invoice(doc.name)
@@ -768,7 +861,7 @@ class TestIneligibleITC(FrappeTestCase):
     def assertGLEntry(self, docname, expected_gl_entry):
         gl_entries = frappe.get_all(
             "GL Entry",
-            filters={"voucher_no": docname},
+            filters={"voucher_no": docname, "is_cancelled": 0},
             fields=["account", "debit", "credit"],
         )
 
@@ -833,7 +926,7 @@ def create_test_items():
             "account_type": "Fixed Asset",
         }
     )
-    asset_account.insert()
+    asset_account.insert(ignore_if_duplicate=True)
 
     asset_category = frappe.get_doc(
         {
@@ -850,9 +943,11 @@ def create_test_items():
             ],
         }
     )
-    asset_category.insert()
+    asset_category.insert(ignore_if_duplicate=True)
 
-    frappe.get_doc({"doctype": "Location", "location_name": "Test Location"}).insert()
+    frappe.get_doc({"doctype": "Location", "location_name": "Test Location"}).insert(
+        ignore_if_duplicate=True
+    )
 
     asset_item = {
         "doctype": "Item",
@@ -879,31 +974,31 @@ def create_test_items():
     }
 
     # Stock Item
-    frappe.get_doc(stock_item).insert()
+    frappe.get_doc(stock_item).insert(ignore_if_duplicate=True)
     frappe.get_doc(
         {
             **stock_item,
             "item_code": "Test Ineligible Stock Item",
             "is_ineligible_for_itc": 1,
         }
-    ).insert()
+    ).insert(ignore_if_duplicate=True)
 
     # Fixed Asset
-    frappe.get_doc(asset_item).insert()
+    frappe.get_doc(asset_item).insert(ignore_if_duplicate=True)
     frappe.get_doc(
         {
             **asset_item,
             "item_code": "Test Ineligible Fixed Asset",
             "is_ineligible_for_itc": 1,
         }
-    ).insert()
+    ).insert(ignore_if_duplicate=True)
 
     # Service Item
-    frappe.get_doc(service_item).insert()
+    frappe.get_doc(service_item).insert(ignore_if_duplicate=True)
     frappe.get_doc(
         {
             **service_item,
             "item_code": "Test Ineligible Service Item",
             "is_ineligible_for_itc": 1,
         }
-    ).insert()
+    ).insert(ignore_if_duplicate=True)

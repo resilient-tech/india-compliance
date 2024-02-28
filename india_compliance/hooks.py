@@ -137,7 +137,10 @@ doc_events = {
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         ],
+        "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Purchase Order": {
@@ -165,7 +168,13 @@ doc_events = {
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
+            "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         ],
+        "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+        "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
+    },
+    "Repost Accounting Ledger": {
+        "before_submit": "india_compliance.gst_india.overrides.repost_accounting_ledger.before_submit",
     },
     "Sales Invoice": {
         "onload": [
@@ -205,6 +214,7 @@ doc_events = {
         "validate": "india_compliance.gst_india.overrides.tax_category.validate"
     },
     "Tax Withholding Category": {
+        "validate": "india_compliance.income_tax_india.overrides.tax_withholding_category.validate",
         "on_change": "india_compliance.income_tax_india.overrides.tax_withholding_category.on_change",
     },
     "Unreconcile Payment": {

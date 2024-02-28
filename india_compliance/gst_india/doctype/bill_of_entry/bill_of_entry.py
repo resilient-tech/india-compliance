@@ -16,6 +16,7 @@ from erpnext.controllers.taxes_and_totals import get_round_off_applicable_accoun
 from india_compliance.gst_india.overrides.ineligible_itc import (
     update_landed_cost_voucher_for_gst_expense,
     update_regional_gl_entries,
+    update_valuation_rate,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -50,6 +51,7 @@ class BillofEntry(Document):
         self.validate_purchase_invoice()
         self.validate_taxes()
         self.reconciliation_status = "Unreconciled"
+        update_valuation_rate(self)
 
     def on_submit(self):
         gl_entries = self.get_gl_entries()
