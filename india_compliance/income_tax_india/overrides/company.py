@@ -27,8 +27,13 @@ def create_tds_account(company):
 
 def create_or_update_tax_withholding_category(company):
     accounts = []
-    abbr = frappe.get_value("Company", company, "abbr")
-    tds_account = frappe.get_value("Account", "TDS Payable - {0}".format(abbr), "name")
+    tds_account = frappe.get_value(
+        "Account", {"account_name": "TDS Payable", "company": company}, "name"
+    )
+
+    ignore_mandatory = False
+    if not tds_account:
+        ignore_mandatory = True
 
     if company and tds_account:
         accounts.append({"company": company, "account": tds_account})
@@ -46,7 +51,7 @@ def create_or_update_tax_withholding_category(company):
 
         if not existing_category_name:
             doc = frappe.get_doc(category_doc)
-            doc.insert(ignore_if_duplicate=True)
+            doc.insert(ignore_if_duplicate=True, ignore_mandatory=ignore_mandatory)
 
         else:
             update_existing_tax_withholding_category(
