@@ -58,24 +58,15 @@ class IneligibleITC:
                 # TODO: handle rounding off of gst amount from gst settings
                 self.update_item_valuation_rate(item, ineligible_tax_amount)
 
-    def update_stock_ledger_entries(self):
-        """
-        Cancels and re-creates Stock Ledger Entries
-        This is done with new valuation rate
-
-        Reference: erpnext.stock.doctype.landed_cost_voucher.landed_cost_voucher.LandedCostVoucher.update_landed_cost
-        """
-        self.doc.docstatus = 2
-        self.doc.update_stock_ledger()
-
-        self.doc.docstatus = 1
-        self.doc.update_stock_ledger()
-
     def update_gl_entries(self, gl_entries):
-        self.update_valuation_rate()
-        self.update_stock_ledger_entries()
-
         self.gl_entries = gl_entries
+
+        if (
+            frappe.flags.through_repost_accounting_ledger
+            or frappe.flags.through_repost_item_valuation
+        ):
+            self.doc.update_valuation_rate()
+            self.update_valuation_rate()
 
         if not self.doc.get("_has_ineligible_itc_items"):
             return gl_entries
@@ -151,7 +142,13 @@ class IneligibleITC:
             )
         )
 
+        if not self.is_debit_entry_required(item):
+            return
+
         expense_account = self.get_item_expense_account(item)
+        if not expense_account:
+            return
+
         against_account = self.get_against_account(item)
         remarks = item.get("_remarks")
 
@@ -184,24 +181,40 @@ class IneligibleITC:
         This method reverses the Stock Adjustment Entry
         """
         stock_account = self.get_item_expense_account(item)
-        cogs_account = self.doc.get_company_default("default_expense_account")
+        cogs_account = self.company.default_expense_account
 
         ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
 
-        self.gl_entries.append(
-            self.doc.get_gl_dict(
-                {
-                    "account": stock_account,
-                    self.cr_or_dr: ineligible_item_tax_amount,
-                    f"{self.cr_or_dr}_in_account_currency": ineligible_item_tax_amount,
-                    "cost_center": item.cost_center or self.cost_center,
-                    "remarks": item.get("_remarks"),
-                }
+        for entry in self.gl_entries:
+            if (
+                entry.get("account") != stock_account
+                or entry.get("cost_center") != item.cost_center
+            ):
+                continue
+
+            entry[self.dr_or_cr] -= ineligible_item_tax_amount
+            entry[f"{self.dr_or_cr}_in_account_currency"] -= ineligible_item_tax_amount
+            break
+
+        else:
+            # FALLBACK: If Stock Account not found in GL Entries
+            self.gl_entries.append(
+                self.doc.get_gl_dict(
+                    {
+                        "account": stock_account,
+                        self.cr_or_dr: ineligible_item_tax_amount,
+                        f"{self.cr_or_dr}_in_account_currency": ineligible_item_tax_amount,
+                        "cost_center": item.cost_center or self.cost_center,
+                        "remarks": item.get("_remarks"),
+                    }
+                )
             )
-        )
 
         for entry in self.gl_entries:
-            if entry.get("account") != cogs_account:
+            if (
+                entry.get("account") != cogs_account
+                or entry.get("cost_center") != item.cost_center
+            ):
                 continue
 
             entry[self.cr_or_dr] -= ineligible_item_tax_amount
@@ -290,6 +303,9 @@ class IneligibleITC:
 
         return abs(tax_amount)
 
+    def is_debit_entry_required(self, item):
+        return True
+
     def update_asset_valuation_rate(self, item):
         frappe.db.set_value(
             "Asset",
@@ -304,10 +320,14 @@ class IneligibleITC:
         )
 
     def is_eligibility_restricted_due_to_pos(self):
-        return False
+        return self.doc.get("ineligibility_reason") == "ITC restricted due to PoS rules"
 
 
 class PurchaseReceipt(IneligibleITC):
+
+    def __init__(self, doc):
+        doc.run_method("onload")
+        super().__init__(doc)
 
     def update_valuation_rate(self):
         for item in self.doc.items:
@@ -321,11 +341,8 @@ class PurchaseReceipt(IneligibleITC):
         if (item.get("_is_stock_item")) or item.get("is_fixed_asset"):
             self.make_gst_expense_entry(item)
 
-        if self.doc.is_return and item.get("_is_stock_item"):
+        if item.get("_is_stock_item"):
             self.reverse_stock_adjustment_entry(item)
-
-    def is_eligibility_restricted_due_to_pos(self):
-        return self.doc.place_of_supply[:2] != self.doc.company_gstin[:2]
 
     def get_against_account(self, item):
         if item.is_fixed_asset:
@@ -345,20 +362,15 @@ class PurchaseInvoice(IneligibleITC):
 
         super().update_valuation_rate()
 
-    def update_stock_ledger_entries(self):
-        if not self.doc.update_stock:
-            return
-
-        super().update_stock_ledger_entries()
-
     def update_item_gl_entries(self, item):
         if self.doc.update_stock or self.is_expense_item(item):
             self.make_gst_expense_entry(item)
 
         self.reverse_input_taxes_entry(item)
 
-        if self.doc.is_return and item.get("_is_stock_item"):
-            self.reverse_stock_adjustment_entry(item)
+    def is_debit_entry_required(self, item):
+        # For Stock Entry / Fixed Asset in PI, Additional Debit is accounted automatically from valuation rates
+        return self.is_expense_item(item)
 
     def is_expense_item(self, item):
         """
@@ -379,9 +391,6 @@ class PurchaseInvoice(IneligibleITC):
             return False
 
         return True
-
-    def is_eligibility_restricted_due_to_pos(self):
-        return self.doc.get("ineligibility_reason") == "ITC restricted due to PoS rules"
 
 
 class BillOfEntry(IneligibleITC):
@@ -404,9 +413,6 @@ class BillOfEntry(IneligibleITC):
                 item.expense_account = expense_account[item.pi_detail]
 
         super().update_valuation_rate()
-
-    def update_stock_ledger_entries(self):
-        return
 
     def get_item_tax_amount(self, item, tax):
         tax_rate = frappe.parse_json(tax.item_wise_tax_rates).get(item.name)
@@ -458,12 +464,23 @@ class BillOfEntry(IneligibleITC):
             },
         )
 
+    def is_eligibility_restricted_due_to_pos(self):
+        return False
+
 
 DOCTYPE_MAPPING = {
     "Purchase Invoice": PurchaseInvoice,
     "Purchase Receipt": PurchaseReceipt,
     "Bill of Entry": BillOfEntry,
 }
+
+
+def update_valuation_rate(doc, method=None):
+    if doc.get("is_opening") == "Yes" or not is_indian_registered_company(doc):
+        return
+
+    if doc.doctype in DOCTYPE_MAPPING:
+        DOCTYPE_MAPPING[doc.doctype](doc).update_valuation_rate()
 
 
 def update_regional_gl_entries(gl_entries, doc):
