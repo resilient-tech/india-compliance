@@ -1,6 +1,14 @@
 name: Server Tests
 
 on:
+    workflow_dispatch: 
+    workflow_call:
+      inputs:
+        base_ref:
+          type : string
+      secrets:
+        codecov_token:
+          required: true
     pull_request:
         paths-ignore:
             - "**.css"
@@ -18,7 +26,7 @@ on:
             - "**.html"
             - "**.csv"
 env:
-    IC_BRANCH: ${{ github.base_ref || github.ref_name }}
+    IC_BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
 
 jobs:
     tests:
@@ -125,7 +133,7 @@ jobs:
         - name: Upload coverage data
           uses: codecov/codecov-action@v4
           env:
-            CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+            CODECOV_TOKEN: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
           with:
             name: MariaDB
             fail_ci_if_error: true
