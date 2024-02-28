@@ -10,7 +10,6 @@ from frappe.model.meta import get_field_precision
 from frappe.utils import cstr, flt, getdate
 import erpnext
 
-from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 
@@ -30,19 +29,23 @@ def execute(filters=None):
 
 def get_hsn_data(filters, columns, output_gst_accounts_dict):
     output_gst_accounts = set()
-    non_cess_accounts = set()
+    non_cess_accounts = ["igst_account", "cgst_account", "sgst_account"]
+    tax_columns = non_cess_accounts + ["cess_account"]
+
     for account_type, account_name in output_gst_accounts_dict.items():
         if not account_name:
             continue
 
         output_gst_accounts.add(account_name)
-        if account_type in GST_ACCOUNT_FIELDS[:3]:
-            non_cess_accounts.add(account_name)
 
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
-    itemised_tax, tax_columns = get_tax_accounts(
-        item_list, columns, company_currency, output_gst_accounts
+    itemised_tax = get_tax_accounts(
+        item_list,
+        columns,
+        company_currency,
+        output_gst_accounts,
+        output_gst_accounts_dict,
     )
 
     data = []
@@ -76,13 +79,14 @@ def get_hsn_data(filters, columns, output_gst_accounts_dict):
             d.description,
             d.uqc,
             flt(d.stock_qty, 2),
-            tax_rate,
             flt(d.taxable_value + total_tax, 2),
             d.taxable_value,
         ]
 
         for tax in tax_columns:
             row.append(flt(item_tax.get(tax, {}).get("tax_amount", 0), 2))
+
+        row.append(tax_rate)
 
         data.append(row)
         added_item.add(key)
@@ -104,7 +108,7 @@ def get_columns():
     columns = [
         {
             "fieldname": "gst_hsn_code",
-            "label": _("HSN/SAC"),
+            "label": _("HSN"),
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "width": 100,
@@ -123,29 +127,57 @@ def get_columns():
         },
         {
             "fieldname": "stock_qty",
-            "label": _("Stock Qty"),
+            "label": _("Total Quantity"),
             "fieldtype": "Float",
             "width": 90,
         },
         {
-            "fieldname": "tax_rate",
-            "label": _("Tax Rate"),
-            "fieldtype": "Data",
-            "width": 90,
-        },
-        {
             "fieldname": "total_amount",
-            "label": _("Total Amount"),
+            "label": _("Total Value"),
             "fieldtype": "Currency",
             "options": "Company:company:default_currency",
             "width": 120,
         },
         {
             "fieldname": "taxable_amount",
-            "label": _("Total Taxable Amount"),
+            "label": _("Taxable Value"),
             "fieldtype": "Currency",
             "options": "Company:company:default_currency",
             "width": 170,
+        },
+        {
+            "fieldname": "igst_account",
+            "label": _("Integrated Tax Amount"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
+            "width": 170,
+        },
+        {
+            "fieldname": "cgst_account",
+            "label": _("Central Tax Amount"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
+            "width": 170,
+        },
+        {
+            "fieldname": "sgst_account",
+            "label": _("State/UT Tax Amount"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
+            "width": 170,
+        },
+        {
+            "fieldname": "cess_account",
+            "label": _("Cess Amount"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
+            "width": 170,
+        },
+        {
+            "fieldname": "tax_rate",
+            "label": _("Rate"),
+            "fieldtype": "Data",
+            "width": 120,
         },
     ]
 
@@ -204,16 +236,12 @@ def get_items(filters):
 
 
 def get_tax_accounts(
-    item_list,
-    columns,
-    company_currency,
-    output_gst_accounts,
+    item_list, columns, company_currency, output_gst_accounts, output_gst_accounts_dict
 ):
     if not item_list:
-        return [], {}
+        return []
 
     tax_doctype = "Sales Taxes and Charges"
-    tax_columns = set()
     itemised_tax = {}
 
     tax_amount_precision = (
@@ -242,13 +270,11 @@ def get_tax_accounts(
         .where(doctype.account_head.isin(output_gst_accounts))
     ).run()
 
+    gst_account_map = {value: key for key, value in output_gst_accounts_dict.items()}
+
     for parent, account_head, item_wise_tax_detail, tax_amount in tax_details:
         if not item_wise_tax_detail:
             continue
-
-        if account_head and tax_amount:
-            # as description is text editor earlier and markup can break the column convention in reports
-            tax_columns.add(account_head)
 
         try:
             item_taxes = json.loads(item_wise_tax_detail)
@@ -258,7 +284,7 @@ def get_tax_accounts(
                     continue
 
                 item_taxes = itemised_tax.setdefault((parent, item_code), {})
-                item_taxes[account_head] = frappe._dict(
+                item_taxes[gst_account_map.get(account_head)] = frappe._dict(
                     tax_rate=flt(tax_rate, 2),
                     tax_amount=flt(tax_amount, tax_amount_precision),
                 )
@@ -266,27 +292,14 @@ def get_tax_accounts(
         except ValueError:
             continue
 
-    for account_head in tax_columns:
-        if account_head not in output_gst_accounts:
-            continue
-
-        columns.append(
-            {
-                "label": account_head,
-                "fieldname": frappe.scrub(account_head),
-                "fieldtype": "Float",
-                "width": 110,
-            }
-        )
-
-    return itemised_tax, tax_columns
+    return itemised_tax
 
 
 def get_merged_data(columns, data):
     merged_hsn_dict = {}
 
     for row in data:
-        key = f"{row[0]}-{row[2]}-{row[4]}"
+        key = f"{row[0]}-{row[2]}-{row[10]}"
         merged_hsn_dict.setdefault(key, {})
         for i, d in enumerate(columns):
             fieldname = d["fieldname"]

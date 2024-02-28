@@ -155,9 +155,9 @@ function download_full_report_json(report) {
 
 function download_current_report_excel(report) {
     open_url_post(`/api/method/${url}.get_gstr1_excel`, {
-        data: JSON.stringify(report.data),
+        data: JSON.stringify(report.data || []),
         filters: JSON.stringify(report.get_values()),
-        columns: JSON.stringify(report.columns),
+        columns: JSON.stringify(report.columns || []),
     });
 }
 
