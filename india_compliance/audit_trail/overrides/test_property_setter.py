@@ -32,5 +32,12 @@ class TestPropertySetter(FrappeTestCase):
             re.compile(r"^(Cannot change the Track Changes property for*)"),
             doc.delete,
         )
+        doc.reload()
+        doc.doc_type = "Address"
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(Cannot change the Track Changes property for*)"),
+            doc.save,
+        )
         frappe.db.set_single_value("Accounts Settings", "enable_audit_trail", 0)
         doc.delete()
