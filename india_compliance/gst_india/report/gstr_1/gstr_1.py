@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 import json
 import re
-from datetime import date
 
 from pypika.terms import Case
 
@@ -128,12 +127,7 @@ class Gstr1Report:
                         ) == "CDNR-UNREG" and not self.is_b2cl_cdn(invoice_details):
                             continue
 
-                        row["is_reverse_charge"] = (
-                            "Y"
-                            if invoice_details.posting_date <= date(2017, 7, 1)
-                            else "N"
-                        )
-                        row["export_type"] = "C" if invoice_details.is_return else "D"
+                        row["document_type"] = "C" if invoice_details.is_return else "D"
 
                     if taxable_value:
                         self.data.append(row)
