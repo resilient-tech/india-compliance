@@ -1,3 +1,5 @@
+from pypika import AliasedQuery
+
 import frappe
 from frappe.query_builder.functions import Count
 
@@ -22,7 +24,12 @@ def update_gst_details_for_transactions(companies):
         gst_accounts = []
         for account_type in ["Input", "Output"]:
             gst_accounts.extend(
-                get_gst_accounts_by_type(company, account_type, throw=False).values()
+                filter(
+                    None,
+                    get_gst_accounts_by_type(
+                        company, account_type, throw=False
+                    ).values(),
+                )
             )
 
         if not gst_accounts:
@@ -48,6 +55,15 @@ def get_docs_with_gst_accounts_and_same_item_multiple_times(doctype, gst_account
         .select(item_doctype.parent)
         .groupby(item_doctype.parent, item_doctype.item_code)
         .having(Count((item_doctype.item_code)) > 2)
+    )
+
+    invoices_with_same_item_multiple_times = (
+        frappe.qb.with_(
+            invoices_with_same_item_multiple_times,
+            "invoices_with_same_item_multiple_times",
+        )
+        .from_(AliasedQuery("invoices_with_same_item_multiple_times"))
+        .select("*")
     )
 
     return (
