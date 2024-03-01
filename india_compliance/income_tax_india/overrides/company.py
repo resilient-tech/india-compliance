@@ -41,22 +41,23 @@ def create_or_update_tax_withholding_category(company):
     categories = get_tds_category_details(accounts)
 
     for category_doc in categories:
-        existing_category_name = frappe.get_value(
+        existing_category_list = frappe.get_all(
             "Tax Withholding Category",
             {
                 "tds_section": category_doc.get("tds_section"),
                 "entity_type": category_doc.get("entity_type"),
             },
+            pluck="name",
         )
-
-        if not existing_category_name:
+        if not existing_category_list:
             doc = frappe.get_doc(category_doc)
             doc.insert(ignore_if_duplicate=True, ignore_mandatory=ignore_mandatory)
 
         else:
-            update_existing_tax_withholding_category(
-                category_doc, existing_category_name, company
-            )
+            for category_name in existing_category_list:
+                update_existing_tax_withholding_category(
+                    category_doc, category_name, company
+                )
 
 
 def update_existing_tax_withholding_category(category_doc, category_name, company):
