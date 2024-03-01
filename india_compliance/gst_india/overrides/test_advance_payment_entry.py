@@ -92,6 +92,21 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             ],
         )
 
+    def test_advance_payment_entry_with_returns(self):
+        payment_doc = self._create_payment_entry()
+        invoice_doc = self._create_sales_invoice(payment_doc)
+
+        create_transaction(
+            doctype="Sales Invoice",
+            is_in_state=1,
+            is_return=1,
+            qty=-1,
+            reason_for_issuing_document="01-Sales Return",
+            return_against=invoice_doc.name,
+        )
+
+        self.assertGLEntries(payment_doc, self.EXPECTED_GL)
+
     def test_first_sales_then_payment_entry(self):
         invoice_doc, payment_doc = self._create_invoice_then_payment()
         payment_doc.submit()
