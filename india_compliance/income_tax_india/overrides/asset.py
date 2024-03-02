@@ -142,4 +142,5 @@ def cancel_depreciation_entries(asset, date):
         if getdate(d.schedule_date) < getdate(start_date_of_fiscal_year):
             continue
 
-        frappe.get_doc("Journal Entry", d.journal_entry).cancel()
+        if d.journal_entry:
+            frappe.get_doc("Journal Entry", d.journal_entry).cancel()
