@@ -130,3 +130,73 @@ class TestGSTSettings(FrappeTestCase):
             },
         )
         doc.save()
+
+    def test_validate_enable_api(self):
+        doc = frappe.get_doc("GST Settings")
+        doc.enable_api = 1
+        frappe.conf.ic_api_secret = None
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(
+                r"^(Please counfigure your India Compliance Account to"
+                " enable API features)"
+            ),
+            doc.validate_enable_api,
+        )
+
+    def test_validate_e_invoice_applicable_companies_without_applicable_from(self):
+        doc = frappe.get_doc("GST Settings")
+        doc.apply_e_invoice_only_for_selected_companies = 1
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(
+                r"^(You must select at least one company to which e-Invoice is Applicable)"
+            ),
+            doc.validate_e_invoice_applicable_companies,
+        )
+        doc.append(
+            "e_invoice_applicable_companies",
+            {"company": "_Test Indian Registered Company"},
+        )
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(Row #\d+:.* is mandatory for enabling e-Invoice)"),
+            doc.validate_e_invoice_applicable_companies,
+        )
+
+    def test_validate_e_invoice_applicable_companies_with_applicable_from(self):
+        doc = frappe.get_doc("GST Settings")
+        doc.append(
+            "e_invoice_applicable_companies",
+            {
+                "company": "_Test Indian Registered Company",
+                "applicable_from": "01-01-2024",
+            },
+        )
+        doc.append(
+            "e_invoice_applicable_companies",
+            {
+                "company": "_Test Indian Registered Company",
+                "applicable_from": "01-01-2024",
+            },
+        )
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(Row #\d+:.* appears multiple times)"),
+            doc.validate_e_invoice_applicable_companies,
+        )
+
+    def test_validate_applicable_from_in_e_invoice(self):
+        doc = frappe.get_doc("GST Settings")
+        doc.append(
+            "e_invoice_applicable_companies",
+            {
+                "company": "_Test Indian Registered Company",
+                "applicable_from": "01-01-2020",
+            },
+        )
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(r"^(Row #\d+:.*date cannot be before.*)"),
+            doc.validate_e_invoice_applicable_companies,
+        )
