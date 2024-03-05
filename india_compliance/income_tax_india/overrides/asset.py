@@ -87,9 +87,6 @@ def get_wdv_or_dd_depr_amount(
     elif fb_row.frequency_of_depreciation == 1:
         if fb_row.daily_prorata_based:
             if schedule_date >= start_date_of_next_fiscal_year:
-                num_days_asset_used_in_fiscal_year = date_diff(
-                    start_date_of_next_fiscal_year, asset.available_for_use_date
-                )
                 num_days_asset_used_in_fiscal_year = 365
             fraction = (
                 date_diff(schedule_date, previous_schedule_date)
