@@ -46,7 +46,11 @@ DOCTYPES_WITH_GST_DETAIL = {
 
 
 def set_gst_breakup(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+    if (
+        ignore_gst_validations(doc, throw=False)
+        or not doc.place_of_supply
+        or not doc.company_gstin
+    ):
         return
 
     doc.gst_breakup_table = frappe.render_template(
@@ -441,7 +445,7 @@ def validate_tax_accounts_for_non_gst(doc):
             )
 
 
-def validate_items(doc):
+def validate_items(doc, throw):
     """Validate Items for a GST Compliant Invoice"""
 
     if not doc.get("items"):
@@ -475,6 +479,8 @@ def validate_items(doc):
         return False
 
     if non_gst_items:
+        if not throw:
+            return False
         frappe.throw(
             _(
                 "Items not covered under GST cannot be clubbed with items for which GST"
@@ -485,6 +491,8 @@ def validate_items(doc):
         )
 
     if items_with_duplicate_taxes:
+        if not throw:
+            return False
         frappe.throw(
             _(
                 "Cannot use different Item Tax Templates in different rows for"
@@ -492,6 +500,8 @@ def validate_items(doc):
             ).format("<br>".join(items_with_duplicate_taxes)),
             title="Inconsistent Item Tax Templates",
         )
+
+    return True
 
 
 def validate_place_of_supply(doc):
@@ -1286,12 +1296,13 @@ def after_mapping(target_doc, method=None, source_doc=None):
         target_doc.set(fieldname, source_doc.get(fieldname))
 
 
-def ignore_gst_validations(doc):
+def ignore_gst_validations(doc, throw=True):
     if (
         not is_indian_registered_company(doc)
         or doc.get("is_opening") == "Yes"
         # If there are no GST items, then no need to proceed further
-        or validate_items(doc) is False
+        # Also returning if item with multiple taxes
+        or validate_items(doc, throw) is False
     ):
         return True
 
