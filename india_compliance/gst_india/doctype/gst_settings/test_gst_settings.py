@@ -148,6 +148,7 @@ class TestGSTSettings(FrappeTestCase):
     def test_validate_e_invoice_applicable_companies_without_applicable_from(self):
         doc = frappe.get_doc("GST Settings")
         doc.apply_e_invoice_only_for_selected_companies = 1
+        doc.e_invoice_applicable_companies = []
         self.assertRaisesRegex(
             frappe.ValidationError,
             re.compile(
