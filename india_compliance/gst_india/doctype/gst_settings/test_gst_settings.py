@@ -144,6 +144,7 @@ class TestGSTSettings(FrappeTestCase):
             doc.validate_enable_api,
         )
 
+    @change_settings("GST Settings", {"enable_e_invoice": 1})
     def test_validate_e_invoice_applicable_companies_without_applicable_from(self):
         doc = frappe.get_doc("GST Settings")
         doc.apply_e_invoice_only_for_selected_companies = 1
@@ -164,6 +165,7 @@ class TestGSTSettings(FrappeTestCase):
             doc.validate_e_invoice_applicable_companies,
         )
 
+    @change_settings("GST Settings", {"enable_e_invoice": 1})
     def test_validate_e_invoice_applicable_companies_with_applicable_from(self):
         doc = frappe.get_doc("GST Settings")
         doc.append(
@@ -186,6 +188,7 @@ class TestGSTSettings(FrappeTestCase):
             doc.validate_e_invoice_applicable_companies,
         )
 
+    @change_settings("GST Settings", {"enable_e_invoice": 1})
     def test_validate_applicable_from_in_e_invoice(self):
         doc = frappe.get_doc("GST Settings")
         doc.append(
