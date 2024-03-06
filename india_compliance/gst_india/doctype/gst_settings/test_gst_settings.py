@@ -147,15 +147,6 @@ class TestGSTSettings(FrappeTestCase):
     @change_settings("GST Settings", {"enable_e_invoice": 1})
     def test_validate_e_invoice_applicable_companies_without_applicable_from(self):
         doc = frappe.get_doc("GST Settings")
-        doc.apply_e_invoice_only_for_selected_companies = 1
-        doc.e_invoice_applicable_companies = []
-        self.assertRaisesRegex(
-            frappe.ValidationError,
-            re.compile(
-                r"^(You must select at least one company to which e-Invoice is Applicable)"
-            ),
-            doc.validate_e_invoice_applicable_companies,
-        )
         doc.append(
             "e_invoice_applicable_companies",
             {"company": "_Test Indian Registered Company"},
@@ -163,6 +154,19 @@ class TestGSTSettings(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.ValidationError,
             re.compile(r"^(Row #\d+:.* is mandatory for enabling e-Invoice)"),
+            doc.validate_e_invoice_applicable_companies,
+        )
+
+    @change_settings("GST Settings", {"enable_e_invoice": 1})
+    def test_validate_company_in_e_invoice_applicable_company(self):
+        doc = frappe.get_doc("GST Settings")
+        doc.apply_e_invoice_only_for_selected_companies = 1
+        doc.e_invoice_applicable_companies = []
+        self.assertRaisesRegex(
+            frappe.ValidationError,
+            re.compile(
+                r"^(You must select at least one company to which e-Invoice is Applicable)"
+            ),
             doc.validate_e_invoice_applicable_companies,
         )
 
