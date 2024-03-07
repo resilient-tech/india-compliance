@@ -1122,7 +1122,7 @@ def set_reverse_charge_as_per_gst_settings(doc):
     if (
         not gst_settings.enable_rcm_for_unregistered_supplier
         or not doc.gst_category == "Unregistered"
-        or doc.grand_total <= gst_settings.rcm_threshold
+        or (doc.grand_total and doc.grand_total <= gst_settings.rcm_threshold)
         or doc.get("is_opening") == "Yes"
     ):
         return
@@ -1147,6 +1147,7 @@ def set_reverse_charge(doc):
             or []
         )
         doc.set("taxes", template)
+        doc.run_method("calculate_taxes_and_totals")
 
 
 def validate_gstin_status(gstin, transaction_date):
@@ -1212,6 +1213,8 @@ def validate_transaction(doc, method=None):
 
     validate_gst_category(doc.gst_category, gstin)
 
+    set_reverse_charge_as_per_gst_settings(doc)
+
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
 
@@ -1223,10 +1226,6 @@ def validate_ecommerce_gstin(doc):
     doc.ecommerce_gstin = validate_gstin(
         doc.ecommerce_gstin, label="E-commerce GSTIN", is_tcs_gstin=True
     )
-
-
-def before_validate(doc, method=None):
-    set_reverse_charge_as_per_gst_settings(doc)
 
 
 def update_gst_details(doc, method=None):
