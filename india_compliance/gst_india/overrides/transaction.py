@@ -44,11 +44,11 @@ DOCTYPES_WITH_GST_DETAIL = {
 }
 
 
-def set_gst_breakup(doc, method=None):
+def set_gst_breakup(doc, method=None, print_settings=None):
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
-    doc.custom_gst_breakup_table = frappe.render_template(
+    doc.gst_breakup_table = frappe.render_template(
         "templates/gst_breakup.html", dict(doc=doc)
     )
 
@@ -145,8 +145,6 @@ def is_indian_registered_company(doc):
 
 
 def validate_mandatory_fields(doc, fields, error_message=None):
-    ignore_mandatory = not doc.docstatus and doc.flags.ignore_mandatory
-
     if isinstance(fields, str):
         fields = (fields,)
 
@@ -157,7 +155,7 @@ def validate_mandatory_fields(doc, fields, error_message=None):
         if doc.get(field):
             continue
 
-        if ignore_mandatory:
+        if doc.flags.ignore_mandatory:
             return False
 
         frappe.throw(
