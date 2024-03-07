@@ -192,7 +192,9 @@ doc_events = {
         "on_update_after_submit": (
             "india_compliance.gst_india.overrides.sales_invoice.on_update_after_submit"
         ),
-        "before_cancel": "india_compliance.gst_india.overrides.sales_invoice.before_cancel",
+        "before_cancel": [
+            "india_compliance.gst_india.overrides.sales_invoice.before_cancel"
+        ],
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
     },
     "Sales Order": {
