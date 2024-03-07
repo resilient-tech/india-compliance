@@ -76,7 +76,16 @@ def validate_credit_debit_note(doc):
         )
 
 
-def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
+def validate_fields_and_set_status_for_e_invoice(doc, gst_settings=None):
+    if doc.docstatus == 2:
+        if doc.irn:
+            doc.einvoice_status = "Pending Cancellation"
+
+        return
+
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
     if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
         doc, gst_settings=gst_settings, throw=False
     ):
@@ -165,6 +174,7 @@ def on_submit(doc, method=None):
 
 
 def before_cancel(doc, method=None):
+    validate_fields_and_set_status_for_e_invoice(doc)
     payment_references = frappe.get_all(
         "Payment Entry Reference",
         filters={
