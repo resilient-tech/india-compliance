@@ -5,9 +5,6 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder.functions import IfNull
-from frappe.utils.data import get_datetime
-
-from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
 
 
 def execute(filters=None):
@@ -43,29 +40,6 @@ def validate_filters(filters=None):
         )
     if filters.from_date > filters.to_date:
         frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
-
-    if not filters.get("company"):
-        return
-
-    e_invoice_applicability_date = get_e_invoice_applicability_date(
-        filters.get("company"), settings
-    )
-
-    if not e_invoice_applicability_date:
-        frappe.throw(
-            _("As per your GST Settings, e-Invoice is not applicable for {}.").format(
-                filters.company
-            ),
-            title=_("Invalid Filter"),
-        )
-
-    if get_datetime(filters.from_date) < get_datetime(e_invoice_applicability_date):
-        frappe.msgprint(
-            _("As per your GST Settings, e-Invoice is applicable from {}.").format(
-                e_invoice_applicability_date
-            ),
-            alert=True,
-        )
 
 
 def get_data(filters=None):
