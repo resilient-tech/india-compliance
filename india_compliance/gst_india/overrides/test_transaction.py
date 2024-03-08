@@ -98,6 +98,27 @@ class TestTransaction(FrappeTestCase):
 
         doc.insert()
 
+    @change_settings(
+        "GST Settings",
+        {"enable_rcm_for_unregistered_supplier": 1, "rcm_threshold": 5000},
+    )
+    def test_transaction_with_rcm_to_unregistered_supplier(self):
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test Unregistered Supplier",
+            rate=10000,
+        )
+
+        self.assertEqual(doc.is_reverse_charge, 1)
+        self.assertEqual(doc.total_taxes_and_charges, 0)
+        self.assertDocumentEqual(
+            {"account_head": "Input Tax CGST - _TIRC", "base_tax_amount": 900},
+            doc.taxes[0],
+        )
+
     def test_non_taxable_items_with_tax(self):
         doc = create_transaction(
             **self.transaction_details,
