@@ -1,3 +1,4 @@
+import json
 import re
 
 from parameterized import parameterized_class
@@ -511,6 +512,23 @@ class TestTransaction(FrappeTestCase):
             re.compile(
                 r"^(.*Charge Type is set to Actual. However, this would not compute item taxes.*)$"
             ),
+            doc.save,
+        )
+
+    def test_invalid_item_wise_tax_details(self):
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+        _append_taxes(
+            doc,
+            ["CGST", "SGST"],
+            charge_type="Actual",
+            tax_amount=9,
+            item_wise_tax_detail=json.dumps({"_Test Trading Goods 1": [9, -9]}),
+            dont_recompute_tax=1,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Charge Type is set to Actual. However, Tax Amount.*)$"),
             doc.save,
         )
 

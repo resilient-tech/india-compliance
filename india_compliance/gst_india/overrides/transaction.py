@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 import frappe
 from frappe import _, bold
@@ -114,6 +115,49 @@ def update_taxable_values(doc, valid_accounts):
 
     if apportioned_charges != total_charges:
         item.taxable_value += total_charges - apportioned_charges
+
+
+def validate_item_wise_tax_detail(doc, gst_accounts):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    item_taxable_values = defaultdict(float)
+
+    for row in doc.items:
+        item_key = row.item_code or row.item_name
+        item_taxable_values[item_key] += row.taxable_value
+
+    for row in doc.taxes:
+        if row.account_head not in gst_accounts:
+            continue
+
+        if row.charge_type != "Actual":
+            continue
+
+        item_wise_tax_detail = frappe.parse_json(row.item_wise_tax_detail or "{}")
+
+        for item_name, (tax_rate, tax_amount) in item_wise_tax_detail.items():
+            if tax_amount and not tax_rate:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                        " not compute item taxes, and your further reporting will be affected."
+                    ).format(row.idx),
+                    title=_("Invalid Charge Type"),
+                )
+
+            # Sales Invoice is created with manual tax amount. So, when a sales return is created,
+            # the tax amount is not recalculated, causing the issue.
+            item_taxable_value = item_taxable_values.get(item_name, 0)
+            tax_difference = abs(item_taxable_value * tax_rate / 100 - tax_amount)
+
+            if tax_difference > 1:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
+                        " is incorrect. Try setting the Charge Type to On Net Total."
+                    ).format(row.idx, tax_amount, bold(item_name))
+                )
 
 
 def get_tds_amount(doc):
@@ -314,19 +358,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 
     for row in rows_to_validate:
         account_head = row.account_head
-
-        if row.charge_type == "Actual":
-            item_tax_detail = frappe.parse_json(row.get("item_wise_tax_detail") or {})
-            for tax_rate, tax_amount in item_tax_detail.values():
-                if tax_amount and not tax_rate:
-                    _throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, this would"
-                            " not compute item taxes, and your further reporting will be affected."
-                        ).format(row.idx),
-                        title=_("Invalid Charge Type"),
-                    )
-
         if account_head not in all_valid_accounts:
             _throw(
                 _("{0} is not a valid GST account for this transaction").format(
@@ -1214,6 +1245,7 @@ def validate_transaction(doc, method=None):
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+    validate_item_wise_tax_detail(doc, valid_accounts)
 
 
 def validate_ecommerce_gstin(doc):

@@ -123,6 +123,7 @@ def _append_taxes(
     charge_type="On Net Total",
     row_id=None,
     tax_amount=None,
+    **kwargs,
 ):
     if isinstance(accounts, str):
         accounts = [accounts]
@@ -143,6 +144,7 @@ def _append_taxes(
             "description": account,
             "rate": rate,
             "cost_center": f"Main - {company_abbr}",
+            **kwargs,
         }
 
         if tax_amount:
