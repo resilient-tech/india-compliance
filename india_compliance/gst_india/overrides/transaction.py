@@ -489,7 +489,7 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    return doc.gst_category in ("SEZ", "Overseas") or (
+    return doc.gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
     )
 
