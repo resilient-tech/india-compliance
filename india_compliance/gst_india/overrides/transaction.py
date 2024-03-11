@@ -1211,6 +1211,27 @@ def validate_gstin_status(gstin, transaction_date):
     _validate_gstin_info(gstin_doc, transaction_date, throw=True)
 
 
+def validate_company_address_field(doc):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    company_address_field = "company_address"
+    if doc.doctype not in SALES_DOCTYPES:
+        company_address_field = "billing_address"
+
+    if (
+        validate_mandatory_fields(
+            doc,
+            company_address_field,
+            _(
+                "Please set {0} set to ensure Company GSTIN is fetched in the transaction."
+            ).format(bold(doc.meta.get_label(company_address_field))),
+        )
+        is False
+    ):
+        return False
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1220,7 +1241,10 @@ def validate_transaction(doc, method=None):
     else:
         doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
-    if validate_mandatory_fields(doc, ("company_address", "company_gstin", "place_of_supply")) is False:
+    if validate_company_address_field(doc) is False:
+        return False
+
+    if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
         return False
 
     # Ignore validation for Quotation not to Customer
