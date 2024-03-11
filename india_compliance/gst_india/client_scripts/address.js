@@ -25,7 +25,7 @@ frappe.ui.form.on(DOCTYPE, {
         india_compliance.set_state_options(frm);
 
         // set default values for GST fields
-        if (!frm.is_new() || !frm.doc.links.length || frm.doc.gstin) return;
+        if (!frm.is_new() || !frm.doc.links || !frm.doc.links.length || frm.doc.gstin) return;
 
         const row = frm.doc.links[0];
         if (!frappe.boot.gst_party_types.includes(row.link_doctype)) return;
