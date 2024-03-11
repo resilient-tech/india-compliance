@@ -35,7 +35,7 @@ function setup_e_waybill_actions(doctype) {
 
             if (!is_e_waybill_api_enabled(frm) || frm.is_dirty()) return;
 
-            if(frm.doc.docstatus === 2) return;
+            if (frm.doc.docstatus === 2) return;
 
             const is_ewb_generatable = is_e_waybill_generatable(frm, true);
 
@@ -44,8 +44,12 @@ function setup_e_waybill_actions(doctype) {
                 !is_ewb_generatable ||
                 frm.doc.e_waybill_status === "Not Applicable"
             ) {
-                if (frm.doc.e_waybill_status === "Not Applicable" && is_ewb_generatable) {
-                    frm._ewb_message = "To generate e-Waybill, change e-Waybill Status to Pending.";
+                if (
+                    frm.doc.e_waybill_status === "Not Applicable" &&
+                    is_ewb_generatable
+                ) {
+                    frm._ewb_message =
+                        "To generate e-Waybill, change e-Waybill Status to Pending.";
                 }
 
                 frm.add_custom_button(
@@ -1091,8 +1095,13 @@ function auto_generate_e_waybill(frm) {
 }
 
 function can_extend_e_waybill(frm) {
-    if (frm.doc.gst_transporter_id != frm.doc.company_gstin) return true;
-    return false;
+    if (
+        frm.doc.gst_transporter_id &&
+        frm.doc.gst_transporter_id != frm.doc.company_gstin
+    )
+        return false;
+
+    return true;
 }
 
 function get_hours(date, hours, date_time_format = frappe.defaultDatetimeFormat) {
@@ -1211,7 +1220,9 @@ function show_e_waybill_generatable_status(frm, is_ewb_generatable) {
     }
 
     frappe.msgprint({
-        title: is_ewb_generatable ? __("e-Waybill can be generated") : __("e-Waybill cannot be generated"),
+        title: is_ewb_generatable
+            ? __("e-Waybill can be generated")
+            : __("e-Waybill cannot be generated"),
         message: frm._ewb_message,
         indicator: is_ewb_generatable ? "green" : "red",
     });
