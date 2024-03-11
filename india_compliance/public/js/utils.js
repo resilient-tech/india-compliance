@@ -147,7 +147,7 @@ Object.assign(india_compliance, {
 
     validate_gstin(gstin) {
         if (!gstin || gstin.length !== 15) {
-            frappe.msgprint("GSTIN must be 15 characters long")
+            frappe.msgprint(__("GSTIN must be 15 characters long"))
             return;
         }
 
@@ -156,7 +156,7 @@ Object.assign(india_compliance, {
         if (GSTIN_REGEX.test(gstin) && is_gstin_check_digit_valid(gstin)) {
             return gstin;
         } else {
-            frappe.msgprint("Invalid GSTIN");
+            frappe.msgprint(__("Invalid GSTIN"));
         }
     },
 
