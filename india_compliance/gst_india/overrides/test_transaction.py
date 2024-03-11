@@ -603,6 +603,24 @@ class TestTransaction(FrappeTestCase):
         doc.save()
         self.assertEqual(doc.items[0].gst_treatment, "Taxable")
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_place_of_supply_for_exports(self):
+        if not self.is_sales_doctype:
+            return
+
+        doc_details = {
+            **self.transaction_details,
+            "customer": "_Test Foreign Customer",
+            "party_name": "_Test Foreign Customer",
+            "shipping_address_name": "_Test Registered Customer-Billing",
+        }
+
+        doc = create_transaction(**doc_details, is_in_state=True)
+
+        # Place of Supply as Gujarat for Shipping Address in Gujarat
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.place_of_supply, "24-Gujarat")
+
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:
             return
