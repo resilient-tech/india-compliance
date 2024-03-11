@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-03-11 11:59:06.887429",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "filing_summary_section",
+  "filing_status",
+  "return_period",
+  "column_break_sqwh",
+  "filing_date",
+  "acknowledgement_number",
+  "section_break_oisv",
+  "e_invoices",
+  "filed_gstr1",
+  "computed_gstr1"
+ ],
+ "fields": [
+  {
+   "fieldname": "filing_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Filing Summary"
+  },
+  {
+   "fieldname": "filing_status",
+   "fieldtype": "Data",
+   "label": "Filing Status"
+  },
+  {
+   "fieldname": "return_period",
+   "fieldtype": "Data",
+   "label": "Return Period"
+  },
+  {
+   "fieldname": "column_break_sqwh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "filing_date",
+   "fieldtype": "Date",
+   "label": "Filing Date"
+  },
+  {
+   "fieldname": "acknowledgement_number",
+   "fieldtype": "Data",
+   "label": "Acknowledgement Number"
+  },
+  {
+   "fieldname": "section_break_oisv",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "e_invoices",
+   "fieldtype": "Attach",
+   "label": "e-Invoices from GST Portal"
+  },
+  {
+   "fieldname": "filed_gstr1",
+   "fieldtype": "Attach",
+   "label": "Filed GSTR-1"
+  },
+  {
+   "fieldname": "computed_gstr1",
+   "fieldtype": "Attach",
+   "label": "Computed GSTR-1"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-03-11 12:11:14.101288",
+ "modified_by": "Administrator",
+ "module": "GST India",
+ "name": "GSTR-1 Filed Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
