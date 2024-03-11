@@ -1173,7 +1173,7 @@ def validate_transaction(doc, method=None):
     else:
         doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
 
-    if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
+    if validate_mandatory_fields(doc, ("company_address", "company_gstin", "place_of_supply")) is False:
         return False
 
     # Ignore validation for Quotation not to Customer
