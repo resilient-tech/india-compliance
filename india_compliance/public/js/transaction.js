@@ -32,7 +32,7 @@ function fetch_gst_details(doctype) {
 
     // we are using address below to prevent multiple event triggers
     if (in_list(frappe.boot.sales_doctypes, doctype)) {
-        event_fields.push("customer_address", "is_export_with_gst");
+        event_fields.push("customer_address", "shipping_address_name", "is_export_with_gst");
     } else {
         event_fields.push("supplier_address");
     }
@@ -57,7 +57,7 @@ async function update_gst_details(frm, event) {
     const party = frm.doc[party_fieldname];
     if (!party) return;
 
-    if (in_list(["company_gstin", "customer_address", "supplier_address"], event)) {
+    if (["company_gstin", "customer_address", "shipping_address_name", "supplier_address"].includes(event)) {
         frm.__update_place_of_supply = true;
     }
 
@@ -98,6 +98,7 @@ async function update_gst_details(frm, event) {
     if (in_list(frappe.boot.sales_doctypes, frm.doc.doctype)) {
         fieldnames_to_set.push(
             "customer_address",
+            "shipping_address_name",
             "billing_address_gstin",
             "is_export_with_gst"
         );
