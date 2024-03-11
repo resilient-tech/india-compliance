@@ -146,12 +146,17 @@ Object.assign(india_compliance, {
     },
 
     validate_gstin(gstin) {
-        if (!gstin || gstin.length !== 15) return;
+        if (!gstin || gstin.length !== 15) {
+            frappe.msgprint("GSTIN must be 15 characters long")
+            return;
+        }
 
         gstin = gstin.trim().toUpperCase();
 
         if (GSTIN_REGEX.test(gstin) && is_gstin_check_digit_valid(gstin)) {
             return gstin;
+        } else {
+            frappe.msgprint("Invalid GSTIN");
         }
     },
 
