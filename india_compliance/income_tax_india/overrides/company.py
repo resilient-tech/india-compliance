@@ -32,7 +32,6 @@ def set_tax_withholding_category(company):
 
     if company and tds_account:
         accounts.append({"company": company, "account": tds_account})
-
     today = getdate()
     fiscal_year_details = get_all_fiscal_year()
 
@@ -52,8 +51,11 @@ def set_tax_withholding_category(company):
                     "Tax Withholding Category", d.get("name"), for_update=True
                 )
 
-                if accounts and not d.get("accounts"):
-                    doc.append("accounts", accounts[0])
+                if accounts:
+                    if not any(
+                        account.get("company") == company for account in doc.accounts
+                    ):
+                        doc.extend("accounts", accounts)
 
                 # if fiscal year doesn't match with any of the already entered data,
                 # append rate row
