@@ -239,12 +239,7 @@ def is_status_refresh_required(gstin, transaction_date):
         not settings.validate_gstin_status
         or not is_api_enabled(settings)
         or settings.sandbox_mode
-<<<<<<< HEAD
-        or not transaction_date  # not from transactions
         or frappe.cache().get_value(gstin)
-=======
-        or frappe.cache.get_value(gstin)
->>>>>>> f749c620 (fix: validate gst_transporter_id (#1624))
     ):
         return
 
