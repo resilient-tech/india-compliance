@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import date_diff, format_date, get_datetime
 
 from india_compliance.gst_india.api_classes.e_invoice import EInvoiceAPI
+from india_compliance.gst_india.api_classes.e_waybill import EWaybillAPI
 from india_compliance.gst_india.api_classes.public import PublicAPI
 from india_compliance.gst_india.utils import (
     is_api_enabled,
@@ -67,13 +68,18 @@ def get_updated_gstin(gstin, transaction_date=None, is_request_from_ui=0):
     if is_request_from_ui:
         return create_or_update_gstin_status(gstin)
 
+    if gstin[:2] == "88":
+        callback = _validate_gst_transporter_id_info
+    else:
+        callback = _validate_gstin_info
+
     frappe.enqueue(
         create_or_update_gstin_status,
         enqueue_after_commit=True,
         queue="short",
         gstin=gstin,
         transaction_date=transaction_date,
-        callback=_validate_gstin_info,
+        callback=callback,
     )
 
 
@@ -84,7 +90,11 @@ def create_or_update_gstin_status(
     callback=None,
 ):
     doctype = "GSTIN"
-    response = _get_gstin_info(gstin=gstin, response=response)
+
+    if gstin and gstin[:2] == "88":
+        response = get_transporter_id_info(gstin)
+    else:
+        response = _get_gstin_info(gstin=gstin, response=response)
 
     if not response:
         return
@@ -187,6 +197,30 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
         )
 
 
+def _validate_gst_transporter_id_info(transporter_id_info, **kwargs):
+    if not transporter_id_info:
+        return
+
+    throw = kwargs.get("throw", False)
+
+    def _throw(message):
+        if throw:
+            frappe.throw(message)
+
+        else:
+            frappe.log_error(
+                title=_("Invalid Transporter ID"),
+                message=message,
+            )
+
+    if transporter_id_info.status != "Active":
+        return _throw(
+            _(
+                "Transporter ID {0} is not Active. Please make sure that transporter ID is valid."
+            ).format(transporter_id_info.gstin)
+        )
+
+
 def get_company_gstin():
     gst_settings = frappe.get_cached_doc("GST Settings")
 
@@ -205,8 +239,12 @@ def is_status_refresh_required(gstin, transaction_date):
         not settings.validate_gstin_status
         or not is_api_enabled(settings)
         or settings.sandbox_mode
+<<<<<<< HEAD
         or not transaction_date  # not from transactions
         or frappe.cache().get_value(gstin)
+=======
+        or frappe.cache.get_value(gstin)
+>>>>>>> f749c620 (fix: validate gst_transporter_id (#1624))
     ):
         return
 
@@ -214,7 +252,18 @@ def is_status_refresh_required(gstin, transaction_date):
         "GSTIN", gstin, ["last_updated_on", "status"], as_dict=True
     )
 
-    if not doc or doc.status not in ("Active", "Cancelled"):
+    if not doc:
+        return True
+
+    # Transporter ID status is never cancelled
+    is_transporter_id = gstin[:2] == "88"
+    if is_transporter_id:
+        return False
+
+    if not transaction_date:  # not from transactions
+        return False
+
+    if doc.status not in ("Active", "Cancelled"):
         return True
 
     days_since_last_update = date_diff(get_datetime(), doc.get("last_updated_on"))
@@ -235,5 +284,28 @@ def get_formatted_response(response):
                 response.cxdt, day_first=True, throw=False
             ),
             "status": response.sts,
+        }
+    )
+
+
+def get_transporter_id_info(transporter_id):
+    if not frappe.get_cached_value("GST Settings", None, "enable_e_waybill"):
+        return
+
+    company_gstin = get_company_gstin()
+    if not company_gstin:
+        return
+
+    response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(
+        transporter_id
+    )
+
+    if not response:
+        return
+
+    return frappe._dict(
+        {
+            "gstin": transporter_id,
+            "status": "Active" if response.transin else "Invalid",
         }
     )

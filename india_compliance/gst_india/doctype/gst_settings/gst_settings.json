@@ -347,7 +347,7 @@
   },
   {
    "default": "1",
-   "description": "Ensures valid GSTIN in transactions by refreshing status periodically from government database",
+   "description": "Ensures valid GSTIN and GST Transporter ID in transactions by refreshing status periodically from government database",
    "fieldname": "validate_gstin_status",
    "fieldtype": "Check",
    "label": "Refresh and Validate GSTIN Status in Transactions"
@@ -384,7 +384,11 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
+<<<<<<< HEAD
  "modified": "2024-01-11 11:06:33.171137",
+=======
+ "modified": "2024-01-22 18:09:00.011977",
+>>>>>>> f749c620 (fix: validate gst_transporter_id (#1624))
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
