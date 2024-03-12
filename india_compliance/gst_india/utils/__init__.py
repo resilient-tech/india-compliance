@@ -167,7 +167,7 @@ def validate_gstin(
 
     if len(gstin) != 15:
         frappe.throw(
-            _("{0} must have 15 characters").format(label),
+            _("{0} {1} must have 15 characters").format(label, frappe.bold(gstin)),
             title=_("Invalid {0}").format(label),
         )
 
