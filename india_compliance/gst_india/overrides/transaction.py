@@ -13,6 +13,7 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gstin.gstin import (
+    _validate_gst_transporter_id_info,
     _validate_gstin_info,
     get_gstin_status,
 )
@@ -1242,6 +1243,26 @@ def validate_gstin_status(gstin, transaction_date):
     _validate_gstin_info(gstin_doc, transaction_date, throw=True)
 
 
+def validate_gst_transporter_id(doc):
+    if not doc.get("gst_transporter_id"):
+        return
+
+    settings = frappe.get_cached_doc("GST Settings")
+    if not settings.validate_gstin_status:
+        return
+
+    doc.gst_transporter_id = validate_gstin(
+        doc.gst_transporter_id, label="GST Transporter ID", is_transporter_id=True
+    )
+
+    gstin_doc = get_gstin_status(doc.gst_transporter_id)
+
+    if not gstin_doc:
+        return
+
+    _validate_gst_transporter_id_info(gstin_doc, throw=True)
+
+
 def validate_company_address_field(doc):
     if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
         return
@@ -1309,7 +1330,7 @@ def validate_transaction(doc, method=None):
         gstin = doc.supplier_gstin
 
     validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
-
+    validate_gst_transporter_id(doc)
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
