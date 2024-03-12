@@ -24,10 +24,12 @@ from frappe.utils.file_manager import get_file_path
 from erpnext.accounts.party import get_default_contact
 from erpnext.accounts.utils import get_fiscal_year
 
+from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.constants import (
     ABBREVIATIONS,
     E_INVOICE_MASTER_CODES_URL,
     GST_ACCOUNT_FIELDS,
+    GST_INVOICE_NUMBER_FORMAT,
     GSTIN_FORMATS,
     PAN_NUMBER,
     PINCODE_FORMAT,
@@ -165,7 +167,7 @@ def validate_gstin(
 
     if len(gstin) != 15:
         frappe.throw(
-            _("{0} must have 15 characters").format(label),
+            _("{0} {1} must have 15 characters").format(label, frappe.bold(gstin)),
             title=_("Invalid {0}").format(label),
         )
 
@@ -392,7 +394,7 @@ def get_place_of_supply(party_details, doctype):
     if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
-            return "96-Other Countries"
+            return get_overseas_place_of_supply(party_details)
 
         if (
             party_details.gst_category == "Unregistered"
@@ -403,7 +405,8 @@ def get_place_of_supply(party_details, doctype):
                 party_details.customer_address,
                 ("gst_state_number", "gst_state"),
             )
-            return f"{gst_state_number}-{gst_state}"
+            if gst_state_number and gst_state:
+                return f"{gst_state_number}-{gst_state}"
 
         party_gstin = party_details.billing_address_gstin or party_details.company_gstin
     else:
@@ -416,6 +419,33 @@ def get_place_of_supply(party_details, doctype):
 
     if state := get_state(state_code):
         return f"{state_code}-{state}"
+
+
+def get_overseas_place_of_supply(party_details):
+    """
+    As per definition the of Export, material should be shipped to a place outside India.
+    Where the material is shipped in India, Place of Supply should be the location where
+    the material is shipped to.
+    """
+    place_of_supply = "96-Other Countries"
+
+    if not party_details.shipping_address_name:
+        return place_of_supply
+
+    shipping_address_details = frappe.get_value(
+        "Address",
+        party_details.shipping_address_name,
+        ("country", "gst_state_number", "gst_state"),
+        as_dict=True,
+    )
+
+    if (
+        shipping_address_details.country == "India"
+        and shipping_address_details.gst_state_number
+    ):
+        place_of_supply = f"{shipping_address_details.gst_state_number}-{shipping_address_details.gst_state}"
+
+    return place_of_supply
 
 
 def get_escaped_gst_accounts(company, account_type, throw=True):
@@ -806,3 +836,61 @@ def tar_gz_bytes_to_data(tar_gz_bytes: bytes) -> str | None:
 @frappe.whitelist(methods=["POST"])
 def disable_item_tax_template_notification():
     frappe.defaults.clear_user_default("needs_item_tax_template_notification")
+
+
+def validate_invoice_number(doc):
+    """Validate GST invoice number requirements."""
+
+    if len(doc.name) > 16:
+        frappe.throw(
+            _("GST Invoice Number cannot exceed 16 characters"),
+            title=_("Invalid GST Invoice Number"),
+        )
+
+    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
+        frappe.throw(
+            _(
+                "GST Invoice Number should start with an alphanumeric character and can"
+                " only contain alphanumeric characters, dash (-) and slash (/)"
+            ),
+            title=_("Invalid GST Invoice Number"),
+        )
+
+
+def handle_server_errors(settings, doc, document_type, error):
+    if not doc.doctype == "Sales Invoice":
+        return
+
+    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+
+    error_message_title = {
+        GatewayTimeoutError: _("Gateway Timeout Error"),
+        GSPServerError: _("GSP/GST Server Down"),
+    }
+
+    document_status_field = (
+        "einvoice_status" if document_type == "e-Invoice" else "e_waybill_status"
+    )
+
+    document_status = "Failed"
+
+    if settings.enable_retry_einv_ewb_generation and (
+        not settings.sandbox_mode or frappe.flags.in_test
+    ):
+        document_status = "Auto-Retry"
+        settings.db_set(
+            "is_retry_einv_ewb_generation_pending", 1, update_modified=False
+        )
+        error_message += (
+            " Your {0} generation will be automatically retried every 5 minutes."
+        ).format(document_type)
+    else:
+        error_message += " Please try again after some time."
+
+    doc.db_set({document_status_field: document_status})
+
+    frappe.msgprint(
+        msg=_(error_message),
+        title=error_message_title.get(type(error)),
+        indicator="yellow",
+    )

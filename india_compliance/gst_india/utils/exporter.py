@@ -276,7 +276,7 @@ class Worksheet:
                     out.append(row.get("label"))
                 else:
                     # eg: [{"fieldname1": "value1", "fieldname2": "value2"}] => ["value1", "value2"]. for data.
-                    out.append(list(row.values()))
+                    out.append([row.get(field["fieldname"]) for field in self.headers])
 
             if row.get("label"):
                 return [out]
@@ -311,6 +311,6 @@ class Worksheet:
     def get_column_index(self, column_name):
         """Get column index / position from column name"""
 
-        for (idx, field) in enumerate(self.headers, 1):
+        for idx, field in enumerate(self.headers, 1):
             if field["fieldname"] == column_name:
                 return idx

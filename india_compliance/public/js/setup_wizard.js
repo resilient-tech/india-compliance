@@ -1,9 +1,48 @@
 frappe.require("assets/india_compliance/js/quick_entry.js");
 update_erpnext_slides_settings();
 
+frappe.setup.on("before_load", function () {
+    if (!frappe.setup.slides.length) return;
+
+    const first_slide = frappe.setup.slides[0];
+    const _onload = first_slide.onload;
+
+    first_slide.onload = function (slide) {
+        _onload.call(this, slide);
+
+        const country_input = frappe.wizard?.slide_dict[0].get_input("country");
+        if (country_input) {
+            country_input.on("change", event => {
+                toggle_india_specific_fields(event.target.value);
+            });
+        }
+    };
+});
+
+function toggle_india_specific_fields(country) {
+    if (!country) return;
+
+    const india_specific_fields = [
+        "company_gstin",
+        "default_gst_rate",
+        "enable_audit_trail",
+    ];
+
+    const hide_field = country && country.toLowerCase() !== "india" ? 1 : 0;
+
+    Object.values(frappe.wizard.slide_dict || {}).forEach(slide => {
+        slide.form?.fields_list?.forEach(fieldobj => {
+            if (india_specific_fields.includes(fieldobj.df.fieldname)) {
+                fieldobj.df.hidden = hide_field;
+                fieldobj.refresh();
+            }
+        });
+    });
+}
+
 function update_erpnext_slides_settings() {
     const slide =
-        erpnext.setup.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
+        erpnext.setup?.slides_settings && erpnext.setup.slides_settings.slice(-1)[0];
     if (!slide) return;
 
     company_gstin_field = {
@@ -20,8 +59,21 @@ function update_erpnext_slides_settings() {
         fieldname: "default_gst_rate",
         fieldtype: "Select",
         label: __("Default GST Rate"),
-        options: [0.0, 0.1, 0.25, 1.0, 1.5, 3.0, 5.0, 6.0, 7.5, 12.0, 18.0, 28.0],
-        default: 18.0,
+        options: [
+            "0.0",
+            "0.1",
+            "0.25",
+            "1.0",
+            "1.5",
+            "3.0",
+            "5.0",
+            "6.0",
+            "7.5",
+            "12.0",
+            "18.0",
+            "28.0",
+        ],
+        default: "18.0",
     });
 
     slide.fields.push({
@@ -37,13 +89,13 @@ function update_erpnext_slides_settings() {
         ),
     });
 
-    if (!can_fetch_gstin_info()) return;
-
     const _onload = slide.onload;
     slide.onload = function (slide) {
         _onload.call(this, slide);
 
-        slide.get_input("company_gstin").on("change", async function () {
+        toggle_india_specific_fields(frappe.wizard.values.country);
+
+        slide.get_input("company_gstin")?.on("change", async function () {
             autofill_company_info(slide);
         });
     };
@@ -52,14 +104,22 @@ function update_erpnext_slides_settings() {
 async function autofill_company_info(slide) {
     const gstin = slide.get_input("company_gstin").val();
     const gstin_field = slide.get_field("company_gstin");
+
+    gstin_field.$input.css("border", "none");
+
+    if (!india_compliance.validate_gstin(gstin)) {
+        gstin_field.$input.css("border", "1px solid red");
+        return;
+    }
+
+    if (!can_fetch_gstin_info()) return;
+
     const gstin_info = await get_gstin_info(gstin, false);
 
     if (gstin_info.business_name) {
         await slide.get_field("company_name").set_value(gstin_info.business_name);
-        slide.get_input("company_name").trigger("change");
+        slide.get_input("company_name").trigger("input");
     }
-
-    set_gstin_description(gstin_field, gstin_info.status);
 }
 
 function can_fetch_gstin_info() {

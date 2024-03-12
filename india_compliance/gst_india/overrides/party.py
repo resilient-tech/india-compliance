@@ -41,6 +41,10 @@ def set_gst_category(doc):
 
 
 def fetch_or_guess_gst_category(doc):
+    # Any transaction can be treated as deemed export
+    if doc.gstin and doc.gst_category == "Deemed Export":
+        return "Deemed Export"
+
     if doc.gstin and is_autofill_party_info_enabled():
         gstin_info = _get_gstin_info(doc.gstin, throw_error=False) or {}
 
@@ -128,7 +132,6 @@ def create_primary_address(doc, method=None):
 
     ERPNext uses `address_line1` so we use `_address_line1` to avoid conflict.
     """
-
     if not doc.get("_address_line1"):
         return
 
@@ -153,5 +156,7 @@ def make_address(doc):
             "gstin": doc.gstin,
             "gst_category": doc.gst_category,
             "links": [{"link_doctype": doc.doctype, "link_name": doc.name}],
+            "is_primary_address": doc.get("is_primary_address"),
+            "is_shipping_address": doc.get("is_shipping_address"),
         }
     ).insert()

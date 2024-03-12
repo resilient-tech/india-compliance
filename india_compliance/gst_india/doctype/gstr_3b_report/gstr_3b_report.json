@@ -10,6 +10,10 @@
   "company_address",
   "year",
   "month",
+  "column_break_jhew",
+  "enqueue_report",
+  "generation_status",
+  "section_break_yqh7",
   "json_output",
   "missing_field_invoices"
  ],
@@ -47,10 +51,34 @@
    "fieldtype": "Small Text",
    "label": "Invoices with no Place Of Supply",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_jhew",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Generate report in the background.",
+   "fieldname": "enqueue_report",
+   "fieldtype": "Check",
+   "label": "Enqueue Report",
+   "print_hide": 1,
+   "report_hide": 1
+  },
+  {
+   "fieldname": "section_break_yqh7",
+   "fieldtype": "Section Break",
+   "hide_border": 1
+  },
+  {
+   "fieldname": "generation_status",
+   "fieldtype": "Data",
+   "label": "Status",
+   "read_only": 1
   }
  ],
  "links": [],
- "modified": "2022-03-01 15:37:33.361290",
+ "modified": "2024-01-02 14:09:31.230340",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",

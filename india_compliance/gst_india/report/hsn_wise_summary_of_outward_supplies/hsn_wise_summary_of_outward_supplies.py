@@ -11,7 +11,6 @@ from frappe.utils import cstr, flt, getdate
 import erpnext
 
 from india_compliance.gst_india.constants import GST_ACCOUNT_FIELDS
-from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
 
 
@@ -24,6 +23,12 @@ def execute(filters=None):
     columns = get_columns()
     output_gst_accounts_dict = get_gst_accounts_by_type(filters.company, "Output")
 
+    data = get_hsn_data(filters, columns, output_gst_accounts_dict)
+
+    return columns, data
+
+
+def get_hsn_data(filters, columns, output_gst_accounts_dict):
     output_gst_accounts = set()
     non_cess_accounts = set()
     for account_type, account_name in output_gst_accounts_dict.items():
@@ -61,22 +66,23 @@ def execute(filters=None):
         item_tax = itemised_tax.get((d.parent, d.item_code), {})
         for tax in tax_columns:
             tax_data = item_tax.get(tax, {})
-            total_tax += flt(tax_data.get("tax_amount", 0))
+            total_tax += flt(tax_data.get("tax_amount", 0), 2)
             if tax in non_cess_accounts:
                 tax_rate += flt(tax_data.get("tax_rate", 0))
 
+        d.taxable_value = flt(d.taxable_value, 2)
         row = [
             d.gst_hsn_code,
             d.description,
             d.uqc,
-            d.stock_qty,
+            flt(d.stock_qty, 2),
             tax_rate,
-            d.taxable_value + total_tax,
+            flt(d.taxable_value + total_tax, 2),
             d.taxable_value,
         ]
 
         for tax in tax_columns:
-            row.append(item_tax.get(tax, {}).get("tax_amount", 0))
+            row.append(flt(item_tax.get(tax, {}).get("tax_amount", 0), 2))
 
         data.append(row)
         added_item.add(key)
@@ -84,7 +90,7 @@ def execute(filters=None):
     if data:
         data = get_merged_data(columns, data)  # merge same hsn code data
 
-    return columns, data
+    return data
 
 
 def validate_filters(filters):
@@ -177,11 +183,11 @@ def get_items(filters):
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
-            `tabGST HSN Code`.description
+            COALESCE(`tabGST HSN Code`.description, 'NA') AS description
         FROM
             `tabSales Invoice`
             INNER JOIN `tabSales Invoice Item` ON `tabSales Invoice`.name = `tabSales Invoice Item`.parent
-            INNER JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
+            LEFT JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
         WHERE
             `tabSales Invoice`.docstatus = 1
             AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '')
@@ -296,6 +302,8 @@ def get_merged_data(columns, data):
 
 @frappe.whitelist()
 def get_json(filters, report_name, data):
+    from india_compliance.gst_india.report.gstr_1.gstr_1 import get_company_gstin_number
+
     filters = json.loads(filters)
     report_data = json.loads(data)
     gstin = filters.get("company_gstin") or get_company_gstin_number(filters["company"])
@@ -310,7 +318,7 @@ def get_json(filters, report_name, data):
 
     gst_json = {"version": "GST3.1.2", "hash": "hash", "gstin": gstin, "fp": fp}
 
-    gst_json["hsn"] = {"data": get_hsn_wise_json_data(filters, report_data)}
+    gst_json["hsn"] = get_hsn_wise_json_data(filters, report_data)
 
     return {"report_name": report_name, "data": gst_json}
 
@@ -371,4 +379,4 @@ def get_hsn_wise_json_data(filters, report_data):
         data.append(row)
         count += 1
 
-    return data
+    return {"data": data}

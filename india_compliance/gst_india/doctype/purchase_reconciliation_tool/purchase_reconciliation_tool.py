@@ -170,14 +170,16 @@ class PurchaseReconciliationTool(Document):
                     status = status.replace("Downloaded", "Uploaded")
 
                 _dict = {
-                    "Classification": category.value
-                    if return_type is ReturnType.GSTR2A
-                    else "ALL",
+                    "Classification": (
+                        category.value if return_type is ReturnType.GSTR2A else "ALL"
+                    ),
                     "Status": status,
-                    columns[-1]: "✅ &nbsp;"
-                    + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
-                    if download
-                    else "",
+                    columns[-1]: (
+                        "✅ &nbsp;"
+                        + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
+                        if download
+                        else ""
+                    ),
                 }
                 if _dict not in data[period]:
                     data[period].append(_dict)
@@ -261,7 +263,7 @@ class PurchaseReconciliationTool(Document):
             "GST Inward Supply", link_doc, pluck="name"
         ):
             self._unlink_documents((pur_linked_with))
-            inward_supplies.append(pur_linked_with)
+            inward_supplies.extend(pur_linked_with)
 
         link_doc["match_status"] = "Manual Match"
 

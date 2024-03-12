@@ -40,13 +40,7 @@ frappe.query_reports["e-Invoice Summary"] = {
             fieldtype: "Select",
             fieldname: "status",
             label: __("e-Invoice Status"),
-            options: "\nPending\nGenerated\nCancelled\nFailed\nNot Applicable",
-        },
-        {
-            fieldtype: "Select",
-            fieldname: "exceptions",
-            label: __("e-Invoice Exceptions"),
-            options: "\ne-Invoice Not Generated\nInvoice Cancelled but not e-Invoice",
+            options: "\nPending\nGenerated\nCancelled\nFailed\nNot Applicable\nPending Cancellation",
         },
     ],
 
@@ -63,6 +57,8 @@ frappe.query_reports["e-Invoice Summary"] = {
             value = `<span class="bold"  style="color: var(--text-on-red)">${value}</span>`;
         else if (value == "Not Applicable")
             value = `<span class="bold"  style="color: var(--text-on-grey)">${value}</span>`;
+        else if (value == "Pending Cancellation")
+            value = `<span class="bold"  style="color: var(--text-on-red)">${value}</span>`;
 
         return value;
     },

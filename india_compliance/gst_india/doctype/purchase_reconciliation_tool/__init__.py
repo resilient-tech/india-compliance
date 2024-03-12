@@ -34,6 +34,7 @@ class Fields(Enum):
     SGST = "sgst"
     IGST = "igst"
     CESS = "cess"
+    TOTAL_GST = "total_gst"
 
 
 class Rule(Enum):
@@ -198,9 +199,7 @@ PAN_RULES = (
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
             Fields.TAXABLE_VALUE: Rule.ROUNDING_DIFFERENCE,
-            Fields.CGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.SGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.IGST: Rule.ROUNDING_DIFFERENCE,
+            Fields.TOTAL_GST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
     },
@@ -214,9 +213,7 @@ PAN_RULES = (
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
             Fields.TAXABLE_VALUE: Rule.ROUNDING_DIFFERENCE,
-            Fields.CGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.SGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.IGST: Rule.ROUNDING_DIFFERENCE,
+            Fields.TOTAL_GST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
     },
@@ -246,9 +243,7 @@ PAN_RULES = (
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
             Fields.TAXABLE_VALUE: Rule.ROUNDING_DIFFERENCE,
-            Fields.CGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.SGST: Rule.ROUNDING_DIFFERENCE,
-            Fields.IGST: Rule.ROUNDING_DIFFERENCE,
+            Fields.TOTAL_GST: Rule.ROUNDING_DIFFERENCE,
             Fields.CESS: Rule.ROUNDING_DIFFERENCE,
         },
     },
@@ -374,12 +369,18 @@ class PurchaseInvoice:
 
         elif names:
             query = query.where(
-                (self.PI.posting_date[self.from_date : self.to_date])
+                (
+                    (self.PI.posting_date[self.from_date : self.to_date])
+                    & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
+                )
                 | (self.PI.name.isin(names))
             )
 
         else:
-            query = query.where(self.PI.posting_date[self.from_date : self.to_date])
+            query = query.where(
+                (self.PI.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
+            )
 
         return query.run(as_dict=True)
 
@@ -539,12 +540,18 @@ class BillOfEntry:
 
         elif names:
             query = query.where(
-                (self.BOE.posting_date[self.from_date : self.to_date])
+                (
+                    (self.BOE.posting_date[self.from_date : self.to_date])
+                    & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
+                )
                 | (self.BOE.name.isin(names))
             )
 
         else:
-            query = query.where(self.BOE.posting_date[self.from_date : self.to_date])
+            query = query.where(
+                (self.BOE.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
+            )
 
         return query.run(as_dict=True)
 
@@ -581,6 +588,7 @@ class BillOfEntry:
             .join(self.PI)
             .on(self.BOE.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
+            .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
             .groupby(self.BOE.name)
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
@@ -772,7 +780,7 @@ class Reconciler(BaseReconciliation):
         # GSTIN Level matching
         purchases = self.get_unmatched_purchase_or_bill_of_entry(category)
         inward_supplies = self.get_unmatched_inward_supply(category, amended_category)
-        self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies, category)
+        self.reconcile_for_rules(GSTIN_RULES, purchases, inward_supplies)
 
         # In case of IMPG GST in not available in 2A. So skip PAN level matching.
         if category == "IMPG":
@@ -781,9 +789,9 @@ class Reconciler(BaseReconciliation):
         # PAN Level matching
         purchases = self.get_pan_level_data(purchases)
         inward_supplies = self.get_pan_level_data(inward_supplies)
-        self.reconcile_for_rules(PAN_RULES, purchases, inward_supplies, category)
+        self.reconcile_for_rules(PAN_RULES, purchases, inward_supplies)
 
-    def reconcile_for_rules(self, rules, purchases, inward_supplies, category):
+    def reconcile_for_rules(self, rules, purchases, inward_supplies):
         if not (purchases and inward_supplies):
             return
 
@@ -793,12 +801,9 @@ class Reconciler(BaseReconciliation):
                 inward_supplies,
                 rule.get("match_status").value,
                 rule.get("rule"),
-                category,
             )
 
-    def reconcile_for_rule(
-        self, purchases, inward_supplies, match_status, rules, category
-    ):
+    def reconcile_for_rule(self, purchases, inward_supplies, match_status, rules):
         """
         Sequentially reconcile invoices as per rules list.
         - Reconciliation only done between invoices of same GSTIN.
@@ -809,28 +814,18 @@ class Reconciler(BaseReconciliation):
             if not inward_supplies.get(supplier_gstin):
                 continue
 
-            summary_diff = {}
-            if match_status == "Residual Match" and category != "CDNR":
-                summary_diff = self.get_summary_difference(
-                    purchases[supplier_gstin], inward_supplies[supplier_gstin]
-                )
-
             for purchase_invoice_name, purchase in (
                 purchases[supplier_gstin].copy().items()
             ):
-                if summary_diff and not (
-                    abs(summary_diff[purchase.bill_date.month]) < 2
-                ):
-                    continue
-
                 for inward_supply_name, inward_supply in (
                     inward_supplies[supplier_gstin].copy().items()
                 ):
-                    if (
-                        summary_diff
-                        and purchase.bill_date.month != inward_supply.bill_date.month
-                    ):
-                        continue
+                    if match_status == "Residual Match":
+                        if (
+                            abs((purchase.bill_date - inward_supply.bill_date).days)
+                            > 10
+                        ):
+                            continue
 
                     if not self.is_doc_matching(purchase, inward_supply, rules):
                         continue
@@ -846,26 +841,6 @@ class Reconciler(BaseReconciliation):
                     purchases[supplier_gstin].pop(purchase_invoice_name)
                     inward_supplies[supplier_gstin].pop(inward_supply_name)
                     break
-
-    def get_summary_difference(self, data1, data2):
-        """
-        Returns dict with difference of monthly purchase for given supplier data.
-        Calculated only for Residual Match.
-
-        Objective: Residual match is to match Invoices where bill no is completely different.
-                    It should be matched for invoices of a given month only if difference in total invoice
-                    value is negligible for purchase and inward supply.
-        """
-        summary = {}
-        for doc in data1.values():
-            summary.setdefault(doc.bill_date.month, 0)
-            summary[doc.bill_date.month] += BaseUtil.get_total_tax(doc)
-
-        for doc in data2.values():
-            summary.setdefault(doc.bill_date.month, 0)
-            summary[doc.bill_date.month] -= BaseUtil.get_total_tax(doc)
-
-        return summary
 
     def is_doc_matching(self, purchase, inward_supply, rules):
         """
@@ -934,6 +909,10 @@ class Reconciler(BaseReconciliation):
     def get_amount_difference(self, purchase, inward_supply, field):
         if field == "cess":
             BaseUtil.update_cess_amount(purchase)
+
+        if field == "total_gst":
+            BaseUtil.update_total_gst_amount(purchase)
+            BaseUtil.update_total_gst_amount(inward_supply)
 
         return abs(purchase.get(field, 0) - inward_supply.get(field, 0))
 
@@ -1008,9 +987,9 @@ class ReconciledData(BaseReconciliation):
         reconciliation_data = [
             frappe._dict(
                 {
-                    "_inward_supply": inward_supplies[0]
-                    if inward_supplies
-                    else frappe._dict(),
+                    "_inward_supply": (
+                        inward_supplies[0] if inward_supplies else frappe._dict()
+                    ),
                     "_purchase_invoice": purchases.get(purchase_name, frappe._dict()),
                 }
             )
@@ -1338,7 +1317,14 @@ class BaseUtil:
 
     @staticmethod
     def update_cess_amount(doc):
-        doc.cess = doc.get("cess", 0) + doc.get("cess_non_advol", 0)
+        if doc.get("cess_non_advol"):
+            doc.cess = doc.get("cess", 0) + doc.get("cess_non_advol", 0)
+            doc.cess_non_advol = 0
+
+    @staticmethod
+    def update_total_gst_amount(doc):
+        if not doc.get("total_gst"):
+            doc.total_gst = doc.cgst + doc.sgst + doc.igst
 
     @staticmethod
     def get_periods(date_range, return_type: ReturnType, reversed_order=False):

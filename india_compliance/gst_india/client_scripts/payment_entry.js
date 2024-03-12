@@ -9,7 +9,23 @@ const WARNING_ICON = `
 `;
 
 frappe.ui.form.on("Payment Entry", {
-    setup: override_get_outstanding_documents,
+    setup(frm) {
+        frm.set_query("customer_address", function () {
+            if (!frm.doc.party) {
+                frappe.throw(__("Please set Party"));
+            }
+
+            return {
+                query: "frappe.contacts.doctype.address.address.address_query",
+                filters: {
+                    link_doctype: frm.doc.party_type,
+                    link_name: frm.doc.party,
+                },
+            };
+        });
+
+        override_get_outstanding_documents(frm);
+    },
 
     refresh(frm) {
         add_warning_indicator(frm, frm.doc.__onload?.reconciliation_status_dict);
@@ -35,7 +51,9 @@ frappe.ui.form.on("Payment Entry", {
         );
     },
 
-    customer_address: update_gst_details,
+    customer_address(frm) {
+        update_gst_details(frm);
+    },
 });
 
 function override_get_outstanding_documents(frm) {
@@ -44,8 +62,12 @@ function override_get_outstanding_documents(frm) {
 
     const new_fn = function () {
         old_fn(...arguments);
+        if (frm.doc.party_type != "Supplier") return;
+
         frappe.after_ajax(() => {
-            response = frappe?.last_response?.message || [];
+            const response = frappe?.last_response?.message || [];
+
+            if (!Array.isArray(response)) return;
 
             const reconciliation_status_dict = response.reduce((acc, d) => {
                 acc[d.voucher_no] = d.reconciliation_status;

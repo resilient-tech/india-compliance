@@ -2,7 +2,6 @@ import frappe
 from frappe import _, bold
 from frappe.utils import flt, fmt_money
 
-from india_compliance.gst_india.constants import GST_INVOICE_NUMBER_FORMAT
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
@@ -17,6 +16,7 @@ from india_compliance.gst_india.utils import (
     get_validated_country_code,
     is_api_enabled,
     is_foreign_doc,
+    validate_invoice_number,
 )
 from india_compliance.gst_india.utils.e_invoice import (
     get_e_invoice_info,
@@ -66,25 +66,6 @@ def validate(doc, method=None):
     set_e_waybill_status(doc, gst_settings)
 
 
-def validate_invoice_number(doc):
-    """Validate GST invoice number requirements."""
-
-    if len(doc.name) > 16:
-        frappe.throw(
-            _("GST Invoice Number cannot exceed 16 characters"),
-            title=_("Invalid GST Invoice Number"),
-        )
-
-    if not GST_INVOICE_NUMBER_FORMAT.match(doc.name):
-        frappe.throw(
-            _(
-                "GST Invoice Number should start with an alphanumeric character and can"
-                " only contain alphanumeric characters, dash (-) and slash (/)"
-            ),
-            title=_("Invalid GST Invoice Number"),
-        )
-
-
 def validate_credit_debit_note(doc):
     if doc.is_return and doc.is_debit_note:
         frappe.throw(
@@ -95,7 +76,16 @@ def validate_credit_debit_note(doc):
         )
 
 
-def validate_fields_and_set_status_for_e_invoice(doc, gst_settings):
+def validate_fields_and_set_status_for_e_invoice(doc, gst_settings=None):
+    if doc.docstatus == 2:
+        if doc.irn:
+            doc.einvoice_status = "Pending Cancellation"
+
+        return
+
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
     if not gst_settings.enable_e_invoice or not validate_e_invoice_applicability(
         doc, gst_settings=gst_settings, throw=False
     ):
@@ -184,6 +174,7 @@ def on_submit(doc, method=None):
 
 
 def before_cancel(doc, method=None):
+    validate_fields_and_set_status_for_e_invoice(doc)
     payment_references = frappe.get_all(
         "Payment Entry Reference",
         filters={

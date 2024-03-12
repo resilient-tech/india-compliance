@@ -5,6 +5,7 @@ from erpnext.assets.doctype.asset.asset import (
     get_asset_account,
     is_cwip_accounting_enabled,
 )
+from erpnext.stock import get_warehouse_account_map
 
 from india_compliance.gst_india.overrides.transaction import (
     is_indian_registered_company,
@@ -16,6 +17,7 @@ class IneligibleITC:
     def __init__(self, doc):
         self.doc = doc
 
+        self.warehouse_account_map = get_warehouse_account_map(doc.company)
         self.company = frappe.get_cached_doc("Company", doc.company)
         self.is_perpetual = self.company.enable_perpetual_inventory
         self.cost_center = doc.cost_center or self.company.cost_center
@@ -45,7 +47,7 @@ class IneligibleITC:
             if item._ineligible_tax_amount:
                 self.doc._has_ineligible_itc_items = True
 
-            if item.item_code in stock_items:
+            if item.item_code in stock_items and self.is_perpetual:
                 item._is_stock_item = True
 
             if item.get("_is_stock_item") or item.get("is_fixed_asset"):
@@ -53,11 +55,18 @@ class IneligibleITC:
                 if self.doc.get("is_return"):
                     ineligible_tax_amount = -ineligible_tax_amount
 
-                # TODO: handle rounding off
+                # TODO: handle rounding off of gst amount from gst settings
                 self.update_item_valuation_rate(item, ineligible_tax_amount)
 
     def update_gl_entries(self, gl_entries):
         self.gl_entries = gl_entries
+
+        if (
+            frappe.flags.through_repost_accounting_ledger
+            or frappe.flags.through_repost_item_valuation
+        ):
+            self.doc.update_valuation_rate()
+            self.update_valuation_rate()
 
         if not self.doc.get("_has_ineligible_itc_items"):
             return gl_entries
@@ -133,23 +142,118 @@ class IneligibleITC:
             )
         )
 
-        if item.get("is_fixed_asset"):
-            item.expense_account = _get_asset_account(
-                item.asset_category, self.doc.company
-            )
-            self.update_asset_valuation_rate(item)
+        if not self.is_debit_entry_required(item):
+            return
 
-        if self.is_debit_entry_required(item):
+        expense_account = self.get_item_expense_account(item)
+        if not expense_account:
+            return
+
+        against_account = self.get_against_account(item)
+        remarks = item.get("_remarks")
+
+        self.gl_entries.append(
+            self.doc.get_gl_dict(
+                args={
+                    "account": expense_account,
+                    self.dr_or_cr: ineligible_item_tax_amount,
+                    f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                    "cost_center": item.cost_center or self.cost_center,
+                    "against": against_account,
+                    "remarks": remarks,
+                },
+                item=item,
+            )
+        )
+
+    def reverse_stock_adjustment_entry(self, item):
+        """
+        Stock Adjustment Entry for returned items is booked in ERPNext
+        Steps as Followed by ERPNext:
+        - Identify Stock Value for each item from Purchase Invoice
+        - Book SLE accordingly as per original Purchase Invoice
+        - Identify Stock Value difference and book it against default expense account
+
+        Reference:
+        - Purchase Invoice: erpnext.accounts.doctype.purchase_invoice.purchase_invoice.PurchaseInvoice.make_stock_adjustment_entry
+        - Purchase Receipt: erpnext.stock.doctype.purchase_receipt.purchase_receipt.PurchaseReceipt.make_item_gl_entries.make_divisional_loss_gl_entry
+
+        This method reverses the Stock Adjustment Entry
+        """
+        stock_account = self.get_item_expense_account(item)
+        cogs_account = self.company.default_expense_account
+
+        ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
+
+        for entry in self.gl_entries:
+            if (
+                entry.get("account") != stock_account
+                or entry.get("cost_center") != item.cost_center
+            ):
+                continue
+
+            entry[self.dr_or_cr] -= ineligible_item_tax_amount
+            entry[f"{self.dr_or_cr}_in_account_currency"] -= ineligible_item_tax_amount
+            break
+
+        else:
+            # FALLBACK: If Stock Account not found in GL Entries
             self.gl_entries.append(
                 self.doc.get_gl_dict(
                     {
-                        "account": item.expense_account,
-                        self.dr_or_cr: ineligible_item_tax_amount,
-                        f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                        "account": stock_account,
+                        self.cr_or_dr: ineligible_item_tax_amount,
+                        f"{self.cr_or_dr}_in_account_currency": ineligible_item_tax_amount,
                         "cost_center": item.cost_center or self.cost_center,
+                        "remarks": item.get("_remarks"),
                     }
                 )
             )
+
+        for entry in self.gl_entries:
+            if (
+                entry.get("account") != cogs_account
+                or entry.get("cost_center") != item.cost_center
+            ):
+                continue
+
+            entry[self.cr_or_dr] -= ineligible_item_tax_amount
+            entry[f"{self.cr_or_dr}_in_account_currency"] -= ineligible_item_tax_amount
+            break
+
+        else:
+            # FALLBACK: If COGS Account not found in GL Entries
+            self.gl_entries.append(
+                self.doc.get_gl_dict(
+                    {
+                        "account": cogs_account,
+                        self.dr_or_cr: ineligible_item_tax_amount,
+                        f"{self.dr_or_cr}_in_account_currency": ineligible_item_tax_amount,
+                        "cost_center": item.cost_center or self.cost_center,
+                        "against": stock_account,
+                        "remarks": item.get("_remarks"),
+                    }
+                )
+            )
+
+    def get_item_expense_account(self, item):
+        if item.get("is_fixed_asset"):
+            expense_account = _get_asset_account(item.asset_category, self.doc.company)
+            item.expense_account = expense_account
+            self.update_asset_valuation_rate(item)
+
+        elif item.get("_is_stock_item") and self.warehouse_account_map.get(
+            item.warehouse
+        ):
+            expense_account = self.warehouse_account_map[item.warehouse]["account"]
+
+        else:
+            expense_account = item.expense_account
+
+        return expense_account
+
+    def get_against_account(self, item):
+        return
 
     def update_ineligible_taxes(self, item):
         """
@@ -203,24 +307,12 @@ class IneligibleITC:
         return True
 
     def update_asset_valuation_rate(self, item):
-        return
-
-    def is_eligibility_restricted_due_to_pos(self):
-        return False
-
-
-class PurchaseReceipt(IneligibleITC):
-    def update_item_gl_entries(self, item):
-        if (item.get("_is_stock_item") and self.is_perpetual) or item.get(
-            "is_fixed_asset"
-        ):
-            self.make_gst_expense_entry(item)
-
-    def update_asset_valuation_rate(self, item):
-        # TODO: Remove this once its fixed in ERPNext
         frappe.db.set_value(
             "Asset",
-            {"item_code": item.item_code, "purchase_receipt": self.doc.name},
+            {
+                "item_code": item.item_code,
+                frappe.scrub(self.doc.doctype): self.doc.name,
+            },
             {
                 "gross_purchase_amount": flt(item.valuation_rate),
                 "purchase_receipt_amount": flt(item.valuation_rate),
@@ -228,10 +320,48 @@ class PurchaseReceipt(IneligibleITC):
         )
 
     def is_eligibility_restricted_due_to_pos(self):
-        return self.doc.place_of_supply[:2] != self.doc.company_gstin[:2]
+        return self.doc.get("ineligibility_reason") == "ITC restricted due to PoS rules"
+
+
+class PurchaseReceipt(IneligibleITC):
+
+    def __init__(self, doc):
+        doc.run_method("onload")
+        super().__init__(doc)
+
+    def update_valuation_rate(self):
+        for item in self.doc.items:
+            item._remarks = self.doc.get("remarks") or _(
+                "Accounting Entry for {0}"
+            ).format("Asset" if item.is_fixed_asset else "Stock")
+
+        super().update_valuation_rate()
+
+    def update_item_gl_entries(self, item):
+        if (item.get("_is_stock_item")) or item.get("is_fixed_asset"):
+            self.make_gst_expense_entry(item)
+
+        if item.get("_is_stock_item"):
+            self.reverse_stock_adjustment_entry(item)
+
+    def get_against_account(self, item):
+        if item.is_fixed_asset:
+            return self.doc.get_company_default("asset_received_but_not_billed")
+
+        elif item.get("_is_stock_item"):
+            return self.doc.get_company_default("stock_received_but_not_billed")
 
 
 class PurchaseInvoice(IneligibleITC):
+
+    def update_valuation_rate(self):
+        for item in self.doc.items:
+            item._remarks = self.doc.get("remarks") or _(
+                "Accounting Entry for {0}"
+            ).format("Asset" if item.is_fixed_asset else "Stock")
+
+        super().update_valuation_rate()
+
     def update_item_gl_entries(self, item):
         if self.doc.update_stock or self.is_expense_item(item):
             self.make_gst_expense_entry(item)
@@ -250,34 +380,17 @@ class PurchaseInvoice(IneligibleITC):
         :param item: Item Row
         :return: bool
         """
-        if self.doc.update_stock:
-            if item.get("is_fixed_asset"):
-                return False
+        if item.get("is_fixed_asset"):
+            return False
 
-            if item.get("_is_stock_item") and self.is_perpetual:
-                return False
-
-            return True
+        if item.get("_is_stock_item"):
+            return False
 
         account_root = frappe.db.get_value("Account", item.expense_account, "root_type")
         if account_root in ["Asset", "Liability", "Equity"]:
             return False
 
         return True
-
-    def update_asset_valuation_rate(self, item):
-        # TODO: Remove this once its fixed in ERPNext
-        frappe.db.set_value(
-            "Asset",
-            {"item_code": item.item_code, "purchase_invoice": self.doc.name},
-            {
-                "gross_purchase_amount": flt(item.valuation_rate),
-                "purchase_receipt_amount": flt(item.valuation_rate),
-            },
-        )
-
-    def is_eligibility_restricted_due_to_pos(self):
-        return self.doc.get("ineligibility_reason") == "ITC restricted due to PoS rules"
 
 
 class BillOfEntry(IneligibleITC):
@@ -314,11 +427,11 @@ class BillOfEntry(IneligibleITC):
     def update_item_valuation_rate(self, item, ineligible_tax_amount):
         item.valuation_rate = ineligible_tax_amount
 
+    def update_asset_valuation_rate(self, item):
+        return
+
     def update_item_gl_entries(self, item):
-        if not (
-            (item.get("_is_stock_item") and self.is_perpetual)
-            or item.get("is_fixed_asset")
-        ):
+        if not ((item.get("_is_stock_item")) or item.get("is_fixed_asset")):
             self.make_gst_expense_entry(item)
 
         self.reverse_input_taxes_entry(item)
@@ -350,6 +463,9 @@ class BillOfEntry(IneligibleITC):
                 "amount": total_gst_expense,
             },
         )
+
+    def is_eligibility_restricted_due_to_pos(self):
+        return False
 
 
 DOCTYPE_MAPPING = {

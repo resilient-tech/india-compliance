@@ -49,9 +49,9 @@ class BaseAPI:
         else:
             frappe.throw(
                 _(
-                    "Please set the relevant credentials in GST Settings to use the"
-                    " {0} API"
-                ).format(self.API_NAME),
+                    "Please set the relevant credentials for GSTIN {0} in GST Settings to use the"
+                    " {1} API"
+                ).format(gstin, self.API_NAME),
                 frappe.DoesNotExistError,
                 title=_("Credentials Unavailable"),
             )
@@ -271,3 +271,27 @@ class BaseAPI:
 
 def get_public_ip():
     return requests.get("https://api.ipify.org").text
+
+
+def check_scheduler_status():
+    """
+    Throw an error if scheduler is disabled
+    """
+
+    if frappe.flags.in_test or frappe.conf.developer_mode:
+        return
+
+    if frappe.utils.scheduler.is_scheduler_disabled():
+        frappe.throw(
+            _(
+                "The Scheduler is currently disabled, which needs to be enabled to use e-Invoicing and e-Waybill features. "
+                "Please get in touch with your server administrator to resolve this issue.<br><br>"
+                "For more information, refer to the following documentation: {0}"
+            ).format(
+                """
+                <a href="https://frappeframework.com/docs/user/en/bench/resources/bench-commands-cheatsheet#scheduler" target="_blank">
+                    Frappe Scheduler Documentation
+                </a>
+                """
+            )
+        )

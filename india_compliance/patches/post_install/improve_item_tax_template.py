@@ -20,7 +20,7 @@ from india_compliance.patches.post_install.update_e_invoice_fields_and_logs impo
     delete_custom_fields,
 )
 
-TRANSACTION_DOCTYPES = (
+TRANSACTION_ITEM_DOCTYPES = (
     "Material Request Item",
     "Supplier Quotation Item",
     "Purchase Order Item",
@@ -38,7 +38,7 @@ FIELDS_TO_DELETE = {
         {"fieldname": "is_nil_exempt"},
         {"fieldname": "is_non_gst"},
     ],
-    TRANSACTION_DOCTYPES: [
+    TRANSACTION_ITEM_DOCTYPES: [
         {"fieldname": "is_nil_exempt"},
         {"fieldname": "is_non_gst"},
     ],
@@ -52,6 +52,9 @@ NEW_TEMPLATES = {
 
 
 def execute():
+    if not frappe.db.has_column("Item", "is_nil_exempt"):
+        return
+
     companies = get_indian_companies()
     templates = create_or_update_item_tax_templates(companies)
     update_items_with_templates(templates)
@@ -69,29 +72,36 @@ def get_indian_companies():
 
 def create_or_update_item_tax_templates(companies):
     if not companies:
-        return {}
+        return
 
     DOCTYPE = "Item Tax Template"
-    item_templates = frappe.get_all(DOCTYPE, pluck="name")
+    item_tax_templates = frappe.get_all(DOCTYPE, pluck="name")
     companies_with_templates = set()
-    companies_gst_accounts = frappe._dict()
+    company_wise_gst_accounts = frappe._dict()
 
     # update tax rates
-    for template_name in item_templates:
+    for template_name in item_tax_templates:
         doc = frappe.get_doc(DOCTYPE, template_name)
-        if doc.company not in companies:
+        if doc.company not in companies or not doc.taxes:
             continue
 
-        gst_accounts = get_all_gst_accounts(doc.company)
-        if not gst_accounts or not doc.taxes:
+        if doc.company not in company_wise_gst_accounts:
+            company_wise_gst_accounts[doc.company] = get_all_gst_accounts(doc.company)
+
+        gst_accounts = company_wise_gst_accounts[doc.company]
+        if not gst_accounts:
+            continue
+
+        _, intra_state_accounts, inter_state_accounts = get_valid_accounts(
+            doc.company, for_sales=True, for_purchase=True, throw=False
+        )
+
+        # All GST Accounts not configured
+        if not intra_state_accounts or not inter_state_accounts:
             continue
 
         gst_rates = set()
         companies_with_templates.add(doc.company)
-        companies_gst_accounts[doc.company] = gst_accounts
-        _, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-            doc.company, for_sales=True, for_purchase=True
-        )
 
         for row in doc.taxes:
             if row.tax_type in intra_state_accounts:
@@ -99,6 +109,7 @@ def create_or_update_item_tax_templates(companies):
             elif row.tax_type in inter_state_accounts:
                 gst_rates.add(row.tax_rate)
 
+        # Invalid template
         if len(gst_rates) != 1:
             continue
 
@@ -118,10 +129,11 @@ def create_or_update_item_tax_templates(companies):
 
     # create new templates for nil rated, exempted, non gst
     templates = {}
+    show_notification = False
     for company in companies_with_templates:
         gst_accounts = [
             {"tax_type": account, "tax_rate": 0}
-            for account in companies_gst_accounts[company]
+            for account in company_wise_gst_accounts[company]
         ]
 
         for new_template in NEW_TEMPLATES.values():
@@ -144,6 +156,22 @@ def create_or_update_item_tax_templates(companies):
             doc.extend("taxes", gst_accounts)
             doc.insert(ignore_if_duplicate=True)
             templates.setdefault(new_template, []).append(doc.name)
+            show_notification = True
+
+    if show_notification:
+        click.secho(
+            "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",
+            color="yellow",
+        )
+        click.secho(
+            "All transactions that were marked as Nil or Exempt, are now marked as Nil Rated.",
+            color="red",
+        )
+
+        for user in get_users_with_role("Accounts Manager"):
+            frappe.defaults.set_user_default(
+                "needs_item_tax_template_notification", 1, user=user
+            )
 
     return templates
 
@@ -179,8 +207,8 @@ def update_items_with_templates(templates):
     )
 
     item_wise_templates = frappe._dict()
-    for item in item_templates:
-        item_wise_templates.setdefault(item.item, set()).add(item.item_tax_template)
+    for row in item_templates:
+        item_wise_templates.setdefault(row.item, set()).add(row.item_tax_template)
 
     fields = (
         "name",
@@ -240,12 +268,12 @@ def remove_old_item_variant_settings():
 def update_gst_treatment_for_transactions():
     "Disclaimer: No specific way to differentate between nil and exempted. Hence all transactions are updated to nil"
 
-    for doctype in TRANSACTION_DOCTYPES:
+    for item_doctype in TRANSACTION_ITEM_DOCTYPES:
         # GST Treatment is not required in Material Request Item
-        if doctype == "Material Request Item":
+        if item_doctype == "Material Request Item":
             continue
 
-        table = frappe.qb.DocType(doctype)
+        table = frappe.qb.DocType(item_doctype)
         query = frappe.qb.update(table)
 
         (
@@ -260,18 +288,24 @@ def update_gst_treatment_for_transactions():
             .run()
         )
 
-    click.secho(
-        "Nil Rated items are differentiated from Exempted for GST (configrable from Item Tax Template).",
-        color="yellow",
-    )
-    click.secho(
-        "All transactions that were marked as Nil or Exempt, are now marked as Nil Rated.",
-        color="red",
-    )
+        doctype = item_doctype.replace(" Item", "")
+        if doctype not in SALES_DOCTYPES:
+            continue
 
-    for user in get_users_with_role("Accounts Manager"):
-        frappe.defaults.set_user_default(
-            "needs_item_tax_template_notification", 1, user=user
+        doc = frappe.qb.DocType(doctype)
+
+        (
+            query.join(doc)
+            .on(doc.name == table.parent)
+            .set(table.gst_treatment, "Zero-Rated")
+            .where(
+                (doc.gst_category == "SEZ")
+                | (
+                    (doc.gst_category == "Overseas")
+                    & (doc.place_of_supply == "96-Other Countries")
+                )
+            )
+            .run()
         )
 
 
@@ -280,7 +314,7 @@ def update_gst_details_for_transactions(companies):
         gst_accounts = []
         for account_type in ["Input", "Output"]:
             gst_accounts.extend(
-                get_gst_accounts_by_type(company, account_type).values()
+                get_gst_accounts_by_type(company, account_type, throw=False).values()
             )
 
         if not gst_accounts:
@@ -292,24 +326,34 @@ def update_gst_details_for_transactions(companies):
             if not docs:
                 continue
 
-            chunk_size = 5000
-            total_docs = len(docs)
+            _update_gst_details(company, doctype, is_sales_doctype, docs)
 
-            for i in range(0, total_docs, chunk_size):
-                chunk = docs[i : i + chunk_size]
 
-                taxes = get_taxes_for_docs(chunk, doctype, is_sales_doctype)
-                items = get_items_for_docs(chunk, doctype)
-                complied_docs = compile_docs(taxes, items)
+def _update_gst_details(company, doctype, is_sales_doctype, docs):
+    chunk_size = 100
+    total_docs = len(docs)
 
-                if not complied_docs:
-                    continue
+    with click.progressbar(
+        range(0, total_docs, chunk_size),
+        label=f"Updating {total_docs} {doctype}s",
+    ) as bar:
+        for index in bar:
+            chunk = docs[index : index + chunk_size]
 
-                gst_details = ItemGSTDetails().get(
-                    complied_docs.values(), doctype, company
-                )
+            taxes = get_taxes_for_docs(chunk, doctype, is_sales_doctype)
+            items = get_items_for_docs(chunk, doctype)
+            complied_docs = compile_docs(taxes, items)
 
-                build_query_and_update_gst_details(gst_details, doctype)
+            if not complied_docs:
+                continue
+
+            gst_details = ItemGSTDetails().get(complied_docs.values(), doctype, company)
+
+            if not gst_details:
+                continue
+
+            build_query_and_update_gst_details(gst_details, doctype)
+            frappe.db.commit()
 
 
 def get_docs_with_gst_accounts(doctype, gst_accounts):
@@ -317,11 +361,11 @@ def get_docs_with_gst_accounts(doctype, gst_accounts):
 
     return (
         frappe.qb.from_(gl_entry)
-        .select("voucher_no")
+        .select(gl_entry.voucher_no)
         .where(gl_entry.voucher_type == doctype)
         .where(gl_entry.account.isin(gst_accounts))
         .where(gl_entry.is_cancelled == 0)
-        .groupby("voucher_no")
+        .distinct()
         .run(pluck=True)
     )
 
@@ -371,12 +415,16 @@ def compile_docs(taxes, items):
     response = frappe._dict()
 
     for tax in taxes:
-        doc = response.setdefault(tax.parent, frappe._dict({"taxes": [], "items": []}))
-        doc.get("taxes").append(tax)
+        if tax.parent not in response:
+            response[tax.parent] = frappe._dict(taxes=[], items=[])
+
+        response[tax.parent]["taxes"].append(tax)
 
     for item in items:
-        doc = response.setdefault(item.parent, frappe._dict({"taxes": [], "items": []}))
-        doc.get("items").append(item)
+        if item.parent not in response:
+            response[item.parent] = frappe._dict(taxes=[], items=[])
+
+        response[item.parent]["items"].append(item)
 
     return response
 
@@ -385,6 +433,7 @@ def build_query_and_update_gst_details(gst_details, doctype):
     transaction_item = frappe.qb.DocType(f"{doctype} Item")
 
     update_query = frappe.qb.update(transaction_item)
+    execute_query = False
 
     # Initialize CASE queries
     conditions = frappe._dict()
@@ -397,7 +446,7 @@ def build_query_and_update_gst_details(gst_details, doctype):
     # Update item conditions (WHEN)
     for item_name, row in gst_details.items():
         for field in conditions:
-            if not row[field]:
+            if not row.get(field):
                 continue
 
             conditions[field] = conditions[field].when(
@@ -414,7 +463,9 @@ def build_query_and_update_gst_details(gst_details, doctype):
         # ELSE
         conditions[field] = conditions[field].else_(transaction_item[field])
         update_query = update_query.set(transaction_item[field], conditions[field])
+        execute_query = True
 
-    update_query = update_query.where(
-        transaction_item.name.isin(list(gst_details.keys()))
-    ).run()
+    if execute_query:
+        update_query = update_query.where(
+            transaction_item.name.isin(list(gst_details.keys()))
+        ).run()
