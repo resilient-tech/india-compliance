@@ -1196,7 +1196,7 @@ def validate_gstin_status(gstin, transaction_date):
 
 
 def validate_gst_transporter_id(doc):
-    if not doc.gst_transporter_id:
+    if not doc.get("gst_transporter_id"):
         return
 
     settings = frappe.get_cached_doc("GST Settings")
@@ -1283,17 +1283,8 @@ def validate_transaction(doc, method=None):
         validate_reverse_charge_transaction(doc)
         gstin = doc.supplier_gstin
 
-    # e-Waybill Docs
-    if doc.doctype in [
-        "Delivery Note",
-        "Sales Invoice",
-        "Purchase Receipt",
-        "Purchase Invoice",
-    ]:
-        validate_gst_transporter_id(doc)
-
     validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
-
+    validate_gst_transporter_id(doc)
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
