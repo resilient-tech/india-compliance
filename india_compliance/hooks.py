@@ -134,9 +134,6 @@ doc_events = {
         ],
         "before_print": "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
         "validate": "india_compliance.gst_india.overrides.purchase_invoice.validate",
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
@@ -152,9 +149,6 @@ doc_events = {
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
     },
@@ -165,9 +159,6 @@ doc_events = {
         ],
         "before_print": "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
         "validate": "india_compliance.gst_india.overrides.purchase_receipt.validate",
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": [
             "india_compliance.gst_india.overrides.transaction.update_gst_details",
@@ -245,9 +236,6 @@ doc_events = {
     "Supplier Quotation": {
         "onload": "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
         "before_print": "india_compliance.gst_india.overrides.transaction.set_gst_breakup",
-        "before_validate": (
-            "india_compliance.gst_india.overrides.transaction.before_validate"
-        ),
         "validate": (
             "india_compliance.gst_india.overrides.transaction.validate_transaction"
         ),
