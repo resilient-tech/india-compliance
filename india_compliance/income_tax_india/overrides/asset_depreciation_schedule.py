@@ -145,12 +145,9 @@ def cancel_depreciation_entries(asset_doc, date):
             asset_doc.name, "Active", row.finance_book
         )
 
-<<<<<<< HEAD:india_compliance/income_tax_india/overrides/asset_depreciation_schedule.py
         for d in asset_depr_schedule_doc.get("depreciation_schedule"):
             if getdate(d.schedule_date) < getdate(start_date_of_fiscal_year):
                 continue
 
-=======
-        if d.journal_entry:
->>>>>>> 7ab7ea71 (fix: cancel depr entries for the year when asset is sold):india_compliance/income_tax_india/overrides/asset.py
-            frappe.get_doc("Journal Entry", d.journal_entry).cancel()
+            if d.journal_entry:
+                frappe.get_doc("Journal Entry", d.journal_entry).cancel()
