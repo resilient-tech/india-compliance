@@ -180,6 +180,10 @@ function set_and_validate_gstin_status(doctype) {
             _set_and_validate_gstin_status(frm, gstin_field_name);
         },
 
+        gst_transporter_id(frm) {
+            _set_and_validate_gstin_status(frm, "gst_transporter_id");
+        },
+
         posting_date(frm) {
             if (frm.get_field("posting_date"))
                 _set_and_validate_gstin_status(frm, gstin_field_name);
