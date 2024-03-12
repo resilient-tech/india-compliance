@@ -205,7 +205,7 @@ def get_tax_amount(taxes, account_head):
     )
 
 
-def set_ineligibility_reason(doc):
+def set_ineligibility_reason(doc, show_alert=True):
     doc.ineligibility_reason = ""
 
     for item in doc.items:
@@ -213,10 +213,13 @@ def set_ineligibility_reason(doc):
             doc.ineligibility_reason = "Ineligible As Per Section 17(5)"
             break
 
-    if doc.place_of_supply[:2] != doc.company_gstin[:2]:
+    if (
+        doc.place_of_supply not in ["96-Other Countries", "97-Other Territory"]
+        and doc.place_of_supply[:2] != doc.company_gstin[:2]
+    ):
         doc.ineligibility_reason = "ITC restricted due to PoS rules"
 
-    if doc.ineligibility_reason:
+    if show_alert and doc.ineligibility_reason:
         frappe.msgprint(
             _("ITC Ineligible: {0}").format(frappe.bold(doc.ineligibility_reason)),
             alert=True,

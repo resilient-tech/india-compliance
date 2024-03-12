@@ -51,14 +51,14 @@ jobs:
             - name: Setup Node
               uses: actions/setup-node@v4
               with:
-                  node-version: 18
+                  node-version: 20
                   check-latest: true
 
             - name: Add to Hosts
               run: echo "127.0.0.1 test_site" | sudo tee -a /etc/hosts
 
             - name: Cache pip
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               with:
                   path: ~/.cache/pip
                   key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt') }}
@@ -67,7 +67,7 @@ jobs:
                       ${{ runner.os }}-
 
             - name: Cache node modules
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               env:
                   cache-name: cache-node-modules
               with:
@@ -82,7 +82,7 @@ jobs:
               id: yarn-cache-dir-path
               run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
-            - uses: actions/cache@v3
+            - uses: actions/cache@v4
               id: yarn-cache
               with:
                   path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
@@ -100,7 +100,7 @@ jobs:
               run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
               env:
                   TYPE: server
-            
+
             - name: Show bench output
               if: ${{ always() }}
               run: cat ~/frappe-bench/bench_start.log || true
@@ -123,7 +123,7 @@ jobs:
           uses: actions/download-artifact@v4
 
         - name: Upload coverage data
-          uses: codecov/codecov-action@v3
+          uses: codecov/codecov-action@v4
           env:
             CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           with:

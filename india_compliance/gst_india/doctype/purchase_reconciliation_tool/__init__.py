@@ -350,12 +350,18 @@ class PurchaseInvoice:
 
         elif names:
             query = query.where(
-                (self.PI.posting_date[self.from_date : self.to_date])
+                (
+                    (self.PI.posting_date[self.from_date : self.to_date])
+                    & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
+                )
                 | (self.PI.name.isin(names))
             )
 
         else:
-            query = query.where(self.PI.posting_date[self.from_date : self.to_date])
+            query = query.where(
+                (self.PI.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.PI.reconciliation_status, "") != "Reconciled")
+            )
 
         return query.run(as_dict=True)
 
@@ -510,12 +516,18 @@ class BillOfEntry:
 
         elif names:
             query = query.where(
-                (self.BOE.posting_date[self.from_date : self.to_date])
+                (
+                    (self.BOE.posting_date[self.from_date : self.to_date])
+                    & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
+                )
                 | (self.BOE.name.isin(names))
             )
 
         else:
-            query = query.where(self.BOE.posting_date[self.from_date : self.to_date])
+            query = query.where(
+                (self.BOE.posting_date[self.from_date : self.to_date])
+                & (IfNull(self.BOE.reconciliation_status, "") != "Reconciled")
+            )
 
         return query.run(as_dict=True)
 
@@ -552,6 +564,7 @@ class BillOfEntry:
             .join(self.PI)
             .on(self.BOE.purchase_invoice == self.PI.name)
             .where(self.BOE.docstatus == 1)
+            .where(IfNull(self.BOE.reconciliation_status, "") != "Not Applicable")
             .groupby(self.BOE.name)
             .select(*fields, ConstantColumn("Bill of Entry").as_("doctype"))
         )
@@ -950,9 +963,9 @@ class ReconciledData(BaseReconciliation):
         reconciliation_data = [
             frappe._dict(
                 {
-                    "_inward_supply": inward_supplies[0]
-                    if inward_supplies
-                    else frappe._dict(),
+                    "_inward_supply": (
+                        inward_supplies[0] if inward_supplies else frappe._dict()
+                    ),
                     "_purchase_invoice": purchases.get(purchase_name, frappe._dict()),
                 }
             )

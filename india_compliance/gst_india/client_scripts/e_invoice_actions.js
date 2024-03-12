@@ -15,7 +15,29 @@ frappe.ui.form.on("Sales Invoice", {
             );
         }
 
-        if (!is_e_invoice_applicable(frm)) return;
+        if (
+            !india_compliance.is_e_invoice_enabled() ||
+            !is_valid_e_invoice_applicability_date(frm)
+        )
+            return;
+
+        if(frm.doc.docstatus === 2) return;
+
+        const is_einv_generatable = is_e_invoice_generatable(frm, true);
+
+        if (frm.doc.docstatus === 0 || !is_einv_generatable) {
+            frm.add_custom_button(
+                __("Applicability Status"),
+                () =>
+                    show_e_invoice_applicability_status(
+                        frm,
+                        is_einv_generatable
+                    ),
+                "e-Invoice"
+            );
+
+            return;
+        }
 
         if (
             !frm.doc.irn &&
@@ -24,7 +46,6 @@ frappe.ui.form.on("Sales Invoice", {
             frm.add_custom_button(
                 __("Generate"),
                 () => {
-                    india_compliance.validate_invoice_number(frm.doc.name);
                     frappe.call({
                         method: "india_compliance.gst_india.utils.e_invoice.generate_e_invoice",
                         args: { docname: frm.doc.name, force: true },
@@ -215,19 +236,85 @@ function get_cancel_e_invoice_dialog_fields(frm, manual_cancel = false) {
     return fields;
 }
 
-function is_e_invoice_applicable(frm) {
-    return (
-        india_compliance.is_e_invoice_enabled() &&
-        frm.doc.docstatus == 1 &&
-        frm.doc.company_gstin &&
-        frm.doc.company_gstin != frm.doc.billing_address_gstin &&
-        (frm.doc.place_of_supply === "96-Other Countries" ||
-            frm.doc.billing_address_gstin) &&
-        frm.doc.items.some(item =>
-            ["Taxable", "Zero-Rated"].includes(item.gst_treatment)
-        ) &&
-        is_valid_e_invoice_applicability_date(frm)
+function is_e_invoice_generatable(frm, show_message = false) {
+    let is_einv_applicable = is_e_invoice_applicable(frm, show_message);
+    if (!show_message) return is_einv_applicable;
+
+    let is_invalid_invoice_number = india_compliance.validate_invoice_number(
+        frm.doc.name
     );
+
+    if (is_invalid_invoice_number.length > 0) {
+        is_einv_applicable = false;
+        frm._einv_message += is_invalid_invoice_number
+            .map(message => `<li>${__(message)}</li>`)
+            .join("");
+    }
+
+    return is_einv_applicable;
+}
+
+function is_e_invoice_applicable(frm, show_message = false) {
+    if (
+        !india_compliance.is_e_invoice_enabled() ||
+        (!show_message && frm.doc.docstatus != 1) ||
+        !is_valid_e_invoice_applicability_date(frm)
+    )
+        return false;
+
+    let is_einv_applicable = true;
+    let message_list = [];
+
+    if (!frm.doc.company_gstin) {
+        is_einv_applicable = false;
+        message_list.push(
+            "Company GSTIN is not set. Ensure its set in Company Address."
+        );
+    }
+
+    if (frm.doc.company_gstin == frm.doc.billing_address_gstin) {
+        is_einv_applicable = false;
+        message_list.push("Company GSTIN and Billing Address GSTIN cannot be same.");
+    }
+
+    if (
+        frm.doc.place_of_supply != "96-Other Countries" &&
+        !frm.doc.billing_address_gstin
+    ) {
+        is_einv_applicable = false;
+        message_list.push("Billing Address GSTIN is required for B2B categorization");
+    }
+
+    if (
+        !frm.doc.items.some(item =>
+            ["Taxable", "Zero-Rated"].includes(item.gst_treatment)
+        )
+    ) {
+        is_einv_applicable = false;
+        message_list.push(
+            "At least one item must be taxable or transaction is categorized as export."
+        );
+    }
+
+    frm._einv_message = "";
+    if (show_message)
+        frm._einv_message = message_list
+            .map(message => `<li>${__(message)}</li>`)
+            .join("");
+
+    return is_einv_applicable;
+}
+
+function show_e_invoice_applicability_status(frm, is_einv_applicable) {
+    if (frm.doc.docstatus == 0 && is_einv_applicable) {
+        frm._einv_message = __("Please submit the doc to generate e-Invoice.");
+    }
+
+    frappe.msgprint({
+        title: is_einv_applicable ? __("e-Invoice can be generated") : __("e-Invoice cannot be generated"),
+        message: frm._einv_message,
+        indicator: is_einv_applicable ? "green" : "red",
+    });
 }
 
 function is_valid_e_invoice_applicability_date(frm) {

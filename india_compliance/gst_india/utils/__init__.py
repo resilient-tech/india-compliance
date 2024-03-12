@@ -394,7 +394,7 @@ def get_place_of_supply(party_details, doctype):
     if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
-            return "96-Other Countries"
+            return get_overseas_place_of_supply(party_details)
 
         if (
             party_details.gst_category == "Unregistered"
@@ -405,7 +405,8 @@ def get_place_of_supply(party_details, doctype):
                 party_details.customer_address,
                 ("gst_state_number", "gst_state"),
             )
-            return f"{gst_state_number}-{gst_state}"
+            if gst_state_number and gst_state:
+                return f"{gst_state_number}-{gst_state}"
 
         party_gstin = party_details.billing_address_gstin or party_details.company_gstin
     else:
@@ -418,6 +419,33 @@ def get_place_of_supply(party_details, doctype):
 
     if state := get_state(state_code):
         return f"{state_code}-{state}"
+
+
+def get_overseas_place_of_supply(party_details):
+    """
+    As per definition the of Export, material should be shipped to a place outside India.
+    Where the material is shipped in India, Place of Supply should be the location where
+    the material is shipped to.
+    """
+    place_of_supply = "96-Other Countries"
+
+    if not party_details.shipping_address_name:
+        return place_of_supply
+
+    shipping_address_details = frappe.get_value(
+        "Address",
+        party_details.shipping_address_name,
+        ("country", "gst_state_number", "gst_state"),
+        as_dict=True,
+    )
+
+    if (
+        shipping_address_details.country == "India"
+        and shipping_address_details.gst_state_number
+    ):
+        place_of_supply = f"{shipping_address_details.gst_state_number}-{shipping_address_details.gst_state}"
+
+    return place_of_supply
 
 
 def get_escaped_gst_accounts(company, account_type, throw=True):
@@ -846,7 +874,9 @@ def handle_server_errors(settings, doc, document_type, error):
 
     document_status = "Failed"
 
-    if settings.enable_retry_einv_ewb_generation:
+    if settings.enable_retry_einv_ewb_generation and (
+        not settings.sandbox_mode or frappe.flags.in_test
+    ):
         document_status = "Auto-Retry"
         settings.db_set(
             "is_retry_einv_ewb_generation_pending", 1, update_modified=False
