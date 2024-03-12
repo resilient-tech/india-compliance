@@ -93,9 +93,11 @@ class TestTransaction(FrappeTestCase):
 
         append_item(doc, frappe._dict(item_code="_Test Non GST Item"))
 
-<<<<<<< HEAD
-=======
-        doc.insert()
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(Items not covered under GST cannot be clubbed.*)$"),
+            doc.insert,
+        )
 
     @change_settings(
         "GST Settings",
@@ -116,24 +118,6 @@ class TestTransaction(FrappeTestCase):
         self.assertDocumentEqual(
             {"account_head": "Input Tax CGST - _TIRC", "base_tax_amount": 900},
             doc.taxes[0],
-        )
-
-    def test_non_taxable_items_with_tax(self):
-        doc = create_transaction(
-            **self.transaction_details,
-            is_in_state=True,
-            item_tax_template="GST 28% - _TIRC",
-            do_not_submit=True,
-        )
-
-        for item in doc.items:
-            item.gst_treatment = "Nil-Rated"
-
->>>>>>> 2b27db46 (test: add test case for purchase rcm automation)
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(r"^(Items not covered under GST cannot be clubbed.*)$"),
-            doc.insert,
         )
 
     def test_transaction_for_items_with_duplicate_taxes(self):
