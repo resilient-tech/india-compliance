@@ -301,6 +301,6 @@ def get_transporter_id_info(transporter_id):
     return frappe._dict(
         {
             "gstin": transporter_id,
-            "status": "Active" if response.status else "Invalid",
+            "status": "Active" if response.transin else "Invalid",
         }
     )

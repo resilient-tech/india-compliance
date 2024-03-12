@@ -30,6 +30,7 @@ from india_compliance.gst_india.utils import (
     is_overseas_doc,
     join_list_with_custom_separators,
     validate_gst_category,
+    validate_gstin,
 )
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
@@ -1210,7 +1211,7 @@ def set_reverse_charge(doc):
         doc.set("taxes", template)
 
 
-def validate_gstin(gstin, transaction_date):
+def validate_gstin_status(gstin, transaction_date):
     settings = frappe.get_cached_doc("GST Settings")
     if not settings.validate_gstin_status:
         return
@@ -1223,15 +1224,19 @@ def validate_gstin(gstin, transaction_date):
     _validate_gstin_info(gstin_doc, transaction_date, throw=True)
 
 
-def validate_gst_transporter_id(gst_transporter_id):
-    if not gst_transporter_id:
+def validate_gst_transporter_id(doc):
+    if not doc.gst_transporter_id:
         return
 
     settings = frappe.get_cached_doc("GST Settings")
     if not settings.validate_gstin_status:
         return
 
-    gstin_doc = get_gstin_status(gst_transporter_id)
+    doc.gst_transporter_id = validate_gstin(
+        doc.gst_transporter_id, label="GST Transporter ID", is_transporter_id=True
+    )
+
+    gstin_doc = get_gstin_status(doc.gst_transporter_id)
 
     if not gstin_doc:
         return
@@ -1290,9 +1295,9 @@ def validate_transaction(doc, method=None):
         "Purchase Receipt",
         "Purchase Invoice",
     ]:
-        validate_gst_transporter_id(doc.gst_transporter_id)
+        validate_gst_transporter_id(doc)
 
-    validate_gstin(gstin, doc.get("posting_date") or doc.get("transaction_date"))
+    validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
 
     validate_gst_category(doc.gst_category, gstin)
 
