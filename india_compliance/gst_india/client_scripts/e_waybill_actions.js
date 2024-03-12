@@ -277,7 +277,7 @@ function show_generate_e_waybill_dialog(frm) {
     );
 
     d.show();
-    validate_gst_transporter_id(d);
+    set_gst_transporter_id_status(d);
 
     //Alert if E-waybill cannot be generated using api
     if (!is_e_waybill_generatable(frm)) {
@@ -356,7 +356,7 @@ function get_generate_e_waybill_dialog(opts, frm) {
                 frm.doc.gst_transporter_id?.length == 15
                     ? frm.doc.gst_transporter_id
                     : "",
-            onchange: () => validate_gst_transporter_id(d),
+            onchange: () => set_gst_transporter_id_status(d),
 
         },
         // Sub Supply Type will be visible here for Delivery Note
@@ -796,7 +796,7 @@ function show_update_transporter_dialog(frm) {
                         frm.doc.gst_transporter_id.length == 15
                         ? frm.doc.gst_transporter_id
                         : "",
-                onchange: () => validate_gst_transporter_id(d),
+                onchange: () => set_gst_transporter_id_status(d),
             },
             {
                 label: "Update e-Waybill Print/Data",
@@ -823,7 +823,7 @@ function show_update_transporter_dialog(frm) {
     // To prevent triggering of change event on input twice
     frappe.ui.form.ControlData.trigger_change_on_input_event = true;
     d.show();
-    validate_gst_transporter_id(d);
+    set_gst_transporter_id_status(d);
 }
 
 async function show_extend_validity_dialog(frm) {
@@ -1134,10 +1134,10 @@ async function update_gst_tranporter_id(dialog) {
     dialog.set_value("gst_transporter_id", response.gst_transporter_id);
 }
 
-function validate_gst_transporter_id(dialog) {
+function set_gst_transporter_id_status(dialog) {
     const gst_transporter_id_field = dialog.get_field("gst_transporter_id");
 
-    india_compliance.set_gstin_status(gst_transporter_id_field, frappe.datetime.now_datetime());
+    india_compliance.set_gstin_status(gst_transporter_id_field);
 }
 
 function update_generation_dialog(dialog, doc) {

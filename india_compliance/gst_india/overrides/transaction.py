@@ -16,6 +16,7 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gstin.gstin import (
+    _validate_gst_transporter_id_info,
     _validate_gstin_info,
     get_gstin_status,
 )
@@ -1222,6 +1223,22 @@ def validate_gstin(gstin, transaction_date):
     _validate_gstin_info(gstin_doc, transaction_date, throw=True)
 
 
+def validate_gst_transporter_id(gst_transporter_id):
+    if not gst_transporter_id:
+        return
+
+    settings = frappe.get_cached_doc("GST Settings")
+    if not settings.validate_gstin_status:
+        return
+
+    gstin_doc = get_gstin_status(gst_transporter_id)
+
+    if not gstin_doc:
+        return
+
+    _validate_gst_transporter_id_info(gstin_doc, throw=True)
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1265,6 +1282,15 @@ def validate_transaction(doc, method=None):
     else:
         validate_reverse_charge_transaction(doc)
         gstin = doc.supplier_gstin
+
+    # e-Waybill Docs
+    if doc.doctype in [
+        "Delivery Note",
+        "Sales Invoice",
+        "Purchase Receipt",
+        "Purchase Invoice",
+    ]:
+        validate_gst_transporter_id(doc.gst_transporter_id)
 
     validate_gstin(gstin, doc.get("posting_date") or doc.get("transaction_date"))
 
