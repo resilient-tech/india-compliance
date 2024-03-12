@@ -621,64 +621,20 @@ def auto_refresh_authtoken():
 
 
 class AutoReconcile:
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.gst_settings = frappe.get_cached_doc("GST Settings")
         self.today = frappe.utils.getdate()
-        self.purchase_from_date = frappe.utils.add_years(self.today, -1)
 
         self.inward_supply_from_date = frappe.utils.add_months(
             frappe.utils.get_first_day(self.today),
             -cint(self.gst_settings.inward_supply_period - 1),
         )
-        self.purchase_reconciliation_company_list = (
-            self.get_reconciliation_company_list()
-        )
+        self.reconciliation_companies = self.get_reconciliation_company_list()
 
+    def download_gstr(self):
         if not self.is_reconciliation_enabled():
             return
 
-    def is_reconciliation_enabled(self):
-        """Returns True if auto reconciliation is enabled for the current day"""
-        return self.gst_settings.enable_auto_reconciliation and self.gst_settings.get(
-            "reconcile_on_" + frappe.utils.getdate().strftime("%A").lower()
-        )
-
-    def get_reconciliation_company_list(self):
-        """Returns list of companies for which auto reconciliation is enabled"""
-        if self.gst_settings.apply_auto_purchase_reconciliation_for_selected_companies:
-            return set(
-                company.company
-                for company in self.gst_settings.auto_purchase_reconciliation_enabled_companies
-            )
-
-    def reconcile_purchases_for_company(self, company):
-        purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
-        purchase_reconciliation_tool.update(
-            {
-                "company": company,
-                "company_gstin": "All",
-                "gst_return": "Both GSTR 2A & 2B",
-                "purchase_from_date": self.purchase_from_date,
-                "purchase_to_date": self.today,
-                "inward_supply_from_date": self.inward_supply_from_date,
-                "inward_supply_to_date": self.today,
-            }
-        )
-
-        purchase_reconciliation_tool.save(ignore_permissions=True)
-
-    def get_gstins_with_valid_credentials(self):
-        valid_gstins = set()
-
-        for company_credentials in self.gst_settings.credentials:
-            if not self.is_valid_company_credentials(company_credentials):
-                continue
-
-            valid_gstins.add(company_credentials.gstin)
-
-        return valid_gstins
-
-    def download_gstr(self):
         # GST Categories for which GSTR 2A is to be downloaded
         gst_categories = self.get_gst_categories()
         gstins = self.get_gstins_with_valid_credentials()
@@ -692,42 +648,89 @@ class AutoReconcile:
             gst_categories=gst_categories,
         )
 
-    def reconcile_purchases(self):
-        """Reconcile purchases for selected companies and GSTINs with valid credentials"""
-        for credential in self.gst_settings.credentials:
-            if not self.is_valid_company_credentials(credential):
-                continue
-
-            self.reconcile_purchases_for_company(credential.company)
-
     def get_gst_categories(self):
         return [
             category.value
-            for action, category in ACTIONS.items()
+            for category in ACTIONS.values()
             if getattr(self.gst_settings, "reconcile_for_" + category.value.lower())
         ]
 
-    def is_valid_company_credentials(self, company_credentials):
+    def get_gstins_with_valid_credentials(self):
+        valid_gstins = set()
+
+        for row in self.gst_settings.credentials:
+            if not self.is_authenticated_credential(row):
+                continue
+
+            valid_gstins.add(row.gstin)
+
+        return valid_gstins
+
+    def is_authenticated_credential(self, credential_row):
         """Returns True if reconciliation is enabled for the company and the session is valid"""
         return (
-            company_credentials.service == "Returns"
-            and company_credentials.session_expiry >= now_datetime()
-            and not (
-                self.gst_settings.apply_auto_purchase_reconciliation_for_selected_companies
-                and company_credentials.company
-                not in self.purchase_reconciliation_company_list
-            )
+            credential_row.company in self.reconciliation_companies
+            and credential_row.session_expiry >= now_datetime()
         )
 
+    def reconcile_purchases(self):
+        """Reconcile purchases for selected companies and GSTINs with valid credentials"""
+        if not self.is_reconciliation_enabled():
+            return
 
-def auto_reconcile():
-    """Auto reconcile purchases and inward supplies"""
-    AutoReconcile().reconcile_purchases()
+        for company in self.reconciliation_companies:
+            self.reconcile_purchases_for_company(company)
+
+    def reconcile_purchases_for_company(self, company):
+        purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
+        purchase_reconciliation_tool.update(
+            {
+                "company": company,
+                "company_gstin": "All",
+                "gst_return": "Both GSTR 2A & 2B",
+                "purchase_from_date": frappe.utils.add_years(self.today, -1),
+                "purchase_to_date": self.today,
+                "inward_supply_from_date": self.inward_supply_from_date,
+                "inward_supply_to_date": self.today,
+            }
+        )
+
+        purchase_reconciliation_tool.save(ignore_permissions=True)
+
+    def get_reconciliation_company_list(self):
+        """Returns list of companies for which auto reconciliation is enabled and credentials are available"""
+        companies = set()
+        for credential in self.gst_settings.credentials:
+            if credential.service == "Returns":
+                companies.add(credential.company)
+
+        if (
+            not self.gst_settings.apply_auto_purchase_reconciliation_for_selected_companies
+        ):
+            return companies
+
+        selected_companies = set()
+        for row in self.gst_settings.auto_purchase_reconciliation_enabled_companies:
+            if row.company in companies:
+                selected_companies.add(row.company)
+
+        return selected_companies
+
+    def is_reconciliation_enabled(self):
+        """Returns True if auto reconciliation is enabled for the current day"""
+        return self.gst_settings.enable_auto_reconciliation and self.gst_settings.get(
+            "reconcile_on_" + frappe.utils.getdate().strftime("%A").lower()
+        )
 
 
 def auto_download_gstr():
     """Auto download GSTR 2A and 2B"""
     AutoReconcile().download_gstr()
+
+
+def auto_reconcile():
+    """Auto reconcile purchases and inward supplies"""
+    AutoReconcile().reconcile_purchases()
 
 
 class BuildExcel:
