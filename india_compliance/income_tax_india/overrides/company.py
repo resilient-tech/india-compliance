@@ -71,7 +71,7 @@ def update_existing_tax_withholding_category(category_doc, category_name, compan
     else:
         accounts = category_doc.get("accounts")
         if accounts:
-            doc.append("accounts", accounts[0])
+            doc.extend("accounts", accounts)
 
     # add rates if not present for the dates
     largest_date = None
