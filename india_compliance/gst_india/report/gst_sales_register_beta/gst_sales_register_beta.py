@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.query_builder.functions import Sum
 from frappe.utils import getdate
 
@@ -23,7 +24,7 @@ def get_columns(filters):
     if not filters.get("company_gstin"):
         columns.append(
             {
-                "label": "Company GSTIN",
+                "label": _("Company GSTIN"),
                 "fieldname": "company_gstin",
                 "width": 120,
             }
@@ -31,36 +32,36 @@ def get_columns(filters):
     columns.extend(
         [
             {
-                "label": "Posting Date",
+                "label": _("Posting Date"),
                 "fieldname": "posting_date",
                 "width": 120,
             },
             {
-                "label": "Invoice Number",
+                "label": _("Invoice Number"),
                 "fieldname": "invoice_no",
                 "fieldtype": "Link",
                 "options": "Sales Invoice",
                 "width": 120,
             },
             {
-                "label": "Customer Name",
+                "label": _("Customer Name"),
                 "fieldname": "customer_name",
                 "fieldtype": "Link",
                 "options": "Customer",
                 "width": 120,
             },
             {
-                "label": "GST Category",
+                "label": _("GST Category"),
                 "fieldname": "gst_category",
                 "width": 120,
             },
             {
-                "label": "Billing Address GSTIN",
+                "label": _("Billing Address GSTIN"),
                 "fieldname": "billing_address_gstin",
                 "width": 120,
             },
             {
-                "label": "Place of Supply",
+                "label": _("Place of Supply"),
                 "fieldname": "place_of_supply",
                 "width": 120,
             },
@@ -72,7 +73,7 @@ def get_columns(filters):
     if gst_settings.enable_reverse_charge_in_sales:
         columns.append(
             {
-                "label": "Is Reverse Charge",
+                "label": _("Is Reverse Charge"),
                 "fieldname": "is_reverse_charge",
                 "fieldtype": "Check",
                 "width": 60,
@@ -82,7 +83,7 @@ def get_columns(filters):
     if gst_settings.enable_overseas_transactions:
         columns.append(
             {
-                "label": "Is Export with GST",
+                "label": _("Is Export with GST"),
                 "fieldname": "is_export_with_gst",
                 "fieldtype": "Check",
                 "width": 60,
@@ -92,13 +93,13 @@ def get_columns(filters):
     columns.extend(
         [
             {
-                "label": "Is Return",
+                "label": _("Is Return"),
                 "fieldname": "is_return",
                 "fieldtype": "Check",
                 "width": 60,
             },
             {
-                "label": "Is Rate Adjustment Entry",
+                "label": _("Is Rate Adjustment Entry"),
                 "fieldname": "is_debit_note",
                 "fieldtype": "Check",
                 "width": 60,
@@ -108,7 +109,7 @@ def get_columns(filters):
     if filters.get("summary_by") == "Summary by Item":
         columns.append(
             {
-                "label": "Item Code",
+                "label": _("Item Code"),
                 "fieldname": "item",
                 "fieldtype": "Link",
                 "options": "Item",
@@ -118,21 +119,21 @@ def get_columns(filters):
     columns.extend(
         [
             {
-                "label": "HSN Code",
+                "label": _("HSN Code"),
                 "fieldname": "gst_hsn_code",
                 "fieldtype": "Link",
                 "options": "GST HSN Code",
                 "width": 120,
             },
-            {"label": "Taxable Value", "fieldname": "taxable_value", "width": 120},
-            {"label": "GST Treatment", "fieldname": "gst_treatment", "width": 120},
-            {"label": "GST Rate", "fieldname": "gst_rate", "width": 60},
-            {"label": "CGST Amount", "fieldname": "cgst_amount", "width": 120},
-            {"label": "SGST Amount", "fieldname": "sgst_amount", "width": 120},
-            {"label": "IGST Amount", "fieldname": "igst_amount", "width": 120},
-            {"label": "Cess Amount", "fieldname": "cess_amount", "width": 120},
-            {"label": "Total Tax", "fieldname": "total_tax", "width": 120},
-            {"label": "Total Amount", "fieldname": "total_amount", "width": 120},
+            {"label": _("Taxable Value"), "fieldname": "taxable_value", "width": 120},
+            {"label": _("GST Treatment"), "fieldname": "gst_treatment", "width": 120},
+            {"label": _("GST Rate"), "fieldname": "gst_rate", "width": 60},
+            {"label": _("CGST Amount"), "fieldname": "cgst_amount", "width": 120},
+            {"label": _("SGST Amount"), "fieldname": "sgst_amount", "width": 120},
+            {"label": _("IGST Amount"), "fieldname": "igst_amount", "width": 120},
+            {"label": _("Cess Amount"), "fieldname": "cess_amount", "width": 120},
+            {"label": _("Total Tax"), "fieldname": "total_tax", "width": 120},
+            {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
         ]
     )
     return columns
