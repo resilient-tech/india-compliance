@@ -61,6 +61,8 @@ def get_wdv_or_dd_depr_amount(
     if is_last_day:
         schedule_date = get_last_day(schedule_date)
 
+    schedule_date = getdate(schedule_date)
+
     if schedule_idx == 0:
         previous_schedule_date = add_days(asset.available_for_use_date, -1)
     else:
@@ -79,6 +81,9 @@ def get_wdv_or_dd_depr_amount(
             depreciation_amount = flt(yearly_opening_wdv) * (
                 flt(fb_row.rate_of_depreciation) / 100
             )
+            # if leap year, then consider 366 days
+            if cint(schedule_date.year) % 4 == 0:
+                depreciation_amount = depreciation_amount * 366 / 365
     elif fb_row.frequency_of_depreciation == 1:
         if fb_row.daily_prorata_based:
             if schedule_date >= start_date_of_next_fiscal_year:
@@ -134,4 +139,5 @@ def cancel_depreciation_entries(asset, date):
         if getdate(d.schedule_date) < getdate(start_date_of_fiscal_year):
             continue
 
-        frappe.get_doc("Journal Entry", d.journal_entry).cancel()
+        if d.journal_entry:
+            frappe.get_doc("Journal Entry", d.journal_entry).cancel()
