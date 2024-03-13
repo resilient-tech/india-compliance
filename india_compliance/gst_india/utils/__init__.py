@@ -167,7 +167,7 @@ def validate_gstin(
 
     if len(gstin) != 15:
         frappe.throw(
-            _("{0} must have 15 characters").format(label),
+            _("{0} {1} must have 15 characters").format(label, frappe.bold(gstin)),
             title=_("Invalid {0}").format(label),
         )
 
@@ -394,7 +394,7 @@ def get_place_of_supply(party_details, doctype):
     if doctype in SALES_DOCTYPES or doctype == "Payment Entry":
         # for exports, Place of Supply is set using GST category in absence of GSTIN
         if party_details.gst_category == "Overseas":
-            return "96-Other Countries"
+            return get_overseas_place_of_supply(party_details)
 
         if (
             party_details.gst_category == "Unregistered"
@@ -419,6 +419,33 @@ def get_place_of_supply(party_details, doctype):
 
     if state := get_state(state_code):
         return f"{state_code}-{state}"
+
+
+def get_overseas_place_of_supply(party_details):
+    """
+    As per definition the of Export, material should be shipped to a place outside India.
+    Where the material is shipped in India, Place of Supply should be the location where
+    the material is shipped to.
+    """
+    place_of_supply = "96-Other Countries"
+
+    if not party_details.shipping_address_name:
+        return place_of_supply
+
+    shipping_address_details = frappe.get_value(
+        "Address",
+        party_details.shipping_address_name,
+        ("country", "gst_state_number", "gst_state"),
+        as_dict=True,
+    )
+
+    if (
+        shipping_address_details.country == "India"
+        and shipping_address_details.gst_state_number
+    ):
+        place_of_supply = f"{shipping_address_details.gst_state_number}-{shipping_address_details.gst_state}"
+
+    return place_of_supply
 
 
 def get_escaped_gst_accounts(company, account_type, throw=True):
