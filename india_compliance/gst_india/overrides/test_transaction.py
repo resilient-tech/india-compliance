@@ -1,3 +1,4 @@
+import json
 import re
 
 from parameterized import parameterized_class
@@ -98,6 +99,27 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+    @change_settings(
+        "GST Settings",
+        {"enable_rcm_for_unregistered_supplier": 1, "rcm_threshold": 5000},
+    )
+    def test_transaction_with_rcm_to_unregistered_supplier(self):
+        if self.is_sales_doctype:
+            return
+
+        doc = create_transaction(
+            **self.transaction_details,
+            supplier="_Test Unregistered Supplier",
+            rate=10000,
+        )
+
+        self.assertEqual(doc.is_reverse_charge, 1)
+        self.assertEqual(doc.total_taxes_and_charges, 0)
+        self.assertDocumentEqual(
+            {"account_head": "Input Tax CGST - _TIRC", "base_tax_amount": 900},
+            doc.taxes[0],
+        )
+
     def test_transaction_for_items_with_duplicate_taxes(self):
         # Should not allow same item in invoice with multiple taxes
         doc = create_transaction(**self.transaction_details, do_not_save=True)
@@ -115,7 +137,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertTrue(doc.place_of_supply)
 
-    def test_validate_mandatory_company_gstin(self):
+    def test_validate_mandatory_company_address(self):
         def unset_company_gstin():
             doc.set(
                 "company_address" if self.is_sales_doctype else "billing_address", ""
@@ -127,7 +149,9 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(.*is a mandatory field for GST Transactions.*)$"),
+            re.compile(
+                r"^(.*to ensure Company GSTIN is fetched in the transaction.*)$"
+            ),
             doc.save,
         )
 
@@ -496,6 +520,23 @@ class TestTransaction(FrappeTestCase):
             doc.save,
         )
 
+    def test_invalid_item_wise_tax_details(self):
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+        _append_taxes(
+            doc,
+            ["CGST", "SGST"],
+            charge_type="Actual",
+            tax_amount=9,
+            item_wise_tax_detail=json.dumps({"_Test Trading Goods 1": [9, -9]}),
+            dont_recompute_tax=1,
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(r"^(.*Charge Type is set to Actual. However, Tax Amount.*)$"),
+            doc.save,
+        )
+
     def test_invalid_charge_type_for_cess_non_advol(self):
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         _append_taxes(doc, ["CGST", "SGST"], charge_type="On Item Quantity")
@@ -600,6 +641,24 @@ class TestTransaction(FrappeTestCase):
         doc.selling_price_list = "Standard Selling"
         doc.save()
         self.assertEqual(doc.items[0].gst_treatment, "Taxable")
+
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
+    def test_place_of_supply_for_exports(self):
+        if not self.is_sales_doctype:
+            return
+
+        doc_details = {
+            **self.transaction_details,
+            "customer": "_Test Foreign Customer",
+            "party_name": "_Test Foreign Customer",
+            "shipping_address_name": "_Test Registered Customer-Billing",
+        }
+
+        doc = create_transaction(**doc_details, is_in_state=True)
+
+        # Place of Supply as Gujarat for Shipping Address in Gujarat
+        self.assertEqual(doc.gst_category, "Overseas")
+        self.assertEqual(doc.place_of_supply, "24-Gujarat")
 
     def test_purchase_with_different_place_of_supply(self):
         if self.is_sales_doctype:

@@ -1322,7 +1322,7 @@ class EWaybillData(GSTTransactionData):
 
         if (
             self.doc.gst_transporter_id
-            and self.doc.gst_transporter_id == self.doc.company_gstin
+            and self.doc.gst_transporter_id != self.doc.company_gstin
         ):
             frappe.throw(
                 _(
