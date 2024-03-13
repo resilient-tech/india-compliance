@@ -21,7 +21,23 @@
   "accounting_dimensions_section",
   "cost_center",
   "dimension_col_break",
-  "project"
+  "project",
+  "section_break_gylx",
+  "igst_rate",
+  "cgst_rate",
+  "sgst_rate",
+  "cess_rate",
+  "cess_non_advol_rate",
+  "column_break_xtvz",
+  "igst_amount",
+  "cgst_amount",
+  "sgst_amount",
+  "cess_amount",
+  "cess_non_advol_amount",
+  "section_break_284w",
+  "gst_hsn_code",
+  "column_break_ppea",
+  "gst_treatment"
  ],
  "fields": [
   {
@@ -116,12 +132,90 @@
    "fieldtype": "Check",
    "label": "Is Ineligible for Input Tax Credit",
    "print_hide": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_gylx",
+   "fieldtype": "Section Break",
+   "label": "GST Details"
+  },
+  {
+   "fieldname": "igst_rate",
+   "fieldtype": "Float",
+   "label": "IGST Rate"
+  },
+  {
+   "fieldname": "cgst_rate",
+   "fieldtype": "Float",
+   "label": "CGST Rate"
+  },
+  {
+   "fieldname": "sgst_rate",
+   "fieldtype": "Float",
+   "label": "SGST Rate"
+  },
+  {
+   "fieldname": "cess_rate",
+   "fieldtype": "Float",
+   "label": "CESS Rate"
+  },
+  {
+   "fieldname": "cess_non_advol_rate",
+   "fieldtype": "Float",
+   "label": "CESS Non Advol Rate"
+  },
+  {
+   "fieldname": "column_break_xtvz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "igst_amount",
+   "fieldtype": "Currency",
+   "label": "IGST Amount"
+  },
+  {
+   "fieldname": "cgst_amount",
+   "fieldtype": "Currency",
+   "label": "CGST Amount"
+  },
+  {
+   "fieldname": "sgst_amount",
+   "fieldtype": "Currency",
+   "label": "SGST Amount"
+  },
+  {
+   "fieldname": "cess_amount",
+   "fieldtype": "Currency",
+   "label": "CESS Amount"
+  },
+  {
+   "fieldname": "cess_non_advol_amount",
+   "fieldtype": "Currency",
+   "label": "CESS Non Advol Amount"
+  },
+  {
+   "fieldname": "section_break_284w",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "gst_treatment",
+   "fieldtype": "Autocomplete",
+   "label": "GST Treatment"
+  },
+  {
+   "fieldname": "column_break_ppea",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gst_hsn_code",
+   "fieldtype": "Data",
+   "label": "HSN/SAC"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2023-10-20 12:24:27.373448",
+ "modified": "2024-03-13 11:33:54.822817",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry Item",

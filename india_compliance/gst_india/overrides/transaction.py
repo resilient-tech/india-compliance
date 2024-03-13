@@ -901,6 +901,7 @@ class ItemGSTDetails:
         return response
 
     def update(self, doc):
+        # here doc will be document in which i want to set gst details
         """
         Update Item GST Details for a single document
         """
@@ -912,7 +913,12 @@ class ItemGSTDetails:
         if not self.gst_account_map:
             return
 
-        self.set_item_wise_tax_details()
+        if doc.doctype == "Bill of Entry":
+
+            self.set_item_wise_tax_details(bill_of_entry = True)
+        else:
+            self.set_item_wise_tax_details()
+
         self.set_tax_amount_precisions(doc.doctype)
         self.update_item_tax_details()
 
@@ -933,7 +939,7 @@ class ItemGSTDetails:
 
         self.item_defaults = item_defaults
 
-    def set_item_wise_tax_details(self):
+    def set_item_wise_tax_details(self,bill_of_entry = False):
         """
         Item Tax Details complied
         Example:
@@ -963,9 +969,13 @@ class ItemGSTDetails:
             tax_details[key]["count"] += 1
 
         for row in self.doc.taxes:
+
+            if bill_of_entry:
+                row.item_wise_tax_detail = row.item_wise_tax_rates
+
             if (
                 not row.tax_amount
-                or not row.item_wise_tax_detail
+                or not row.item_wise_tax_detail 
                 or row.account_head not in self.gst_account_map
             ):
                 continue
@@ -1063,7 +1073,9 @@ class ItemGSTTreatment:
         self.doc = doc
         is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
-        if is_overseas_doc(doc) and is_sales_transaction:
+        if doc.doctype == "Bill of Entry" or (
+            is_overseas_doc(doc) and is_sales_transaction
+        ):
             self.set_for_overseas()
             return
 
@@ -1307,9 +1319,10 @@ def validate_ecommerce_gstin(doc):
 
 def update_gst_details(doc, method=None):
     ItemGSTTreatment().set(doc)
-    if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
+    if doc.doctype in DOCTYPES_WITH_GST_DETAIL or doc.doctype == "Bill of Entry":
         ItemGSTDetails().update(doc)
         validate_non_taxable_items(doc)
+        print("done")
 
 
 def validate_non_taxable_items(doc):
