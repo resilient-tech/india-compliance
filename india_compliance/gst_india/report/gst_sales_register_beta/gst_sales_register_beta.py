@@ -9,13 +9,17 @@ from frappe.utils import getdate
 
 def execute(filters=None):
     if not filters:
-        filters = frappe._dict({})
+        return [], []
+
+    filters = frappe._dict(filters)
     columns = get_columns(filters)
     data = []
-    if filters.get("summary_by") == "Summary by Item":
+
+    if filters.summary_by == "Summary by Item":
         data = get_data_for_item_wise_summary(filters)
-    elif filters.get("summary_by") == "Summary by HSN":
+    elif filters.summary_by == "Summary by HSN":
         data = get_data_for_hsn_wise_summary(filters)
+
     return columns, data
 
 
@@ -136,6 +140,7 @@ def get_columns(filters):
             {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
         ]
     )
+
     return columns
 
 
@@ -145,6 +150,7 @@ def get_data_for_item_wise_summary(filters=None):
     query = get_base_query(si, si_item)
     query = query.select(si_item.item_code.as_("item"))
     query = get_query_with_filters(si, query, filters)
+
     return query.run(as_dict=True)
 
 
@@ -165,6 +171,7 @@ def get_data_for_hsn_wise_summary(filters):
         si_item.gst_treatment,
     )
     query = get_query_with_filters(si, query, filters)
+
     return query.run(as_dict=True)
 
 
@@ -177,7 +184,7 @@ def get_base_query(si, si_item):
             si_item.gst_hsn_code,
             si.billing_address_gstin,
             si.company_gstin,
-            si.customer_name.as_("customer_name"),
+            si.customer_name,
             si.name.as_("invoice_no"),
             si.posting_date,
             si.place_of_supply,
@@ -201,18 +208,21 @@ def get_base_query(si, si_item):
         )
         .where(si.docstatus == 1)
     )
+
     return query
 
 
 def get_query_with_filters(si, query, filters=None):
-    if not filters:
-        return query
-    if filters.get("company") and filters.get("company"):
-        query = query.where(si.company == filters["company"])
-    if filters.get("company_gstin") and filters.get("company_gstin"):
-        query = query.where(si.company_gstin == filters["company_gstin"])
-    if filters.get("from_date") and filters.get("from_date"):
-        query = query.where(si.posting_date >= getdate(filters["from_date"]))
-    if filters.get("to_date") and filters.get("to_date"):
-        query = query.where(si.posting_date <= getdate(filters["to_date"]))
+    if filters.company:
+        query = query.where(si.company == filters.company)
+
+    if filters.company_gstin:
+        query = query.where(si.company_gstin == filters.company_gstin)
+
+    if filters.from_date:
+        query = query.where(si.posting_date >= getdate(filters.from_date))
+
+    if filters.to_date:
+        query = query.where(si.posting_date <= getdate(filters.to_date))
+
     return query
