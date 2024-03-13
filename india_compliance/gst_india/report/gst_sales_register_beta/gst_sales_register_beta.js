@@ -9,11 +9,16 @@ frappe.query_reports["GST Sales Register Beta"] = {
             options: "Company",
             default: frappe.defaults.get_user_default("Company"),
             on_change: report => {
-                set_gstin_options(report);
                 report.set_filter_value({
                     company_gstin: "",
                 });
-
+            },
+            get_query: function () {
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
             },
             reqd: 1,
         },
@@ -21,7 +26,10 @@ frappe.query_reports["GST Sales Register Beta"] = {
             fieldname: "company_gstin",
             label: __("Company GSTIN"),
             fieldtype: "Autocomplete",
-            get_data: () => set_gstin_options(frappe.query_report),
+            get_query: function () {
+                const company = frappe.query_report.get_filter_value("company");
+                return india_compliance.get_gstin_query(company);
+            },
         },
         {
             "fieldname": "from_date",
@@ -52,14 +60,5 @@ frappe.query_reports["GST Sales Register Beta"] = {
     ]
 };
 
-async function set_gstin_options(report) {
-    const options = await india_compliance.get_gstin_options(
-        report.get_filter_value("company")
-    );
-    const gstin_field = report.get_filter("company_gstin");
-    gstin_field.set_data(options);
-
-    // if (options.length === 1) gstin_field.set_value(options[0]);
-}
 
 
