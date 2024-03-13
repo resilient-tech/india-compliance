@@ -10,11 +10,9 @@ from frappe.utils import getdate
 def execute(filters=None):
     if not filters:
         return [], []
-
     filters = frappe._dict(filters)
     columns = get_columns(filters)
     data = []
-
     if filters.summary_by == "Summary by Item":
         data = get_data_for_item_wise_summary(filters)
     elif filters.summary_by == "Summary by HSN":
@@ -46,14 +44,24 @@ def get_columns(filters):
                 "label": _("Invoice Number"),
                 "fieldname": "invoice_no",
                 "fieldtype": "Link",
-                "options": "Sales Invoice",
+                "options": "Purchase Invoice",
                 "width": 120,
             },
             {
-                "label": _("Customer Name"),
-                "fieldname": "customer_name",
+                "label": _("Bill Number"),
+                "fieldname": "bill_no",
+                "width": 120,
+            },
+            {
+                "label": _("Bill Date"),
+                "fieldname": "bill_date",
+                "width": 120,
+            },
+            {
+                "label": _("Supplier Name"),
+                "fieldname": "supplier",
                 "fieldtype": "Link",
-                "options": "Customer",
+                "options": "Supplier",
                 "width": 120,
             },
             {
@@ -62,8 +70,8 @@ def get_columns(filters):
                 "width": 120,
             },
             {
-                "label": _("Billing Address GSTIN"),
-                "fieldname": "billing_address_gstin",
+                "label": _("Supplier GSTIN"),
+                "fieldname": "supplier_gstin",
                 "width": 120,
             },
             {
@@ -86,16 +94,6 @@ def get_columns(filters):
             }
         )
 
-    if gst_settings.enable_overseas_transactions:
-        columns.append(
-            {
-                "label": _("Is Export with GST"),
-                "fieldname": "is_export_with_gst",
-                "fieldtype": "Check",
-                "width": 60,
-            }
-        )
-
     columns.extend(
         [
             {
@@ -103,25 +101,27 @@ def get_columns(filters):
                 "fieldname": "is_return",
                 "fieldtype": "Check",
                 "width": 60,
-            },
-            {
-                "label": _("Is Rate Adjustment Entry"),
-                "fieldname": "is_debit_note",
-                "fieldtype": "Check",
-                "width": 60,
-            },
+            }
         ]
     )
 
     if filters.summary_by == "Summary by Item":
-        columns.append(
-            {
-                "label": _("Item Code"),
-                "fieldname": "item",
-                "fieldtype": "Link",
-                "options": "Item",
-                "width": 120,
-            }
+        columns.extend(
+            [
+                {
+                    "label": _("Item Code"),
+                    "fieldname": "item",
+                    "fieldtype": "Link",
+                    "options": "Item",
+                    "width": 120,
+                },
+                {
+                    "label": _("Is Ineligible for ITC"),
+                    "fieldname": "is_ineligible_for_itc",
+                    "fieldtype": "Check",
+                    "width": 60,
+                },
+            ]
         )
 
     columns.extend(
@@ -148,94 +148,93 @@ def get_columns(filters):
     return columns
 
 
-def get_data_for_item_wise_summary(filters=None):
-    si = frappe.qb.DocType("Sales Invoice")
-    si_item = frappe.qb.DocType("Sales Invoice Item")
-
-    query = get_base_query(si, si_item)
+def get_data_for_item_wise_summary(filters):
+    pi = frappe.qb.DocType("Purchase Invoice")
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
+    query = get_base_query(pi, pi_item)
     query = query.select(
-        si_item.item_code.as_("item"),
-        si_item.taxable_value,
-        si_item.cgst_amount,
-        si_item.sgst_amount,
-        si_item.igst_amount,
-        si_item.cess_amount,
+        pi_item.item_code.as_("item"),
+        pi_item.taxable_value,
+        pi_item.cgst_amount,
+        pi_item.sgst_amount,
+        pi_item.igst_amount,
+        pi_item.cess_amount,
     )
-    query = get_query_with_filters(si, query, filters)
+    query = get_query_with_filters(pi, query, filters)
 
     return query.run(as_dict=True)
 
 
 def get_data_for_hsn_wise_summary(filters):
-    si = frappe.qb.DocType("Sales Invoice")
-    si_item = frappe.qb.DocType("Sales Invoice Item")
+    pi = frappe.qb.DocType("Purchase Invoice")
+    pi_item = frappe.qb.DocType("Purchase Invoice Item")
 
-    query = get_base_query(si, si_item)
+    query = get_base_query(pi, pi_item)
     query = query.select(
-        Sum(si_item.taxable_value).as_("taxable_value"),
-        Sum(si_item.cgst_amount).as_("cgst_amount"),
-        Sum(si_item.sgst_amount).as_("sgst_amount"),
-        Sum(si_item.igst_amount).as_("igst_amount"),
-        Sum(si_item.cess_amount).as_("cess_amount"),
+        Sum(pi_item.taxable_value).as_("taxable_value"),
+        Sum(pi_item.cgst_amount).as_("cgst_amount"),
+        Sum(pi_item.sgst_amount).as_("sgst_amount"),
+        Sum(pi_item.igst_amount).as_("igst_amount"),
+        Sum(pi_item.cess_amount).as_("cess_amount"),
     ).groupby(
-        si.name,
-        si_item.gst_hsn_code,
-        (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate),
-        si_item.gst_treatment,
+        pi.name,
+        pi_item.gst_hsn_code,
+        (pi_item.cgst_rate + pi_item.sgst_rate + pi_item.igst_rate),
+        pi_item.gst_treatment,
     )
-    query = get_query_with_filters(si, query, filters)
+    query = get_query_with_filters(pi, query, filters)
 
     return query.run(as_dict=True)
 
 
-def get_base_query(si, si_item):
+def get_base_query(pi, pi_item):
     query = (
-        frappe.qb.from_(si)
-        .inner_join(si_item)
-        .on(si.name == si_item.parent)
+        frappe.qb.from_(pi)
+        .inner_join(pi_item)
+        .on(pi.name == pi_item.parent)
         .select(
-            si_item.gst_hsn_code,
-            si.billing_address_gstin,
-            si.company_gstin,
-            si.customer_name,
-            si.name.as_("invoice_no"),
-            si.posting_date,
-            si.place_of_supply,
-            si.is_reverse_charge,
-            si.is_export_with_gst,
-            si.is_return,
-            si.is_debit_note,
-            si.gst_category,
-            si_item.gst_treatment,
-            (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate).as_("gst_rate"),
-            (si_item.cgst_amount + si_item.sgst_amount + si_item.igst_amount).as_(
+            pi_item.gst_hsn_code,
+            pi.supplier_gstin,
+            pi.company_gstin,
+            pi.supplier,
+            pi.name.as_("invoice_no"),
+            pi.posting_date,
+            pi.bill_no,
+            pi.bill_date,
+            pi.place_of_supply,
+            pi.is_reverse_charge,
+            pi.is_return,
+            pi.gst_category,
+            pi_item.gst_treatment,
+            (pi_item.cgst_rate + pi_item.sgst_rate + pi_item.igst_rate).as_("gst_rate"),
+            (pi_item.cgst_amount + pi_item.sgst_amount + pi_item.igst_amount).as_(
                 "total_tax"
             ),
             (
-                si_item.taxable_value
-                + si_item.cgst_amount
-                + si_item.sgst_amount
-                + si_item.igst_amount
-                + si_item.cess_amount
+                pi_item.taxable_value
+                + pi_item.cgst_amount
+                + pi_item.sgst_amount
+                + pi_item.igst_amount
+                + pi_item.cess_amount
             ).as_("total_amount"),
         )
-        .where(si.docstatus == 1)
+        .where(pi.docstatus == 1)
     )
 
     return query
 
 
-def get_query_with_filters(si, query, filters=None):
+def get_query_with_filters(pi, query, filters=None):
     if filters.company:
-        query = query.where(si.company == filters.company)
+        query = query.where(pi.company == filters.company)
 
     if filters.company_gstin:
-        query = query.where(si.company_gstin == filters.company_gstin)
+        query = query.where(pi.company_gstin == filters.company_gstin)
 
     if filters.from_date:
-        query = query.where(si.posting_date >= getdate(filters.from_date))
+        query = query.where(pi.posting_date >= getdate(filters.from_date))
 
     if filters.to_date:
-        query = query.where(si.posting_date <= getdate(filters.to_date))
+        query = query.where(pi.posting_date <= getdate(filters.to_date))
 
     return query
