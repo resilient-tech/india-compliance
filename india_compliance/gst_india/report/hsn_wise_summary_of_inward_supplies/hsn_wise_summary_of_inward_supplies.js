@@ -4,34 +4,17 @@
 frappe.query_reports["HSN-wise summary of inward supplies"] = {
     filters: [
         {
-            fieldname: "from_date",
-            label: __("From Date"),
-            fieldtype: "Date",
-            width: "80",
-            reqd : 1,
-            default: india_compliance.last_month_start(),
-        },
-        {
-            fieldname: "to_date",
-            label: __("To Date"),
-            fieldtype: "Date",
-            width: "80",
-            reqd : 1,
-            default: india_compliance.last_month_end(),
-        },
-        {
-            fieldname: "company_address",
-            label: __("Address"),
             fieldtype: "Link",
-            options: "Address",
+            options: "Company",
+            fieldname: "company",
+            reqd: 1,
+            label: __("Company"),
             get_query: function () {
-                const company = frappe.query_report.get_filter_value("company");
-                if (company) {
-                    return {
-                        query: "frappe.contacts.doctype.address.address.address_query",
-                        filters: { link_doctype: "Company", link_name: company },
-                    };
-                }
+                return {
+                    filters: {
+                        country: "India",
+                    },
+                };
             },
         },
         {
@@ -42,6 +25,26 @@ frappe.query_reports["HSN-wise summary of inward supplies"] = {
                 const company = frappe.query_report.get_filter_value("company");
                 return india_compliance.get_gstin_query(company);
             },
+        },
+        {
+            fieldname: "gst_hsn_code",
+            label: __("HSN/SAC"),
+            fieldtype: "Link",
+            options: "GST HSN Code",
+        },
+        {
+            fieldname: "from_date",
+            label: __("From Date"),
+            fieldtype: "Date",
+            reqd: 1,
+            default: india_compliance.last_month_start(),
+        },
+        {
+            fieldname: "to_date",
+            label: __("To Date"),
+            fieldtype: "Date",
+            reqd: 1,
+            default: india_compliance.last_month_end(),
         },
     ],
 };
