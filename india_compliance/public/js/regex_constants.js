@@ -12,9 +12,8 @@ export const OVERSEAS_REGEX = new RegExp([NRI_ID, OIDAR].join("|"));
 export const UNBODY_REGEX = new RegExp(UNBODY);
 export const TDS_REGEX = new RegExp(TDS);
 
-// TDS is covered in Normal, hence not included separately
 export const GSTIN_REGEX = new RegExp(
-    [NORMAL, GOVT_DEPTID, NRI_ID, OIDAR, UNBODY].join("|")
+    [NORMAL, GOVT_DEPTID, NRI_ID, OIDAR, UNBODY, TDS].join("|")
 );
 
 export const GST_INVOICE_NUMBER_FORMAT = new RegExp("^[^\\W_][A-Za-z\\d\\-/]{0,15}$");
