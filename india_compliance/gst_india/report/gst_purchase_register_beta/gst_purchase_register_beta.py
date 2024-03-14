@@ -11,6 +11,11 @@ def execute(filters=None):
     if not filters:
         return [], []
     filters = frappe._dict(filters)
+
+    if filters.from_date and filters.to_date:
+        if getdate(filters.from_date) > getdate(filters.to_date):
+            frappe.throw(_("The end date cannot precede the start date"))
+
     columns = get_columns(filters)
     data = []
     if filters.summary_by == "Summary by Item":
@@ -219,6 +224,7 @@ def get_base_query(pi, pi_item):
             ).as_("total_amount"),
         )
         .where(pi.docstatus == 1)
+        .where(pi.is_opening != "Yes")
     )
 
     return query
