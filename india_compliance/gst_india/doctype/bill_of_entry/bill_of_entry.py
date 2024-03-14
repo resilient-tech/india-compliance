@@ -180,20 +180,34 @@ class BillofEntry(Document):
 
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
+
         for tax in self.taxes:
-            if (
-                tax.account_head
-                in (input_accounts.igst_account, input_accounts.cess_account)
-                or not tax.tax_amount
-            ):
+            if not tax.tax_amount:
                 continue
 
-            frappe.throw(
-                _(
-                    "Row #{0}: Only Input IGST and CESS accounts are allowed in"
-                    " Bill of Entry"
-                ).format(tax.idx)
-            )
+            if tax.account_head not in (
+                input_accounts.igst_account,
+                input_accounts.cess_account,
+            ):
+                frappe.throw(
+                    _(
+                        "Row #{0}: Only Input IGST and CESS accounts are allowed in"
+                        " Bill of Entry"
+                    ).format(tax.idx)
+                )
+
+            if tax.charge_type == "Actual":
+                item_wise_tax_rates = json.loads(tax.item_wise_tax_rates)
+                if not item_wise_tax_rates:
+                    frappe.throw(
+                        _(
+                            "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                            " not compute item taxes, and your further reporting will be affected."
+                        ).format(tax.idx),
+                        title=_("Invalid Charge Type"),
+                    )
+
+            # TODO: Check for tax rate difference
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
