@@ -901,7 +901,6 @@ class ItemGSTDetails:
         return response
 
     def update(self, doc):
-        # here doc will be document in which i want to set gst details
         """
         Update Item GST Details for a single document
         """
@@ -914,8 +913,7 @@ class ItemGSTDetails:
             return
 
         if doc.doctype == "Bill of Entry":
-
-            self.set_item_wise_tax_details(bill_of_entry = True)
+            self.set_item_wise_tax_details(bill_of_entry=True)
         else:
             self.set_item_wise_tax_details()
 
@@ -939,7 +937,7 @@ class ItemGSTDetails:
 
         self.item_defaults = item_defaults
 
-    def set_item_wise_tax_details(self,bill_of_entry = False):
+    def set_item_wise_tax_details(self, bill_of_entry=False):
         """
         Item Tax Details complied
         Example:
@@ -975,7 +973,7 @@ class ItemGSTDetails:
 
             if (
                 not row.tax_amount
-                or not row.item_wise_tax_detail 
+                or not row.item_wise_tax_detail
                 or row.account_head not in self.gst_account_map
             ):
                 continue
@@ -1322,7 +1320,6 @@ def update_gst_details(doc, method=None):
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL or doc.doctype == "Bill of Entry":
         ItemGSTDetails().update(doc)
         validate_non_taxable_items(doc)
-        print("done")
 
 
 def validate_non_taxable_items(doc):

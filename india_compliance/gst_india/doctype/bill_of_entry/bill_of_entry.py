@@ -18,6 +18,7 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
     update_regional_gl_entries,
     update_valuation_rate,
 )
+from india_compliance.gst_india.overrides.transaction import update_gst_details
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
@@ -46,6 +47,12 @@ class BillofEntry(Document):
 
     def before_validate(self):
         self.set_taxes_and_totals()
+
+    def before_save(self):
+        update_gst_details(self)
+
+    def before_submit(self):
+        update_gst_details(self)
 
     def validate(self):
         self.validate_purchase_invoice()
