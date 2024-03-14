@@ -50,7 +50,7 @@ def get_columns(filters):
                 "fieldname": "invoice_no",
                 "fieldtype": "Link",
                 "options": "Purchase Invoice",
-                "width": 120,
+                "width": 150,
             },
             {
                 "label": _("Bill Number"),
@@ -67,7 +67,7 @@ def get_columns(filters):
                 "fieldname": "supplier",
                 "fieldtype": "Link",
                 "options": "Supplier",
-                "width": 120,
+                "width": 150,
             },
             {
                 "label": _("GST Category"),
@@ -77,7 +77,7 @@ def get_columns(filters):
             {
                 "label": _("Supplier GSTIN"),
                 "fieldname": "supplier_gstin",
-                "width": 120,
+                "width": 180,
             },
             {
                 "label": _("Place of Supply"),
@@ -95,7 +95,7 @@ def get_columns(filters):
                 "label": _("Is Reverse Charge"),
                 "fieldname": "is_reverse_charge",
                 "fieldtype": "Check",
-                "width": 60,
+                "width": 120,
             }
         )
 
@@ -118,13 +118,13 @@ def get_columns(filters):
                     "fieldname": "item",
                     "fieldtype": "Link",
                     "options": "Item",
-                    "width": 120,
+                    "width": 180,
                 },
                 {
                     "label": _("Is Ineligible for ITC"),
                     "fieldname": "is_ineligible_for_itc",
                     "fieldtype": "Check",
-                    "width": 60,
+                    "width": 120,
                 },
             ]
         )
@@ -144,7 +144,11 @@ def get_columns(filters):
             {"label": _("CGST Amount"), "fieldname": "cgst_amount", "width": 120},
             {"label": _("SGST Amount"), "fieldname": "sgst_amount", "width": 120},
             {"label": _("IGST Amount"), "fieldname": "igst_amount", "width": 120},
-            {"label": _("Cess Amount"), "fieldname": "cess_amount", "width": 120},
+            {
+                "label": _("Total Cess Amount"),
+                "fieldname": "total_cess_amount",
+                "width": 120,
+            },
             {"label": _("Total Tax"), "fieldname": "total_tax", "width": 120},
             {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
         ]
@@ -163,7 +167,18 @@ def get_data_for_item_wise_summary(filters):
         pi_item.cgst_amount,
         pi_item.sgst_amount,
         pi_item.igst_amount,
-        pi_item.cess_amount,
+        (pi_item.cess_amount + pi_item.cess_non_advol_amount).as_("total_cess_amount"),
+        (pi_item.cgst_amount + pi_item.sgst_amount + pi_item.igst_amount).as_(
+            "total_tax"
+        ),
+        (
+            pi_item.taxable_value
+            + pi_item.cgst_amount
+            + pi_item.sgst_amount
+            + pi_item.igst_amount
+            + pi_item.cess_amount
+            + pi_item.cess_non_advol_amount
+        ).as_("total_amount"),
     )
     query = get_query_with_filters(pi, query, filters)
 
@@ -180,7 +195,22 @@ def get_data_for_hsn_wise_summary(filters):
         Sum(pi_item.cgst_amount).as_("cgst_amount"),
         Sum(pi_item.sgst_amount).as_("sgst_amount"),
         Sum(pi_item.igst_amount).as_("igst_amount"),
-        Sum(pi_item.cess_amount).as_("cess_amount"),
+        (Sum(pi_item.cess_amount) + Sum(pi_item.cess_non_advol_amount)).as_(
+            "total_cess_amount"
+        ),
+        (
+            Sum(pi_item.cgst_amount)
+            + Sum(pi_item.sgst_amount)
+            + Sum(pi_item.igst_amount)
+        ).as_("total_tax"),
+        (
+            Sum(pi_item.taxable_value)
+            + Sum(pi_item.cgst_amount)
+            + Sum(pi_item.sgst_amount)
+            + Sum(pi_item.igst_amount)
+            + Sum(pi_item.cess_amount)
+            + Sum(pi_item.cess_non_advol_amount)
+        ).as_("total_amount"),
     ).groupby(
         pi.name,
         pi_item.gst_hsn_code,
@@ -193,6 +223,7 @@ def get_data_for_hsn_wise_summary(filters):
 
 
 def get_base_query(pi, pi_item):
+
     query = (
         frappe.qb.from_(pi)
         .inner_join(pi_item)
@@ -212,16 +243,6 @@ def get_base_query(pi, pi_item):
             pi.gst_category,
             pi_item.gst_treatment,
             (pi_item.cgst_rate + pi_item.sgst_rate + pi_item.igst_rate).as_("gst_rate"),
-            (pi_item.cgst_amount + pi_item.sgst_amount + pi_item.igst_amount).as_(
-                "total_tax"
-            ),
-            (
-                pi_item.taxable_value
-                + pi_item.cgst_amount
-                + pi_item.sgst_amount
-                + pi_item.igst_amount
-                + pi_item.cess_amount
-            ).as_("total_amount"),
         )
         .where(pi.docstatus == 1)
         .where(pi.is_opening != "Yes")

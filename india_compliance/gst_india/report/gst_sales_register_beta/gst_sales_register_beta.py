@@ -36,7 +36,7 @@ def get_columns(filters):
             {
                 "label": _("Company GSTIN"),
                 "fieldname": "company_gstin",
-                "width": 120,
+                "width": 180,
             },
         )
 
@@ -52,14 +52,14 @@ def get_columns(filters):
                 "fieldname": "invoice_no",
                 "fieldtype": "Link",
                 "options": "Sales Invoice",
-                "width": 120,
+                "width": 150,
             },
             {
                 "label": _("Customer Name"),
                 "fieldname": "customer_name",
                 "fieldtype": "Link",
                 "options": "Customer",
-                "width": 120,
+                "width": 150,
             },
             {
                 "label": _("GST Category"),
@@ -69,7 +69,7 @@ def get_columns(filters):
             {
                 "label": _("Billing Address GSTIN"),
                 "fieldname": "billing_address_gstin",
-                "width": 120,
+                "width": 180,
             },
             {
                 "label": _("Place of Supply"),
@@ -87,7 +87,7 @@ def get_columns(filters):
                 "label": _("Is Reverse Charge"),
                 "fieldname": "is_reverse_charge",
                 "fieldtype": "Check",
-                "width": 60,
+                "width": 120,
             }
         )
 
@@ -97,7 +97,7 @@ def get_columns(filters):
                 "label": _("Is Export with GST"),
                 "fieldname": "is_export_with_gst",
                 "fieldtype": "Check",
-                "width": 60,
+                "width": 120,
             }
         )
 
@@ -107,13 +107,13 @@ def get_columns(filters):
                 "label": _("Is Return"),
                 "fieldname": "is_return",
                 "fieldtype": "Check",
-                "width": 60,
+                "width": 120,
             },
             {
-                "label": _("Is Rate Adjustment Entry"),
+                "label": _("Is Debit Note"),
                 "fieldname": "is_debit_note",
                 "fieldtype": "Check",
-                "width": 60,
+                "width": 120,
             },
         ]
     )
@@ -125,7 +125,7 @@ def get_columns(filters):
                 "fieldname": "item",
                 "fieldtype": "Link",
                 "options": "Item",
-                "width": 120,
+                "width": 180,
             }
         )
 
@@ -140,11 +140,15 @@ def get_columns(filters):
             },
             {"label": _("Taxable Value"), "fieldname": "taxable_value", "width": 120},
             {"label": _("GST Treatment"), "fieldname": "gst_treatment", "width": 120},
-            {"label": _("GST Rate"), "fieldname": "gst_rate", "width": 60},
+            {"label": _("GST Rate"), "fieldname": "gst_rate", "width": 120},
             {"label": _("CGST Amount"), "fieldname": "cgst_amount", "width": 120},
             {"label": _("SGST Amount"), "fieldname": "sgst_amount", "width": 120},
             {"label": _("IGST Amount"), "fieldname": "igst_amount", "width": 120},
-            {"label": _("Cess Amount"), "fieldname": "cess_amount", "width": 120},
+            {
+                "label": _("Total Cess Amount"),
+                "fieldname": "total_cess_amount",
+                "width": 120,
+            },
             {"label": _("Total Tax"), "fieldname": "total_tax", "width": 120},
             {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
         ]
@@ -164,7 +168,18 @@ def get_data_for_item_wise_summary(filters=None):
         si_item.cgst_amount,
         si_item.sgst_amount,
         si_item.igst_amount,
-        si_item.cess_amount,
+        (si_item.cess_amount + si_item.cess_non_advol_amount).as_("total_cess_amount"),
+        (si_item.cgst_amount + si_item.sgst_amount + si_item.igst_amount).as_(
+            "total_tax"
+        ),
+        (
+            si_item.taxable_value
+            + si_item.cgst_amount
+            + si_item.sgst_amount
+            + si_item.igst_amount
+            + si_item.cess_amount
+            + si_item.cess_non_advol_amount
+        ).as_("total_amount"),
     )
     query = get_query_with_filters(si, query, filters)
 
@@ -181,13 +196,29 @@ def get_data_for_hsn_wise_summary(filters):
         Sum(si_item.cgst_amount).as_("cgst_amount"),
         Sum(si_item.sgst_amount).as_("sgst_amount"),
         Sum(si_item.igst_amount).as_("igst_amount"),
-        Sum(si_item.cess_amount).as_("cess_amount"),
+        (Sum(si_item.cess_amount) + Sum(si_item.cess_non_advol_amount)).as_(
+            "total_cess_amount"
+        ),
+        (
+            Sum(si_item.cgst_amount)
+            + Sum(si_item.sgst_amount)
+            + Sum(si_item.igst_amount)
+        ).as_("total_tax"),
+        (
+            Sum(si_item.taxable_value)
+            + Sum(si_item.cgst_amount)
+            + Sum(si_item.sgst_amount)
+            + Sum(si_item.igst_amount)
+            + Sum(si_item.cess_amount)
+            + Sum(si_item.cess_non_advol_amount)
+        ).as_("total_amount"),
     ).groupby(
         si.name,
         si_item.gst_hsn_code,
         (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate),
         si_item.gst_treatment,
     )
+
     query = get_query_with_filters(si, query, filters)
 
     return query.run(as_dict=True)
@@ -213,16 +244,6 @@ def get_base_query(si, si_item):
             si.gst_category,
             si_item.gst_treatment,
             (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate).as_("gst_rate"),
-            (si_item.cgst_amount + si_item.sgst_amount + si_item.igst_amount).as_(
-                "total_tax"
-            ),
-            (
-                si_item.taxable_value
-                + si_item.cgst_amount
-                + si_item.sgst_amount
-                + si_item.igst_amount
-                + si_item.cess_amount
-            ).as_("total_amount"),
         )
         .where(si.docstatus == 1)
         .where(si.is_opening != "Yes")
