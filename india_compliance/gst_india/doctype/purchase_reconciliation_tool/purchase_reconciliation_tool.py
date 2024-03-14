@@ -706,17 +706,7 @@ class AutoReconcile:
             if credential.service == "Returns":
                 companies.add(credential.company)
 
-        if (
-            not self.gst_settings.apply_auto_purchase_reconciliation_for_selected_companies
-        ):
-            return companies
-
-        selected_companies = set()
-        for row in self.gst_settings.auto_purchase_reconciliation_enabled_companies:
-            if row.company in companies:
-                selected_companies.add(row.company)
-
-        return selected_companies
+        return companies
 
     def is_reconciliation_enabled(self):
         """Returns True if auto reconciliation is enabled for the current day"""
