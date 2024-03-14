@@ -5,7 +5,7 @@ import datetime
 
 import frappe
 from frappe.test_runner import make_test_objects
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_bill_of_entry,
@@ -20,6 +20,8 @@ PURCHASE_INVOICE_DEFAULT_ARGS = {
     "qty": 10,
     "rate": 1000,
     "is_in_state": 1,
+    "posting_date": "2023-12-11",
+    "set_posting_time": 1,
 }
 INWARD_SUPPLY_DEFAULT_ARGS = {
     "company": "_Test Indian Registered Company",
@@ -43,12 +45,13 @@ BILL_OF_ENTRY_DEFAULT_ARGS = {
     "supplier_gstin": "",
     "gst_category": "Overseas",
     "is_in_state": 0,
+    "posting_date": "2023-12-11",
+    "set_posting_time": 1,
 }
 
 
 class TestPurchaseReconciliationTool(FrappeTestCase):
     @classmethod
-    @change_settings("GST Settings", enable_overseas_transactions=1)
     def setUpClass(cls):
         super().setUpClass()
 
@@ -78,7 +81,6 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         )
 
         purchase_reconciliation_tool.save(ignore_permissions=True)
-
         reconciled_data = purchase_reconciliation_tool.ReconciledData.get()
 
         for row in reconciled_data:
@@ -97,6 +99,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
 
     @classmethod
     def create_test_data(cls):
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 1)
         test_cases = cls.test_data.get("TEST_CASES")
 
         make_test_objects("Address", cls.test_data.get("ADDRESSES"), reset=True)
@@ -119,9 +122,11 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
                 _reconciled_data["purchase_invoice_name"] = pi.get("name")
                 _reconciled_data["inward_supply_name"] = gst_is.get("name")
 
-                cls.reconciled_data[
-                    (pi.get("name"), gst_is.get("name"))
-                ] = _reconciled_data
+                cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = (
+                    _reconciled_data
+                )
+
+        frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
 
 
 def create_purchase_invoice(**kwargs):
@@ -152,6 +157,7 @@ def create_boe(**kwargs):
         {
             "bill_of_entry_no": pi.bill_no,
             "bill_of_entry_date": pi.bill_date,
+            "posting_date": pi.posting_date,
         }
     )
 

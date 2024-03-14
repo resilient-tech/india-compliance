@@ -348,8 +348,9 @@ Object.assign(india_compliance, {
         });
 
         let error_type = "otp_requested";
+        let is_authenticated = false;
 
-        while (true) {
+        while (!is_authenticated) {
             const otp = await this.get_gstin_otp(error_type, gstin);
 
             const { message } = await frappe.call({
@@ -362,6 +363,7 @@ Object.assign(india_compliance, {
                 continue;
             }
 
+            is_authenticated = true;
             return true;
         }
     }
