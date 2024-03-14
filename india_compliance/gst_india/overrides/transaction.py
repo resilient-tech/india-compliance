@@ -914,7 +914,6 @@ class ItemGSTDetails:
             return
 
         self.set_item_wise_tax_details()
-
         self.set_tax_amount_precisions(doc.doctype)
         self.update_item_tax_details()
 
