@@ -18,7 +18,11 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
     Reconciler,
 )
-from india_compliance.gst_india.utils import get_json_from_file, get_timespan_date_range
+from india_compliance.gst_india.utils import (
+    get_json_from_file,
+    get_timespan_date_range,
+    is_api_enabled,
+)
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
     ACTIONS,
@@ -710,6 +714,12 @@ class AutoReconcile:
 
     def is_reconciliation_enabled(self):
         """Returns True if auto reconciliation is enabled for the current day"""
+        if not is_api_enabled(self.gst_settings):
+            return False
+
+        if self.settings.sandbox_mode:
+            return False
+
         return self.gst_settings.enable_auto_reconciliation and self.gst_settings.get(
             "reconcile_on_" + frappe.utils.getdate().strftime("%A").lower()
         )
