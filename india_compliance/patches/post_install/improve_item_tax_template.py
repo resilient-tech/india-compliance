@@ -392,20 +392,23 @@ def get_taxes_for_docs(docs, doctype, is_sales_doctype):
 def get_items_for_docs(docs, doctype):
     item_doctype = f"{doctype} Item"
     item = frappe.qb.DocType(item_doctype)
-    return (
+
+    query = (
         frappe.qb.from_(item)
         .select(
             item.name,
             item.parent,
             item.item_code,
             item.item_name,
-            item.qty,
             item.taxable_value,
         )
         .where(item.parenttype == doctype)
         .where(item.parent.isin(docs))
-        .run(as_dict=True)
     )
+    if doctype != "Bill of Entry":
+        query = query.select(item.qty)
+
+    return query.run(as_dict=True)
 
 
 def compile_docs(taxes, items):

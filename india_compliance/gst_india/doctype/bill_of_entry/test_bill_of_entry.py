@@ -1,6 +1,9 @@
 # Copyright (c) 2023, Resilient Tech and Contributors
 # See license.txt
 
+import json
+import re
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
@@ -101,3 +104,75 @@ class TestBillofEntry(FrappeTestCase):
             },
             lcv,
         )
+
+    def test_gst_details_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        # Create BOE
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.save()
+        boe.submit()
+
+        # Verify BOE
+        item_wise_tax_rates = json.loads(boe.taxes[0].item_wise_tax_rates)
+        item_name = boe.items[0].name
+        taxable_value = boe.items[0].taxable_value
+
+        self.assertDocumentEqual(
+            {
+                "items": [
+                    {
+                        "igst_rate": item_wise_tax_rates[item_name],
+                        "igst_amount": (
+                            taxable_value * item_wise_tax_rates[item_name] / 100
+                        ),
+                    }
+                ],
+            },
+            boe,
+        )
+
+    def test_check_type_actual_without_item_wise_tax_rates(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        # Create BOE
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.save()
+        boe.submit()
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Input Tax IGST - MRPL",
+                "description": "Freight",
+                "tax_amount": 20,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": {},
+            },
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would.*)$"
+            ),
+            boe.insert,
+        )
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Input Tax IGST - MRPL",
+                "description": "Freight",
+                "tax_amount": 20,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": {"bdc5e9bb4d": 18.0, "1e5b793cd8": 18},
+            },
+        )
+        boe.insert()
