@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import today
+from frappe.utils import today, flt
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
@@ -180,6 +180,10 @@ class BillofEntry(Document):
 
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
+        taxable_value_map = {}
+
+        for row in self.get("items"):
+            taxable_value_map[row.name] = row.taxable_value
 
         for tax in self.taxes:
             if not tax.tax_amount:
@@ -196,18 +200,34 @@ class BillofEntry(Document):
                     ).format(tax.idx)
                 )
 
-            if tax.charge_type == "Actual":
-                item_wise_tax_rates = json.loads(tax.item_wise_tax_rates)
-                if not item_wise_tax_rates:
-                    frappe.throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, this would"
-                            " not compute item taxes, and your further reporting will be affected."
-                        ).format(tax.idx),
-                        title=_("Invalid Charge Type"),
-                    )
+            if not tax.charge_type == "Actual":
+                continue
 
-            # TODO: Check for tax rate difference
+            item_wise_tax_rates = json.loads(tax.item_wise_tax_rates)
+            if not item_wise_tax_rates:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                        " not compute item taxes, and your further reporting will be affected."
+                    ).format(tax.idx),
+                    title=_("Invalid Charge Type"),
+                )
+
+            # validating total tax
+            total_tax = 0
+            for item, rate in item_wise_tax_rates.items():
+                item_taxable_value = taxable_value_map.get(item, 0)
+                total_tax += flt(item_taxable_value) * flt(rate) / 100
+
+            tax_difference = abs(total_tax - tax.tax_amount)
+
+            if tax_difference > 1:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
+                        " is incorrect. Try setting the Charge Type to On Net Total."
+                    ).format(row.idx, tax.tax_amount)
+                )
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
@@ -280,8 +300,10 @@ class BillofEntry(Document):
         item_tax_map = self.get_item_tax_map(tax_templates, tax_accounts)
 
         for tax in taxes:
-            if tax.charge_type != "On Net Total" and not tax.item_wise_tax_rates:
-                tax.item_wise_tax_rates = "{}"
+            if tax.charge_type != "On Net Total":
+                if not tax.item_wise_tax_rates:
+                    tax.item_wise_tax_rates = "{}"
+
                 continue
 
             item_wise_tax_rates = (

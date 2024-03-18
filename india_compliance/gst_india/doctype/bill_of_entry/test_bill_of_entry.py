@@ -134,21 +134,19 @@ class TestBillofEntry(FrappeTestCase):
             boe,
         )
 
-    def test_check_type_actual_without_item_wise_tax_rates(self):
+    def test_charge_type_actual_without_item_wise_tax_rates(self):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
         # Create BOE
         boe = make_bill_of_entry(pi.name)
         boe.bill_of_entry_no = "123"
         boe.bill_of_entry_date = today()
-        boe.save()
-
         boe.append(
             "taxes",
             {
                 "charge_type": "Actual",
                 "account_head": "Input Tax IGST - _TIRC",
-                "tax_amount": 20,
+                "tax_amount": 18,
                 "cost_center": "Main - _TIRC",
                 "item_wise_tax_rates": {},
             },
@@ -156,8 +154,10 @@ class TestBillofEntry(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual.*)"),
-            boe.insert,
+            re.compile(
+                r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"
+            ),
+            boe.save,
         )
 
         boe.taxes = []
@@ -169,7 +169,29 @@ class TestBillofEntry(FrappeTestCase):
                 "account_head": "Input Tax IGST - _TIRC",
                 "tax_amount": 30,
                 "cost_center": "Main - _TIRC",
-                "item_wise_tax_rates": json.dumps({"1e5b793cd8": 18}),
+                "item_wise_tax_rates": json.dumps({boe.items[0].name: 18}),
             },
         )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"
+            ),
+            boe.save,
+        )
+
+        boe.taxes = []
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Input Tax IGST - _TIRC",
+                "tax_amount": 18,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": json.dumps({boe.items[0].name: 18}),
+            },
+        )
+
         boe.save()
