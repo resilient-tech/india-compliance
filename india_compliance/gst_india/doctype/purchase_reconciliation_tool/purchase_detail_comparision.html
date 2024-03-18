@@ -9,6 +9,11 @@
 		</thead>
 		<tbody data-label="detail-view-content">
 			<tr>
+				<th>Company GSTIN</th>
+				<td data-label="company_gstin">{{ inward_supply.company_gstin || '-' }}</td>
+				<td data-label="company_gstin">{{ purchase.company_gstin || '-' }}</td>
+			</tr>
+			<tr>
 				<th>Document Links</td>
 				{% if inward_supply.name %}
 				<td data-label="name">{{ frappe.utils.get_form_link("GST Inward Supply",
