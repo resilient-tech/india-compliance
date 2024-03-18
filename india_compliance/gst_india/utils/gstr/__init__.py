@@ -52,7 +52,7 @@ GSTR_MODULES = {
 IMPORT_CATEGORY = ("IMPG", "IMPGSEZ")
 
 
-def download_gstr_2a(gstin, return_periods, otp=None):
+def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
     requests_made = 0
     queued_message = False
@@ -71,6 +71,9 @@ def download_gstr_2a(gstin, return_periods, otp=None):
                 not settings.enable_overseas_transactions
                 and category.value in IMPORT_CATEGORY
             ):
+                continue
+
+            if gst_categories and category.value not in gst_categories:
                 continue
 
             frappe.publish_realtime(

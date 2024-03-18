@@ -7,6 +7,7 @@ from typing import List
 import frappe
 from frappe.model.document import Document
 from frappe.query_builder.functions import IfNull
+from frappe.utils import add_to_date, cint, now_datetime
 from frappe.utils.response import json_handler
 
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
@@ -17,9 +18,14 @@ from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     ReconciledData,
     Reconciler,
 )
-from india_compliance.gst_india.utils import get_json_from_file, get_timespan_date_range
+from india_compliance.gst_india.utils import (
+    get_json_from_file,
+    get_timespan_date_range,
+    is_api_enabled,
+)
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr import (
+    ACTIONS,
     IMPORT_CATEGORY,
     GSTRCategory,
     ReturnsAPI,
@@ -96,38 +102,23 @@ class PurchaseReconciliationTool(Document):
             return save_gstr_2b(self.company_gstin, period, json_data)
 
     @frappe.whitelist()
-    def download_gstr_2a(self, date_range, force=False, otp=None):
+    def download_gstr(
+        self, company_gstins, date_range, return_type=None, force=False, otp=None
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        return_type = ReturnType.GSTR2A
-        periods = BaseUtil.get_periods(date_range, return_type)
-        if not force:
-            periods = self.get_periods_to_download(return_type, periods)
-
-        return download_gstr_2a(self.company_gstin, periods, otp)
-
-    @frappe.whitelist()
-    def download_gstr_2b(self, date_range, otp=None):
-        frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
-
-        return_type = ReturnType.GSTR2B
-        periods = self.get_periods_to_download(
-            return_type, BaseUtil.get_periods(date_range, return_type)
-        )
-        return download_gstr_2b(self.company_gstin, periods, otp)
-
-    def get_periods_to_download(self, return_type, periods):
-        existing_periods = get_import_history(
-            self.company_gstin,
-            return_type,
-            periods,
-            pluck="return_period",
+        download_gstr(
+            company_gstins=company_gstins,
+            date_range=date_range,
+            return_type=return_type,
+            force=force,
+            otp=otp,
         )
 
-        return [period for period in periods if period not in existing_periods]
-
     @frappe.whitelist()
-    def get_import_history(self, return_type, date_range, for_download=True):
+    def get_import_history(
+        self, company_gstin, return_type, date_range, for_download=True
+    ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if not return_type:
@@ -135,7 +126,7 @@ class PurchaseReconciliationTool(Document):
 
         return_type = ReturnType(return_type)
         periods = BaseUtil.get_periods(date_range, return_type, True)
-        history = get_import_history(self.company_gstin, return_type, periods)
+        history = get_import_history(company_gstin, return_type, periods)
 
         columns = [
             "Period",
@@ -467,6 +458,61 @@ class PurchaseReconciliationTool(Document):
         return data
 
 
+def download_gstr(
+    company_gstins,
+    date_range,
+    return_type=None,
+    force=False,
+    otp=None,
+    gst_categories=None,
+):
+    if return_type:
+        return_type = ReturnType(return_type)
+
+    for company_gstin in company_gstins:
+        try:
+            if not return_type or return_type == ReturnType.GSTR2A:
+                _download_gstr_2a(date_range, company_gstin, force, otp, gst_categories)
+
+            if not return_type or return_type == ReturnType.GSTR2B:
+                _download_gstr_2b(date_range, company_gstin, otp)
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"Error while downloading {return_type.value if return_type else 'GSTR 2A & 2B'} for {company_gstin} ",
+            )
+
+
+def _download_gstr_2a(
+    date_range, company_gstin, force=False, otp=None, gst_categories=None
+):
+    return_type = ReturnType.GSTR2A
+    periods = BaseUtil.get_periods(date_range, return_type)
+    if not force:
+        periods = get_periods_to_download(company_gstin, return_type, periods)
+
+    return download_gstr_2a(company_gstin, periods, otp, gst_categories)
+
+
+def _download_gstr_2b(date_range, company_gstin, otp=None):
+    return_type = ReturnType.GSTR2B
+    periods = get_periods_to_download(
+        company_gstin, return_type, BaseUtil.get_periods(date_range, return_type)
+    )
+    return download_gstr_2b(company_gstin, periods, otp)
+
+
+def get_periods_to_download(company_gstin, return_type, periods):
+    existing_periods = get_import_history(
+        company_gstin,
+        return_type,
+        periods,
+        pluck="return_period",
+    )
+
+    return [period for period in periods if period not in existing_periods]
+
+
 def get_import_history(
     company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
 ):
@@ -556,11 +602,137 @@ def parse_params(fun):
     return wrapper
 
 
-@frappe.whitelist()
-def resend_otp(company_gstin):
-    frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
+def auto_refresh_authtoken():
+    is_auto_refresh_enabled = frappe.db.get_single_value(
+        "GST Settings", "auto_refresh_auth_token"
+    )
 
-    return ReturnsAPI(company_gstin).request_otp()
+    if not is_auto_refresh_enabled:
+        return
+
+    for credential in frappe.get_all(
+        "GST Credential",
+        filters={
+            "service": "Returns",
+            "session_expiry": (">=", now_datetime()),
+        },
+        fields=["session_key", "session_expiry", "gstin", "auth_token"],
+    ):
+        if credential.session_key and credential.session_expiry < add_to_date(
+            now_datetime(), minutes=10
+        ):
+            api = ReturnsAPI(credential.gstin)
+            response = api.refresh_auth_token()
+            api.process_response(response)
+
+
+class AutoReconcile:
+    def __init__(self):
+        self.gst_settings = frappe.get_cached_doc("GST Settings")
+        self.today = frappe.utils.getdate()
+
+        self.inward_supply_from_date = frappe.utils.add_months(
+            frappe.utils.get_first_day(self.today),
+            -cint(self.gst_settings.inward_supply_period - 1),
+        )
+        self.reconciliation_companies = self.get_reconciliation_company_list()
+
+    def download_gstr(self):
+        if not self.is_reconciliation_enabled():
+            return
+
+        # GST Categories for which GSTR 2A is to be downloaded
+        gst_categories = self.get_gst_categories()
+        gstins = self.get_gstins_with_valid_credentials()
+
+        download_gstr(
+            date_range=[
+                self.inward_supply_from_date.strftime("%Y-%m-%d"),
+                self.today.strftime("%Y-%m-%d"),
+            ],
+            company_gstins=gstins,
+            gst_categories=gst_categories,
+        )
+
+    def get_gst_categories(self):
+        return [
+            category.value
+            for category in ACTIONS.values()
+            if getattr(self.gst_settings, "reconcile_for_" + category.value.lower())
+        ]
+
+    def get_gstins_with_valid_credentials(self):
+        valid_gstins = set()
+
+        for row in self.gst_settings.credentials:
+            if not self.is_authenticated_credential(row):
+                continue
+
+            valid_gstins.add(row.gstin)
+
+        return valid_gstins
+
+    def is_authenticated_credential(self, credential_row):
+        """Returns True if reconciliation is enabled for the company and the session is valid"""
+        return (
+            credential_row.company in self.reconciliation_companies
+            and credential_row.session_expiry >= now_datetime()
+        )
+
+    def reconcile_purchases(self):
+        """Reconcile purchases for selected companies and GSTINs with valid credentials"""
+        if not self.is_reconciliation_enabled():
+            return
+
+        for company in self.reconciliation_companies:
+            self.reconcile_purchases_for_company(company)
+
+    def reconcile_purchases_for_company(self, company):
+        purchase_reconciliation_tool = frappe.get_doc("Purchase Reconciliation Tool")
+        purchase_reconciliation_tool.update(
+            {
+                "company": company,
+                "company_gstin": "All",
+                "gst_return": "Both GSTR 2A & 2B",
+                "purchase_from_date": frappe.utils.add_years(self.today, -1),
+                "purchase_to_date": self.today,
+                "inward_supply_from_date": self.inward_supply_from_date,
+                "inward_supply_to_date": self.today,
+            }
+        )
+
+        purchase_reconciliation_tool.save(ignore_permissions=True)
+
+    def get_reconciliation_company_list(self):
+        """Returns list of companies for which auto reconciliation is enabled and credentials are available"""
+        companies = set()
+        for credential in self.gst_settings.credentials:
+            if credential.service == "Returns":
+                companies.add(credential.company)
+
+        return companies
+
+    def is_reconciliation_enabled(self):
+        """Returns True if auto reconciliation is enabled for the current day"""
+        if not is_api_enabled(self.gst_settings):
+            return False
+
+        if self.settings.sandbox_mode:
+            return False
+
+        return self.gst_settings.enable_auto_reconciliation and self.gst_settings.get(
+            "reconcile_on_" + frappe.utils.getdate().strftime("%A").lower()
+        )
+
+
+def auto_download_gstr():
+    """Auto download GSTR 2A and 2B"""
+    AutoReconcile().download_gstr()
+
+
+def auto_reconcile():
+    """Auto reconcile purchases and inward supplies"""
+    AutoReconcile().reconcile_purchases()
 
 
 class BuildExcel:
