@@ -16,6 +16,7 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
     get_escaped_name,
     get_gst_accounts_by_type,
+    get_gstin_list,
     get_party_for_gstin,
 )
 from india_compliance.gst_india.utils.gstr import IMPORT_CATEGORY, ReturnType
@@ -24,6 +25,7 @@ from india_compliance.gst_india.utils.gstr import IMPORT_CATEGORY, ReturnType
 class Fields(Enum):
     FISCAL_YEAR = "fy"
     SUPPLIER_GSTIN = "supplier_gstin"
+    COMPANY_GSTIN = "company_gstin"
     BILL_NO = "bill_no"
     PLACE_OF_SUPPLY = "place_of_supply"
     REVERSE_CHARGE = "is_reverse_charge"
@@ -76,6 +78,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             Fields.BILL_NO: Rule.EXACT_MATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -91,6 +94,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -106,6 +110,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             Fields.BILL_NO: Rule.EXACT_MATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -121,6 +126,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -136,6 +142,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            # Fields.COMPANY_GSTIN: Rule.MISMATCH,
             Fields.BILL_NO: Rule.EXACT_MATCH,
             # Fields.PLACE_OF_SUPPLY: Rule.MISMATCH,
             # Fields.IS_REVERSE_CHARGE: Rule.MISMATCH,
@@ -151,6 +158,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            # Fields.COMPANY_GSTIN: Rule.MISMATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             # Fields.PLACE_OF_SUPPLY: Rule.MISMATCH,
             # Fields.IS_REVERSE_CHARGE: Rule.MISMATCH,
@@ -166,6 +174,7 @@ GSTIN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             Fields.SUPPLIER_GSTIN: Rule.EXACT_MATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             # Fields.BILL_NO: Rule.MISMATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -185,6 +194,7 @@ PAN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             Fields.BILL_NO: Rule.EXACT_MATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -198,6 +208,7 @@ PAN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -211,6 +222,7 @@ PAN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
+            Fields.COMPANY_GSTIN: Rule.MISMATCH,
             Fields.BILL_NO: Rule.FUZZY_MATCH,
             # Fields.PLACE_OF_SUPPLY: Rule.MISMATCH,
             # Fields.IS_REVERSE_CHARGE: Rule.MISMATCH,
@@ -226,6 +238,7 @@ PAN_RULES = (
         "rule": {
             Fields.FISCAL_YEAR: Rule.EXACT_MATCH,
             # Fields.SUPPLIER_GSTIN: Rule.MISMATCH,
+            Fields.COMPANY_GSTIN: Rule.EXACT_MATCH,
             # Fields.BILL_NO: Rule.MISMATCH,
             Fields.PLACE_OF_SUPPLY: Rule.EXACT_MATCH,
             Fields.REVERSE_CHARGE: Rule.EXACT_MATCH,
@@ -292,11 +305,16 @@ class InwardSupply:
             frappe.qb.from_(self.GSTR2)
             .left_join(self.GSTR2_ITEM)
             .on(self.GSTR2_ITEM.parent == self.GSTR2.name)
-            .where(self.company_gstin == self.GSTR2.company_gstin)
             .where(IfNull(self.GSTR2.match_status, "") != "Amended")
             .groupby(self.GSTR2_ITEM.parent)
             .select(*fields, ConstantColumn("GST Inward Supply").as_("doctype"))
         )
+
+        if self.company_gstin == "All":
+            query = query.where(self.GSTR2.company_gstin.notnull())
+        else:
+            query = query.where(self.company_gstin == self.GSTR2.company_gstin)
+
         if self.include_ignored == 0:
             query = query.where(IfNull(self.GSTR2.action, "") != "Ignore")
 
@@ -311,6 +329,7 @@ class InwardSupply:
             "bill_date",
             "name",
             "supplier_gstin",
+            "company_gstin",
             "is_reverse_charge",
             "place_of_supply",
         ]
@@ -413,7 +432,6 @@ class PurchaseInvoice:
             .on(self.PI_TAX.parent == self.PI.name)
             .left_join(pi_item)
             .on(pi_item.parent == self.PI.name)
-            .where(self.company_gstin == self.PI.company_gstin)
             .where(self.PI.docstatus == 1)
             .where(IfNull(self.PI.reconciliation_status, "") != "Not Applicable")
             .groupby(self.PI.name)
@@ -423,6 +441,11 @@ class PurchaseInvoice:
                 ConstantColumn("Purchase Invoice").as_("doctype"),
             )
         )
+
+        if self.company_gstin == "All":
+            query = query.where(self.PI.company_gstin.notnull())
+        else:
+            query = query.where(self.company_gstin == self.PI.company_gstin)
 
         if self.include_ignored == 0:
             query = query.where(IfNull(self.PI.reconciliation_status, "") != "Ignored")
@@ -439,6 +462,7 @@ class PurchaseInvoice:
         fields = [
             "name",
             "supplier_gstin",
+            "company_gstin",
             "bill_no",
             "place_of_supply",
             "is_reverse_charge",
@@ -579,7 +603,6 @@ class BillOfEntry:
         tax_fields = [
             self.query_tax_amount(account).as_(tax[:-8])
             for tax, account in gst_accounts.items()
-            if account
         ]
 
         fields = [
@@ -588,6 +611,7 @@ class BillOfEntry:
             self.BOE.total_taxable_value.as_("taxable_value"),
             self.BOE.bill_of_entry_date.as_("bill_date"),
             self.BOE.posting_date,
+            self.BOE.company_gstin,
             self.PI.supplier_name,
             self.PI.place_of_supply,
             self.PI.is_reverse_charge,
@@ -1019,6 +1043,7 @@ class ReconciledData(BaseReconciliation):
     ):
         inward_supply_fields = [
             "supplier_name",
+            "company_gstin",
             "classification",
             "match_status",
             "action",
@@ -1036,6 +1061,7 @@ class ReconciledData(BaseReconciliation):
         purchase_fields = [
             "supplier",
             "supplier_name",
+            "company_gstin",
             "is_return",
             "gst_category",
             "reconciliation_status",
@@ -1096,6 +1122,8 @@ class ReconciledData(BaseReconciliation):
         default_dict = {
             "supplier_name": "",
             "supplier_gstin": "",
+            "purchase_company_gstin": "",
+            "inward_supply_company_gstin": "",
             "bill_no": "",
             "bill_date": "",
             "match_status": "",
@@ -1131,6 +1159,8 @@ class ReconciledData(BaseReconciliation):
                 "supplier_name": data.supplier_name
                 or self.guess_supplier_name(data.supplier_gstin),
                 "supplier_gstin": data.supplier_gstin or data.supplier_name,
+                "purchase_company_gstin": purchase.get("company_gstin") or "",
+                "inward_supply_company_gstin": inward_supply.get("company_gstin") or "",
                 "purchase_doctype": purchase.get("doctype"),
                 "purchase_invoice_name": purchase.get("name"),
                 "inward_supply_name": inward_supply.get("name"),
