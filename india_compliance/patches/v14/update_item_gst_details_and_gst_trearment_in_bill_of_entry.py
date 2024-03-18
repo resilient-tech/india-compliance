@@ -71,7 +71,7 @@ def update_gst_details(company, doctype, docs):
 
             taxes = get_taxes_for_docs(chunk, doctype)
             items = get_items_for_docs(chunk, doctype)
-            complied_docs = compile_docs(taxes, items)
+            complied_docs = compile_docs(taxes, items, doctype="Bill of Entry")
 
             if not complied_docs:
                 continue
@@ -94,7 +94,7 @@ def get_taxes_for_docs(docs, doctype):
             taxes.tax_amount,
             taxes.account_head,
             taxes.parent,
-            taxes.item_wise_tax_detail,
+            taxes.item_wise_tax_rates,
         )
         .where(taxes.parenttype == doctype)
         .where(taxes.parent.isin(docs))

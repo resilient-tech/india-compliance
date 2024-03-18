@@ -142,14 +142,12 @@ class TestBillofEntry(FrappeTestCase):
         boe.bill_of_entry_no = "123"
         boe.bill_of_entry_date = today()
         boe.save()
-        boe.submit()
 
         boe.append(
             "taxes",
             {
                 "charge_type": "Actual",
-                "account_head": "Input Tax IGST - MRPL",
-                "description": "Freight",
+                "account_head": "Input Tax IGST - _TIRC",
                 "tax_amount": 20,
                 "cost_center": "Main - _TIRC",
                 "item_wise_tax_rates": {},
@@ -158,21 +156,20 @@ class TestBillofEntry(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would.*)$"
-            ),
+            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual.*)"),
             boe.insert,
         )
+
+        boe.taxes = []
 
         boe.append(
             "taxes",
             {
                 "charge_type": "Actual",
-                "account_head": "Input Tax IGST - MRPL",
-                "description": "Freight",
-                "tax_amount": 20,
+                "account_head": "Input Tax IGST - _TIRC",
+                "tax_amount": 30,
                 "cost_center": "Main - _TIRC",
-                "item_wise_tax_rates": {"bdc5e9bb4d": 18.0, "1e5b793cd8": 18},
+                "item_wise_tax_rates": json.dumps({"1e5b793cd8": 18}),
             },
         )
-        boe.insert()
+        boe.save()

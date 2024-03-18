@@ -280,7 +280,7 @@ class BillofEntry(Document):
         item_tax_map = self.get_item_tax_map(tax_templates, tax_accounts)
 
         for tax in taxes:
-            if tax.charge_type != "On Net Total":
+            if tax.charge_type != "On Net Total" and not tax.item_wise_tax_rates:
                 tax.item_wise_tax_rates = "{}"
                 continue
 

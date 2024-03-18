@@ -408,7 +408,7 @@ def get_items_for_docs(docs, doctype):
     )
 
 
-def compile_docs(taxes, items):
+def compile_docs(taxes, items, doctype=None):
     """
     Complie docs, so that each one could be accessed as if it's a single doc.
     """
@@ -425,6 +425,9 @@ def compile_docs(taxes, items):
             response[item.parent] = frappe._dict(taxes=[], items=[])
 
         response[item.parent]["items"].append(item)
+
+    if doctype:
+        response[item.parent].update({"doctype": doctype})
 
     return response
 
