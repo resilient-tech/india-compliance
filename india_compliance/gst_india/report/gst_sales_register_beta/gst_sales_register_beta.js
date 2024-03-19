@@ -53,9 +53,9 @@ frappe.query_reports["GST Sales Register Beta"] = {
         },
         {
             fieldtype: "Select",
-            fieldname: "invoice_type",
-            label: __("Invoice Type"),
-            options: "\nB2B\nB2C",
+            fieldname: "invoice_category",
+            label: __("Invoice Category"),
+            options: "\nNil-Rated\nExempted\nNon-GST\nCredit/Debit Notes Registered (CDNR)\nCredit/Debit Notes Unregistered (CDNUR)\nB2B\nB2C(Large)\nB2C(Small)\nExport Invoice",
         }
     ]
 };
