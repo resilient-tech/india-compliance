@@ -3,8 +3,7 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder import Case
-from frappe.query_builder.functions import Sum
+from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import getdate
 
 B2C_LIMIT = 2_50_000
@@ -160,8 +159,13 @@ def get_columns(filters):
                 "width": 120,
             },
             {"label": _("Total Tax"), "fieldname": "total_tax", "width": 120},
-            {"label": _("Tot"), "fieldname": "tot", "width": 120},
-            {"label": _("Tot"), "fieldname": "return_against", "width": 120},
+            {"label": _("Return Against"), "fieldname": "return_against", "width": 120},
+            {
+                "label": _("Return Invoice Amount"),
+                "fieldname": "returned_invoice_base_grand_total",
+                "fieldtype": "Float",
+                "width": 120,
+            },
             {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
         ]
     )
@@ -201,6 +205,7 @@ def get_invoices_for_item_wise_summary(filters=None):
         ).as_("total_amount"),
     )
     query = get_query_with_filters(si, query, filters)
+
     return query.run(as_dict=True)
 
 
@@ -238,15 +243,19 @@ def get_invoices_for_hsn_wise_summary(filters=None):
     )
 
     query = get_query_with_filters(si, query, filters)
-    # print(query)
+
     return query.run(as_dict=True)
 
 
 def get_base_query(si, si_item):
+    returned_si = frappe.qb.DocType("Sales Invoice", alias="returned_si")
+
     query = (
         frappe.qb.from_(si)
         .inner_join(si_item)
         .on(si.name == si_item.parent)
+        .left_join(returned_si)
+        .on(si.return_against == returned_si.name)
         .select(
             si_item.gst_hsn_code,
             si.billing_address_gstin,
@@ -263,23 +272,15 @@ def get_base_query(si, si_item):
             si.return_against,
             si.gst_category,
             si_item.gst_treatment,
-            Case()
-            .when(
-                (
-                    (si.is_return == 1 or si.is_debit_note == 1)
-                    and (si.return_against != "")
-                ),
-                frappe.qb.from_(si)
-                .select(si.total)
-                .where(si.name == si.return_against),
-            )
-            .as_("tot"),
             (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate).as_("gst_rate"),
+            IfNull(returned_si.base_grand_total, 0).as_(
+                "returned_invoice_base_grand_total"
+            ),
         )
         .where(si.docstatus == 1)
         .where(si.is_opening != "Yes")
     )
-    frappe.errprint(query)
+
     return query
 
 
