@@ -4,7 +4,7 @@
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Date, Sum, IfNull
+from frappe.query_builder.functions import Date, IfNull, Sum
 
 
 def execute(filters=None):
@@ -24,12 +24,9 @@ def validate_filters(filters):
 
 
 def get_data(filters):
-    data = []
-
     purchase_invoice_data = get_invoice_data("Purchase Invoice", filters)
-    boe_data = get_invoice_data("Purchase Invoice", filters)
-
-    data = purchase_invoice_data + boe_data
+    boe_data = get_invoice_data("Bill of Entry", filters)
+    data = []
 
     return data
 
@@ -50,19 +47,15 @@ def get_invoice_data(doctype, filters):
             IfNull(hsn_code.description, "").as_("hsn_code.description"),
             invoice_item.stock_uom.as_("uqc"),
             invoice_item.stock_qty,
-            (
-                invoice_item.cgst_rate + invoice_item.sgst_rate + invoice_item.igst_rate
-            ).as_("tax_rate"),
-            Sum(invoice_item.igst_amount).as_("igst_amount"),
-            Sum(invoice_item.cgst_amount).as_("cgst_amount"),
-            Sum(invoice_item.sgst_amount).as_("sgst_amount"),
-            Sum(invoice_item.taxable_value).as_("taxable_amount"),
-            Sum(
-                invoice_item.igst_amount
-                + invoice_item.cgst_amount
-                + invoice_item.sgst_amount
-                + invoice_item.taxable_value
-            ).as_("total_amount"),
+            invoice_item.cgst_rate,
+            invoice_item.sgst_rate,
+            invoice_item.igst_rate,
+            invoice_item.igst_amount,
+            invoice_item.cgst_amount,
+            invoice_item.sgst_amount,
+            invoice_item.taxable_value,
+            invoice_item.cess_amount,
+            invoice_item.cess_non_advol_amount,
         )
         .where(
             Date(invoice.posting_date).between(filters.from_date, filters.to_date),
@@ -70,11 +63,6 @@ def get_invoice_data(doctype, filters):
             invoice.company == filters.company,
             invoice.docstatus == 1,
             invoice.is_opening != "Yes",
-        )
-        .groupby(
-            invoice_item.gst_hsn_code,
-            invoice_item.stock_uom,
-            invoice_item.cgst_rate + invoice_item.sgst_rate + invoice_item.igst_rate,
         )
     )
 
@@ -85,7 +73,7 @@ def get_invoice_data(doctype, filters):
         query = query.where(
             IfNull(invoice_item.gst_hsn_code, "") == filters.gst_hsn_code
         )
-        
+
     return query.run(as_dict=True)
 
 
