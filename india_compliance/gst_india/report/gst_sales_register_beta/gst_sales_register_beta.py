@@ -3,8 +3,11 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder import Case
 from frappe.query_builder.functions import Sum
 from frappe.utils import getdate
+
+B2C_LIMIT = 2_50_000
 
 
 def execute(filters=None):
@@ -157,6 +160,8 @@ def get_columns(filters):
                 "width": 120,
             },
             {"label": _("Total Tax"), "fieldname": "total_tax", "width": 120},
+            {"label": _("Tot"), "fieldname": "tot", "width": 120},
+            {"label": _("Tot"), "fieldname": "return_against", "width": 120},
             {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
         ]
     )
@@ -196,11 +201,10 @@ def get_invoices_for_item_wise_summary(filters=None):
         ).as_("total_amount"),
     )
     query = get_query_with_filters(si, query, filters)
-
     return query.run(as_dict=True)
 
 
-def get_invoices_for_hsn_wise_summary(filters):
+def get_invoices_for_hsn_wise_summary(filters=None):
     si = frappe.qb.DocType("Sales Invoice")
     si_item = frappe.qb.DocType("Sales Invoice Item")
 
@@ -234,7 +238,7 @@ def get_invoices_for_hsn_wise_summary(filters):
     )
 
     query = get_query_with_filters(si, query, filters)
-
+    # print(query)
     return query.run(as_dict=True)
 
 
@@ -256,14 +260,26 @@ def get_base_query(si, si_item):
             si.is_export_with_gst,
             si.is_return,
             si.is_debit_note,
+            si.return_against,
             si.gst_category,
             si_item.gst_treatment,
+            Case()
+            .when(
+                (
+                    (si.is_return == 1 or si.is_debit_note == 1)
+                    and (si.return_against != "")
+                ),
+                frappe.qb.from_(si)
+                .select(si.total)
+                .where(si.name == si.return_against),
+            )
+            .as_("tot"),
             (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate).as_("gst_rate"),
         )
         .where(si.docstatus == 1)
         .where(si.is_opening != "Yes")
     )
-
+    frappe.errprint(query)
     return query
 
 
@@ -285,104 +301,111 @@ def get_query_with_filters(si, query, filters=None):
 
 class GSTR1Conditions:
 
-    def is_nil_rated(self, row):
-        return row.gst_treatment == "Nil-Rated"
+    def is_nil_rated(self, invoice):
+        return invoice.gst_treatment == "Nil-Rated"
 
-    def is_exempted(self, row):
-        return row.gst_treatment == "Exempted"
+    def is_exempted(self, invoice):
+        return invoice.gst_treatment == "Exempted"
 
-    def is_non_gst(self, row):
-        return row.gst_treatment == "Non-GST"
+    def is_non_gst(self, invoice):
+        return invoice.gst_treatment == "Non-GST"
 
-    def is_nil_rated_exempted_or_non_gst(self, row):
-        return self.is_nil_rated(row) or self.is_exempted(row) or self.is_non_gst(row)
+    def is_nil_rated_exempted_or_non_gst(self, invoice):
+        return (
+            self.is_nil_rated(invoice)
+            or self.is_exempted(invoice)
+            or self.is_non_gst(invoice)
+        )
 
-    def is_cn_dn(self, row):
-        return row.is_return or row.is_debit_note
+    def is_cn_dn(self, invoice):
+        return invoice.is_return or invoice.is_debit_note
 
-    def has_gstin_and_is_not_export(self, row):
-        return row.billing_address_gstin and row.place_of_supply != "96-Other Countries"
+    def has_gstin_and_is_not_export(self, invoice):
+        return invoice.billing_address_gstin and not self.is_export(invoice)
 
-    def is_export(self, row):
-        return row.place_of_supply == "96-Other Countries"
+    def is_export(self, invoice):
+        return invoice.place_of_supply == "96-Other Countries"
 
-    def is_b2cl_cn_dn(self, row):
-        return row.total > 250000 and row.company_gstin[:2] != row.place_of_supply[:2]
+    def is_inter_state(self, invoice):
+        return invoice.company_gstin[:2] != invoice.place_of_supply[:2]
 
-    def is_b2cl_invoice(self, row):
-        return row.total > 250000 and row.company_gstin[:2] != row.place_of_supply[:2]
+    def is_b2cl_cn_dn(self, invoice):
+        # if invoice.return_against:
+        #     doc = frappe.get_doc("Sales Invoice", invoice.return_against)
+        #     invoice_value = max(doc.total, invoice.total)
+        #     return invoice_value > B2C_LIMIT and self.is_inter_state(invoice)
 
-    def is_b2cs_cn_dn(self, row):
-        return not self.is_b2cl_cn_dn(row)
+        # return invoice.total > B2C_LIMIT and self.is_inter_state(invoice)
+        return self.is_inter_state(invoice)
 
-    def is_b2cs_invoice(self, row):
-        return not self.is_b2cl_invoice(row)
+    def is_b2cl_invoice(self, invoice):
+        return invoice.total > B2C_LIMIT and self.is_inter_state(invoice)
 
 
 class GSTR1Sections(GSTR1Conditions):
 
     def get_nil_rated_invoices(self, invoices):
         filtered_invoices = []
-        for row in invoices:
-            if self.is_nil_rated(row):
-                filtered_invoices.append(row)
+        for invoice in invoices:
+            if self.is_nil_rated(invoice):
+                filtered_invoices.append(invoice)
 
         return filtered_invoices
 
     def get_exempted_invoices(self, invoices):
         filtered_invoices = []
-        for row in invoices:
-            if self.is_exempted(row):
-                filtered_invoices.append(row)
+        for invoice in invoices:
+            if self.is_exempted(invoice):
+                filtered_invoices.append(invoice)
 
         return filtered_invoices
 
     def get_non_gst_invoices(self, invoices):
         filtered_invoices = []
-        for row in invoices:
-            if self.is_non_gst(row):
-                filtered_invoices.append(row)
+        for invoice in invoices:
+            if self.is_non_gst(invoice):
+                filtered_invoices.append(invoice)
 
         return filtered_invoices
 
     def get_b2b_invoices(self, invoices):
         filtered_invoices = []
 
-        for row in invoices:
+        for invoice in invoices:
             if (
-                not self.is_nil_rated_exempted_or_non_gst(row)
-                and not self.is_cn_dn(row)
-                and self.has_gstin_and_is_not_export(row)
+                not self.is_nil_rated_exempted_or_non_gst(invoice)
+                and not self.is_cn_dn(invoice)
+                and self.has_gstin_and_is_not_export(invoice)
             ):
-                filtered_invoices.append(row)
+                filtered_invoices.append(invoice)
 
         return filtered_invoices
 
     def get_export_invoices(self, invoices):
         filtered_invoices = []
 
-        for row in invoices:
+        for invoice in invoices:
             if (
-                not self.is_nil_rated_exempted_or_non_gst(row)
-                and not self.is_cn_dn(row)
-                and self.is_export(row)
+                not self.is_nil_rated_exempted_or_non_gst(invoice)
+                and not self.is_cn_dn(invoice)
+                and self.is_export(invoice)
             ):
-                filtered_invoices.append(row)
+                filtered_invoices.append(invoice)
 
         return filtered_invoices
 
     def get_b2cl_invoices(self, invoices):
         filtered_invoices = []
 
-        for row in invoices:
+        for invoice in invoices:
             if (
-                not self.is_nil_rated_exempted_or_non_gst(row)
-                and not self.is_cn_dn(row)
-                and not self.has_gstin_and_is_not_export(row)
-                and not self.is_export(row)
-                and self.is_b2cl_invoice(row)
+                not self.is_nil_rated_exempted_or_non_gst(invoice)
+                and not self.is_cn_dn(invoice)
+                and not self.has_gstin_and_is_not_export(invoice)
+                and not self.is_export(invoice)
+                and self.is_b2cl_invoice(invoice)
             ):
-                filtered_invoices.append(row)
+                filtered_invoices.append(invoice)
 
         return filtered_invoices
 
@@ -394,7 +417,7 @@ class GSTR1Sections(GSTR1Conditions):
                 not self.is_nil_rated_exempted_or_non_gst(row)
                 and not self.has_gstin_and_is_not_export(row)
                 and not self.is_export(row)
-                and (self.is_b2cs_cn_dn(row) or self.is_b2cs_invoice(row))
+                and (not self.is_b2cl_cn_dn(row) or not self.is_b2cl_invoice(row))
             ):
                 filtered_invoices.append(row)
 
@@ -457,33 +480,33 @@ class GSTR1Invoices(GSTR1Sections):
                 row.invoice_category = "B2CS"
         return invoices
 
-    def get_filtered_invoices(self, invoices, filter=None):
-        if not filter:
+    def get_filtered_invoices(self, invoices, invoice_category=None):
+        if not invoice_category:
             return invoices
 
-        if filter == "Nil-Rated":
+        if invoice_category == "Nil-Rated":
             return self.get_nil_rated_invoices(invoices)
 
-        if filter == "Exempted":
+        if invoice_category == "Exempted":
             return self.get_exempted_invoices(invoices)
 
-        if filter == "Non-GST":
+        if invoice_category == "Non-GST":
             return self.get_non_gst_invoices(invoices)
 
-        if filter == "B2B":
+        if invoice_category == "B2B":
             return self.get_b2b_invoices(invoices)
 
-        if filter == "Export Invoice":
+        if invoice_category == "Export Invoice":
             return self.get_export_invoices(invoices)
 
-        if filter == "B2C(Large)":
+        if invoice_category == "B2C(Large)":
             return self.get_b2cl_invoices(invoices)
 
-        if filter == "B2C(Small)":
+        if invoice_category == "B2C(Small)":
             return self.get_b2cs_invoices(invoices)
 
-        if filter == "Credit/Debit Notes Registered (CDNR)":
+        if invoice_category == "Credit/Debit Notes Registered (CDNR)":
             return self.get_cdnr_invoices(invoices)
 
-        if filter == "Credit/Debit Notes Unregistered (CDNUR)":
+        if invoice_category == "Credit/Debit Notes Unregistered (CDNUR)":
             return self.get_cdnur_invoices(invoices)
