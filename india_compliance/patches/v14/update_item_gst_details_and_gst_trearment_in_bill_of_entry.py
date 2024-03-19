@@ -2,7 +2,7 @@ import click
 
 import frappe
 
-from india_compliance.gst_india.overrides.transaction import ItemGSTDetails
+from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import BOEGSTDetails
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.patches.post_install.improve_item_tax_template import (
     build_query_and_update_gst_details,
@@ -11,7 +11,6 @@ from india_compliance.patches.post_install.improve_item_tax_template import (
 
 
 def execute():
-    set_gst_treatment()
     companies = get_indian_companies()
     update_gst_details_for_transactions(companies)
 
@@ -76,7 +75,7 @@ def update_gst_details(company, doctype, docs):
             if not complied_docs:
                 continue
 
-            gst_details = ItemGSTDetails().get(complied_docs.values(), doctype, company)
+            gst_details = BOEGSTDetails().get(complied_docs.values(), doctype, company)
 
             if not gst_details:
                 continue
@@ -120,14 +119,3 @@ def get_items_for_docs(docs, doctype):
     )
 
     return query.run(as_dict=True)
-
-
-def set_gst_treatment():
-    bill_of_entry_item = frappe.qb.DocType("Bill of Entry Item")
-
-    (
-        frappe.qb.update(bill_of_entry_item)
-        .set("gst_treatment", "Zero-Rated")
-        .where(bill_of_entry_item.docstatus != 0)
-        .run()
-    )

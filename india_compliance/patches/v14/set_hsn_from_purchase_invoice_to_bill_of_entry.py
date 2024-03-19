@@ -5,7 +5,6 @@ from frappe.query_builder.functions import IfNull
 
 
 def execute():
-    bill_of_entry = frappe.qb.DocType("Bill of Entry")
     bill_of_entry_item = frappe.qb.DocType("Bill of Entry Item")
     purchase_invoice_item = frappe.qb.DocType("Purchase Invoice Item")
 
@@ -30,11 +29,8 @@ def execute():
     (
         frappe.qb.update(bill_of_entry_item)
         .set(bill_of_entry_item.gst_hsn_code, purchase_invoice_items.pur_hsn_code)
-        .join(bill_of_entry)
-        .on(bill_of_entry_item.parent == bill_of_entry.name)
         .join(purchase_invoice_items)
-        .on(purchase_invoice_items.pur_name == bill_of_entry.purchase_invoice)
-        .where(purchase_invoice_items.pur_item == bill_of_entry_item.item_code)
-        .where(bill_of_entry.docstatus == 1)
+        .on(purchase_invoice_items.name == bill_of_entry_item.pi_detail)
+        .where(bill_of_entry_item.docstatus == 1)
         .run()
     )

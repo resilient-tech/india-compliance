@@ -43,7 +43,6 @@ DOCTYPES_WITH_GST_DETAIL = {
     "Delivery Note",
     "Sales Invoice",
     "POS Invoice",
-    "Bill of Entry",
 }
 
 
@@ -955,10 +954,6 @@ class ItemGSTDetails:
         - Item count added to handle rounding errors
         """
 
-        if self.doc.doctype == "Bill of Entry":
-            self.get_tax_details_for_bill_of_entry()
-            return
-
         tax_details = frappe._dict()
 
         for row in self.doc.get("items"):
@@ -1006,6 +1001,9 @@ class ItemGSTDetails:
         for item in self.doc.get("items"):
             item.update(self.get_item_tax_detail(item))
 
+    def get_item_key(self, item):
+        return item.item_code or item.item_name
+
     def get_item_tax_detail(self, item):
         """
         - get item_tax_detail as it is if
@@ -1018,11 +1016,7 @@ class ItemGSTDetails:
                 - tax_amount
                 - count
         """
-        item_key = (
-            item.name
-            if self.doc.doctype == "Bill of Entry"
-            else item.item_code or item.item_name
-        )
+        item_key = self.get_item_key(item)
 
         item_tax_detail = self.item_tax_details.get(item_key)
         if not item_tax_detail:
@@ -1068,62 +1062,13 @@ class ItemGSTDetails:
 
             self.precision[fieldname] = field.precision or default_precision
 
-    def get_tax_details_for_bill_of_entry(self):
-        tax_details = frappe._dict()
-        taxable_value_map = {}
-
-        for row in self.doc.get("items"):
-            key = row.name
-            taxable_value_map[key] = row.taxable_value
-
-            if key not in tax_details:
-                tax_details[key] = self.item_defaults.copy()
-            tax_details[key]["count"] += 1
-
-        for row in self.doc.taxes:
-            if (
-                not row.tax_amount
-                or not row.item_wise_tax_rates
-                or row.account_head not in self.gst_account_map
-            ):
-                continue
-
-            account_type = self.gst_account_map[row.account_head]
-            tax = account_type[:-8]
-            tax_rate_field = f"{tax}_rate"
-            tax_amount_field = f"{tax}_amount"
-
-            old = json.loads(row.item_wise_tax_rates)
-
-            # update item taxes
-            for row_name in old:
-                if row_name not in tax_details:
-                    # Do not compute if Item is not present in Item table
-                    # There can be difference in Item Table and Item Wise Tax Details
-                    continue
-
-                item_taxes = tax_details[row_name]
-                tax_rate = old.get(row_name)
-
-                # cases when charge type == "Actual"
-                if not tax_rate:
-                    continue
-
-                tax_amount = tax_rate * taxable_value_map.get(row_name) / 100
-                item_taxes[tax_rate_field] = tax_rate
-                item_taxes[tax_amount_field] += tax_amount
-
-        self.item_tax_details = tax_details
-
 
 class ItemGSTTreatment:
     def set(self, doc):
         self.doc = doc
         is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
-        if doc.doctype == "Bill of Entry" or (
-            is_overseas_doc(doc) and is_sales_transaction
-        ):
+        if is_overseas_doc(doc) and is_sales_transaction:
             self.set_for_overseas()
             return
 

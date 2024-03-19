@@ -18,8 +18,70 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
     update_regional_gl_entries,
     update_valuation_rate,
 )
-from india_compliance.gst_india.overrides.transaction import update_gst_details
+from india_compliance.gst_india.overrides.transaction import (
+    ItemGSTDetails,
+    ItemGSTTreatment,
+    validate_non_taxable_items,
+)
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+
+
+class BOEGSTDetails(ItemGSTDetails):
+    def set_item_wise_tax_details(self):
+        tax_details = frappe._dict()
+        taxable_value_map = {}
+
+        for row in self.doc.get("items"):
+            key = row.name
+            taxable_value_map[key] = row.taxable_value
+
+            if key not in tax_details:
+                tax_details[key] = self.item_defaults.copy()
+            tax_details[key]["count"] += 1
+
+        for row in self.doc.taxes:
+            if (
+                not row.tax_amount
+                or not row.item_wise_tax_rates
+                or row.account_head not in self.gst_account_map
+            ):
+                continue
+
+            account_type = self.gst_account_map[row.account_head]
+            tax = account_type[:-8]
+            tax_rate_field = f"{tax}_rate"
+            tax_amount_field = f"{tax}_amount"
+
+            old = json.loads(row.item_wise_tax_rates)
+
+            # update item taxes
+            for row_name in old:
+                if row_name not in tax_details:
+                    # Do not compute if Item is not present in Item table
+                    # There can be difference in Item Table and Item Wise Tax Details
+                    continue
+
+                item_taxes = tax_details[row_name]
+                tax_rate = old.get(row_name)
+
+                # cases when charge type == "Actual"
+                if not tax_rate:
+                    continue
+
+                tax_amount = tax_rate * taxable_value_map.get(row_name) / 100
+                item_taxes[tax_rate_field] = tax_rate
+                item_taxes[tax_amount_field] += tax_amount
+
+        self.item_tax_details = tax_details
+
+    def get_item_key(self, item):
+        return item.name
+
+
+def update_gst_details(doc, method=None):
+    ItemGSTTreatment().set(doc)
+    BOEGSTDetails().update(doc)
+    validate_non_taxable_items(doc)
 
 
 class BillofEntry(Document):
@@ -200,7 +262,7 @@ class BillofEntry(Document):
                     ).format(tax.idx)
                 )
 
-            if not tax.charge_type == "Actual":
+            if tax.charge_type != "Actual":
                 continue
 
             item_wise_tax_rates = json.loads(tax.item_wise_tax_rates)
