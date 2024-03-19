@@ -159,14 +159,13 @@ def get_columns(filters):
                 "width": 120,
             },
             {"label": _("Total Tax"), "fieldname": "total_tax", "width": 120},
-            {"label": _("Return Against"), "fieldname": "return_against", "width": 120},
+            {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
             {
-                "label": _("Return Invoice Amount"),
-                "fieldname": "returned_invoice_base_grand_total",
+                "label": _("Retured Grand Total"),
+                "fieldname": "returned_base_grand_total",
                 "fieldtype": "Float",
                 "width": 120,
             },
-            {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
         ]
     )
     if not filters.invoice_category:
@@ -192,9 +191,13 @@ def get_invoices_for_item_wise_summary(filters=None):
         si_item.sgst_amount,
         si_item.igst_amount,
         (si_item.cess_amount + si_item.cess_non_advol_amount).as_("total_cess_amount"),
-        (si_item.cgst_amount + si_item.sgst_amount + si_item.igst_amount).as_(
-            "total_tax"
-        ),
+        (
+            si_item.cgst_amount
+            + si_item.sgst_amount
+            + si_item.igst_amount
+            + si_item.cess_amount
+            + si_item.cess_non_advol_amount
+        ).as_("total_tax"),
         (
             si_item.taxable_value
             + si_item.cgst_amount
@@ -226,6 +229,8 @@ def get_invoices_for_hsn_wise_summary(filters=None):
             Sum(si_item.cgst_amount)
             + Sum(si_item.sgst_amount)
             + Sum(si_item.igst_amount)
+            + Sum(si_item.cess_amount)
+            + Sum(si_item.cess_non_advol_amount)
         ).as_("total_tax"),
         (
             Sum(si_item.taxable_value)
@@ -262,7 +267,7 @@ def get_base_query(si, si_item):
             si.company_gstin,
             si.customer_name,
             si.name.as_("invoice_no"),
-            si.total,
+            IfNull(si.base_grand_total, si.grand_total).as_("base_grand_total"),
             si.posting_date,
             si.place_of_supply,
             si.is_reverse_charge,
@@ -270,12 +275,10 @@ def get_base_query(si, si_item):
             si.is_return,
             si.is_debit_note,
             si.return_against,
+            IfNull(returned_si.base_grand_total, 0).as_("returned_base_grand_total"),
             si.gst_category,
             si_item.gst_treatment,
             (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate).as_("gst_rate"),
-            IfNull(returned_si.base_grand_total, 0).as_(
-                "returned_invoice_base_grand_total"
-            ),
         )
         .where(si.docstatus == 1)
         .where(si.is_opening != "Yes")
@@ -331,16 +334,16 @@ class GSTR1Conditions:
         return invoice.company_gstin[:2] != invoice.place_of_supply[:2]
 
     def is_b2cl_cn_dn(self, invoice):
-        # if invoice.return_against:
-        #     doc = frappe.get_doc("Sales Invoice", invoice.return_against)
-        #     invoice_value = max(doc.total, invoice.total)
-        #     return invoice_value > B2C_LIMIT and self.is_inter_state(invoice)
+        if invoice.return_against:
+            invoice_value = max(
+                invoice.base_grand_total, invoice.returned_base_grand_total
+            )
+            return invoice_value > B2C_LIMIT and self.is_inter_state(invoice)
 
-        # return invoice.total > B2C_LIMIT and self.is_inter_state(invoice)
-        return self.is_inter_state(invoice)
+        return invoice.base_grand_total > B2C_LIMIT and self.is_inter_state(invoice)
 
     def is_b2cl_invoice(self, invoice):
-        return invoice.total > B2C_LIMIT and self.is_inter_state(invoice)
+        return invoice.base_grand_total > B2C_LIMIT and self.is_inter_state(invoice)
 
 
 class GSTR1Sections(GSTR1Conditions):
@@ -479,6 +482,7 @@ class GSTR1Invoices(GSTR1Sections):
                     continue
 
                 row.invoice_category = "B2CS"
+
         return invoices
 
     def get_filtered_invoices(self, invoices, invoice_category=None):
