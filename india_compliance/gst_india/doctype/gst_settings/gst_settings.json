@@ -50,6 +50,34 @@
   "gst_uom_map",
   "accounts_tab",
   "gst_accounts",
+  "purchase_reconciliation_tab",
+  "purchase_reconciliation_section",
+  "enable_auto_reconciliation",
+  "inward_supply_period",
+  "column_break_zlfe",
+  "gst_categories_section",
+  "reconcile_for_b2b",
+  "reconcile_for_b2ba",
+  "column_break_notc",
+  "reconcile_for_cdnr",
+  "reconcile_for_cdnra",
+  "column_break_jpws",
+  "reconcile_for_isd",
+  "reconcile_for_isda",
+  "column_break_brkt",
+  "reconcile_for_impg",
+  "reconcile_for_impgsez",
+  "auto_reconciliation_days_section",
+  "reconcile_on_monday",
+  "reconcile_on_friday",
+  "column_break_fghn",
+  "reconcile_on_tuesday",
+  "reconcile_on_saturday",
+  "column_break_koqs",
+  "reconcile_on_wednesday",
+  "reconcile_on_sunday",
+  "column_break_sdge",
+  "reconcile_on_thursday",
   "credentials_tab",
   "credentials",
   "api_secret",
@@ -366,6 +394,160 @@
    "label": "Enable e-Waybill Generation from Purchase Receipt"
   },
   {
+   "fieldname": "purchase_reconciliation_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_auto_reconciliation",
+   "fieldtype": "Check",
+   "label": "Enable Auto Reconciliation"
+  },
+  {
+   "fieldname": "column_break_zlfe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: india_compliance.is_api_enabled(doc)",
+   "fieldname": "purchase_reconciliation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Purchase Reconciliation"
+  },
+  {
+   "depends_on": "eval: doc.enable_auto_reconciliation",
+   "fieldname": "auto_reconciliation_days_section",
+   "fieldtype": "Section Break",
+   "label": "Auto Reconciliation Days"
+  },
+  {
+   "fieldname": "column_break_fghn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "2",
+   "depends_on": "eval: doc.enable_auto_reconciliation",
+   "description": "The Inward Supply data for the specified number of months will be used for reconciliation starting from the provided date.",
+   "fieldname": "inward_supply_period",
+   "fieldtype": "Int",
+   "label": "Inward Supply Period in months"
+  },
+  {
+   "depends_on": "eval: doc.enable_auto_reconciliation",
+   "fieldname": "gst_categories_section",
+   "fieldtype": "Section Break",
+   "label": "GST Categories"
+  },
+  {
+   "fieldname": "column_break_brkt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_notc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_jpws",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_koqs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_sdge",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_monday",
+   "fieldtype": "Check",
+   "label": "Monday"
+  },
+  {
+   "default": "1",
+   "fieldname": "reconcile_on_friday",
+   "fieldtype": "Check",
+   "label": "Friday"
+  },
+  {
+   "default": "1",
+   "fieldname": "reconcile_on_tuesday",
+   "fieldtype": "Check",
+   "label": "Tuesday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_saturday",
+   "fieldtype": "Check",
+   "label": "Saturday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_wednesday",
+   "fieldtype": "Check",
+   "label": "Wednesday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_sunday",
+   "fieldtype": "Check",
+   "label": "Sunday"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_on_thursday",
+   "fieldtype": "Check",
+   "label": "Thursday"
+  },
+  {
+   "default": "1",
+   "fieldname": "reconcile_for_b2b",
+   "fieldtype": "Check",
+   "label": "B2B"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_for_b2ba",
+   "fieldtype": "Check",
+   "label": "B2BA"
+  },
+  {
+   "default": "1",
+   "fieldname": "reconcile_for_cdnr",
+   "fieldtype": "Check",
+   "label": "CDNR"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_for_cdnra",
+   "fieldtype": "Check",
+   "label": "CDNRA"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_for_isd",
+   "fieldtype": "Check",
+   "label": "ISD"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_for_isda",
+   "fieldtype": "Check",
+   "label": "ISDA"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_for_impg",
+   "fieldtype": "Check",
+   "label": "IMPG"
+  },
+  {
+   "default": "0",
+   "fieldname": "reconcile_for_impgsez",
+   "fieldtype": "Check",
+   "label": "IMPGSEZ"
+  },
+  {
    "default": "0",
    "depends_on": "eval: india_compliance.is_api_enabled(doc)",
    "description": "Automatically Retry e-Invoice and e-Waybill Generation for GSP/GST Server Errors",
@@ -384,7 +566,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-01-22 18:09:00.011977",
+ "modified": "2024-03-14 11:04:18.651943",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

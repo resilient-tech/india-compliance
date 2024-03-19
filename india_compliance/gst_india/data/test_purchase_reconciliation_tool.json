@@ -1,0 +1,193 @@
+{
+    "TEST_CASES": {
+        "TEST_EXACT_MATCH": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-23-00001"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-00001"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00001",
+                    "classification": "B2B",
+                    "differences": "",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "match_status": "Exact Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0
+                }
+            },
+            {
+                "BILL_OF_ENTRY": {
+                    "bill_no": "BILL-23-00011"
+                },
+                "INWARD_SUPPLY": {
+                    "supplier_name": "_Test Foreign Supplier",
+                    "bill_no": "BILL-23-00011",
+                    "bill_date": "2023-12-11",
+                    "classification": "IMPG",
+                    "doc_type": "Bill of Entry",
+                    "supply_type": "",
+                    "place_of_supply": "24-Gujarat",
+                    "items": [
+                        {
+                            "taxable_value": 10000,
+                            "rate": 18,
+                            "igst": 1800
+                        }
+                    ],
+                    "document_value": 11800,
+                    "supplier_gstin": null,
+                    "itc_availability": "Yes",
+                    "return_period_2b": "122023",
+                    "gen_date_2b": "2023-12-11"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00011",
+                    "classification": "IMPG",
+                    "differences": "",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "match_status": "Exact Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Bill of Entry",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "_Test Foreign Supplier",
+                    "supplier_name": "_Test Foreign Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0
+                }
+            },
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-23-00010",
+                    "company_gstin": "29AABCR1718E1ZL"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-00010",
+                    "company_gstin": "29AABCR1718E1ZL"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00010",
+                    "classification": "B2B",
+                    "differences": "",
+                    "inward_supply_company_gstin": "29AABCR1718E1ZL",
+                    "inward_supply_name": "",
+                    "match_status": "Exact Match",
+                    "purchase_company_gstin": "29AABCR1718E1ZL",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0
+                }
+            }
+        ],
+        "TEST_DIFFERENT_COMPANY_GSTIN_MISMATCH": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-23-00021",
+                    "company_gstin": "24AAQCA8719H1ZC"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-00021",
+                    "company_gstin": "29AABCR1718E1ZL"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00021",
+                    "classification": "B2B",
+                    "differences": "COMPANY_GSTIN",
+                    "inward_supply_company_gstin": "29AABCR1718E1ZL",
+                    "inward_supply_name": "",
+                    "match_status": "Mismatch",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0
+                }
+            }
+        ],
+        "TEST_ROUNDING_DIFFERENCE_SUGGESTED_MATCH": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-23-00030"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-00030",
+                    "items": [
+                        {
+                            "taxable_value": 10000.50,
+                            "rate": 18,
+                            "sgst": 900.045,
+                            "cgst": 900.045
+                        }
+                    ],
+                    "document_value": 11800.09
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00030",
+                    "classification": "B2B",
+                    "differences": "Rounding Difference, TAXABLE_VALUE, CGST, SGST",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "match_status": "Suggested Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": -0.09,
+                    "taxable_value_difference": -0.5
+                }
+            }
+        ],
+        "TEST_BILL_NO_SUGGESTED_MATCH": [
+            {
+                "PURCHASE_INVOICE": {
+                    "bill_no": "BILL-23-00040"
+                },
+                "INWARD_SUPPLY": {
+                    "bill_no": "BILL-23-00045"
+                },
+                "RECONCILED_DATA": {
+                    "action": "No Action",
+                    "bill_date": "2023-12-11",
+                    "bill_no": "BILL-23-00040",
+                    "classification": "B2B",
+                    "differences": "",
+                    "inward_supply_company_gstin": "24AAQCA8719H1ZC",
+                    "inward_supply_name": "",
+                    "match_status": "Suggested Match",
+                    "purchase_company_gstin": "24AAQCA8719H1ZC",
+                    "purchase_doctype": "Purchase Invoice",
+                    "purchase_invoice_name": "",
+                    "supplier_gstin": "24AABCR6898M1ZN",
+                    "supplier_name": "_Test Registered Supplier",
+                    "tax_difference": 0.0,
+                    "taxable_value_difference": 0.0
+                }
+            }
+        ]
+    }
+}
