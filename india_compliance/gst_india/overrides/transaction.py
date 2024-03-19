@@ -1068,13 +1068,15 @@ class ItemGSTTreatment:
         self.doc = doc
         is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
-        if is_overseas_doc(doc) and is_sales_transaction:
+        if is_sales_transaction and is_overseas_doc(doc):
             self.set_for_overseas()
             return
 
         self.gst_accounts = get_all_gst_accounts(self.doc.company)
         has_gst_accounts = any(
-            row.account_head in self.gst_accounts for row in self.doc.taxes
+            row.account_head in self.gst_accounts
+            and (row.get("base_tax_amount_after_discount_amount") or row.tax_amount)
+            for row in self.doc.taxes
         )
 
         if not has_gst_accounts:

@@ -11,6 +11,7 @@ from india_compliance.patches.post_install.improve_item_tax_template import (
 
 
 def execute():
+    set_gst_treatment()
     companies = get_indian_companies()
     update_gst_details_for_transactions(companies)
 
@@ -119,3 +120,33 @@ def get_items_for_docs(docs, doctype):
     )
 
     return query.run(as_dict=True)
+
+
+def set_gst_treatment():
+
+    # based on item_tax_template
+    boe = frappe.qb.DocType("Bill of Entry")
+    boe_item = frappe.qb.DocType("Bill of Entry Item", alias="boe_item")
+    item_tax_template = frappe.qb.DocType("Item Tax Template")
+
+    (
+        frappe.qb.update(boe_item)
+        .left_join(item_tax_template)
+        .on(item_tax_template.name == boe_item.item_tax_template)
+        .set(boe_item.gst_treatment, item_tax_template.gst_treatment)
+        .where(boe_item.docstatus == 1)
+        .run()
+    )
+
+    # if no taxes are applied all the items are nil-rated
+
+    (
+        frappe.qb.update(boe_item)
+        .join(boe)
+        .on(boe.name == boe_item.parent)
+        .set(boe_item.gst_treatment, "Nil-Rated")
+        .where(boe_item.docstatus == 1)
+        .where(boe.total_taxes == 0)
+        .where((boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST"))))
+        .run()
+    )
