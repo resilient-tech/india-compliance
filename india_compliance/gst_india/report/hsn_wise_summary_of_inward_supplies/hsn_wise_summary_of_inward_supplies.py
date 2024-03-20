@@ -53,13 +53,10 @@ def get_invoice_data(doctype, filters):
             invoice_item.igst_amount,
             invoice_item.cgst_amount,
             invoice_item.sgst_amount,
-            (
-                invoice_item.igst_amount
-                + invoice_item.cgst_amount
-                + invoice_item.sgst_amount
-            ).as_("total_amount"),
             invoice_item.taxable_value.as_("taxable_amount"),
-            (invoice_item.cess_amount + invoice_item.cess_non_advol_amount).as_("cess_amount"),
+            (invoice_item.cess_amount + invoice_item.cess_non_advol_amount).as_(
+                "cess_amount"
+            ),
         )
         .where(Date(invoice.posting_date).between(filters.from_date, filters.to_date))
         .where(IfNull(invoice_item.gst_hsn_code, "") != "")
@@ -93,7 +90,13 @@ def get_inward_data(purchase_invoice_data, boe_data):
             # Sum(query.uqc).as_("uqc"),
             # Sum(query.stock_qty).as_("stock_qty"),
             query.tax_rate.as_("tax_rate"),
-            Sum(query.total_amount).as_("total_amount"),
+            Sum(
+                query.igst_amount
+                + query.cgst_amount
+                + query.sgst_amount
+                + query.taxable_amount
+                + query.cess_amount
+            ).as_("total_amount"),
             Sum(query.taxable_amount).as_("taxable_amount"),
             Sum(query.igst_amount).as_("igst_amount"),
             Sum(query.cgst_amount).as_("cgst_amount"),
