@@ -1,6 +1,7 @@
 import click
 
 import frappe
+from frappe.query_builder.functions import IfNull
 
 from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import BOEGSTDetails
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -129,5 +130,16 @@ def set_gst_treatment():
         .where(boe_item.docstatus == 1)
         .where(boe.total_taxes == 0)
         .where((boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST"))))
+        .run()
+    )
+
+    (
+        frappe.qb.update(boe_item)
+        .join(boe)
+        .on(boe.name == boe_item.parent)
+        .set(boe_item.gst_treatment, "Taxable")
+        .where(boe_item.docstatus == 1)
+        .where(boe.total_taxes != 0)
+        .where(IfNull(boe.gst_treatment, "") == "")
         .run()
     )

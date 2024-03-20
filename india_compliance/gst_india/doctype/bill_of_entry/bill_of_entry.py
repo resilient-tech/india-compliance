@@ -21,6 +21,7 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
+    validate_charge_type_for_cess_non_advol_accounts,
     validate_non_taxable_items,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
@@ -33,7 +34,7 @@ class BOEGSTDetails(ItemGSTDetails):
 
         for row in self.doc.get("items"):
             key = row.name
-            item_map[row.name] = row
+            item_map[key] = row
             tax_details[key] = self.item_defaults.copy()
             tax_details[key]["count"] += 1
 
@@ -65,9 +66,7 @@ class BOEGSTDetails(ItemGSTDetails):
                 item = item_map.get(row_name)
 
                 multiplier = (
-                    item.qty
-                    if tax == "cess_non_advol"
-                    else flt(item.taxable_value) / 100
+                    item.qty if tax == "cess_non_advol" else item.taxable_value / 100
                 )
 
                 # cases when charge type == "Actual"
@@ -213,9 +212,9 @@ class BillofEntry(Document):
             multiplier = (
                 item.qty
                 if charge_type == "On Item Quantity"
-                else flt(item.taxable_value) / 100
+                else item.taxable_value / 100
             )
-            tax_amount += item_wise_tax_rates.get(item.name, 0) * multiplier
+            tax_amount += flt(item_wise_tax_rates.get(item.name, 0)) * multiplier
 
         return tax_amount
 
@@ -276,29 +275,9 @@ class BillofEntry(Document):
                     ).format(tax.idx)
                 )
 
-            if (
-                tax.charge_type == "On Item Quantity"
-                and tax.account_head != input_accounts.cess_non_advol_account
-            ):
-                frappe.throw(
-                    _(
-                        "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
-                        " as it is not a Cess Non Advol Account"
-                    ).format(row.idx),
-                    title=_("Invalid Charge Type"),
-                )
-
-            if (
-                tax.charge_type != "On Item Quantity"
-                and tax.account_head == input_accounts.cess_non_advol_account
-            ):
-                frappe.throw(
-                    _(
-                        "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
-                        " as it is a Cess Non Advol Account"
-                    ).format(row.idx),
-                    title=_("Invalid Charge Type"),
-                )
+            validate_charge_type_for_cess_non_advol_accounts(
+                [input_accounts.cess_non_advol_account], tax
+            )
 
             if tax.charge_type == "Actual":
 
@@ -316,7 +295,7 @@ class BillofEntry(Document):
                 total_tax = 0
                 for item, rate in item_wise_tax_rates.items():
                     item_taxable_value = taxable_value_map.get(item, 0)
-                    total_tax += flt(item_taxable_value) * flt(rate) / 100
+                    total_tax += item_taxable_value * rate / 100
 
                 tax_difference = abs(total_tax - tax.tax_amount)
 

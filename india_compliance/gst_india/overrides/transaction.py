@@ -395,29 +395,8 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
-        if (
-            row.charge_type == "On Item Quantity"
-            and account_head not in cess_non_advol_accounts
-        ):
-            _throw(
-                _(
-                    "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
-                    " as it is not a Cess Non Advol Account"
-                ).format(row.idx),
-                title=_("Invalid Charge Type"),
-            )
-
-        if (
-            row.charge_type != "On Item Quantity"
-            and account_head in cess_non_advol_accounts
-        ):
-            _throw(
-                _(
-                    "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
-                    " as it is a Cess Non Advol Account"
-                ).format(row.idx),
-                title=_("Invalid Charge Type"),
-            )
+        # validating charge type "On Item Quantity" and non_cess_advol_account
+        validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, row)
 
     used_accounts = set(row.account_head for row in rows_to_validate)
     if not is_inter_state:
@@ -456,6 +435,32 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             )
 
     return all_valid_accounts
+
+
+def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, row):
+    if (
+        row.charge_type == "On Item Quantity"
+        and row.account_head not in cess_non_advol_accounts
+    ):
+        frappe.throw(
+            _(
+                "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
+                " as it is not a Cess Non Advol Account"
+            ).format(row.idx),
+            title=_("Invalid Charge Type"),
+        )
+
+    if (
+        row.charge_type != "On Item Quantity"
+        and row.account_head in cess_non_advol_accounts
+    ):
+        frappe.throw(
+            _(
+                "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
+                " as it is a Cess Non Advol Account"
+            ).format(row.idx),
+            title=_("Invalid Charge Type"),
+        )
 
 
 def validate_items(doc):
@@ -1074,9 +1079,7 @@ class ItemGSTTreatment:
 
         self.gst_accounts = get_all_gst_accounts(self.doc.company)
         has_gst_accounts = any(
-            row.account_head in self.gst_accounts
-            and (row.get("base_tax_amount_after_discount_amount") or row.tax_amount)
-            for row in self.doc.taxes
+            row.account_head in self.gst_accounts for row in self.doc.taxes
         )
 
         if not has_gst_accounts:
