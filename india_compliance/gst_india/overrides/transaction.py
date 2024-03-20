@@ -912,8 +912,8 @@ class ItemGSTDetails:
         if not self.gst_account_map:
             return
 
-        self.set_item_wise_tax_details()
         self.set_tax_amount_precisions(doc.doctype)
+        self.set_item_wise_tax_details()
         self.update_item_tax_details()
 
     def set_gst_accounts_and_item_defaults(self, doctype, company):
