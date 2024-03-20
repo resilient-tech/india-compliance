@@ -5,6 +5,7 @@
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Date, IfNull, Sum
+from india_compliance.gst_india.utils.__init__ import get_gst_uom
 
 
 def execute(filters=None):
@@ -27,8 +28,11 @@ def get_data(filters):
 
     purchase_invoice_data = get_invoice_data("Purchase Invoice", filters)
     boe_data = get_invoice_data("Bill of Entry", filters)
-
-    return get_inward_data(purchase_invoice_data, boe_data)
+    data =  get_inward_data(purchase_invoice_data, boe_data)
+    return data
+    # for item in data:
+    #     item["gst_uom"] = get_gst_uom(item.get("uom"))
+    # return data
 
 
 def get_invoice_data(doctype, filters):
@@ -45,7 +49,7 @@ def get_invoice_data(doctype, filters):
         .select(
             invoice_item.gst_hsn_code.as_("gst_hsn_code"),
             IfNull(hsn_code.description, "").as_("description"),
-            # invoice_item.stock_uom.as_("uqc"),
+            # invoice_item.stock_uom.as_("uom"),
             # invoice_item.stock_qty,
             (
                 invoice_item.cgst_rate + invoice_item.sgst_rate + invoice_item.igst_rate
@@ -87,7 +91,7 @@ def get_inward_data(purchase_invoice_data, boe_data):
         .select(
             query.gst_hsn_code.as_("gst_hsn_code"),
             query.description,
-            # Sum(query.uqc).as_("uqc"),
+            # Sum(query.uom).as_("uom"),
             # Sum(query.stock_qty).as_("stock_qty"),
             query.tax_rate.as_("tax_rate"),
             Sum(
@@ -105,7 +109,7 @@ def get_inward_data(purchase_invoice_data, boe_data):
         )
         .groupby(
             query.gst_hsn_code,
-            # query.uqc
+            # query.uom
             query.tax_rate,
         )
     )
@@ -128,8 +132,14 @@ def get_columns(filters=None):
             "width": 300,
         },
         {
-            "fieldname": "uqc",
-            "label": _("UQC"),
+            "fieldname": "uom",
+            "label": _("UOM"),
+            "fieldtype": "Data",
+            "width": 100,
+        },
+        {
+            "fieldname": "gst_uom",
+            "label": _("GST UOM"),
             "fieldtype": "Data",
             "width": 100,
         },
