@@ -7,6 +7,7 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.patches.post_install.improve_item_tax_template import (
     build_query_and_update_gst_details,
     compile_docs,
+    get_items_for_docs,
 )
 
 
@@ -100,26 +101,6 @@ def get_taxes_for_docs(docs, doctype):
         .where(taxes.parent.isin(docs))
         .run(as_dict=True)
     )
-
-
-def get_items_for_docs(docs, doctype):
-    item_doctype = f"{doctype} Item"
-    item = frappe.qb.DocType(item_doctype)
-
-    query = (
-        frappe.qb.from_(item)
-        .select(
-            item.name,
-            item.parent,
-            item.item_code,
-            item.item_name,
-            item.taxable_value,
-        )
-        .where(item.parenttype == doctype)
-        .where(item.parent.isin(docs))
-    )
-
-    return query.run(as_dict=True)
 
 
 def set_gst_treatment():

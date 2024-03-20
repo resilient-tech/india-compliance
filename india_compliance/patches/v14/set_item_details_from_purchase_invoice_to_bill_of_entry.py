@@ -1,5 +1,4 @@
 import frappe
-from frappe.query_builder.functions import IfNull
 
 
 def execute():
@@ -11,7 +10,8 @@ def execute():
         .left_join(pi_item)
         .on(pi_item.name == boe_item.pi_detail)
         .set(boe_item.gst_hsn_code, pi_item.gst_hsn_code)
+        .set(boe_item.qty, pi_item.qty)
+        .set(boe_item.uom, pi_item.uom)
         .where(boe_item.docstatus == 1)
-        .where(IfNull(boe_item.gst_hsn_code, "") == "")
         .run()
     )
