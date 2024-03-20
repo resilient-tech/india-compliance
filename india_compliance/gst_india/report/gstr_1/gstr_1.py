@@ -12,6 +12,12 @@ from frappe.query_builder import Criterion
 from frappe.query_builder.functions import IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
+from india_compliance.gst_india.report.hsn_wise_summary_of_inward_supplies.hsn_wise_summary_of_inward_supplies import (
+    get_columns as get_inward_columns,
+)
+from india_compliance.gst_india.report.hsn_wise_summary_of_inward_supplies.hsn_wise_summary_of_inward_supplies import (
+    get_data as get_inward_data,
+)
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
     get_columns as get_hsn_columns,
 )
@@ -110,6 +116,9 @@ class Gstr1Report:
             self.get_documents_issued_data()
         elif self.filters.get("type_of_business") == "HSN":
             self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
+        elif self.filters.get("type_of_business") == "HSNI":
+            self.data = get_inward_data(self.filters)
+
         elif self.invoices:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
@@ -1033,6 +1042,9 @@ class Gstr1Report:
             ]
         elif self.filters.get("type_of_business") == "HSN":
             self.columns = get_hsn_columns()
+        elif self.filters.get("type_of_business") == "HSNI":
+            self.columns = get_inward_columns()
+
             return
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 

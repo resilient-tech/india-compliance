@@ -12,6 +12,7 @@ const TYPES_OF_BUSINESS = {
     "NIL Rated": __("NIL RATED/EXEMPTED Invoices"),
     "Document Issued Summary": __("Document Issued Summary"),
     HSN: __("HSN-wise-summary of outward supplies"),
+    HSNI: __("HSN-wise-summary of inward supplies"),
 };
 
 const url = "india_compliance.gst_india.report.gstr_1.gstr_1";

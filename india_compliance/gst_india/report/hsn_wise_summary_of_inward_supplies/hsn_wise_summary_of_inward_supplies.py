@@ -11,7 +11,7 @@ def execute(filters=None):
     validate_filters(filters)
 
     columns = get_columns(filters)
-    data = get_invoice_data(filters)
+    data = get_data(filters)
 
     return columns, data
 
@@ -24,11 +24,11 @@ def validate_filters(filters):
 
 
 def get_data(filters):
+
     purchase_invoice_data = get_invoice_data("Purchase Invoice", filters)
     boe_data = get_invoice_data("Bill of Entry", filters)
-    data = []
 
-    return data
+    return get_inward_data(purchase_invoice_data, boe_data)
 
 
 def get_invoice_data(doctype, filters):
@@ -44,27 +44,31 @@ def get_invoice_data(doctype, filters):
         .on(invoice_item.gst_hsn_code == hsn_code.hsn_code)
         .select(
             invoice_item.gst_hsn_code.as_("gst_hsn_code"),
-            IfNull(hsn_code.description, "").as_("hsn_code.description"),
-            invoice_item.stock_uom.as_("uqc"),
-            invoice_item.stock_qty,
-            invoice_item.cgst_rate,
-            invoice_item.sgst_rate,
-            invoice_item.igst_rate,
+            IfNull(hsn_code.description, "").as_("description"),
+            # invoice_item.stock_uom.as_("uqc"),
+            # invoice_item.stock_qty,
+            (
+                invoice_item.cgst_rate + invoice_item.sgst_rate + invoice_item.igst_rate
+            ).as_("tax_rate"),
             invoice_item.igst_amount,
             invoice_item.cgst_amount,
             invoice_item.sgst_amount,
-            invoice_item.taxable_value,
-            invoice_item.cess_amount,
-            invoice_item.cess_non_advol_amount,
+            (
+                invoice_item.igst_amount
+                + invoice_item.cgst_amount
+                + invoice_item.sgst_amount
+            ).as_("total_amount"),
+            invoice_item.taxable_value.as_("taxable_amount"),
+            (invoice_item.cess_amount + invoice_item.cess_non_advol_amount).as_("cess_amount"),
         )
-        .where(
-            Date(invoice.posting_date).between(filters.from_date, filters.to_date),
-            IfNull(invoice_item.gst_hsn_code, "") != "",
-            invoice.company == filters.company,
-            invoice.docstatus == 1,
-            invoice.is_opening != "Yes",
-        )
+        .where(Date(invoice.posting_date).between(filters.from_date, filters.to_date))
+        .where(IfNull(invoice_item.gst_hsn_code, "") != "")
+        .where(invoice.company == filters.company)
+        .where(invoice.docstatus == 1)
     )
+
+    if doctype == "Purchase Invoice":
+        query = query.where(invoice.is_opening != "Yes")
 
     if filters.get("compnay_gstin"):
         query = query.where(IfNull(invoice.company_gstin, "") == filters.company_gstin)
@@ -74,10 +78,38 @@ def get_invoice_data(doctype, filters):
             IfNull(invoice_item.gst_hsn_code, "") == filters.gst_hsn_code
         )
 
-    return query.run(as_dict=True)
+    return query
 
 
-def get_columns(filters):
+def get_inward_data(purchase_invoice_data, boe_data):
+
+    query = purchase_invoice_data * boe_data
+
+    data = (
+        frappe.qb.from_(query)
+        .select(
+            query.gst_hsn_code.as_("gst_hsn_code"),
+            query.description,
+            # Sum(query.uqc).as_("uqc"),
+            # Sum(query.stock_qty).as_("stock_qty"),
+            query.tax_rate.as_("tax_rate"),
+            Sum(query.total_amount).as_("total_amount"),
+            Sum(query.taxable_amount).as_("taxable_amount"),
+            Sum(query.igst_amount).as_("igst_amount"),
+            Sum(query.cgst_amount).as_("cgst_amount"),
+            Sum(query.sgst_amount).as_("sgst_amount"),
+            Sum(query.cess_amount).as_("cess_amount"),
+        )
+        .groupby(
+            query.gst_hsn_code,
+            # query.uqc
+            query.tax_rate,
+        )
+    )
+    return data.run(as_dict=True)
+
+
+def get_columns(filters=None):
     columns = [
         {
             "fieldname": "gst_hsn_code",
@@ -127,19 +159,25 @@ def get_columns(filters):
         {
             "fieldname": "igst_amount",
             "label": _("Total IGST Amount"),
-            "fieldtype": "Int",
+            "fieldtype": "Float",
             "width": 120,
         },
         {
             "fieldname": "sgst_amount",
             "label": _("Total SGST Amount"),
-            "fieldtype": "Int",
+            "fieldtype": "Float",
             "width": 120,
         },
         {
             "fieldname": "cgst_amount",
             "label": _("Total CGST Amount"),
-            "fieldtype": "Int",
+            "fieldtype": "Float",
+            "width": 120,
+        },
+        {
+            "fieldname": "cess_amount",
+            "label": _("Total CESS Amount"),
+            "fieldtype": "Float",
             "width": 120,
         },
     ]
