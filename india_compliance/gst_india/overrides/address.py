@@ -9,6 +9,24 @@ from india_compliance.gst_india.utils import (
     validate_pincode,
 )
 
+def set_gstin_and_gstCategory(doc, method=None):
+    links = doc.links
+
+    for link in links:
+        doctype = link.link_doctype
+        docname = link.link_name
+
+        if doctype not in ['Customer','Supplier']:
+            continue
+
+        gstin = doc.gstin
+        if gstin:
+            frappe.db.set_value(doctype,docname,"gstin",gstin)
+
+        gst_category = doc.gst_category
+        if gst_category:
+            frappe.db.set_value(doctype, docname, "gst_category", gst_category)
+
 
 def validate(doc, method=None):
     doc.gstin = validate_gstin(doc.gstin)
