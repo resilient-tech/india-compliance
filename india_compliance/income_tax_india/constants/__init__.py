@@ -22,6 +22,7 @@ TDS_SECTIONS = [
     "194LBB",
     "194IA",
     "194N",
+    "194Q",
 ]
 
 TDS_ENTITY_TYPE = ["Individual", "Company", "Company Assessee", "No PAN / Invalid PAN"]
