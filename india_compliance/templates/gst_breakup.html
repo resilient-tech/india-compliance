@@ -31,7 +31,7 @@
                         {% else %}
                             <td class="text-right">
                                 {% if value.tax_rate or not value.tax_amount %}
-                                    ({{ value.tax_rate }}%)
+                                    ({{ value.tax_rate }}%)&nbsp;
                                 {% endif %}
 
                                 {% if doc.get('is_return') %}
