@@ -1355,8 +1355,54 @@ def validate_ecommerce_gstin(doc):
 def update_gst_details(doc, method=None):
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
+<<<<<<< HEAD
 
     ItemGSTTreatment().set(doc)
+=======
+        validate_item_tax_template(doc)
+
+
+def validate_item_tax_template(doc):
+    if not doc.items or not doc.taxes:
+        return
+
+    non_taxable_items_with_tax = []
+    taxable_items_with_no_tax = []
+
+    for item in doc.items:
+        if item.gst_treatment == "Zero-Rated" and not doc.get("is_export_with_gst"):
+            continue
+
+        total_taxes = abs(item.igst_amount + item.cgst_amount + item.sgst_amount)
+
+        if total_taxes and item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST"):
+            non_taxable_items_with_tax.append(item.idx)
+
+        if not total_taxes and item.gst_treatment in ("Taxable", "Zero-Rated"):
+            taxable_items_with_no_tax.append(item.idx)
+
+    # Case: Zero Tax template with taxes or missing GST Accounts
+    if non_taxable_items_with_tax:
+        frappe.throw(
+            _(
+                "Cannot charge GST on Non-Taxable Items.<br>"
+                "Are the taxes setup correctly in Item Tax Template? Please select"
+                " the correct Item Tax Template for following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in non_taxable_items_with_tax)),
+            title=_("Invalid Items"),
+        )
+>>>>>>> f588cb8c (fix: validate inconsistent gst treatment with item taxes)
+
+    # Case: Taxable template with missing GST Accounts
+    if taxable_items_with_no_tax:
+        frappe.throw(
+            _(
+                "No GST is being charged on Taxable Items.<br>"
+                "Are there missing GST accounts in Item Tax Template? Please"
+                " verify the Item Tax Template for following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in taxable_items_with_no_tax)),
+            title=_("Invalid Items"),
+        )
 
 
 def after_mapping(target_doc, method=None, source_doc=None):
