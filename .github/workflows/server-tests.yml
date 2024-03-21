@@ -1,6 +1,17 @@
 name: Server Tests
 
 on:
+    workflow_call:
+      inputs:
+        base_ref:
+          type : string
+
+        app_name:
+          type : string
+      
+      secrets:
+        codecov_token:
+    
     pull_request:
         paths-ignore:
             - "**.css"
@@ -18,7 +29,8 @@ on:
             - "**.html"
             - "**.csv"
 env:
-    IC_BRANCH: ${{ github.base_ref || github.ref_name }}
+    BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
+    APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
 
 jobs:
     tests:
@@ -94,10 +106,14 @@ jobs:
               run: |
                   bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
               env:
+<<<<<<< HEAD
                   BRANCH_TO_CLONE: ${{ env.IC_BRANCH == 'next' && 'develop' || env.IC_BRANCH }}
+=======
+                  BRANCH_TO_CLONE: ${{ env.BRANCH }}
+>>>>>>> 41764e9c (ci: allow workflow call for other projects to use (#1791))
 
             - name: Run Tests
-              run: cd ~/frappe-bench/ && bench --site test_site run-tests --app india_compliance --coverage
+              run: cd ~/frappe-bench/ && bench --site test_site run-tests --app ${{ env.APP_NAME }} --coverage
               env:
                   TYPE: server
 
@@ -113,6 +129,8 @@ jobs:
 
     coverage:
         name: Coverage Wrap Up
+        env:
+            CODECOV_TOKEN: ${{ secrets.codecov_token || secrets.CODECOV_TOKEN }}
         needs: tests
         runs-on: ubuntu-latest
         steps:
@@ -123,9 +141,10 @@ jobs:
           uses: actions/download-artifact@v4
 
         - name: Upload coverage data
+          if: github.event.repository.name == 'india-compliance' || env.CODECOV_TOKEN != ''
           uses: codecov/codecov-action@v4
           env:
-            CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+            CODECOV_TOKEN: ${{ env.CODECOV_TOKEN }}
           with:
             name: MariaDB
             fail_ci_if_error: true
