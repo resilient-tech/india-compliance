@@ -58,11 +58,15 @@ function validate_gstin(doctype) {
                 frappe.throw(__("GSTIN/UIN should be 15 characters long"));
             }
 
-            gstin = india_compliance.validate_gstin(gstin);
-
             if (TCS_REGEX.test(gstin)) {
-                frappe.throw(__("e-Commerce Operator (TCS) GSTIN is not allowed to be set in Party/Address"));
+                frappe.throw(
+                    __(
+                        "e-Commerce Operator (TCS) GSTIN is not allowed to be set in Party/Address"
+                    )
+                );
             }
+
+            gstin = india_compliance.validate_gstin(gstin);
 
             frm.doc.gstin = gstin;
             frm.refresh_field("gstin");
