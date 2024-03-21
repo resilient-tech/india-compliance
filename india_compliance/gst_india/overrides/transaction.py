@@ -55,9 +55,13 @@ def set_gst_breakup(doc, method=None, print_settings=None):
     ):
         return
 
-    doc.gst_breakup_table = frappe.render_template(
+    gst_breakup_html = frappe.render_template(
         "templates/gst_breakup.html", dict(doc=doc)
     )
+    if not gst_breakup_html:
+        return
+
+    doc.gst_breakup_table = gst_breakup_html.replace("\n", "").replace("    ", "")
 
 
 def update_taxable_values(doc, valid_accounts):
