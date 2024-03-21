@@ -342,7 +342,7 @@ def _update_gst_details(company, doctype, is_sales_doctype, docs):
 
             taxes = get_taxes_for_docs(chunk, doctype, is_sales_doctype)
             items = get_items_for_docs(chunk, doctype)
-            complied_docs = compile_docs(taxes, items)
+            complied_docs = compile_docs(taxes, items, doctype)
 
             if not complied_docs:
                 continue
@@ -408,7 +408,7 @@ def get_items_for_docs(docs, doctype):
     )
 
 
-def compile_docs(taxes, items):
+def compile_docs(taxes, items, doctype):
     """
     Complie docs, so that each one could be accessed as if it's a single doc.
     """
@@ -416,13 +416,13 @@ def compile_docs(taxes, items):
 
     for tax in taxes:
         if tax.parent not in response:
-            response[tax.parent] = frappe._dict(taxes=[], items=[])
+            response[tax.parent] = frappe._dict(taxes=[], items=[], doctype=doctype)
 
         response[tax.parent]["taxes"].append(tax)
 
     for item in items:
         if item.parent not in response:
-            response[item.parent] = frappe._dict(taxes=[], items=[])
+            response[item.parent] = frappe._dict(taxes=[], items=[], doctype=doctype)
 
         response[item.parent]["items"].append(item)
 

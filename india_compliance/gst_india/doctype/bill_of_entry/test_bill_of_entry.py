@@ -1,6 +1,9 @@
 # Copyright (c) 2023, Resilient Tech and Contributors
 # See license.txt
 
+import json
+import re
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from frappe.utils import today
@@ -10,6 +13,8 @@ from india_compliance.gst_india.doctype.bill_of_entry.bill_of_entry import (
     make_journal_entry_for_payment,
     make_landed_cost_voucher,
 )
+from india_compliance.gst_india.overrides.test_transaction import create_cess_accounts
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.tests import create_purchase_invoice
 
 
@@ -101,3 +106,125 @@ class TestBillofEntry(FrappeTestCase):
             },
             lcv,
         )
+
+    def test_gst_details_in_boe(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        # Create BOE
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.items[0].customs_duty = 100
+        boe.save()
+
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Taxable",
+                "igst_rate": 18,
+                "cgst_rate": 0,
+                "sgst_rate": 0,
+                "cess_rate": 0,
+                "cess_non_advol_rate": 0,
+                "igst_amount": 36,
+                "cgst_amount": 0,
+                "sgst_amount": 0,
+                "cess_amount": 0,
+                "cess_non_advol_amount": 0,
+            },
+            boe.items[0],
+        )
+
+        # test cess non_advol
+        create_cess_accounts()
+
+        gst_accounts = get_gst_accounts_by_type(boe.company, "Input")
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "On Item Quantity",
+                "account_head": gst_accounts.cess_non_advol_account,
+                "rate": 20,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": {},
+            },
+        )
+
+        boe.save()
+        self.assertDocumentEqual(
+            {
+                "gst_treatment": "Taxable",
+                "igst_rate": 18,
+                "cgst_rate": 0,
+                "sgst_rate": 0,
+                "cess_rate": 0,
+                "cess_non_advol_rate": 20,
+                "igst_amount": 36,
+                "cgst_amount": 0,
+                "sgst_amount": 0,
+                "cess_amount": 0,
+                "cess_non_advol_amount": 20,
+            },
+            boe.items[0],
+        )
+
+    def test_charge_type_actual_without_item_wise_tax_rates(self):
+        pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
+
+        # Create BOE
+        boe = make_bill_of_entry(pi.name)
+        boe.bill_of_entry_no = "123"
+        boe.bill_of_entry_date = today()
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Input Tax IGST - _TIRC",
+                "tax_amount": 18,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": {},
+            },
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"
+            ),
+            boe.save,
+        )
+
+        boe.taxes = []
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Input Tax IGST - _TIRC",
+                "tax_amount": 30,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": json.dumps({boe.items[0].name: 18}),
+            },
+        )
+
+        self.assertRaisesRegex(
+            frappe.exceptions.ValidationError,
+            re.compile(
+                r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"
+            ),
+            boe.save,
+        )
+
+        boe.taxes = []
+
+        boe.append(
+            "taxes",
+            {
+                "charge_type": "Actual",
+                "account_head": "Input Tax IGST - _TIRC",
+                "tax_amount": 18,
+                "cost_center": "Main - _TIRC",
+                "item_wise_tax_rates": json.dumps({boe.items[0].name: 18}),
+            },
+        )
+
+        boe.save()
