@@ -30,7 +30,7 @@ on:
             - "**.csv"
 env:
     BRANCH: ${{ inputs.base_ref || github.base_ref || github.ref_name }}
-    APP_NAME: ${{ inputs.app_name }} || "india_compliance"
+    APP_NAME: ${{ inputs.app_name || 'india_compliance' }}
 
 jobs:
     tests:
@@ -137,7 +137,7 @@ jobs:
           uses: actions/download-artifact@v4
 
         - name: Upload coverage data
-          if: env.CODECOV_TOKEN != ''
+          if: github.event.repository.name == 'india-compliance' || env.CODECOV_TOKEN != ''
           uses: codecov/codecov-action@v4
           env:
             CODECOV_TOKEN: ${{ env.CODECOV_TOKEN }}
