@@ -22,7 +22,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
     validate_charge_type_for_cess_non_advol_accounts,
-    validate_non_taxable_items,
+    validate_item_tax_template,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -86,7 +86,7 @@ class BOEGSTDetails(ItemGSTDetails):
 def update_gst_details(doc, method=None):
     ItemGSTTreatment().set(doc)
     BOEGSTDetails().update(doc)
-    validate_non_taxable_items(doc)
+    validate_item_tax_template(doc)
 
 
 class BillofEntry(Document):
