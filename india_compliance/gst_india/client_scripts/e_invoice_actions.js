@@ -101,19 +101,31 @@ frappe.ui.form.on("Sales Invoice", {
             };
 
             if (!is_irn_cancellable(frm) || !india_compliance.is_e_invoice_enabled()) {
-                const d = frappe.warn(
-                    __("Cannot Cancel IRN"),
-                    __(
-                        `You should ideally create a <strong>Credit Note</strong>
-                        against this invoice instead of cancelling it. If you
-                        choose to proceed, you'll be required to manually exclude this
-                        IRN when filing GST Returns.<br><br>
+                let message = "";
 
-                        Are you sure you want to continue?`
-                    ),
-                    continueCancellation,
-                    __("Yes")
+                if (frm.doc.is_return)
+                    message = __(
+                        `You should ideally create a standalone <strong>Debit Note</strong>
+                        against this credit note instead of cancelling it.`
+                    );
+                else if (frm.doc.is_debit_note)
+                    message = __(
+                        `You should ideally create a standalone <strong>Credit Note</strong>
+                        against this debit note instead of cancelling it.`
+                    );
+                else
+                    message = __(
+                        `You should ideally create a <strong>Credit Note</strong>
+                    against this invoice instead of cancelling it.`
+                    );
+
+                message += __(
+                    `<br><br>If you choose to proceed, you'll be required to manually exclude this
+                    IRN when filing GST Returns.<br><br>
+
+                    Are you sure you want to continue?`
                 );
+                const d = frappe.warn(__("Cannot Cancel IRN"), message, continueCancellation, __("Yes"));
 
                 d.set_secondary_action_label(__("No"));
                 return;

@@ -77,6 +77,9 @@ doc_events = {
             "india_compliance.gst_india.overrides.address.validate",
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
         ],
+        "on_update": [
+            "india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"
+        ],
     },
     "Company": {
         "on_trash": "india_compliance.gst_india.overrides.company.delete_gst_settings_for_company",
@@ -377,6 +380,13 @@ scheduler_events = {
         "*/5 * * * *": [
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation",
             "india_compliance.gst_india.utils.gstr.download_queued_request",
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken",
+        ],
+        "0 2 * * *": [
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_download_gstr",
+        ],
+        "0 4 * * *": [
+            "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_reconcile",
         ],
         "0 1 * * *": [
             "india_compliance.gst_india.utils.e_waybill.extend_scheduled_e_waybills"
