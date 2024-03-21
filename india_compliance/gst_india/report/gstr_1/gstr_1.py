@@ -281,10 +281,10 @@ class Gstr1Report:
                     abs(invoice_details.base_grand_total), 2
                 )
             elif (
-                self.filters.get("type_of_business") == "CDNR-UNREG"
+                self.filters.get("type_of_business") in ("CDNR-REG", "CDNR-UNREG")
                 and fieldname == "gst_category"
             ):
-                row[fieldname] = get_invoice_type(invoice_details)
+                row[fieldname] = get_invoice_type_for_excel(invoice_details)
             elif fieldname == "invoice_value":
                 row[fieldname] = flt(invoice_details.base_rounded_total, 2) or flt(
                     invoice_details.base_grand_total, 2
@@ -730,7 +730,7 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
-                    "fieldname": "export_type",
+                    "fieldname": "document_type",
                     "label": _("Note Type"),
                     "fieldtype": "Data",
                 },
@@ -793,7 +793,7 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
-                    "fieldname": "export_type",
+                    "fieldname": "document_type",
                     "label": _("Note Type"),
                     "fieldtype": "Data",
                 },
@@ -928,15 +928,15 @@ class Gstr1Report:
                     "width": 180,
                 },
                 {
-                    "fieldname": "applicable_tax_rate",
-                    "label": _("Applicable % of Tax Rate"),
-                    "fieldtype": "Data",
-                },
-                {
                     "fieldname": "rate",
                     "label": _("Rate"),
                     "fieldtype": "Int",
                     "width": 60,
+                },
+                {
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
+                    "fieldtype": "Data",
                 },
                 {
                     "fieldname": "taxable_value",
@@ -1055,6 +1055,7 @@ class Gstr1Report:
         elif self.filters.get("type_of_business") == "HSN":
             self.columns = get_hsn_columns()
             return
+
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 
 
@@ -1843,6 +1844,22 @@ def get_invoice_type(row):
             "Unregistered": "B2CL",
         }
     ).get(gst_category)
+
+
+def get_invoice_type_for_excel(row):
+    invoice_type = get_invoice_type(row)
+
+    return (
+        {
+            "R": "Regular B2B",
+            "DE": "Deemed Exp",
+            "SEWP": "SEZ supplies with payment",
+            "SEWOP": "SEZ supplies without payment",
+            "B2CL": "B2CL",
+            "EXPWP": "EXPWP",
+            "EXPWOP": "EXPWOP",
+        }
+    ).get(invoice_type)
 
 
 def get_basic_invoice_detail(row):

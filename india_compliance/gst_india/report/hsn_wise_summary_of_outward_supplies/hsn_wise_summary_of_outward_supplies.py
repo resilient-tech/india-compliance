@@ -40,7 +40,7 @@ def get_hsn_data(filters, columns, output_gst_accounts_dict):
 
     company_currency = erpnext.get_company_currency(filters.company)
     item_list = get_items(filters)
-    itemised_tax = get_tax_accounts(
+    itemised_tax = get_item_taxes(
         item_list,
         columns,
         company_currency,
@@ -80,13 +80,12 @@ def get_hsn_data(filters, columns, output_gst_accounts_dict):
             d.uqc,
             flt(d.stock_qty, 2),
             flt(d.taxable_value + total_tax, 2),
+            tax_rate,
             d.taxable_value,
         ]
 
         for tax in tax_columns:
             row.append(flt(item_tax.get(tax, {}).get("tax_amount", 0), 2))
-
-        row.append(tax_rate)
 
         data.append(row)
         added_item.add(key)
@@ -139,6 +138,12 @@ def get_columns():
             "width": 120,
         },
         {
+            "fieldname": "tax_rate",
+            "label": _("Rate"),
+            "fieldtype": "Data",
+            "width": 120,
+        },
+        {
             "fieldname": "taxable_amount",
             "label": _("Taxable Value"),
             "fieldtype": "Currency",
@@ -172,12 +177,6 @@ def get_columns():
             "fieldtype": "Currency",
             "options": "Company:company:default_currency",
             "width": 170,
-        },
-        {
-            "fieldname": "tax_rate",
-            "label": _("Rate"),
-            "fieldtype": "Data",
-            "width": 120,
         },
     ]
 
@@ -235,7 +234,7 @@ def get_items(filters):
     return items
 
 
-def get_tax_accounts(
+def get_item_taxes(
     item_list, columns, company_currency, output_gst_accounts, output_gst_accounts_dict
 ):
     if not item_list:
@@ -299,7 +298,7 @@ def get_merged_data(columns, data):
     merged_hsn_dict = {}
 
     for row in data:
-        key = f"{row[0]}-{row[2]}-{row[10]}"
+        key = f"{row[0]}-{row[2]}-{row[5]}"
         merged_hsn_dict.setdefault(key, {})
         for i, d in enumerate(columns):
             fieldname = d["fieldname"]
