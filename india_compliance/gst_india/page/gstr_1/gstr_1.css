@@ -1,0 +1,45 @@
+.form-section {
+    z-index: 0;
+}
+
+.gstr-1-no-data-state {
+    align-items: center;
+    width: 100%;
+    height: 65vh;
+    justify-content: center;
+    display: flex;
+}
+
+.form-tabs-list {
+    z-index: auto;
+}
+
+.tab-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    margin: 0.4rem 1rem 0.4rem 0.4rem;
+}
+
+.datatable {
+    /* overflow: scroll; */
+    margin-left: 2px;
+    width: 78vw;
+    border-radius: 0.4rem;
+    border: 1px solid #dee2e6;
+}
+
+.dt-row-header>.dt-cell,
+.dt-row-filter>.dt-cell {
+    height: 34px !important;
+}
+
+.custom-tabs>.nav-item>.nav-link {
+    padding: 3px 6px;
+    margin: 4px;
+}
+
+.custom-tabs>.nav-item>.nav-link.active {
+    background-color: var(--control-bg);
+    border-radius: 0.4rem;
+}
