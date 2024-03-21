@@ -140,6 +140,6 @@ def set_gst_treatment():
         .set(boe_item.gst_treatment, "Taxable")
         .where(boe_item.docstatus == 1)
         .where(boe.total_taxes != 0)
-        .where(IfNull(boe.gst_treatment, "") == "")
+        .where(IfNull(boe_item.gst_treatment, "") == "")
         .run()
     )

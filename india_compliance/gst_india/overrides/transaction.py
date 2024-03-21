@@ -437,28 +437,28 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     return all_valid_accounts
 
 
-def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, row):
+def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, tax_row):
     if (
-        row.charge_type == "On Item Quantity"
-        and row.account_head not in cess_non_advol_accounts
+        tax_row.charge_type == "On Item Quantity"
+        and tax_row.account_head not in cess_non_advol_accounts
     ):
         frappe.throw(
             _(
                 "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
                 " as it is not a Cess Non Advol Account"
-            ).format(row.idx),
+            ).format(tax_row.idx),
             title=_("Invalid Charge Type"),
         )
 
     if (
-        row.charge_type != "On Item Quantity"
-        and row.account_head in cess_non_advol_accounts
+        tax_row.charge_type != "On Item Quantity"
+        and tax_row.account_head in cess_non_advol_accounts
     ):
         frappe.throw(
             _(
                 "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
                 " as it is a Cess Non Advol Account"
-            ).format(row.idx),
+            ).format(tax_row.idx),
             title=_("Invalid Charge Type"),
         )
 
