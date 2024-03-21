@@ -115,13 +115,13 @@ frappe.ui.form.on("Bill of Entry Taxes", {
 
     async charge_type(frm, cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (row.charge_type === "On Net Total") {
-            await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
-            frm.taxes_controller.update_tax_amount(cdt, cdn);
-        } else {
+        if (!row.charge_type || row.charge_type === "Actual") {
             row.rate = 0;
             row.item_wise_tax_rates = "{}";
             frm.refresh_field("taxes");
+        } else {
+            await frm.taxes_controller.set_item_wise_tax_rates(null, cdn);
+            frm.taxes_controller.update_tax_amount(cdt, cdn);
         }
     },
 
@@ -301,8 +301,8 @@ class TaxesController {
 
     async update_tax_rate(cdt, cdn) {
         const row = locals[cdt][cdn];
-        if (row.charge_type === "Actual") row.rate = 0;
-        else if (row.charge_type === "On Net Total") {
+        if (!row.charge_type || row.charge_type === "Actual") row.rate = 0;
+        else {
             this.update_item_wise_tax_rates(row);
             await this.update_tax_amount(cdt, cdn);
         }
@@ -323,16 +323,26 @@ class TaxesController {
         else taxes = this.frm.doc.taxes;
 
         taxes.forEach(async row => {
-            if (row.charge_type !== "On Net Total") return;
+            if (!row.charge_type || row.charge_type === "Actual") return;
 
-            const tax_amount = this.get_tax_on_net_total(row);
+            let tax_amount = 0;
+
+            if (row.charge_type === "On Net Total") {
+                tax_amount = this.get_tax_on_net_total(row);
+            }
+
+            if (row.charge_type == "On Item Quantity") {
+                tax_amount = this.get_tax_on_item_quantity(row);
+            }
 
             // update if tax amount is changed manually
             if (tax_amount !== row.tax_amount) {
                 row.tax_amount = tax_amount;
             }
 
-            if (frappe.flags.round_off_applicable_accounts?.includes(row.account_head)) {
+            if (
+                frappe.flags.round_off_applicable_accounts?.includes(row.account_head)
+            ) {
                 row.tax_amount = Math.round(row.tax_amount);
             }
         });
@@ -363,6 +373,20 @@ class TaxesController {
         const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
         return this.frm.doc.items.reduce((total, item) => {
             return total + (item.taxable_value * item_wise_tax_rates[item.name]) / 100;
+        }, 0);
+    }
+
+    get_tax_on_item_quantity(tax_row) {
+        /**
+         * This method is used to calculate the tax amount on item quntity (cess non advol)
+         * based on the item wise tax rates and item quantity.
+         *
+         * @param {object} tax_row - Tax row object.
+         */
+
+        const item_wise_tax_rates = JSON.parse(tax_row.item_wise_tax_rates || "{}");
+        return this.frm.doc.items.reduce((total, item) => {
+            return total + (item.qty * item_wise_tax_rates[item.name]);
         }, 0);
     }
 }
