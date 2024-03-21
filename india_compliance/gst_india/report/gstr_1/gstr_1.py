@@ -281,8 +281,9 @@ class Gstr1Report:
                     abs(invoice_details.base_grand_total), 2
                 )
             elif (
-                self.filters.get("type_of_business") in ("CDNR-REG", "CDNR-UNREG")
-                and fieldname == "gst_category"
+                self.filters.get("type_of_business")
+                in ("CDNR-REG", "CDNR-UNREG", "B2B")
+                and fieldname == "invoice_type"
             ):
                 row[fieldname] = get_invoice_type_for_excel(invoice_details)
             elif fieldname == "invoice_value":
@@ -632,7 +633,7 @@ class Gstr1Report:
                     "fieldtype": "Data",
                 },
                 {
-                    "fieldname": "gst_category",
+                    "fieldname": "invoice_type",
                     "label": _("Invoice Type"),
                     "fieldtype": "Data",
                 },
@@ -746,7 +747,7 @@ class Gstr1Report:
                     "fieldtype": "Data",
                 },
                 {
-                    "fieldname": "gst_category",
+                    "fieldname": "invoice_type",
                     "label": _("Note Supply Type"),
                     "fieldtype": "Data",
                 },
@@ -775,7 +776,7 @@ class Gstr1Report:
         elif self.filters.get("type_of_business") == "CDNR-UNREG":
             self.invoice_columns = [
                 {
-                    "fieldname": "gst_category",
+                    "fieldname": "invoice_type",
                     "label": _("UR Type"),
                     "fieldtype": "Data",
                 },
@@ -1826,40 +1827,43 @@ def get_document_issued_summary_json(data):
 
 
 def get_invoice_type(row):
+    invoice_type = row.get("invoice_type")
+    return (
+        {
+            "Regular B2B": "R",
+            "Deemed Exp": "DE",
+            "SEZ supplies with payment": "SEWP",
+            "SEZ supplies without payment": "SEWOP",
+            "B2CL": "B2CL",
+            "EXPWP": "EXPWP",
+            "EXPWOP": "EXPWOP",
+        }
+    ).get(invoice_type)
+
+
+def get_invoice_type_for_excel(row):
     gst_category = row.get("gst_category")
 
     if gst_category == "SEZ":
-        return "SEWP" if row.get("export_type") == "WPAY" else "SEWOP"
+        return (
+            "SEZ supplies with payment"
+            if row.get("export_type") == "WPAY"
+            else "SEZ supplies without payment"
+        )
 
     if gst_category == "Overseas":
         return "EXPWP" if row.get("export_type") == "WPAY" else "EXPWOP"
 
     return (
         {
-            "Deemed Export": "DE",
-            "Registered Regular": "R",
-            "Registered Composition": "R",
-            "Tax Deductor": "R",
-            "UIN Holders": "R",
+            "Deemed Export": "Deemed Exp",
+            "Registered Regular": "Regular B2B",
+            "Registered Composition": "Regular B2B",
+            "Tax Deductor": "Regular B2B",
+            "UIN Holders": "Regular B2B",
             "Unregistered": "B2CL",
         }
     ).get(gst_category)
-
-
-def get_invoice_type_for_excel(row):
-    invoice_type = get_invoice_type(row)
-
-    return (
-        {
-            "R": "Regular B2B",
-            "DE": "Deemed Exp",
-            "SEWP": "SEZ supplies with payment",
-            "SEWOP": "SEZ supplies without payment",
-            "B2CL": "B2CL",
-            "EXPWP": "EXPWP",
-            "EXPWOP": "EXPWOP",
-        }
-    ).get(invoice_type)
 
 
 def get_basic_invoice_detail(row):
