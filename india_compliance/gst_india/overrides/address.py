@@ -10,6 +10,46 @@ from india_compliance.gst_india.utils import (
 )
 
 
+def update_party_gstin_and_gst_category(doc, method=None):
+    """
+    Update GSTIN and GST Category for Customer and Supplier based on Address.
+    """
+    if not doc.gstin:
+        return
+
+    if not doc.has_value_changed("gstin"):
+        return
+
+    party_address_updated = False
+    for link in doc.links:
+        doctype = link.link_doctype
+        docname = link.link_name
+
+        if doctype not in ["Customer", "Supplier"]:
+            continue
+
+        party_gst_category, party_pan = frappe.db.get_value(
+            doctype, docname, ["gst_category", "pan"]
+        )
+        if party_gst_category != "Unregistered":
+            continue
+
+        address_pan = doc.gstin[2:12]
+        if party_pan and party_pan != address_pan:
+            continue
+
+        frappe.db.set_value(
+            doctype,
+            docname,
+            {"gstin": doc.gstin, "gst_category": doc.gst_category, "pan": address_pan},
+        )
+
+        party_address_updated = True
+
+    if party_address_updated:
+        frappe.msgprint(_("Party GSTIN is updated based on Address"), alert=True)
+
+
 def validate(doc, method=None):
     doc.gstin = validate_gstin(doc.gstin)
     set_gst_category(doc)
