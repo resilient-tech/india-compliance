@@ -77,8 +77,8 @@ doc_events = {
             "india_compliance.gst_india.overrides.address.validate",
             "india_compliance.gst_india.overrides.party.set_docs_with_previous_gstin",
         ],
-        "before_save": [
-            "india_compliance.gst_india.overrides.address.set_gstin_and_gstCategory"
+        "on_update": [
+            "india_compliance.gst_india.overrides.address.update_party_gstin_and_gst_category"
         ],
     },
     "Company": {
