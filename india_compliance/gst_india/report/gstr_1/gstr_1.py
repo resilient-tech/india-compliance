@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 import json
 import re
-from datetime import date
 
 from pypika.terms import Case
 
@@ -128,12 +127,7 @@ class Gstr1Report:
                         ) == "CDNR-UNREG" and not self.is_b2cl_cdn(invoice_details):
                             continue
 
-                        row.append(
-                            "Y"
-                            if invoice_details.posting_date <= date(2017, 7, 1)
-                            else "N"
-                        )
-                        row.append("C" if invoice_details.is_return else "D")
+                        row["document_type"] = "C" if invoice_details.is_return else "D"
 
                     if taxable_value:
                         self.data.append(row)
@@ -230,6 +224,7 @@ class Gstr1Report:
                             "invoice_value": flt(
                                 invoice_details.get("base_grand_total"), 2
                             ),
+                            "applicable_tax_rate": 0,
                         },
                     )
 
@@ -275,28 +270,34 @@ class Gstr1Report:
         return grand_total > B2C_LIMIT
 
     def get_row_data_for_invoice(self, invoice, invoice_details, tax_rate, items):
-        row = []
+        row = {}
         for fieldname in self.invoice_fields:
             if (
                 self.filters.get("type_of_business") in ("CDNR-REG", "CDNR-UNREG")
                 and fieldname == "invoice_value"
             ):
-                row.append(
-                    flt(abs(invoice_details.base_rounded_total), 2)
-                    or flt(abs(invoice_details.base_grand_total), 2)
+
+                row[fieldname] = flt(abs(invoice_details.base_rounded_total), 2) or flt(
+                    abs(invoice_details.base_grand_total), 2
                 )
+            elif (
+                self.filters.get("type_of_business")
+                in ("CDNR-REG", "CDNR-UNREG", "B2B")
+                and fieldname == "invoice_type"
+            ):
+                row[fieldname] = get_invoice_type_for_excel(invoice_details)
             elif fieldname == "invoice_value":
-                row.append(
-                    flt(invoice_details.base_rounded_total, 2)
-                    or flt(invoice_details.base_grand_total, 2)
+                row[fieldname] = flt(invoice_details.base_rounded_total, 2) or flt(
+                    invoice_details.base_grand_total, 2
                 )
             elif fieldname in ("posting_date", "shipping_bill_date"):
-                row.append(formatdate(invoice_details.get(fieldname), "dd-MMM-YY"))
+                row[fieldname] = formatdate(invoice_details.get(fieldname), "dd-MMM-YY")
+
             elif fieldname == "export_type":
                 export_type = "WPAY" if invoice_details.get(fieldname) else "WOPAY"
-                row.append(export_type)
+                row[fieldname] = export_type
             else:
-                row.append(invoice_details.get(fieldname))
+                row[fieldname] = invoice_details.get(fieldname)
         taxable_value = 0
         cess_amount = 0
 
@@ -307,11 +308,13 @@ class Gstr1Report:
                     self.invoice_cess.get(invoice, {}).get(item_code, 0.0), 2
                 )
 
-        row += [tax_rate or 0, taxable_value]
+        row["rate"] = tax_rate or 0
+        row["taxable_value"] = taxable_value
+        row["applicable_tax_rate"] = 0
 
         for column in self.other_columns:
             if column.get("fieldname") == "cess_amount":
-                row.append(cess_amount)
+                row["cess_amount"] = cess_amount
 
         return row, taxable_value
 
@@ -345,8 +348,15 @@ class Gstr1Report:
         data = report.get_data()
 
         for key, value in data.items():
-            row = [key[0], key[1], value[0], value[1]]
-            self.data.append(row)
+            self.data.append(
+                {
+                    "place_of_supply": key[0],
+                    "rate": key[1],
+                    "taxable_value": value[0],
+                    "cess_amount": value[1],
+                    "applicable_tax_rate": 0,
+                }
+            )
 
     def get_documents_issued_data(self):
         report = GSTR1DocumentIssuedSummary(self.filters)
@@ -618,7 +628,12 @@ class Gstr1Report:
                     "fieldtype": "Data",
                 },
                 {
-                    "fieldname": "gst_category",
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
+                    "fieldtype": "Data",
+                },
+                {
+                    "fieldname": "invoice_type",
                     "label": _("Invoice Type"),
                     "fieldtype": "Data",
                 },
@@ -668,10 +683,9 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
-                    "fieldname": "ecommerce_gstin",
-                    "label": _("E-Commerce GSTIN"),
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
                     "fieldtype": "Data",
-                    "width": 130,
                 },
             ]
             self.other_columns = [
@@ -681,7 +695,13 @@ class Gstr1Report:
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
                     "width": 100,
-                }
+                },
+                {
+                    "fieldname": "ecommerce_gstin",
+                    "label": _("E-Commerce GSTIN"),
+                    "fieldtype": "Data",
+                    "width": 130,
+                },
             ]
         elif self.filters.get("type_of_business") == "CDNR-REG":
             self.invoice_columns = [
@@ -698,41 +718,22 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
-                    "fieldname": "return_against",
-                    "label": _("Invoice/Advance Receipt Number"),
+                    "fieldname": "invoice_number",
+                    "label": _("Note Number"),
                     "fieldtype": "Link",
                     "options": "Sales Invoice",
                     "width": 120,
                 },
                 {
                     "fieldname": "posting_date",
-                    "label": _("Invoice/Advance Receipt date"),
+                    "label": _("Note Date"),
                     "fieldtype": "Data",
                     "width": 120,
                 },
                 {
-                    "fieldname": "invoice_number",
-                    "label": _("Invoice/Advance Receipt Number"),
-                    "fieldtype": "Link",
-                    "options": "Sales Invoice",
-                    "width": 120,
-                },
-                {
-                    "fieldname": "is_reverse_charge",
-                    "label": _("Reverse Charge"),
+                    "fieldname": "document_type",
+                    "label": _("Note Type"),
                     "fieldtype": "Data",
-                },
-                {
-                    "fieldname": "export_type",
-                    "label": _("Export Type"),
-                    "fieldtype": "Data",
-                    "hidden": 1,
-                },
-                {
-                    "fieldname": "reason_for_issuing_document",
-                    "label": _("Reason For Issuing document"),
-                    "fieldtype": "Data",
-                    "width": 140,
                 },
                 {
                     "fieldname": "place_of_supply",
@@ -741,16 +742,26 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
-                    "fieldname": "gst_category",
-                    "label": _("GST Category"),
+                    "fieldname": "is_reverse_charge",
+                    "label": _("Reverse Charge"),
+                    "fieldtype": "Data",
+                },
+                {
+                    "fieldname": "invoice_type",
+                    "label": _("Note Supply Type"),
                     "fieldtype": "Data",
                 },
                 {
                     "fieldname": "invoice_value",
-                    "label": _("Invoice Value"),
+                    "label": _("Note Value"),
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
                     "width": 120,
+                },
+                {
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
+                    "fieldtype": "Data",
                 },
             ]
             self.other_columns = [
@@ -761,39 +772,13 @@ class Gstr1Report:
                     "options": "Company:company:default_currency",
                     "width": 100,
                 },
-                {
-                    "fieldname": "pre_gst",
-                    "label": _("PRE GST"),
-                    "fieldtype": "Data",
-                    "width": 80,
-                },
-                {
-                    "fieldname": "document_type",
-                    "label": _("Document Type"),
-                    "fieldtype": "Data",
-                    "width": 80,
-                },
             ]
         elif self.filters.get("type_of_business") == "CDNR-UNREG":
             self.invoice_columns = [
                 {
-                    "fieldname": "customer_name",
-                    "label": _("Receiver Name"),
+                    "fieldname": "invoice_type",
+                    "label": _("UR Type"),
                     "fieldtype": "Data",
-                    "width": 120,
-                },
-                {
-                    "fieldname": "return_against",
-                    "label": _("Issued Against"),
-                    "fieldtype": "Link",
-                    "options": "Sales Invoice",
-                    "width": 120,
-                },
-                {
-                    "fieldname": "posting_date",
-                    "label": _("Note Date"),
-                    "fieldtype": "Date",
-                    "width": 120,
                 },
                 {
                     "fieldname": "invoice_number",
@@ -803,16 +788,15 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
-                    "fieldname": "export_type",
-                    "label": _("Export Type"),
+                    "fieldname": "posting_date",
+                    "label": _("Note Date"),
                     "fieldtype": "Data",
-                    "hidden": 1,
+                    "width": 120,
                 },
                 {
-                    "fieldname": "reason_for_issuing_document",
-                    "label": _("Reason For Issuing document"),
+                    "fieldname": "document_type",
+                    "label": _("Note Type"),
                     "fieldtype": "Data",
-                    "width": 140,
                 },
                 {
                     "fieldname": "place_of_supply",
@@ -821,16 +805,16 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
-                    "fieldname": "gst_category",
-                    "label": _("GST Category"),
-                    "fieldtype": "Data",
-                },
-                {
                     "fieldname": "invoice_value",
-                    "label": _("Invoice Value"),
+                    "label": _("Note Value"),
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
                     "width": 120,
+                },
+                {
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
+                    "fieldtype": "Data",
                 },
             ]
             self.other_columns = [
@@ -841,26 +825,29 @@ class Gstr1Report:
                     "options": "Company:company:default_currency",
                     "width": 100,
                 },
-                {
-                    "fieldname": "pre_gst",
-                    "label": _("PRE GST"),
-                    "fieldtype": "Data",
-                    "width": 80,
-                },
-                {
-                    "fieldname": "document_type",
-                    "label": _("Document Type"),
-                    "fieldtype": "Data",
-                    "width": 80,
-                },
             ]
         elif self.filters.get("type_of_business") == "B2C Small":
             self.invoice_columns = [
+                {
+                    "fieldname": "type",
+                    "label": _("Type"),
+                    "fieldtype": "Data",
+                    "width": 50,
+                },
                 {
                     "fieldname": "place_of_supply",
                     "label": _("Place Of Supply"),
                     "fieldtype": "Data",
                     "width": 120,
+                },
+            ]
+            self.other_columns = [
+                {
+                    "fieldname": "cess_amount",
+                    "label": _("Cess Amount"),
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                    "width": 100,
                 },
                 {
                     "fieldname": "ecommerce_gstin",
@@ -869,21 +856,14 @@ class Gstr1Report:
                     "width": 130,
                 },
             ]
-            self.other_columns = [
+            self.tax_columns.insert(
+                1,
                 {
-                    "fieldname": "cess_amount",
-                    "label": _("Cess Amount"),
-                    "fieldtype": "Currency",
-                    "options": "Company:company:default_currency",
-                    "width": 100,
-                },
-                {
-                    "fieldname": "type",
-                    "label": _("Type"),
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
                     "fieldtype": "Data",
-                    "width": 50,
                 },
-            ]
+            )
         elif self.filters.get("type_of_business") == "EXPORT":
             self.invoice_columns = [
                 {
@@ -931,16 +911,6 @@ class Gstr1Report:
                     "width": 120,
                 },
             ]
-        elif self.filters.get("type_of_business") in ("Advances", "Adjustment"):
-            self.invoice_columns = [
-                {
-                    "fieldname": "place_of_supply",
-                    "label": _("Place Of Supply"),
-                    "fieldtype": "Data",
-                    "width": 180,
-                }
-            ]
-
             self.other_columns = [
                 {
                     "fieldname": "cess_amount",
@@ -950,6 +920,76 @@ class Gstr1Report:
                     "width": 130,
                 }
             ]
+        elif self.filters.get("type_of_business") == "Advances":
+            self.columns = [
+                {
+                    "fieldname": "place_of_supply",
+                    "label": _("Place Of Supply"),
+                    "fieldtype": "Data",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "rate",
+                    "label": _("Rate"),
+                    "fieldtype": "Int",
+                    "width": 60,
+                },
+                {
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
+                    "fieldtype": "Data",
+                },
+                {
+                    "fieldname": "taxable_value",
+                    "label": _("Gross Advance Recieved"),
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                    "width": 150,
+                },
+                {
+                    "fieldname": "cess_amount",
+                    "label": _("Cess Amount"),
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                    "width": 130,
+                },
+            ]
+            return
+        elif self.filters.get("type_of_business") == "Adjustment":
+            self.columns = [
+                {
+                    "fieldname": "place_of_supply",
+                    "label": _("Place Of Supply"),
+                    "fieldtype": "Data",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "rate",
+                    "label": _("Rate"),
+                    "fieldtype": "Int",
+                    "width": 60,
+                },
+                {
+                    "fieldname": "applicable_tax_rate",
+                    "label": _("Applicable % of Tax Rate"),
+                    "fieldtype": "Data",
+                },
+                {
+                    "fieldname": "taxable_value",
+                    "label": _("Gross Advance Adjusted"),
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                    "width": 150,
+                },
+                {
+                    "fieldname": "cess_amount",
+                    "label": _("Cess Amount"),
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                    "width": 130,
+                },
+            ]
+            return
         elif self.filters.get("type_of_business") == "NIL Rated":
             self.invoice_columns = [
                 {
@@ -960,21 +1000,21 @@ class Gstr1Report:
                 },
                 {
                     "fieldname": "nil_rated",
-                    "label": _("Nil Rated"),
+                    "label": _("Nil Rated Supplies"),
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
                     "width": 200,
                 },
                 {
                     "fieldname": "exempted",
-                    "label": _("Exempted"),
+                    "label": _("Exempted(other than nil rated/non GST supply)"),
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
-                    "width": 200,
+                    "width": 350,
                 },
                 {
                     "fieldname": "non_gst",
-                    "label": _("Non GST"),
+                    "label": _("Non-GST Supplies"),
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
                     "width": 200,
@@ -989,51 +1029,34 @@ class Gstr1Report:
                     "width": 300,
                 },
                 {
-                    "fieldname": "naming_series",
-                    "label": _("Series"),
-                    "fieldtype": "Data",
-                    "width": 150,
-                },
-                {
                     "fieldname": "from_serial_no",
-                    "label": _("Serial Number From"),
+                    "label": _("Sr. No. From"),
                     "fieldtype": "Data",
                     "width": 160,
                 },
                 {
                     "fieldname": "to_serial_no",
-                    "label": _("Serial Number To"),
+                    "label": _("Sr. No. To"),
                     "fieldtype": "Data",
                     "width": 160,
                 },
                 {
-                    "fieldname": "total_submitted",
-                    "label": _("Submitted Number"),
-                    "fieldtype": "Int",
-                    "width": 180,
-                },
-                {
-                    "fieldname": "total_draft",
-                    "label": _("Draft Number"),
+                    "fieldname": "total_issued",
+                    "label": _("Total Number"),
                     "fieldtype": "Int",
                     "width": 150,
                 },
                 {
                     "fieldname": "cancelled",
-                    "label": _("Cancelled Number"),
+                    "label": _("Cancelled"),
                     "fieldtype": "Int",
                     "width": 160,
-                },
-                {
-                    "fieldname": "total_issued",
-                    "label": _("Total Issued Documents"),
-                    "fieldtype": "Int",
-                    "width": 150,
                 },
             ]
         elif self.filters.get("type_of_business") == "HSN":
             self.columns = get_hsn_columns()
             return
+
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 
 
@@ -1804,21 +1827,40 @@ def get_document_issued_summary_json(data):
 
 
 def get_invoice_type(row):
+    invoice_type = row.get("invoice_type")
+    return (
+        {
+            "Regular B2B": "R",
+            "Deemed Exp": "DE",
+            "SEZ supplies with payment": "SEWP",
+            "SEZ supplies without payment": "SEWOP",
+            "B2CL": "B2CL",
+            "EXPWP": "EXPWP",
+            "EXPWOP": "EXPWOP",
+        }
+    ).get(invoice_type)
+
+
+def get_invoice_type_for_excel(row):
     gst_category = row.get("gst_category")
 
     if gst_category == "SEZ":
-        return "SEWP" if row.get("export_type") == "WPAY" else "SEWOP"
+        return (
+            "SEZ supplies with payment"
+            if row.get("export_type") == "WPAY"
+            else "SEZ supplies without payment"
+        )
 
     if gst_category == "Overseas":
         return "EXPWP" if row.get("export_type") == "WPAY" else "EXPWOP"
 
     return (
         {
-            "Deemed Export": "DE",
-            "Registered Regular": "R",
-            "Registered Composition": "R",
-            "Tax Deductor": "R",
-            "UIN Holders": "R",
+            "Deemed Export": "Deemed Exp",
+            "Registered Regular": "Regular B2B",
+            "Registered Composition": "Regular B2B",
+            "Tax Deductor": "Regular B2B",
+            "UIN Holders": "Regular B2B",
             "Unregistered": "B2CL",
         }
     ).get(gst_category)
@@ -1943,12 +1985,19 @@ def get_gstr1_excel(filters, data=None, columns=None):
     excel = ExcelExporter()
     excel.remove_sheet("Sheet")
 
-    if data:
+    if isinstance(data, str):
         type_of_business = filters.get("type_of_business")
         filename.append(type_of_business)
 
+        data = json.loads(data)
+        data = data[:-1] if data else data
         headers = json.loads(columns) if columns else []
-        data = json.loads(data)[:-1]
+
+        if not data:
+            # Retrieve report data if data is empty
+            report_data = execute(filters)
+            headers = report_data[0] or []
+            data = format_data_to_dict(report_data)
 
         create_excel_sheet(excel, type_of_business, headers, data)
 
