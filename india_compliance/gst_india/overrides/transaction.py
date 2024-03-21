@@ -445,7 +445,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     return all_valid_accounts
 
 
-<<<<<<< HEAD
 def validate_tax_accounts_for_non_gst(doc):
     """GST Tax Accounts should not be charged for Non GST Items"""
     accounts_list = get_all_gst_accounts(doc.company)
@@ -460,8 +459,6 @@ def validate_tax_accounts_for_non_gst(doc):
             )
 
 
-def validate_items(doc, throw):
-=======
 def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, tax_row):
     if (
         tax_row.charge_type == "On Item Quantity"
@@ -488,8 +485,7 @@ def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, ta
         )
 
 
-def validate_items(doc):
->>>>>>> 4af06b20 (fix: add GST Details and allow cess non advol in Bill of Entry (#1866))
+def validate_items(doc, throw):
     """Validate Items for a GST Compliant Invoice"""
 
     if not doc.get("items"):
