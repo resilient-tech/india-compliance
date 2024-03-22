@@ -16,11 +16,17 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
 )
 from india_compliance.gst_india.utils import get_party_for_gstin
 from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
+from india_compliance.gst_india.utils.gstr.gstr1 import (
+    save_einvoice_data,
+    save_gstr_1_filed_data,
+)
 
 
 class ReturnType(Enum):
     GSTR2A = "GSTR2a"
     GSTR2B = "GSTR2b"
+    GSTR1 = "GSTR1"
+    eInvoice = "e-Invoice"
 
 
 class GSTRCategory(Enum):
@@ -317,6 +323,8 @@ def _download_gstr_2a(gstin, return_period, json_data):
 GSTR_FUNCTIONS = {
     ReturnType.GSTR2A.value: _download_gstr_2a,
     ReturnType.GSTR2B.value: save_gstr_2b,
+    ReturnType.GSTR1.value: save_gstr_1_filed_data,
+    ReturnType.eInvoice.value: save_einvoice_data,
 }
 
 
