@@ -1,5 +1,16 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
+const invoice_type = {
+    "B2B,SEZ,DE": ["", "4A", "4B", "6B", "6C"],
+    "B2C (Large)": ["5"],
+    "Exports": ["", "EXPWP", "EXPWOP"],
+    "B2C (Others)": ["7"],
+    "Nil Rated,Exempted,Non-GST": ["", "Nil-Rated", "Exempted", "Non-GST"],
+    "Credit / Debit notes (Registered)": ["9B"],
+    "Credit / Debit notes (Unregistered)": ["9B"],
+}
+
+let invoice_category=""
 frappe.query_reports["GST Sales Register Beta"] = {
     "filters": [
         {
@@ -32,17 +43,17 @@ frappe.query_reports["GST Sales Register Beta"] = {
             },
         },
         {
-            "fieldname": "from_date",
-            "label": __("From Date"),
-            "fieldtype": "Date",
-            "default": frappe.datetime.add_months(frappe.datetime.get_today(), -1),
-            "width": "80"
+            fieldname: "from_date",
+            label: __("From Date"),
+            fieldtype: "Date",
+            default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
+            width: "80"
         },
         {
-            "fieldname": "to_date",
-            "label": __("To Date"),
-            "fieldtype": "Date",
-            "default": frappe.datetime.get_today()
+            fieldname: "to_date",
+            label: __("To Date"),
+            fieldtype: "Date",
+            default: frappe.datetime.get_today()
         },
         {
             fieldtype: "Select",
@@ -52,13 +63,31 @@ frappe.query_reports["GST Sales Register Beta"] = {
             default: "Summary by Item"
         },
         {
-            fieldtype: "Select",
+            fieldtype: "Autocomplete",
             fieldname: "invoice_category",
             label: __("Invoice Category"),
-            options: "\nNil-Rated\nExempted\nNon-GST\nCredit/Debit Notes Registered (CDNR)\nCredit/Debit Notes Unregistered (CDNUR)\nB2B\nB2C(Large)\nB2C(Small)\nExport Invoice",
+            options: "\nB2B,SEZ,DE\nB2C (Large)\nExports\nB2C (Others)\nNil Rated,Exempted,Non-GST\nCredit / Debit notes (Registered)\nCredit / Debit Notes (Unregistered)",
+            on_change:(report)=>{
+				report.set_filter_value('invoice_sub_category', "");
+
+            }
+        },
+        {
+            fieldtype: "Autocomplete",
+            fieldname: "invoice_sub_category",
+            label: __("Invoice Sub Category"),
+            get_data:function(){
+                const invoice_category=frappe.query_report.get_filter_value("invoice_category");
+                return invoice_type[invoice_category];
+            },
+
+            // options:get_sub_category_options(frappe.query_report)
+
         }
     ]
 };
 
-
-
+function get_sub_category_options(report) {
+    console.log(report)
+    return invoice_type['B2B,SEZ,DE']
+}
