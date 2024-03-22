@@ -5,6 +5,7 @@
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Date, IfNull, Sum
+
 from india_compliance.gst_india.utils.__init__ import get_gst_uom
 
 
@@ -26,13 +27,63 @@ def validate_filters(filters):
 
 def get_data(filters):
 
-    purchase_invoice_data = get_invoice_data("Purchase Invoice", filters)
-    boe_data = get_invoice_data("Bill of Entry", filters)
-    data =  get_inward_data(purchase_invoice_data, boe_data)
-    return data
-    # for item in data:
-    #     item["gst_uom"] = get_gst_uom(item.get("uom"))
-    # return data
+    if filters.type_of_supplies == "summary of inward supplies":
+        purchase_invoice_data = get_invoice_data("Purchase Invoice", filters)
+        boe_data = get_invoice_data("Bill of Entry", filters)
+        data = get_inward_data(purchase_invoice_data, boe_data)
+    else:
+        sales_invoice_data = get_invoice_data("Sales Invoice", filters)
+        data = get_inward_data(sales_invoice_data)
+
+    return get_merged_data(data)
+
+
+def get_merged_data(data):
+    merged_hsn_dict = {}
+
+    for row in data:
+
+        if row.gst_hsn_code.startswith("99"):
+            # service item doesn't have qty/uom
+            row.stock_qty = 0
+            row.gst_uom = "NA"
+        else:
+            row.gst_uom = get_gst_uom(row.get("uom"))
+
+        key = f"{row['gst_hsn_code']}-{row['gst_uom']}-{row['tax_rate']}"
+
+        merged_hsn_dict.setdefault(
+            key,
+            {
+                "gst_hsn_code": "",
+                "description": "",
+                "gst_uom": "",
+                "stock_qty": 0,
+                "tax_rate": 0,
+                "total_amount": 0,
+                "taxable_amount": 0,
+                "igst_amount": 0,
+                "cgst_amount": 0,
+                "sgst_amount": 0,
+                "cess_amount": 0,
+            },
+        )
+
+        dict = merged_hsn_dict[key]
+
+        dict["gst_hsn_code"] = row["gst_hsn_code"]
+        dict["description"] = row["description"]
+        dict["gst_uom"] = row["gst_uom"]
+        dict["stock_qty"] += row["stock_qty"]
+        dict["tax_rate"] += row["tax_rate"]
+        dict["total_amount"] += row["total_amount"]
+        dict["taxable_amount"] += row["taxable_amount"]
+        dict["igst_amount"] += row["igst_amount"]
+        dict["cgst_amount"] += row["cgst_amount"]
+        dict["sgst_amount"] += row["sgst_amount"]
+        dict["cess_amount"] += row["cess_amount"]
+
+    return list(merged_hsn_dict.values())
 
 
 def get_invoice_data(doctype, filters):
@@ -49,8 +100,8 @@ def get_invoice_data(doctype, filters):
         .select(
             invoice_item.gst_hsn_code.as_("gst_hsn_code"),
             IfNull(hsn_code.description, "").as_("description"),
-            # invoice_item.stock_uom.as_("uom"),
-            # invoice_item.stock_qty,
+            invoice_item.uom.as_("uom"),
+            invoice_item.qty.as_("stock_qty"),
             (
                 invoice_item.cgst_rate + invoice_item.sgst_rate + invoice_item.igst_rate
             ).as_("tax_rate"),
@@ -82,18 +133,21 @@ def get_invoice_data(doctype, filters):
     return query
 
 
-def get_inward_data(purchase_invoice_data, boe_data):
+def get_inward_data(invoice_data, boe_data=None):
 
-    query = purchase_invoice_data * boe_data
+    if boe_data is None:
+        query = invoice_data
+    else:
+        query = invoice_data * boe_data
 
     data = (
         frappe.qb.from_(query)
         .select(
             query.gst_hsn_code.as_("gst_hsn_code"),
             query.description,
-            # Sum(query.uom).as_("uom"),
-            # Sum(query.stock_qty).as_("stock_qty"),
-            query.tax_rate.as_("tax_rate"),
+            query.uom,
+            Sum(query.stock_qty).as_("stock_qty"),
+            query.tax_rate,
             Sum(
                 query.igst_amount
                 + query.cgst_amount
@@ -109,7 +163,7 @@ def get_inward_data(purchase_invoice_data, boe_data):
         )
         .groupby(
             query.gst_hsn_code,
-            # query.uom
+            query.uom,
             query.tax_rate,
         )
     )
@@ -130,12 +184,6 @@ def get_columns(filters=None):
             "label": _("Description"),
             "fieldtype": "Data",
             "width": 300,
-        },
-        {
-            "fieldname": "uom",
-            "label": _("UOM"),
-            "fieldtype": "Data",
-            "width": 100,
         },
         {
             "fieldname": "gst_uom",

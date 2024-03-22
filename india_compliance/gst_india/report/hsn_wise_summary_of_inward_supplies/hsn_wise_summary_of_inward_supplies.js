@@ -4,6 +4,13 @@
 frappe.query_reports["HSN-wise summary of inward supplies"] = {
     filters: [
         {
+            fieldname: "type_of_supplies",
+            label: __("Type of Supplies"),
+            fieldtype: "Select",
+            options: ["summary of inward supplies", "summary of outward supplies"],
+            reqd: 1,
+        },
+        {
             fieldtype: "Link",
             options: "Company",
             fieldname: "company",
