@@ -181,7 +181,10 @@ class IneligibleITC:
         This method reverses the Stock Adjustment Entry
         """
         stock_account = self.get_item_expense_account(item)
-        cogs_account = self.company.default_expense_account
+        cogs_account = (
+            self.company.default_expense_account
+            or self.company.stock_received_but_not_billed
+        )
 
         ineligible_item_tax_amount = item.get("_ineligible_tax_amount", 0)
 
