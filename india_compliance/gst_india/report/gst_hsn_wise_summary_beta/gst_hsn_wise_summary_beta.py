@@ -8,6 +8,11 @@ from frappe.query_builder.functions import Date, IfNull, Sum
 
 from india_compliance.gst_india.utils.__init__ import get_gst_uom
 
+DOCTYPE_MAP = {
+    "Inward": ["Purchase Invoice", "Bill of Entry"],
+    "Outward": ["Sales Invoice"],
+}
+
 
 def execute(filters=None):
     validate_filters(filters)
@@ -26,67 +31,50 @@ def validate_filters(filters):
 
 
 def get_data(filters):
+    doctype_list = DOCTYPE_MAP[filters.type_of_supplies]
+    query_list = []
 
-    if filters.type_of_supplies == "summary of inward supplies":
-        purchase_invoice_data = get_invoice_data("Purchase Invoice", filters)
-        boe_data = get_invoice_data("Bill of Entry", filters)
-        data = get_inward_data(purchase_invoice_data, boe_data)
-    else:
-        sales_invoice_data = get_invoice_data("Sales Invoice", filters)
-        data = get_inward_data(sales_invoice_data)
+    for doctype in doctype_list:
+        query = get_transaction_data_query(doctype, filters)
+        query_list.append(query)
+
+    data = get_summary_data(query_list)
 
     return get_merged_data(data)
 
 
 def get_merged_data(data):
     merged_hsn_dict = {}
+    amount_fields = {
+        "total_qty": 0,
+        "tax_rate": 0,
+        "total_value": 0,
+        "total_taxable_value": 0,
+        "total_igst_amount": 0,
+        "total_cgst_amount": 0,
+        "total_sgst_amount": 0,
+        "total_cess_amount": 0,
+    }
 
     for row in data:
-
         if row.gst_hsn_code.startswith("99"):
             # service item doesn't have qty/uom
-            row.stock_qty = 0
+            row.total_qty = 0
             row.gst_uom = "NA"
         else:
             row.gst_uom = get_gst_uom(row.get("uom"))
 
         key = f"{row['gst_hsn_code']}-{row['gst_uom']}-{row['tax_rate']}"
 
-        merged_hsn_dict.setdefault(
-            key,
-            {
-                "gst_hsn_code": "",
-                "description": "",
-                "gst_uom": "",
-                "stock_qty": 0,
-                "tax_rate": 0,
-                "total_amount": 0,
-                "taxable_amount": 0,
-                "igst_amount": 0,
-                "cgst_amount": 0,
-                "sgst_amount": 0,
-                "cess_amount": 0,
-            },
-        )
+        new_row = merged_hsn_dict.setdefault(key, {**row, **amount_fields})
 
-        dict = merged_hsn_dict[key]
-
-        dict["gst_hsn_code"] = row["gst_hsn_code"]
-        dict["description"] = row["description"]
-        dict["gst_uom"] = row["gst_uom"]
-        dict["stock_qty"] += row["stock_qty"]
-        dict["tax_rate"] += row["tax_rate"]
-        dict["total_amount"] += row["total_amount"]
-        dict["taxable_amount"] += row["taxable_amount"]
-        dict["igst_amount"] += row["igst_amount"]
-        dict["cgst_amount"] += row["cgst_amount"]
-        dict["sgst_amount"] += row["sgst_amount"]
-        dict["cess_amount"] += row["cess_amount"]
+        for key in amount_fields:
+            new_row[key] += row[key]
 
     return list(merged_hsn_dict.values())
 
 
-def get_invoice_data(doctype, filters):
+def get_transaction_data_query(doctype, filters):
     invoice = frappe.qb.DocType(doctype)
     invoice_item = frappe.qb.DocType(f"{doctype} Item")
     hsn_code = frappe.qb.DocType("GST HSN Code")
@@ -101,7 +89,7 @@ def get_invoice_data(doctype, filters):
             invoice_item.gst_hsn_code.as_("gst_hsn_code"),
             IfNull(hsn_code.description, "").as_("description"),
             invoice_item.uom.as_("uom"),
-            invoice_item.qty.as_("stock_qty"),
+            invoice_item.qty,
             (
                 invoice_item.cgst_rate + invoice_item.sgst_rate + invoice_item.igst_rate
             ).as_("tax_rate"),
@@ -119,8 +107,13 @@ def get_invoice_data(doctype, filters):
         .where(invoice.docstatus == 1)
     )
 
-    if doctype == "Purchase Invoice":
+    if doctype != "Bill of Entry":
         query = query.where(invoice.is_opening != "Yes")
+
+    if doctype == "Purchase Invoice":
+        query = query.where(
+            (invoice.gst_category != "Overseas") & (invoice.is_reverse_charge != 1)
+        )
 
     if filters.get("compnay_gstin"):
         query = query.where(IfNull(invoice.company_gstin, "") == filters.company_gstin)
@@ -133,12 +126,11 @@ def get_invoice_data(doctype, filters):
     return query
 
 
-def get_inward_data(invoice_data, boe_data=None):
+def get_summary_data(query_list):
+    query = query_list[0]
 
-    if boe_data is None:
-        query = invoice_data
-    else:
-        query = invoice_data * boe_data
+    for qlist in query_list[1:]:
+        query = query * qlist
 
     data = (
         frappe.qb.from_(query)
@@ -146,7 +138,7 @@ def get_inward_data(invoice_data, boe_data=None):
             query.gst_hsn_code.as_("gst_hsn_code"),
             query.description,
             query.uom,
-            Sum(query.stock_qty).as_("stock_qty"),
+            Sum(query.qty).as_("total_qty"),
             query.tax_rate,
             Sum(
                 query.igst_amount
@@ -154,12 +146,12 @@ def get_inward_data(invoice_data, boe_data=None):
                 + query.sgst_amount
                 + query.taxable_amount
                 + query.cess_amount
-            ).as_("total_amount"),
-            Sum(query.taxable_amount).as_("taxable_amount"),
-            Sum(query.igst_amount).as_("igst_amount"),
-            Sum(query.cgst_amount).as_("cgst_amount"),
-            Sum(query.sgst_amount).as_("sgst_amount"),
-            Sum(query.cess_amount).as_("cess_amount"),
+            ).as_("total_value"),
+            Sum(query.taxable_amount).as_("total_taxable_value"),
+            Sum(query.igst_amount).as_("total_igst_amount"),
+            Sum(query.cgst_amount).as_("total_cgst_amount"),
+            Sum(query.sgst_amount).as_("total_sgst_amount"),
+            Sum(query.cess_amount).as_("total_cess_amount"),
         )
         .groupby(
             query.gst_hsn_code,
@@ -167,6 +159,7 @@ def get_inward_data(invoice_data, boe_data=None):
             query.tax_rate,
         )
     )
+
     return data.run(as_dict=True)
 
 
@@ -174,7 +167,7 @@ def get_columns(filters=None):
     columns = [
         {
             "fieldname": "gst_hsn_code",
-            "label": _("HSN/SAC"),
+            "label": _("HSN"),
             "fieldtype": "Link",
             "options": "GST HSN Code",
             "width": 100,
@@ -187,58 +180,62 @@ def get_columns(filters=None):
         },
         {
             "fieldname": "gst_uom",
-            "label": _("GST UOM"),
+            "label": _("UQC"),
             "fieldtype": "Data",
             "width": 100,
         },
         {
-            "fieldname": "stock_qty",
-            "label": _("Stock Qty"),
+            "fieldname": "total_qty",
+            "label": _("Total Qty"),
             "fieldtype": "Float",
             "width": 90,
+        },
+        {
+            "fieldname": "total_value",
+            "label": _("Total Value"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
+            "width": 120,
         },
         {
             "fieldname": "tax_rate",
-            "label": _("Tax Rate"),
-            "fieldtype": "Data",
+            "label": _("Rate"),
+            "fieldtype": "Float",
             "width": 90,
         },
         {
-            "fieldname": "total_amount",
-            "label": _("Total Amount"),
+            "fieldname": "total_taxable_value",
+            "label": _("Taxable Value"),
             "fieldtype": "Currency",
             "options": "Company:company:default_currency",
             "width": 120,
         },
         {
-            "fieldname": "taxable_amount",
-            "label": _("Total Taxable Amount"),
+            "fieldname": "total_igst_amount",
+            "label": _("Integrated Tax Amount"),
             "fieldtype": "Currency",
             "options": "Company:company:default_currency",
-            "width": 170,
-        },
-        {
-            "fieldname": "igst_amount",
-            "label": _("Total IGST Amount"),
-            "fieldtype": "Float",
             "width": 120,
         },
         {
-            "fieldname": "sgst_amount",
-            "label": _("Total SGST Amount"),
-            "fieldtype": "Float",
+            "fieldname": "total_cgst_amount",
+            "label": _("Central Tax Amount"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 120,
         },
         {
-            "fieldname": "cgst_amount",
-            "label": _("Total CGST Amount"),
-            "fieldtype": "Float",
+            "fieldname": "total_sgst_amount",
+            "label": _("State/UT Tax Amount"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 120,
         },
         {
-            "fieldname": "cess_amount",
-            "label": _("Total CESS Amount"),
-            "fieldtype": "Float",
+            "fieldname": "total_cess_amount",
+            "label": _("CESS Amount"),
+            "fieldtype": "Currency",
+            "options": "Company:company:default_currency",
             "width": 120,
         },
     ]

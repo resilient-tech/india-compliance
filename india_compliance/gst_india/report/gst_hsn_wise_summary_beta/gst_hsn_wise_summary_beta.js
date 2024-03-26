@@ -1,13 +1,13 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["HSN-wise summary of inward supplies"] = {
+frappe.query_reports["GST HSN Wise Summary Beta"] = {
     filters: [
         {
             fieldname: "type_of_supplies",
             label: __("Type of Supplies"),
             fieldtype: "Select",
-            options: ["summary of inward supplies", "summary of outward supplies"],
+            options: ["Inward", "Outward"],
             reqd: 1,
         },
         {
