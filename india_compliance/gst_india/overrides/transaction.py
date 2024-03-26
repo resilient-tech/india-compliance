@@ -46,14 +46,7 @@ DOCTYPES_WITH_GST_DETAIL = {
 }
 
 
-def set_gst_breakup(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    # recalculating gst details as items has been grouped
-    if doc.get("group_same_items"):
-        ItemGSTDetails().update(doc)
-
+def set_gst_breakup(doc):
     gst_breakup_html = frappe.render_template(
         "templates/gst_breakup.html", dict(doc=doc)
     )
@@ -561,7 +554,7 @@ def get_source_state_code(doc):
     return (doc.supplier_gstin or doc.company_gstin)[:2]
 
 
-def validate_hsn_codes(doc, method=None):
+def validate_hsn_codes(doc):
     validate_hsn_code, valid_hsn_length = get_hsn_settings()
 
     if not validate_hsn_code:
@@ -620,7 +613,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, message=None):
         )
 
 
-def validate_overseas_gst_category(doc, method=None):
+def validate_overseas_gst_category(doc):
     if not is_overseas_doc(doc):
         return
 
@@ -1312,6 +1305,23 @@ def validate_transaction(doc, method=None):
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
+
+
+def before_print(doc, method=None, print_settings=None):
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+        return
+
+    if doc.get("group_same_items"):
+        ItemGSTDetails().update(doc)
+
+    set_gst_breakup(doc)
+
+
+def onload(doc, method=None):
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+        return
+
+    set_gst_breakup(doc)
 
 
 def validate_ecommerce_gstin(doc):
