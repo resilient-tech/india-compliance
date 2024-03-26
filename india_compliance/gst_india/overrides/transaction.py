@@ -50,18 +50,7 @@ DOCTYPES_WITH_GST_DETAIL = {
 }
 
 
-<<<<<<< HEAD
-def set_gst_breakup(doc, method=None, print_settings=None):
-    if (
-        ignore_gst_validations(doc, throw=False)
-        or not doc.place_of_supply
-        or not doc.company_gstin
-    ):
-        return
-
-=======
 def set_gst_breakup(doc):
->>>>>>> 3dc297ae (fix: recalculate gst details for gst breakup if group_same_items is True (#1923))
     gst_breakup_html = frappe.render_template(
         "templates/gst_breakup.html", dict(doc=doc)
     )
