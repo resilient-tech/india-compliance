@@ -3,10 +3,10 @@ frappe.provide("india_compliance");
 india_compliance.quick_info_popover = class QuickInfoPopover {
 	constructor(frm, field_dict) {
 		/**
-	 * Setup tooltip for fields to show details
-	 * @param {Object} frm          Form object
-	 * @param {Object} field_dict   Dictionary of fields with info to show
-	 */
+		 * Setup tooltip for fields to show details
+		 * @param {Object} frm          Form object
+		 * @param {Object} field_dict   Dictionary of fields with info to show
+		 */
 		this.frm = frm;
 		this.field_dict = field_dict;
 		this.make();
