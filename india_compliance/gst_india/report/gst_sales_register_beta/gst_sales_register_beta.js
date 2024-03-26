@@ -1,16 +1,15 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
-const invoice_type = {
-    "B2B,SEZ,DE": ["4A", "4B", "6B", "6C"],
-    "B2C (Large)": ["5"],
+const INVOICE_TYPE = {
+    "B2B,SEZ,DE": ["B2B Regular", "B2B Reverse charge", "SEZWP", "SEZWOP", "Deemed Exports"],
+    "B2C (Large)": ["B2C (Large)"],
     "Exports": ["EXPWP", "EXPWOP"],
-    "B2C (Others)": ["7"],
+    "B2C (Others)": ["B2C (Others)"],
     "Nil Rated,Exempted,Non-GST": ["Nil-Rated", "Exempted", "Non-GST"],
-    "Credit / Debit notes (Registered)": ["9B"],
-    "Credit / Debit notes (Unregistered)": ["9B"],
+    "Credit / Debit notes (Registered)": ["CDNR"],
+    "Credit / Debit notes (Unregistered)": ["CDNUR"],
 }
 
-let invoice_category=""
 frappe.query_reports["GST Sales Register Beta"] = {
     onload: set_sub_category_options,
     filters: [
@@ -44,44 +43,46 @@ frappe.query_reports["GST Sales Register Beta"] = {
             },
         },
         {
-            fieldname: "from_date",
-            label: __("From Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
+            fieldname: "date_range",
+            label: __("Date Range"),
+            fieldtype: "DateRange",
+            default: [india_compliance.last_month_start(), india_compliance.last_month_end()],
             width: "80"
-        },
-        {
-            fieldname: "to_date",
-            label: __("To Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.get_today()
         },
         {
             fieldtype: "Select",
             fieldname: "summary_by",
             label: __("Summary By"),
-            options: "Summary by HSN\nSummary by Item",
+            options: "Overview\nSummary by HSN\nSummary by Item",
             default: "Summary by Item"
         },
         {
             fieldtype: "Autocomplete",
             fieldname: "invoice_category",
             label: __("Invoice Category"),
-            options: "\nB2B,SEZ,DE\nB2C (Large)\nExports\nB2C (Others)\nNil Rated,Exempted,Non-GST\nCredit / Debit notes (Registered)\nCredit / Debit Notes (Unregistered)",
+            options: "B2B,SEZ,DE\nB2C (Large)\nExports\nB2C (Others)\nNil Rated,Exempted,Non-GST\nCredit / Debit notes (Registered)\nCredit / Debit Notes (Unregistered)",
             on_change(report) {
-				report.set_filter_value('invoice_sub_category', "");
+                console.log(report)
+                report.set_filter_value('invoice_sub_category', "");
                 set_sub_category_options(report);
-            }
+            },
+            depends_on: 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"'
         },
         {
             fieldtype: "Autocomplete",
             fieldname: "invoice_sub_category",
             label: __("Invoice Sub Category"),
+            depends_on: 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"'
         }
     ]
 };
 
 function set_sub_category_options(report) {
     const invoice_category = frappe.query_report.get_filter_value("invoice_category");
-    report.get_filter('invoice_sub_category').set_data(invoice_type[invoice_category] || []);
+    report.get_filter('invoice_sub_category').set_data(INVOICE_TYPE[invoice_category] || []);
+
+    if (invoice_category && INVOICE_TYPE[invoice_category].length == 1) {
+        report.set_filter_value("invoice_sub_category", INVOICE_TYPE[invoice_category][0])
+    }
 }
+
