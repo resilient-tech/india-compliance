@@ -50,6 +50,10 @@ def set_gst_breakup(doc, method=None, print_settings=None):
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
+    # recalculating gst details as items has been grouped
+    if doc.get("group_same_items"):
+        ItemGSTDetails().update(doc)
+
     gst_breakup_html = frappe.render_template(
         "templates/gst_breakup.html", dict(doc=doc)
     )
