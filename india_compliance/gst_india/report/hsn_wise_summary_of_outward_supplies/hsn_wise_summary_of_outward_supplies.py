@@ -209,8 +209,8 @@ def get_items(filters):
         f"""
         SELECT
             `tabSales Invoice Item`.gst_hsn_code,
-            `tabSales Invoice Item`.stock_uom as uqc,
-            sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
+            `tabSales Invoice Item`.uom as uqc,
+            sum(`tabSales Invoice Item`.qty) AS stock_qty,
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code,
