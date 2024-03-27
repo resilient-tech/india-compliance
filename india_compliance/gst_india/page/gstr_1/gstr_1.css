@@ -2,7 +2,7 @@
     z-index: 0;
 }
 
-.gstr-1-no-data-state {
+.gstr-1-no-data-state, .gstr-1-loading-state {
     align-items: center;
     width: 100%;
     height: 65vh;

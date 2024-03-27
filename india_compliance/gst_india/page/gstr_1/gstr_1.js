@@ -6,18 +6,18 @@ frappe.pages["gstr_1"].on_page_load = function (wrapper) {
     india_compliance.gstr_1 = new GSTR1(wrapper);
 };
 
-// TODO: either import from report/gstr_1.js or vice versa
+// TODO: verify keys & values
 const TYPES_OF_BUSINESS = {
     B2B: __("B2B Invoices - 4A, 4B, 4C, 6B, 6C"),
-    "B2C Large": __("B2C(Large) Invoices - 5A, 5B"),
-    "B2C Small": __("B2C(Small) Invoices - 7"),
-    "CDNR-REG": __("Credit/Debit Notes (Registered) - 9B"),
-    "CDNR-UNREG": __("Credit/Debit Notes (Unregistered) - 9B"),
-    EXPORT: __("Export Invoice - 6A"),
-    Advances: __("Tax Liability (Advances Received) - 11A(1), 11A(2)"),
-    Adjustment: __("Adjustment of Advances - 11B(1), 11B(2)"),
-    "NIL Rated": __("NIL RATED/EXEMPTED Invoices"),
-    "Document Issued Summary": __("Document Issued Summary"),
+    B2CL: __("B2C(Large) Invoices - 5A, 5B"),
+    B2CS: __("B2C(Small) Invoices - 7"),
+    CDNR: __("Credit/Debit Notes (Registered) - 9B"),
+    CDNUR: __("Credit/Debit Notes (Unregistered) - 9B"),
+    EXP: __("Export Invoice - 6A"),
+    TXP: __("Tax Liability (Advances Received) - 11A(1), 11A(2)"),
+    AT: __("Adjustment of Advances - 11B(1), 11B(2)"),
+    NIL: __("NIL RATED/EXEMPTED Invoices"),
+    DOCISS: __("Document Issued Summary"),
     HSN: __("HSN-wise-summary of outward supplies"),
 };
 
@@ -35,11 +35,7 @@ class GSTR1 {
 
     setup_page() {
         this._tabs = ["books", "reconcile", "filed"]; // primary tabs
-        this.tab_views = {
-            books: ["Summary", "Invoice", "HSN"],
-            reconcile: ["Summary", "Details"],
-            filed: ["Summary", "Details"],
-        };
+        this._views = ["summary", "details"];
         this.tab_actions = {
             books: [
                 {
@@ -57,9 +53,6 @@ class GSTR1 {
         };
         this.tabs = Object.fromEntries(this._tabs.map(tab => [tab, {}]));
         this.gstr1_data = new GSTR1Data();
-
-        // TODO: set status dynamically from GSTR filed log
-        this.page.set_indicator("Not Filed", "red");
 
         this.make_page_actions();
         this.make_form();
@@ -82,7 +75,10 @@ class GSTR1 {
                     options: "Company",
                     reqd: 1,
                     default: frappe.defaults.get_user_default("Company"),
-                    onchange: () => this.render_empty_state(),
+                    onchange: () => {
+                        me.form.set_value("company_gstin", "");
+                        this.render_empty_state();
+                    },
                 },
                 {
                     fieldtype: "Column Break",
@@ -92,10 +88,11 @@ class GSTR1 {
                     fieldname: "company_gstin",
                     fieldtype: "Autocomplete",
                     reqd: 1,
-                    default: get_company_default_gstin(),
+                    default: async () => {
+                        await get_default_company_gstin(me);
+                    },
                     get_query: () => {
                         const company = me.form.get_value("company");
-
                         return company
                             ? india_compliance.get_gstin_query(company)
                             : null;
@@ -173,18 +170,27 @@ class GSTR1 {
 
     make_page_actions() {
         var me = this;
-        let generate_btn = this.page.set_primary_action("Generate", () => {
+        let generate_btn = this.page.set_primary_action("Generate", async () => {
             if (!this.form.get_values()) return;
-
             this.render_loading_state();
 
-            // TODO: add api call here
-            setTimeout(() => {
-                if (!this.generate_btn_clicked) {
-                    this.generate_btn_clicked = true;
-                }
-                this.render();
-            }, 1000);
+            await frappe.call({
+                method: "india_compliance.gst_india.page.gstr_1.apis.get_mock_data",
+                args: this.form.get_values(),
+                callback: function (res) {
+                    if (!res || !res.message) return;
+
+                    me.gstr1_data.set_data(res.message);
+                },
+            });
+
+            if (!this.generate_btn_clicked) {
+                this.generate_btn_clicked = true;
+            }
+            // TODO: If filed_data present in response, set filed-green, else not_filed-red
+            this.page.set_indicator("Filed", "green");
+
+            this.render();
         });
 
         // TODO: Add more actions as required
@@ -270,31 +276,32 @@ class GSTR1 {
         ).appendTo(this.tab_section);
 
         this._tabs.forEach(tab => {
+            const is_active = this.active_tab === tab ? "show active" : "";
+            const data_table_per_view = this._views
+                .map(view => {
+                    return `<div id="gstr-1-__${tab}-${view}-data-table" class="dt"></div>`;
+                })
+                .join(" ");
+
             let tab_content = $(`
-                <div
-                    class="tab-pane fade ${
-                        this.active_tab === tab ? "show active" : ""
-                    }"
-                    id="gstr-1-__${tab}-content"
-                    role="tabpanel"
-                    aria-labelledby="gstr-1-__${tab}"
-                >
+                <div class="tab-pane fade ${is_active}" id="gstr-1-__${tab}-content" role="tabpanel" aria-labelledby="gstr-1-__${tab}">
                     <div class="d-flex flex-row justify-content-between align-items-center" id="gstr-1-__${tab}-header">
                         <div class="view-heading ml-1" id="gstr-1-__${tab}-heading"></div>
                         <div class="tab-view-switch" id="gstr-1-__${tab}-custom-actions"></div>
                     </div>
                     <div id="gstr-1-__${tab}-data">
-                    ${this.tab_views[tab]
-                        .map(view => {
-                            return `<div id="gstr-1-__${tab}-${view}-data-table" class="dt"></div>`;
-                        })
-                        .join(" ")}
+                        ${data_table_per_view}
                     </div>
                 </div>
             `);
             this.tabs_content.append(tab_content);
-            toggle_data_table_visibility(tab, "Summary");
+            show_active_data_table(
+                tab,
+                "summary",
+                tab_content.find(`#gstr-1-__${tab}-data`)
+            );
         });
+
         this.render_view_group();
         this.render_data();
     }
@@ -316,14 +323,19 @@ class GSTR1 {
         this._tabs.forEach(tab => {
             this.tabs[tab].datatable = {};
 
-            this.tab_views[tab].forEach((view, index) => {
+            this._views.forEach(view => {
+                const { columns, data } = this.gstr1_data.get_columns_and_data(
+                    tab,
+                    view
+                );
+
                 this.tabs[tab].datatable[view] = new india_compliance.DataTableManager({
                     $wrapper: $(`#gstr-1-__${tab}-${view}-data-table`),
-                    columns: this.gstr1_data.get_books_overview_columns(),
-                    data: this.gstr1_data.get_books_overview_data(),
+                    columns: columns,
+                    data: data,
                     options: {
                         cellHeight: 55,
-                        serialNoColumn: index !== 0, // Remove serialNoColumn for Summary view
+                        serialNoColumn: view !== "summary",
                         noDataMessage: "No Data found!",
                     },
                 });
@@ -335,17 +347,19 @@ class GSTR1 {
 
     set_data_table_listeners() {
         var me = this;
-        this.tabs.books.datatable["Summary"].$datatable.on(
+        this.tabs.books.datatable["summary"].$datatable.on(
             "click",
             ".section_name",
             async function (e) {
                 e.preventDefault();
 
                 const section_name = $(this).text();
+                const active_tab = me.active_tab;
+                const active_view = "details";
 
                 // TODO: make dynamic
-                me.tabs.books.viewgroup.set_heading(section_name);
-                me.tabs.books.viewgroup.set_active_view("Invoice");
+                me.tabs[active_tab].viewgroup.set_heading(section_name);
+                me.tabs[active_tab].viewgroup.set_active_view(active_view);
 
                 await me.filter_group.push_new_filter([
                     "GSTR-1",
@@ -355,10 +369,16 @@ class GSTR1 {
                 ]);
                 me.filter_group.apply();
 
+                const { columns, data } = me.gstr1_data.get_columns_and_data(
+                    active_tab,
+                    active_view,
+                    section_name
+                );
+
                 // TODO: refresh data-table with new data
-                // me.tabs[me.active_tab].datatable.refresh(
-                //     me.gstr1_data.get_books_section_wise_data(section_name)
-                // );
+                me.tabs[active_tab].datatable[active_view].refresh(data, columns);
+
+                show_active_data_table(active_tab, active_view);
             }
         );
     }
@@ -369,7 +389,7 @@ class GSTR1 {
             this.tabs[tab].viewgroup = new ViewGroup({
                 $wrapper: $(`#gstr-1-__${tab}-header`),
                 tab: tab,
-                _views: this.tab_views[tab],
+                _views: this._views,
                 refresh: view => {
                     this.tabs[tab].datatable[view].refresh();
                 },
@@ -380,7 +400,7 @@ class GSTR1 {
     // FILTER GROUP
     setup_filter_button() {
         this.filter_group = new india_compliance.FilterGroup({
-            doctype: "GSTR-1",
+            doctype: "GSTR-1", // TODO: technically wrong
             parent: this.tab_actions_container.find(".filter-grp"),
             filter_options: {
                 fieldname: "section_name",
@@ -395,16 +415,22 @@ class GSTR1 {
     }
 
     apply_filters() {
-        // if (this.filter_group.filters.length === 0) {
-        //     const current_tab = this.tabs[this.active_tab];
-        //     current_tab.datatable.refresh(this.gstr1_data.get_books_overview_data());
-        //     current_tab.viewgroup.set_heading("");
-        //     current_tab.viewgroup.set_active_view("Summary");
-        // }
+        if (this.filter_group.filters.length === 0) {
+            const current_tab = this.tabs[this.active_tab];
+            const target_view = "summary";
+            current_tab.datatable[target_view].refresh(
+                this.gstr1_data.summary["books"]
+            );
+            current_tab.viewgroup.set_heading("");
+            current_tab.viewgroup.set_active_view(target_view);
+
+            show_active_data_table(this.active_tab, target_view);
+        }
         // TODO: filter functionality
     }
 
     get_filter_fields() {
+        // TODO: add more filters
         return [
             {
                 label: "Section Name",
@@ -421,141 +447,215 @@ class GSTR1 {
 
 class GSTR1Data {
     constructor() {
-        this.books_data = {
-            Overview: Object.keys(TYPES_OF_BUSINESS).map(key => {
-                return [TYPES_OF_BUSINESS[key], "10", "3000", "9", "9", "0"];
-            }),
-            B2B: [
-                ["SINV-001", "default description", "3000", "3000", "9", "9", "0"],
-                ["SINV-002", "description", "3000", "3000", "9", "9", "0"],
-                ["SINV-003", "default", "3000", "3000", "9", "9", "0"],
-                ["SINV-004", "defaucription", "3000", "3000", "9", "9", "0"],
-                ["SINV-005", "defaulion", "3000", "3000", "9", "9", "0"],
-                ["SINV-001", "default description", "3000", "3000", "9", "9", "0"],
-                ["SINV-002", "description", "3000", "3000", "9", "9", "0"],
-                ["SINV-003", "default", "3000", "3000", "9", "9", "0"],
-                ["SINV-004", "defaucription", "3000", "3000", "9", "9", "0"],
-                ["SINV-005", "defaulion", "3000", "3000", "9", "9", "0"],
-            ],
-            "B2C Large": [],
-            "B2C Small": [],
-            "CDNR-REG": [],
-            "CDNR-UNREG": [],
-            EXPORT: [],
-            Advances: [],
-            Adjustment: [],
-            "NIL Rated": [],
-            "Document Issued Summary": [],
-            HSN: [],
-        };
+        this.reset_data();
     }
 
-    get_columns_and_data(active_tab, active_view) {
+    reset_data() {
+        this.data = [];
+        this.filtered_data = [];
+        this.summary = {};
+    }
+
+    set_data(data) {
+        this.data = data;
+
+        // TODO: data cleaning & conversion
+        this.generate_summary_data();
+
+        this.filtered_data = this.data;
+    }
+
+    filter_data() {
+        // TODO: apply necessary filters to the data
+        // this.filtered_data = .....
+    }
+
+    generate_summary_data() {
+        this.generate_books_summary_data();
+
+        // TODO: generate all summary (not only books)
+        // this.generate_filed_summary_data();
+    }
+
+    generate_books_summary_data() {
+        const books_summary = [];
+
+        for (const [section_name, section_data] of Object.entries(this.data)) {
+            const section_summary = {
+                section_name:
+                    TYPES_OF_BUSINESS[section_name.toUpperCase()] ||
+                    section_name.toUpperCase(),
+                taxable_amount: 0,
+                cgst: 0,
+                sgst: 0,
+                igst: 0,
+                cess: 0,
+            };
+
+            section_data.forEach(inv => {
+                section_summary.taxable_amount += inv.invoice_value;
+                section_summary.cgst += inv.items[0].cgst_amount;
+                section_summary.sgst += inv.items[0].sgst_amount;
+                section_summary.igst += inv.items[0].igst_amount;
+                section_summary.cess += inv.items[0].cess_amount;
+            });
+
+            books_summary.push(section_summary);
+        }
+
+        this.summary["books"] = books_summary;
+    }
+
+    generate_filed_summary_data() {
+        // TODO: change function as per data
+        const filed_summary = [];
+
+        for (const [section_name, section_data] of Object.entries(this.data)) {
+            const section_summary = {
+                section_name: section_name,
+                taxable_amount: 0,
+                cgst: 0,
+                sgst: 0,
+                igst: 0,
+                cess: 0,
+            };
+
+            section_data.forEach(inv => {
+                section_summary.taxable_amount += inv.invoice_value;
+                section_summary.cgst += inv.items[0].cgst_amount;
+                section_summary.sgst += inv.items[0].sgst_amount;
+                section_summary.igst += inv.items[0].igst_amount;
+                section_summary.cess += inv.items[0].cess_amount;
+            });
+
+            filed_summary.push(section_summary);
+        }
+
+        this.summary["filed"] = filed_summary;
+    }
+
+    get_columns_and_data(tab, view, section_name = null) {
+        // TODO: get cols & data acc to active tab & active view
+        if (tab === "books") {
+            if (view === "details") {
+                if (!section_name) {
+                    return { columns: [], data: [] };
+                }
+                return {
+                    columns: this.get_books_section_wise_columns(section_name),
+                    data: this.get_books_section_wise_data(section_name),
+                };
+            } else {
+                return {
+                    columns: this.get_books_summary_columns(),
+                    data: this.summary[tab],
+                };
+            }
+        }
+
         return { columns: [], data: [] };
     }
 
-    get_books_overview_columns() {
+    get_books_summary_columns() {
         return [
             {
-                label: "Section",
+                name: "Section",
                 fieldname: "section_name",
                 width: 300,
                 _value: (...args) => `<a href="#" class='section_name'>${args[0]}</a>`,
             },
             {
-                label: "Total Transactions",
-                fieldname: "total_txns",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                label: "Taxable Amomunt",
+                name: "Taxable Amomunt",
                 fieldname: "taxable_amount",
+                width: 180,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "IGST",
+                fieldname: "igst",
                 width: 150,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "IGST",
-                fieldname: "igst",
-                width: 100,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                label: "CGST",
+                name: "CGST",
                 fieldname: "cgst",
-                width: 100,
+                width: 150,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "SGST",
+                name: "SGST",
                 fieldname: "sgst",
-                width: 100,
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "CESS",
+                fieldname: "cess",
+                width: 150,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
         ];
     }
 
-    get_books_overview_data() {
-        return this.books_data.Overview;
-    }
-
     get_books_section_wise_data(section) {
         const section_key = Object.keys(TYPES_OF_BUSINESS).find(
             key => TYPES_OF_BUSINESS[key] == section
         );
-        return this.books_data[section_key];
+        return this.data[section_key.toLowerCase()];
     }
 
-    get_b2b_overview_columns() {
+    get_books_section_wise_columns(section) {
+        // TODO: return section wise columns
+        return this.get_b2b_columns();
+    }
+
+    get_b2b_columns() {
         return [
             {
-                label: "Section",
-                fieldname: "section_name",
+                name: "Invoice Number",
+                fieldname: "invoice_number",
                 width: 150,
-                _value: (...args) => `<a href="#" class='section_name'>${args[0]}</a>`,
             },
             {
-                label: "Description",
-                fieldname: "description",
+                name: "Customer GSTIN",
+                fieldname: "customer_gstin",
                 width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Total Amomunt",
-                fieldname: "total_amount",
+                name: "Invoice Value",
+                fieldname: "invoice_value",
                 width: 150,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "Taxable Amomunt",
-                fieldname: "taxable_amount",
+                name: "Taxable Value",
+                fieldname: "taxable_value",
                 width: 150,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "IGST",
+                name: "IGST",
                 fieldname: "igst",
                 width: 100,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "CGST",
+                name: "CGST",
                 fieldname: "cgst",
                 width: 100,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
             },
             {
-                label: "SGST",
+                name: "SGST",
                 fieldname: "sgst",
                 width: 100,
                 align: "center",
@@ -569,7 +669,7 @@ class ViewGroup {
     constructor(options) {
         Object.assign(this, options);
         this.views = {};
-        this.active_view = frappe.scrub(this._views[0]);
+        this.active_view = this._views[0];
         this.heading = this.$wrapper.find(".view-heading");
         this.render();
     }
@@ -578,10 +678,9 @@ class ViewGroup {
         this.heading.html(`<h4>${text}</h4>`);
     }
 
-    set_active_view(tab) {
-        tab = frappe.scrub(tab);
-        this.active_view = tab;
-        this.views[`${tab}_view`].children().tab("show");
+    set_active_view(view) {
+        this.active_view = view;
+        this.views[`${view}_view`].children().tab("show");
     }
 
     render() {
@@ -594,20 +693,19 @@ class ViewGroup {
     }
 
     make_views() {
-        this._views.forEach(tab => {
-            let _view = frappe.scrub(tab);
-            this.views[`${_view}_view`] = $(`<li class="nav-item show">
+        this._views.forEach(view => {
+            this.views[`${view}_view`] = $(`<li class="nav-item show">
                 <a
-                    class="nav-link ${this.active_view === _view ? "active" : ""}"
-                    id="gstr-1-__${_view}-view"
+                    class="nav-link ${this.active_view === view ? "active" : ""}"
+                    id="gstr-1-__${view}-view"
                     data-toggle="tab"
-                    data-fieldname="${tab}"
-                    href="#gstr-1-__${_view}-view"
+                    data-fieldname="${view}"
+                    href="#gstr-1-__${view}-view"
                     role="tab"
-                    aria-controls="gstr-1-__${_view}-view"
+                    aria-controls="gstr-1-__${view}-view"
                     aria-selected="true"
                 >
-                    ${tab}
+                    ${frappe.unscrub(view)}
                 </a>
             </li>`).appendTo(this.tab_link_container);
         });
@@ -622,16 +720,24 @@ class ViewGroup {
             $target.tab("show");
 
             this.active_view = $target.attr("data-fieldname");
-
-            // TODO: toggle data-table visibility
-            toggle_data_table_visibility(this.tab, this.active_view);
-            this.refresh(this.active_view);
+            show_active_data_table(this.tab, this.active_view);
+            // this.refresh(this.active_view);
         });
     }
 }
 
-function get_company_default_gstin() {
-    // TODO
+async function get_default_company_gstin(me) {
+    me.form.set_value("company_gstin", "");
+
+    const company = me.form.get_value("company");
+    const { message: gstin_list } = await frappe.call(
+        "india_compliance.gst_india.utils.get_gstin_list",
+        { party: company }
+    );
+
+    if (gstin_list && gstin_list.length) {
+        me.form.set_value("company_gstin", gstin_list[0]);
+    }
 }
 
 function get_previous_month() {
@@ -652,8 +758,9 @@ function get_year_list(current_date) {
     return options.reverse().map(year => year.toString());
 }
 
-function toggle_data_table_visibility(active_tab, active_view) {
-    const tab_data_div = $(`#gstr-1-__${active_tab}-data`);
-    tab_data_div.children().filter(".dt").hide();
-    tab_data_div.find(`#gstr-1-__${active_tab}-${active_view}-data-table`).show();
+function show_active_data_table(active_tab, active_view, target_div = null) {
+    if (!target_div) target_div = $(`#gstr-1-__${active_tab}-data`);
+
+    target_div.children().filter(".dt").hide();
+    target_div.find(`#gstr-1-__${active_tab}-${active_view}-data-table`).show();
 }
