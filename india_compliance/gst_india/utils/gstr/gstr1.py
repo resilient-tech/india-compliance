@@ -46,6 +46,7 @@ class GSTR1Query:
             .left_join(returned_si)
             .on(self.si.return_against == returned_si.name)
             .select(
+                IfNull(self.si_item.item_code, self.si_item.item_name).as_("item_code"),
                 self.si_item.gst_hsn_code,
                 self.si.billing_address_gstin,
                 self.si.company_gstin,

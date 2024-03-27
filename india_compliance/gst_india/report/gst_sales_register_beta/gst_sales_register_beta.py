@@ -63,27 +63,42 @@ def get_columns(filters):
                     "label": _("No. of records"),
                     "fieldname": "no_of_records",
                     "width": "120",
+                    "fieldtype": "Int",
                 },
                 {
                     "label": _("Taxable Value"),
                     "fieldname": "taxable_value",
                     "width": "120",
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                 },
                 {
                     "label": _("IGST Amount"),
                     "fieldname": "igst_amount",
                     "width": "120",
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                 },
-                {"label": _("CGST Amount"), "fieldname": "cgst_amount", "width": "120"},
+                {
+                    "label": _("CGST Amount"),
+                    "fieldname": "cgst_amount",
+                    "width": "120",
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                },
                 {
                     "label": _("SGST Amount"),
                     "fieldname": "sgst_amount",
                     "width": "120",
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                 },
                 {
                     "label": _("Total Cess Amount"),
                     "fieldname": "total_cess_amount",
                     "width": "120",
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                 },
             ]
         )
@@ -121,16 +136,19 @@ def get_columns(filters):
                     "label": _("GST Category"),
                     "fieldname": "gst_category",
                     "width": 120,
+                    "fieldtype": "Data",
                 },
                 {
                     "label": _("Billing Address GSTIN"),
                     "fieldname": "billing_address_gstin",
                     "width": 180,
+                    "fieldtype": "Data",
                 },
                 {
                     "label": _("Place of Supply"),
                     "fieldname": "place_of_supply",
                     "width": 120,
+                    "fieldtype": "Data",
                 },
             ]
         )
@@ -178,7 +196,7 @@ def get_columns(filters):
             columns.append(
                 {
                     "label": _("Item Code"),
-                    "fieldname": "item",
+                    "fieldname": "item_code",
                     "fieldtype": "Link",
                     "options": "Item",
                     "width": 180,
@@ -198,28 +216,69 @@ def get_columns(filters):
                     "label": _("Taxable Value"),
                     "fieldname": "taxable_value",
                     "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                 },
                 {
                     "label": _("GST Treatment"),
                     "fieldname": "gst_treatment",
                     "width": 120,
+                    "fieldtype": "Data",
                 },
-                {"label": _("GST Rate"), "fieldname": "gst_rate", "width": 120},
-                {"label": _("CGST Amount"), "fieldname": "cgst_amount", "width": 120},
-                {"label": _("SGST Amount"), "fieldname": "sgst_amount", "width": 120},
-                {"label": _("IGST Amount"), "fieldname": "igst_amount", "width": 120},
+                {
+                    "label": _("GST Rate"),
+                    "fieldname": "gst_rate",
+                    "width": 120,
+                    "fieldtype": "Data",
+                },
+                {
+                    "label": _("CGST Amount"),
+                    "fieldname": "cgst_amount",
+                    "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                },
+                {
+                    "label": _("SGST Amount"),
+                    "fieldname": "sgst_amount",
+                    "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                },
+                {
+                    "label": _("IGST Amount"),
+                    "fieldname": "igst_amount",
+                    "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                },
                 {
                     "label": _("Total Cess Amount"),
                     "fieldname": "total_cess_amount",
                     "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                 },
-                {"label": _("Total Tax"), "fieldname": "total_tax", "width": 120},
-                {"label": _("Total Amount"), "fieldname": "total_amount", "width": 120},
+                {
+                    "label": _("Total Tax"),
+                    "fieldname": "total_tax",
+                    "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                },
+                {
+                    "label": _("Total Amount"),
+                    "fieldname": "total_amount",
+                    "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
+                },
                 {
                     "label": _("Retured Invoice Total"),
                     "fieldname": "returned_invoice_total",
-                    "fieldtype": "Float",
                     "width": 120,
+                    "fieldtype": "Currency",
+                    "options": "Company:company:default_currency",
                 },
             ]
         )
@@ -230,11 +289,13 @@ def get_columns(filters):
                         "label": _("Invoice Category"),
                         "fieldname": "invoice_category",
                         "width": 120,
+                        "fieldtype": "Data",
                     },
                     {
                         "label": _("Invoice Sub Category"),
                         "fieldname": "invoice_sub_category",
                         "width": 120,
+                        "fieldtype": "Data",
                     },
                 ]
             )
