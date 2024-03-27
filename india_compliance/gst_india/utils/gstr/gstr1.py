@@ -11,134 +11,145 @@ B2C_LIMIT = 2_50_000
 
 
 class GSTR1Query:
-    def get_invoices_for_item_wise_summary(self, filters=None):
-        si = frappe.qb.DocType("Sales Invoice")
-        si_item = frappe.qb.DocType("Sales Invoice Item")
+    def init(self, filters=None, additional_columns=None):
+        self.si = frappe.qb.DocType("Sales Invoice")
+        self.si_item = frappe.qb.DocType("Sales Invoice Item")
+        self.filters = frappe._dict(filters or {})
+        self.additional_columns = additional_columns or []
 
-        query = self.get_base_query(si, si_item)
-        query = query.select(
-            si_item.item_code.as_("item"),
-            si_item.taxable_value,
-            si_item.cgst_amount,
-            si_item.sgst_amount,
-            si_item.igst_amount,
-            (si_item.cess_amount + si_item.cess_non_advol_amount).as_(
-                "total_cess_amount"
-            ),
-            (
-                si_item.cgst_amount
-                + si_item.sgst_amount
-                + si_item.igst_amount
-                + si_item.cess_amount
-                + si_item.cess_non_advol_amount
-            ).as_("total_tax"),
-            (
-                si_item.taxable_value
-                + si_item.cgst_amount
-                + si_item.sgst_amount
-                + si_item.igst_amount
-                + si_item.cess_amount
-                + si_item.cess_non_advol_amount
-            ).as_("total_amount"),
-        )
-        query = self.get_query_with_filters(si, query, filters)
-
-        return query.run(as_dict=True)
-
-    def get_invoices_for_hsn_wise_summary(self, filters=None):
-        si = frappe.qb.DocType("Sales Invoice")
-        si_item = frappe.qb.DocType("Sales Invoice Item")
-
-        query = self.get_base_query(si, si_item)
-        query = query.select(
-            Sum(si_item.taxable_value).as_("taxable_value"),
-            Sum(si_item.cgst_amount).as_("cgst_amount"),
-            Sum(si_item.sgst_amount).as_("sgst_amount"),
-            Sum(si_item.igst_amount).as_("igst_amount"),
-            (Sum(si_item.cess_amount) + Sum(si_item.cess_non_advol_amount)).as_(
-                "total_cess_amount"
-            ),
-            (
-                Sum(si_item.cgst_amount)
-                + Sum(si_item.sgst_amount)
-                + Sum(si_item.igst_amount)
-                + Sum(si_item.cess_amount)
-                + Sum(si_item.cess_non_advol_amount)
-            ).as_("total_tax"),
-            (
-                Sum(si_item.taxable_value)
-                + Sum(si_item.cgst_amount)
-                + Sum(si_item.sgst_amount)
-                + Sum(si_item.igst_amount)
-                + Sum(si_item.cess_amount)
-                + Sum(si_item.cess_non_advol_amount)
-            ).as_("total_amount"),
-        ).groupby(
-            si.name,
-            si_item.gst_hsn_code,
-            (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate),
-            si_item.gst_treatment,
-        )
-
-        query = self.get_query_with_filters(si, query, filters)
-
-        return query.run(as_dict=True)
-
-    def get_base_query(self, si, si_item):
+    def get_base_query(self):
         returned_si = frappe.qb.DocType("Sales Invoice", alias="returned_si")
 
         query = (
-            frappe.qb.from_(si)
-            .inner_join(si_item)
-            .on(si.name == si_item.parent)
+            frappe.qb.from_(self.si)
+            .inner_join(self.si_item)
+            .on(self.si.name == self.si_item.parent)
             .left_join(returned_si)
-            .on(si.return_against == returned_si.name)
+            .on(self.si.return_against == returned_si.name)
             .select(
-                si_item.gst_hsn_code,
-                si.billing_address_gstin,
-                si.company_gstin,
-                si.customer_name,
-                si.name.as_("invoice_no"),
-                si.posting_date,
-                si.place_of_supply,
-                si.is_reverse_charge,
-                si.is_export_with_gst,
-                si.is_return,
-                si.is_debit_note,
-                si.return_against,
-                IfNull(si.base_rounded_total, si.base_grand_total).as_("invoice_total"),
+                self.si_item.gst_hsn_code,
+                self.si.billing_address_gstin,
+                self.si.company_gstin,
+                self.si.customer_name,
+                self.si.name.as_("invoice_no"),
+                self.si.posting_date,
+                self.si.place_of_supply,
+                self.si.is_reverse_charge,
+                self.si.is_export_with_gst,
+                self.si.is_return,
+                self.si.is_debit_note,
+                self.si.return_against,
+                IfNull(self.si.base_rounded_total, self.si.base_grand_total).as_(
+                    "invoice_total"
+                ),
                 IfNull(
                     returned_si.base_rounded_total,
                     IfNull(returned_si.base_grand_total, 0),
                 ).as_("returned_invoice_total"),
-                si.gst_category,
-                si_item.gst_treatment,
-                (si_item.cgst_rate + si_item.sgst_rate + si_item.igst_rate).as_(
-                    "gst_rate"
-                ),
+                self.si.gst_category,
+                self.si_item.gst_treatment,
+                (
+                    self.si_item.cgst_rate
+                    + self.si_item.sgst_rate
+                    + self.si_item.igst_rate
+                ).as_("gst_rate"),
             )
-            .where(si.docstatus == 1)
-            .where(si.is_opening != "Yes")
-            .where(IfNull(si.billing_address_gstin, "") != si.company_gstin)
-            .orderby(si.posting_date, si.name, order=Order.desc)
+            .where(self.si.docstatus == 1)
+            .where(self.si.is_opening != "Yes")
+            .where(IfNull(self.si.billing_address_gstin, "") != self.si.company_gstin)
+            .orderby(self.si.posting_date, self.si.name, order=Order.desc)
         )
 
-        return query
+        if self.additional_columns:
+            pass
 
-    def get_query_with_filters(self, si, query, filters=None):
-        if filters.company:
-            query = query.where(si.company == filters.company)
-
-        if filters.company_gstin:
-            query = query.where(si.company_gstin == filters.company_gstin)
-
-        if filters.date_range[0]:
-            query = query.where(si.posting_date >= getdate(filters.date_range[0]))
-
-        if filters.date_range[1]:
-            query = query.where(si.posting_date <= getdate(filters.date_range[1]))
+        query = self.get_query_with_filters()
 
         return query
+
+    def get_query_with_filters(self, query):
+        if self.filters.company:
+            query = query.where(self.si.company == self.filters.company)
+
+        if self.filters.company_gstin:
+            query = query.where(self.si.company_gstin == self.filters.company_gstin)
+
+        if self.filters.from_date:
+            query = query.where(self.si.posting_date >= getdate(self.filters.from_date))
+
+        if self.filters.to_date:
+            query = query.where(self.si.posting_date <= getdate(self.filters.to_date))
+
+        return query
+
+
+class GSTR1Data(GSTR1Query):
+    def init(self, filters=None):
+        self.base_query = self.get_base_query(self)
+
+    def get_invoices_for_item_wise_summary(self):
+        query = self.base_query
+        query = query.select(
+            self.si_item.item_code.as_("item"),
+            self.si_item.taxable_value,
+            self.si_item.cgst_amount,
+            self.si_item.sgst_amount,
+            self.si_item.igst_amount,
+            (self.si_item.cess_amount + self.si_item.cess_non_advol_amount).as_(
+                "total_cess_amount"
+            ),
+            (
+                self.si_item.cgst_amount
+                + self.si_item.sgst_amount
+                + self.si_item.igst_amount
+                + self.si_item.cess_amount
+                + self.si_item.cess_non_advol_amount
+            ).as_("total_tax"),
+            (
+                self.si_item.taxable_value
+                + self.si_item.cgst_amount
+                + self.si_item.sgst_amount
+                + self.si_item.igst_amount
+                + self.si_item.cess_amount
+                + self.si_item.cess_non_advol_amount
+            ).as_("total_amount"),
+        )
+
+        return query.run(as_dict=True)
+
+    def get_invoices_for_hsn_wise_summary(self):
+        query = self.base_query
+        query = query.select(
+            Sum(self.si_item.taxable_value).as_("taxable_value"),
+            Sum(self.si_item.cgst_amount).as_("cgst_amount"),
+            Sum(self.si_item.sgst_amount).as_("sgst_amount"),
+            Sum(self.si_item.igst_amount).as_("igst_amount"),
+            (
+                Sum(self.si_item.cess_amount) + Sum(self.si_item.cess_non_advol_amount)
+            ).as_("total_cess_amount"),
+            (
+                Sum(self.si_item.cgst_amount)
+                + Sum(self.si_item.sgst_amount)
+                + Sum(self.si_item.igst_amount)
+                + Sum(self.si_item.cess_amount)
+                + Sum(self.si_item.cess_non_advol_amount)
+            ).as_("total_tax"),
+            (
+                Sum(self.si_item.taxable_value)
+                + Sum(self.si_item.cgst_amount)
+                + Sum(self.si_item.sgst_amount)
+                + Sum(self.si_item.igst_amount)
+                + Sum(self.si_item.cess_amount)
+                + Sum(self.si_item.cess_non_advol_amount)
+            ).as_("total_amount"),
+        ).groupby(
+            self.si.name,
+            self.si_item.gst_hsn_code,
+            (self.si_item.cgst_rate + self.si_item.sgst_rate + self.si_item.igst_rate),
+            self.si_item.gst_treatment,
+        )
+
+        return query.run(as_dict=True)
 
 
 class GSTR1Conditions:
