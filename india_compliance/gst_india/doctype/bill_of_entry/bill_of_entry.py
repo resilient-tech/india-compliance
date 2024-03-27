@@ -24,6 +24,7 @@ from india_compliance.gst_india.overrides.transaction import (
     validate_charge_type_for_cess_non_advol_accounts,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.__init__ import get_gst_accounts_by_tax_type
 
 
 class BOEGSTDetails(ItemGSTDetails):
@@ -252,11 +253,17 @@ class BillofEntry(Document):
                 )
 
     def validate_taxes(self):
+        cess_non_advol_account = get_gst_accounts_by_tax_type(
+            self.company, "cess_non_advol"
+        )
+
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
         taxable_value_map = {}
+        item_qty = {}
 
         for row in self.get("items"):
             taxable_value_map[row.name] = row.taxable_value
+            item_qty[row.name] = row.qty
 
         for tax in self.taxes:
             if not tax.tax_amount:
@@ -291,20 +298,37 @@ class BillofEntry(Document):
                     )
 
                 # validating total tax
-                total_tax = 0
-                for item, rate in item_wise_tax_rates.items():
-                    item_taxable_value = taxable_value_map.get(item, 0)
-                    total_tax += item_taxable_value * rate / 100
+                if tax.account_head in cess_non_advol_account:
+                    total_tax = 0
+                    for item, rate in item_wise_tax_rates.items():
+                        qty = item_qty.get(item, 0)
+                        total_tax += qty * rate
 
-                tax_difference = abs(total_tax - tax.tax_amount)
+                    tax_difference = abs(total_tax - tax.tax_amount)
 
-                if tax_difference > 1:
-                    frappe.throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
-                            " is incorrect. Try setting the Charge Type to On Net Total."
-                        ).format(row.idx, tax.tax_amount)
-                    )
+                    if tax_difference > 1:
+                        frappe.throw(
+                            _(
+                                "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
+                                " is incorrect. Try setting the Charge Type to On Net Total."
+                            ).format(row.idx, tax.tax_amount)
+                        )
+
+                else:
+                    total_tax = 0
+                    for item, rate in item_wise_tax_rates.items():
+                        item_taxable_value = taxable_value_map.get(item, 0)
+                        total_tax += item_taxable_value * rate / 100
+
+                    tax_difference = abs(total_tax - tax.tax_amount)
+
+                    if tax_difference > 1:
+                        frappe.throw(
+                            _(
+                                "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
+                                " is incorrect. Try setting the Charge Type to On Net Total."
+                            ).format(row.idx, tax.tax_amount)
+                        )
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict

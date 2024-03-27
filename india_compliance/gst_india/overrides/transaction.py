@@ -125,9 +125,13 @@ def validate_item_wise_tax_detail(doc, gst_accounts):
 
     item_taxable_values = defaultdict(float)
 
+    cess_non_advol_account = get_gst_accounts_by_tax_type(doc.company, "cess_non_advol")
+    item_qty = defaultdict(float)
+
     for row in doc.items:
         item_key = row.item_code or row.item_name
         item_taxable_values[item_key] += row.taxable_value
+        item_qty[item_key] += row.qty
 
     for row in doc.taxes:
         if row.account_head not in gst_accounts:
@@ -150,16 +154,28 @@ def validate_item_wise_tax_detail(doc, gst_accounts):
 
             # Sales Invoice is created with manual tax amount. So, when a sales return is created,
             # the tax amount is not recalculated, causing the issue.
-            item_taxable_value = item_taxable_values.get(item_name, 0)
-            tax_difference = abs(item_taxable_value * tax_rate / 100 - tax_amount)
+            if row.account_head in cess_non_advol_account:
+                total_qty = item_qty.get(item_name, 0)
+                tax_difference = abs(total_qty * tax_rate - tax_amount)
 
-            if tax_difference > 1:
-                frappe.throw(
-                    _(
-                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
-                        " is incorrect. Try setting the Charge Type to On Net Total."
-                    ).format(row.idx, tax_amount, bold(item_name))
-                )
+                if tax_difference > 1:
+                    frappe.throw(
+                        _(
+                            "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
+                            " is incorrect. Try setting the Charge Type to On Net Total.hello sir ji"
+                        ).format(row.idx, tax_amount, bold(item_name))
+                    )
+            else:
+                item_taxable_value = item_taxable_values.get(item_name, 0)
+                tax_difference = abs(item_taxable_value * tax_rate / 100 - tax_amount)
+
+                if tax_difference > 1:
+                    frappe.throw(
+                        _(
+                            "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
+                            " is incorrect. Try setting the Charge Type to On Net Total."
+                        ).format(row.idx, tax_amount, bold(item_name))
+                    )
 
 
 def get_tds_amount(doc):
@@ -452,7 +468,7 @@ def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, ta
         )
 
     if (
-        tax_row.charge_type != "On Item Quantity"
+        tax_row.charge_type not in ["On Item Quantity", "Actual"]
         and tax_row.account_head in cess_non_advol_accounts
     ):
         frappe.throw(
