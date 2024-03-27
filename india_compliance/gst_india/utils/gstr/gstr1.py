@@ -11,11 +11,14 @@ B2C_LIMIT = 2_50_000
 
 
 class GSTR1Query:
-    def init(self, filters=None, additional_columns=None):
+    def __init__(
+        self, filters=None, additional_si_columns=None, additional_si_item_columns=None
+    ):
         self.si = frappe.qb.DocType("Sales Invoice")
         self.si_item = frappe.qb.DocType("Sales Invoice Item")
         self.filters = frappe._dict(filters or {})
-        self.additional_columns = additional_columns or []
+        self.additional_si_columns = additional_si_columns or []
+        self.additional_si_item_columns = additional_si_item_columns or []
 
     def get_base_query(self):
         returned_si = frappe.qb.DocType("Sales Invoice", alias="returned_si")
@@ -60,10 +63,15 @@ class GSTR1Query:
             .orderby(self.si.posting_date, self.si.name, order=Order.desc)
         )
 
-        if self.additional_columns:
-            pass
+        if self.additional_si_columns:
+            for col in self.additional_si_columns:
+                query = query.select(self.si[col])
 
-        query = self.get_query_with_filters()
+        if self.additional_si_columns:
+            for col in self.additional_si_item_columns:
+                query = query.select(self.si_item[col])
+
+        query = self.get_query_with_filters(query)
 
         return query
 
@@ -74,23 +82,28 @@ class GSTR1Query:
         if self.filters.company_gstin:
             query = query.where(self.si.company_gstin == self.filters.company_gstin)
 
-        if self.filters.from_date:
-            query = query.where(self.si.posting_date >= getdate(self.filters.from_date))
+        if self.filters.date_range[0]:
+            query = query.where(
+                self.si.posting_date >= getdate(self.filters.date_range[0])
+            )
 
-        if self.filters.to_date:
-            query = query.where(self.si.posting_date <= getdate(self.filters.to_date))
+        if self.filters.date_range[1]:
+            query = query.where(
+                self.si.posting_date <= getdate(self.filters.date_range[1])
+            )
 
         return query
 
 
 class GSTR1Data(GSTR1Query):
-    def init(self, filters=None):
-        self.base_query = self.get_base_query(self)
+    def __init__(self, filters=None):
+        super().__init__(filters)
+        self.base_query = self.get_base_query()
 
     def get_invoices_for_item_wise_summary(self):
         query = self.base_query
         query = query.select(
-            self.si_item.item_code.as_("item"),
+            IfNull(self.si_item.item_code, self.si_item.item_name).as_("item"),
             self.si_item.taxable_value,
             self.si_item.cgst_amount,
             self.si_item.sgst_amount,
@@ -419,7 +432,10 @@ class GSTR1Sections(GSTR1Conditions):
         return filtered_invoices
 
 
-class GSTR1Invoices(GSTR1Query, GSTR1Sections):
+class GSTR1Invoices(GSTR1Data, GSTR1Sections):
+    def __init__(self, filters=None):
+        super().__init__(filters)
+
     def assign_invoice_category_and_sub_category(self, invoices):
         for invoice in invoices:
             if (
@@ -555,6 +571,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Sections):
 
 
 class GSTR1Overview(GSTR1Invoices):
+    def __init__(self, filters=None):
+        super().__init__(filters)
+
     def get_summary_section_wise(self, description, invoices):
         summary = {}
         summary["description"] = description
@@ -573,7 +592,7 @@ class GSTR1Overview(GSTR1Invoices):
 
     def get_overview(self, filters):
 
-        invoices = self.get_invoices_for_item_wise_summary(filters)
+        invoices = self.get_invoices_for_item_wise_summary()
 
         b2b_regular_invoices = self.get_b2b_regular_invoices(invoices)
         b2b_reverse_charge_invoices = self.get_b2b_reverse_charge_invoices(invoices)

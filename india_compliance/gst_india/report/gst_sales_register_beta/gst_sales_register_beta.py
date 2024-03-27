@@ -22,14 +22,14 @@ def execute(filters=None):
     invoices = []
 
     if filters.summary_by == "Overview":
-        summary = GSTR1Overview().get_overview(filters)
+        summary = GSTR1Overview(filters).get_overview(filters)
         return columns, summary
 
-    _class = GSTR1Invoices()
+    _class = GSTR1Invoices(filters)
     if filters.summary_by == "Summary by Item":
-        invoices = _class.get_invoices_for_item_wise_summary(filters)
+        invoices = _class.get_invoices_for_item_wise_summary()
     elif filters.summary_by == "Summary by HSN":
-        invoices = _class.get_invoices_for_hsn_wise_summary(filters)
+        invoices = _class.get_invoices_for_hsn_wise_summary()
 
     if filters.invoice_category:
         invoices = _class.get_filtered_invoices(
