@@ -10,7 +10,7 @@ from frappe.utils import getdate
 B2C_LIMIT = 2_50_000
 SUB_CATEGORIES = {
     "B2B Regular": "B2B Regular",
-    "B2B Reverce Charge": "B2B Reverse Charge",
+    "B2B Reverse charge": "B2B Reverse Charge",
     "SEZWP": "SEZ with payment",
     "SEZWOP": "SEZ without payment",
     "Deemed Exports": "Deemed Exports",
