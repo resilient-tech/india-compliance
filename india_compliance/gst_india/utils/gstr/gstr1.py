@@ -4,10 +4,26 @@
 from pypika import Order
 
 import frappe
-from frappe.query_builder.functions import IfNull, Sum
+from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
 B2C_LIMIT = 2_50_000
+SUB_CATEGORIES = {
+    "B2B Regular": "B2B Regular",
+    "B2B Reverce Charge": "B2B Reverse Charge",
+    "SEZWP": "SEZ with payment",
+    "SEZWOP": "SEZ without payment",
+    "Deemed Exports": "Deemed Exports",
+    "B2C (Large)": "B2C (Large)",
+    "EXPWP": "Exports with payment",
+    "EXPWOP": "Exports without payment",
+    "B2C (Others)": "B2C (Others)",
+    "Nil-Rated": "Nil-Rated",
+    "Exempted": "Exempted",
+    "Non-GST": "Non-GST",
+    "CDNR": "Credit/Debit notes (Registered)",
+    "CDNUR": "Credit/Debit notes (Unregistered)",
+}
 
 
 class GSTR1Query:
@@ -50,119 +66,72 @@ class GSTR1Query:
                     IfNull(returned_si.base_grand_total, 0),
                 ).as_("returned_invoice_total"),
                 self.si.gst_category,
-                self.si_item.gst_treatment,
+                IfNull(self.si_item.gst_treatment, "Not Defined").as_("gst_treatment"),
                 (
                     self.si_item.cgst_rate
                     + self.si_item.sgst_rate
                     + self.si_item.igst_rate
                 ).as_("gst_rate"),
+                self.si_item.taxable_value,
+                self.si_item.cgst_amount,
+                self.si_item.sgst_amount,
+                self.si_item.igst_amount,
+                self.si_item.cess_amount,
+                self.si_item.cess_non_advol_amount,
+                (self.si_item.cess_amount + self.si_item.cess_non_advol_amount).as_(
+                    "total_cess_amount"
+                ),
+                (
+                    self.si_item.cgst_amount
+                    + self.si_item.sgst_amount
+                    + self.si_item.igst_amount
+                    + self.si_item.cess_amount
+                    + self.si_item.cess_non_advol_amount
+                ).as_("total_tax"),
+                (
+                    self.si_item.taxable_value
+                    + self.si_item.cgst_amount
+                    + self.si_item.sgst_amount
+                    + self.si_item.igst_amount
+                    + self.si_item.cess_amount
+                    + self.si_item.cess_non_advol_amount
+                ).as_("total_amount"),
             )
             .where(self.si.docstatus == 1)
             .where(self.si.is_opening != "Yes")
             .where(IfNull(self.si.billing_address_gstin, "") != self.si.company_gstin)
-            .orderby(self.si.posting_date, self.si.name, order=Order.desc)
         )
 
         if self.additional_si_columns:
             for col in self.additional_si_columns:
                 query = query.select(self.si[col])
 
-        if self.additional_si_columns:
+        if self.additional_si_item_columns:
             for col in self.additional_si_item_columns:
                 query = query.select(self.si_item[col])
 
-        query = self.get_query_with_filters(query)
+        query = self.get_query_with_common_filters(query)
 
         return query
 
-    def get_query_with_filters(self, query):
+    def get_query_with_common_filters(self, query):
         if self.filters.company:
             query = query.where(self.si.company == self.filters.company)
 
         if self.filters.company_gstin:
             query = query.where(self.si.company_gstin == self.filters.company_gstin)
 
-        if self.filters.date_range[0]:
+        if self.filters.from_date:
             query = query.where(
-                self.si.posting_date >= getdate(self.filters.date_range[0])
+                Date(self.si.posting_date) >= getdate(self.filters.from_date)
             )
 
-        if self.filters.date_range[1]:
+        if self.filters.to_date:
             query = query.where(
-                self.si.posting_date <= getdate(self.filters.date_range[1])
+                Date(self.si.posting_date) <= getdate(self.filters.to_date)
             )
 
         return query
-
-
-class GSTR1Data(GSTR1Query):
-    def __init__(self, filters=None):
-        super().__init__(filters)
-        self.base_query = self.get_base_query()
-
-    def get_invoices_for_item_wise_summary(self):
-        query = self.base_query
-        query = query.select(
-            IfNull(self.si_item.item_code, self.si_item.item_name).as_("item"),
-            self.si_item.taxable_value,
-            self.si_item.cgst_amount,
-            self.si_item.sgst_amount,
-            self.si_item.igst_amount,
-            (self.si_item.cess_amount + self.si_item.cess_non_advol_amount).as_(
-                "total_cess_amount"
-            ),
-            (
-                self.si_item.cgst_amount
-                + self.si_item.sgst_amount
-                + self.si_item.igst_amount
-                + self.si_item.cess_amount
-                + self.si_item.cess_non_advol_amount
-            ).as_("total_tax"),
-            (
-                self.si_item.taxable_value
-                + self.si_item.cgst_amount
-                + self.si_item.sgst_amount
-                + self.si_item.igst_amount
-                + self.si_item.cess_amount
-                + self.si_item.cess_non_advol_amount
-            ).as_("total_amount"),
-        )
-
-        return query.run(as_dict=True)
-
-    def get_invoices_for_hsn_wise_summary(self):
-        query = self.base_query
-        query = query.select(
-            Sum(self.si_item.taxable_value).as_("taxable_value"),
-            Sum(self.si_item.cgst_amount).as_("cgst_amount"),
-            Sum(self.si_item.sgst_amount).as_("sgst_amount"),
-            Sum(self.si_item.igst_amount).as_("igst_amount"),
-            (
-                Sum(self.si_item.cess_amount) + Sum(self.si_item.cess_non_advol_amount)
-            ).as_("total_cess_amount"),
-            (
-                Sum(self.si_item.cgst_amount)
-                + Sum(self.si_item.sgst_amount)
-                + Sum(self.si_item.igst_amount)
-                + Sum(self.si_item.cess_amount)
-                + Sum(self.si_item.cess_non_advol_amount)
-            ).as_("total_tax"),
-            (
-                Sum(self.si_item.taxable_value)
-                + Sum(self.si_item.cgst_amount)
-                + Sum(self.si_item.sgst_amount)
-                + Sum(self.si_item.igst_amount)
-                + Sum(self.si_item.cess_amount)
-                + Sum(self.si_item.cess_non_advol_amount)
-            ).as_("total_amount"),
-        ).groupby(
-            self.si.name,
-            self.si_item.gst_hsn_code,
-            (self.si_item.cgst_rate + self.si_item.sgst_rate + self.si_item.igst_rate),
-            self.si_item.gst_treatment,
-        )
-
-        return query.run(as_dict=True)
 
 
 class GSTR1Conditions:
@@ -205,11 +174,10 @@ class GSTR1Conditions:
         return (abs(invoice_total) > B2C_LIMIT) and self.is_inter_state(invoice)
 
     def is_b2cl_invoice(self, invoice):
-        return abs(invoice.invoice_total) > B2C_LIMIT and self.is_inter_state(invoice)
+        return abs(invoice.total_amount) > B2C_LIMIT and self.is_inter_state(invoice)
 
 
 class GSTR1Sections(GSTR1Conditions):
-
     def get_nil_rated_exempted_non_gst_invoices(self, invoices):
         filtered_invoices = []
         for invoice in invoices:
@@ -432,7 +400,7 @@ class GSTR1Sections(GSTR1Conditions):
         return filtered_invoices
 
 
-class GSTR1Invoices(GSTR1Data, GSTR1Sections):
+class GSTR1Invoices(GSTR1Query, GSTR1Sections):
     def __init__(self, filters=None):
         super().__init__(filters)
 
@@ -507,7 +475,39 @@ class GSTR1Invoices(GSTR1Data, GSTR1Sections):
                     continue
 
                 invoice.invoice_category = "B2C (Others)"
+
         return invoices
+
+    def get_invoices_for_item_wise_summary(self):
+        query = self.get_base_query()
+
+        return query.run(as_dict=True)
+
+    def get_invoices_for_hsn_wise_summary(self):
+        query = self.get_base_query()
+
+        query = (
+            frappe.qb.from_(query)
+            .select(
+                "*",
+                Sum(query.taxable_value).as_("taxable_value"),
+                Sum(query.cgst_amount).as_("cgst_amount"),
+                Sum(query.sgst_amount).as_("sgst_amount"),
+                Sum(query.igst_amount).as_("igst_amount"),
+                Sum(query.total_cess_amount).as_("total_cess_amount"),
+                Sum(query.total_tax).as_("total_tax_amount"),
+                Sum(query.total_amount).as_("total_amount"),
+            )
+            .groupby(
+                query.invoice_no,
+                query.gst_hsn_code,
+                query.gst_rate,
+                query.gst_treatment,
+            )
+            .orderby(query.posting_date, query.invoice_no, order=Order.desc)
+        )
+
+        return query.run(as_dict=True)
 
     def get_filtered_invoices(
         self, invoices, invoice_category=None, invoice_sub_category=None
@@ -569,92 +569,33 @@ class GSTR1Invoices(GSTR1Data, GSTR1Sections):
         if invoice_category == "Credit / Debit Notes (Unregistered)":
             return self.get_cdnur_invoices(invoices)
 
-
-class GSTR1Overview(GSTR1Invoices):
-    def __init__(self, filters=None):
-        super().__init__(filters)
-
-    def get_summary_section_wise(self, description, invoices):
-        summary = {}
-        summary["description"] = description
-        summary["no_of_records"] = len(
-            set(invoice["invoice_no"] for invoice in invoices)
-        )
-        summary["taxable_value"] = sum(invoice["taxable_value"] for invoice in invoices)
-        summary["igst_amount"] = sum(invoice["igst_amount"] for invoice in invoices)
-        summary["cgst_amount"] = sum(invoice["cgst_amount"] for invoice in invoices)
-        summary["sgst_amount"] = sum(invoice["sgst_amount"] for invoice in invoices)
-        summary["total_cess_amount"] = sum(
-            invoice["total_cess_amount"] for invoice in invoices
-        )
-
-        return summary
-
-    def get_overview(self, filters):
-
+    def get_overview(self):
         invoices = self.get_invoices_for_item_wise_summary()
+        invoices = self.assign_invoice_category_and_sub_category(invoices)
 
-        b2b_regular_invoices = self.get_b2b_regular_invoices(invoices)
-        b2b_reverse_charge_invoices = self.get_b2b_reverse_charge_invoices(invoices)
-        b2c_large_invoices = self.get_b2cl_invoices(invoices)
-        exports_with_payment_invoices = self.get_export_with_payment_invoices(invoices)
-        exports_without_payment_invoices = self.get_export_without_payment_invoices(
-            invoices
-        )
-        sez_with_payment_invoices = self.get_sez_wp_invoices(invoices)
-        sez_without_payment_invoices = self.get_sez_wop_invoices(invoices)
-        deemed_exports_invoices = self.get_deemed_exports_invoices(invoices)
-        b2cs_invoices = self.get_b2cs_invoices(invoices)
-        nil_rated_invoices = self.get_nil_rated_invoices(invoices)
-        exempted_invoices = self.get_exempted_invoices(invoices)
-        non_gst_invoices = self.get_non_gst_invoices(invoices)
-        cdnr_invoices = self.get_cdnr_invoices(invoices)
-        cdnur_invoices = self.get_cdnur_invoices(invoices)
+        amount_fields = {
+            "taxable_value": 0,
+            "igst_amount": 0,
+            "cgst_amount": 0,
+            "sgst_amount": 0,
+            "total_cess_amount": 0,
+        }
 
-        summary = []
-        summary.append(
-            self.get_summary_section_wise("B2B Regular", b2b_regular_invoices)
-        )
-        summary.append(
-            self.get_summary_section_wise(
-                "B2B Reverse Charge", b2b_reverse_charge_invoices
-            )
-        )
-        summary.append(
-            self.get_summary_section_wise("SEZ with payment", sez_with_payment_invoices)
-        )
-        summary.append(
-            self.get_summary_section_wise(
-                "SEZ without payment", sez_without_payment_invoices
-            )
-        )
-        summary.append(
-            self.get_summary_section_wise("Deemed Exports", deemed_exports_invoices)
-        )
-        summary.append(self.get_summary_section_wise("B2C (Large)", b2c_large_invoices))
-        summary.append(
-            self.get_summary_section_wise(
-                "Export with payment", exports_with_payment_invoices
-            )
-        )
-        summary.append(
-            self.get_summary_section_wise(
-                "Export without payment", exports_without_payment_invoices
-            )
-        )
-        summary.append(self.get_summary_section_wise("B2C (Others)", b2cs_invoices))
-        summary.append(self.get_summary_section_wise("Nil Rated", nil_rated_invoices))
-        summary.append(self.get_summary_section_wise("Exempted", exempted_invoices))
-        summary.append(self.get_summary_section_wise("Non-GST", non_gst_invoices))
-        summary.append(
-            self.get_summary_section_wise(
-                "Credit / Debit notes (Registered)", cdnr_invoices
-            )
-        )
-        summary.append(
-            self.get_summary_section_wise(
-                "Credit / Debit notes (Unregistered)", cdnur_invoices
-            )
-        )
+        summary = {}
 
-        return summary
+        for category, description in SUB_CATEGORIES.items():
+            summary[category] = {
+                "description": description,
+                "no_of_records": 0,
+                **amount_fields,
+            }
+
+        for row in invoices:
+            new_row = summary[row.get("invoice_sub_category", row["invoice_category"])]
+
+            for key in amount_fields:
+                new_row[key] += row[key]
+
+            new_row["no_of_records"] += 1
+
+        return list(summary.values())

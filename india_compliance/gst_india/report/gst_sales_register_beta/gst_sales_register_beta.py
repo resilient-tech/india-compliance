@@ -5,40 +5,51 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils.gstr.gstr1 import GSTR1Invoices, GSTR1Overview
+from india_compliance.gst_india.utils.gstr.gstr1 import GSTR1Invoices
 
 
 def execute(filters=None):
-    if not filters:
-        return [], []
-
-    filters = frappe._dict(filters)
-
-    if filters.date_range[0] and filters.date_range[1]:
-        if getdate(filters.date_range[0]) > getdate(filters.date_range[1]):
-            frappe.throw(_("The end date cannot precede the start date"))
-
+    filters = validate_filters(filters)
+    data = get_data(filters)
     columns = get_columns(filters)
-    invoices = []
+
+    return columns, data
+
+
+def validate_filters(filters):
+    filters = frappe._dict(filters)
+    filters["from_date"] = filters.date_range[0]
+    filters["to_date"] = filters.date_range[1]
+
+    if filters.from_date and filters.to_date:
+        if getdate(filters.from_date) > getdate(filters.to_date):
+            frappe.throw(
+                _("From Date must be before To Date"), title=_("Invalid Filter")
+            )
+
+    return filters
+
+
+def get_data(filters):
+    _class = GSTR1Invoices(filters)
 
     if filters.summary_by == "Overview":
-        summary = GSTR1Overview(filters).get_overview(filters)
-        return columns, summary
+        return _class.get_overview()
 
-    _class = GSTR1Invoices(filters)
     if filters.summary_by == "Summary by Item":
-        invoices = _class.get_invoices_for_item_wise_summary()
+        data = _class.get_invoices_for_item_wise_summary()
+
     elif filters.summary_by == "Summary by HSN":
-        invoices = _class.get_invoices_for_hsn_wise_summary()
+        data = _class.get_invoices_for_hsn_wise_summary()
 
     if filters.invoice_category:
-        invoices = _class.get_filtered_invoices(
-            invoices, filters.invoice_category, filters.invoice_sub_category
+        data = _class.get_filtered_invoices(
+            data, filters.invoice_category, filters.invoice_sub_category
         )
     else:
-        invoices = _class.assign_invoice_category_and_sub_category(invoices)
+        data = _class.assign_invoice_category_and_sub_category(data)
 
-    return columns, invoices
+    return data
 
 
 def get_columns(filters):
