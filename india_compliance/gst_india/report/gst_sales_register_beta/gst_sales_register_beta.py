@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils.gstr.gstr1 import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr.gstr_1 import GSTR1Invoices
 
 
 def execute(filters=None):
@@ -47,9 +47,9 @@ def get_data(filters):
             data, filters.invoice_category, filters.invoice_sub_category
         )
     else:
-        data = _class.assign_invoice_category_and_sub_category(data)
+        data = _class._assign_invoice_category_and_sub_category(data)
 
-    return data
+    # return data
 
 
 def get_columns(filters):
