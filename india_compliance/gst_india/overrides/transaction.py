@@ -1425,7 +1425,11 @@ def validate_transaction(doc, method=None):
 
 
 def before_print(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+    if (
+        ignore_gst_validations(doc, throw=False)
+        or not doc.place_of_supply
+        or not doc.company_gstin
+    ):
         return
 
     if doc.get("group_same_items"):
@@ -1435,7 +1439,11 @@ def before_print(doc, method=None, print_settings=None):
 
 
 def onload(doc, method=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+    if (
+        ignore_gst_validations(doc, throw=False)
+        or not doc.place_of_supply
+        or not doc.company_gstin
+    ):
         return
 
     set_gst_breakup(doc)
