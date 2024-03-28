@@ -24,7 +24,7 @@
 .datatable {
     /* overflow: scroll; */
     margin-left: 2px;
-    width: 78vw;
+    /* width: 78vw; */
     border-radius: 0.4rem;
     border: 1px solid #dee2e6;
 }

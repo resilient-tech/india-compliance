@@ -54,12 +54,12 @@ class GSTR1 {
         this.tabs = Object.fromEntries(this._tabs.map(tab => [tab, {}]));
         this.gstr1_data = new GSTR1Data();
 
-        this.make_page_actions();
-        this.make_form();
+        this.setup_page_actions();
+        this.setup_form_fields();
         this.render();
     }
 
-    make_form() {
+    setup_form_fields() {
         var me = this;
         var current_date = new Date();
         this.form = new frappe.ui.FieldGroup({
@@ -168,7 +168,7 @@ class GSTR1 {
         );
     }
 
-    make_page_actions() {
+    setup_page_actions() {
         var me = this;
         let generate_btn = this.page.set_primary_action("Generate", async () => {
             if (!this.form.get_values()) return;

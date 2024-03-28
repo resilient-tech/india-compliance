@@ -1,0 +1,19 @@
+div[data-page-route="GSTR-1 Beta"]
+    [data-fieldname="tabs_empty_state"],
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] {
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+}
+
+div[data-page-route="GSTR-1 Beta"]
+    [data-fieldname="tabs_empty_state"]
+    > img,
+div[data-page-route="GSTR-1 Beta"]
+    [data-fieldname="tabs_no_data"]
+    > img {
+    margin-bottom: var(--margin-md);
+    max-height: 100px;
+}
