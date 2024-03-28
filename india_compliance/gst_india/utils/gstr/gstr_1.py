@@ -258,9 +258,7 @@ class GSTR1Sections(GSTR1Conditions):
 
     def is_b2b_regular_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
-            and not self.is_cn_dn(invoice)
-            and self.has_gstin_and_is_not_export(invoice)
+            self.is_b2b_invoice(invoice)
             and not invoice.is_reverese_charge
             and invoice.gst_category != "SEZ"
             and invoice.gst_category != "Deemed Export"
@@ -268,38 +266,27 @@ class GSTR1Sections(GSTR1Conditions):
 
     def is_b2b_reverse_charge_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
-            and not self.is_cn_dn(invoice)
-            and self.has_gstin_and_is_not_export(invoice)
+            self.is_b2b_invoice(invoice)
             and invoice.is_reverese_charge
             and invoice.gst_category == "Deemed Export"
         )
 
     def is_sez_wp_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
-            and not self.is_cn_dn(invoice)
-            and self.has_gstin_and_is_not_export(invoice)
+            self.is_b2b_invoice(invoice)
             and invoice.gst_category == "SEZ"
             and invoice.is_export_with_gst
         )
 
     def is_sez_wop_invoice(self, invoice):
         return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
-            and not self.is_cn_dn(invoice)
-            and self.has_gstin_and_is_not_export(invoice)
+            self.is_b2b_invoice(invoice)
             and invoice.gst_category == "SEZ"
             and not invoice.is_export_with_gst
         )
 
     def is_deemed_exports_invoice(self, invoice):
-        return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
-            and not self.is_cn_dn(invoice)
-            and self.has_gstin_and_is_not_export(invoice)
-            and invoice.gst_category == "Deemed Export"
-        )
+        return self.is_b2b_invoice(invoice) and invoice.gst_category == "Deemed Export"
 
     def is_export_invoice(self, invoice):
         return (
@@ -309,20 +296,10 @@ class GSTR1Sections(GSTR1Conditions):
         )
 
     def is_export_with_payment_invoice(self, invoice):
-        return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
-            and not self.is_cn_dn(invoice)
-            and self.is_export(invoice)
-            and invoice.is_export_with_gst
-        )
+        return self.is_export_invoice(invoice) and invoice.is_export_with_gst
 
     def is_export_without_payment_invoice(self, invoice):
-        return (
-            not self.is_nil_rated_exempted_or_non_gst(invoice)
-            and not self.is_cn_dn(invoice)
-            and self.is_export(invoice)
-            and not invoice.is_export_with_gst
-        )
+        return self.is_export_invoice(invoice) and not invoice.is_export_with_gst
 
     def is_b2cl_invoice(self, invoice):
         return (
