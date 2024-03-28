@@ -32,24 +32,23 @@ def validate_filters(filters):
 
 def get_data(filters):
     _class = GSTR1Invoices(filters)
+    invoices = []
+
+    if filters.summary_by == "Summary by Item":
+        invoices = _class.get_invoices_for_item_wise_summary()
+
+    if filters.summary_by == "Summary by HSN":
+        invoices = _class.get_invoices_for_hsn_wise_summary()
 
     if filters.summary_by == "Overview":
         return _class.get_overview()
 
-    if filters.summary_by == "Summary by Item":
-        data = _class.get_invoices_for_item_wise_summary()
-
-    elif filters.summary_by == "Summary by HSN":
-        data = _class.get_invoices_for_hsn_wise_summary()
-
     if filters.invoice_category:
-        data = _class.get_filtered_invoices(
-            data, filters.invoice_category, filters.invoice_sub_category
+        return _class.get_filtered_invoices(
+            invoices, filters.invoice_category, filters.invoice_sub_category
         )
-    else:
-        data = _class.assign_invoice_category_and_sub_category(data)
 
-    return data
+    return _class.assign_invoice_category_and_sub_category(invoices)
 
 
 def get_columns(filters):
@@ -213,17 +212,17 @@ def get_columns(filters):
                     "width": 120,
                 },
                 {
+                    "label": _("GST Treatment"),
+                    "fieldname": "gst_treatment",
+                    "width": 120,
+                    "fieldtype": "Data",
+                },
+                {
                     "label": _("Taxable Value"),
                     "fieldname": "taxable_value",
                     "width": 120,
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
-                },
-                {
-                    "label": _("GST Treatment"),
-                    "fieldname": "gst_treatment",
-                    "width": 120,
-                    "fieldtype": "Data",
                 },
                 {
                     "label": _("GST Rate"),

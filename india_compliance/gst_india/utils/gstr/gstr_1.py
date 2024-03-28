@@ -8,9 +8,10 @@ from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
 B2C_LIMIT = 2_50_000
-SUB_CATEGORIES = {
+
+SUB_CATEGORIES_DESCRIPTION = {
     "B2B Regular": "B2B Regular",
-    "B2B Reverse charge": "B2B Reverse Charge",
+    "B2B Reverse Charge": "B2B Reverse Charge",
     "SEZWP": "SEZ with payment",
     "SEZWOP": "SEZ without payment",
     "Deemed Exports": "Deemed Exports",
@@ -25,36 +26,27 @@ SUB_CATEGORIES = {
     "CDNUR": "Credit/Debit Notes (Unregistered)",
 }
 
-INVOICES = {
-    "B2B,SEZ,DE": {
-        "B2B Regular": "self.is_b2b_regular_invoice(invoice)",
-        "B2B Reverse Charge": "self.is_b2b_reverse_charge_invoice(invoice)",
-        "SEZWP": "self.is_sez_wp_invoice(invoice)",
-        "SEZWOP": "self.is_sez_wop_invoice(invoice)",
-        "Deemed Exports": "self.is_deemed_exports_invoice(invoice)",
-        "B2B,SEZ,DE": "self.is_b2b_invoice(invoice)",
-    },
-    "B2C (Large)": {"B2C (Large)": "self.is_b2cl_invoice(invoice)"},
-    "Exports": {
-        "EXPWP": "self.is_export_with_payment_invoice(invoice)",
-        "EXPWOP": "self.is_export_without_payment_invoice(invoice)",
-        "Exports": "self.is_export_invoice(invoice)",
-    },
-    "B2C (Others)": {"B2C (Others)": "self.is_b2cs_invoice(invoice)"},
-    "Nil-Rated,Exempted,Non-GST": {
-        "Nil-Rated": "self.is_nil_rated(invoice)",
-        "Exempted": "self.is_exempted(invoice)",
-        "Non-GST": "self.is_non_gst(invoice)",
-        "Nil-Rated,Exempted,Non-GST": "self.is_nil_rated_exempted_non_gst_invoice(invoice)",
-    },
-    "Credit/Debit Notes (Registered)": {
-        "CDNR": "self.is_cdnr_invoice(invoice)",
-        "Credit/Debit Notes (Registered)": "self.is_cdnr_invoice(invoice)",
-    },
-    "Credit/Debit Notes (Unregistered)": {
-        "CDNUR": "self.is_cdnur_invoice(invoice)",
-        "Credit/Debit Notes (Unregistered)": "self.is_cdnur_invoice(invoice)",
-    },
+# TODO: Better dict
+INVOICE_CONDITION_MAP = {
+    "B2B Regular": "is_b2b_regular_invoice",
+    "B2B Reverse Charge": "is_b2b_reverse_charge_invoice",
+    "SEZWP": "is_sez_wp_invoice",
+    "SEZWOP": "is_sez_wop_invoice",
+    "Deemed Exports": "is_deemed_exports_invoice",
+    "B2B,SEZ,DE": "is_b2b_invoice",
+    "B2C (Large)": "is_b2cl_invoice",
+    "EXPWP": "is_export_with_payment_invoice",
+    "EXPWOP": "is_export_without_payment_invoice",
+    "Exports": "is_export_invoice",
+    "B2C (Others)": "is_b2cs_invoice",
+    "Nil-Rated": "is_nil_rated_invoice",
+    "Exempted": "is_exempted_invoice",
+    "Non-GST": "is_non_gst_invoice",
+    "Nil-Rated,Exempted,Non-GST": "is_nil_rated_exempted_non_gst_invoice",
+    "CDNR": "is_cdnr_invoice",
+    "Credit/Debit Notes (Registered)": "is_cdnr_invoice",
+    "CDNUR": "is_cdnur_invoice",
+    "Credit/Debit Notes (Unregistered)": "is_cdnur_invoice",
 }
 
 
@@ -473,13 +465,14 @@ class GSTR1Invoices(GSTR1Query, GSTR1Sections):
     def get_filtered_invoices(
         self, invoices, invoice_category=None, invoice_sub_category=None
     ):
-        condition_func = INVOICES[invoice_category][
-            invoice_sub_category or invoice_category
-        ]
+
+        category = invoice_sub_category or invoice_category
+        condition = getattr(self, INVOICE_CONDITION_MAP.get(category), None)
+
         filtered_invoices = []
         for invoice in invoices:
             self.invoice_conditions = {}
-            if eval(condition_func):
+            if condition(invoice):
                 filtered_invoices.append(invoice)
 
         return filtered_invoices
@@ -498,7 +491,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Sections):
 
         summary = {}
 
-        for category, description in SUB_CATEGORIES.items():
+        for category, description in SUB_CATEGORIES_DESCRIPTION.items():
             summary[category] = {
                 "description": description,
                 "no_of_records": 0,
