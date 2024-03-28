@@ -1,13 +1,13 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
 const INVOICE_TYPE = {
-    "B2B,SEZ,DE": ["B2B Regular", "B2B Reverse charge", "SEZWP", "SEZWOP", "Deemed Exports"],
+    "B2B,SEZ,DE": ["B2B Regular", "B2B Reverse Charge", "SEZWP", "SEZWOP", "Deemed Exports"],
     "B2C (Large)": ["B2C (Large)"],
     "Exports": ["EXPWP", "EXPWOP"],
     "B2C (Others)": ["B2C (Others)"],
-    "Nil Rated,Exempted,Non-GST": ["Nil-Rated", "Exempted", "Non-GST"],
-    "Credit / Debit notes (Registered)": ["CDNR"],
-    "Credit / Debit notes (Unregistered)": ["CDNUR"],
+    "Nil-Rated,Exempted,Non-GST": ["Nil-Rated", "Exempted", "Non-GST"],
+    "Credit/Debit Notes (Registered)": ["CDNR"],
+    "Credit/Debit Notes (Unregistered)": ["CDNUR"],
 }
 
 frappe.query_reports["GST Sales Register Beta"] = {
@@ -60,9 +60,8 @@ frappe.query_reports["GST Sales Register Beta"] = {
             fieldtype: "Autocomplete",
             fieldname: "invoice_category",
             label: __("Invoice Category"),
-            options: "B2B,SEZ,DE\nB2C (Large)\nExports\nB2C (Others)\nNil Rated,Exempted,Non-GST\nCredit / Debit notes (Registered)\nCredit / Debit Notes (Unregistered)",
+            options: "B2B,SEZ,DE\nB2C (Large)\nExports\nB2C (Others)\nNil-Rated,Exempted,Non-GST\nCredit/Debit Notes (Registered)\nCredit/Debit Notes (Unregistered)",
             on_change(report) {
-                console.log(report)
                 report.set_filter_value('invoice_sub_category', "");
                 set_sub_category_options(report);
             },
