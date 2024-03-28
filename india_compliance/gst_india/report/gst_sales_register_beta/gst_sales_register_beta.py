@@ -282,21 +282,22 @@ def get_columns(filters):
             ]
         )
         if not filters.invoice_category:
-            columns.extend(
-                [
-                    {
-                        "label": _("Invoice Category"),
-                        "fieldname": "invoice_category",
-                        "width": 120,
-                        "fieldtype": "Data",
-                    },
-                    {
-                        "label": _("Invoice Sub Category"),
-                        "fieldname": "invoice_sub_category",
-                        "width": 120,
-                        "fieldtype": "Data",
-                    },
-                ]
+            columns.append(
+                {
+                    "label": _("Invoice Category"),
+                    "fieldname": "invoice_category",
+                    "width": 120,
+                    "fieldtype": "Data",
+                }
+            )
+        if not filters.invoice_sub_category:
+            columns.append(
+                {
+                    "label": _("Invoice Sub Category"),
+                    "fieldname": "invoice_sub_category",
+                    "width": 120,
+                    "fieldtype": "Data",
+                }
             )
 
     return columns
