@@ -154,28 +154,25 @@ def validate_item_wise_tax_detail(doc, gst_accounts):
 
             # Sales Invoice is created with manual tax amount. So, when a sales return is created,
             # the tax amount is not recalculated, causing the issue.
-            if row.account_head in cess_non_advol_account:
-                total_qty = item_qty.get(item_name, 0)
-                tax_difference = abs(total_qty * tax_rate - tax_amount)
+            multiplier = (
+                item_qty.get(item_name, 0)
+                if row.account_head in cess_non_advol_account
+                else item_taxable_values.get(item_name, 0) / 100
+            )
+            tax_difference = abs(multiplier * tax_rate - tax_amount)
 
-                if tax_difference > 1:
-                    frappe.throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
-                            " is incorrect. Try setting the Charge Type to On Net Total.hello sir ji"
-                        ).format(row.idx, tax_amount, bold(item_name))
-                    )
-            else:
-                item_taxable_value = item_taxable_values.get(item_name, 0)
-                tax_difference = abs(item_taxable_value * tax_rate / 100 - tax_amount)
-
-                if tax_difference > 1:
-                    frappe.throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
-                            " is incorrect. Try setting the Charge Type to On Net Total."
-                        ).format(row.idx, tax_amount, bold(item_name))
-                    )
+            column = (
+                "cess non-advol"
+                if row.account_head in cess_non_advol_account
+                else "Net Total"
+            )
+            if tax_difference > 1:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
+                        " is incorrect. Try setting the Charge Type to On {2}."
+                    ).format(row.idx, tax_amount, column)
+                )
 
 
 def get_tds_amount(doc):
