@@ -793,6 +793,26 @@ class TestTransaction(FrappeTestCase):
             doc.insert,
         )
 
+    def test_onload_for_non_gst_document(self):
+        """
+        For gst_breakup we are checking for "ignore_gst_validations".
+        It should return silently for invalid docs.
+        """
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+
+        append_item(doc, frappe._dict(item_tax_template="GST 28% - _TIRC"))
+
+        doc.flags.update(
+            ignore_mandatory=True,
+            ignore_validate=True,
+        )
+
+        doc.save()
+        doc.run_method("onload")
+
+        print_settings = frappe.get_single("Print Settings").as_dict()
+        doc.run_method("before_print", print_settings)
+
 
 class TestQuotationTransaction(FrappeTestCase):
     @classmethod
