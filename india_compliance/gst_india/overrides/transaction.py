@@ -1487,3 +1487,18 @@ def ignore_gst_validations(doc, throw=True):
         or validate_items(doc, throw) is False
     ):
         return True
+
+
+def before_update_after_submit(doc, method=None):
+    if ignore_gst_validations(doc):
+        return False
+
+    validate_items(doc)
+
+    if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
+        validate_hsn_codes(doc)
+
+    valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
+    update_taxable_values(doc, valid_accounts)
+    validate_item_wise_tax_detail(doc, valid_accounts)
+    update_gst_details(doc)
