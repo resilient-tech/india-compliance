@@ -354,7 +354,7 @@ def _download_queued_request(doc):
         )
 
     except Exception as e:
-        frappe.db.delete("GSTR Import Log", {"name": doc.name})
+        frappe.db.delete("GSTR Import Log", doc.name)
         raise e
 
     if response.error_type in ["otp_requested", "invalid_otp"]:
