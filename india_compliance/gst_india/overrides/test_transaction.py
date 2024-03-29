@@ -263,10 +263,11 @@ class TestTransaction(FrappeTestCase):
                 "item_code": "_Test Item Without HSN",
                 "item_name": "_Test Item Without HSN",
                 "valuation_rate": 100,
+                "is_sales_item": 0,
             },
         )
-        item_without_hsn.flags.ignore_validate = True
         item_without_hsn.insert()
+        item_without_hsn.db_set("is_sales_item", 1)
 
         # create transaction
         doc = create_transaction(
