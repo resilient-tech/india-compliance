@@ -216,10 +216,11 @@ class TestTransaction(FrappeTestCase):
                 "item_code": "_Test Item Without HSN",
                 "item_name": "_Test Item Without HSN",
                 "valuation_rate": 100,
+                "is_sales_item": 0,
             },
         )
-        item_without_hsn.flags.ignore_validate = True
         item_without_hsn.insert()
+        item_without_hsn.db_set("is_sales_item", 1)
 
         # create transaction
         doc = create_transaction(
@@ -791,6 +792,26 @@ class TestTransaction(FrappeTestCase):
             re.compile(r"^(.*Only one row can be selected as a Reference Row.*)$"),
             doc.insert,
         )
+
+    def test_onload_for_non_gst_document(self):
+        """
+        For gst_breakup we are checking for "ignore_gst_validations".
+        It should return silently for invalid docs.
+        """
+        doc = create_transaction(**self.transaction_details, do_not_save=True)
+
+        append_item(doc, frappe._dict(item_tax_template="GST 28% - _TIRC"))
+
+        doc.flags.update(
+            ignore_mandatory=True,
+            ignore_validate=True,
+        )
+
+        doc.save()
+        doc.run_method("onload")
+
+        print_settings = frappe.get_single("Print Settings").as_dict()
+        doc.run_method("before_print", print_settings)
 
 
 class TestQuotationTransaction(FrappeTestCase):
