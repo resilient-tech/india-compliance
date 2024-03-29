@@ -1483,6 +1483,7 @@ def ignore_gst_validations(doc, throw=True):
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Note: This is kept for backwards compatibility with Frappe versions < 14.21.0
 def ignore_logs_on_trash(doc, method=None):
     if (
@@ -1496,7 +1497,16 @@ def ignore_logs_on_trash(doc, method=None):
         "e-Invoice Log",
     )
 =======
+=======
+def before_update_after_submit_item(doc, method=None):
+    frappe.flags.through_update_item = True
+
+
+>>>>>>> 118a40f7 (fix: set flags for specific updates)
 def before_update_after_submit(doc, method=None):
+    if not frappe.flags.through_update_item:
+        return
+
     if ignore_gst_validations(doc):
         return
 
