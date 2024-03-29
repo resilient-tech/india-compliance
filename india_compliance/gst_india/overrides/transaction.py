@@ -1489,7 +1489,14 @@ def ignore_gst_validations(doc, throw=True):
         return True
 
 
+def before_update_after_submit_item(doc, method=None):
+    frappe.flags.through_update_item = True
+
+
 def before_update_after_submit(doc, method=None):
+    if not frappe.flags.through_update_item:
+        return
+
     if ignore_gst_validations(doc):
         return
 
