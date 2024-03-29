@@ -360,22 +360,27 @@ class GSTR1Invoices(GSTR1Query, GSTR1Sections):
 
                 if self.is_b2b_regular_invoice(invoice):
                     invoice.invoice_sub_category = "B2B Regular"
+                    invoice.invoice_type = "Regular B2B"
                     continue
 
                 if self.is_b2b_reverse_charge_invoice(invoice):
                     invoice.invoice_sub_category = "B2B Reverse Charge"
+                    invoice.invoice_type = "Regular B2B"
                     continue
 
                 if self.is_sez_wp_invoice(invoice):
                     invoice.invoice_sub_category = "SEZWP"
+                    invoice.invoice_type = "SEZ supplies with payment"
                     continue
 
                 if self.is_sez_wop_invoice(invoice):
                     invoice.invoice_sub_category = "SEZWOP"
+                    invoice.invoice_type = "SEZ supplies without payment"
                     continue
 
                 if self.is_deemed_exports_invoice(invoice):
                     invoice.invoice_sub_category = "Deemed Exports"
+                    invoice.invoice_type = "Deemed Exp"
                     continue
 
             elif self.is_export_invoice(invoice):
@@ -383,10 +388,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Sections):
 
                 if self.is_export_with_payment_invoice(invoice):
                     invoice.invoice_sub_category = "EXPWP"
+                    invoice.invoice_type = "WPAY"
                     continue
 
                 if self.is_export_without_payment_invoice(invoice):
                     invoice.invoice_sub_category = "EXPWOP"
+                    invoice.invoice_type = "WOPAY"
                     continue
 
             elif self.is_b2cl_invoice(invoice):
@@ -414,6 +421,148 @@ class GSTR1Invoices(GSTR1Query, GSTR1Sections):
                 invoice.invoice_sub_category = "B2C (Others)"
 
         return invoices
+
+    def assign_category(self, invoice):
+        if self.is_nil_rated_exempted_non_gst_invoice(invoice):
+            invoice.invoice_category = "Nil-Rated,Exempted,Non-GST"
+            return invoice
+
+        elif self.is_b2b_invoice(invoice):
+            invoice.invoice_category = "B2B"
+            return invoice
+
+        elif self.is_export_invoice(invoice):
+            invoice.invoice_category = "Exports"
+            return invoice
+
+        elif self.is_b2cl_invoice(invoice):
+            invoice.invoice_category = "B2C (Large)"
+            return invoice
+
+        elif self.is_b2cs_invoice(invoice):
+            invoice.invoice_category = "B2C (Others)"
+            return invoice
+
+        elif self.is_cdnr_invoice(invoice):
+            invoice.invoice_category = "CDNR"
+            return invoice
+
+        elif self.is_cdnur_invoice(invoice):
+            invoice.invoice_category = "CDNUR"
+            return invoice
+
+        else:
+            invoice.invoice_category = "B2C (Others)"
+            return invoice
+
+    def assign_sub_category(self, invoice):
+        if invoice.invoice_category == "Nil-Rated,Exempted,Non-GST":
+            if self.is_nil_rated(invoice):
+                invoice.invoice_sub_category = "Nil-Rated"
+                return invoice
+
+            if self.is_exempted(invoice):
+                invoice.invoice_sub_category = "Exempted"
+                return invoice
+
+            if self.is_non_gst(invoice):
+                invoice.invoice_sub_category = "Non-GST"
+                return invoice
+
+        elif invoice.invoice_category == "B2B":
+            if self.is_b2b_regular_invoice(invoice):
+                invoice.invoice_sub_category = "B2B Regular"
+                return invoice
+
+            if self.is_b2b_reverse_charge_invoice(invoice):
+                invoice.invoice_sub_category = "B2B Reverse Charge"
+                return invoice
+
+            if self.is_sez_wp_invoice(invoice):
+                invoice.invoice_sub_category = "SEZWP"
+                return invoice
+
+            if self.is_sez_wop_invoice(invoice):
+                invoice.invoice_sub_category = "SEZWOP"
+                return invoice
+
+            if self.is_deemed_exports_invoice(invoice):
+                invoice.invoice_sub_category = "Deemed Exports"
+                return invoice
+
+        elif invoice.invoice_category == "Exports":
+            if self.is_export_with_payment_invoice(invoice):
+                invoice.invoice_sub_category = "EXPWP"
+                return invoice
+
+            if self.is_export_without_payment_invoice(invoice):
+                invoice.invoice_sub_category = "EXPWOP"
+                return invoice
+
+        elif invoice.invoice_category == "B2C (Large)":
+            invoice.invoice_sub_category = "B2C (Large)"
+            return invoice
+
+        elif invoice.invoice_category == "B2C (Others)":
+            invoice.invoice_sub_category = "B2C (Others)"
+            return invoice
+
+        elif invoice.invoice_category == "CDNR":
+            invoice.invoice_sub_category = "CDNR"
+            return invoice
+
+        elif invoice.invoice_category == "CDNUR":
+            invoice.invoice_sub_category = "CDNUR"
+            return invoice
+
+        else:
+            invoice.invoice_sub_category = "B2C (Others)"
+            return invoice
+
+    def assign_invoice_type(self, invoice):
+        if invoice.invoice_sub_category == "B2B Regular":
+            invoice.invoice_type = "Regular B2B"
+            return invoice
+
+        elif invoice.invoice_sub_category == "B2B Reverse Charge":
+            invoice.invoice_type == "Regular B2B"
+            return invoice
+
+        elif invoice.invoice_sub_category == "SEZWP":
+            invoice.invoice_type = "SEZ supplies with payment"
+            return invoice
+
+        elif invoice.invoice_sub_category == "SEZWOP":
+            invoice.invoice_type = "SEZ supplies without payment"
+            return invoice
+
+        elif invoice.invoice_sub_category == "Deemed Exports":
+            invoice.invoice_type = "Deemed Exp"
+            return invoice
+
+        elif invoice.invoice_sub_category == "EXPWP":
+            invoice.invoice_type == "WPAY"
+            return invoice
+
+        elif invoice.invoice_sub_category == "EXPWOP":
+            invoice.invoice_type == "WOPAY"
+            return invoice
+
+        elif invoice.invoice_sub_category == "Nil-Rated":
+            if self.is_inter_state(invoice) and invoice.billing_address_gstin:
+                invoice.invoice_type = "Interstate Registered"
+                return invoice
+            if self.is_inter_state(invoice) and not invoice.billing_address_gstin:
+                invoice.invoice_typ = "Interstate Unregistered"
+                return invoice
+            if not self.is_inter_state(invoice) and invoice.billing_address_gstin:
+                invoice.invoice_type = "Intrastate Registered"
+                return invoice
+            if not self.is_inter_state(invoice) and not invoice.billing_address_gstin:
+                invoice.invoice_type = "Intrastate Unregistered"
+
+        elif invoice.invoice_sub_category == "CDNR":
+            pass
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
