@@ -358,7 +358,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-09-06 21:35:11.153554",
+ "modified": "2024-03-29 11:54:42.687831",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Inward Supply",
@@ -394,7 +394,7 @@
   }
  ],
  "search_fields": "bill_date, supplier_name, bill_no, document_value",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "supplier_name",

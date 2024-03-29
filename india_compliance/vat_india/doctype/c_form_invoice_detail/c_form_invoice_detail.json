@@ -64,13 +64,13 @@
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-04-02 10:07:26.466108",
+ "modified": "2024-03-29 11:36:18.687936",
  "modified_by": "Administrator",
  "module": "VAT India",
  "name": "C-Form Invoice Detail",
  "owner": "Administrator",
  "permissions": [],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": []
 }
