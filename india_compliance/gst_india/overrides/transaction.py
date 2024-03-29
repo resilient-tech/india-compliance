@@ -1498,7 +1498,7 @@ def ignore_logs_on_trash(doc, method=None):
 =======
 def before_update_after_submit(doc, method=None):
     if ignore_gst_validations(doc):
-        return False
+        return
 
     validate_items(doc)
 
