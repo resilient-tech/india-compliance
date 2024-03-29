@@ -305,6 +305,7 @@ class TestEWaybill(FrappeTestCase):
         - check if item details are generated correctly
         """
         si = create_sales_invoice(do_not_submit=True)
+        item_code = si.items[0].item_code
 
         hsn_codes = frappe.get_file_json(
             frappe.get_app_path(
@@ -321,11 +322,10 @@ class TestEWaybill(FrappeTestCase):
             append_item(
                 si,
                 frappe._dict(
-                    item_code=hsn_code,
+                    item_code=item_code,
                     item_name="Test Item {}".format(i),
                     rate=100,
                     gst_hsn_code=hsn_code,
-                    uom="Nos"
                 ),
             )
 
@@ -338,13 +338,7 @@ class TestEWaybill(FrappeTestCase):
         )
 
         # Assert get_all_item_details
-        to_remove = [
-            d
-            for d in si.items
-            if d.gst_hsn_code != "61149090" and d.item_code != "_Test Trading Goods 1"
-        ]
-        for item in to_remove:
-            si.remove(item)
+        si.items = si.items[:1]
         si.save()
 
         self.assertListEqual(
@@ -355,7 +349,7 @@ class TestEWaybill(FrappeTestCase):
                     "taxable_value": 100.0,
                     "hsn_code": "61149090",
                     "item_name": "Test Trading Goods 1",
-                    "uom": "Nos",
+                    "uom": "NOS",
                     "cgst_amount": 0,
                     "cgst_rate": 0,
                     "sgst_amount": 0,
@@ -385,7 +379,7 @@ class TestEWaybill(FrappeTestCase):
             [
                 {
                     "hsn_code": "61149090",
-                    "uom": "Nos",
+                    "uom": "NOS",
                     "item_name": "",
                     "cgst_rate": 9.0,
                     "sgst_rate": 9.0,
