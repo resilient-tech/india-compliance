@@ -48,7 +48,7 @@ def get_data(filters):
             invoices, filters.invoice_category, filters.invoice_sub_category
         )
 
-    return _class.assign_invoice_category_and_sub_category(invoices)
+    return _class.set_additional_fields(invoices)
 
 
 def get_columns(filters):
