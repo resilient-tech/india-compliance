@@ -80,7 +80,7 @@ function set_sub_category_options(report) {
     const invoice_category = frappe.query_report.get_filter_value("invoice_category");
     report.get_filter('invoice_sub_category').set_data(INVOICE_TYPE[invoice_category] || []);
 
-    if (invoice_category && INVOICE_TYPE[invoice_category].length == 1) {
+    if (invoice_category && INVOICE_TYPE[invoice_category].length === 1) {
         report.set_filter_value("invoice_sub_category", INVOICE_TYPE[invoice_category][0])
     }
 }
