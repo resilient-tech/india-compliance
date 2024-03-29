@@ -809,6 +809,9 @@ class TestTransaction(FrappeTestCase):
         doc.save()
         doc.run_method("onload")
 
+        print_settings = frappe.get_single("Print Settings").as_dict()
+        doc.run_method("before_print", print_settings)
+
 
 class TestQuotationTransaction(FrappeTestCase):
     @classmethod
