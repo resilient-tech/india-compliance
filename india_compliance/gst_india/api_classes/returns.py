@@ -157,7 +157,7 @@ class ReturnsAuthenticate(BaseAPI):
             )
 
             # cache of parent doctype GST Settings is not cleared by default so clear it manually
-            frappe.clear_document_cache("GST Settings")
+            frappe.clear_document_cache("GST Settings", "GST Settings")
 
         return response
 
