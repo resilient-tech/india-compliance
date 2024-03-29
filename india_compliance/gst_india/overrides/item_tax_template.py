@@ -1,11 +1,12 @@
 import frappe
 from frappe import _
-from frappe.utils import rounded
+from frappe.utils import flt, rounded
 
 from india_compliance.gst_india.overrides.transaction import get_valid_accounts
 
 
 def validate(doc, method=None):
+    doc.gst_rate = flt(doc.gst_rate)
     validate_zero_tax_options(doc)
     validate_tax_rates(doc)
 
