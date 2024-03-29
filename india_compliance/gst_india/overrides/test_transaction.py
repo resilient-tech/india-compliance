@@ -266,6 +266,7 @@ class TestTransaction(FrappeTestCase):
             },
         )
         item_without_hsn.flags.ignore_validate = True
+        item_without_hsn.add_default_uom_in_conversion_factor_table()
         item_without_hsn.insert()
 
         # create transaction

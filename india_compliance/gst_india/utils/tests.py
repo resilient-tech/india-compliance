@@ -103,7 +103,7 @@ def append_item(transaction, data=None, company_abbr="_TIRC"):
         {
             "item_code": data.item_code or "_Test Trading Goods 1",
             "qty": data.qty or 1,
-            "uom": data.uom,
+            "uom": data.uom or "NOS",
             "rate": data.rate or 100,
             "cost_center": f"Main - {company_abbr}",
             "item_tax_template": data.item_tax_template,
