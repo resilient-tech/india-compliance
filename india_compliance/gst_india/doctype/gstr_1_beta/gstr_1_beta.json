@@ -13,7 +13,7 @@
   "month",
   "column_break_qcor",
   "year",
-  "section_break_ruqo",
+  "data_section",
   "tabs_html",
   "tabs_empty_state",
   "tabs_no_data"
@@ -31,10 +31,6 @@
    "label": "Company",
    "options": "Company",
    "reqd": 1
-  },
-  {
-   "fieldname": "section_break_ruqo",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "company_gstin",
@@ -62,7 +58,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "new Date().getFullYear().toString()",
    "fieldname": "year",
    "fieldtype": "Autocomplete",
    "label": "Year",
@@ -85,13 +80,17 @@
    "fieldname": "tabs_no_data",
    "fieldtype": "HTML",
    "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"No data available for selected filters\") }}</p>"
+  },
+  {
+   "fieldname": "data_section",
+   "fieldtype": "Section Break"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-03-28 13:06:02.741548",
+ "modified": "2024-03-28 17:54:56.536508",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",

@@ -3,23 +3,28 @@
 
 frappe.provide("india_compliance");
 
-SUMMARY_COLUMNS = []
+DOCTYPE = "GSTR-1 Beta";
+
+SUMMARY_COLUMNS = [];
 BOOKS_DETAILS_COLUMNS = {
-    "b2b": [
+    b2b: [
         { label: "GSTIN/UIN of Recipient", fieldname: "gstin", fieldtype: "Data" },
         { label: "Invoice Number", fieldname: "invoice_no", fieldtype: "Data" },
-    ]
-
-}
+    ],
+};
 FILED_DETAILS_COLUMNS = {
-    "b2b": [
+    b2b: [
         { label: "GSTIN/UIN of Recipient", fieldname: "gstin", fieldtype: "Data" },
         { label: "Invoice Number", fieldname: "invoice_no", fieldtype: "Data" },
-    ]
-}
+    ],
+};
 
-frappe.ui.form.on("GSTR-1 Beta", {
-    setup(frm) {
+frappe.ui.form.on(DOCTYPE, {
+    async setup(frm) {
+        patch_set_active_tab(frm);
+        await set_default_fields(frm);
+
+        await frappe.require("gstr1.bundle.js");
         frm.gstr1 = new GSTR1(frm);
     },
 
@@ -34,6 +39,14 @@ frappe.ui.form.on("GSTR-1 Beta", {
         // Primary Action
         frm.disable_save();
         frm.page.set_primary_action(__("Generate"), () => frm.save());
+
+        frm.add_custom_button("Download Excel", () => {});
+
+        // // move actions button next to filters
+        // for (let button of $(".custom-actions")) {
+        //     $(".custom-button-group").remove();
+        //     $(button).appendTo($(".custom-button-group"));
+        // }
     },
 
     before_save(frm) {
@@ -43,43 +56,44 @@ frappe.ui.form.on("GSTR-1 Beta", {
     after_save(frm) {
         frm.gstr1.refresh(frm.doc.__onload?.data);
     },
-
-    on_generate(frm) {
-        frm.call("generate").then((r) => {
-            if (!r.message) return;
-            frm.doc._data = r.message;
-            frm.trigger("set_indicator");
-            frm.gstr1 = new GSTR1(frm);
-        });
-    },
 });
-
-async function set_gstin_options(frm) {
-    const { query, params } = india_compliance.get_gstin_query(frm.doc.company);
-    const { message } = await frappe.call({
-        method: query,
-        args: params,
-    });
-
-    if (!message) return [];
-    const gstin_field = frm.get_field("company_gstin");
-    gstin_field.set_data(message);
-    return message;
-}
 
 class GSTR1 {
     // Render page / Setup Listeners / Setup Data
     TABS = [
         {
             label: __("Books"),
+            name: "books",
             views: ["Summary", "Details"],
             is_active: true,
             active_view: "Summary",
-            actions: [{
-                label: __("Download Excel"),
-                action: () => this.download_books_as_excel(),
-            }],
-        }
+            actions: [
+                {
+                    label: __("Download Excel"),
+                    action: () => this.download_books_as_excel(),
+                },
+            ],
+        },
+        {
+            label: __("Reconcile"),
+            name: "reconcile",
+            views: ["Summary", "Details"],
+            is_active: false,
+            active_view: "Summary",
+        },
+        {
+            label: __("Filed"),
+            name: "filed",
+            views: ["Summary", "Details"],
+            is_active: false,
+            active_view: "Summary",
+            actions: [
+                {
+                    label: __("Mark as Filed"),
+                    action: () => this.mark_as_filed(),
+                },
+            ],
+        },
     ];
 
     constructor(frm) {
@@ -94,8 +108,12 @@ class GSTR1 {
     }
 
     refresh(data) {
-        if (data)
+        if (data) {
             this.data = data;
+            this.refresh_filter_fields();
+        }
+
+        // apply filters
     }
 
     // RENDER
@@ -103,6 +121,9 @@ class GSTR1 {
     render() {
         this.render_tab_group();
         this.render_indicator();
+        this.setup_filter_button();
+        this.render_view_groups();
+        this.render_data_tables();
     }
 
     render_tab_group() {
@@ -124,18 +145,32 @@ class GSTR1 {
                 },
                 {
                     fieldtype: "Tab Break",
+                    fieldname: "reconcile_tab",
+                    label: __("Reconcile"),
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: "reconcile_html",
+                },
+                {
+                    fieldtype: "Tab Break",
                     fieldname: "filed_tab",
                     label: __("Filed"),
                 },
                 {
                     fieldtype: "HTML",
                     fieldname: "filed_html",
-                }
+                },
             ],
             body: this.$wrapper,
             frm: this.frm,
         });
         this.tab_group.make();
+
+        // make tabs_dict for easy access
+        this.tabs = Object.fromEntries(
+            this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
+        );
     }
 
     render_indicator() {
@@ -146,42 +181,105 @@ class GSTR1 {
         frm.page.set_indicator(status, color);
     }
 
+    render_view_groups() {
+        // this.TABS.forEach(tab => {
+        //     this.tabs[`${tab.name}_tab`].viewgroup = new ViewGroup({
+        //         $wrapper: "",
+        //         tab: tab.name,
+        //         _views: tab.views,
+        //         active_view: tab.active_view,
+        //     });
+        // });
+    }
+
+    render_data_tables() {
+        this.TABS.forEach(tab => {
+            this.tabs[`${tab.name}_tab`].datatable = new india_compliance.DataTableManager({
+                $wrapper: this.tab_group.get_field(`${tab.name}_html`).$wrapper,
+                columns: [],
+                data: [],
+                options: {
+                    cellHeight: 55,
+                },
+            });
+        });
+        this.set_datatable_listeners();
+    }
+
     // SETUP
 
-    setup_tabs() {
-        const tabs_html_wrapper = this.form.fields_dict.tabs_html.$wrapper;
-        console.log(tabs_html_wrapper);
-        this.tab_group = new frappe.ui.FieldGroup({
-            fields: [
-                {
-                    //hack: for the FieldGroup(Layout) to avoid rendering default "details" tab
-                    fieldtype: "Section Break",
-                },
-                {
-                    fieldtype: "Tab Break",
-                    fieldname: "books_tab",
-                    label: __("Books"),
-                    active: 1,
-                },
-            ],
-            body: tabs_html_wrapper,
-            frm: { doctype: "GSTR1", get_perm: () => true, set_active_tab: () => { } },
+    setup_filter_button() {
+        this.filter_group = new india_compliance.FilterGroup({
+            doctype: DOCTYPE,
+            parent: this.$wrapper.find(".form-tabs-list"),
+            filter_options: {
+                fieldname: "section_name",
+                filter_fields: this.get_filter_fields(),
+            },
+            on_change: () => {
+                this.refresh();
+            },
         });
-        this.tab_group.make();
+    }
+
+    // LISTENERS
+
+    set_datatable_listeners() {
+        const me = this;
+        this.tabs.books_tab.datatable.$datatable.on("click", ".match-status", async function (e) {
+            e.preventDefault();
+
+            const match_status = $(this).text();
+            await me.filter_group.push_new_filter([
+                DOCTYPE,
+                "match_status",
+                "=",
+                match_status,
+            ]);
+            me.filter_group.apply();
+        });
     }
 
     // ACTIONS
 
-    download_books_as_excel() { }
+    download_books_as_excel() {}
+
+    mark_as_filed() {}
 
     // UTILS
 
-    set_active_tab(tab) { }
+    get_filter_fields() {
+        const fields = [
+            {
+                label: "Section Name",
+                fieldname: "section_name",
+                fieldtype: "Autocomplete",
+                options: ["B2B", "B2CL", "B2CS"],
+            },
+        ];
+
+        fields.forEach(field => (field.parent = DOCTYPE));
+        return fields;
+    }
+
+    refresh_filter_fields() {
+        this.filter_group.filter_options.filter_fields = this.get_filter_fields();
+    }
+
+    get_autocomplete_options(field) {
+        const options = [];
+        this.data.forEach(row => {
+            if (row[field] && !options.includes(row[field])) options.push(row[field]);
+        });
+        return options;
+    }
+
+    apply_filters() {}
 }
 
 class GSTR1Data {
     // Process Data / Summarize Data / Filter Data / Columns and Data Formatting / Reconcile
-    constructor() { }
+    constructor() {}
 
     reset_data() {
         this.data = {}; // Raw Data
@@ -192,14 +290,12 @@ class GSTR1Data {
 
 class TabManager {
     //
-
 }
 
 class ViewGroup {
     constructor(options) {
         Object.assign(this, options);
         this.views = {};
-        this.active_view = this._views[0];
         this.heading = this.$wrapper.find(".view-heading");
         this.render();
     }
@@ -256,25 +352,59 @@ class ViewGroup {
     }
 }
 
-async function get_default_company_gstin(me) {
-    me.form.set_value("company_gstin", "");
+// UTILITY FUNCTIONS
 
-    const company = me.form.get_value("company");
+function patch_set_active_tab(frm) {
+    const set_active_tab = frm.set_active_tab;
+    frm.set_active_tab = function (...args) {
+        set_active_tab.apply(this, args);
+        frm.refresh();
+    };
+}
+
+async function set_gstin_options(frm) {
+    const { query, params } = india_compliance.get_gstin_query(frm.doc.company);
+    const { message } = await frappe.call({
+        method: query,
+        args: params,
+    });
+
+    if (!message) return [];
+    const gstin_field = frm.get_field("company_gstin");
+    gstin_field.set_data(message);
+    return message;
+}
+
+async function set_default_fields(frm) {
+    await set_default_company_gstin(frm);
+    set_default_year(frm);
+    set_previous_month(frm);
+}
+
+async function set_default_company_gstin(frm) {
+    frm.set_value("company_gstin", "");
+
+    const company = frm.doc.company;
     const { message: gstin_list } = await frappe.call(
         "india_compliance.gst_india.utils.get_gstin_list",
         { party: company }
     );
 
     if (gstin_list && gstin_list.length) {
-        me.form.set_value("company_gstin", gstin_list[0]);
+        frm.set_value("company_gstin", gstin_list[0]);
     }
 }
 
-function get_previous_month() {
+function set_default_year(frm) {
+    const year = new Date().getFullYear().toString();
+    frm.set_value("year", year);
+}
+
+function set_previous_month(frm) {
     var previous_month_date = new Date();
     previous_month_date.setMonth(previous_month_date.getMonth() - 1);
-
-    return previous_month_date.toLocaleDateString("en", { month: "long" });
+    const month = previous_month_date.toLocaleDateString("en", { month: "long" });
+    frm.set_value("month", month);
 }
 
 function get_year_list(current_date) {
