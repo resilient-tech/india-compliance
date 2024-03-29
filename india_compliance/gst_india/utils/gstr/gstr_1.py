@@ -408,8 +408,6 @@ class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
             self.invoice_conditions = {}
             self.assign_categories(invoice)
 
-        return invoices
-
     def assign_categories(self, invoice):
 
         self.set_invoice_category(invoice)
@@ -469,9 +467,15 @@ class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
             if not condition(invoice):
                 continue
 
-            self.assign_categories(invoice)
-            if invoice.invoice_sub_category == invoice_sub_category:
+            invoice.invoice_category = invoice_category
+            self.set_invoice_sub_category_and_type(invoice)
+
+            if not invoice_sub_category:
                 filtered_invoices.append(invoice)
+
+            elif invoice_sub_category == invoice.invoice_sub_category:
+                filtered_invoices.append(invoice)
+                continue
 
         return filtered_invoices
 
@@ -494,15 +498,21 @@ class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
             summary[category] = {
                 "description": SUB_CATEGORIES_DESCRIPTION.get(category, category),
                 "no_of_records": 0,
+                "unique_records": set(),
                 **amount_fields,
             }
 
         for row in invoices:
-            new_row = summary[row.get("invoice_sub_category", row["invoice_category"])]
+            category_key = summary[
+                row.get("invoice_sub_category", row["invoice_category"])
+            ]
 
             for key in amount_fields:
-                new_row[key] += row[key]
+                category_key[key] += row[key]
 
-            new_row["no_of_records"] += 1
+            category_key["unique_records"].add(row.invoice_no)
+
+        for category_key in summary.values():
+            category_key["no_of_records"] = len(category_key["unique_records"])
 
         return list(summary.values())
