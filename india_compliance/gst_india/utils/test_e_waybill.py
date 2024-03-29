@@ -325,6 +325,7 @@ class TestEWaybill(FrappeTestCase):
                     item_name="Test Item {}".format(i),
                     rate=100,
                     gst_hsn_code=hsn_code,
+                    uom="Nos"
                 ),
             )
 
@@ -354,7 +355,7 @@ class TestEWaybill(FrappeTestCase):
                     "taxable_value": 100.0,
                     "hsn_code": "61149090",
                     "item_name": "Test Trading Goods 1",
-                    "uom": "NOS",
+                    "uom": "Nos",
                     "cgst_amount": 0,
                     "cgst_rate": 0,
                     "sgst_amount": 0,
@@ -384,7 +385,7 @@ class TestEWaybill(FrappeTestCase):
             [
                 {
                     "hsn_code": "61149090",
-                    "uom": "NOS",
+                    "uom": "Nos",
                     "item_name": "",
                     "cgst_rate": 9.0,
                     "sgst_rate": 9.0,
