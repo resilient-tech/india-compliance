@@ -464,6 +464,9 @@ class GSTR3BReport(Document):
             place_of_supply = (
                 invoice_details.get("place_of_supply") or "00-Other Territory"
             )
+            is_overseas_invoice = is_overseas_transaction(
+                "Sales Invoice", gst_category, place_of_supply
+            )
 
             for rate, items in items_based_on_rate.items():
                 for item_code, taxable_value in self.invoice_items.get(inv).items():
@@ -476,15 +479,14 @@ class GSTR3BReport(Document):
                             self.report_dict["sup_details"]["osup_nongst"][
                                 "txval"
                             ] += taxable_value
-                        elif rate == 0 or (
-                            is_overseas_transaction(
-                                "Sales Invoice", gst_category, place_of_supply
-                            )
-                            and not invoice_details.get("is_export_with_gst")
-                        ):
+                        elif rate == 0 or (is_overseas_invoice):
                             self.report_dict["sup_details"]["osup_zero"][
                                 "txval"
                             ] += taxable_value
+
+                            self.report_dict["sup_details"]["osup_zero"]["iamt"] += flt(
+                                taxable_value * rate / 100, 2
+                            )
                         else:
                             if inv in self.cgst_sgst_invoices:
                                 tax_rate = rate / 2
@@ -531,7 +533,10 @@ class GSTR3BReport(Document):
                                     ]["iamt"] += flt(taxable_value * rate / 100, 2)
 
             if self.invoice_cess.get(inv):
-                self.report_dict["sup_details"]["osup_det"]["csamt"] += flt(
+
+                invoice_category = "osup_zero" if is_overseas_invoice else "osup_det"
+
+                self.report_dict["sup_details"][invoice_category]["csamt"] += flt(
                     self.invoice_cess.get(inv), 2
                 )
 
