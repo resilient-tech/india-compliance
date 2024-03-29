@@ -154,6 +154,7 @@ doc_events = {
         ),
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
     },
     "Purchase Receipt": {
         "onload": [
@@ -199,6 +200,7 @@ doc_events = {
         ),
         "before_save": "india_compliance.gst_india.overrides.transaction.update_gst_details",
         "before_submit": "india_compliance.gst_india.overrides.transaction.update_gst_details",
+        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
     },
     "Supplier": {
         "validate": [

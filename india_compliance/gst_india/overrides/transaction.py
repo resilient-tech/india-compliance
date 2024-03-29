@@ -1482,6 +1482,7 @@ def ignore_gst_validations(doc, throw=True):
         return True
 
 
+<<<<<<< HEAD
 # Note: This is kept for backwards compatibility with Frappe versions < 14.21.0
 def ignore_logs_on_trash(doc, method=None):
     if (
@@ -1494,3 +1495,18 @@ def ignore_logs_on_trash(doc, method=None):
         "e-Waybill Log",
         "e-Invoice Log",
     )
+=======
+def before_update_after_submit(doc, method=None):
+    if ignore_gst_validations(doc):
+        return False
+
+    validate_items(doc)
+
+    if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
+        validate_hsn_codes(doc)
+
+    valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
+    update_taxable_values(doc, valid_accounts)
+    validate_item_wise_tax_detail(doc, valid_accounts)
+    update_gst_details(doc)
+>>>>>>> cdeae988 (fix: update taxable value on updating items after submitting Sales Order and Purchase Order)
