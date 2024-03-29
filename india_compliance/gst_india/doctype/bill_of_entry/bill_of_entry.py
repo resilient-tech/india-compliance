@@ -254,11 +254,11 @@ class BillofEntry(Document):
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
         taxable_value_map = {}
-        item_qty = {}
+        item_qty_map = {}
 
         for row in self.get("items"):
             taxable_value_map[row.name] = row.taxable_value
-            item_qty[row.name] = row.qty
+            item_qty_map[row.name] = row.qty
 
         for tax in self.taxes:
             if not tax.tax_amount:
@@ -294,22 +294,22 @@ class BillofEntry(Document):
 
                 # validating total tax
                 total_tax = 0
+                is_non_cess_advol = (
+                    tax.account_head == input_accounts.cess_non_advol_account
+                )
+
                 for item, rate in item_wise_tax_rates.items():
                     multiplier = (
-                        item_qty.get(item, 0)
-                        if tax.account_head in input_accounts.cess_non_advol_account
+                        item_qty_map.get(item, 0)
+                        if is_non_cess_advol
                         else taxable_value_map.get(item, 0) / 100
                     )
                     total_tax += multiplier * rate
 
                 tax_difference = abs(total_tax - tax.tax_amount)
 
-                column = (
-                    "cess non-advol"
-                    if tax.account_head in input_accounts.cess_non_advol_account
-                    else "Net Total"
-                )
                 if tax_difference > 1:
+                    column = "On Item Quantity" if is_non_cess_advol else "Net Total"
                     frappe.throw(
                         _(
                             "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
