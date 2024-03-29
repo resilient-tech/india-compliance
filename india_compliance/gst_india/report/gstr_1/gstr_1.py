@@ -1852,12 +1852,12 @@ def get_invoice_type_for_excel(row):
     if gst_category == "SEZ":
         return (
             "SEZ supplies with payment"
-            if row.get("export_type") == "WPAY"
+            if row.get("export_type")
             else "SEZ supplies without payment"
         )
 
     if gst_category == "Overseas":
-        return "EXPWP" if row.get("export_type") == "WPAY" else "EXPWOP"
+        return "EXPWP" if row.get("export_type") else "EXPWOP"
 
     return (
         {
