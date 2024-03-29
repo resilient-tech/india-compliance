@@ -297,7 +297,7 @@
    "link_fieldname": "link_name"
   }
  ],
- "modified": "2023-12-13 16:43:40.501418",
+ "modified": "2024-03-29 11:36:17.991037",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Bill of Entry",
@@ -349,7 +349,7 @@
    "role": "Auditor"
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

@@ -33,7 +33,7 @@
   }
  ],
  "links": [],
- "modified": "2022-03-01 15:35:07.689101",
+ "modified": "2024-03-29 11:54:42.576237",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST HSN Code",
@@ -77,7 +77,7 @@
  ],
  "quick_entry": 1,
  "search_fields": "hsn_code, description",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "hsn_code",

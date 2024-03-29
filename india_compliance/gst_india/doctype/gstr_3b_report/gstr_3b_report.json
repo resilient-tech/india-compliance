@@ -78,7 +78,7 @@
   }
  ],
  "links": [],
- "modified": "2024-01-02 14:09:31.230340",
+ "modified": "2024-03-29 11:54:43.342426",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR 3B Report",
@@ -104,7 +104,7 @@
    "write": 1
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

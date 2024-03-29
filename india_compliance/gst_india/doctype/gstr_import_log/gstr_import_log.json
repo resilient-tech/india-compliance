@@ -68,7 +68,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-09-06 09:18:47.885426",
+ "modified": "2024-03-29 11:54:43.449587",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR Import Log",
@@ -99,7 +99,7 @@
    "role": "Accounts User"
   }
  ],
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "gstin"
