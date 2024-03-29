@@ -1500,8 +1500,6 @@ def before_update_after_submit(doc, method=None):
     if ignore_gst_validations(doc):
         return
 
-    validate_items(doc)
-
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
 
