@@ -1,6 +1,8 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from enum import Enum
+
 from pypika import Order
 
 import frappe
@@ -8,6 +10,54 @@ from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
 B2C_LIMIT = 2_50_000
+
+
+class GSTR1_Categories(Enum):
+    """
+    Overview Page of GSTR-1
+    """
+
+    # Invoice Items Bifurcation
+    B2B = "B2B,SEZ,DE"
+    B2CL = "B2C (Large)"
+    EXP = "Exports"
+    B2CS = "B2C (Others)"
+    NIL_EXEMPT = "Nil-Rated, Exempted, Non-GST"
+    CDNR = "Credit/Debit Notes (Registered)"
+    CDNUR = "Credit/Debit Notes (Unregistered)"
+    # Other Categories
+    AT = "Advances Received"
+    TXP = "Advances Adjusted"
+    DOC_ISSUE = "Document Issued"
+    HSN = "HSN Summary"
+
+
+class GSTR1_SubCategories(Enum):
+    """
+    Summary Page of GSTR-1
+    """
+
+    # Invoice Items Bifurcation
+    B2B_REGULAR = "B2B Regular"  # Regular B2B
+    B2B_REVERSE_CHARGE = "B2B Reverse Charge"  # Regular B2B
+    SEZWP = "SEZWP"  # SEZ supplies with payment
+    SEZWOP = "SEZWOP"  # SEZ supplies without payment
+    DE = "Deemed Exports"  # Deemed Exp
+    B2CL = "B2C (Large)"  # NA
+    EXPWP = "EXPWP"  # WPAY
+    EXPWOP = "EXPWOP"  # WOPAY
+    B2CS = "B2C (Others)"  # NA
+    NIL_RATED = "Nil-Rated"  # Inter vs Intra & Regis vs UnRegis
+    EXEMPTED = "Exempted"  # Inter vs Intra & Regis vs UnRegis
+    NON_GST = "Non-GST"  # Inter vs Intra & Regis vs UnRegis
+    CDNR = "CDNR"  # Like B2B
+    CDNUR = "CDNUR"  # B2CL vs EXPWP vs EXPWOP
+    # Other Sub-Categories
+    # AT = "Advances Received"
+    # TXP = "Advances Adjusted"
+    # HSN = "HSN Summary"
+    # DOC_ISSUE = "Document Issued"
+
 
 SUB_CATEGORIES_DESCRIPTION = {
     "SEZWP": "SEZ with payment",
@@ -27,41 +77,15 @@ CATEGORY_CONDITIONS = {
     "Credit/Debit Notes (Registered)": "is_cdnr_invoice",
     "Credit/Debit Notes (Unregistered)": "is_cdnur_invoice",
 }
-DOCUMENT_TYPE_MAP = {
-    "B2B,SEZ,DE": "get_category_for_b2b",
-    "B2C (Large)": "get_category_for_b2cl",
-    "Exports": "get_category_for_exports",
-    "B2C (Others)": "get_category_for_b2c",
-    "Nil-Rated,Exempted,Non-GST": "get_category_for_nil_exp_non_gst",
-    "Credit/Debit Notes (Registered)": "get_category_for_cdnr",
-    "Credit/Debit Notes (Unregistered)": "get_category_for_cdnur",
-}
 
-SUB_CATEGORY_CONDITIONS = {
-    "B2B,SEZ,DE": {
-        "B2B Regular": "is_b2b_regular_invoice",
-        "B2B Reverse Charge": "is_b2b_reverse_charge_invoice",
-        "SEZWP": "is_sez_wp_invoice",
-        "SEZWOP": "is_sez_wop_invoice",
-        "Deemed Exports": "is_deemed_exports_invoice",
-    },
-    "B2C (Large)": {"B2C (Large)": "is_b2cl_invoice"},
-    "Exports": {
-        "EXPWP": "is_export_with_payment_invoice",
-        "EXPWOP": "is_export_without_payment_invoice",
-    },
-    "B2C (Others)": {"B2C (Others)": "is_b2cs_invoice"},
-    "Nil-Rated,Exempted,Non-GST": {
-        "Nil-Rated": "is_nil_rated_invoice",
-        "Exempted": "is_exempted_invoice",
-        "Non-GST": "is_non_gst_invoice",
-    },
-    "Credit/Debit Notes (Registered)": {
-        "CDNR": "is_cdnr_invoice",
-    },
-    "Credit/Debit Notes (Unregistered)": {
-        "CDNUR": "is_cdnur_invoice",
-    },
+SUB_CATEGORY_AND_INVOICE_TYPE_MAP = {
+    "B2B,SEZ,DE": "set_for_b2b",
+    "B2C (Large)": "set_for_b2cl",
+    "Exports": "set_for_exports",
+    "B2C (Others)": "set_for_b2cs",
+    "Nil-Rated,Exempted,Non-GST": "set_for_nil_exp_non_gst",
+    "Credit/Debit Notes (Registered)": "set_for_cdnr",
+    "Credit/Debit Notes (Unregistered)": "set_for_cdnur",
 }
 
 
@@ -247,15 +271,6 @@ class GSTR1Sections(GSTR1Conditions):
             or self.is_non_gst(invoice)
         )
 
-    def is_nil_rated_invoice(self, invoice):
-        return self.is_nil_rated(invoice)
-
-    def is_exempted_invoice(self, invoice):
-        return self.is_exempted(invoice)
-
-    def is_non_gst_invoice(self, invoice):
-        return self.is_non_gst(invoice)
-
     def is_b2b_invoice(self, invoice):
         return (
             not self.is_nil_rated_exempted_or_non_gst(invoice)
@@ -263,46 +278,12 @@ class GSTR1Sections(GSTR1Conditions):
             and self.has_gstin_and_is_not_export(invoice)
         )
 
-    def is_b2b_regular_invoice(self, invoice):
-        return (
-            self.is_b2b_invoice(invoice)
-            and not invoice.is_reverese_charge
-            and invoice.gst_category != "SEZ"
-            and invoice.gst_category != "Deemed Export"
-        )
-
-    def is_b2b_reverse_charge_invoice(self, invoice):
-        return self.is_b2b_invoice(invoice) and invoice.is_reverese_charge
-
-    def is_sez_wp_invoice(self, invoice):
-        return (
-            self.is_b2b_invoice(invoice)
-            and invoice.gst_category == "SEZ"
-            and invoice.is_export_with_gst
-        )
-
-    def is_sez_wop_invoice(self, invoice):
-        return (
-            self.is_b2b_invoice(invoice)
-            and invoice.gst_category == "SEZ"
-            and not invoice.is_export_with_gst
-        )
-
-    def is_deemed_exports_invoice(self, invoice):
-        return self.is_b2b_invoice(invoice) and invoice.gst_category == "Deemed Export"
-
     def is_export_invoice(self, invoice):
         return (
             not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.is_cn_dn(invoice)
             and self.is_export(invoice)
         )
-
-    def is_export_with_payment_invoice(self, invoice):
-        return self.is_export_invoice(invoice) and invoice.is_export_with_gst
-
-    def is_export_without_payment_invoice(self, invoice):
-        return self.is_export_invoice(invoice) and not invoice.is_export_with_gst
 
     def is_b2cl_invoice(self, invoice):
         return (
@@ -335,70 +316,87 @@ class GSTR1Sections(GSTR1Conditions):
             and (self.is_export(invoice) or self.is_b2cl_cn_dn(invoice))
         )
 
-    def is_b2b_supply(self, invoice):
-        return
-
 
 class GSTRDocumentType(GSTR1Sections):
-    def get_category_for_b2b(self, invoice):
-        if self.is_sez_wp_invoice(invoice):
-            return "SEZ supplies with payment"
 
-        elif self.is_sez_wop_invoice(invoice):
-            return "SEZ supplies without payment"
+    def set_for_b2b(self, invoice):
+        self._set_invoice_type_for_b2b_and_cdnr(invoice)
 
-        elif self.is_deemed_exports_invoice(invoice):
-            return "Deemed Exp"
+    def set_for_b2cl(self, invoice):
+        # NO INVOICE VALUE
+        invoice.invoice_sub_category = "B2C (Large)"
 
-        return "Regular B2B"
+    def set_for_exports(self, invoice):
+        if invoice.is_export_with_gst:
+            invoice.invoice_sub_category = "EXPWP"
+            invoice.invoice_type = "WPAY"
 
-    def get_category_for_b2cl(self, invoice):
-        # NO value
-        return ""
+        else:
+            invoice.invoice_sub_category = "EXPWOP"
+            invoice.invoice_type = "WOPAY"
 
-    def get_category_for_exports(self, invoice):
-        if self.is_export_with_payment_invoice(invoice):
-            return "WPAY"
+    def set_for_b2cs(self, invoice):
+        # NO INVOICE VALUE
+        invoice.invoice_sub_category = "B2C (Others)"
 
-        return "WOPAY"
-
-    def get_category_for_b2c(self, invoice):
-        # No value
-        return ""
-
-    def get_category_for_nil_exp_non_gst(self, invoice):
+    def set_for_nil_exp_non_gst(self, invoice):
+        # INVOICE TYPE
         is_registered = self.has_gstin_and_is_not_export(invoice)
         is_interstate = self.is_inter_state(invoice)
 
         gst_registration = "registered" if is_registered else "unregistered"
         supply_type = "Inter-State" if is_interstate else "Intra-State"
 
-        return f"{supply_type} to {gst_registration} persons"
+        invoice.invoice_type = f"{supply_type} to {gst_registration} persons"
 
-    def get_category_for_cdnr(self, invoice):
+        # INVOICE SUB CATEGORY
+        if self.is_nil_rated(invoice):
+            invoice.invoice_sub_category = "Nil-Rated"
+
+        elif self.is_exempted(invoice):
+            invoice.invoice_sub_category = "Exempted"
+
+        elif self.is_non_gst(invoice):
+            invoice.invoice_sub_category = "Non-GST"
+
+    def set_for_cdnr(self, invoice):
+        self._set_invoice_type_for_b2b_and_cdnr(invoice)
+        invoice.invoice_sub_category = "CDNR"
+
+    def set_for_cdnur(self, invoice):
+        invoice.invoice_sub_category = "CDNUR"
+        if self.is_export(invoice):
+            if invoice.is_export_with_gst:
+                invoice.invoice_type = "EXPWP"
+                return
+
+            invoice.invoice_type = "EXPWOP"
+            return
+
+        invoice.invoice_type = "B2CL"
+        return
+
+    def _set_invoice_type_for_b2b_and_cdnr(self, invoice):
         if invoice.gst_category == "Deemed Export":
-            return "Deemed Exp"
+            invoice.invoice_type = "Deemed Exp"
+            invoice.invoice_sub_category = "Deemed Export"
 
         elif invoice.gst_category == "SEZ":
             if invoice.is_export_with_gst:
-                return "SEZ supplies with payment"
+                invoice.invoice_type = "SEZ supplies with payment"
+                invoice.invoice_sub_category = "SEZWP"
 
-            return "SEZ supplies without payment"
+            else:
+                invoice.invoice_type = "SEZ supplies without payment"
+                invoice.invoice_sub_category = "SEZWOP"
 
         elif invoice.is_reverese_charge:
-            # TODO: verify
-            return "Intra-State supplies attracting IGST"
+            invoice.invoice_type = "Regular B2B"
+            invoice.invoice_sub_category = "B2B Reverse Charge"
 
-        return "Regular B2B"
-
-    def get_category_for_cdnur(self, invoice):
-        if self.is_export(invoice):
-            if invoice.is_export_with_gst:
-                return "EXPWP"
-
-            return "EXPWOP"
-
-        return "B2CL"
+        else:
+            invoice.invoice_type = "Regular B2B"
+            invoice.invoice_sub_category = "B2B Regular"
 
 
 class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
@@ -414,26 +412,18 @@ class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
 
     def assign_categories(self, invoice):
 
-        invoice.invoice_category = self.get_invoice_category(invoice)
-        invoice.invoice_sub_category = self.get_invoice_sub_category(invoice)
-        invoice.invoice_type = self.get_invoice_type(invoice)
+        self.set_invoice_category(invoice)
+        self.set_invoice_sub_category_and_type(invoice)
 
-    def get_invoice_category(self, invoice):
+    def set_invoice_category(self, invoice):
         for category, function in CATEGORY_CONDITIONS.items():
             if getattr(self, function, None)(invoice):
-                return category
+                invoice.invoice_category = category
 
-    def get_invoice_type(self, invoice):
-        func = DOCUMENT_TYPE_MAP.get(invoice.invoice_category)
-
-        print(getattr(self, func, None)(invoice))
-        return getattr(self, func, None)(invoice)
-
-    def get_invoice_sub_category(self, invoice):
-        sub_category_conditions = SUB_CATEGORY_CONDITIONS.get(invoice.invoice_category)
-        for sub_category, function in sub_category_conditions.items():
-            if getattr(self, function, None)(invoice):
-                return sub_category
+    def set_invoice_sub_category_and_type(self, invoice):
+        category = invoice.invoice_category
+        function = SUB_CATEGORY_AND_INVOICE_TYPE_MAP.get(category)
+        getattr(self, function, None)(invoice)
 
     def get_invoices_for_item_wise_summary(self):
         query = self.get_base_query()
@@ -472,12 +462,6 @@ class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
 
         filtered_invoices = []
         condition = CATEGORY_CONDITIONS.get(invoice_category)
-
-        if invoice_sub_category:
-            condition = SUB_CATEGORY_CONDITIONS.get(invoice_category).get(
-                invoice_sub_category
-            )
-
         condition = getattr(self, condition, None)
 
         for invoice in invoices:
@@ -486,13 +470,14 @@ class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
                 continue
 
             self.assign_categories(invoice)
-            filtered_invoices.append(invoice)
+            if invoice.invoice_sub_category == invoice_sub_category:
+                filtered_invoices.append(invoice)
 
         return filtered_invoices
 
     def get_overview(self):
         invoices = self.get_invoices_for_item_wise_summary()
-        invoices = self.assign_invoice_category_and_sub_category(invoices)
+        self.set_additional_fields(invoices)
 
         amount_fields = {
             "taxable_value": 0,
@@ -504,10 +489,7 @@ class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
 
         summary = {}
 
-        subcategories = []
-        for subcategory_dict in SUB_CATEGORY_CONDITIONS.values():
-            subcategories.extend(subcategory_dict.keys())
-
+        subcategories = [category.value for category in GSTR1_SubCategories]
         for category in subcategories:
             summary[category] = {
                 "description": SUB_CATEGORIES_DESCRIPTION.get(category, category),
