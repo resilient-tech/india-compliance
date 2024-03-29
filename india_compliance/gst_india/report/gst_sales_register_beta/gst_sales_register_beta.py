@@ -279,6 +279,12 @@ def get_columns(filters):
                     "fieldtype": "Currency",
                     "options": "Company:company:default_currency",
                 },
+                 {
+                    "label": _("Invoice Type"),
+                    "fieldname": "invoice_type",
+                    "width": 120,
+                    "fieldtype": "Data",
+                }
             ]
         )
         if not filters.invoice_category:

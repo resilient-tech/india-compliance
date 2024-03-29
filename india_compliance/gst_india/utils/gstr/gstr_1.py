@@ -27,6 +27,15 @@ CATEGORY_CONDITIONS = {
     "Credit/Debit Notes (Registered)": "is_cdnr_invoice",
     "Credit/Debit Notes (Unregistered)": "is_cdnur_invoice",
 }
+DOCUMENT_TYPE_MAP = {
+    "B2B,SEZ,DE": "get_category_for_b2b",
+    "B2C (Large)": "get_category_for_b2cl",
+    "Exports": "get_category_for_exports",
+    "B2C (Others)": "get_category_for_b2c",
+    "Nil-Rated,Exempted,Non-GST": "get_category_for_nil_exp_non_gst",
+    "Credit/Debit Notes (Registered)": "get_category_for_cdnr",
+    "Credit/Debit Notes (Unregistered)": "get_category_for_cdnur",
+}
 
 SUB_CATEGORY_CONDITIONS = {
     "B2B,SEZ,DE": {
@@ -193,7 +202,7 @@ class GSTR1Conditions:
 
     @wrapper
     def is_nil_rated_exempted_or_non_gst(self, invoice):
-        return (
+        return not self.is_export(invoice) and (
             self.is_nil_rated(invoice)
             or self.is_exempted(invoice)
             or self.is_non_gst(invoice)
@@ -326,18 +335,85 @@ class GSTR1Sections(GSTR1Conditions):
             and (self.is_export(invoice) or self.is_b2cl_cn_dn(invoice))
         )
 
+    def is_b2b_supply(self, invoice):
+        return
 
-class GSTR1Invoices(GSTR1Query, GSTR1Sections):
+
+class GSTRDocumentType(GSTR1Sections):
+    def get_category_for_b2b(self, invoice):
+        if self.is_sez_wp_invoice(invoice):
+            return "SEZ supplies with payment"
+
+        elif self.is_sez_wop_invoice(invoice):
+            return "SEZ supplies without payment"
+
+        elif self.is_deemed_exports_invoice(invoice):
+            return "Deemed Exp"
+
+        return "Regular B2B"
+
+    def get_category_for_b2cl(self, invoice):
+        # NO value
+        return ""
+
+    def get_category_for_exports(self, invoice):
+        if self.is_export_with_payment_invoice(invoice):
+            return "WPAY"
+
+        return "WOPAY"
+
+    def get_category_for_b2c(self, invoice):
+        # No value
+        return ""
+
+    def get_category_for_nil_exp_non_gst(self, invoice):
+        is_registered = self.has_gstin_and_is_not_export(invoice)
+        is_interstate = self.is_inter_state(invoice)
+
+        gst_registration = "registered" if is_registered else "unregistered"
+        supply_type = "Inter-State" if is_interstate else "Intra-State"
+
+        return f"{supply_type} to {gst_registration} persons"
+
+    def get_category_for_cdnr(self, invoice):
+        if invoice.gst_category == "Deemed Export":
+            return "Deemed Exp"
+
+        elif invoice.gst_category == "SEZ":
+            if invoice.is_export_with_gst:
+                return "SEZ supplies with payment"
+
+            return "SEZ supplies without payment"
+
+        elif invoice.is_reverese_charge:
+            # TODO: verify
+            return "Intra-State supplies attracting IGST"
+
+        return "Regular B2B"
+
+    def get_category_for_cdnur(self, invoice):
+        if self.is_export(invoice):
+            if invoice.is_export_with_gst:
+                return "EXPWP"
+
+            return "EXPWOP"
+
+        return "B2CL"
+
+
+class GSTR1Invoices(GSTR1Query, GSTRDocumentType):
     def __init__(self, filters=None):
         super().__init__(filters)
 
     def set_additional_fields(self, invoices):
         for invoice in invoices:
+            self.invoice_conditions = {}
             self.assign_categories(invoice)
 
         return invoices
 
     def assign_categories(self, invoice):
+
         invoice.invoice_category = self.get_invoice_category(invoice)
         invoice.invoice_sub_category = self.get_invoice_sub_category(invoice)
         invoice.invoice_type = self.get_invoice_type(invoice)
@@ -346,6 +422,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Sections):
         for category, function in CATEGORY_CONDITIONS.items():
             if getattr(self, function, None)(invoice):
                 return category
+
+    def get_invoice_type(self, invoice):
+        func = DOCUMENT_TYPE_MAP.get(invoice.invoice_category)
+
+        print(getattr(self, func, None)(invoice))
+        return getattr(self, func, None)(invoice)
 
     def get_invoice_sub_category(self, invoice):
         sub_category_conditions = SUB_CATEGORY_CONDITIONS.get(invoice.invoice_category)
