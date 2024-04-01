@@ -259,7 +259,7 @@ class GSTR1Conditions:
         return (abs(invoice_total) > B2C_LIMIT) and self.is_inter_state(invoice)
 
     @cache_invoice_condition
-    def is_b2cl_invoice(self, invoice):
+    def is_b2cl_inv(self, invoice):
         return abs(invoice.total_amount) > B2C_LIMIT and self.is_inter_state(invoice)
 
 
@@ -291,6 +291,7 @@ class GSTR1CategoryConditions(GSTR1Conditions):
             and not self.is_cn_dn(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and not self.is_export(invoice)
+            and self.is_b2cl_inv(invoice)
         )
 
     def is_b2cs_invoice(self, invoice):
@@ -298,7 +299,7 @@ class GSTR1CategoryConditions(GSTR1Conditions):
             not self.is_nil_rated_exempted_or_non_gst(invoice)
             and not self.has_gstin_and_is_not_export(invoice)
             and not self.is_export(invoice)
-            and (not self.is_b2cl_cn_dn(invoice) or not self.is_b2cl_invoice(invoice))
+            and (not self.is_b2cl_cn_dn(invoice) or not self.is_b2cl_inv(invoice))
         )
 
     def is_cdnr_invoice(self, invoice):
