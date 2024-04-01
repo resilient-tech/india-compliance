@@ -1,7 +1,7 @@
 import sys
-import requests
 from urllib.parse import urlparse
 
+import requests
 
 WEBSITE_REPOS = frozenset(("india-compliance-docs",))
 DOCUMENTATION_DOMAINS = frozenset(("docs.indiacompliance.app",))

@@ -90,7 +90,7 @@ def update_gstin_and_gst_category():
                 if len(gstins) == 1:
                     default_gstin = next(iter(gstins))
                 else:
-                    default_gstin = list(gstins)[0]
+                    default_gstin = next(iter(gstins))
 
                 new_gstins.setdefault((doctype, default_gstin), []).append(party.name)
 

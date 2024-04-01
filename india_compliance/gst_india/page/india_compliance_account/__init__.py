@@ -56,7 +56,7 @@ def get_auth_session():
 
 
 @frappe.whitelist()
-def set_auth_session(session: str = None):
+def set_auth_session(session: str | None = None):
     frappe.only_for("System Manager")
 
     if not session:

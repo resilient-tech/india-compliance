@@ -249,7 +249,7 @@ class Gstr1Report:
                     )
                     row["type"] = "E" if ecommerce_gstin else "OE"
 
-            for key, value in b2c_output.items():
+            for value in b2c_output.values():
                 self.data.append(value)
 
     def is_b2cl_cdn(self, invoice):
@@ -323,18 +323,14 @@ class Gstr1Report:
         conditions = self.get_conditions()
 
         invoice_data = frappe.db.sql(
-            """
-			select
-				{select_columns}
-			from `tab{doctype}` si
-			where docstatus = 1 {where_conditions}
-			and is_opening = 'No'
-			order by posting_date desc
-			""".format(
-                select_columns=self.select_columns,
-                doctype=self.doctype,
-                where_conditions=conditions,
-            ),
+            f"""
+        	select
+        		{self.select_columns}
+        	from `tab{self.doctype}` si
+        	where docstatus = 1 {conditions}
+        	and is_opening = 'No'
+        	order by posting_date desc
+        	""",
             self.filters,
             as_dict=1,
         )
@@ -388,20 +384,16 @@ class Gstr1Report:
             )
 
         if self.filters.get("type_of_business") == "B2C Large":
-            conditions += """ AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
-				AND grand_total > {0} AND is_return != 1 AND is_debit_note !=1
+            conditions += f""" AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
+				AND grand_total > {B2C_LIMIT} AND is_return != 1 AND is_debit_note !=1
                 AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
-                AND SUBSTR(place_of_supply, 1, 2) != '96'""".format(
-                B2C_LIMIT
-            )
+                AND SUBSTR(place_of_supply, 1, 2) != '96'"""
 
         elif self.filters.get("type_of_business") == "B2C Small":
-            conditions += """ AND (
+            conditions += f""" AND (
 				SUBSTR(place_of_supply, 1, 2) = SUBSTR(company_gstin, 1, 2)
-					OR grand_total <= {0}) AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
-                    AND SUBSTR(place_of_supply, 1, 2) != '96' """.format(
-                B2C_LIMIT
-            )
+					OR grand_total <= {B2C_LIMIT}) AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
+                    AND SUBSTR(place_of_supply, 1, 2) != '96' """
 
         elif self.filters.get("type_of_business") == "CDNR-REG":
             conditions += """ AND (is_return = 1 OR is_debit_note = 1) AND IFNULL(gst_category, '') not in ('Unregistered', 'Overseas')"""
@@ -426,13 +418,12 @@ class Gstr1Report:
         self.nil_exempt_non_gst = {}
 
         items = frappe.db.sql(
-            """
+            f"""
 			select item_code, item_name, parent, taxable_value, item_tax_rate, gst_treatment
-            from `tab%s Item`
-			where parent in (%s)
-		"""
-            % (self.doctype, ", ".join(["%s"] * len(self.invoices))),
-            tuple(self.invoices),
+            from `tab{self.doctype} Item`
+			where parent in ({", ".join(["%s"] * len(self.invoices))})
+		""",
+           tuple(self.invoices),
             as_dict=1,
         )
 
@@ -463,17 +454,16 @@ class Gstr1Report:
 
     def get_items_based_on_tax_rate(self):
         tax_details = frappe.db.sql(
-            """
-			select
-				parent, account_head, item_wise_tax_detail
-			from `tab%s`
-			where
-				parenttype = %s and docstatus = 1
-				and parent in (%s)
-			order by account_head
-		"""
-            % (self.tax_doctype, "%s", ", ".join(["%s"] * len(self.invoices.keys()))),
-            tuple([self.doctype] + list(self.invoices.keys())),
+            f"""
+            SELECT
+                parent, account_head, item_wise_tax_detail
+            FROM `tab{self.tax_doctype}`
+            WHERE
+                parenttype = %s AND docstatus = 1
+                AND parent IN ({', '.join(['%s'] * len(self.invoices))})
+            ORDER BY account_head
+            """,
+            (self.doctype, *self.invoices.keys()),
         )
 
         self.items_based_on_tax_rate = {}
@@ -1161,7 +1151,7 @@ class GSTR11A11BData:
         data = {}
         for entry in records:
             taxable_value = flt(entry.taxable_value, 2)
-            tax_rate = round(((entry.tax_amount / taxable_value) * 100))
+            tax_rate = round((entry.tax_amount / taxable_value) * 100)
 
             data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
 
@@ -1258,7 +1248,7 @@ class GSTR1DocumentIssuedSummary:
             slice_indices.append(i)
 
         document_series_list = [
-            data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])
+            data[i:j] for i, j in zip([0, *slice_indices], [*slice_indices, None])
         ]
 
         for series in document_series_list:
@@ -1423,7 +1413,7 @@ def get_gstr1_json(filters, data=None):
 
 
 def get_json(type_of_business, gstin, data, filters):
-    if data and list(data[-1].values())[0] == "Total":
+    if data and next(iter(data[-1].values())) == "Total":
         data = data[:-1]
 
     res = {}
@@ -1528,7 +1518,7 @@ def get_b2b_json(res, gstin):
         if not gst_in:
             continue
 
-        for number, invoice in res[gst_in].items():
+        for invoice in res[gst_in].values():
             if not invoice[0]["place_of_supply"]:
                 frappe.throw(
                     _(
@@ -1707,7 +1697,7 @@ def get_cdnr_reg_json(res, gstin):
         if not gst_in:
             continue
 
-        for number, invoice in res[gst_in].items():
+        for invoice in res[gst_in].values():
             if not invoice[0]["place_of_supply"]:
                 frappe.throw(
                     _(
@@ -1746,7 +1736,7 @@ def get_cdnr_reg_json(res, gstin):
 def get_cdnr_unreg_json(res, gstin):
     out = []
 
-    for invoice, items in res.items():
+    for items in res.values():
         inv_item = {
             "nt_num": items[0]["invoice_number"],
             "nt_dt": getdate(items[0]["posting_date"]).strftime("%d-%m-%Y"),
@@ -1775,7 +1765,7 @@ def get_exempted_json(data):
         ]
     }
 
-    for i, v in enumerate(data):
+    for i in range(len(data)):
         if data[i].get("nil_rated"):
             out["inv"][i]["nil_amt"] = data[i]["nil_rated"]
 
@@ -1950,12 +1940,7 @@ def download_json_file():
 
     frappe.response["filename"] = (
         frappe.scrub(
-            "{0} {1} {2} {3}".format(
-                data["report_name"],
-                data["report_type"],
-                report_data["gstin"],
-                report_data["fp"],
-            )
+            f"{data['report_name']} {data['report_type']} {report_data['gstin']} {report_data['fp']}"
         )
         + ".json"
     )

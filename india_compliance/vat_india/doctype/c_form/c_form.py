@@ -31,21 +31,17 @@ class CForm(Document):
                 elif inv and inv[0][1] and inv[0][1] != self.name:
                     frappe.throw(
                         _(
-                            """Invoice {0} is tagged in another C-form: {1}.
+                            f"""Invoice {d.invoice_no} is tagged in another C-form: {inv[0][1]}.
 						If you want to change C-form no for this invoice,
-						please remove invoice no from the previous c-form and then try again""".format(
-                                d.invoice_no, inv[0][1]
-                            )
+						please remove invoice no from the previous c-form and then try again"""
                         )
                     )
 
                 elif not inv:
                     frappe.throw(
                         _(
-                            "Row {0}: Invoice {1} is invalid, it might be cancelled /"
-                            " does not exist. Please enter a valid Invoice.".format(
-                                d.idx, d.invoice_no
-                            )
+                            f"Row {d.idx}: Invoice {d.invoice_no} is invalid, it might be cancelled /"
+                            " does not exist. Please enter a valid Invoice."
                         )
                     )
 
@@ -67,16 +63,14 @@ class CForm(Document):
         inv = [d.invoice_no for d in self.get("invoices")]
         if inv:
             frappe.db.sql(
-                """update `tabSales Invoice` set c_form_no=%s, modified=%s where name in (%s)"""
-                % ("%s", "%s", ", ".join(["%s"] * len(inv))),
-                tuple([self.name, self.modified] + inv),
+                f"""update `tabSales Invoice` set c_form_no=%s, modified=%s where name in ({', '.join(['%s'] * len(inv))})""",
+                (self.name, self.modified, *inv),
             )
 
             frappe.db.sql(
-                """update `tabSales Invoice` set c_form_no = null, modified = %s
-				where name not in (%s) and ifnull(c_form_no, '') = %s"""
-                % ("%s", ", ".join(["%s"] * len(inv)), "%s"),
-                tuple([self.modified] + inv + [self.name]),
+                f"""update `tabSales Invoice` set c_form_no = null, modified = %s
+				where name not in ({', '.join(['%s'] * len(inv))}) and ifnull(c_form_no, '') = %s""",
+                (self.modified, *inv, self.name),
             )
         else:
             frappe.throw(_("Please enter atleast 1 invoice in the table"))

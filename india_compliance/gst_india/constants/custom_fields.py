@@ -1146,12 +1146,21 @@ e_waybill_status_field = {
     "read_only_depends_on": "eval:doc.ewaybill",
 }
 
-purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
+purchase_e_waybill_field = {
+    **sales_e_waybill_field,
+    "insert_after": "supplier_name",
+}
 
 E_WAYBILL_FIELDS = {
-    "Sales Invoice": E_WAYBILL_INV_FIELDS
-    + [sales_e_waybill_field, e_waybill_status_field],
-    "Delivery Note": E_WAYBILL_DN_FIELDS + [sales_e_waybill_field],
-    "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
-    "Purchase Receipt": E_WAYBILL_PURCHASE_RECEIPT_FIELDS + [purchase_e_waybill_field],
+    "Sales Invoice": [
+        *E_WAYBILL_INV_FIELDS,
+        sales_e_waybill_field,
+        e_waybill_status_field,
+    ],
+    "Delivery Note": [*E_WAYBILL_DN_FIELDS, sales_e_waybill_field],
+    "Purchase Invoice": [*E_WAYBILL_INV_FIELDS, purchase_e_waybill_field],
+    "Purchase Receipt": [
+        *E_WAYBILL_PURCHASE_RECEIPT_FIELDS,
+        purchase_e_waybill_field,
+    ],
 }

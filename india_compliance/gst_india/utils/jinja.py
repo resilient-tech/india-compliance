@@ -2,6 +2,7 @@ import base64
 import json
 from datetime import datetime
 from io import BytesIO
+from typing import ClassVar
 
 import pyqrcode
 from barcode import Code128
@@ -181,7 +182,7 @@ class GSTBreakup:
     ]
     """
 
-    CESS_HEADERS = ["CESS", "CESS Non Advol"]
+    CESS_HEADERS: ClassVar[list[str]] = ["CESS", "CESS Non Advol"]
 
     def __init__(self, doc):
         self.doc = doc

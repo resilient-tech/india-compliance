@@ -47,7 +47,7 @@ def get_docs_with_gst_accounts_and_same_item_multiple_times(doctype, gst_account
         frappe.qb.from_(item_doctype)
         .select(item_doctype.parent)
         .groupby(item_doctype.parent, item_doctype.item_code)
-        .having(Count((item_doctype.item_code)) > 2)
+        .having(Count(item_doctype.item_code) > 2)
     )
 
     return (

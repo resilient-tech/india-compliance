@@ -55,7 +55,6 @@ ignore = [
     "E402", # module level import not at top of file
     "E501", # line too long
     "E741", # ambiguous variable name
-    "F401", # "unused" imports
     "F403", # can't detect undefined names from * import
     "F405", # can't detect undefined names from * import
     "F722", # syntax error in forward type annotation
@@ -63,3 +62,8 @@ ignore = [
     "RUF001", # string contains ambiguous unicode character
     "B905", # `zip()` without an explicit `strict=` parameter
 ]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true

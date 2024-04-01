@@ -129,7 +129,7 @@ def set_gst_treatment():
         .set(boe_item.gst_treatment, "Nil-Rated")
         .where(boe_item.docstatus == 1)
         .where(boe.total_taxes == 0)
-        .where((boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST"))))
+        .where(boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST")))
         .run()
     )
 

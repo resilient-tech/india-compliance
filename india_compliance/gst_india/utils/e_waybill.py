@@ -347,7 +347,7 @@ def update_vehicle_info(*, doctype, docname, values):
 
     for key, value in values_in_comment.items():
         if value:
-            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+            comment += f"{frappe.bold(_(key))}: {value} <br>"
 
     log_and_process_e_waybill(
         doc,
@@ -451,11 +451,8 @@ def update_transporter(*, doctype, docname, values):
     )
 
     comment = (
-        "Transporter Info has been updated by {user}. New Transporter ID is"
-        " {transporter_id}."
-    ).format(
-        user=frappe.bold(get_fullname()),
-        transporter_id=frappe.bold(values.gst_transporter_id),
+        f"Transporter Info has been updated by {frappe.bold(get_fullname())}. New Transporter ID is"
+        f" {frappe.bold(values.gst_transporter_id)}."
     )
 
     log_and_process_e_waybill(
@@ -961,7 +958,7 @@ def update_e_waybill_log_for_extention(
 
     for key, value in values_in_comment.items():
         if value:
-            comment += "{0}: {1} <br>".format(frappe.bold(_(key)), value)
+            comment += f"{frappe.bold(_(key))}: {value} <br>"
 
     log_and_process_e_waybill(
         doc,

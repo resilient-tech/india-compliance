@@ -16,7 +16,6 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
     get_escaped_name,
     get_gst_accounts_by_type,
-    get_gstin_list,
     get_party_for_gstin,
 )
 from india_compliance.gst_india.utils.gstr import IMPORT_CATEGORY, ReturnType
@@ -286,7 +285,7 @@ class InwardSupply:
         periods = BaseUtil._get_periods(self.from_date, self.to_date)
 
         if self.gst_return == "GSTR 2B":
-            query = query.where((self.GSTR2.return_period_2b.isin(periods)))
+            query = query.where(self.GSTR2.return_period_2b.isin(periods))
         else:
             query = query.where(
                 (self.GSTR2.return_period_2b.isin(periods))
@@ -951,9 +950,9 @@ class ReconciledData(BaseReconciliation):
 
     def get_consolidated_data(
         self,
-        purchase_names: list = None,
-        inward_supply_names: list = None,
-        prefix: str = None,
+        purchase_names: list | None = None,
+        inward_supply_names: list | None = None,
+        prefix: str | None = None,
     ):
         data = self.get(purchase_names, inward_supply_names)
         for doc in data:
@@ -997,7 +996,11 @@ class ReconciledData(BaseReconciliation):
         self.process_data(reconciliation_data, retain_doc=True)
         return reconciliation_data[0]
 
-    def get(self, purchase_names: list = None, inward_supply_names: list = None):
+    def get(
+        self,
+        purchase_names: list | None = None,
+        inward_supply_names: list | None = None,
+    ):
         # TODO: update cess amount in purchase invoice
         """
         Get Reconciliation data based on standard filters

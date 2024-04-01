@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case, DatePart
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
+from frappe.query_builder.functions import Extract, IfNull, Ifnull, LiteralValue, Sum
 from frappe.utils import cint, flt, get_first_day, get_last_day
 
 from india_compliance.gst_india.utils import get_escaped_gst_accounts

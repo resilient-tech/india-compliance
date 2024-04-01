@@ -1,4 +1,5 @@
 import re
+from typing import ClassVar
 
 import frappe
 from frappe import _
@@ -10,8 +11,8 @@ from india_compliance.gst_india.constants import DISTANCE_REGEX
 class EInvoiceAPI(BaseAPI):
     API_NAME = "e-Invoice"
     BASE_PATH = "ei/api"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + ("password",)
-    IGNORED_ERROR_CODES = {
+    SENSITIVE_INFO = (*BaseAPI.SENSITIVE_INFO, "password")
+    IGNORED_ERROR_CODES: ClassVar[dict[str, str]] = {
         # Generate IRN errors
         "2150": "Duplicate IRN",
         # Get e-Invoice by IRN errors

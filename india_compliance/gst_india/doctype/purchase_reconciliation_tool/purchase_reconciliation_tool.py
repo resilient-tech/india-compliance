@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import json
-from typing import List
 
 import frappe
 from frappe.model.document import Document
@@ -266,7 +265,7 @@ class PurchaseReconciliationTool(Document):
         if pur_linked_with := frappe.db.get_all(
             "GST Inward Supply", link_doc, pluck="name"
         ):
-            self._unlink_documents((pur_linked_with))
+            self._unlink_documents(pur_linked_with)
             inward_supplies.extend(pur_linked_with)
 
         link_doc["match_status"] = "Manual Match"
@@ -514,7 +513,7 @@ def get_periods_to_download(company_gstin, return_type, periods):
 
 
 def get_import_history(
-    company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
+    company_gstin, return_type: ReturnType, periods: list[str], fields=None, pluck=None
 ):
     if not (fields or pluck):
         fields = (

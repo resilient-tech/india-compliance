@@ -1,5 +1,6 @@
 import json
 from base64 import b64decode, b64encode
+from typing import ClassVar
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -207,7 +208,8 @@ class ReturnsAuthenticate(BaseAPI):
 class ReturnsAPI(ReturnsAuthenticate):
     API_NAME = "GST Returns"
     BASE_PATH = "standard/gstn"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
+    SENSITIVE_INFO = (
+        *BaseAPI.SENSITIVE_INFO,
         "auth-token",
         "auth_token",
         "app_key",
@@ -215,7 +217,7 @@ class ReturnsAPI(ReturnsAuthenticate):
         "rek",
     )
 
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict[str, str]] = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
         "RET11416": "no_docs_found",

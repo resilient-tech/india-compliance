@@ -239,7 +239,7 @@ class GSTBalanceReport:
     def get_closing_balance(self):
         return self.get_account_wise_dict(
             self.get_gl_query()
-            .where((self.gl_entry.posting_date <= self.filters.to_date))
+            .where(self.gl_entry.posting_date <= self.filters.to_date)
             .run(as_dict=True)
         )
 
