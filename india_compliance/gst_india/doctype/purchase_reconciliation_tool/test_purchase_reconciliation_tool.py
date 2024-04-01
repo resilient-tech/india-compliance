@@ -55,6 +55,16 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
 
+        # create 2023-2024 fiscal year
+        fiscal_year = frappe.new_doc("Fiscal Year")
+        fiscal_year.update(
+            {
+                "year_start_date": "2023-04-01",
+                "year_end_date": "2024-03-31",
+                "year": "2023-2024",
+            }
+        ).insert(ignore_if_duplicate=True)
+
         cls.test_data = frappe.get_file_json(
             frappe.get_app_path(
                 "india_compliance",
