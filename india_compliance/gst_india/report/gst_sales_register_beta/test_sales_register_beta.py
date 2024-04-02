@@ -1,6 +1,6 @@
 import datetime
 
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
 
 from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
     execute,
@@ -670,9 +670,7 @@ INVOICES = [
         # B2C (large)
         "item_code": "_Test Trading Goods 1",
         "customer": "_Test Unregistered Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "29-Karnataka",
-        "gst_treatment": "Taxable",
         "rate": 2000,
         "qty": 200,
         "is_out_state": 1,
@@ -681,9 +679,7 @@ INVOICES = [
         # B2CS
         "item_code": "_Test Trading Goods 1",
         "customer": "_Test Unregistered Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "24-Gujarat",
-        "gst_treatment": "Taxable",
         "rate": 2000,
         "qty": 200,
         "is_in_state": 1,
@@ -693,9 +689,7 @@ INVOICES = [
         "item_code": "_Test Nil Rated Item",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Unregistered Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "24-Gujarat",
-        "gst_treatment": "Nil-Rated",
         "rate": 2000,
         "qty": 200,
         "is_in_state": 1,
@@ -705,9 +699,7 @@ INVOICES = [
         "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Registered Composition Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "29-Karnataka",
-        "gst_treatment": "Taxable",
         "rate": 2000,
         "qty": 200,
         "is_out_state": 1,
@@ -717,9 +709,7 @@ INVOICES = [
         "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Registered Composition Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "29-Karnataka",
-        "gst_treatment": "Taxable",
         "rate": 2000,
         "qty": -200,
         "is_return": 1,
@@ -730,9 +720,7 @@ INVOICES = [
         "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Foreign Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "96-Other Countries",
-        "gst_treatment": "Zero-Rated",
         "rate": 2000,
         "qty": 200,
     },
@@ -741,9 +729,7 @@ INVOICES = [
         "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Foreign Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "96-Other Countries",
-        "gst_treatment": "Zero-Rated",
         "rate": 2000,
         "qty": 200,
         "is_export_with_gst": 1,
@@ -753,9 +739,7 @@ INVOICES = [
         "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Foreign Customer",
-        "posting_date": "2024-04-02",
         "place_of_supply": "96-Other Countries",
-        "gst_treatment": "Zero-Rated",
         "rate": 2000,
         "qty": -200,
         "is_return": 1,
@@ -765,6 +749,7 @@ INVOICES = [
 
 class TestSalesRegisterBeta(FrappeTestCase):
     @classmethod
+    @change_settings("GST Settings", {"enable_api": 1})
     def setUpClass(cls):
         TestSalesRegisterBeta().create_sales_invoices()
 
