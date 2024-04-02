@@ -86,9 +86,7 @@ class GSTR:
 
     def get_supplier_transactions(self, category, supplier):
         return [
-            self.get_transaction(
-                category, frappe._dict(supplier), frappe._dict(invoice)
-            )
+            self.get_transaction(category, frappe._dict(supplier), frappe._dict(invoice))
             for invoice in supplier.get(self.get_key("invoice_key"))
         ]
 
@@ -144,11 +142,7 @@ def validate_company_gstins(company=None, company_gstin=None):
     credentials = get_company_gstin_credentials(company, company_gstin)
 
     if company_gstin and not credentials:
-        frappe.throw(
-            _("Missing GSTIN credentials for GSTIN: {gstin}.").format(
-                gstin=company_gstin
-            )
-        )
+        frappe.throw(_("Missing GSTIN credentials for GSTIN: {gstin}.").format(gstin=company_gstin))
 
     if not credentials:
         frappe.throw(_("Missing credentials in GST Settings"))

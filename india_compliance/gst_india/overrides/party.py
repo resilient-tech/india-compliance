@@ -61,9 +61,7 @@ def validate_pan(doc):
     """
 
     if doc.gstin:
-        doc.pan = (
-            pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
-        )
+        doc.pan = pan_from_gstin if is_valid_pan(pan_from_gstin := doc.gstin[2:12]) else ""
         return
 
     if not doc.pan:
@@ -82,9 +80,7 @@ def set_docs_with_previous_gstin(doc, method=None):
     if not previous_gstin or previous_gstin == doc.gstin:
         return
 
-    docs_with_previous_gstin = get_docs_with_previous_gstin(
-        previous_gstin, doc.doctype, doc.name
-    )
+    docs_with_previous_gstin = get_docs_with_previous_gstin(previous_gstin, doc.doctype, doc.name)
     if not docs_with_previous_gstin:
         return
 

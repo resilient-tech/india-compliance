@@ -43,9 +43,7 @@ class TestEInvoice(FrappeTestCase):
         )
         cls.e_invoice_test_data = frappe._dict(
             frappe.get_file_json(
-                frappe.get_app_path(
-                    "india_compliance", "gst_india", "data", "test_e_invoice.json"
-                )
+                frappe.get_app_path("india_compliance", "gst_india", "data", "test_e_invoice.json")
             )
         )
         update_dates_for_test_data(cls.e_invoice_test_data)
@@ -82,9 +80,7 @@ class TestEInvoice(FrappeTestCase):
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_request_data_for_foreign_transactions(self):
         test_data = self.e_invoice_test_data.foreign_transaction
-        si = create_sales_invoice(
-            **test_data.get("kwargs"), qty=1000, do_not_submit=True
-        )
+        si = create_sales_invoice(**test_data.get("kwargs"), qty=1000, do_not_submit=True)
         si.update(
             {
                 "shipping_bill_number": "1234",
@@ -199,9 +195,7 @@ class TestEInvoice(FrappeTestCase):
             )
         si.save()
 
-        frappe.db.set_single_value(
-            "GST Settings", "e_invoice_applicable_from", "2021-01-01"
-        )
+        frappe.db.set_single_value("GST Settings", "e_invoice_applicable_from", "2021-01-01")
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -300,18 +294,14 @@ class TestEInvoice(FrappeTestCase):
             frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
         )
 
-        self.assertFalse(
-            frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name")
-        )
+        self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
 
     @responses.activate
     def test_generate_e_invoice_with_nil_exempted_item(self):
         """Generate test e-Invoice for nil/exempted items Item"""
 
         test_data = self.e_invoice_test_data.get("nil_exempted_item")
-        si = create_sales_invoice(
-            **test_data.get("kwargs"), do_not_submit=True, is_in_state=True
-        )
+        si = create_sales_invoice(**test_data.get("kwargs"), do_not_submit=True, is_in_state=True)
 
         append_item(
             si,
@@ -359,9 +349,7 @@ class TestEInvoice(FrappeTestCase):
             frappe.get_doc("e-Invoice Log", {"sales_invoice": si.name}),
         )
 
-        self.assertFalse(
-            frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name")
-        )
+        self.assertFalse(frappe.db.get_value("e-Waybill Log", {"reference_name": si.name}, "name"))
 
     @responses.activate
     def test_credit_note_e_invoice_with_goods_item(self):
@@ -434,9 +422,7 @@ class TestEInvoice(FrappeTestCase):
         )
 
         self.assertFalse(
-            frappe.db.get_value(
-                "e-Waybill Log", {"reference_name": credit_note.name}, "name"
-            )
+            frappe.db.get_value("e-Waybill Log", {"reference_name": credit_note.name}, "name")
         )
 
     @responses.activate
@@ -461,9 +447,7 @@ class TestEInvoice(FrappeTestCase):
         debit_note.submit()
 
         # Assert if request data given in Json
-        self.assertDictEqual(
-            test_data.get("request_data"), EInvoiceData(debit_note).get_data()
-        )
+        self.assertDictEqual(test_data.get("request_data"), EInvoiceData(debit_note).get_data())
 
         # Mock response for generating irn
         self._mock_e_invoice_response(data=test_data)
@@ -499,9 +483,7 @@ class TestEInvoice(FrappeTestCase):
         )
 
         self.assertFalse(
-            frappe.db.get_value(
-                "e-Waybill Log", {"reference_name": debit_note.name}, "name"
-            )
+            frappe.db.get_value("e-Waybill Log", {"reference_name": debit_note.name}, "name")
         )
 
     @responses.activate
@@ -521,9 +503,7 @@ class TestEInvoice(FrappeTestCase):
             si,
         )
 
-        test_data.get("response_data").get("result").update(
-            {"AckDt": str(now_datetime())}
-        )
+        test_data.get("response_data").get("result").update({"AckDt": str(now_datetime())})
 
         # Assert if request data given in Json
         self.assertDictEqual(test_data.get("request_data"), EInvoiceData(si).get_data())
@@ -569,9 +549,7 @@ class TestEInvoice(FrappeTestCase):
         si.reload()
         si.cancel()
 
-        values = frappe._dict(
-            {"reason": "Others", "remark": "Manually deleted from GSTR-1"}
-        )
+        values = frappe._dict({"reason": "Others", "remark": "Manually deleted from GSTR-1"})
 
         mark_e_invoice_as_cancelled("Sales Invoice", si.name, values)
         cancelled_doc = frappe.get_doc("Sales Invoice", si.name)
@@ -581,9 +559,7 @@ class TestEInvoice(FrappeTestCase):
             cancelled_doc,
         )
 
-        self.assertTrue(
-            frappe.get_cached_value("e-Invoice Log", si.irn, "is_cancelled"), 1
-        )
+        self.assertTrue(frappe.get_cached_value("e-Invoice Log", si.irn, "is_cancelled"), 1)
 
     def test_validate_e_invoice_applicability(self):
         """Test if e_invoicing is applicable"""
@@ -775,16 +751,12 @@ class TestEInvoice(FrappeTestCase):
         )
 
     def _cancel_e_invoice(self, invoice_no):
-        values = frappe._dict(
-            {"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"}
-        )
+        values = frappe._dict({"reason": "Data Entry Mistake", "remark": "Data Entry Mistake"})
         doc = load_doc("Sales Invoice", invoice_no, "cancel")
 
         # Prepared e_waybill cancel data
         cancel_e_waybill = self.e_invoice_test_data.get("cancel_e_waybill")
-        cancel_e_waybill.get("response_data").get("result").update(
-            {"ewayBillNo": doc.ewaybill}
-        )
+        cancel_e_waybill.get("response_data").get("result").update({"ewayBillNo": doc.ewaybill})
 
         # Assert for Mock request data
         self.assertDictEqual(
@@ -851,14 +823,10 @@ def update_dates_for_test_data(test_data):
             continue
 
         response_request = (
-            value.get("request_data")
-            if isinstance(value.get("request_data"), dict)
-            else {}
+            value.get("request_data") if isinstance(value.get("request_data"), dict) else {}
         )
         response_result = (
-            value.get("response_data").get("result")
-            if value.get("response_data")
-            else {}
+            value.get("response_data").get("result") if value.get("response_data") else {}
         )
 
         # Handle Duplicate IRN test data

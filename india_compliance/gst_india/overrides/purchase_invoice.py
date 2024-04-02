@@ -31,11 +31,7 @@ def onload(doc, method=None):
     if not is_api_enabled(gst_settings):
         return
 
-    if (
-        gst_settings.enable_e_waybill
-        and gst_settings.enable_e_waybill_from_pi
-        and doc.ewaybill
-    ):
+    if gst_settings.enable_e_waybill and gst_settings.enable_e_waybill_from_pi and doc.ewaybill:
         doc.set_onload("e_waybill_info", get_e_waybill_info(doc))
 
 
@@ -116,9 +112,7 @@ def validate_supplier_invoice_number(doc):
 
 def get_dashboard_data(data):
     transactions = data.setdefault("transactions", [])
-    reference_section = next(
-        (row for row in transactions if row.get("label") == "Reference"), None
-    )
+    reference_section = next((row for row in transactions if row.get("label") == "Reference"), None)
 
     if reference_section is None:
         reference_section = {"label": "Reference", "items": []}

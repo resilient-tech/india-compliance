@@ -4,9 +4,7 @@ from india_compliance.gst_india.utils.custom_fields import delete_old_fields
 
 DOCTYPES = ("Purchase Invoice", "Sales Invoice")
 
-DOCTYPE_COLUMNS = {
-    doctype: frappe.db.get_table_columns(doctype) for doctype in DOCTYPES
-}
+DOCTYPE_COLUMNS = {doctype: frappe.db.get_table_columns(doctype) for doctype in DOCTYPES}
 
 
 def execute():

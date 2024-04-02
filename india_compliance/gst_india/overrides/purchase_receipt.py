@@ -26,9 +26,7 @@ def onload(doc, method=None):
 
     doc.flags.ignore_mandatory = True
     if (
-        validate_mandatory_fields(
-            doc, ("company_gstin", "place_of_supply", "gst_category")
-        )
+        validate_mandatory_fields(doc, ("company_gstin", "place_of_supply", "gst_category"))
         is False
     ):
         return

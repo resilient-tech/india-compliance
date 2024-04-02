@@ -53,9 +53,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 ),
                 "diffprcnt": "1",
                 "irn_source": "e-Invoice",
-                "irn_number": (
-                    "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
-                ),
+                "irn_number": ("897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Invoice",
                 "items": [
@@ -133,9 +131,7 @@ class TestGSTR2b(FrappeTestCase, TestGSTRMixin):
                 "reason_itc_unavailability": "Return filed post annual cut-off",
                 "diffprcnt": "1",
                 "irn_source": "e-Invoice",
-                "irn_number": (
-                    "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
-                ),
+                "irn_number": ("897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"),
                 "irn_gen_date": date(2019, 12, 24),
                 "doc_type": "Credit Note",
                 "items": [

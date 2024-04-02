@@ -6,9 +6,7 @@ from frappe.tests.utils import FrappeTestCase
 
 class TestUtils(FrappeTestCase):
     def test_validate_new_party(self):
-        party = frappe.new_doc(
-            "Customer", customer_name="Resilient Tech", gstin="24AUTPV8831F1ZZ"
-        )
+        party = frappe.new_doc("Customer", customer_name="Resilient Tech", gstin="24AUTPV8831F1ZZ")
         party.save()
 
         self.assertEqual(party.gst_category, "Registered Regular")

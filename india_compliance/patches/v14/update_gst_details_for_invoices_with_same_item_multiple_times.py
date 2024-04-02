@@ -30,9 +30,7 @@ def update_gst_details_for_transactions(companies):
 
         for doctype in ("Sales Invoice", "Purchase Invoice"):
             is_sales_doctype = doctype in SALES_DOCTYPES
-            docs = get_docs_with_gst_accounts_and_same_item_multiple_times(
-                doctype, gst_accounts
-            )
+            docs = get_docs_with_gst_accounts_and_same_item_multiple_times(doctype, gst_accounts)
             if not docs:
                 continue
 

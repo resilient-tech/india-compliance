@@ -90,9 +90,7 @@ def update_gstin_for_je(company, gst_accounts):
 
 def _update_gstins_for_je(je_list, gstin):
     doc = frappe.qb.DocType("Journal Entry")
-    frappe.qb.update(doc).set(doc.company_gstin, gstin).where(
-        doc.name.isin(je_list)
-    ).run()
+    frappe.qb.update(doc).set(doc.company_gstin, gstin).where(doc.name.isin(je_list)).run()
 
 
 def update_gl_entries(gst_accounts):

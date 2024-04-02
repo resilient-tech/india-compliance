@@ -30,7 +30,7 @@ def execute(filters=None):
 def get_hsn_data(filters, columns, output_gst_accounts_dict):
     output_gst_accounts = set()
     non_cess_accounts = ["igst_account", "cgst_account", "sgst_account"]
-    tax_columns = [*non_cess_accounts , "cess_account"]
+    tax_columns = [*non_cess_accounts, "cess_account"]
 
     for account_name in output_gst_accounts_dict.values():
         if not account_name:
@@ -370,21 +370,13 @@ def get_hsn_wise_json_data(filters, report_data):
         if hsn_description := hsn.get("description"):
             row["desc"] = hsn_description[:30]
 
-        row["iamt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("igst_account"))), 0.0), 2
-        )
+        row["iamt"] += flt(hsn.get(frappe.scrub(cstr(gst_accounts.get("igst_account"))), 0.0), 2)
 
-        row["camt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("cgst_account"))), 0.0), 2
-        )
+        row["camt"] += flt(hsn.get(frappe.scrub(cstr(gst_accounts.get("cgst_account"))), 0.0), 2)
 
-        row["samt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("sgst_account"))), 0.0), 2
-        )
+        row["samt"] += flt(hsn.get(frappe.scrub(cstr(gst_accounts.get("sgst_account"))), 0.0), 2)
 
-        row["csamt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("cess_account"))), 0.0), 2
-        )
+        row["csamt"] += flt(hsn.get(frappe.scrub(cstr(gst_accounts.get("cess_account"))), 0.0), 2)
 
         data.append(row)
         count += 1

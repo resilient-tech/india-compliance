@@ -119,9 +119,7 @@ def generate_e_waybills(doctype, docnames, force=False):
             _generate_e_waybill(doc, force=force)
         except Exception:
             frappe.log_error(
-                title=_("e-Waybill generation failed for {0} {1}").format(
-                    doctype, docname
-                ),
+                title=_("e-Waybill generation failed for {0} {1}").format(doctype, docname),
                 message=frappe.get_traceback(),
             )
 
@@ -331,9 +329,9 @@ def update_vehicle_info(*, doctype, docname, values):
         alert=True,
     )
 
-    comment = _(
-        "Vehicle Info has been updated by {user}.<br><br> New details are: <br>"
-    ).format(user=frappe.bold(get_fullname()))
+    comment = _("Vehicle Info has been updated by {user}.<br><br> New details are: <br>").format(
+        user=frappe.bold(get_fullname())
+    )
 
     values_in_comment = {
         "Vehicle No": values.vehicle_no,
@@ -530,9 +528,7 @@ def extend_scheduled_e_waybills():
         return
 
     for e_waybill_data in e_waybills_to_extend:
-        frappe.db.set_value(
-            "e-Waybill Log", e_waybill_data.name, "extension_scheduled", 0
-        )
+        frappe.db.set_value("e-Waybill Log", e_waybill_data.name, "extension_scheduled", 0)
 
         try:
             extension_data = json.loads(e_waybill_data.extension_data)
@@ -546,9 +542,9 @@ def extend_scheduled_e_waybills():
 
         except Exception:
             frappe.log_error(
-                title=_(
-                    "Failed to Extend Validity of Scheduled e-Waybill #{ewb_no}"
-                ).format(ewb_no=e_waybill_data.e_waybill_number),
+                title=_("Failed to Extend Validity of Scheduled e-Waybill #{ewb_no}").format(
+                    ewb_no=e_waybill_data.e_waybill_number
+                ),
                 message=frappe.get_traceback(),
             )
 
@@ -653,9 +649,7 @@ def _fetch_e_waybill_data(doc, log):
 def find_matching_e_waybill(*, doctype, docname, e_waybill_date):
     doc = load_doc(doctype, docname, "submit")
 
-    response = EWaybillAPI(doc).get_e_waybills_by_date(
-        format_date(e_waybill_date, "dd/mm/yyyy")
-    )
+    response = EWaybillAPI(doc).get_e_waybills_by_date(format_date(e_waybill_date, "dd/mm/yyyy"))
 
     result = {
         k: v
@@ -821,9 +815,7 @@ def get_valid_and_invalid_e_waybill_log(
             fetch_e_waybill_data(doctype=doctype, docname=docname, attach=False)
             valid_log.append(e_waybill_no)
         except Exception:
-            invalid_log.append(
-                {"link": form_link, "reason": "Cannot fetch latest data"}
-            )
+            invalid_log.append({"link": form_link, "reason": "Cannot fetch latest data"})
 
     if not valid_log:
         frappe.throw(_("No Valid e-Waybill log found."))
@@ -917,9 +909,7 @@ def update_e_waybill_log_for_extention(
     }
 
     if scheduled:
-        comment_prefix = (
-            f"e-Waybill extention has been scheduled for {frappe.bold(scheduled_time)}"
-        )
+        comment_prefix = f"e-Waybill extention has been scheduled for {frappe.bold(scheduled_time)}"
         extension_data = json.dumps(values, indent=4)
 
         log_data = {
@@ -1060,9 +1050,7 @@ def get_billing_shipping_address_map(doc):
     address = get_address_map(doc)
 
     address.ship_to = (
-        doc.port_address
-        if (is_foreign_doc(doc) and doc.port_address)
-        else address.ship_to
+        doc.port_address if (is_foreign_doc(doc) and doc.port_address) else address.ship_to
     )
 
     if doc.is_return:
@@ -1137,9 +1125,7 @@ class EWaybillData(GSTTransactionData):
         return {
             "ewbNo": self.doc.ewaybill,
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": self.sanitize_value(
-                values.place_of_change, regex=3, max_length=50
-            ),
+            "fromPlace": self.sanitize_value(values.place_of_change, regex=3, max_length=50),
             "fromState": int(STATE_NUMBERS[values.state]),
             "reasonCode": int(UPDATE_VEHICLE_REASON_CODES[values.reason]),
             "reasonRem": self.sanitize_value(values.remark, regex=3),
@@ -1169,9 +1155,7 @@ class EWaybillData(GSTTransactionData):
         extension_details = {
             "ewbNo": int(self.doc.ewaybill),
             "vehicleNo": self.transaction_details.vehicle_no,
-            "fromPlace": self.sanitize_value(
-                values.current_place, regex=3, max_length=50
-            ),
+            "fromPlace": self.sanitize_value(values.current_place, regex=3, max_length=50),
             "fromState": STATE_NUMBERS[values.current_state],
             "fromPincode": int(values.current_pincode),
             "remainingDistance": int(values.remaining_distance),
@@ -1179,9 +1163,7 @@ class EWaybillData(GSTTransactionData):
             "transDocDate": self.transaction_details.lr_date,
             "transMode": self.transaction_details.mode_of_transport,
             "consignmentStatus": CONSIGNMENT_STATUS[values.consignment_status],
-            "transitType": (
-                TRANSIT_TYPES[values.transit_type] if values.transit_type else ""
-            ),
+            "transitType": (TRANSIT_TYPES[values.transit_type] if values.transit_type else ""),
             "extnRsnCode": EXTEND_VALIDITY_REASON_CODES[values.reason],
             "extnRemarks": self.sanitize_value(
                 values.remark if values.remark else values.reason, regex=3
@@ -1243,10 +1225,7 @@ class EWaybillData(GSTTransactionData):
 
         else:
             frappe.throw(
-                _(
-                    "e-Waybill cannot be generated because all items have service HSN"
-                    " codes"
-                ),
+                _("e-Waybill cannot be generated because all items have service HSN" " codes"),
                 title=_("Invalid Data"),
             )
 
@@ -1299,9 +1278,7 @@ class EWaybillData(GSTTransactionData):
 
     def validate_if_e_waybill_can_be_extend(self):
         # this works because we do run_onload in load_doc above
-        valid_upto = get_datetime(
-            self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto")
-        )
+        valid_upto = get_datetime(self.doc.get_onload().get("e_waybill_info", {}).get("valid_upto"))
 
         now = get_datetime()
         extend_after = add_to_date(valid_upto, hours=-8, as_datetime=True)
@@ -1314,10 +1291,7 @@ class EWaybillData(GSTTransactionData):
                 )
             )
 
-        if (
-            self.doc.gst_transporter_id
-            and self.doc.gst_transporter_id != self.doc.company_gstin
-        ):
+        if self.doc.gst_transporter_id and self.doc.gst_transporter_id != self.doc.company_gstin:
             frappe.throw(
                 _(
                     "e-Waybill cannot be extended by you as GST Transporter ID is assigned. Ask the transporter to extend the e-Waybill."
@@ -1349,17 +1323,13 @@ class EWaybillData(GSTTransactionData):
     def validate_if_ewaybill_can_be_cancelled(self):
         cancel_upto = add_to_date(
             # this works because we do run_onload in load_doc above
-            get_datetime(
-                self.doc.get_onload().get("e_waybill_info", {}).get("created_on")
-            ),
+            get_datetime(self.doc.get_onload().get("e_waybill_info", {}).get("created_on")),
             days=1,
             as_datetime=True,
         )
 
         if cancel_upto < get_datetime():
-            frappe.throw(
-                _("e-Waybill can be cancelled only within 24 Hours of its generation")
-            )
+            frappe.throw(_("e-Waybill can be cancelled only within 24 Hours of its generation"))
 
     def get_all_item_details(self):
         if len(self.doc.items) <= ITEM_LIMIT:
@@ -1390,9 +1360,7 @@ class EWaybillData(GSTTransactionData):
 
         if len(hsn_wise_items) > ITEM_LIMIT:
             frappe.throw(
-                _("e-Waybill can only be generated for upto {0} HSN/SAC Codes").format(
-                    ITEM_LIMIT
-                ),
+                _("e-Waybill can only be generated for upto {0} HSN/SAC Codes").format(ITEM_LIMIT),
                 title=_("HSN/SAC Limit Exceeded"),
             )
 
@@ -1402,9 +1370,7 @@ class EWaybillData(GSTTransactionData):
         # first HSN Code for goods
         doc = self.doc
         main_hsn_code = next(
-            row.gst_hsn_code
-            for row in doc.items
-            if not row.gst_hsn_code.startswith("99")
+            row.gst_hsn_code for row in doc.items if not row.gst_hsn_code.startswith("99")
         )
 
         self.transaction_details.update(
@@ -1458,9 +1424,7 @@ class EWaybillData(GSTTransactionData):
             },
         }
 
-        self.transaction_details.update(
-            default_supply_types.get((doc.doctype, doc.is_return), {})
-        )
+        self.transaction_details.update(default_supply_types.get((doc.doctype, doc.is_return), {}))
 
         if is_foreign_doc(self.doc):
             self.transaction_details.update(sub_supply_type=3)  # Export
@@ -1468,8 +1432,7 @@ class EWaybillData(GSTTransactionData):
                 self.transaction_details.update(document_type="BIL")
 
         if doc.doctype in ("Sales Invoice", "Purchase Invoice") and all(
-            item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST")
-            for item in doc.items
+            item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST") for item in doc.items
         ):
             self.transaction_details.update(document_type="BIL")
 
@@ -1479,13 +1442,9 @@ class EWaybillData(GSTTransactionData):
     def set_party_address_details(self):
         transaction_type = 1
         address = get_billing_shipping_address_map(self.doc)
-        has_different_to_address = (
-            address.ship_to and address.ship_to != address.bill_to
-        )
+        has_different_to_address = address.ship_to and address.ship_to != address.bill_to
 
-        has_different_from_address = (
-            address.ship_from and address.ship_from != address.bill_from
-        )
+        has_different_from_address = address.ship_from and address.ship_from != address.bill_from
 
         self.bill_to = self.get_address_details(address.bill_to)
         self.bill_from = self.get_address_details(address.bill_from)

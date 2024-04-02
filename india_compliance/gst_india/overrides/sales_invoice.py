@@ -32,9 +32,7 @@ from india_compliance.gst_india.utils.transaction_data import (
 def onload(doc, method=None):
     if not doc.get("ewaybill"):
         if doc.gst_category == "Overseas" and is_e_waybill_applicable(doc):
-            doc.set_onload(
-                "shipping_address_in_india", is_shipping_address_in_india(doc)
-            )
+            doc.set_onload("shipping_address_in_india", is_shipping_address_in_india(doc))
 
         if not doc.get("irn"):
             return
@@ -282,13 +280,9 @@ def set_and_validate_advances_with_gst(doc):
         if not advance.allocated_amount:
             continue
 
-        tax_row = taxes.get(
-            advance.reference_name, frappe._dict(paid_amount=1, tax_amount=0)
-        )
+        tax_row = taxes.get(advance.reference_name, frappe._dict(paid_amount=1, tax_amount=0))
 
-        _tax_amount = flt(
-            advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2
-        )
+        _tax_amount = flt(advance.allocated_amount / tax_row.paid_amount * tax_row.tax_amount, 2)
         tax_amount += _tax_amount
         allocated_amount_with_taxes += _tax_amount
         allocated_amount_with_taxes += advance.allocated_amount

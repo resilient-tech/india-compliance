@@ -22,22 +22,14 @@ def is_documentation_link(word: str) -> bool:
 
     if parsed_url.netloc == "github.com":
         parts = parsed_url.path.split("/")
-        if (
-            len(parts) >= 5
-            and parts[1] == "resilient-tech"
-            and parts[2] in WEBSITE_REPOS
-        ):
+        if len(parts) >= 5 and parts[1] == "resilient-tech" and parts[2] in WEBSITE_REPOS:
             return True
 
     return False
 
 
 def contains_documentation_link(body: str) -> bool:
-    return any(
-        is_documentation_link(word)
-        for line in body.splitlines()
-        for word in line.split()
-    )
+    return any(is_documentation_link(word) for line in body.splitlines() for word in line.split())
 
 
 def check_pull_request(number: str) -> "tuple[int, str]":
@@ -52,12 +44,7 @@ def check_pull_request(number: str) -> "tuple[int, str]":
     head_sha = (payload.get("head") or {}).get("sha")
     body = (payload.get("body") or "").lower()
 
-    if (
-        not title.startswith("feat")
-        or not head_sha
-        or "no-docs" in body
-        or "backport" in body
-    ):
+    if not title.startswith("feat") or not head_sha or "no-docs" in body or "backport" in body:
         return 0, "Skipping documentation checks... 🏃"
 
     if contains_documentation_link(body):

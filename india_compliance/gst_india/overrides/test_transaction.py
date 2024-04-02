@@ -186,9 +186,7 @@ class TestTransaction(FrappeTestCase):
 
     def test_validate_mandatory_company_address(self):
         def unset_company_gstin():
-            doc.set(
-                "company_address" if self.is_sales_doctype else "billing_address", ""
-            )
+            doc.set("company_address" if self.is_sales_doctype else "billing_address", "")
             doc.company_gstin = ""
 
         doc = create_transaction(**self.transaction_details, do_not_submit=True)
@@ -196,9 +194,7 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(.*to ensure Company GSTIN is fetched in the transaction.*)$"
-            ),
+            re.compile(r"^(.*to ensure Company GSTIN is fetched in the transaction.*)$"),
             doc.save,
         )
 
@@ -233,13 +229,9 @@ class TestTransaction(FrappeTestCase):
         # GST Setting is disabled by default.
 
         if self.is_sales_doctype:
-            self.transaction_details.customer_address = (
-                "_Test Registered Customer-Billing-1"
-            )
+            self.transaction_details.customer_address = "_Test Registered Customer-Billing-1"
         else:
-            self.transaction_details.supplier_address = (
-                "_Test Registered Supplier-Billing-1"
-            )
+            self.transaction_details.supplier_address = "_Test Registered Supplier-Billing-1"
 
         doc = create_transaction(**self.transaction_details, do_not_save=True)
         self.assertRaisesRegex(
@@ -406,9 +398,7 @@ class TestTransaction(FrappeTestCase):
         )
 
         # Adding taxes
-        _append_taxes(
-            doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1
-        )
+        _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Total", row_id=1)
         doc.insert()
 
         self.assertDocumentEqual({"taxable_value": 120}, doc.items[0])  # 100 + 20
@@ -417,9 +407,7 @@ class TestTransaction(FrappeTestCase):
         if self.doctype not in DOCTYPES_WITH_GST_DETAIL:
             return
 
-        doc = create_transaction(
-            **self.transaction_details, is_in_state=True, do_not_save=True
-        )
+        doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_save=True)
 
         # Adding charges
         doc.append(
@@ -449,13 +437,9 @@ class TestTransaction(FrappeTestCase):
     #            Validate GST Accounts                                                    #
     #######################################################################################
     def test_validate_same_company_and_party_gstin(self):
-        doc = create_transaction(
-            **self.transaction_details, is_in_state=True, do_not_save=True
-        )
+        doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_save=True)
 
-        party_gstin_field = (
-            "billing_address_gstin" if self.is_sales_doctype else "supplier_gstin"
-        )
+        party_gstin_field = "billing_address_gstin" if self.is_sales_doctype else "supplier_gstin"
 
         doc.company_gstin = "24AAQCA8719H1ZC"
         doc.set(party_gstin_field, doc.company_gstin)
@@ -644,9 +628,7 @@ class TestTransaction(FrappeTestCase):
         )
 
         # test non gst treatment
-        doc = create_transaction(
-            **self.transaction_details, item_code="_Test Non GST Item"
-        )
+        doc = create_transaction(**self.transaction_details, item_code="_Test Non GST Item")
         self.assertDocumentEqual(
             {"gst_treatment": "Non-GST"},
             doc.items[0],
@@ -749,9 +731,7 @@ class TestTransaction(FrappeTestCase):
         )
 
     def test_invalid_gst_account_outstate(self):
-        doc = create_transaction(
-            **self.transaction_details, is_out_state=True, do_not_save=True
-        )
+        doc = create_transaction(**self.transaction_details, is_out_state=True, do_not_save=True)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -767,9 +747,7 @@ class TestTransaction(FrappeTestCase):
         else:
             self.transaction_details.supplier = "_Test Registered InterState Supplier"
 
-        doc = create_transaction(
-            **self.transaction_details, is_in_state=True, do_not_save=True
-        )
+        doc = create_transaction(**self.transaction_details, is_in_state=True, do_not_save=True)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
@@ -793,9 +771,7 @@ class TestTransaction(FrappeTestCase):
         )
 
         # Adding taxes
-        _append_taxes(
-            doc, ("CGST", "SGST"), charge_type="On Previous Row Amount", row_id=1
-        )
+        _append_taxes(doc, ("CGST", "SGST"), charge_type="On Previous Row Amount", row_id=1)
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,

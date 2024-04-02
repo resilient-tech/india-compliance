@@ -64,9 +64,7 @@ class BOEGSTDetails(ItemGSTDetails):
                 precision = self.precision.get(tax_amount_field)
                 item = item_map.get(row_name)
 
-                multiplier = (
-                    item.qty if tax == "cess_non_advol" else item.taxable_value / 100
-                )
+                multiplier = item.qty if tax == "cess_non_advol" else item.taxable_value / 100
 
                 # cases when charge type == "Actual"
                 if not tax_rate:
@@ -90,9 +88,7 @@ def update_gst_details(doc, method=None):
 
 class BillofEntry(Document):
     get_gl_dict = AccountsController.get_gl_dict
-    get_value_in_transaction_currency = (
-        AccountsController.get_value_in_transaction_currency
-    )
+    get_value_in_transaction_currency = AccountsController.get_value_in_transaction_currency
     get_voucher_subtype = AccountsController.get_voucher_subtype
 
     def onload(self):
@@ -137,14 +133,10 @@ class BillofEntry(Document):
 
     # Code adapted from AccountsController.on_trash
     def on_trash(self):
-        if not frappe.db.get_single_value(
-            "Accounts Settings", "delete_linked_ledger_entries"
-        ):
+        if not frappe.db.get_single_value("Accounts Settings", "delete_linked_ledger_entries"):
             return
 
-        frappe.db.delete(
-            "GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name}
-        )
+        frappe.db.delete("GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name})
 
     def set_defaults(self):
         self.set_item_defaults()
@@ -190,9 +182,7 @@ class BillofEntry(Document):
             if tax.charge_type == "Actual":
                 continue
 
-            tax.tax_amount = self.get_tax_amount(
-                tax.item_wise_tax_rates, tax.charge_type
-            )
+            tax.tax_amount = self.get_tax_amount(tax.item_wise_tax_rates, tax.charge_type)
 
             if tax.account_head in round_off_accounts:
                 tax.tax_amount = round(tax.tax_amount, 0)
@@ -208,11 +198,7 @@ class BillofEntry(Document):
 
         tax_amount = 0
         for item in self.items:
-            multiplier = (
-                item.qty
-                if charge_type == "On Item Quantity"
-                else item.taxable_value / 100
-            )
+            multiplier = item.qty if charge_type == "On Item Quantity" else item.taxable_value / 100
             tax_amount += flt(item_wise_tax_rates.get(item.name, 0)) * multiplier
 
         return tax_amount
@@ -220,9 +206,7 @@ class BillofEntry(Document):
     def validate_purchase_invoice(self):
         purchase = frappe.get_doc("Purchase Invoice", self.purchase_invoice)
         if purchase.docstatus != 1:
-            frappe.throw(
-                _("Purchase Invoice must be submitted when creating a Bill of Entry")
-            )
+            frappe.throw(_("Purchase Invoice must be submitted when creating a Bill of Entry"))
 
         if purchase.gst_category != "Overseas":
             frappe.throw(
@@ -235,15 +219,12 @@ class BillofEntry(Document):
         pi_items = {item.name for item in purchase.items}
         for item in self.items:
             if not item.pi_detail:
-                frappe.throw(
-                    _("Row #{0}: Purchase Invoice Item is required").format(item.idx)
-                )
+                frappe.throw(_("Row #{0}: Purchase Invoice Item is required").format(item.idx))
 
             if item.pi_detail not in pi_items:
                 frappe.throw(
                     _(
-                        "Row #{0}: Purchase Invoice Item {1} not found in Purchase"
-                        " Invoice {2}"
+                        "Row #{0}: Purchase Invoice Item {1} not found in Purchase" " Invoice {2}"
                     ).format(
                         item.idx,
                         frappe.bold(item.pi_detail),
@@ -279,7 +260,6 @@ class BillofEntry(Document):
             )
 
             if tax.charge_type == "Actual":
-
                 item_wise_tax_rates = json.loads(tax.item_wise_tax_rates)
                 if not item_wise_tax_rates:
                     frappe.throw(
@@ -471,9 +451,7 @@ def make_bill_of_entry(source_name, target_doc=None):
         target.set_defaults()
 
         # Add default tax
-        input_igst_account = get_gst_accounts_by_type(
-            source.company, "Input"
-        ).igst_account
+        input_igst_account = get_gst_accounts_by_type(source.company, "Input").igst_account
 
         if not input_igst_account:
             return
@@ -623,10 +601,7 @@ def make_landed_cost_voucher(source_name, target_doc=None):
 
         if total_customs_duty != source.total_customs_duty:
             frappe.msgprint(
-                _(
-                    "Could not find purchase receipts for all items. Please check"
-                    " manually."
-                )
+                _("Could not find purchase receipts for all items. Please check" " manually.")
             )
 
         update_landed_cost_voucher_for_gst_expense(source, target)

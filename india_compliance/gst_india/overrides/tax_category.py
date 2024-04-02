@@ -13,13 +13,9 @@ def validate(doc, method=None):
     ):
         if doc.is_inter_state:
             frappe.throw(
-                _("Inter State tax category for GST State {0} already exists").format(
-                    doc.gst_state
-                )
+                _("Inter State tax category for GST State {0} already exists").format(doc.gst_state)
             )
         else:
             frappe.throw(
-                _("Intra State tax category for GST State {0} already exists").format(
-                    doc.gst_state
-                )
+                _("Intra State tax category for GST State {0} already exists").format(doc.gst_state)
             )

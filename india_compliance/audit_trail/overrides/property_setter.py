@@ -9,11 +9,7 @@ from india_compliance.audit_trail.utils import (
 
 
 def validate(doc, method=None):
-    if (
-        frappe.flags.in_install
-        or frappe.flags.in_migrate
-        or not is_audit_trail_enabled()
-    ):
+    if frappe.flags.in_install or frappe.flags.in_migrate or not is_audit_trail_enabled():
         return
 
     is_protected = is_protected_property_setter(doc)

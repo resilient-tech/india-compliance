@@ -17,9 +17,7 @@ class GSTInwardSupply(Document):
         if self.gstr_1_filing_date:
             self.gstr_1_filled = True
 
-        if self.match_status != "Amended" and (
-            self.other_return_period or self.is_amended
-        ):
+        if self.match_status != "Amended" and (self.other_return_period or self.is_amended):
             update_docs_for_amendment(self)
 
 
@@ -85,14 +83,10 @@ def update_docs_for_amendment(doc):
             and original.link_name != doc.name
             and doc.is_new()
         ):
-            frappe.db.set_value(
-                "GST Inward Supply", original.name, "link_name", doc.name
-            )
+            frappe.db.set_value("GST Inward Supply", original.name, "link_name", doc.name)
 
             # new original
-            original = frappe.db.get_value(
-                "GST Inward Supply", original.link_name, fields
-            )
+            original = frappe.db.get_value("GST Inward Supply", original.link_name, fields)
 
         if original.match_status == "Amended":
             return

@@ -23,9 +23,7 @@ class CForm(Document):
 
                 if inv and inv[0][0] != "Yes":
                     frappe.throw(
-                        _("C-form is not applicable for Invoice: {0}").format(
-                            d.invoice_no
-                        )
+                        _("C-form is not applicable for Invoice: {0}").format(d.invoice_no)
                     )
 
                 elif inv and inv[0][1] and inv[0][1] != self.name:

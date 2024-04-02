@@ -184,9 +184,9 @@ class GSTBalanceReport:
                 }
             )
 
-            closing_balance = (
-                data[account]["opening_debit"] + data[account]["debit"]
-            ) - (data[account]["opening_credit"] + data[account]["credit"])
+            closing_balance = (data[account]["opening_debit"] + data[account]["debit"]) - (
+                data[account]["opening_credit"] + data[account]["credit"]
+            )
 
             if closing_balance > 0:
                 data[account]["closing_debit"] = closing_balance
@@ -205,9 +205,7 @@ class GSTBalanceReport:
                 data.setdefault(account, frappe._dict(account=account))
                 row = balance.get(account, {})
 
-                data[account][f"gstin_{company_gstin}"] = row.get("debit", 0) - row.get(
-                    "credit", 0
-                )
+                data[account][f"gstin_{company_gstin}"] = row.get("debit", 0) - row.get("credit", 0)
 
         return list(data.values())
 
@@ -262,9 +260,7 @@ class GSTBalanceReport:
         )
 
         if self.filters.company_gstin:
-            query = query.where(
-                self.gl_entry.company_gstin == self.filters.company_gstin
-            )
+            query = query.where(self.gl_entry.company_gstin == self.filters.company_gstin)
 
         return query
 

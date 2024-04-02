@@ -23,9 +23,7 @@ def validate_filters(filters):
 
     if filters.from_date and filters.to_date:
         if getdate(filters.from_date) > getdate(filters.to_date):
-            frappe.throw(
-                _("From Date must be before To Date"), title=_("Invalid Filter")
-            )
+            frappe.throw(_("From Date must be before To Date"), title=_("Invalid Filter"))
 
     return filters
 

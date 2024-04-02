@@ -13,9 +13,7 @@ def execute():
 
     doctypes = ("Sales Invoice", "Purchase Invoice")
     for doctype in doctypes:
-        if not frappe.db.exists(
-            "Custom Field", {"dt": doctype, "fieldname": "invoice_type"}
-        ):
+        if not frappe.db.exists("Custom Field", {"dt": doctype, "fieldname": "invoice_type"}):
             continue
 
         for invoice_type, gst_category in invoice_type_gst_category_map.items():

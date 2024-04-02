@@ -50,9 +50,7 @@ def _get_gstin_info(gstin, *, throw_error=True):
             frappe.clear_last_message()
             return frappe._dict()
 
-    business_name = (
-        response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
-    )
+    business_name = response.tradeNam if response.ctb == "Proprietorship" else response.lgnm
 
     gstin_info = frappe._dict(
         gstin=response.gstin,
@@ -74,9 +72,7 @@ def get_archived_gstin_info(gstin):
     """
     Use Integration Requests to get the GSTIN info if available
     """
-    archive_days = frappe.get_cached_value(
-        "GST Settings", None, "archive_party_info_days"
-    )
+    archive_days = frappe.get_cached_value("GST Settings", None, "archive_party_info_days")
 
     if not archive_days:
         return
@@ -125,9 +121,7 @@ def _extract_address_lines(address):
         address[key] = address[key].strip(f"{whitespace},")
 
     address_line1 = ", ".join(
-        titlecase(value)
-        for key in ("bno", "flno", "bnm")
-        if (value := address.get(key))
+        titlecase(value) for key in ("bno", "flno", "bnm") if (value := address.get(key))
     )
 
     address_line2 = ", ".join(

@@ -175,9 +175,7 @@ class TestIneligibleITC(FrappeTestCase):
             },
         ):
             settings = frappe.get_single("Repost Accounting Ledger Settings")
-            settings.append(
-                "allowed_types", {"document_type": "Purchase Invoice", "allowed": 1}
-            )
+            settings.append("allowed_types", {"document_type": "Purchase Invoice", "allowed": 1})
             settings.save()
 
         doc.items[4].expense_account = "Office Rent - _TIRC"
@@ -968,9 +966,7 @@ def create_test_items():
         "item_group": "All Item Groups",
         "gst_hsn_code": "730419",
         "is_stock_item": 0,
-        "item_defaults": [
-            {**item_defaults, "expense_account": "Administrative Expenses - _TIRC"}
-        ],
+        "item_defaults": [{**item_defaults, "expense_account": "Administrative Expenses - _TIRC"}],
     }
 
     # Stock Item

@@ -44,9 +44,7 @@ class TestHSNWiseSummaryReport(TestCase):
             )
         )
 
-        filtered_rows = list(
-            filter(lambda row: row["gst_hsn_code"] == "61149090", data)
-        )
+        filtered_rows = list(filter(lambda row: row["gst_hsn_code"] == "61149090", data))
         self.assertTrue(filtered_rows)
 
         hsn_row = filtered_rows[0]

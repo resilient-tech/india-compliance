@@ -132,8 +132,7 @@ def create_or_update_item_tax_templates(companies):
     show_notification = False
     for company in companies_with_templates:
         gst_accounts = [
-            {"tax_type": account, "tax_rate": 0}
-            for account in company_wise_gst_accounts[company]
+            {"tax_type": account, "tax_rate": 0} for account in company_wise_gst_accounts[company]
         ]
 
         for new_template in NEW_TEMPLATES.values():
@@ -169,9 +168,7 @@ def create_or_update_item_tax_templates(companies):
         )
 
         for user in get_users_with_role("Accounts Manager"):
-            frappe.defaults.set_user_default(
-                "needs_item_tax_template_notification", 1, user=user
-            )
+            frappe.defaults.set_user_default("needs_item_tax_template_notification", 1, user=user)
 
     return templates
 
@@ -300,10 +297,7 @@ def update_gst_treatment_for_transactions():
             .set(table.gst_treatment, "Zero-Rated")
             .where(
                 (doc.gst_category == "SEZ")
-                | (
-                    (doc.gst_category == "Overseas")
-                    & (doc.place_of_supply == "96-Other Countries")
-                )
+                | ((doc.gst_category == "Overseas") & (doc.place_of_supply == "96-Other Countries"))
             )
             .run()
         )
@@ -371,9 +365,7 @@ def get_docs_with_gst_accounts(doctype, gst_accounts):
 
 
 def get_taxes_for_docs(docs, doctype, is_sales_doctype):
-    taxes_doctype = (
-        "Sales Taxes and Charges" if is_sales_doctype else "Purchase Taxes and Charges"
-    )
+    taxes_doctype = "Sales Taxes and Charges" if is_sales_doctype else "Purchase Taxes and Charges"
     taxes = frappe.qb.DocType(taxes_doctype)
     return (
         frappe.qb.from_(taxes)

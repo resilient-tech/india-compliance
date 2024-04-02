@@ -20,9 +20,7 @@ def create_company_fixtures(company):
 
 
 def create_tds_account(company):
-    create_default_company_account(
-        company, account_name="TDS Payable", parent="Duties and Taxes"
-    )
+    create_default_company_account(company, account_name="TDS Payable", parent="Duties and Taxes")
 
 
 def create_or_update_tax_withholding_category(company):
@@ -51,9 +49,7 @@ def create_or_update_tax_withholding_category(company):
 
         else:
             for category_name in existing_category_list:
-                update_existing_tax_withholding_category(
-                    category_doc, category_name, company
-                )
+                update_existing_tax_withholding_category(category_doc, category_name, company)
 
 
 def update_existing_tax_withholding_category(category_doc, category_name, company):
@@ -93,9 +89,7 @@ def update_existing_tax_withholding_category(category_doc, category_name, compan
 def get_tds_category_details(accounts):
     tds_details = []
     tds_rules = frappe.get_file_json(
-        frappe.get_app_path(
-            "india_compliance", "income_tax_india", "data", "tds_details.json"
-        )
+        frappe.get_app_path("india_compliance", "income_tax_india", "data", "tds_details.json")
     )
     for rule in tds_rules:
         tds_details.append(
@@ -107,9 +101,7 @@ def get_tds_category_details(accounts):
                 "tds_section": rule.get("tds_section"),
                 "entity_type": rule.get("entity_type"),
                 "round_off_tax_amount": rule.get("round_off_tax_amount"),
-                "consider_party_ledger_amount": rule.get(
-                    "consider_party_ledger_amount"
-                ),
+                "consider_party_ledger_amount": rule.get("consider_party_ledger_amount"),
                 "tax_on_excess_amount": rule.get("tax_on_excess_amount"),
                 "rates": get_prospective_tds_rates(rule["rates"]),
             }

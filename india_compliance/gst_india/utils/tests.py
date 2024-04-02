@@ -52,10 +52,7 @@ def create_transaction(**data):
         if not transaction.supplier:
             transaction.supplier = "_Test Registered Supplier"
 
-        if (
-            transaction.doctype == "Purchase Invoice"
-            and not transaction.itc_classification
-        ):
+        if transaction.doctype == "Purchase Invoice" and not transaction.itc_classification:
             transaction.itc_classification = "All Other ITC"
 
     if transaction.doctype == "POS Invoice":

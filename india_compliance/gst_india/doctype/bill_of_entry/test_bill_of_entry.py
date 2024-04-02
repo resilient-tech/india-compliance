@@ -187,9 +187,7 @@ class TestBillofEntry(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"
-            ),
+            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual. However, this would*)"),
             boe.save,
         )
 
@@ -208,9 +206,7 @@ class TestBillofEntry(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"
-            ),
+            re.compile(r"^(Tax Row #\d+: Charge Type is set to Actual. However, Tax Amount*)"),
             boe.save,
         )
 

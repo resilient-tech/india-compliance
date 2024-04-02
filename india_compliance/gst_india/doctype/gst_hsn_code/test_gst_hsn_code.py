@@ -27,9 +27,7 @@ class TestGSTHSNCode(FrappeTestCase):
 
     def test_update_taxes_in_item_master(self):
         taxes = [{"item_tax_template": "GST 12% - _TIUC", "tax_category": "In-State"}]
-        doc = frappe.get_doc(
-            {"doctype": "GST HSN Code", "hsn_code": "100000", "taxes": taxes}
-        )
+        doc = frappe.get_doc({"doctype": "GST HSN Code", "hsn_code": "100000", "taxes": taxes})
         doc.save()
         item = frappe.get_doc(
             {

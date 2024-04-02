@@ -17,6 +17,4 @@ class eWaybillLog(Document):
         doc = frappe.get_doc(self.reference_doctype, self.reference_name)
         _fetch_e_waybill_data(doc, self)
         send_updated_doc(self)
-        frappe.msgprint(
-            _("Fetched latest e-Waybill data"), alert=True, indicator="green"
-        )
+        frappe.msgprint(_("Fetched latest e-Waybill data"), alert=True, indicator="green")

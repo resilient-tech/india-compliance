@@ -59,8 +59,7 @@ class GSTSettings(Document):
                 break
 
         if not (
-            has_value_changed
-            or not self.is_child_table_same("e_invoice_applicable_companies")
+            has_value_changed or not self.is_child_table_same("e_invoice_applicable_companies")
         ):
             return
 
@@ -115,9 +114,7 @@ class GSTSettings(Document):
             account_types = company_wise_account_types.setdefault(row.company, [])
             if row.account_type in account_types:
                 frappe.throw(
-                    _(
-                        "Row #{0}: Account Type {1} appears multiple times for {2}"
-                    ).format(
+                    _("Row #{0}: Account Type {1} appears multiple times for {2}").format(
                         row.idx,
                         frappe.bold(row.account_type),
                         frappe.bold(row.company),
@@ -134,9 +131,7 @@ class GSTSettings(Document):
             toggle_custom_fields(E_INVOICE_FIELDS, self.enable_e_invoice)
 
         if self.has_value_changed("enable_reverse_charge_in_sales"):
-            toggle_custom_fields(
-                SALES_REVERSE_CHARGE_FIELDS, self.enable_reverse_charge_in_sales
-            )
+            toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, self.enable_reverse_charge_in_sales)
 
     def validate_e_invoice_applicability_date(self):
         if not self.enable_api or not self.enable_e_invoice:
@@ -178,24 +173,19 @@ class GSTSettings(Document):
                 continue
 
             frappe.throw(
-                _(
-                    "Row #{0}: Password is required when setting a GST Credential"
-                    " for {1}"
-                ).format(credential.idx, credential.service),
+                _("Row #{0}: Password is required when setting a GST Credential" " for {1}").format(
+                    credential.idx, credential.service
+                ),
                 frappe.MandatoryError,
                 _("Missing Required Field"),
             )
 
         if (self.enable_e_invoice or self.enable_e_waybill) and all(
-            credential.service != "e-Waybill / e-Invoice"
-            for credential in self.credentials
+            credential.service != "e-Waybill / e-Invoice" for credential in self.credentials
         ):
             frappe.msgprint(
                 # TODO: Add Link to Documentation.
-                _(
-                    "Please set credentials for e-Waybill / e-Invoice to use API"
-                    " features"
-                ),
+                _("Please set credentials for e-Waybill / e-Invoice to use API" " features"),
                 indicator="yellow",
                 alert=True,
             )
@@ -205,16 +195,9 @@ class GSTSettings(Document):
             credential.app_key = frappe.generate_hash(length=32)
 
     def validate_enable_api(self):
-        if (
-            self.enable_api
-            and self.has_value_changed("enable_api")
-            and not can_enable_api(self)
-        ):
+        if self.enable_api and self.has_value_changed("enable_api") and not can_enable_api(self):
             frappe.throw(
-                _(
-                    "Please counfigure your India Compliance Account to "
-                    "enable API features"
-                )
+                _("Please counfigure your India Compliance Account to " "enable API features")
             )
 
         if (
@@ -223,19 +206,13 @@ class GSTSettings(Document):
             and self.has_value_changed("sandbox_mode")
         ):
             frappe.msgprint(
-                _(
-                    "Autofill Party Information based on GSTIN is not supported in"
-                    " sandbox mode"
-                ),
+                _("Autofill Party Information based on GSTIN is not supported in" " sandbox mode"),
             )
 
     def validate_e_invoice_applicable_companies(self):
         if not self.e_invoice_applicable_companies:
             frappe.throw(
-                _(
-                    "You must select at least one company to which e-Invoice is"
-                    " Applicable"
-                )
+                _("You must select at least one company to which e-Invoice is" " Applicable")
             )
 
         company_list = []
@@ -306,9 +283,7 @@ def update_gst_category():
         category_map.setdefault(gst_category, []).append(address.name)
 
     for gst_category, addresses in category_map.items():
-        frappe.db.set_value(
-            "Address", {"name": ("in", addresses)}, "gst_category", gst_category
-        )
+        frappe.db.set_value("Address", {"name": ("in", addresses)}, "gst_category", gst_category)
 
     frappe.db.set_global("has_missing_gst_category", None)
 

@@ -16,9 +16,7 @@ class EInvoiceAPI(BaseAPI):
         # Generate IRN errors
         "2150": "Duplicate IRN",
         # Get e-Invoice by IRN errors
-        "2283": (
-            "IRN details cannot be provided as it is generated more than 2 days ago"
-        ),
+        "2283": ("IRN details cannot be provided as it is generated more than 2 days ago"),
         # Cancel IRN errors
         "9999": "Invoice is not active",
         "4002": "EwayBill is already generated for this IRN",

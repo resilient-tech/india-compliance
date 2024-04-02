@@ -234,9 +234,7 @@ class DetailedReport(BaseAuditTrail):
         ]
 
         if doctype == "Payment Entry":
-            fields.extend(
-                ["party_type", "party_name", "total_allocated_amount as amount"]
-            )
+            fields.extend(["party_type", "party_name", "total_allocated_amount as amount"])
 
         # Amount
         if doctype == "Subcontracting Receipt":

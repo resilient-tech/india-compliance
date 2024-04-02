@@ -139,9 +139,7 @@ class GSTAdvanceDetail:
 
         summary_data = {}
         for row in data:
-            new_row = summary_data.setdefault(
-                row["payment_entry"], {**row, **amount_fields}
-            )
+            new_row = summary_data.setdefault(row["payment_entry"], {**row, **amount_fields})
 
             for key in amount_fields:
                 new_row[key] += flt(row[key])
@@ -219,16 +217,12 @@ class GSTAdvanceDetail:
             conditions.append(self.pe.paid_from == self.filters.get("account"))
 
         if self.filters.get("show_for_period") and self.filters.get("from_date"):
-            conditions.append(
-                self.gl_entry.posting_date >= getdate(self.filters.get("from_date"))
-            )
+            conditions.append(self.gl_entry.posting_date >= getdate(self.filters.get("from_date")))
         else:
             conditions.append(IfNull(self.pe.unallocated_amount, 0) > 0)
 
         if self.filters.get("to_date"):
-            conditions.append(
-                self.gl_entry.posting_date <= getdate(self.filters.get("to_date"))
-            )
+            conditions.append(self.gl_entry.posting_date <= getdate(self.filters.get("to_date")))
 
         return conditions
 
