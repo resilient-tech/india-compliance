@@ -1,6 +1,5 @@
 import datetime
 
-import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.report.gst_sales_register_beta.gst_sales_register_beta import (
@@ -18,8 +17,8 @@ FILTERS = {
 EXPECTED_OUTPUT = {
     "SUMMARY_BY_ITEM": [
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -49,8 +48,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "B2C (Large)",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -112,8 +111,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "Nil-Rated",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": "29AABCR1718E1ZL",
             "company_gstin": "24AAQCA8719H1ZC",
@@ -144,8 +143,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "B2B Regular",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": "29AABCR1718E1ZL",
             "company_gstin": "24AAQCA8719H1ZC",
@@ -176,8 +175,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "CDNR",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -208,8 +207,8 @@ EXPECTED_OUTPUT = {
             "invoice_type": "WOPAY",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -240,8 +239,8 @@ EXPECTED_OUTPUT = {
             "invoice_type": "WPAY",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -274,8 +273,8 @@ EXPECTED_OUTPUT = {
     ],
     "SUMMARY_BY_HSN": [
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -306,8 +305,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "B2C (Large)",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -371,8 +370,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "Nil-Rated",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": "29AABCR1718E1ZL",
             "company_gstin": "24AAQCA8719H1ZC",
@@ -404,8 +403,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "B2B Regular",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": "29AABCR1718E1ZL",
             "company_gstin": "24AAQCA8719H1ZC",
@@ -437,8 +436,8 @@ EXPECTED_OUTPUT = {
             "invoice_sub_category": "CDNR",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -470,8 +469,8 @@ EXPECTED_OUTPUT = {
             "invoice_type": "WOPAY",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -503,8 +502,8 @@ EXPECTED_OUTPUT = {
             "invoice_type": "WPAY",
         },
         {
-            "item_code": "SKU001",
-            "gst_hsn_code": "999512",
+            "item_code": "_Test Trading Goods 1",
+            "gst_hsn_code": "61149090",
             "uom": "Nos",
             "billing_address_gstin": None,
             "company_gstin": "24AAQCA8719H1ZC",
@@ -669,7 +668,7 @@ EXPECTED_OUTPUT = {
 INVOICES = [
     {
         # B2C (large)
-        "item_code": "SKU001",
+        "item_code": "_Test Trading Goods 1",
         "customer": "_Test Unregistered Customer",
         "posting_date": "2024-04-02",
         "place_of_supply": "29-Karnataka",
@@ -680,7 +679,7 @@ INVOICES = [
     },
     {
         # B2CS
-        "item_code": "SKU001",
+        "item_code": "_Test Trading Goods 1",
         "customer": "_Test Unregistered Customer",
         "posting_date": "2024-04-02",
         "place_of_supply": "24-Gujarat",
@@ -703,7 +702,7 @@ INVOICES = [
     },
     {
         # B2B Regular
-        "item_code": "SKU001",
+        "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Registered Composition Customer",
         "posting_date": "2024-04-02",
@@ -715,7 +714,7 @@ INVOICES = [
     },
     {
         # CDNR
-        "item_code": "SKU001",
+        "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Registered Composition Customer",
         "posting_date": "2024-04-02",
@@ -728,7 +727,7 @@ INVOICES = [
     },
     {
         # exports EXWOP
-        "item_code": "SKU001",
+        "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Foreign Customer",
         "posting_date": "2024-04-02",
@@ -739,7 +738,7 @@ INVOICES = [
     },
     {
         # exports EXWP
-        "item_code": "SKU001",
+        "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Foreign Customer",
         "posting_date": "2024-04-02",
@@ -751,7 +750,7 @@ INVOICES = [
     },
     {
         # CDNUR
-        "item_code": "SKU001",
+        "item_code": "_Test Trading Goods 1",
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Foreign Customer",
         "posting_date": "2024-04-02",
@@ -774,7 +773,6 @@ class TestSalesRegisterBeta(FrappeTestCase):
             inv = create_sales_invoice(**invoice)
             EXPECTED_OUTPUT["SUMMARY_BY_ITEM"][index]["invoice_no"] = inv.name
             EXPECTED_OUTPUT["SUMMARY_BY_HSN"][index]["invoice_no"] = inv.name
-        frappe.db.commit()
 
     def test_summary_by_item(self):
         FILTERS["summary_by"] = "Summary by Item"
