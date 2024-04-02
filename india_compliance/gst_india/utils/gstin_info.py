@@ -131,7 +131,7 @@ def _extract_address_lines(address):
     )
 
     address_line2 = ", ".join(
-        titlecase(value) for key in ("loc", "city") if (value := address.get(key))
+        {titlecase(value) for key in ("loc", "city") if (value := address.get(key))}
     )
 
     if not (street := address.get("st")):
