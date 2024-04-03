@@ -304,7 +304,7 @@ function is_e_invoice_applicable(frm, show_message = false) {
     ) {
         is_einv_applicable = false;
         message_list.push(
-            "At least one item must be taxable or transaction is categorized as export."
+            "All items are either Nil-Rated/Exempted/Non-GST. At least one item must be taxable or the transaction should be categorised as export."
         );
     }
 
