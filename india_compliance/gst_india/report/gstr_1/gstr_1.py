@@ -312,13 +312,14 @@ class Gstr1Report:
 
         invoice_data = frappe.db.sql(
             f"""
-        	select
-        		{self.select_columns}
-        	from `tab{self.doctype}` si
-        	where docstatus = 1 {conditions}
-        	and is_opening = 'No'
-        	order by posting_date desc
-        	""",
+			select
+				{self.select_columns}
+			from `tab{self.doctype}` si
+			where docstatus = 1 %s
+			and is_opening = 'No'
+			order by posting_date desc
+			"""
+            % (conditions),
             self.filters,
             as_dict=1,
         )
@@ -411,7 +412,7 @@ class Gstr1Report:
             from `tab{self.doctype} Item`
 			where parent in ({", ".join(["%s"] * len(self.invoices))})
 		""",
-            tuple(self.invoices),
+            (*self.invoices,),
             as_dict=1,
         )
 
@@ -1729,14 +1730,14 @@ def get_exempted_json(data):
         ]
     }
 
-    for i in range(len(data)):
-        if data[i].get("nil_rated"):
+    for i, item in enumerate(data):
+        if item.get("nil_rated"):
             out["inv"][i]["nil_amt"] = data[i]["nil_rated"]
 
-        if data[i].get("exempted"):
+        if item.get("exempted"):
             out["inv"][i]["expt_amt"] = data[i]["exempted"]
 
-        if data[i].get("non_gst"):
+        if item.get("non_gst"):
             out["inv"][i]["ngsup_amt"] = data[i]["non_gst"]
 
     return out

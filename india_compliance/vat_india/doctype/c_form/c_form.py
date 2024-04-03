@@ -61,13 +61,17 @@ class CForm(Document):
         inv = [d.invoice_no for d in self.get("invoices")]
         if inv:
             frappe.db.sql(
-                f"""update `tabSales Invoice` set c_form_no=%s, modified=%s where name in ({', '.join(['%s'] * len(inv))})""",
+                """
+                update `tabSales Invoice` set c_form_no=%s, modified=%s where name in ({})
+                """.format(", ".join(["%s"] * len(inv))),
                 (self.name, self.modified, *inv),
             )
 
             frappe.db.sql(
-                f"""update `tabSales Invoice` set c_form_no = null, modified = %s
-				where name not in ({', '.join(['%s'] * len(inv))}) and ifnull(c_form_no, '') = %s""",
+                """update `tabSales Invoice` set c_form_no = null, modified = %s
+				where name not in ({}) and ifnull(c_form_no, '') = %s""".format(
+                    ", ".join(["%s"] * len(inv))
+                ),
                 (self.modified, *inv, self.name),
             )
         else:

@@ -114,7 +114,9 @@ def update_gl_entries(gst_accounts):
 
     if error_voucher_types:
         click.secho(
-            f"Company GSTIN is now a required field in GL Entry with GST Account. Seems it is missing in your custom doctypes: {', '.join(error_voucher_types)}",
+            "Company GSTIN is now a required field in GL Entry with GST Account. Seems it is missing in your custom doctypes: {}".format(
+                ",".join(error_voucher_types)
+            ),
             fg="red",
         )
 
