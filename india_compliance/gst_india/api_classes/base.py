@@ -254,21 +254,26 @@ class BaseAPI:
         return frappe.generate_hash(length=length)
 
     def mask_sensitive_info(self, log):
+        request_headers = log.request_headers
+        output = log.output
+        data = log.data
+        request_body = data and data.body
+
         for key in self.SENSITIVE_INFO:
-            if key in log.request_headers:
-                log.request_headers[key] = "*****"
+            if key in request_headers:
+                request_headers[key] = "*****"
 
-            if key in log.get("output", {}):
-                log.output[key] = "*****"
+            if output and key in output:
+                output[key] = "*****"
 
-            if not log.data:
-                return
+            if not data:
+                continue
 
-            if key in log.get("data", {}):
-                log.data[key] = "*****"
+            if key in data:
+                data[key] = "*****"
 
-            if key in log.get("data", {}).get("body", {}):
-                log.data["body"][key] = "*****"
+            if request_body and key in request_body:
+                request_body[key] = "*****"
 
 
 def get_public_ip():
