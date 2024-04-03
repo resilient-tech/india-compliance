@@ -752,6 +752,7 @@ class TestSalesRegisterBeta(FrappeTestCase):
     @classmethod
     @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def setUpClass(cls):
+        super().setUpClass()
         TestSalesRegisterBeta().create_sales_invoices()
 
     def create_sales_invoices(self):
