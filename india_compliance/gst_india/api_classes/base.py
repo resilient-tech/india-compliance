@@ -161,7 +161,9 @@ class BaseAPI:
             raise e
 
         finally:
-            log.output = response_json.copy()
+            if response_json:
+                log.output = response_json.copy()
+
             self.mask_sensitive_info(log)
 
             enqueue_integration_request(**log)
@@ -256,7 +258,7 @@ class BaseAPI:
             if key in log.request_headers:
                 log.request_headers[key] = "*****"
 
-            if key in log.output:
+            if key in log.get("output", {}):
                 log.output[key] = "*****"
 
             if not log.data:
