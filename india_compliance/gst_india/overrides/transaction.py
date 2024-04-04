@@ -226,7 +226,7 @@ def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=Tr
         account_types.append("Output")
 
     if for_purchase:
-        account_types.extend(["Input", "Reverse Charge"])
+        account_types.extend(["Input", "Purchase Reverse Charge"])
 
     for account_type in account_types:
         accounts = get_gst_accounts_by_type(company, account_type, throw=throw)
@@ -336,7 +336,7 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
     elif not doc.is_reverse_charge:
         if idx := _get_matched_idx(
             rows_to_validate,
-            get_gst_accounts_by_type(doc.company, "Reverse Charge").values(),
+            get_gst_accounts_by_type(doc.company, "Purchase Reverse Charge").values(),
         ):
             _throw(
                 _(
@@ -841,7 +841,7 @@ def validate_reverse_charge_transaction(doc, method=None):
         return
 
     reverse_charge_accounts = get_gst_accounts_by_type(
-        doc.company, "Reverse Charge"
+        doc.company, "Purchase Reverse Charge"
     ).values()
 
     input_gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()

@@ -54,7 +54,7 @@ def execute():
 
 def get_account_type(row):
     if row.is_reverse_charge_account:
-        return "Reverse Charge"
+        return "Purchase Reverse Charge"
 
     accounts = (row.cgst_account, row.sgst_account, row.igst_account)
     if all("input" in (account or "").lower() for account in accounts):
