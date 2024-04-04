@@ -3,29 +3,30 @@
 
 frappe.provide("india_compliance");
 
-DOCTYPE = "GSTR-1 Beta";
-
-SUMMARY_COLUMNS = [];
-BOOKS_DETAILS_COLUMNS = {
-    b2b: [
-        { label: "GSTIN/UIN of Recipient", fieldname: "gstin", fieldtype: "Data" },
-        { label: "Invoice Number", fieldname: "invoice_no", fieldtype: "Data" },
-    ],
-};
-FILED_DETAILS_COLUMNS = {
-    b2b: [
-        { label: "GSTIN/UIN of Recipient", fieldname: "gstin", fieldtype: "Data" },
-        { label: "Invoice Number", fieldname: "invoice_no", fieldtype: "Data" },
-    ],
+const DOCTYPE = "GSTR-1 Beta";
+const GSTR_1_SUB_CATEGORIES = {
+    B2B_REGULAR: "B2B Regular",
+    B2B_REVERSE_CHARGE: "B2B Reverse Charge",
+    SEZWP: "SEZ with Payment of Tax",
+    SEZWOP: "SEZ without Payment of Tax",
+    DE: "Deemed Exports",
+    EXPWP: "Export with Payment of Tax",
+    EXPWOP: "Export without Payment of Tax",
+    B2CL: "B2C (Large)",
+    B2CS: "B2C (Others)",
+    NIL_RATED: "Nil Rated",
+    EXEMPTED: "Exempted",
+    NON_GST: "Non-GST",
+    CDNR: "Credit/Debit Notes (Registered)",
+    CDNUR: "Credit/Debit Notes (Unregistered)",
 };
 
 frappe.ui.form.on(DOCTYPE, {
-    async setup(frm) {
-        patch_set_active_tab(frm);
-        await set_default_fields(frm);
-
-        await frappe.require("gstr1.bundle.js");
-        frm.gstr1 = new GSTR1(frm);
+    setup(frm) {
+        // patch_set_active_tab(frm);
+        patch_set_indicator(frm);
+        frappe.require("gstr1.bundle.js").then(() => (frm.gstr1 = new GSTR1(frm)));
+        set_default_fields(frm);
     },
 
     async company(frm) {
@@ -40,13 +41,8 @@ frappe.ui.form.on(DOCTYPE, {
         frm.disable_save();
         frm.page.set_primary_action(__("Generate"), () => frm.save());
 
-        frm.add_custom_button("Download Excel", () => {});
-
-        // // move actions button next to filters
-        // for (let button of $(".custom-actions")) {
-        //     $(".custom-button-group").remove();
-        //     $(button).appendTo($(".custom-button-group"));
-        // }
+        // Indicators
+        frm.gstr1?.render_indicator();
     },
 
     before_save(frm) {
@@ -54,7 +50,9 @@ frappe.ui.form.on(DOCTYPE, {
     },
 
     after_save(frm) {
-        frm.gstr1.refresh(frm.doc.__onload?.data);
+        const data = frm.doc.__onload?.data;
+        frm.gstr1.status = data.status;
+        frm.gstr1.refresh_data(data);
     },
 });
 
@@ -66,33 +64,33 @@ class GSTR1 {
             name: "books",
             views: ["Summary", "Details"],
             is_active: true,
-            active_view: "Summary",
             actions: [
                 {
                     label: __("Download Excel"),
                     action: () => this.download_books_as_excel(),
                 },
             ],
+            _DataManager: BooksTab,
         },
         {
             label: __("Reconcile"),
             name: "reconcile",
             views: ["Summary", "Details"],
             is_active: false,
-            active_view: "Summary",
+            _DataManager: ReconcileTab,
         },
         {
             label: __("Filed"),
             name: "filed",
             views: ["Summary", "Details"],
             is_active: false,
-            active_view: "Summary",
             actions: [
                 {
                     label: __("Mark as Filed"),
                     action: () => this.mark_as_filed(),
                 },
             ],
+            _DataManager: FiledTab,
         },
     ];
 
@@ -104,16 +102,36 @@ class GSTR1 {
     init(frm) {
         this.frm = frm;
         this.data = frm.doc._data;
+        this.filters = [];
         this.$wrapper = frm.fields_dict.tabs_html.$wrapper;
     }
 
-    refresh(data) {
-        if (data) {
-            this.data = data;
-            this.refresh_filter_fields();
-        }
+    refresh_data(data) {
+        if (data) this.data = data;
 
-        // apply filters
+        this.TABS.forEach(tab => {
+            this.tabs[`${tab.name}_tab`].datamanager.refresh_data(this.data[tab.name]);
+        });
+    }
+
+    refresh_view() {
+        this.viewgroup.set_active_view(this.active_view);
+        this.TABS.forEach(tab => {
+            this.tabs[`${tab.name}_tab`].datamanager.refresh_view(
+                this.active_view,
+                this.filter_category
+            );
+        });
+    }
+
+    refresh_filter() {
+        const category_filter = this.filters.filter(row => row[1] === "description");
+        this.filter_category = category_filter.length ? category_filter[0][3] : null;
+
+        if (this.filter_category) this.active_view = "Details";
+        else this.active_view = "Summary";
+
+        this.refresh_view();
     }
 
     // RENDER
@@ -171,39 +189,41 @@ class GSTR1 {
         this.tabs = Object.fromEntries(
             this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
         );
-    }
 
-    render_indicator() {
-        const status = this.frm.doc._data?.status;
-        if (!status) return;
-
-        let color = status === "Filed" ? "green" : "orange";
-        frm.page.set_indicator(status, color);
+        this.$wrapper.find(".form-tabs-list").append(`<div class="tab-actions"></div>`);
     }
 
     render_view_groups() {
-        // this.TABS.forEach(tab => {
-        //     this.tabs[`${tab.name}_tab`].viewgroup = new ViewGroup({
-        //         $wrapper: "",
-        //         tab: tab.name,
-        //         _views: tab.views,
-        //         active_view: tab.active_view,
-        //     });
-        // });
+        this.active_view = "Summary";
+        const wrapper = this.$wrapper.find(".tab-actions").find(".custom-button-group");
+
+        this.viewgroup = new ViewGroup({
+            $wrapper: wrapper,
+            view_names: ["Summary", "Details"],
+            active_view: this.active_view,
+            parent: this,
+            callback: this.change_view,
+        });
     }
 
     render_data_tables() {
         this.TABS.forEach(tab => {
-            this.tabs[`${tab.name}_tab`].datatable = new india_compliance.DataTableManager({
-                $wrapper: this.tab_group.get_field(`${tab.name}_html`).$wrapper,
-                columns: [],
-                data: [],
-                options: {
-                    cellHeight: 55,
-                },
-            });
+            const wrapper = this.tab_group.get_field(`${tab.name}_html`).$wrapper;
+            this.tabs[`${tab.name}_tab`].datamanager = new tab._DataManager(
+                wrapper,
+                this.apply_filters
+            );
         });
-        this.set_datatable_listeners();
+    }
+
+    render_indicator() {
+        if (!this.status) {
+            this.frm.page.clear_indicator();
+            return;
+        }
+
+        let color = this.status === "Filed" ? "green" : "orange";
+        this.frm.page.set_indicator(this.status, color);
     }
 
     // SETUP
@@ -211,32 +231,15 @@ class GSTR1 {
     setup_filter_button() {
         this.filter_group = new india_compliance.FilterGroup({
             doctype: DOCTYPE,
-            parent: this.$wrapper.find(".form-tabs-list"),
+            parent: this.$wrapper.find(".tab-actions"),
             filter_options: {
-                fieldname: "section_name",
+                fieldname: "description",
                 filter_fields: this.get_filter_fields(),
             },
             on_change: () => {
-                this.refresh();
+                this.filters = this.filter_group.get_filters();
+                this.refresh_filter();
             },
-        });
-    }
-
-    // LISTENERS
-
-    set_datatable_listeners() {
-        const me = this;
-        this.tabs.books_tab.datatable.$datatable.on("click", ".match-status", async function (e) {
-            e.preventDefault();
-
-            const match_status = $(this).text();
-            await me.filter_group.push_new_filter([
-                DOCTYPE,
-                "match_status",
-                "=",
-                match_status,
-            ]);
-            me.filter_group.apply();
         });
     }
 
@@ -251,10 +254,10 @@ class GSTR1 {
     get_filter_fields() {
         const fields = [
             {
-                label: "Section Name",
-                fieldname: "section_name",
+                label: "Description",
+                fieldname: "description",
                 fieldtype: "Autocomplete",
-                options: ["B2B", "B2CL", "B2CS"],
+                options: Object.values(GSTR_1_SUB_CATEGORIES),
             },
         ];
 
@@ -274,34 +277,353 @@ class GSTR1 {
         return options;
     }
 
-    apply_filters() {}
-}
+    apply_filters = async category => {
+        await this.filter_group.push_new_filter([
+            DOCTYPE,
+            "description",
+            "=",
+            category,
+        ]);
+        this.filter_group.apply();
+    };
 
-class GSTR1Data {
-    // Process Data / Summarize Data / Filter Data / Columns and Data Formatting / Reconcile
-    constructor() {}
+    change_view = (view_group, target_view) => {
+        const current_view = this.active_view;
 
-    reset_data() {
-        this.data = {}; // Raw Data
-        this.filtered_data = {}; // Filtered Data / Details View
-        this.summary = {}; // Summary Data
+        if (!this.filter_category && current_view === "Summary")
+            return this.filter_category_dialog(view_group, target_view);
+
+        view_group.set_active_view(target_view);
+        this.active_view = target_view;
+
+        this.refresh_view();
+
+        console.log(this.active_view);
+    };
+
+    filter_category_dialog(view_group, target_view) {
+        const dialog = new frappe.ui.Dialog({
+            title: __("Filter by Category"),
+            fields: [
+                {
+                    fieldname: "description",
+                    fieldtype: "Autocomplete",
+                    options: Object.values(GSTR_1_SUB_CATEGORIES),
+                    label: __("Category"),
+                },
+            ],
+            primary_action: () => {
+                const { description } = dialog.get_values();
+                if (!description) return;
+
+                dialog.hide();
+                frappe.run_serially([
+                    () => this.apply_filters(description),
+                    () => this.change_view(view_group, target_view),
+                ]);
+            },
+        });
+
+        dialog.show();
     }
 }
 
 class TabManager {
-    //
+    DEFAULT_SUMMARY = {
+        description: "",
+        total_docs: 0,
+        total_taxable_amount: 0,
+        total_igst_amount: 0,
+        total_cgst_amount: 0,
+        total_sgst_amount: 0,
+        total_cess_amount: 0,
+    };
+
+    constructor(wrapper, callback) {
+        this.wrapper = wrapper;
+        this.callback = callback; // when a row is clicked
+        this.reset_data();
+        this.setup_wrapper();
+        this.setup_datatable(wrapper);
+        this.setup_actions();
+    }
+
+    reset_data() {
+        this.data = {}; // Raw Data
+        this.filtered_data = {}; // Filtered Data / Details View
+        this.summary = {};
+    }
+
+    refresh_data(data) {
+        this.data = data;
+        this.summarize_data();
+        this.datatable.refresh(Object.values(this.summary));
+    }
+
+    refresh_view(view, category) {
+        if (!category && view === "Details") return;
+
+        if (view === "Details")
+            this.setup_datatable(
+                this.wrapper,
+                this.data[category],
+                this.get_b2b_columns()
+            );
+        else if (view === "Summary") {
+            let filtered_summary = Object.values(this.summary);
+            if (category)
+                filtered_summary = filtered_summary.filter(
+                    row => row.description === category
+                );
+
+            this.setup_datatable(
+                this.wrapper,
+                filtered_summary,
+                this.get_summary_columns()
+            );
+        }
+
+        this.set_title(category);
+    }
+
+    set_title(category) {
+        if (category) this.wrapper.find(".tab-title-text").text(category);
+        else this.wrapper.find(".tab-title-text").html("&nbsp");
+    }
+
+    // SETUP
+
+    setup_wrapper() {
+        this.wrapper.append(`
+            <div class="tab-title m-3 d-flex justify-content-between align-items-center">
+                <div class="tab-title-text">&nbsp</div>
+                <div class="custom-button-group"></div>
+            </div>
+            <div class="data-table"></div>
+        `);
+    }
+
+    setup_datatable(wrapper, data, columns) {
+        const _columns = columns || this.get_summary_columns();
+        const _data = data || [];
+
+        this.datatable = new india_compliance.DataTableManager({
+            $wrapper: wrapper.find(".data-table"),
+            columns: _columns,
+            data: _data,
+            options: {
+                cellHeight: 55,
+            },
+            no_data_message: __("No data found"),
+        });
+
+        this.setup_datatable_listeners();
+    }
+
+    setup_datatable_listeners() {
+        const me = this;
+        this.datatable.$datatable.on(
+            "click",
+            ".summary-description",
+            async function (e) {
+                e.preventDefault();
+
+                const summary_description = $(this).text();
+                me.callback && me.callback(summary_description);
+            }
+        );
+    }
+
+    setup_actions() { }
+
+    // UTILS
+
+    add_custom_button(label, action) {
+        let button = this.wrapper.find(
+            `button[data-label="${encodeURIComponent(label)}"]`
+        );
+        if (button.length) return;
+
+        $(`
+            <button
+            class="btn btn-default ellipsis"
+            data-label="${encodeURIComponent(label)}">
+                ${label}
+            </button>
+        `)
+            .appendTo(this.wrapper.find(".custom-button-group"))
+            .on("click", action);
+    }
+
+    // DATA
+    summarize_data() {
+        Object.values(GSTR_1_SUB_CATEGORIES).forEach(category => {
+            this.summary[category] = { ...this.DEFAULT_SUMMARY, description: category };
+        });
+
+        Object.entries(this.data).forEach(([category, rows]) => {
+            this.summary[category] = rows.reduce((accumulator, row) => {
+                accumulator.total_docs += 1;
+                accumulator.total_taxable_amount += row.total_taxable_amount || 0;
+                accumulator.total_igst_amount += row.total_igst_amount || 0;
+                accumulator.total_cgst_amount += row.total_cgst_amount || 0;
+                accumulator.total_sgst_amount += row.total_sgst_amount || 0;
+                accumulator.total_cess_amount += row.total_cess_amount || 0;
+                return accumulator;
+            }, this.summary[category]);
+        });
+    }
+
+    // COLUMNS
+    get_summary_columns() {
+        return [
+            {
+                name: "Description",
+                fieldname: "description",
+                width: 300,
+                _value: (...args) =>
+                    `<a href = "#" class="summary-description">${args[0]}</a>`,
+            },
+            {
+                name: "Total Docs",
+                fieldname: "total_docs",
+                width: 100,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "Taxable Amomunt",
+                fieldname: "total_taxable_amount",
+                width: 180,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "IGST",
+                fieldname: "total_igst_amount",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "CGST",
+                fieldname: "total_cgst_amount",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "SGST",
+                fieldname: "total_sgst_amount",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "CESS",
+                fieldname: "total_cess_amount",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+        ];
+    }
+
+    get_b2b_columns() { }
+}
+
+class ReconcileTab extends TabManager { }
+
+class FiledTab extends TabManager {
+    // COLUMNS
+}
+
+class BooksTab extends TabManager {
+    setup_actions() {
+        this.add_custom_button("Download Excel", () => console.log("hi"));
+    }
+
+    // Process Data / Summarize Data / Filter Data / Columns and Data Formatting / Reconcile
+
+    // COLUMNS
+
+    get_b2b_columns() {
+        return [
+            {
+                name: "Invoice Number",
+                fieldname: "invoice_number",
+                width: 150,
+            },
+            {
+                name: "Customer GSTIN",
+                fieldname: "customer_gstin",
+                width: 150,
+            },
+            {
+                name: "Invoice Value",
+                fieldname: "invoice_value",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "Taxable Value",
+                fieldname: "taxable_value",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "IGST",
+                fieldname: "igst",
+                width: 100,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "CGST",
+                fieldname: "cgst",
+                width: 100,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "SGST",
+                fieldname: "sgst",
+                width: 100,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+        ];
+    }
 }
 
 class ViewGroup {
     constructor(options) {
         Object.assign(this, options);
         this.views = {};
-        this.heading = this.$wrapper.find(".view-heading");
         this.render();
     }
 
-    set_heading(text) {
-        this.heading.html(`<h4>${text}</h4>`);
+    render() {
+        $(this.$wrapper).append(
+            `
+            <div class= "view-group">
+                <div class="view-switch"></div>
+            </div>
+            `
+        );
+
+        this.view_group_container = $(`
+            <ul
+                class= "nav custom-tabs rounded-sm border d-inline-flex"
+                id = "custom-tabs"
+                role = "tablist"
+            ></ul>
+        `).appendTo(this.$wrapper.find(`.view-switch`));
+
+        this.make_views();
+        this.setup_events();
     }
 
     set_active_view(view) {
@@ -309,45 +631,37 @@ class ViewGroup {
         this.views[`${view}_view`].children().tab("show");
     }
 
-    render() {
-        this.tab_link_container = $(`
-            <ul class="nav custom-tabs rounded-sm border d-inline-flex mb-3" id="custom-tabs" role="tablist"></ul>
-		`).appendTo(this.$wrapper.find(".tab-view-switch"));
-
-        this.make_views();
-        this.setup_view_events();
-    }
-
     make_views() {
-        this._views.forEach(view => {
-            this.views[`${view}_view`] = $(`<li class="nav-item show">
-                <a
-                    class="nav-link ${this.active_view === view ? "active" : ""}"
-                    id="gstr-1-__${view}-view"
-                    data-toggle="tab"
-                    data-fieldname="${view}"
-                    href="#gstr-1-__${view}-view"
-                    role="tab"
-                    aria-controls="gstr-1-__${view}-view"
-                    aria-selected="true"
-                >
-                    ${frappe.unscrub(view)}
-                </a>
-            </li>`).appendTo(this.tab_link_container);
+        this.view_names.forEach(view => {
+            this.views[`${view}_view`] = $(
+                `
+                <li class="nav-item show">
+                    <a
+                        class="nav-link ${this.active_view === view ? "active" : ""}"
+                        id = "gstr-1-__${view}-view"
+                        data-toggle="tab"
+                        data-fieldname="${view}"
+                        href="#gstr-1-__${view}-view"
+                        role="tab"
+                        aria-controls="gstr-1-__${view}-view"
+                        aria-selected="true"
+            >
+            ${frappe.unscrub(view)}
+                    </a>
+                </li>
+            `
+            ).appendTo(this.view_group_container);
         });
     }
 
-    setup_view_events() {
-        this.tab_link_container.off("click").on("click", ".nav-link", e => {
+    setup_events() {
+        this.view_group_container.off("click").on("click", ".nav-link", e => {
             e.preventDefault();
             e.stopImmediatePropagation();
 
-            const $target = $(e.currentTarget);
-            $target.tab("show");
-
-            this.active_view = $target.attr("data-fieldname");
-            show_active_data_table(this.tab, this.active_view);
-            // this.refresh(this.active_view);
+            this.target = $(e.currentTarget);
+            const target_view = this.target.attr("data-fieldname");
+            this.callback && this.callback(this, target_view);
         });
     }
 }
@@ -360,6 +674,10 @@ function patch_set_active_tab(frm) {
         set_active_tab.apply(this, args);
         frm.refresh();
     };
+}
+
+function patch_set_indicator(frm) {
+    frm.toolbar.set_indicator = function () { };
 }
 
 async function set_gstin_options(frm) {
@@ -375,8 +693,8 @@ async function set_gstin_options(frm) {
     return message;
 }
 
-async function set_default_fields(frm) {
-    await set_default_company_gstin(frm);
+function set_default_fields(frm) {
+    set_default_company_gstin(frm);
     set_default_year(frm);
     set_previous_month(frm);
 }

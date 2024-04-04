@@ -2,15 +2,11 @@ div[data-page-route="GSTR-1 Beta"] {
     --dt-row-height: 34px;
 }
 
-div[data-page-route="GSTR-1 Beta"]
-    [data-fieldname="tabs_html"]
-    .section-body {
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .section-body {
     margin-top: 0;
 }
 
-div[data-page-route="GSTR-1 Beta"]
-    [data-fieldname="tabs_html"]
-    .form-tabs-list {
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .form-tabs-list {
     margin-top: var(--margin-sm);
     display: flex;
     justify-content: space-between;
@@ -29,7 +25,8 @@ div[data-page-route="GSTR-1 Beta"]
 div[data-page-route="GSTR-1 Beta"]
     [data-fieldname="tabs_html"]
     .form-tabs-list
-    .inner-group-button, .filter-selector {
+    .inner-group-button,
+.filter-selector, .view-group{
     margin-bottom: 8px;
     margin-left: 8px;
 }
@@ -40,6 +37,10 @@ div[data-page-route="GSTR-1 Beta"]
     .custom-button-group
     .btn {
     padding: 5px 10px;
+}
+
+div[data-page-route="GSTR-1 Beta"] .tab-title-text {
+    font-size: 1.2rem;
 }
 
 div[data-page-route="GSTR-1 Beta"] .datatable .dt-scrollable {
@@ -60,8 +61,7 @@ div[data-page-route="GSTR-1 Beta"] .datatable .dt-row-filter .dt-cell {
     max-height: var(--dt-row-height);
 }
 
-div[data-page-route="GSTR-1 Beta"]
-    [data-fieldname="tabs_empty_state"],
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_empty_state"],
 div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] {
     min-height: 320px;
     display: flex;
@@ -70,19 +70,54 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] {
     flex-direction: column;
 }
 
-div[data-page-route="GSTR-1 Beta"]
-    [data-fieldname="tabs_empty_state"]
-    > img,
-div[data-page-route="GSTR-1 Beta"]
-    [data-fieldname="tabs_no_data"]
-    > img {
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_empty_state"] > img,
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] > img {
     margin-bottom: var(--margin-md);
     max-height: 100px;
 }
 
-div[data-page-route="GSTR-1 Beta"]
-    [data-fieldname="tabs_html"] {
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] {
     margin-bottom: var(--margin-sm);
     border: 1px solid var(--border-color);
     border-radius: var(--margin-xs);
+}
+
+div[data-page-route="GSTR-1 Beta"] .books_view_group,
+.reconcile_view_group,
+.filed_view_group {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--margin-md);
+}
+
+div[data-page-route="GSTR-1 Beta"] .tab-actions {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="books_html"],
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="reconcile_html"],
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="filed_html"] {
+    margin-left: -11px;
+    margin-right: -15px;
+}
+
+.custom-tabs > .nav-item > .nav-link {
+    padding: 4px 8px;
+}
+
+.custom-tabs > .nav-item > .nav-link.active {
+    background-color: var(--control-bg);
+}
+
+.custom-tabs > .nav-item:first-child > .nav-link {
+    border-radius: 0.4rem 0 0 0.4rem;
+}
+
+.custom-tabs > .nav-item:last-child > .nav-link {
+    border-radius: 0 0.4rem 0.4rem 0;
 }

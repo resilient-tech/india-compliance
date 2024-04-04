@@ -565,6 +565,13 @@ class GSTR1Data {
                 _value: (...args) => `<a href="#" class='section_name'>${args[0]}</a>`,
             },
             {
+                name: "Total Docs",
+                fieldname: "total_docs",
+                width: 100,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
                 name: "Taxable Amomunt",
                 fieldname: "taxable_amount",
                 width: 180,
