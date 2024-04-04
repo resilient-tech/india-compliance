@@ -167,7 +167,7 @@ STATE_PINCODE_MAPPING = {
     "Lakshadweep Islands": (682, 682),
     "Kerala": (670, 695),
     "Tamil Nadu": (600, 643),
-    "Puducherry": ((533, 533), (605, 605), (607, 607), (609, 609)),
+    "Puducherry": ((533, 533), (605, 605), (607, 607), (609, 609), (673, 673)),
     "Andaman and Nicobar Islands": (744, 744),
     "Andhra Pradesh": (500, 535),
 }
