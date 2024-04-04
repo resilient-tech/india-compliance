@@ -257,7 +257,7 @@ class BaseAPI:
         request_headers = log.request_headers
         output = log.output
         data = log.data
-        request_body = data and data.body
+        request_body = data and data.get("body")
 
         for key in self.SENSITIVE_INFO:
             if key in request_headers:
