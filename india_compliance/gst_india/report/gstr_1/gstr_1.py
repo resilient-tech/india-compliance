@@ -315,11 +315,10 @@ class Gstr1Report:
 			select
 				{self.select_columns}
 			from `tab{self.doctype}` si
-			where docstatus = 1 %s
+			where docstatus = 1 {conditions}
 			and is_opening = 'No'
 			order by posting_date desc
-			"""
-            % (conditions),
+			""",
             self.filters,
             as_dict=1,
         )
