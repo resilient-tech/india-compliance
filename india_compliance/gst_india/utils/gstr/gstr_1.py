@@ -164,6 +164,12 @@ class GSTR1Query:
             .where(self.si.docstatus == 1)
             .where(self.si.is_opening != "Yes")
             .where(IfNull(self.si.billing_address_gstin, "") != self.si.company_gstin)
+            .orderby(
+                self.si.posting_date,
+                self.si.name,
+                self.si_item.item_code,
+                order=Order.desc,
+            )
         )
 
         if self.additional_si_columns:
@@ -452,7 +458,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 query.gst_treatment,
                 query.uom,
             )
-            .orderby(query.posting_date, query.invoice_no, order=Order.desc)
+            .orderby(
+                query.posting_date, query.invoice_no, query.item_code, order=Order.desc
+            )
         )
 
         return query.run(as_dict=True)
