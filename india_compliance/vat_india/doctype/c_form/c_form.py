@@ -29,10 +29,10 @@ class CForm(Document):
                 elif inv and inv[0][1] and inv[0][1] != self.name:
                     frappe.throw(
                         _(
-                            f"""Invoice {d.invoice_no} is tagged in another C-form: {inv[0][1]}.
+                            """Invoice {0} is tagged in another C-form: {1}.
 						If you want to change C-form no for this invoice,
 						please remove invoice no from the previous c-form and then try again"""
-                        )
+                        ).format(d.invoice_no, inv[0][1])
                     )
 
                 elif not inv:
