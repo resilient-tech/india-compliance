@@ -19,22 +19,37 @@ const GSTR_1_SUB_CATEGORIES = {
     NON_GST: "Non-GST",
     CDNR: "Credit/Debit Notes (Registered)",
     CDNUR: "Credit/Debit Notes (Unregistered)",
+    AT: "Advances Received",
+    TXP: "Advances Adjusted",
+    HSN: "HSN Summary",
+    DOC_ISSUE: "Document Issued",
 };
 
 frappe.ui.form.on(DOCTYPE, {
     setup(frm) {
         // patch_set_active_tab(frm);
         patch_set_indicator(frm);
-        frappe.require("gstr1.bundle.js").then(() => (frm.gstr1 = new GSTR1(frm)));
+        frappe.require("gstr1.bundle.js").then(() => {
+            frm.gstr1 = new GSTR1(frm);
+            frm.trigger("company");
+        });
         set_default_fields(frm);
     },
 
     async company(frm) {
+        render_empty_state(frm);
+
         if (!frm.doc.company) return;
-        const options = await set_gstin_options(frm);
+        const options = await india_compliance.set_gstin_options(frm);
 
         frm.set_value("company_gstin", options[0]);
     },
+
+    company_gstin: render_empty_state,
+
+    month: render_empty_state,
+
+    year: render_empty_state,
 
     refresh(frm) {
         // Primary Action
@@ -62,35 +77,18 @@ class GSTR1 {
         {
             label: __("Books"),
             name: "books",
-            views: ["Summary", "Details"],
             is_active: true,
-            actions: [
-                {
-                    label: __("Download Excel"),
-                    action: () => this.download_books_as_excel(),
-                },
-            ],
-            _DataManager: BooksTab,
+            _TabManager: BooksTab,
         },
         {
             label: __("Reconcile"),
             name: "reconcile",
-            views: ["Summary", "Details"],
-            is_active: false,
-            _DataManager: ReconcileTab,
+            _TabManager: ReconcileTab,
         },
         {
             label: __("Filed"),
             name: "filed",
-            views: ["Summary", "Details"],
-            is_active: false,
-            actions: [
-                {
-                    label: __("Mark as Filed"),
-                    action: () => this.mark_as_filed(),
-                },
-            ],
-            _DataManager: FiledTab,
+            _TabManager: FiledTab,
         },
     ];
 
@@ -110,14 +108,17 @@ class GSTR1 {
         if (data) this.data = data;
 
         this.TABS.forEach(tab => {
-            this.tabs[`${tab.name}_tab`].datamanager.refresh_data(this.data[tab.name]);
+            this.tabs[`${tab.name}_tab`].tabmanager.refresh_data(
+                this.data[tab.name],
+                this.status
+            );
         });
     }
 
     refresh_view() {
         this.viewgroup.set_active_view(this.active_view);
         this.TABS.forEach(tab => {
-            this.tabs[`${tab.name}_tab`].datamanager.refresh_view(
+            this.tabs[`${tab.name}_tab`].tabmanager.refresh_view(
                 this.active_view,
                 this.filter_category
             );
@@ -141,44 +142,34 @@ class GSTR1 {
         this.render_indicator();
         this.setup_filter_button();
         this.render_view_groups();
-        this.render_data_tables();
+        this.render_tabs();
     }
 
     render_tab_group() {
+        const tab_fields = this.TABS.reduce(
+            (acc, tab) => [
+                ...acc,
+                {
+                    fieldtype: "Tab Break",
+                    fieldname: `${tab.name}_tab`,
+                    label: __(tab.label),
+                    active: tab.is_active ? 1 : 0,
+                },
+                {
+                    fieldtype: "HTML",
+                    fieldname: `${tab.name}_html`,
+                },
+            ],
+            []
+        );
+
         this.tab_group = new frappe.ui.FieldGroup({
             fields: [
                 {
                     //hack: for the FieldGroup(Layout) to avoid rendering default "details" tab
                     fieldtype: "Section Break",
                 },
-                {
-                    fieldtype: "Tab Break",
-                    fieldname: "books_tab",
-                    label: __("Books"),
-                    active: 1,
-                },
-                {
-                    fieldtype: "HTML",
-                    fieldname: "books_html",
-                },
-                {
-                    fieldtype: "Tab Break",
-                    fieldname: "reconcile_tab",
-                    label: __("Reconcile"),
-                },
-                {
-                    fieldtype: "HTML",
-                    fieldname: "reconcile_html",
-                },
-                {
-                    fieldtype: "Tab Break",
-                    fieldname: "filed_tab",
-                    label: __("Filed"),
-                },
-                {
-                    fieldtype: "HTML",
-                    fieldname: "filed_html",
-                },
+                ...tab_fields,
             ],
             body: this.$wrapper,
             frm: this.frm,
@@ -197,7 +188,7 @@ class GSTR1 {
         this.active_view = "Summary";
         const wrapper = this.$wrapper.find(".tab-actions").find(".custom-button-group");
 
-        this.viewgroup = new ViewGroup({
+        this.viewgroup = new india_compliance.ViewGroup({
             $wrapper: wrapper,
             view_names: ["Summary", "Details"],
             active_view: this.active_view,
@@ -206,10 +197,10 @@ class GSTR1 {
         });
     }
 
-    render_data_tables() {
+    render_tabs() {
         this.TABS.forEach(tab => {
             const wrapper = this.tab_group.get_field(`${tab.name}_html`).$wrapper;
-            this.tabs[`${tab.name}_tab`].datamanager = new tab._DataManager(
+            this.tabs[`${tab.name}_tab`].tabmanager = new tab._TabManager(
                 wrapper,
                 this.apply_filters
             );
@@ -312,15 +303,13 @@ class GSTR1 {
                     label: __("Category"),
                 },
             ],
-            primary_action: () => {
+            primary_action: async () => {
                 const { description } = dialog.get_values();
                 if (!description) return;
 
                 dialog.hide();
-                frappe.run_serially([
-                    () => this.apply_filters(description),
-                    () => this.change_view(view_group, target_view),
-                ]);
+                await this.apply_filters(description);
+                this.change_view(view_group, target_view);
             },
         });
 
@@ -329,6 +318,7 @@ class GSTR1 {
 }
 
 class TabManager {
+    CATEGORY_COLUMNS = {}
     DEFAULT_SUMMARY = {
         description: "",
         total_docs: 0,
@@ -341,11 +331,10 @@ class TabManager {
 
     constructor(wrapper, callback) {
         this.wrapper = wrapper;
-        this.callback = callback; // when a row is clicked
+        this.callback = callback;
         this.reset_data();
         this.setup_wrapper();
         this.setup_datatable(wrapper);
-        this.setup_actions();
     }
 
     reset_data() {
@@ -354,8 +343,10 @@ class TabManager {
         this.summary = {};
     }
 
-    refresh_data(data) {
+    refresh_data(data, status) {
         this.data = data;
+        this.status = status;
+        this.setup_actions();
         this.summarize_data();
         this.datatable.refresh(Object.values(this.summary));
     }
@@ -363,13 +354,13 @@ class TabManager {
     refresh_view(view, category) {
         if (!category && view === "Details") return;
 
-        if (view === "Details")
-            this.setup_datatable(
-                this.wrapper,
-                this.data[category],
-                this.get_b2b_columns()
-            );
-        else if (view === "Summary") {
+        if (view === "Details") {
+            const columns_func = this.CATEGORY_COLUMNS[category];
+            console.log(columns_func);
+            const columns = columns_func ? columns_func() : this.get_b2b_columns();
+            this.setup_datatable(this.wrapper, this.data[category], columns);
+
+        } else if (view === "Summary") {
             let filtered_summary = Object.values(this.summary);
             if (category)
                 filtered_summary = filtered_summary.filter(
@@ -386,18 +377,18 @@ class TabManager {
         this.set_title(category);
     }
 
+    // SETUP
+
     set_title(category) {
         if (category) this.wrapper.find(".tab-title-text").text(category);
         else this.wrapper.find(".tab-title-text").html("&nbsp");
     }
 
-    // SETUP
-
     setup_wrapper() {
         this.wrapper.append(`
             <div class="tab-title m-3 d-flex justify-content-between align-items-center">
                 <div class="tab-title-text">&nbsp</div>
-                <div class="custom-button-group"></div>
+                <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
             </div>
             <div class="data-table"></div>
         `);
@@ -438,7 +429,7 @@ class TabManager {
 
     // UTILS
 
-    add_custom_button(label, action) {
+    add_tab_custom_button(label, action) {
         let button = this.wrapper.find(
             `button[data-label="${encodeURIComponent(label)}"]`
         );
@@ -532,22 +523,35 @@ class TabManager {
     get_b2b_columns() { }
 }
 
-class ReconcileTab extends TabManager { }
-
-class FiledTab extends TabManager {
-    // COLUMNS
-}
-
 class BooksTab extends TabManager {
+    CATEGORY_COLUMNS = {
+        "B2B Regular": this.get_invoice_columns,
+        "B2B Reverse Charge": this.get_invoice_columns,
+        "SEZ with Payment of Tax": this.get_invoice_columns,
+        "HSN Summary": this.get_hsn_columns,
+    };
+
     setup_actions() {
-        this.add_custom_button("Download Excel", () => console.log("hi"));
+        this.add_tab_custom_button("Download Excel", () =>
+            this.download_books_as_excel()
+        );
     }
 
-    // Process Data / Summarize Data / Filter Data / Columns and Data Formatting / Reconcile
+    // ACTIONS
+
+    download_books_as_excel() {
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_books_as_excel",
+            args: { data: this.data },
+            callback: r => {
+                frappe.msgprint(r.message);
+            },
+        });
+    }
 
     // COLUMNS
 
-    get_b2b_columns() {
+    get_invoice_columns() {
         return [
             {
                 name: "Invoice Number",
@@ -596,73 +600,99 @@ class BooksTab extends TabManager {
             },
         ];
     }
+
+    get_hsn_columns() {
+        return [
+            {
+                name: "HSN Code",
+                fieldname: "hsn_code",
+                width: 150,
+            },
+            {
+                name: "Description",
+                fieldname: "description",
+                width: 300,
+            },
+            {
+                name: "UQC",
+                fieldname: "uqc",
+                width: 100,
+            },
+            {
+                name: "Total Quantity",
+                fieldname: "total_quantity",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "Total Value",
+                fieldname: "total_value",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "Total Taxable Value",
+                fieldname: "total_taxable_value",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "Total Integrated Tax",
+                fieldname: "total_igst",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "Total Central Tax",
+                fieldname: "total_cgst",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+            {
+                name: "Total State/UT Tax",
+                fieldname: "total_sgst",
+                width: 150,
+                align: "center",
+                _value: (...args) => format_number(args[0]),
+            },
+        ];
+    }
 }
 
-class ViewGroup {
-    constructor(options) {
-        Object.assign(this, options);
-        this.views = {};
-        this.render();
+class ReconcileTab extends TabManager {
+    setup_actions() {
+        this.add_tab_custom_button("Download Excel", () =>
+            this.download_reconcile_as_excel()
+        );
     }
 
-    render() {
-        $(this.$wrapper).append(
-            `
-            <div class= "view-group">
-                <div class="view-switch"></div>
-            </div>
-            `
+    download_reconcile_as_excel() {
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_reconcile_as_excel",
+            args: { data: this.data },
+            callback: r => {
+                frappe.msgprint(r.message);
+            },
+        });
+    }
+}
+
+class FiledTab extends TabManager {
+    setup_actions() {
+        this.add_tab_custom_button("Download Excel", () =>
+            this.download_filed_as_excel()
         );
 
-        this.view_group_container = $(`
-            <ul
-                class= "nav custom-tabs rounded-sm border d-inline-flex"
-                id = "custom-tabs"
-                role = "tablist"
-            ></ul>
-        `).appendTo(this.$wrapper.find(`.view-switch`));
+        console.log(this.status);
+        if (this.status === "Filed") return;
 
-        this.make_views();
-        this.setup_events();
-    }
-
-    set_active_view(view) {
-        this.active_view = view;
-        this.views[`${view}_view`].children().tab("show");
-    }
-
-    make_views() {
-        this.view_names.forEach(view => {
-            this.views[`${view}_view`] = $(
-                `
-                <li class="nav-item show">
-                    <a
-                        class="nav-link ${this.active_view === view ? "active" : ""}"
-                        id = "gstr-1-__${view}-view"
-                        data-toggle="tab"
-                        data-fieldname="${view}"
-                        href="#gstr-1-__${view}-view"
-                        role="tab"
-                        aria-controls="gstr-1-__${view}-view"
-                        aria-selected="true"
-            >
-            ${frappe.unscrub(view)}
-                    </a>
-                </li>
-            `
-            ).appendTo(this.view_group_container);
-        });
-    }
-
-    setup_events() {
-        this.view_group_container.off("click").on("click", ".nav-link", e => {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-
-            this.target = $(e.currentTarget);
-            const target_view = this.target.attr("data-fieldname");
-            this.callback && this.callback(this, target_view);
-        });
+        this.add_tab_custom_button("Download JSON", () => console.log("hi"));
+        this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
     }
 }
 
@@ -678,19 +708,6 @@ function patch_set_active_tab(frm) {
 
 function patch_set_indicator(frm) {
     frm.toolbar.set_indicator = function () { };
-}
-
-async function set_gstin_options(frm) {
-    const { query, params } = india_compliance.get_gstin_query(frm.doc.company);
-    const { message } = await frappe.call({
-        method: query,
-        args: params,
-    });
-
-    if (!message) return [];
-    const gstin_field = frm.get_field("company_gstin");
-    gstin_field.set_data(message);
-    return message;
 }
 
 function set_default_fields(frm) {
@@ -734,4 +751,9 @@ function get_year_list(current_date) {
         (_, index) => start_year + index
     );
     return options.reverse().map(year => year.toString());
+}
+
+function render_empty_state(frm) {
+    frm.doc.__onload = null;
+    frm.refresh();
 }

@@ -3,6 +3,7 @@
 
 from enum import Enum
 
+import frappe
 from frappe.model.document import Document
 
 
@@ -44,7 +45,7 @@ class GSTR1_SubCategories(Enum):
 
 
 DATA = {
-    "status": "Not Filed",
+    "status": "Filed",
     "reconcile": {},
     "filed": {},
     "books": {
@@ -421,3 +422,18 @@ class GSTR1Beta(Document):
 
     def validate(self):
         self.data = DATA
+
+
+####################################################################################################
+####### DOWNLOAD APIs ##############################################################################
+####################################################################################################
+
+
+@frappe.whitelist()
+def download_books_as_excel(data):
+    return "Data Downloaded to Excel Successfully"
+
+
+@frappe.whitelist()
+def download_reconcile_as_excel(data):
+    return "Data Downloaded to Excel Successfully"
