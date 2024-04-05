@@ -213,7 +213,10 @@ class GSTR1 {
             return;
         }
 
-        let color = this.status === "Filed" ? "green" : "orange";
+        const tab_name = (this.status === "Filed") ? "Filed" : "File";
+        const color = (this.status === "Filed") ? "green" : "orange";
+
+        this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
         this.frm.page.set_indicator(this.status, color);
     }
 
