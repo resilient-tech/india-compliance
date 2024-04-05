@@ -14,7 +14,7 @@ const GSTR_1_SUB_CATEGORIES = {
     EXPWOP: "Export without Payment of Tax",
     B2CL: "B2C (Large)",
     B2CS: "B2C (Others)",
-    NIL_RATED: "Nil Rated",
+    NIL_RATED: "Nil-Rated",
     EXEMPTED: "Exempted",
     NON_GST: "Non-GST",
     CDNR: "Credit/Debit Notes (Registered)",
