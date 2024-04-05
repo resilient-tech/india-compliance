@@ -109,6 +109,7 @@ class Gstr1Report:
             self.get_documents_issued_data()
         elif self.filters.get("type_of_business") == "HSN":
             self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
+
         elif self.invoices:
             for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
                 invoice_details = self.invoices.get(inv)
@@ -1055,6 +1056,7 @@ class Gstr1Report:
             ]
         elif self.filters.get("type_of_business") == "HSN":
             self.columns = get_hsn_columns()
+
             return
 
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
