@@ -15,7 +15,7 @@ frappe.ui.form.on("Journal Entry Account", {
 });
 
 function toggle_gstin_for_journal_entry(frm) {
-    toggle_company_gstin(frm, taxes_table="accounts", account_head="account");
+    toggle_company_gstin(frm, "accounts", "account");
 }
 
 async function toggle_company_gstin(frm, taxes_table, account_head) {
