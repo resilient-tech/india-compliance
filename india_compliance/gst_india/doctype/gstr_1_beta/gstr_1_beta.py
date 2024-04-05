@@ -47,7 +47,35 @@ class GSTR1_SubCategories(Enum):
 DATA = {
     "status": "Filed",
     "reconcile": {},
-    "filed": {},
+    "filed": {
+        GSTR1_SubCategories.NIL_RATED.value: [
+            {
+                "document_category": "Inter-State supplies to registered persons",
+                "total_taxable_value": 2000,
+                "total_igst_amount": 0,
+            },
+        ],
+        GSTR1_SubCategories.B2CS.value: [
+            {
+                "document_category": "OE",
+                "place_of_supply": "01-JHARKHAND",
+                "total_taxable_value": 2000,
+                "total_igst_amount": 0,
+                "tax_rate": 12,
+                "total_cess_amount": 0,
+                "e_commerce_gstin": "01AAACE9602H1Z5",
+            },
+            {
+                "document_category": "OE",
+                "place_of_supply": "01-JHARKHAND",
+                "total_taxable_value": 2000,
+                "total_igst_amount": 0,
+                "tax_rate": 18,
+                "total_cess_amount": 0,
+                "e_commerce_gstin": "01AAACE9602H1Z5",
+            },
+        ],
+    },
     "books": {
         GSTR1_SubCategories.B2B_REGULAR.value: [
             {
@@ -58,7 +86,7 @@ DATA = {
                 "invoice_date": "2024-04-01",
                 "invoice_value": 1280,
                 "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
+                "reverse_charge": "Y",
                 "e_commerce_gstin": "01AAACE9602H1Z5",
                 "invoice_category": "B2B, SEZ, DE",
                 "invoice_sub_category": "B2B Regular",
@@ -407,6 +435,42 @@ DATA = {
                         "cess_amount": 0,
                     }
                 ],
+            },
+        ],
+        GSTR1_SubCategories.NIL_RATED.value: [
+            {
+                "document_category": "Inter-State supplies to registered persons",
+                "total_taxable_value": 1000,
+                "document_number": "INV-015",
+                "document_date": "2024-04-01",
+                "total_igst_amount": 0,
+            },
+            {
+                "document_category": "Inter-State supplies to registered persons",
+                "total_taxable_value": 1000,
+                "document_number": "INV-015",
+                "document_date": "2024-04-01",
+                "total_igst_amount": 0,
+            },
+        ],
+        GSTR1_SubCategories.B2CS.value: [
+            {
+                "document_category": "OE",
+                "place_of_supply": "01-JHARKHAND",
+                "total_taxable_value": 1000,
+                "total_igst_amount": 0,
+                "tax_rate": 6,
+                "total_cess_amount": 0,
+                "e_commerce_gstin": "01AAACE9602H1Z5",
+            },
+            {
+                "document_category": "OE",
+                "place_of_supply": "01-JHARKHAND",
+                "total_taxable_value": 1000,
+                "total_igst_amount": 0,
+                "tax_rate": 6,
+                "total_cess_amount": 0,
+                "e_commerce_gstin": "01AAACE9602H1Z5",
             },
         ],
     },
