@@ -7,7 +7,7 @@ from erpnext.controllers.accounts_controller import update_child_qty_rate
 from india_compliance.gst_india.utils.tests import create_transaction
 
 DATA = {
-    "customer": "_Test Dummy",
+    "customer": "_Test Unregistered Customer",
     "item_code": "_Test Trading Goods 1",
     "qty": 1,
     "rate": 100,
