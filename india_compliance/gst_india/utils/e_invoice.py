@@ -511,8 +511,9 @@ class EInvoiceData(GSTTransactionData):
         """
         Non Taxable Value should be added to other charges.
         """
-        self.transaction_details.other_charges += self.rounded(
-            self.transaction_details.total_non_taxable_value
+        self.transaction_details.other_charges = self.rounded(
+            self.transaction_details.other_charges
+            + self.transaction_details.total_non_taxable_value
         )
 
     def validate_transaction(self):
