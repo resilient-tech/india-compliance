@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 import frappe
 from frappe import _, bold
@@ -12,6 +13,7 @@ from india_compliance.gst_india.constants import (
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
 from india_compliance.gst_india.doctype.gstin.gstin import (
+    _validate_gst_transporter_id_info,
     _validate_gstin_info,
     get_gstin_status,
 )
@@ -44,13 +46,14 @@ DOCTYPES_WITH_GST_DETAIL = {
 }
 
 
-def set_gst_breakup(doc, method=None, print_settings=None):
-    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
-        return
-
-    doc.gst_breakup_table = frappe.render_template(
+def set_gst_breakup(doc):
+    gst_breakup_html = frappe.render_template(
         "templates/gst_breakup.html", dict(doc=doc)
     )
+    if not gst_breakup_html:
+        return
+
+    doc.gst_breakup_table = gst_breakup_html.replace("\n", "").replace("    ", "")
 
 
 def update_taxable_values(doc, valid_accounts):
@@ -114,6 +117,49 @@ def update_taxable_values(doc, valid_accounts):
 
     if apportioned_charges != total_charges:
         item.taxable_value += total_charges - apportioned_charges
+
+
+def validate_item_wise_tax_detail(doc, gst_accounts):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    item_taxable_values = defaultdict(float)
+
+    for row in doc.items:
+        item_key = row.item_code or row.item_name
+        item_taxable_values[item_key] += row.taxable_value
+
+    for row in doc.taxes:
+        if row.account_head not in gst_accounts:
+            continue
+
+        if row.charge_type != "Actual":
+            continue
+
+        item_wise_tax_detail = frappe.parse_json(row.item_wise_tax_detail or "{}")
+
+        for item_name, (tax_rate, tax_amount) in item_wise_tax_detail.items():
+            if tax_amount and not tax_rate:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                        " not compute item taxes, and your further reporting will be affected."
+                    ).format(row.idx),
+                    title=_("Invalid Charge Type"),
+                )
+
+            # Sales Invoice is created with manual tax amount. So, when a sales return is created,
+            # the tax amount is not recalculated, causing the issue.
+            item_taxable_value = item_taxable_values.get(item_name, 0)
+            tax_difference = abs(item_taxable_value * tax_rate / 100 - tax_amount)
+
+            if tax_difference > 1:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
+                        " is incorrect. Try setting the Charge Type to On Net Total."
+                    ).format(row.idx, tax_amount, bold(item_name))
+                )
 
 
 def get_tds_amount(doc):
@@ -314,19 +360,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
 
     for row in rows_to_validate:
         account_head = row.account_head
-
-        if row.charge_type == "Actual":
-            item_tax_detail = frappe.parse_json(row.get("item_wise_tax_detail") or {})
-            for tax_rate, tax_amount in item_tax_detail.values():
-                if tax_amount and not tax_rate:
-                    _throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, this would"
-                            " not compute item taxes, and your further reporting will be affected."
-                        ).format(row.idx),
-                        title=_("Invalid Charge Type"),
-                    )
-
         if account_head not in all_valid_accounts:
             _throw(
                 _("{0} is not a valid GST account for this transaction").format(
@@ -363,29 +396,8 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         if row.charge_type == "On Previous Row Total":
             previous_row_references.add(row.row_id)
 
-        if (
-            row.charge_type == "On Item Quantity"
-            and account_head not in cess_non_advol_accounts
-        ):
-            _throw(
-                _(
-                    "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
-                    " as it is not a Cess Non Advol Account"
-                ).format(row.idx),
-                title=_("Invalid Charge Type"),
-            )
-
-        if (
-            row.charge_type != "On Item Quantity"
-            and account_head in cess_non_advol_accounts
-        ):
-            _throw(
-                _(
-                    "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
-                    " as it is a Cess Non Advol Account"
-                ).format(row.idx),
-                title=_("Invalid Charge Type"),
-            )
+        # validating charge type "On Item Quantity" and non_cess_advol_account
+        validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, row)
 
     used_accounts = set(row.account_head for row in rows_to_validate)
     if not is_inter_state:
@@ -424,6 +436,32 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             )
 
     return all_valid_accounts
+
+
+def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, tax_row):
+    if (
+        tax_row.charge_type == "On Item Quantity"
+        and tax_row.account_head not in cess_non_advol_accounts
+    ):
+        frappe.throw(
+            _(
+                "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
+                " as it is not a Cess Non Advol Account"
+            ).format(tax_row.idx),
+            title=_("Invalid Charge Type"),
+        )
+
+    if (
+        tax_row.charge_type != "On Item Quantity"
+        and tax_row.account_head in cess_non_advol_accounts
+    ):
+        frappe.throw(
+            _(
+                "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
+                " as it is a Cess Non Advol Account"
+            ).format(tax_row.idx),
+            title=_("Invalid Charge Type"),
+        )
 
 
 def validate_items(doc):
@@ -489,7 +527,7 @@ def validate_place_of_supply(doc):
 
 
 def is_inter_state_supply(doc):
-    return doc.gst_category in ("SEZ", "Overseas") or (
+    return doc.gst_category == "SEZ" or (
         doc.place_of_supply[:2] != get_source_state_code(doc)
     )
 
@@ -516,7 +554,7 @@ def get_source_state_code(doc):
     return (doc.supplier_gstin or doc.company_gstin)[:2]
 
 
-def validate_hsn_codes(doc, method=None):
+def validate_hsn_codes(doc):
     validate_hsn_code, valid_hsn_length = get_hsn_settings()
 
     if not validate_hsn_code:
@@ -575,7 +613,7 @@ def _validate_hsn_codes(doc, valid_hsn_length, message=None):
         )
 
 
-def validate_overseas_gst_category(doc, method=None):
+def validate_overseas_gst_category(doc):
     if not is_overseas_doc(doc):
         return
 
@@ -880,8 +918,8 @@ class ItemGSTDetails:
         if not self.gst_account_map:
             return
 
-        self.set_item_wise_tax_details()
         self.set_tax_amount_precisions(doc.doctype)
+        self.set_item_wise_tax_details()
         self.update_item_tax_details()
 
     def set_gst_accounts_and_item_defaults(self, doctype, company):
@@ -921,6 +959,7 @@ class ItemGSTDetails:
         - There could be more than one row for same account
         - Item count added to handle rounding errors
         """
+
         tax_details = frappe._dict()
 
         for row in self.doc.get("items"):
@@ -968,6 +1007,9 @@ class ItemGSTDetails:
         for item in self.doc.get("items"):
             item.update(self.get_item_tax_detail(item))
 
+    def get_item_key(self, item):
+        return item.item_code or item.item_name
+
     def get_item_tax_detail(self, item):
         """
         - get item_tax_detail as it is if
@@ -980,7 +1022,8 @@ class ItemGSTDetails:
                 - tax_amount
                 - count
         """
-        item_key = item.item_code or item.item_name
+        item_key = self.get_item_key(item)
+
         item_tax_detail = self.item_tax_details.get(item_key)
         if not item_tax_detail:
             return {}
@@ -1031,7 +1074,7 @@ class ItemGSTTreatment:
         self.doc = doc
         is_sales_transaction = doc.doctype in SALES_DOCTYPES
 
-        if is_overseas_doc(doc) and is_sales_transaction:
+        if is_sales_transaction and is_overseas_doc(doc):
             self.set_for_overseas()
             return
 
@@ -1122,7 +1165,7 @@ def set_reverse_charge_as_per_gst_settings(doc):
     if (
         not gst_settings.enable_rcm_for_unregistered_supplier
         or not doc.gst_category == "Unregistered"
-        or doc.grand_total <= gst_settings.rcm_threshold
+        or (doc.grand_total and doc.grand_total <= gst_settings.rcm_threshold)
         or doc.get("is_opening") == "Yes"
     ):
         return
@@ -1147,6 +1190,7 @@ def set_reverse_charge(doc):
             or []
         )
         doc.set("taxes", template)
+        doc.run_method("calculate_taxes_and_totals")
 
 
 def validate_gstin_status(gstin, transaction_date):
@@ -1162,6 +1206,47 @@ def validate_gstin_status(gstin, transaction_date):
     _validate_gstin_info(gstin_doc, transaction_date, throw=True)
 
 
+def validate_gst_transporter_id(doc):
+    if not doc.get("gst_transporter_id"):
+        return
+
+    settings = frappe.get_cached_doc("GST Settings")
+    if not settings.validate_gstin_status:
+        return
+
+    doc.gst_transporter_id = validate_gstin(
+        doc.gst_transporter_id, label="GST Transporter ID", is_transporter_id=True
+    )
+
+    gstin_doc = get_gstin_status(doc.gst_transporter_id)
+
+    if not gstin_doc:
+        return
+
+    _validate_gst_transporter_id_info(gstin_doc, throw=True)
+
+
+def validate_company_address_field(doc):
+    if doc.doctype not in DOCTYPES_WITH_GST_DETAIL:
+        return
+
+    company_address_field = "company_address"
+    if doc.doctype not in SALES_DOCTYPES:
+        company_address_field = "billing_address"
+
+    if (
+        validate_mandatory_fields(
+            doc,
+            company_address_field,
+            _(
+                "Please set {0} to ensure Company GSTIN is fetched in the transaction."
+            ).format(bold(doc.meta.get_label(company_address_field))),
+        )
+        is False
+    ):
+        return False
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1172,6 +1257,9 @@ def validate_transaction(doc, method=None):
         validate_place_of_supply(doc)
     else:
         doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+    if validate_company_address_field(doc) is False:
+        return False
 
     if validate_mandatory_fields(doc, ("company_gstin", "place_of_supply")) is False:
         return False
@@ -1207,13 +1295,33 @@ def validate_transaction(doc, method=None):
         gstin = doc.supplier_gstin
 
     validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
-
+    validate_gst_transporter_id(doc)
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
 
+    set_reverse_charge_as_per_gst_settings(doc)
+
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
+    validate_item_wise_tax_detail(doc, valid_accounts)
+
+
+def before_print(doc, method=None, print_settings=None):
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+        return
+
+    if doc.get("group_same_items"):
+        ItemGSTDetails().update(doc)
+
+    set_gst_breakup(doc)
+
+
+def onload(doc, method=None):
+    if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
+        return
+
+    set_gst_breakup(doc)
 
 
 def validate_ecommerce_gstin(doc):
@@ -1225,36 +1333,51 @@ def validate_ecommerce_gstin(doc):
     )
 
 
-def before_validate(doc, method=None):
-    set_reverse_charge_as_per_gst_settings(doc)
-
-
 def update_gst_details(doc, method=None):
     ItemGSTTreatment().set(doc)
     if doc.doctype in DOCTYPES_WITH_GST_DETAIL:
         ItemGSTDetails().update(doc)
-        validate_non_taxable_items(doc)
+        validate_item_tax_template(doc)
 
 
-def validate_non_taxable_items(doc):
+def validate_item_tax_template(doc):
     if not doc.items or not doc.taxes:
         return
 
     non_taxable_items_with_tax = []
+    taxable_items_with_no_tax = []
+
     for item in doc.items:
-        if item.gst_treatment in ("Taxable", "Zero-Rated"):
+        if item.gst_treatment == "Zero-Rated" and not doc.get("is_export_with_gst"):
             continue
 
-        if item.igst_amount or item.cgst_amount or item.sgst_amount:
+        total_taxes = abs(item.igst_amount + item.cgst_amount + item.sgst_amount)
+
+        if total_taxes and item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST"):
             non_taxable_items_with_tax.append(item.idx)
 
+        if not total_taxes and item.gst_treatment in ("Taxable", "Zero-Rated"):
+            taxable_items_with_no_tax.append(item.idx)
+
+    # Case: Zero Tax template with taxes or missing GST Accounts
     if non_taxable_items_with_tax:
         frappe.throw(
             _(
                 "Cannot charge GST on Non-Taxable Items.<br>"
-                "Please select the correct Item Tax Template for"
-                " following row numbers:<br>{0}"
+                "Are the taxes setup correctly in Item Tax Template? Please select"
+                " the correct Item Tax Template for following row numbers:<br>{0}"
             ).format(", ".join(bold(row_no) for row_no in non_taxable_items_with_tax)),
+            title=_("Invalid Items"),
+        )
+
+    # Case: Taxable template with missing GST Accounts
+    if taxable_items_with_no_tax:
+        frappe.throw(
+            _(
+                "No GST is being charged on Taxable Items.<br>"
+                "Are there missing GST accounts in Item Tax Template? Please"
+                " verify the Item Tax Template for following row numbers:<br>{0}"
+            ).format(", ".join(bold(row_no) for row_no in taxable_items_with_no_tax)),
             title=_("Invalid Items"),
         )
 
@@ -1275,3 +1398,25 @@ def after_mapping(target_doc, method=None, source_doc=None):
 def ignore_gst_validations(doc):
     if not is_indian_registered_company(doc) or doc.get("is_opening") == "Yes":
         return True
+
+
+def before_update_after_submit_item(doc, method=None):
+    frappe.flags.through_update_item = True
+
+
+def before_update_after_submit(doc, method=None):
+    if not frappe.flags.through_update_item:
+        return
+
+    if ignore_gst_validations(doc):
+        return
+
+    validate_items(doc)
+
+    if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
+        validate_hsn_codes(doc)
+
+    valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
+    update_taxable_values(doc, valid_accounts)
+    validate_item_wise_tax_detail(doc, valid_accounts)
+    update_gst_details(doc)
