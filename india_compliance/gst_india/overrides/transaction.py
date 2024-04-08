@@ -1490,8 +1490,22 @@ def ignore_gst_validations(doc, throw=True):
         return True
 
 
-def before_update_after_submit_item(doc, method=None):
-    frappe.flags.through_update_item = True
+def on_change_item(doc, method=None):
+    """
+    Objective:
+    Child item is saved before trying to update parent doc.
+    Hence we can't verify has_value_changed for items in the parent doc.
+
+    Solution:
+    - Set a flag in on_change of item
+    - Runs for both insert and save (update after submit)
+    - Set flag only if `ignore_validate_update_after_submit` is set
+
+    Reference:
+    erpnext.controllers.accounts_controller.update_child_qty_rate
+    """
+    if doc.flags.ignore_validate_update_after_submit:
+        frappe.flags.through_update_item = True
 
 
 def before_update_after_submit(doc, method=None):
