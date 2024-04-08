@@ -8,6 +8,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import today
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
 from erpnext.accounts.party import _get_party_details
+from erpnext.controllers.accounts_controller import update_child_qty_rate
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
@@ -932,3 +933,77 @@ def create_tax_accounts(account_name):
             **defaults,
         }
     ).insert(ignore_if_duplicate=True)
+
+
+class TestItemUpdate(FrappeTestCase):
+    DATA = {
+        "customer": "_Test Unregistered Customer",
+        "item_code": "_Test Trading Goods 1",
+        "qty": 1,
+        "rate": 100,
+        "is_in_state": 1,
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    def create_order(self, doctype):
+        self.DATA["doctype"] = doctype
+        doc = create_transaction(**self.DATA)
+        return doc
+
+    def test_so_and_po_after_item_update(self):
+        for doctype in ["Sales Order", "Purchase Order"]:
+            doc = self.create_order(doctype)
+
+            self.assertDocumentEqual(
+                {
+                    "taxable_value": 100,
+                    "cgst_amount": 9,
+                    "sgst_amount": 9,
+                },
+                doc.items[0],
+            )
+
+            # Update Item Rate
+            item = doc.items[0]
+            item_to_update = [
+                {
+                    "item_code": item.item_code,
+                    "qty": item.qty,
+                    "rate": 200,
+                    "docname": item.name,
+                    "name": item.name,
+                    "idx": item.idx,
+                }
+            ]
+
+            update_child_qty_rate(doctype, json.dumps(item_to_update), doc.name)
+            doc = frappe.get_doc(doctype, doc.name)
+
+            self.assertDocumentEqual(
+                {
+                    "taxable_value": 200,
+                    "cgst_amount": 18,
+                    "sgst_amount": 18,
+                },
+                doc.items[0],
+            )
+
+            # Insert New Item
+            item_to_update.append(
+                {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 50, "idx": 2}
+            )
+
+            update_child_qty_rate(doctype, json.dumps(item_to_update), doc.name)
+            doc = frappe.get_doc(doctype, doc.name)
+
+            self.assertDocumentEqual(
+                {
+                    "taxable_value": 50,
+                    "cgst_amount": 4.5,
+                    "sgst_amount": 4.5,
+                },
+                doc.items[1],
+            )
