@@ -1433,9 +1433,6 @@ def before_print(doc, method=None, print_settings=None):
     ):
         return
 
-    if doc.get("group_same_items"):
-        ItemGSTDetails().update(doc)
-
     set_gst_breakup(doc)
 
 
