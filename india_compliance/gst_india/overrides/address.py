@@ -103,8 +103,8 @@ def validate_state(doc):
 
     if doc.gstin and doc.gst_state_number != doc.gstin[:2]:
         frappe.throw(
-            _(
-                "First 2 digits of GSTIN should match with State Number for {0} ({1})"
-            ).format(frappe.bold(doc.gst_state), doc.gst_state_number),
+            _("First 2 digits of GSTIN should match with State Number for {0} ({1})").format(
+                frappe.bold(doc.gst_state), doc.gst_state_number
+            ),
             title=_("Invalid GSTIN or State"),
         )

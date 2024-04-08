@@ -41,8 +41,6 @@ class TestGSTIN(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(
-                r"^(.*is not Active. Please make sure that transporter ID is valid.*)$"
-            ),
+            re.compile(r"^(.*is not Active. Please make sure that transporter ID is valid.*)$"),
             si.save,
         )

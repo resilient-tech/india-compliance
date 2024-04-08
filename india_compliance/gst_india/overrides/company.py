@@ -88,11 +88,7 @@ def modify_tax_defaults(default_taxes, gst_rate):
         template = default_taxes["chart_of_accounts"]["*"][template_type]
         for tax in template:
             for row in tax.get("taxes"):
-                rate = (
-                    gst_rate
-                    if row["account_head"]["tax_rate"] == 18
-                    else flt(gst_rate / 2, 3)
-                )
+                rate = gst_rate if row["account_head"]["tax_rate"] == 18 else flt(gst_rate / 2, 3)
 
                 row["account_head"]["tax_rate"] = rate
 
@@ -220,9 +216,7 @@ def create_default_company_account(
     account.flags.ignore_permissions = True
     account.insert(ignore_if_duplicate=True)
 
-    if default_fieldname and not frappe.db.get_value(
-        "Company", company, default_fieldname
-    ):
+    if default_fieldname and not frappe.db.get_value("Company", company, default_fieldname):
         frappe.db.set_value(
             "Company", company, default_fieldname, account.name, update_modified=False
         )

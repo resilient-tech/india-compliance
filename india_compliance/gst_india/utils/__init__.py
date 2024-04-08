@@ -119,9 +119,7 @@ def get_party_for_gstin(gstin, party_type="Supplier"):
     if not gstin:
         return
 
-    if party := frappe.db.get_value(
-        party_type, filters={"gstin": gstin}, fieldname="name"
-    ):
+    if party := frappe.db.get_value(party_type, filters={"gstin": gstin}, fieldname="name"):
         return party
 
     address = frappe.qb.DocType("Address")
@@ -191,14 +189,10 @@ def validate_gst_category(gst_category, gstin):
     """
 
     if not gstin:
-        if gst_category not in (
-            categories_without_gstin := {"Unregistered", "Overseas"}
-        ):
+        if gst_category not in (categories_without_gstin := {"Unregistered", "Overseas"}):
             frappe.throw(
                 _("GST Category should be one of {0}").format(
-                    " or ".join(
-                        frappe.bold(category) for category in categories_without_gstin
-                    )
+                    " or ".join(frappe.bold(category) for category in categories_without_gstin)
                 ),
                 title=_("Invalid GST Category"),
             )
@@ -214,9 +208,7 @@ def validate_gst_category(gst_category, gstin):
 
     if TCS.match(gstin):
         frappe.throw(
-            _(
-                "e-Commerce Operator (TCS) GSTIN is not allowed for transaction / party / address"
-            ),
+            _("e-Commerce Operator (TCS) GSTIN is not allowed for transaction / party / address"),
         )
 
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
@@ -248,8 +240,7 @@ def validate_pincode(address):
     if not PINCODE_FORMAT.match(address.pincode):
         frappe.throw(
             _(
-                "Postal Code for Address {0} must be a 6-digit number and cannot start"
-                " with 0"
+                "Postal Code for Address {0} must be a 6-digit number and cannot start" " with 0"
             ).format(get_link_to_form("Address", address.name)),
             title=_("Invalid Postal Code"),
         )
@@ -276,9 +267,7 @@ def validate_pincode(address):
         ).format(
             postal_code=frappe.bold(address.pincode),
             name=(
-                get_link_to_form("Address", address.name)
-                if not address.get("__unsaved")
-                else ""
+                get_link_to_form("Address", address.name) if not address.get("__unsaved") else ""
             ),
             state=frappe.bold(address.state),
             url=E_INVOICE_MASTER_CODES_URL,
@@ -396,10 +385,7 @@ def get_place_of_supply(party_details, doctype):
         if party_details.gst_category == "Overseas":
             return get_overseas_place_of_supply(party_details)
 
-        if (
-            party_details.gst_category == "Unregistered"
-            and party_details.customer_address
-        ):
+        if party_details.gst_category == "Unregistered" and party_details.customer_address:
             gst_state_number, gst_state = frappe.db.get_value(
                 "Address",
                 party_details.customer_address,
@@ -439,11 +425,10 @@ def get_overseas_place_of_supply(party_details):
         as_dict=True,
     )
 
-    if (
-        shipping_address_details.country == "India"
-        and shipping_address_details.gst_state_number
-    ):
-        place_of_supply = f"{shipping_address_details.gst_state_number}-{shipping_address_details.gst_state}"
+    if shipping_address_details.country == "India" and shipping_address_details.gst_state_number:
+        place_of_supply = (
+            f"{shipping_address_details.gst_state_number}-{shipping_address_details.gst_state}"
+        )
 
     return place_of_supply
 
@@ -494,8 +479,7 @@ def get_gst_accounts_by_type(company, account_type, throw=True):
 
     frappe.throw(
         _(
-            "Could not retrieve GST Accounts of type {0} from GST Settings for"
-            " Company {1}"
+            "Could not retrieve GST Accounts of type {0} from GST Settings for" " Company {1}"
         ).format(frappe.bold(account_type), frappe.bold(company)),
         frappe.DoesNotExistError,
     )
@@ -537,8 +521,7 @@ def get_gst_accounts_by_tax_type(company, tax_type, throw=True):
 
     frappe.throw(
         _(
-            "Could not retrieve GST Accounts of type {0} from GST Settings for"
-            " Company {1}"
+            "Could not retrieve GST Accounts of type {0} from GST Settings for" " Company {1}"
         ).format(frappe.bold(tax_type), frappe.bold(company)),
     )
 
@@ -586,12 +569,7 @@ def parse_datetime(value, day_first=False, throw=True):
         return parsed.replace(tzinfo=None)
 
     # localize to india, convert to system, remove tzinfo
-    return (
-        timezone(TIMEZONE)
-        .localize(parsed)
-        .astimezone(timezone(system_tz))
-        .replace(tzinfo=None)
-    )
+    return timezone(TIMEZONE).localize(parsed).astimezone(timezone(system_tz)).replace(tzinfo=None)
 
 
 def as_ist(value=None):
@@ -604,12 +582,7 @@ def as_ist(value=None):
         return parsed
 
     # localize to system, convert to IST, remove tzinfo
-    return (
-        timezone(system_tz)
-        .localize(parsed)
-        .astimezone(timezone(TIMEZONE))
-        .replace(tzinfo=None)
-    )
+    return timezone(system_tz).localize(parsed).astimezone(timezone(TIMEZONE)).replace(tzinfo=None)
 
 
 def get_json_from_file(path):
@@ -626,11 +599,7 @@ def join_list_with_custom_separators(input, separator=", ", last_separator=" or 
     if len(input) == 1:
         return cstr(input[0])
 
-    return (
-        separator.join(cstr(item) for item in input[:-1])
-        + last_separator
-        + cstr(input[-1])
-    )
+    return separator.join(cstr(item) for item in input[:-1]) + last_separator + cstr(input[-1])
 
 
 def titlecase(value):
@@ -666,11 +635,7 @@ def is_api_enabled(settings=None):
 
 def is_autofill_party_info_enabled():
     settings = frappe.get_cached_doc("GST Settings")
-    return (
-        is_api_enabled(settings)
-        and settings.autofill_party_info
-        and not settings.sandbox_mode
-    )
+    return is_api_enabled(settings) and settings.autofill_party_info and not settings.sandbox_mode
 
 
 def can_enable_api(settings):
@@ -708,9 +673,7 @@ def are_goods_supplied(doc):
     return any(
         item
         for item in doc.items
-        if item.gst_hsn_code
-        and not item.gst_hsn_code.startswith("99")
-        and item.qty != 0
+        if item.gst_hsn_code and not item.gst_hsn_code.startswith("99") and item.qty != 0
     )
 
 
@@ -861,7 +824,9 @@ def handle_server_errors(settings, doc, document_type, error):
     if not doc.doctype == "Sales Invoice":
         return
 
-    error_message = "Government services are currently slow/down. We apologize for the inconvenience caused."
+    error_message = (
+        "Government services are currently slow/down. We apologize for the inconvenience caused."
+    )
 
     error_message_title = {
         GatewayTimeoutError: _("Gateway Timeout Error"),
@@ -878,12 +843,10 @@ def handle_server_errors(settings, doc, document_type, error):
         not settings.sandbox_mode or frappe.flags.in_test
     ):
         document_status = "Auto-Retry"
-        settings.db_set(
-            "is_retry_einv_ewb_generation_pending", 1, update_modified=False
-        )
+        settings.db_set("is_retry_einv_ewb_generation_pending", 1, update_modified=False)
         error_message += (
-            " Your {0} generation will be automatically retried every 5 minutes."
-        ).format(document_type)
+            f" Your {document_type} generation will be automatically retried every 5 minutes."
+        )
     else:
         error_message += " Please try again after some time."
 

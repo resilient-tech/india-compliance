@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case, DatePart
 from frappe.query_builder.custom import ConstantColumn
-from frappe.query_builder.functions import Extract, Ifnull, IfNull, LiteralValue, Sum
+from frappe.query_builder.functions import Extract, IfNull, Ifnull, LiteralValue, Sum
 from frappe.utils import cint, flt, get_first_day, get_last_day
 
 from india_compliance.gst_india.utils import get_escaped_gst_accounts
@@ -50,12 +50,8 @@ class BaseGSTR3BDetails:
             },
         ]
         self.data = []
-        self.from_date = get_first_day(
-            f"{cint(self.filters.year)}-{cint(self.filters.month)}-01"
-        )
-        self.to_date = get_last_day(
-            f"{cint(self.filters.year)}-{cint(self.filters.month)}-01"
-        )
+        self.from_date = get_first_day(f"{cint(self.filters.year)}-{cint(self.filters.month)}-01")
+        self.to_date = get_last_day(f"{cint(self.filters.year)}-{cint(self.filters.month)}-01")
         self.company = self.filters.company
         self.company_gstin = self.filters.company_gstin
 
@@ -122,11 +118,7 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
         boe_ineligible_itc = self.get_ineligible_itc_from_boe()
 
         data = (
-            purchase_data
-            + boe_data
-            + journal_entry_data
-            + pi_ineligible_itc
-            + boe_ineligible_itc
+            purchase_data + boe_data + journal_entry_data + pi_ineligible_itc + boe_ineligible_itc
         )
 
         self.data = sorted(
@@ -336,9 +328,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
             if invoice.gst_category == "Registered Composition":
                 supplier_state = cint(invoice.supplier_gstin[0:2])
             else:
-                supplier_state = (
-                    cint(address_state_map.get(invoice.supplier_address)) or state
-                )
+                supplier_state = cint(address_state_map.get(invoice.supplier_address)) or state
 
             intra, inter = 0, 0
             taxable_value = invoice.taxable_value
@@ -366,9 +356,7 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 }
             )
 
-        self.data = sorted(
-            formatted_data, key=lambda k: (k["nature_of_supply"], k["posting_date"])
-        )
+        self.data = sorted(formatted_data, key=lambda k: (k["nature_of_supply"], k["posting_date"]))
 
     def get_address_state_map(self):
         return frappe._dict(
@@ -480,9 +468,7 @@ class IneligibleITC:
             .select(*self.select_net_gst_amount_from_gl_entry())
             .select(
                 boe.name.as_("voucher_no"),
-                ConstantColumn("Ineligible As Per Section 17(5)").as_(
-                    "itc_classification"
-                ),
+                ConstantColumn("Ineligible As Per Section 17(5)").as_("itc_classification"),
             )
             .where(boe.name.isin(ineligible_transactions))
             .groupby(boe[group_by])
@@ -515,9 +501,7 @@ class IneligibleITC:
                 ).as_("csamt"),
                 LiteralValue(0).as_("camt"),
                 LiteralValue(0).as_("samt"),
-                ConstantColumn("Ineligible As Per Section 17(5)").as_(
-                    "itc_classification"
-                ),
+                ConstantColumn("Ineligible As Per Section 17(5)").as_("itc_classification"),
             )
             .where(boe.name.isin(ineligible_transactions))
             .groupby(boe[group_by])
@@ -534,9 +518,7 @@ class IneligibleITC:
         else:
             group_by_field = group_by
 
-        credit_availed_dict = frappe._dict(
-            {d[group_by_field]: d for d in credit_availed}
-        )
+        credit_availed_dict = frappe._dict({d[group_by_field]: d for d in credit_availed})
         ineligible_credit = []
         tax_amounts = ["camt", "samt", "iamt", "csamt"]
 
@@ -580,10 +562,7 @@ class IneligibleITC:
         fields = []
 
         for account_field, key in account_field_map.items():
-            if (
-                account_field not in self.gst_accounts
-                or not self.gst_accounts[account_field]
-            ):
+            if account_field not in self.gst_accounts or not self.gst_accounts[account_field]:
                 continue
 
             fields.append(

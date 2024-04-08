@@ -47,9 +47,7 @@ def get_wdv_or_dd_depr_amount(
 
     rate_of_depreciation = fb_row.rate_of_depreciation
 
-    start_date_of_next_fiscal_year = add_days(
-        get_fiscal_year(asset.available_for_use_date)[2], 1
-    )
+    start_date_of_next_fiscal_year = add_days(get_fiscal_year(asset.available_for_use_date)[2], 1)
 
     num_days_asset_used_in_fiscal_year = date_diff(
         start_date_of_next_fiscal_year, asset.available_for_use_date
@@ -83,9 +81,7 @@ def get_wdv_or_dd_depr_amount(
                 flt(rate_of_depreciation) / 100
             )
         else:
-            depreciation_amount = flt(yearly_opening_wdv) * (
-                flt(fb_row.rate_of_depreciation) / 100
-            )
+            depreciation_amount = flt(yearly_opening_wdv) * (flt(fb_row.rate_of_depreciation) / 100)
             # if leap year, then consider 366 days
             if cint(schedule_date.year) % 4 == 0:
                 depreciation_amount = depreciation_amount * 366 / 365
@@ -109,15 +105,11 @@ def get_wdv_or_dd_depr_amount(
 
         if schedule_date < start_date_of_next_fiscal_year:
             depreciation_amount = (
-                flt(asset.gross_purchase_amount)
-                * (flt(rate_of_depreciation) / 100)
-                * fraction
+                flt(asset.gross_purchase_amount) * (flt(rate_of_depreciation) / 100) * fraction
             )
         else:
             depreciation_amount = (
-                flt(yearly_opening_wdv)
-                * (flt(fb_row.rate_of_depreciation) / 100)
-                * fraction
+                flt(yearly_opening_wdv) * (flt(fb_row.rate_of_depreciation) / 100) * fraction
             )
     else:
         frappe.throw(_("Only monthly and yearly depreciations allowed yet."))

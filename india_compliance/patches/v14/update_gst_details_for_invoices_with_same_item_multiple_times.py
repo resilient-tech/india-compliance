@@ -30,9 +30,7 @@ def update_gst_details_for_transactions(companies):
 
         for doctype in ("Sales Invoice", "Purchase Invoice"):
             is_sales_doctype = doctype in SALES_DOCTYPES
-            docs = get_docs_with_gst_accounts_and_same_item_multiple_times(
-                doctype, gst_accounts
-            )
+            docs = get_docs_with_gst_accounts_and_same_item_multiple_times(doctype, gst_accounts)
             if not docs:
                 continue
 
@@ -47,7 +45,7 @@ def get_docs_with_gst_accounts_and_same_item_multiple_times(doctype, gst_account
         frappe.qb.from_(item_doctype)
         .select(item_doctype.parent)
         .groupby(item_doctype.parent, item_doctype.item_code)
-        .having(Count((item_doctype.item_code)) > 2)
+        .having(Count(item_doctype.item_code) > 2)
     )
 
     return (

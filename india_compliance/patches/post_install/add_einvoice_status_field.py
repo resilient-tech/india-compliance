@@ -8,9 +8,7 @@ def execute():
     # and E Invoice Settings should be enabled
 
     if not frappe.db.has_column("Sales Invoice", "signed_einvoice") or not sbool(
-        frappe.db.get_value(
-            "E Invoice Settings", "E Invoice Settings", "enable", ignore=True
-        )
+        frappe.db.get_single_value("E Invoice Settings", "enable", ignore=True)
     ):
         set_not_applicable_status()
         return

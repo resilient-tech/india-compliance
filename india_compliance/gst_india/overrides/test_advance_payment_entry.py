@@ -1,6 +1,7 @@
 import json
 import re
 from contextlib import contextmanager
+from typing import ClassVar
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -42,7 +43,7 @@ def toggle_seperate_advance_accounting():
 
 
 class TestAdvancePaymentEntry(FrappeTestCase):
-    EXPECTED_GL = [
+    EXPECTED_GL: ClassVar[list[dict]] = [
         {"account": "Cash - _TIRC", "debit": 590.0, "credit": 0.0},
         {"account": "Debtors - _TIRC", "debit": 0.0, "credit": 500.0},
         {"account": "Output Tax SGST - _TIRC", "debit": 0.0, "credit": 45.0},
@@ -182,8 +183,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         )["gl_data"]
 
         preview_data = [
-            {"account": row[1], "debit": row[2], "credit": row[3]}
-            for row in preview_data
+            {"account": row[1], "debit": row[2], "credit": row[3]} for row in preview_data
         ]
 
         out_str = json.dumps(sorted(preview_data, key=json.dumps))
@@ -219,9 +219,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             "to_posting_date": payment_doc.posting_date,
         }
         references = get_outstanding_reference_documents(args)
-        current_ref = next(
-            ref for ref in references if ref.voucher_no == invoice_doc.name
-        )
+        current_ref = next(ref for ref in references if ref.voucher_no == invoice_doc.name)
 
         payment_doc.extend(
             "references",
@@ -382,9 +380,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         payment_doc.setup_party_account_field()
         payment_doc.set_missing_values()
         payment_doc.set_exchange_rate()
-        payment_doc.received_amount = (
-            payment_doc.paid_amount / payment_doc.target_exchange_rate
-        )
+        payment_doc.received_amount = payment_doc.paid_amount / payment_doc.target_exchange_rate
         payment_doc.save()
 
         if not do_not_submit:
@@ -407,9 +403,7 @@ class TestAdvancePaymentEntry(FrappeTestCase):
             "to_posting_date": payment_doc.posting_date,
         }
         references = get_outstanding_reference_documents(args)
-        current_ref = next(
-            ref for ref in references if ref.voucher_no == invoice_doc.name
-        )
+        current_ref = next(ref for ref in references if ref.voucher_no == invoice_doc.name)
 
         payment_doc.extend(
             "references",
@@ -461,12 +455,8 @@ def make_payment_reconciliation(payment_doc, invoice_doc, amount):
     pr.receivable_payable_account = invoice_doc.debit_to
 
     pr.get_unreconciled_entries()
-    invoices = [
-        row.as_dict() for row in pr.invoices if row.invoice_number == invoice_doc.name
-    ]
-    payments = [
-        row.as_dict() for row in pr.payments if row.reference_name == payment_doc.name
-    ]
+    invoices = [row.as_dict() for row in pr.invoices if row.invoice_number == invoice_doc.name]
+    payments = [row.as_dict() for row in pr.payments if row.reference_name == payment_doc.name]
 
     pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
     pr.allocation[0].allocated_amount = amount

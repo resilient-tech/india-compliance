@@ -38,9 +38,7 @@ class TestGSTRMixin:
             self.log_doctype, filters, ["name", "last_updated_on"]
         )
         self.assertIsNotNone(docname)
-        self.assertAlmostEqual(
-            last_updated_on, get_datetime(), delta=timedelta(minutes=2)
-        )
+        self.assertAlmostEqual(last_updated_on, get_datetime(), delta=timedelta(minutes=2))
 
 
 class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
@@ -201,9 +199,7 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
                 "gstr_1_filing_date": date(2020, 5, 12),
                 "registration_cancel_date": date(2019, 8, 27),
                 "irn_source": "e-Invoice",
-                "irn_number": (
-                    "897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"
-                ),
+                "irn_number": ("897ADG56RTY78956HYUG90BNHHIJK453GFTD99845672FDHHHSHGFH4567FG56TR"),
                 "irn_gen_date": date(2019, 12, 24),
             },
             doc,

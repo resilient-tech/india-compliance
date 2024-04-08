@@ -66,9 +66,7 @@ def update_gstin_and_gst_category():
     # party-wise addresses
     address_map = {}
     for address in all_addresses:
-        address_map.setdefault((address.link_doctype, address.link_name), []).append(
-            address
-        )
+        address_map.setdefault((address.link_doctype, address.link_name), []).append(address)
 
     new_gstins = {}
     new_gst_categories = {}
@@ -83,14 +81,12 @@ def update_gstin_and_gst_category():
             # in case user has custom gstin field in party
             default_gstin = party.gstin
 
-            if not default_gstin and (
-                gstins := {address.gstin for address in address_list}
-            ):
+            if not default_gstin and (gstins := {address.gstin for address in address_list}):
                 # update gstin in party only where there is one gstin per party
                 if len(gstins) == 1:
                     default_gstin = next(iter(gstins))
                 else:
-                    default_gstin = list(gstins)[0]
+                    default_gstin = next(iter(gstins))
 
                 new_gstins.setdefault((doctype, default_gstin), []).append(party.name)
 
@@ -113,9 +109,7 @@ def update_gstin_and_gst_category():
         frappe.db.set_value(doctype, {"name": ("in", docnames)}, "gstin", gstin)
 
     for gst_category, addresses in new_gst_categories.items():
-        frappe.db.set_value(
-            "Address", {"name": ("in", addresses)}, "gst_category", gst_category
-        )
+        frappe.db.set_value("Address", {"name": ("in", addresses)}, "gst_category", gst_category)
 
     if print_warning:
         frappe.db.set_global("has_missing_gst_category", 1)

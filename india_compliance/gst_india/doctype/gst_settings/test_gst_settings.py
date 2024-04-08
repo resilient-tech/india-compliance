@@ -8,7 +8,6 @@ from frappe.utils.data import getdate
 
 
 class TestGSTSettings(FrappeTestCase):
-
     @change_settings("GST Settings", {"enable_api": 1})
     def test_api_key_enabled(self):
         doc = frappe.get_doc("GST Settings")
@@ -43,9 +42,7 @@ class TestGSTSettings(FrappeTestCase):
                 row.account_type = "Output"
                 self.assertRaisesRegex(
                     frappe.ValidationError,
-                    re.compile(
-                        r"^(Row #\d+: Account Type .* appears multiple times for .*)"
-                    ),
+                    re.compile(r"^(Row #\d+: Account Type .* appears multiple times for .*)"),
                     doc.save,
                 )
                 break
@@ -99,10 +96,7 @@ class TestGSTSettings(FrappeTestCase):
         )
         self.assertRaisesRegex(
             frappe.MandatoryError,
-            re.compile(
-                r"^(Row #\d+: Password is required when setting a GST Credential"
-                " for.*)"
-            ),
+            re.compile(r"^(Row #\d+: Password is required when setting a GST Credential" " for.*)"),
             doc.save,
         )
 
@@ -138,8 +132,7 @@ class TestGSTSettings(FrappeTestCase):
         self.assertRaisesRegex(
             frappe.ValidationError,
             re.compile(
-                r"^(Please counfigure your India Compliance Account to"
-                " enable API features)"
+                r"^(Please counfigure your India Compliance Account to" " enable API features)"
             ),
             doc.validate_enable_api,
         )
@@ -164,9 +157,7 @@ class TestGSTSettings(FrappeTestCase):
         doc.e_invoice_applicable_companies = []
         self.assertRaisesRegex(
             frappe.ValidationError,
-            re.compile(
-                r"^(You must select at least one company to which e-Invoice is Applicable)"
-            ),
+            re.compile(r"^(You must select at least one company to which e-Invoice is Applicable)"),
             doc.validate_e_invoice_applicable_companies,
         )
 

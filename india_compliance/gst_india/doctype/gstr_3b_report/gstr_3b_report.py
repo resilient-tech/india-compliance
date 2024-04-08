@@ -54,9 +54,7 @@ class GSTR3BReport(Document):
             itc_details = self.get_itc_details()
             self.set_itc_details(itc_details)
             self.get_itc_reversal_entries()
-            inward_nil_exempt = self.get_inward_nil_exempt(
-                self.gst_details.get("gst_state")
-            )
+            inward_nil_exempt = self.get_inward_nil_exempt(self.gst_details.get("gst_state"))
             self.set_inward_nil_exempt(inward_nil_exempt)
 
             self.missing_field_invoices = self.get_missing_field_invoices()
@@ -181,9 +179,7 @@ class GSTR3BReport(Document):
 
             for key in ["camt", "samt", "iamt", "csamt"]:
                 if entry.account in self.account_heads.get(key):
-                    self.report_dict["itc_elg"]["itc_rev"][index][key] += flt(
-                        entry.amount
-                    )
+                    self.report_dict["itc_elg"]["itc_rev"][index][key] += flt(entry.amount)
                     net_itc[key] -= flt(entry.amount)
 
     def get_itc_details(self):
@@ -276,9 +272,7 @@ class GSTR3BReport(Document):
                 d.place_of_supply = "00-" + cstr(state)
 
             supplier_state = address_state_map.get(d.supplier_address) or state
-            is_intra_state = cstr(supplier_state) == cstr(
-                d.place_of_supply.split("-")[1]
-            )
+            is_intra_state = cstr(supplier_state) == cstr(d.place_of_supply.split("-")[1])
             amount = flt(d.taxable_value, 2)
 
             if d.gst_treatment != "Non-GST":
@@ -354,9 +348,7 @@ class GSTR3BReport(Document):
             is_exempted = d.gst_treatment == "Exempted"
             is_non_gst = d.gst_treatment == "Non-GST"
 
-            if (
-                is_nil_rated or is_exempted
-            ) and d.item_code not in self.is_nil_or_exempt:
+            if (is_nil_rated or is_exempted) and d.item_code not in self.is_nil_or_exempt:
                 self.is_nil_or_exempt.append(d.item_code)
 
             if is_non_gst and d.item_code not in self.is_non_gst:
@@ -405,9 +397,7 @@ class GSTR3BReport(Document):
                             if not (
                                 cgst_or_sgst
                                 or account in self.account_heads.get("iamt")
-                                or (
-                                    item_code in self.is_non_gst + self.is_nil_or_exempt
-                                )
+                                or (item_code in self.is_non_gst + self.is_nil_or_exempt)
                             ):
                                 continue
 
@@ -418,11 +408,9 @@ class GSTR3BReport(Document):
                                     if parent not in self.cgst_sgst_invoices:
                                         self.cgst_sgst_invoices.append(parent)
 
-                                rate_based_dict = (
-                                    self.items_based_on_tax_rate.setdefault(
-                                        parent, {}
-                                    ).setdefault(tax_rate, [])
-                                )
+                                rate_based_dict = self.items_based_on_tax_rate.setdefault(
+                                    parent, {}
+                                ).setdefault(tax_rate, [])
                                 if item_code not in rate_based_dict:
                                     rate_based_dict.append(item_code)
                     except ValueError:
@@ -440,19 +428,14 @@ class GSTR3BReport(Document):
                     invoice_details.get("place_of_supply"),
                 )
             ):
-                self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
-                    0, items.keys()
-                )
+                self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(0, items.keys())
             else:
                 for item in items.keys():
                     if (
                         item in self.is_nil_or_exempt + self.is_non_gst
-                        and item
-                        not in self.items_based_on_tax_rate.get(invoice, {}).get(0, [])
+                        and item not in self.items_based_on_tax_rate.get(invoice, {}).get(0, [])
                     ):
-                        self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(
-                            0, []
-                        )
+                        self.items_based_on_tax_rate.setdefault(invoice, {}).setdefault(0, [])
                         self.items_based_on_tax_rate[invoice][0].append(item)
 
     def set_outward_taxable_supplies(self):
@@ -461,9 +444,7 @@ class GSTR3BReport(Document):
         for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
             invoice_details = self.invoice_map.get(inv, {})
             gst_category = invoice_details.get("gst_category")
-            place_of_supply = (
-                invoice_details.get("place_of_supply") or "00-Other Territory"
-            )
+            place_of_supply = invoice_details.get("place_of_supply") or "00-Other Territory"
             is_overseas_invoice = is_overseas_transaction(
                 "Sales Invoice", gst_category, place_of_supply
             )
@@ -472,17 +453,13 @@ class GSTR3BReport(Document):
                 for item_code, taxable_value in self.invoice_items.get(inv).items():
                     if item_code in items:
                         if item_code in self.is_nil_or_exempt:
-                            self.report_dict["sup_details"]["osup_nil_exmp"][
-                                "txval"
-                            ] += taxable_value
+                            self.report_dict["sup_details"]["osup_nil_exmp"]["txval"] += (
+                                taxable_value
+                            )
                         elif item_code in self.is_non_gst:
-                            self.report_dict["sup_details"]["osup_nongst"][
-                                "txval"
-                            ] += taxable_value
+                            self.report_dict["sup_details"]["osup_nongst"]["txval"] += taxable_value
                         elif rate == 0 or (is_overseas_invoice):
-                            self.report_dict["sup_details"]["osup_zero"][
-                                "txval"
-                            ] += taxable_value
+                            self.report_dict["sup_details"]["osup_zero"]["txval"] += taxable_value
 
                             self.report_dict["sup_details"]["osup_zero"]["iamt"] += flt(
                                 taxable_value * rate / 100, 2
@@ -490,22 +467,22 @@ class GSTR3BReport(Document):
                         else:
                             if inv in self.cgst_sgst_invoices:
                                 tax_rate = rate / 2
-                                self.report_dict["sup_details"]["osup_det"][
-                                    "camt"
-                                ] += flt(taxable_value * tax_rate / 100, 2)
-                                self.report_dict["sup_details"]["osup_det"][
-                                    "samt"
-                                ] += flt(taxable_value * tax_rate / 100, 2)
-                                self.report_dict["sup_details"]["osup_det"][
-                                    "txval"
-                                ] += flt(taxable_value, 2)
+                                self.report_dict["sup_details"]["osup_det"]["camt"] += flt(
+                                    taxable_value * tax_rate / 100, 2
+                                )
+                                self.report_dict["sup_details"]["osup_det"]["samt"] += flt(
+                                    taxable_value * tax_rate / 100, 2
+                                )
+                                self.report_dict["sup_details"]["osup_det"]["txval"] += flt(
+                                    taxable_value, 2
+                                )
                             else:
-                                self.report_dict["sup_details"]["osup_det"][
-                                    "iamt"
-                                ] += flt(taxable_value * rate / 100, 2)
-                                self.report_dict["sup_details"]["osup_det"][
-                                    "txval"
-                                ] += flt(taxable_value, 2)
+                                self.report_dict["sup_details"]["osup_det"]["iamt"] += flt(
+                                    taxable_value * rate / 100, 2
+                                )
+                                self.report_dict["sup_details"]["osup_det"]["txval"] += flt(
+                                    taxable_value, 2
+                                )
 
                                 if (
                                     gst_category
@@ -525,15 +502,14 @@ class GSTR3BReport(Document):
                                             "iamt": 0.0,
                                         },
                                     )
-                                    inter_state_supply_details[
-                                        (gst_category, place_of_supply)
-                                    ]["txval"] += flt(taxable_value, 2)
-                                    inter_state_supply_details[
-                                        (gst_category, place_of_supply)
-                                    ]["iamt"] += flt(taxable_value * rate / 100, 2)
+                                    inter_state_supply_details[(gst_category, place_of_supply)][
+                                        "txval"
+                                    ] += flt(taxable_value, 2)
+                                    inter_state_supply_details[(gst_category, place_of_supply)][
+                                        "iamt"
+                                    ] += flt(taxable_value * rate / 100, 2)
 
             if self.invoice_cess.get(inv):
-
                 invoice_category = "osup_zero" if is_overseas_invoice else "osup_det"
 
                 self.report_dict["sup_details"][invoice_category]["csamt"] += flt(
@@ -643,16 +619,12 @@ class GSTR3BReport(Document):
 
 
 def get_address_state_map():
-    return frappe._dict(
-        frappe.get_all("Address", fields=["name", "gst_state"], as_list=1)
-    )
+    return frappe._dict(frappe.get_all("Address", fields=["name", "gst_state"], as_list=1))
 
 
 def get_json(template):
-    file_path = os.path.join(
-        os.path.dirname(__file__), "{template}.json".format(template=template)
-    )
-    with open(file_path, "r") as f:
+    file_path = os.path.join(os.path.dirname(__file__), f"{template}.json")
+    with open(file_path) as f:
         return cstr(f.read())
 
 

@@ -30,9 +30,7 @@ def get_outstanding_reference_documents(args, validate=False):
     if not invoice_list:
         return reference_documents
 
-    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
-        invoice_list
-    )
+    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(invoice_list)
 
     for d in reference_documents:
         d["reconciliation_status"] = reconciliation_status_dict.get(d["voucher_no"], "")
@@ -62,14 +60,10 @@ def onload(doc, method=None):
         return
 
     invoice_list = [
-        x.reference_name
-        for x in doc.references
-        if x.reference_doctype == "Purchase Invoice"
+        x.reference_name for x in doc.references if x.reference_doctype == "Purchase Invoice"
     ]
 
-    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(
-        invoice_list
-    )
+    reconciliation_status_dict = get_reconciliation_status_for_invoice_list(invoice_list)
 
     doc.set_onload("reconciliation_status_dict", reconciliation_status_dict)
 
@@ -87,9 +81,7 @@ def validate(doc, method=None):
         gst_accounts = get_all_gst_accounts(doc.company)
         for row in doc.taxes:
             if row.account_head in gst_accounts and row.tax_amount != 0:
-                frappe.throw(
-                    _("GST Taxes are not allowed for Supplier Advance Payment Entry")
-                )
+                frappe.throw(_("GST Taxes are not allowed for Supplier Advance Payment Entry"))
 
 
 def on_submit(doc, method=None):
@@ -201,9 +193,7 @@ def _get_gl_for_advance_gst_reversal(payment_entry, reference_row):
 
         # All existing PLE are delinked and new ones are created everytime on update
         # refer: reconcile_against_document in utils.py
-        create_payment_ledger_entry(
-            [gl_entry], update_outstanding="No", cancel=0, adv_adj=1
-        )
+        create_payment_ledger_entry([gl_entry], update_outstanding="No", cancel=0, adv_adj=1)
 
         return gl_dicts
 
@@ -277,9 +267,7 @@ def get_proportionate_taxes_for_row(payment_entry, reference_row, taxes):
         reference_row
     )
     for account, amount in taxes.items():
-        taxes[account] = flt(
-            amount * base_allocated_amount / payment_entry.base_paid_amount, 2
-        )
+        taxes[account] = flt(amount * base_allocated_amount / payment_entry.base_paid_amount, 2)
 
     return taxes
 
@@ -292,9 +280,7 @@ def balance_taxes(payment_entry, reference_row, taxes):
 
             taxes[account] = taxes[account] - flt(
                 amount
-                * payment_entry.calculate_base_allocated_amount_for_reference(
-                    allocation_row
-                )
+                * payment_entry.calculate_base_allocated_amount_for_reference(allocation_row)
                 / payment_entry.base_paid_amount,
                 2,
             )

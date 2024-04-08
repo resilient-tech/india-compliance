@@ -20,17 +20,12 @@ def validate_filters(filters=None):
 
     if not filters.company:
         frappe.throw(
-            _("{} is mandatory for generating Bill of Entry Summary Report").format(
-                _("Company")
-            ),
+            _("{} is mandatory for generating Bill of Entry Summary Report").format(_("Company")),
             title=_("Invalid Filter"),
         )
     if not filters.from_date or not filters.to_date:
         frappe.throw(
-            _(
-                "From Date & To Date is mandatory for generating Bill of Entry Summary"
-                " Report"
-            ),
+            _("From Date & To Date is mandatory for generating Bill of Entry Summary" " Report"),
             title=_("Invalid Filter"),
         )
     if filters.from_date > filters.to_date:
@@ -56,11 +51,7 @@ def get_data(filters):
             bill_of_entry.total_amount_payable,
         )
         .where(bill_of_entry.docstatus == 1)
-        .where(
-            bill_of_entry.bill_of_entry_date[
-                filters.get("from_date") : filters.get("to_date")
-            ]
-        )
+        .where(bill_of_entry.bill_of_entry_date[filters.get("from_date") : filters.get("to_date")])
         .where(bill_of_entry.company == filters.get("company"))
     )
 

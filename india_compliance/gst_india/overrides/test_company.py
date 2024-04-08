@@ -43,8 +43,6 @@ class TestCompanyFixtures(FrappeTestCase):
             for tax in template:
                 for row in tax.get("taxes"):
                     expected_rate = (
-                        gst_rate
-                        if "IGST" in row["account_head"]["account_name"]
-                        else gst_rate / 2
+                        gst_rate if "IGST" in row["account_head"]["account_name"] else gst_rate / 2
                     )
                     self.assertEqual(row["account_head"]["tax_rate"], expected_rate)

@@ -11,6 +11,9 @@
 # absolufy imports
 79da1480c6187839aff417b99aea2e1b71014a00
 
+# formatting with ruff
+fd0af21cec8a96274a6e65cc99f4bc096dea929f
+
 # formatting with black
 702dd2a60de6957e0cddb1e82e887dd90124baa0
 

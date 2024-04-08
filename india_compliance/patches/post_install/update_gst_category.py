@@ -8,6 +8,4 @@ def execute():
             "Purchase Invoice": "supplier_gstin",
         }
     ).items():
-        frappe.db.set_value(
-            doctype, {field: ("in", (None, ""))}, "gst_category", "Unregistered"
-        )
+        frappe.db.set_value(doctype, {field: ("in", (None, ""))}, "gst_category", "Unregistered")

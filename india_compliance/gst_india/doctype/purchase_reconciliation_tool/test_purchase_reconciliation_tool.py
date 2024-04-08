@@ -101,10 +101,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
         for row in reconciled_data:
             self.assertDictEqual(
                 row,
-                self.reconciled_data.get(
-                    (row.purchase_invoice_name, row.inward_supply_name)
-                )
-                or {},
+                self.reconciled_data.get((row.purchase_invoice_name, row.inward_supply_name)) or {},
             )
 
     @classmethod
@@ -132,9 +129,7 @@ class TestPurchaseReconciliationTool(FrappeTestCase):
                 _reconciled_data["purchase_invoice_name"] = pi.get("name")
                 _reconciled_data["inward_supply_name"] = gst_is.get("name")
 
-                cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = (
-                    _reconciled_data
-                )
+                cls.reconciled_data[(pi.get("name"), gst_is.get("name"))] = _reconciled_data
 
         frappe.db.set_single_value("GST Settings", "enable_overseas_transactions", 0)
 

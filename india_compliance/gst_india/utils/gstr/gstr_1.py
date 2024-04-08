@@ -89,9 +89,7 @@ CATEGORY_CONDITIONS = {
 
 
 class GSTR1Query:
-    def __init__(
-        self, filters=None, additional_si_columns=None, additional_si_item_columns=None
-    ):
+    def __init__(self, filters=None, additional_si_columns=None, additional_si_item_columns=None):
         self.si = frappe.qb.DocType("Sales Invoice")
         self.si_item = frappe.qb.DocType("Sales Invoice Item")
         self.filters = frappe._dict(filters or {})
@@ -122,20 +120,16 @@ class GSTR1Query:
                 self.si.is_return,
                 self.si.is_debit_note,
                 self.si.return_against,
-                IfNull(self.si.base_rounded_total, self.si.base_grand_total).as_(
-                    "invoice_total"
-                ),
+                IfNull(self.si.base_rounded_total, self.si.base_grand_total).as_("invoice_total"),
                 IfNull(
                     returned_si.base_rounded_total,
                     IfNull(returned_si.base_grand_total, 0),
                 ).as_("returned_invoice_total"),
                 self.si.gst_category,
                 IfNull(self.si_item.gst_treatment, "Not Defined").as_("gst_treatment"),
-                (
-                    self.si_item.cgst_rate
-                    + self.si_item.sgst_rate
-                    + self.si_item.igst_rate
-                ).as_("gst_rate"),
+                (self.si_item.cgst_rate + self.si_item.sgst_rate + self.si_item.igst_rate).as_(
+                    "gst_rate"
+                ),
                 self.si_item.taxable_value,
                 self.si_item.cgst_amount,
                 self.si_item.sgst_amount,
@@ -186,14 +180,10 @@ class GSTR1Query:
             query = query.where(self.si.company_gstin == self.filters.company_gstin)
 
         if self.filters.from_date:
-            query = query.where(
-                Date(self.si.posting_date) >= getdate(self.filters.from_date)
-            )
+            query = query.where(Date(self.si.posting_date) >= getdate(self.filters.from_date))
 
         if self.filters.to_date:
-            query = query.where(
-                Date(self.si.posting_date) <= getdate(self.filters.to_date)
-            )
+            query = query.where(Date(self.si.posting_date) <= getdate(self.filters.to_date))
 
         return query
 
@@ -211,7 +201,6 @@ def cache_invoice_condition(func):
 
 
 class GSTR1Conditions:
-
     @cache_invoice_condition
     def is_nil_rated(self, invoice):
         return invoice.gst_treatment == "Nil-Rated"
@@ -227,9 +216,7 @@ class GSTR1Conditions:
     @cache_invoice_condition
     def is_nil_rated_exempted_or_non_gst(self, invoice):
         return not self.is_export(invoice) and (
-            self.is_nil_rated(invoice)
-            or self.is_exempted(invoice)
-            or self.is_non_gst(invoice)
+            self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)
         )
 
     @cache_invoice_condition
@@ -265,11 +252,7 @@ class GSTR1Conditions:
 
 class GSTR1CategoryConditions(GSTR1Conditions):
     def is_nil_rated_exempted_non_gst_invoice(self, invoice):
-        return (
-            self.is_nil_rated(invoice)
-            or self.is_exempted(invoice)
-            or self.is_non_gst(invoice)
-        )
+        return self.is_nil_rated(invoice) or self.is_exempted(invoice) or self.is_non_gst(invoice)
 
     def is_b2b_invoice(self, invoice):
         return (
@@ -319,7 +302,6 @@ class GSTR1CategoryConditions(GSTR1Conditions):
 
 
 class GSTR1Subcategory(GSTR1CategoryConditions):
-
     def set_for_b2b(self, invoice):
         self._set_invoice_type_for_b2b_and_cdnr(invoice)
 
@@ -410,7 +392,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             self.assign_categories(invoice)
 
     def assign_categories(self, invoice):
-
         self.set_invoice_category(invoice)
         self.set_invoice_sub_category_and_type(invoice)
 
@@ -457,10 +438,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
         return query.run(as_dict=True)
 
-    def get_filtered_invoices(
-        self, invoices, invoice_category=None, invoice_sub_category=None
-    ):
-
+    def get_filtered_invoices(self, invoices, invoice_category=None, invoice_sub_category=None):
         filtered_invoices = []
         functions = CATEGORY_CONDITIONS.get(invoice_category)
         condition = getattr(self, functions["category"], None)
@@ -505,9 +483,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             }
 
         for row in invoices:
-            category_key = summary[
-                row.get("invoice_sub_category", row["invoice_category"])
-            ]
+            category_key = summary[row.get("invoice_sub_category", row["invoice_category"])]
 
             for key in amount_fields:
                 category_key[key] += row[key]

@@ -1,5 +1,6 @@
 import json
 from base64 import b64decode, b64encode
+from typing import ClassVar
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -52,9 +53,9 @@ class FilesAPI(BaseAPI):
         computed_hash = hash_sha256(response)
         if computed_hash != self.hash:
             frappe.throw(
-                _(
-                    "Hash of file doesn't match for {0}. File may be corrupted or tampered."
-                ).format(self.ul)
+                _("Hash of file doesn't match for {0}. File may be corrupted or tampered.").format(
+                    self.ul
+                )
             )
 
         encrypted_data = tar_gz_bytes_to_data(response)
@@ -134,9 +135,7 @@ class ReturnsAuthenticate(BaseAPI):
             values["auth_token"] = response.auth_token
 
         if response.get("expiry"):
-            session_expiry = add_to_date(
-                None, minutes=cint(response.expiry), as_datetime=True
-            )
+            session_expiry = add_to_date(None, minutes=cint(response.expiry), as_datetime=True)
             self.session_expiry = session_expiry
             values["session_expiry"] = session_expiry
 
@@ -169,9 +168,7 @@ class ReturnsAuthenticate(BaseAPI):
             json["app_key"] = (
                 aes_encrypt_data(self.app_key, self.session_key)
                 if json.get("action") == "REFRESHTOKEN"
-                else encrypt_using_public_key(
-                    self.app_key, self.get_public_certificate()
-                )
+                else encrypt_using_public_key(self.app_key, self.get_public_certificate())
             )
 
         if json.get("otp"):
@@ -207,7 +204,8 @@ class ReturnsAuthenticate(BaseAPI):
 class ReturnsAPI(ReturnsAuthenticate):
     API_NAME = "GST Returns"
     BASE_PATH = "standard/gstn"
-    SENSITIVE_INFO = BaseAPI.SENSITIVE_INFO + (
+    SENSITIVE_INFO = (
+        *BaseAPI.SENSITIVE_INFO,
         "auth-token",
         "auth_token",
         "app_key",
@@ -215,7 +213,7 @@ class ReturnsAPI(ReturnsAuthenticate):
         "rek",
     )
 
-    IGNORED_ERROR_CODES = {
+    IGNORED_ERROR_CODES: ClassVar[dict[str, str]] = {
         "RETOTPREQUEST": "otp_requested",
         "EVCREQUEST": "otp_requested",
         "RET11416": "no_docs_found",
@@ -380,9 +378,7 @@ class GSTR2bAPI(ReturnsAPI):
         if file_num:
             params.update({"file_num": file_num})
 
-        return self.get(
-            "GET2B", return_period, params=params, endpoint="returns/gstr2b", otp=otp
-        )
+        return self.get("GET2B", return_period, params=params, endpoint="returns/gstr2b", otp=otp)
 
 
 class GSTR2aAPI(ReturnsAPI):

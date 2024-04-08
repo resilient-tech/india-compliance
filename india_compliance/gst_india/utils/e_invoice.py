@@ -79,9 +79,7 @@ def generate_e_invoices(docnames, force=False):
 
     def log_error():
         frappe.log_error(
-            title=_("e-Invoice generation failed for Sales Invoice {0}").format(
-                docname
-            ),
+            title=_("e-Invoice generation failed for Sales Invoice {0}").format(docname),
             message=frappe.get_traceback(),
         )
 
@@ -200,9 +198,7 @@ def generate_e_invoice(docname, throw=True, force=False):
     invoice_data = None
     if result.SignedInvoice:
         decoded_invoice = json.loads(
-            jwt.decode(result.SignedInvoice, options={"verify_signature": False})[
-                "data"
-            ]
+            jwt.decode(result.SignedInvoice, options={"verify_signature": False})["data"]
         )
         invoice_data = frappe.as_json(decoded_invoice, indent=4)
 
@@ -252,9 +248,7 @@ def cancel_e_invoice(docname, values):
 
     result = EInvoiceAPI(doc).cancel_irn(data)
 
-    log_and_process_e_invoice_cancellation(
-        doc, values, result, "e-Invoice cancelled successfully"
-    )
+    log_and_process_e_invoice_cancellation(doc, values, result, "e-Invoice cancelled successfully")
 
     return send_updated_doc(doc)
 
@@ -338,10 +332,7 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
 
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(
-            _(
-                "e-Invoice is not applicable for invoices with same company and billing"
-                " GSTIN"
-            )
+            _("e-Invoice is not applicable for invoices with same company and billing" " GSTIN")
         )
 
     if doc.irn:
@@ -364,20 +355,15 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    applicability_date = get_e_invoice_applicability_date(
-        doc.company, gst_settings, throw
-    )
+    applicability_date = get_e_invoice_applicability_date(doc.company, gst_settings, throw)
 
     if not applicability_date:
-        return _throw(
-            _("e-Invoice is not applicable for company {0}").format(doc.company)
-        )
+        return _throw(_("e-Invoice is not applicable for company {0}").format(doc.company))
 
     if getdate(applicability_date) > getdate(doc.posting_date):
         return _throw(
             _(
-                "e-Invoice is not applicable for invoices before {0} as per your"
-                " GST Settings"
+                "e-Invoice is not applicable for invoices before {0} as per your" " GST Settings"
             ).format(frappe.bold(format_date(applicability_date)))
         )
 
@@ -439,12 +425,9 @@ def validate_if_e_invoice_can_be_cancelled(doc):
 
     if (
         not acknowledged_on
-        or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True)
-        < get_datetime()
+        or add_to_date(get_datetime(acknowledged_on), days=1, as_datetime=True) < get_datetime()
     ):
-        frappe.throw(
-            _("e-Invoice can only be cancelled upto 24 hours after it is generated")
-        )
+        frappe.throw(_("e-Invoice can only be cancelled upto 24 hours after it is generated"))
 
 
 def retry_e_invoice_e_waybill_generation():
@@ -454,8 +437,7 @@ def retry_e_invoice_e_waybill_generation():
         return
 
     if not (
-        settings.enable_retry_einv_ewb_generation
-        and settings.is_retry_einv_ewb_generation_pending
+        settings.enable_retry_einv_ewb_generation and settings.is_retry_einv_ewb_generation_pending
     ):
         return
 
@@ -530,9 +512,7 @@ class EInvoiceData(GSTTransactionData):
 
         if len(self.doc.items) > ITEM_LIMIT:
             frappe.throw(
-                _("e-Invoice can only be generated for upto {0} items").format(
-                    ITEM_LIMIT
-                ),
+                _("e-Invoice can only be generated for upto {0} items").format(ITEM_LIMIT),
                 title=_("Item Limit Exceeded"),
             )
 
@@ -547,24 +527,16 @@ class EInvoiceData(GSTTransactionData):
                     if item.qty
                     else abs(self.rounded(item.taxable_value, 3))
                 ),
-                "barcode": self.sanitize_value(
-                    item.barcode, max_length=30, truncate=False
-                ),
+                "barcode": self.sanitize_value(item.barcode, max_length=30, truncate=False),
             }
         )
 
-        if batch_no := self.sanitize_value(
-            item.batch_no, max_length=20, truncate=False
-        ):
-            batch_expiry_date = frappe.db.get_value(
-                "Batch", item.batch_no, "expiry_date"
-            )
+        if batch_no := self.sanitize_value(item.batch_no, max_length=20, truncate=False):
+            batch_expiry_date = frappe.db.get_value("Batch", item.batch_no, "expiry_date")
             item_details.update(
                 {
                     "batch_no": batch_no,
-                    "batch_expiry_date": format_date(
-                        batch_expiry_date, self.DATE_FORMAT
-                    ),
+                    "batch_expiry_date": format_date(batch_expiry_date, self.DATE_FORMAT),
                 }
             )
 
@@ -582,9 +554,7 @@ class EInvoiceData(GSTTransactionData):
                     {
                         "original_name": return_against,
                         "original_date": format_date(
-                            frappe.db.get_value(
-                                "Sales Invoice", return_against, "posting_date"
-                            ),
+                            frappe.db.get_value("Sales Invoice", return_against, "posting_date"),
                             self.DATE_FORMAT,
                         ),
                     }
@@ -594,9 +564,7 @@ class EInvoiceData(GSTTransactionData):
             {
                 "tax_scheme": "GST",
                 "supply_type": self.get_supply_type(),
-                "reverse_charge": (
-                    "Y" if getattr(self.doc, "is_reverse_charge", 0) else "N"
-                ),
+                "reverse_charge": ("Y" if getattr(self.doc, "is_reverse_charge", 0) else "N"),
                 "invoice_type": invoice_type,
                 "ecommerce_gstin": self.doc.ecommerce_gstin,
                 "place_of_supply": self.doc.place_of_supply.split("-")[0],
@@ -611,21 +579,15 @@ class EInvoiceData(GSTTransactionData):
         credit_days = 0
         paid_amount = 0
 
-        if self.doc.due_date and getdate(self.doc.due_date) > getdate(
-            self.doc.posting_date
-        ):
-            credit_days = (
-                getdate(self.doc.due_date) - getdate(self.doc.posting_date)
-            ).days
+        if self.doc.due_date and getdate(self.doc.due_date) > getdate(self.doc.posting_date):
+            credit_days = (getdate(self.doc.due_date) - getdate(self.doc.posting_date)).days
 
         if (self.doc.is_pos or self.doc.advances) and self.doc.base_paid_amount:
             paid_amount = abs(self.rounded(self.doc.base_paid_amount))
 
         self.transaction_details.update(
             {
-                "payee_name": (
-                    self.sanitize_value(self.doc.company) if paid_amount else ""
-                ),
+                "payee_name": (self.sanitize_value(self.doc.company) if paid_amount else ""),
                 "mode_of_payment": self.get_mode_of_payment(),
                 "paid_amount": paid_amount,
                 "credit_days": credit_days,
@@ -688,9 +650,7 @@ class EInvoiceData(GSTTransactionData):
             self.doc.dispatch_address_name
             and self.doc.company_address != self.doc.dispatch_address_name
         ):
-            self.dispatch_address = self.get_address_details(
-                self.doc.dispatch_address_name
-            )
+            self.dispatch_address = self.get_address_details(self.doc.dispatch_address_name)
 
         self.billing_address.legal_name = self.transaction_details.party_name
         self.company_address.legal_name = self.transaction_details.company_name
@@ -707,9 +667,7 @@ class EInvoiceData(GSTTransactionData):
                 self.dispatch_address.update(seller)
 
             self.transaction_details.name = (
-                random_string(6).lstrip("0")
-                if not frappe.flags.in_test
-                else "test_invoice_no"
+                random_string(6).lstrip("0") if not frappe.flags.in_test else "test_invoice_no"
             )
 
             # For overseas transactions, dummy GSTIN is not needed
@@ -872,9 +830,7 @@ class EInvoiceData(GSTTransactionData):
             return export_details
 
         export_details["ShipBNo"] = self.doc.shipping_bill_number
-        export_details["ShipBDt"] = format_date(
-            self.doc.shipping_bill_date, self.DATE_FORMAT
-        )
+        export_details["ShipBDt"] = format_date(self.doc.shipping_bill_date, self.DATE_FORMAT)
 
         if self.doc.port_code in PORT_CODES:
             export_details["Port"] = self.doc.port_code

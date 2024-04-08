@@ -171,9 +171,7 @@ def _create_hsn_codes():
 
 def add_fields_to_item_variant_settings():
     settings = frappe.get_doc("Item Variant Settings")
-    fields_to_add = ITEM_VARIANT_FIELDNAMES - {
-        row.field_name for row in settings.fields
-    }
+    fields_to_add = ITEM_VARIANT_FIELDNAMES - {row.field_name for row in settings.fields}
 
     for fieldname in fields_to_add:
         settings.append("fields", {"field_name": fieldname})

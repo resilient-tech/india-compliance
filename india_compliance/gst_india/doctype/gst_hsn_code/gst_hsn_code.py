@@ -61,8 +61,7 @@ def validate_hsn_code(hsn_code):
     if len(hsn_code) not in valid_hsn_length:
         frappe.throw(
             _(
-                "HSN/SAC Code should be {0} digits long. Please enter a valid"
-                " HSN/SAC code."
+                "HSN/SAC Code should be {0} digits long. Please enter a valid" " HSN/SAC code."
             ).format(join_list_with_custom_separators(valid_hsn_length)),
             title=_("Invalid HSN/SAC"),
         )

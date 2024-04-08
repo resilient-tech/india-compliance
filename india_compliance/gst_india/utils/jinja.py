@@ -2,6 +2,7 @@ import base64
 import json
 from datetime import datetime
 from io import BytesIO
+from typing import ClassVar
 
 import pyqrcode
 from barcode import Code128
@@ -135,9 +136,7 @@ def get_fields_to_display(data, field_map, mandatory_fields=None):
     if mandatory_fields:
         fields_to_display.update(mandatory_fields)
 
-    return {
-        field: label for field, label in field_map.items() if field in fields_to_display
-    }
+    return {field: label for field, label in field_map.items() if field in fields_to_display}
 
 
 def get_e_invoice_item_fields(data):
@@ -181,7 +180,7 @@ class GSTBreakup:
     ]
     """
 
-    CESS_HEADERS = ["CESS", "CESS Non Advol"]
+    CESS_HEADERS: ClassVar[list[str]] = ["CESS", "CESS Non Advol"]
 
     def __init__(self, doc):
         self.doc = doc
@@ -210,9 +209,7 @@ class GSTBreakup:
                     },
                 )
 
-                tax_details["tax_amount"] += flt(
-                    item.get(f"{_tax_type}_amount", 0), self.precision
-                )
+                tax_details["tax_amount"] += flt(item.get(f"{_tax_type}_amount", 0), self.precision)
 
         return list(self.gst_breakup_data.values())
 
@@ -222,8 +219,7 @@ class GSTBreakup:
 
         return any(
             any(
-                getattr(item, f"{scrub(tax_type)}_amount", 0) != 0
-                for tax_type in self.CESS_HEADERS
+                getattr(item, f"{scrub(tax_type)}_amount", 0) != 0 for tax_type in self.CESS_HEADERS
             )
             for item in self.doc.items
         )

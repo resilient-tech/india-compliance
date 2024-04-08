@@ -574,9 +574,7 @@ CUSTOM_FIELDS = {
             "label": "Reason for Ineligibility",
             "fieldtype": "Select",
             "insert_after": "itc_classification",
-            "options": (
-                "\nIneligible As Per Section 17(5)\nITC restricted due to PoS rules"
-            ),
+            "options": ("\nIneligible As Per Section 17(5)\nITC restricted due to PoS rules"),
             "read_only": 1,
             "print_hide": 1,
         },
@@ -906,12 +904,8 @@ reverse_charge_field = frappe._dict(
 # POS Invoice excluded, since it isn't designed for reverse charge transactions
 SALES_REVERSE_CHARGE_FIELDS = {
     "Quotation": reverse_charge_field.copy().update(insert_after="customer_name"),
-    "Sales Order": reverse_charge_field.copy().update(
-        insert_after="skip_delivery_note"
-    ),
-    "Delivery Note": reverse_charge_field.copy().update(
-        insert_after="set_posting_time"
-    ),
+    "Sales Order": reverse_charge_field.copy().update(insert_after="skip_delivery_note"),
+    "Delivery Note": reverse_charge_field.copy().update(insert_after="set_posting_time"),
     "Sales Invoice": reverse_charge_field.copy().update(insert_after="is_debit_note"),
 }
 
@@ -1146,12 +1140,21 @@ e_waybill_status_field = {
     "read_only_depends_on": "eval:doc.ewaybill",
 }
 
-purchase_e_waybill_field = {**sales_e_waybill_field, "insert_after": "supplier_name"}
+purchase_e_waybill_field = {
+    **sales_e_waybill_field,
+    "insert_after": "supplier_name",
+}
 
 E_WAYBILL_FIELDS = {
-    "Sales Invoice": E_WAYBILL_INV_FIELDS
-    + [sales_e_waybill_field, e_waybill_status_field],
-    "Delivery Note": E_WAYBILL_DN_FIELDS + [sales_e_waybill_field],
-    "Purchase Invoice": E_WAYBILL_INV_FIELDS + [purchase_e_waybill_field],
-    "Purchase Receipt": E_WAYBILL_PURCHASE_RECEIPT_FIELDS + [purchase_e_waybill_field],
+    "Sales Invoice": [
+        *E_WAYBILL_INV_FIELDS,
+        sales_e_waybill_field,
+        e_waybill_status_field,
+    ],
+    "Delivery Note": [*E_WAYBILL_DN_FIELDS, sales_e_waybill_field],
+    "Purchase Invoice": [*E_WAYBILL_INV_FIELDS, purchase_e_waybill_field],
+    "Purchase Receipt": [
+        *E_WAYBILL_PURCHASE_RECEIPT_FIELDS,
+        purchase_e_waybill_field,
+    ],
 }

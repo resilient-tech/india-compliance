@@ -191,9 +191,9 @@ class Gstr1Report:
                 invoice_details = self.invoices.get(inv)
 
                 # for B2C Small, skip if B2CL CDN
-                if self.filters.get(
-                    "type_of_business"
-                ) == "B2C Small" and self.is_b2cl_cdn(invoice_details):
+                if self.filters.get("type_of_business") == "B2C Small" and self.is_b2cl_cdn(
+                    invoice_details
+                ):
                     continue
 
                 for rate, items in items_based_on_rate.items():
@@ -218,12 +218,10 @@ class Gstr1Report:
                             "cess_amount": 0,
                             "type": "",
                             "invoice_number": invoice_number,
-                            "posting_date": invoice_details.get(
-                                "posting_date"
-                            ).strftime("%d-%m-%Y"),
-                            "invoice_value": flt(
-                                invoice_details.get("base_grand_total"), 2
+                            "posting_date": invoice_details.get("posting_date").strftime(
+                                "%d-%m-%Y"
                             ),
+                            "invoice_value": flt(invoice_details.get("base_grand_total"), 2),
                             "applicable_tax_rate": 0,
                         },
                     )
@@ -232,24 +230,20 @@ class Gstr1Report:
                     row["taxable_value"] += sum(
                         [
                             flt(net_amount, 2)
-                            for item_code, net_amount in self.invoice_items.get(
-                                inv
-                            ).items()
+                            for item_code, net_amount in self.invoice_items.get(inv).items()
                             if item_code in items
                         ]
                     )
                     row["cess_amount"] += sum(
                         [
                             flt(cess, 2)
-                            for item_code, cess in self.invoice_cess.get(
-                                inv, {}
-                            ).items()
+                            for item_code, cess in self.invoice_cess.get(inv, {}).items()
                             if item_code in items
                         ]
                     )
                     row["type"] = "E" if ecommerce_gstin else "OE"
 
-            for key, value in b2c_output.items():
+            for value in b2c_output.values():
                 self.data.append(value)
 
     def is_b2cl_cdn(self, invoice):
@@ -264,9 +258,7 @@ class Gstr1Report:
             # not B2CL
             return False
 
-        grand_total = invoice.return_against_invoice_total or abs(
-            invoice.base_grand_total
-        )
+        grand_total = invoice.return_against_invoice_total or abs(invoice.base_grand_total)
         return grand_total > B2C_LIMIT
 
     def get_row_data_for_invoice(self, invoice, invoice_details, tax_rate, items):
@@ -276,13 +268,11 @@ class Gstr1Report:
                 self.filters.get("type_of_business") in ("CDNR-REG", "CDNR-UNREG")
                 and fieldname == "invoice_value"
             ):
-
                 row[fieldname] = flt(abs(invoice_details.base_rounded_total), 2) or flt(
                     abs(invoice_details.base_grand_total), 2
                 )
             elif (
-                self.filters.get("type_of_business")
-                in ("CDNR-REG", "CDNR-UNREG", "B2B")
+                self.filters.get("type_of_business") in ("CDNR-REG", "CDNR-UNREG", "B2B")
                 and fieldname == "invoice_type"
             ):
                 row[fieldname] = get_invoice_type_for_excel(invoice_details)
@@ -304,9 +294,7 @@ class Gstr1Report:
         for item_code, net_amount in self.invoice_items.get(invoice).items():
             if item_code in items:
                 taxable_value += flt(abs(net_amount), 2)
-                cess_amount += flt(
-                    self.invoice_cess.get(invoice, {}).get(item_code, 0.0), 2
-                )
+                cess_amount += flt(self.invoice_cess.get(invoice, {}).get(item_code, 0.0), 2)
 
         row["rate"] = tax_rate or 0
         row["taxable_value"] = taxable_value
@@ -323,18 +311,14 @@ class Gstr1Report:
         conditions = self.get_conditions()
 
         invoice_data = frappe.db.sql(
-            """
+            f"""
 			select
-				{select_columns}
-			from `tab{doctype}` si
-			where docstatus = 1 {where_conditions}
+				{self.select_columns}
+			from `tab{self.doctype}` si
+			where docstatus = 1 {conditions}
 			and is_opening = 'No'
 			order by posting_date desc
-			""".format(
-                select_columns=self.select_columns,
-                doctype=self.doctype,
-                where_conditions=conditions,
-            ),
+			""",
             self.filters,
             as_dict=1,
         )
@@ -388,20 +372,16 @@ class Gstr1Report:
             )
 
         if self.filters.get("type_of_business") == "B2C Large":
-            conditions += """ AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
-				AND grand_total > {0} AND is_return != 1 AND is_debit_note !=1
+            conditions += f""" AND ifnull(SUBSTR(place_of_supply, 1, 2),'') != ifnull(SUBSTR(company_gstin, 1, 2),'')
+				AND grand_total > {B2C_LIMIT} AND is_return != 1 AND is_debit_note !=1
                 AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
-                AND SUBSTR(place_of_supply, 1, 2) != '96'""".format(
-                B2C_LIMIT
-            )
+                AND SUBSTR(place_of_supply, 1, 2) != '96'"""
 
         elif self.filters.get("type_of_business") == "B2C Small":
-            conditions += """ AND (
+            conditions += f""" AND (
 				SUBSTR(place_of_supply, 1, 2) = SUBSTR(company_gstin, 1, 2)
-					OR grand_total <= {0}) AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
-                    AND SUBSTR(place_of_supply, 1, 2) != '96' """.format(
-                B2C_LIMIT
-            )
+					OR grand_total <= {B2C_LIMIT}) AND IFNULL(gst_category, "") in ('Unregistered', 'Overseas')
+                    AND SUBSTR(place_of_supply, 1, 2) != '96' """
 
         elif self.filters.get("type_of_business") == "CDNR-REG":
             conditions += """ AND (is_return = 1 OR is_debit_note = 1) AND IFNULL(gst_category, '') not in ('Unregistered', 'Overseas')"""
@@ -426,13 +406,12 @@ class Gstr1Report:
         self.nil_exempt_non_gst = {}
 
         items = frappe.db.sql(
-            """
+            f"""
 			select item_code, item_name, parent, taxable_value, item_tax_rate, gst_treatment
-            from `tab%s Item`
-			where parent in (%s)
-		"""
-            % (self.doctype, ", ".join(["%s"] * len(self.invoices))),
-            tuple(self.invoices),
+            from `tab{self.doctype} Item`
+			where parent in ({", ".join(["%s"] * len(self.invoices))})
+		""",
+            (*self.invoices,),
             as_dict=1,
         )
 
@@ -449,31 +428,24 @@ class Gstr1Report:
 
             self.nil_exempt_non_gst.setdefault(d.parent, [0.0, 0.0, 0.0])
             if is_nil_rated:
-                self.nil_exempt_non_gst[d.parent][0] += flt(
-                    d.get("taxable_value", 0), 2
-                )
+                self.nil_exempt_non_gst[d.parent][0] += flt(d.get("taxable_value", 0), 2)
             elif is_exempted:
-                self.nil_exempt_non_gst[d.parent][1] += flt(
-                    d.get("taxable_value", 0), 2
-                )
+                self.nil_exempt_non_gst[d.parent][1] += flt(d.get("taxable_value", 0), 2)
             elif is_non_gst:
-                self.nil_exempt_non_gst[d.parent][2] += flt(
-                    d.get("taxable_value", 0), 2
-                )
+                self.nil_exempt_non_gst[d.parent][2] += flt(d.get("taxable_value", 0), 2)
 
     def get_items_based_on_tax_rate(self):
         tax_details = frappe.db.sql(
-            """
-			select
-				parent, account_head, item_wise_tax_detail
-			from `tab%s`
-			where
-				parenttype = %s and docstatus = 1
-				and parent in (%s)
-			order by account_head
-		"""
-            % (self.tax_doctype, "%s", ", ".join(["%s"] * len(self.invoices.keys()))),
-            tuple([self.doctype] + list(self.invoices.keys())),
+            f"""
+            SELECT
+                parent, account_head, item_wise_tax_detail
+            FROM `tab{self.tax_doctype}`
+            WHERE
+                parenttype = %s AND docstatus = 1
+                AND parent IN ({', '.join(['%s'] * len(self.invoices))})
+            ORDER BY account_head
+            """,
+            (self.doctype, *self.invoices.keys()),
         )
 
         self.items_based_on_tax_rate = {}
@@ -544,18 +516,18 @@ class Gstr1Report:
             if not invoice.get("is_export_with_gst") and is_overseas_transaction(
                 "Sales Invoice", invoice.gst_category, invoice.place_of_supply
             ):
-                self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(
-                    0, []
-                ).extend(items)
+                self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(0, []).extend(
+                    items
+                )
 
             # Show invoice with all items are in nil exempt and exclude non-gst
             if (
                 invoice_no in self.nil_exempt_non_gst
                 and self.nil_exempt_non_gst[invoice_no][2] == 0
             ):
-                self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(
-                    0, []
-                ).extend(items)
+                self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(0, []).extend(
+                    items
+                )
 
     def get_columns(self):
         self.other_columns = []
@@ -1098,12 +1070,8 @@ class GSTR11A11BData:
         return query.run(as_dict=True)
 
     def get_query(self):
-        cr_or_dr = (
-            "credit" if self.filters.get("type_of_business") == "Advances" else "debit"
-        )
-        cr_or_dr_amount_field = getattr(
-            self.gl_entry, f"{cr_or_dr}_in_account_currency"
-        )
+        cr_or_dr = "credit" if self.filters.get("type_of_business") == "Advances" else "debit"
+        cr_or_dr_amount_field = getattr(self.gl_entry, f"{cr_or_dr}_in_account_currency")
         cess_account = get_escaped_name(self.gst_accounts.cess_account)
 
         return (
@@ -1145,15 +1113,11 @@ class GSTR11A11BData:
         conditions.append(self.gl_entry.company == self.filters.get("company"))
         conditions.append(self.gl_entry.account.isin(gst_accounts_list))
         conditions.append(
-            self.gl_entry.posting_date[
-                self.filters.get("from_date") : self.filters.get("to_date")
-            ]
+            self.gl_entry.posting_date[self.filters.get("from_date") : self.filters.get("to_date")]
         )
 
         if self.filters.get("company_gstin"):
-            conditions.append(
-                self.gl_entry.company_gstin == self.filters.get("company_gstin")
-            )
+            conditions.append(self.gl_entry.company_gstin == self.filters.get("company_gstin"))
 
         return conditions
 
@@ -1161,7 +1125,7 @@ class GSTR11A11BData:
         data = {}
         for entry in records:
             taxable_value = flt(entry.taxable_value, 2)
-            tax_rate = round(((entry.tax_amount / taxable_value) * 100))
+            tax_rate = round((entry.tax_amount / taxable_value) * 100)
 
             data.setdefault((entry.place_of_supply, tax_rate), [0.0, 0.0])
 
@@ -1230,9 +1194,7 @@ class GSTR1DocumentIssuedSummary:
             .groupby(self.sales_invoice.name)
         )
         query = (
-            query.where(
-                self.sales_invoice.company_address == self.filters.company_address
-            )
+            query.where(self.sales_invoice.company_address == self.filters.company_address)
             if self.filters.company_address
             else query
         )
@@ -1258,7 +1220,7 @@ class GSTR1DocumentIssuedSummary:
             slice_indices.append(i)
 
         document_series_list = [
-            data[i:j] for i, j in zip([0] + slice_indices, slice_indices + [None])
+            data[i:j] for i, j in zip([0, *slice_indices], [*slice_indices, None])
         ]
 
         for series in document_series_list:
@@ -1275,9 +1237,7 @@ class GSTR1DocumentIssuedSummary:
                     "total_submitted": total_submitted_count,
                     "cancelled": cancelled_count,
                     "total_draft": draft_count,
-                    "total_issued": draft_count
-                    + total_submitted_count
-                    + cancelled_count,
+                    "total_issued": draft_count + total_submitted_count + cancelled_count,
                 }
             )
 
@@ -1346,13 +1306,9 @@ class GSTR1DocumentIssuedSummary:
 
         for doc in data:
             if doc.is_opening == "Yes":
-                nature_of_document["Excluded from Report (Is Opening Entry)"].append(
-                    doc
-                )
+                nature_of_document["Excluded from Report (Is Opening Entry)"].append(doc)
             elif doc.same_gstin_billing:
-                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(
-                    doc
-                )
+                nature_of_document["Excluded from Report (Same GSTIN Billing)"].append(doc)
             elif doc.is_return:
                 nature_of_document["Credit Note"].append(doc)
             elif doc.is_debit_note:
@@ -1406,9 +1362,7 @@ def get_gstr1_json(filters, data=None):
     for type_of_business, abbr in report_types.items():
         filters["type_of_business"] = type_of_business
 
-        report_data = data_dict.get(type_of_business) or format_data_to_dict(
-            execute(filters)
-        )
+        report_data = data_dict.get(type_of_business) or format_data_to_dict(execute(filters))
         report_data = get_json(type_of_business, gstin, report_data, filters)
 
         if not report_data:
@@ -1423,7 +1377,7 @@ def get_gstr1_json(filters, data=None):
 
 
 def get_json(type_of_business, gstin, data, filters):
-    if data and list(data[-1].values())[0] == "Total":
+    if data and next(iter(data[-1].values())) == "Total":
         data = data[:-1]
 
     res = {}
@@ -1446,9 +1400,9 @@ def get_json(type_of_business, gstin, data, filters):
 
     if type_of_business == "EXPORT":
         for item in data:
-            res.setdefault(item["export_type"], {}).setdefault(
-                item["invoice_number"], []
-            ).append(item)
+            res.setdefault(item["export_type"], {}).setdefault(item["invoice_number"], []).append(
+                item
+            )
 
         return get_export_json(res)
 
@@ -1528,7 +1482,7 @@ def get_b2b_json(res, gstin):
         if not gst_in:
             continue
 
-        for number, invoice in res[gst_in].items():
+        for invoice in res[gst_in].values():
             if not invoice[0]["place_of_supply"]:
                 frappe.throw(
                     _(
@@ -1707,7 +1661,7 @@ def get_cdnr_reg_json(res, gstin):
         if not gst_in:
             continue
 
-        for number, invoice in res[gst_in].items():
+        for invoice in res[gst_in].values():
             if not invoice[0]["place_of_supply"]:
                 frappe.throw(
                     _(
@@ -1746,7 +1700,7 @@ def get_cdnr_reg_json(res, gstin):
 def get_cdnr_unreg_json(res, gstin):
     out = []
 
-    for invoice, items in res.items():
+    for items in res.values():
         inv_item = {
             "nt_num": items[0]["invoice_number"],
             "nt_dt": getdate(items[0]["posting_date"]).strftime("%d-%m-%Y"),
@@ -1775,14 +1729,14 @@ def get_exempted_json(data):
         ]
     }
 
-    for i, v in enumerate(data):
-        if data[i].get("nil_rated"):
+    for i, item in enumerate(data):
+        if item.get("nil_rated"):
             out["inv"][i]["nil_amt"] = data[i]["nil_rated"]
 
-        if data[i].get("exempted"):
+        if item.get("exempted"):
             out["inv"][i]["expt_amt"] = data[i]["exempted"]
 
-        if data[i].get("non_gst"):
+        if item.get("non_gst"):
             out["inv"][i]["ngsup_amt"] = data[i]["non_gst"]
 
     return out
@@ -1898,10 +1852,7 @@ def get_rate_and_tax_details(row, gstin):
 
     # calculate tax amount added
     tax = flt((row["taxable_value"] * rate) / 100.0, 2)
-    if (
-        row.get("billing_address_gstin")
-        and gstin[0:2] == row["billing_address_gstin"][0:2]
-    ):
+    if row.get("billing_address_gstin") and gstin[0:2] == row["billing_address_gstin"][0:2]:
         itm_det.update({"camt": flt(tax / 2.0, 2), "samt": flt(tax / 2.0, 2)})
     else:
         itm_det.update({"iamt": tax})
@@ -1950,12 +1901,7 @@ def download_json_file():
 
     frappe.response["filename"] = (
         frappe.scrub(
-            "{0} {1} {2} {3}".format(
-                data["report_name"],
-                data["report_type"],
-                report_data["gstin"],
-                report_data["fp"],
-            )
+            f"{data['report_name']} {data['report_type']} {report_data['gstin']} {report_data['fp']}"
         )
         + ".json"
     )
@@ -2016,6 +1962,4 @@ def get_gstr1_excel(filters, data=None, columns=None):
 
 
 def create_excel_sheet(excel, sheet_name, headers, data):
-    excel.create_sheet(
-        sheet_name=sheet_name, headers=headers, data=data, add_totals=False
-    )
+    excel.create_sheet(sheet_name=sheet_name, headers=headers, data=data, add_totals=False)

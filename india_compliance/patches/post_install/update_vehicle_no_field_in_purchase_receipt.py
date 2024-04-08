@@ -14,11 +14,6 @@ def execute():
     REGEX_PATTERN = r"^[a-zA-Z]{2}[-\s]?[0-9]{2}[-\s]?[a-zA-Z]{1,3}[-\s]?[0-9]{4}$"
     pr = frappe.qb.DocType("Purchase Receipt")
 
-    (
-        frappe.qb.update(pr)
-        .set(pr.vehicle_no, pr.lr_no)
-        .where(pr.lr_no.regexp(REGEX_PATTERN))
-        .run()
-    )
+    (frappe.qb.update(pr).set(pr.vehicle_no, pr.lr_no).where(pr.lr_no.regexp(REGEX_PATTERN)).run())
 
     (frappe.qb.update(pr).set(pr.lr_no, "").where(pr.lr_no.regexp(REGEX_PATTERN)).run())

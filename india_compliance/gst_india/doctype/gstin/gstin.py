@@ -44,18 +44,14 @@ class GSTIN(Document):
 
 
 @frappe.whitelist()
-def get_gstin_status(
-    gstin, transaction_date=None, is_request_from_ui=0, force_update=0
-):
+def get_gstin_status(gstin, transaction_date=None, is_request_from_ui=0, force_update=0):
     """
     Permission check not required as GSTIN details are public where GSTIN is known.
     """
     if not gstin:
         return
 
-    if not int(force_update) and not is_status_refresh_required(
-        gstin, transaction_date
-    ):
+    if not int(force_update) and not is_status_refresh_required(gstin, transaction_date):
         if not frappe.db.exists("GSTIN", gstin):
             return
 
@@ -179,10 +175,7 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
             ).format(format_date(registration_date), gstin_doc.gstin)
         )
 
-    if (
-        gstin_doc.status == "Cancelled"
-        and date_diff(transaction_date, cancelled_date) >= 0
-    ):
+    if gstin_doc.status == "Cancelled" and date_diff(transaction_date, cancelled_date) >= 0:
         return _throw(
             _(
                 "Party GSTIN {1} is cancelled on {0}. Please make sure that document date is before {0}."
@@ -191,9 +184,7 @@ def _validate_gstin_info(gstin_doc, transaction_date=None, throw=False):
 
     if gstin_doc.status not in ("Active", "Cancelled"):
         return _throw(
-            _("Status of Party GSTIN {1} is {0}").format(
-                gstin_doc.status, gstin_doc.gstin
-            )
+            _("Status of Party GSTIN {1} is {0}").format(gstin_doc.status, gstin_doc.gstin)
         )
 
 
@@ -243,9 +234,7 @@ def is_status_refresh_required(gstin, transaction_date):
     ):
         return
 
-    doc = frappe.db.get_value(
-        "GSTIN", gstin, ["last_updated_on", "status"], as_dict=True
-    )
+    doc = frappe.db.get_value("GSTIN", gstin, ["last_updated_on", "status"], as_dict=True)
 
     if not doc:
         return True
@@ -272,12 +261,8 @@ def get_formatted_response(response):
     return frappe._dict(
         {
             "gstin": response.gstin,
-            "registration_date": parse_datetime(
-                response.rgdt, day_first=True, throw=False
-            ),
-            "cancelled_date": parse_datetime(
-                response.cxdt, day_first=True, throw=False
-            ),
+            "registration_date": parse_datetime(response.rgdt, day_first=True, throw=False),
+            "cancelled_date": parse_datetime(response.cxdt, day_first=True, throw=False),
             "status": response.sts,
         }
     )
@@ -291,9 +276,7 @@ def get_transporter_id_info(transporter_id):
     if not company_gstin:
         return
 
-    response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(
-        transporter_id
-    )
+    response = EWaybillAPI(company_gstin=company_gstin).get_transporter_details(transporter_id)
 
     if not response:
         return

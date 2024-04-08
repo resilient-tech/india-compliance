@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import json
-from typing import List
 
 import frappe
 from frappe.model.document import Document
@@ -83,9 +82,7 @@ class PurchaseReconciliationTool(Document):
             _Reconciler.reconcile(row["original"], row["amended"])
 
         self.ReconciledData = ReconciledData(**self.get_reco_doc())
-        self.reconciliation_data = json.dumps(
-            self.ReconciledData.get(), default=json_handler
-        )
+        self.reconciliation_data = json.dumps(self.ReconciledData.get(), default=json_handler)
 
         self.db_set("is_modified", 0)
 
@@ -102,9 +99,7 @@ class PurchaseReconciliationTool(Document):
             return save_gstr_2b(self.company_gstin, period, json_data)
 
     @frappe.whitelist()
-    def download_gstr(
-        self, company_gstins, date_range, return_type=None, force=False, otp=None
-    ):
+    def download_gstr(self, company_gstins, date_range, return_type=None, force=False, otp=None):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         download_gstr(
@@ -116,9 +111,7 @@ class PurchaseReconciliationTool(Document):
         )
 
     @frappe.whitelist()
-    def get_import_history(
-        self, company_gstin, return_type, date_range, for_download=True
-    ):
+    def get_import_history(self, company_gstin, return_type, date_range, for_download=True):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
         if not return_type:
@@ -146,10 +139,7 @@ class PurchaseReconciliationTool(Document):
                 if category.value == "ISDA" and return_type == ReturnType.GSTR2A:
                     continue
 
-                if (
-                    not settings.enable_overseas_transactions
-                    and category.value in IMPORT_CATEGORY
-                ):
+                if not settings.enable_overseas_transactions and category.value in IMPORT_CATEGORY:
                     continue
 
                 download = next(
@@ -179,8 +169,7 @@ class PurchaseReconciliationTool(Document):
                     ),
                     "Status": status,
                     columns[-1]: (
-                        "✅ &nbsp;"
-                        + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
+                        "✅ &nbsp;" + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
                         if download
                         else ""
                     ),
@@ -238,9 +227,7 @@ class PurchaseReconciliationTool(Document):
     def get_invoice_details(self, purchase_name, inward_supply_name):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
-        return self.ReconciledData.get_manually_matched_data(
-            purchase_name, inward_supply_name
-        )
+        return self.ReconciledData.get_manually_matched_data(purchase_name, inward_supply_name)
 
     @frappe.whitelist()
     def link_documents(self, purchase_invoice_name, inward_supply_name, link_doctype):
@@ -263,10 +250,8 @@ class PurchaseReconciliationTool(Document):
             "link_doctype": link_doctype,
             "link_name": purchase_invoice_name,
         }
-        if pur_linked_with := frappe.db.get_all(
-            "GST Inward Supply", link_doc, pluck="name"
-        ):
-            self._unlink_documents((pur_linked_with))
+        if pur_linked_with := frappe.db.get_all("GST Inward Supply", link_doc, pluck="name"):
+            self._unlink_documents(pur_linked_with)
             inward_supplies.extend(pur_linked_with)
 
         link_doc["match_status"] = "Manual Match"
@@ -315,9 +300,7 @@ class PurchaseReconciliationTool(Document):
         if not names:
             return
 
-        frappe.db.set_value(
-            doctype, {"name": ("in", names)}, "reconciliation_status", status
-        )
+        frappe.db.set_value(doctype, {"name": ("in", names)}, "reconciliation_status", status)
 
     def _unlink_documents(self, inward_supplies):
         if not inward_supplies:
@@ -405,9 +388,7 @@ class PurchaseReconciliationTool(Document):
         )
 
         if not filters.show_matched:
-            query = query.where(
-                PI.name.notin(PurchaseInvoice.query_matched_purchase_invoice())
-            )
+            query = query.where(PI.name.notin(PurchaseInvoice.query_matched_purchase_invoice()))
 
         return self._get_link_options(query.run(as_dict=True))
 
@@ -436,9 +417,7 @@ class PurchaseReconciliationTool(Document):
         )
 
         if not filters.show_matched:
-            query = query.where(
-                BOE.name.notin(BillOfEntry.query_matched_bill_of_entry())
-            )
+            query = query.where(BOE.name.notin(BillOfEntry.query_matched_bill_of_entry()))
 
         return self._get_link_options(query.run(as_dict=True))
 
@@ -448,12 +427,8 @@ class PurchaseReconciliationTool(Document):
             if not row.get("classification"):
                 row.classification = self.ReconciledData.guess_classification(row)
 
-            row.description = (
-                f"{row.bill_no}, {row.bill_date}, Taxable Amount: {row.taxable_value}"
-            )
-            row.description += (
-                f", Tax Amount: {BaseUtil.get_total_tax(row)}, {row.classification}"
-            )
+            row.description = f"{row.bill_no}, {row.bill_date}, Taxable Amount: {row.taxable_value}"
+            row.description += f", Tax Amount: {BaseUtil.get_total_tax(row)}, {row.classification}"
 
         return data
 
@@ -483,9 +458,7 @@ def download_gstr(
             )
 
 
-def _download_gstr_2a(
-    date_range, company_gstin, force=False, otp=None, gst_categories=None
-):
+def _download_gstr_2a(date_range, company_gstin, force=False, otp=None, gst_categories=None):
     return_type = ReturnType.GSTR2A
     periods = BaseUtil.get_periods(date_range, return_type)
     if not force:
@@ -514,7 +487,7 @@ def get_periods_to_download(company_gstin, return_type, periods):
 
 
 def get_import_history(
-    company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
+    company_gstin, return_type: ReturnType, periods: list[str], fields=None, pluck=None
 ):
     if not (fields or pluck):
         fields = (
@@ -603,9 +576,7 @@ def parse_params(fun):
 
 
 def auto_refresh_authtoken():
-    is_auto_refresh_enabled = frappe.db.get_single_value(
-        "GST Settings", "auto_refresh_auth_token"
-    )
+    is_auto_refresh_enabled = frappe.db.get_single_value("GST Settings", "auto_refresh_auth_token")
 
     if not is_auto_refresh_enabled:
         return
@@ -810,9 +781,7 @@ class BuildExcel:
         """Add filters to the sheet"""
 
         label = "2B" if self.doc.gst_return == "GSTR 2B" else "2A/2B"
-        self.period = (
-            f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
-        )
+        self.period = f"{self.doc.inward_supply_from_date} to {self.doc.inward_supply_to_date}"
 
         self.filters = frappe._dict(
             {
@@ -838,9 +807,7 @@ class BuildExcel:
         )
 
     def get_supplier_data(self):
-        return self.process_data(
-            self.data.get("supplier_summary"), self.supplier_header
-        )
+        return self.process_data(self.data.get("supplier_summary"), self.supplier_header)
 
     def get_invoice_data(self):
         data = ReconciledData(**self.doc).get_consolidated_data(

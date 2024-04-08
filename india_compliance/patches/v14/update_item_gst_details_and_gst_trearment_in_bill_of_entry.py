@@ -28,9 +28,7 @@ def update_gst_details_for_transactions(companies):
         gst_accounts.extend(
             filter(
                 None,
-                get_gst_accounts_by_type(
-                    company, account_type="Input", throw=False
-                ).values(),
+                get_gst_accounts_by_type(company, account_type="Input", throw=False).values(),
             )
         )
 
@@ -105,7 +103,6 @@ def get_taxes_for_docs(docs, doctype):
 
 
 def set_gst_treatment():
-
     # based on item_tax_template
     boe = frappe.qb.DocType("Bill of Entry")
     boe_item = frappe.qb.DocType("Bill of Entry Item", alias="boe_item")
@@ -129,7 +126,7 @@ def set_gst_treatment():
         .set(boe_item.gst_treatment, "Nil-Rated")
         .where(boe_item.docstatus == 1)
         .where(boe.total_taxes == 0)
-        .where((boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST"))))
+        .where(boe_item.gst_treatment.notin(("Nil-Rated", "Exempted", "Non-GST")))
         .run()
     )
 

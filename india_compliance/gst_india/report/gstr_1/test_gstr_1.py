@@ -67,9 +67,7 @@ class TestGSTR1DocumentIssuedSummary(FrappeTestCase):
         }
         report_data = format_data_to_dict(execute(filters))
 
-        report_json = get_json(
-            "Document Issued Summary", "24AAQCA8719H1ZC", report_data, filters
-        )
+        report_json = get_json("Document Issued Summary", "24AAQCA8719H1ZC", report_data, filters)
 
         self.assertDictEqual(report_json, JSON_OUTPUT)
 
@@ -84,9 +82,7 @@ def create_test_items():
     # Sales Invoices
     sales_invoices = create_sales_invoices(3)
     create_sales_invoices(1)[0].cancel()
-    sales_invoice = create_sales_invoices(1, do_not_save=True, do_not_submit=True)[
-        0
-    ].save()
+    sales_invoice = create_sales_invoices(1, do_not_save=True, do_not_submit=True)[0].save()
 
     invoices_for_outward_supply.append(
         {

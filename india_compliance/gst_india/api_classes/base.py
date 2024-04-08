@@ -22,9 +22,7 @@ class BaseAPI:
         self.settings = frappe.get_cached_doc("GST Settings")
         if not is_api_enabled(self.settings):
             frappe.throw(
-                _("Please enable API in GST Settings to use the {0} API").format(
-                    self.API_NAME
-                )
+                _("Please enable API in GST Settings to use the {0} API").format(self.API_NAME)
             )
 
         self.sandbox_mode = self.settings.sandbox_mode
@@ -149,9 +147,7 @@ class BaseAPI:
                     response_json = response.content
 
                 else:
-                    frappe.throw(
-                        _("Error parsing response: {0}").format(response.content)
-                    )
+                    frappe.throw(_("Error parsing response: {0}").format(response.content))
 
             response_json = self.process_response(response_json)
             return response_json.get("result", response_json)
@@ -221,9 +217,7 @@ class BaseAPI:
 
         # GSP connectivity issues
         if status_code == 401 or (
-            status_code == 403
-            and response_json
-            and response_json.get("error") == "access_denied"
+            status_code == 403 and response_json and response_json.get("error") == "access_denied"
         ):
             frappe.throw(
                 _("Error establishing connection to GSP. Please contact {0}.").format(
