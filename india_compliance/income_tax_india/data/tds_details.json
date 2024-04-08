@@ -1299,5 +1299,80 @@
         "cumulative_threshold": 0
       }
     ]
+  },
+  {
+    "name": "TDS - 194Q - Individual",
+    "category_name": "TDS on purchasing",
+    "round_off_tax_amount": 0,
+    "tds_section": "194Q",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Individual",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 0.1,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 0.1,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194Q - Company",
+    "category_name": "TDS on purchasing",
+    "round_off_tax_amount": 0,
+    "tds_section": "194Q",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "Company",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 0.1,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 0.1,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      }
+    ]
+  },
+  {
+    "name": "TDS - 194Q - No PAN / Invalid PAN",
+    "category_name": "TDS on purchasing",
+    "round_off_tax_amount": 0,
+    "tds_section": "194Q",
+    "consider_party_ledger_amount": 0,
+    "tax_on_excess_amount": 0,
+    "entity_type": "No PAN / Invalid PAN",
+    "rates": [
+      {
+        "from_date": "2023-04-01",
+        "to_date": "2024-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 5000000,
+        "cumulative_threshold": 0
+      }
+    ]
   }
 ]

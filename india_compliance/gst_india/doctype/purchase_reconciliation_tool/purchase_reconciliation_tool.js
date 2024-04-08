@@ -60,6 +60,7 @@ async function add_gstr2b_alert(frm) {
                 frm,
                 [frm.doc.inward_supply_from_date, frm.doc.inward_supply_to_date],
                 ReturnType.GSTR2B,
+                frm.company_gstin,
                 true
             );
             remove_gstr2b_alert(existing_alert);
@@ -1112,6 +1113,7 @@ class ImportDialog {
     constructor(frm, for_download = true) {
         this.frm = frm;
         this.for_download = for_download;
+        this.company_gstin = frm.doc.company_gstin;
         this.init_dialog();
         this.dialog.show();
     }
@@ -1171,18 +1173,18 @@ class ImportDialog {
             if (this.return_type === ReturnType.GSTR2A) {
                 this.dialog.$wrapper.find(".btn-secondary").removeClass("hidden");
                 this.dialog.set_primary_action(__("Download All"), () => {
-                    download_gstr(this.frm, this.date_range, this.return_type, false);
+                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, false);
                     this.dialog.hide();
                 });
                 this.dialog.set_secondary_action_label(__("Download Missing"));
                 this.dialog.set_secondary_action(() => {
-                    download_gstr(this.frm, this.date_range, this.return_type, true);
+                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, true);
                     this.dialog.hide();
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
                 this.dialog.$wrapper.find(".btn-secondary").addClass("hidden");
                 this.dialog.set_primary_action(__("Download"), () => {
-                    download_gstr(this.frm, this.date_range, this.return_type, true);
+                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, true);
                     this.dialog.hide();
                 });
             }
@@ -1205,12 +1207,14 @@ class ImportDialog {
 
     async fetch_import_history() {
         const { message } = await this.frm.call("get_import_history", {
+            company_gstin: this.company_gstin,
             return_type: this.return_type,
             date_range: this.date_range,
             for_download: this.for_download,
         });
 
-        if (!message) return;
+        // TODO: modify HTML for case: company_gstin == "All"
+        if (!message || this.company_gstin == "All") return;
         this.dialog.fields_dict.history.html(
             frappe.render_template("gstr_download_history", message)
         );
@@ -1264,6 +1268,25 @@ class ImportDialog {
                 },
             },
             {
+                label: "Company GSTIN",
+                fieldname: "company_gstin",
+                fieldtype: "Autocomplete",
+                default: this.frm.doc.company_gstin,
+                get_query: async () => {
+                    let { message: gstin_list } = await frappe.call({
+                        method: "india_compliance.gst_india.utils.get_gstin_list",
+                        args: { party: this.frm.doc.company },
+                    });
+
+                    gstin_list.unshift("All");
+                    this.dialog.fields_dict.company_gstin.set_data(gstin_list);
+                },
+                onchange: () => {
+                    this.company_gstin = this.dialog.get_value("company_gstin");
+                    this.fetch_import_history();
+                }
+            },
+            {
                 fieldtype: "Column Break",
             },
             {
@@ -1312,29 +1335,25 @@ async function download_gstr(
     frm,
     date_range,
     return_type,
+    company_gstin,
     only_missing = true,
     otp = null
 ) {
-    let method;
-    const args = { date_range, otp };
-
-    if (return_type === ReturnType.GSTR2A) {
-        method = "download_gstr_2a";
-        args.force = !only_missing;
-    } else {
-        method = "download_gstr_2b";
-    }
-
-    frm.events.show_progress(frm, "download");
-    const { message } = await frm.call(method, args);
-
-    if (message && ["otp_requested", "invalid_otp"].includes(message.error_type)) {
-        const otp = await india_compliance.get_gstin_otp(
-            message.error_type,
-            frm.doc.company_gstin
+    const authenticated_company_gstins =
+        await india_compliance.authenticate_company_gstins(
+            frm.doc.company,
+            company_gstin == "All" ? null : company_gstin
         );
-        if (otp) download_gstr(frm, date_range, return_type, only_missing, otp);
-    }
+
+    const args = {
+        return_type: return_type,
+        company_gstins: authenticated_company_gstins,
+        date_range: date_range,
+        force: !only_missing,
+        otp,
+    };
+    frm.events.show_progress(frm, "download");
+    await frm.call("download_gstr", args);
 }
 
 class EmailDialog {

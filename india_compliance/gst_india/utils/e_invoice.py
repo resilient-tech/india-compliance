@@ -364,7 +364,9 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     if not gst_settings.enable_e_invoice:
         return _throw(_("e-Invoice is not enabled in GST Settings"))
 
-    applicability_date = get_e_invoice_applicability_date(doc, gst_settings, throw)
+    applicability_date = get_e_invoice_applicability_date(
+        doc.company, gst_settings, throw
+    )
 
     if not applicability_date:
         return _throw(
@@ -410,7 +412,7 @@ def validate_taxable_item(doc, throw=True):
     )
 
 
-def get_e_invoice_applicability_date(doc, settings=None, throw=True):
+def get_e_invoice_applicability_date(company, settings=None, throw=True):
     if not settings:
         settings = frappe.get_cached_doc("GST Settings")
 
@@ -418,7 +420,7 @@ def get_e_invoice_applicability_date(doc, settings=None, throw=True):
 
     if settings.apply_e_invoice_only_for_selected_companies:
         for row in settings.e_invoice_applicable_companies:
-            if doc.company == row.company:
+            if company == row.company:
                 e_invoice_applicable_from = row.applicable_from
                 break
 
@@ -509,8 +511,9 @@ class EInvoiceData(GSTTransactionData):
         """
         Non Taxable Value should be added to other charges.
         """
-        self.transaction_details.other_charges += self.rounded(
-            self.transaction_details.total_non_taxable_value
+        self.transaction_details.other_charges = self.rounded(
+            self.transaction_details.other_charges
+            + self.transaction_details.total_non_taxable_value
         )
 
     def validate_transaction(self):

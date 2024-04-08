@@ -204,6 +204,13 @@ def set_default_gst_settings():
         "validate_gstin_status": 1,
         "gstin_status_refresh_interval": 30,
         "enable_retry_einv_ewb_generation": 1,
+        # Auto - Reconciliation
+        "enable_auto_reconciliation": 1,
+        "inward_supply_period": 2,
+        "reconcile_on_tuesday": 1,
+        "reconcile_on_friday": 1,
+        "reconcile_for_b2b": 1,
+        "reconcile_for_cdnr": 1,
     }
 
     if frappe.conf.developer_mode:

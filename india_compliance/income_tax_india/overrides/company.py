@@ -31,10 +31,6 @@ def create_or_update_tax_withholding_category(company):
         "Account", {"account_name": "TDS Payable", "company": company}, "name"
     )
 
-    ignore_mandatory = False
-    if not tds_account:
-        ignore_mandatory = True
-
     if company and tds_account:
         accounts.append({"company": company, "account": tds_account})
 
@@ -51,7 +47,7 @@ def create_or_update_tax_withholding_category(company):
         )
         if not existing_category_list:
             doc = frappe.get_doc(category_doc)
-            doc.insert(ignore_if_duplicate=True, ignore_mandatory=ignore_mandatory)
+            doc.insert(ignore_if_duplicate=True, ignore_mandatory=True)
 
         else:
             for category_name in existing_category_list:
@@ -71,7 +67,7 @@ def update_existing_tax_withholding_category(category_doc, category_name, compan
     else:
         accounts = category_doc.get("accounts")
         if accounts:
-            doc.append("accounts", accounts[0])
+            doc.extend("accounts", accounts)
 
     # add rates if not present for the dates
     largest_date = None
@@ -87,6 +83,9 @@ def update_existing_tax_withholding_category(category_doc, category_name, compan
             continue
 
         doc.append("rates", cat_row)
+
+    # accounts table is mandatory
+    doc.flags.ignore_mandatory = True
 
     doc.save()
 

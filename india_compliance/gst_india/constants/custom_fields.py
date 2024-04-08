@@ -153,7 +153,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "gst_breakup_table",
             "label": "GST Breakup Table",
-            "fieldtype": "Long Text",
+            "fieldtype": "Text Editor",
             "insert_after": "section_gst_breakup",
             "is_virtual": 1,
             "read_only": 1,
@@ -258,7 +258,7 @@ CUSTOM_FIELDS = {
         {
             "fieldname": "gst_breakup_table",
             "label": "GST Breakup Table",
-            "fieldtype": "Long Text",
+            "fieldtype": "Text Editor",
             "insert_after": "section_gst_breakup",
             "is_virtual": 1,
             "read_only": 1,
@@ -933,7 +933,7 @@ E_INVOICE_FIELDS = {
             "label": "e-Invoice Status",
             "fieldtype": "Select",
             "insert_after": "status",
-            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable",
+            "options": "\nPending\nGenerated\nAuto-Retry\nCancelled\nManually Cancelled\nFailed\nNot Applicable\nPending Cancellation",
             "default": None,
             "hidden": 1,
             "no_copy": 1,
