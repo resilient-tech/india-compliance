@@ -64,7 +64,7 @@ def get_columns(filters):
                     "label": _("No. of records"),
                     "fieldname": "no_of_records",
                     "width": "120",
-                    "fieldtype": "Int",
+                    "fieldtype": "HTML",
                 },
                 {
                     "label": _("Taxable Value"),
