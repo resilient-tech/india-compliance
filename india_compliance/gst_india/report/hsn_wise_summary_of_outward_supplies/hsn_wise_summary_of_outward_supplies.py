@@ -7,7 +7,7 @@ import json
 import frappe
 from frappe import _
 from frappe.model.meta import get_field_precision
-from frappe.utils import cstr, flt, getdate
+from frappe.utils import flt, getdate
 import erpnext
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type, get_gst_uom
@@ -349,7 +349,6 @@ def download_json_file():
 
 def get_hsn_wise_json_data(filters, report_data):
     filters = frappe._dict(filters)
-    gst_accounts = get_gst_accounts_by_type(filters.company, "Output")
     data = []
     count = 1
 
@@ -372,21 +371,10 @@ def get_hsn_wise_json_data(filters, report_data):
         if hsn_description := hsn.get("description"):
             row["desc"] = hsn_description[:30]
 
-        row["iamt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("igst_account"))), 0.0), 2
-        )
-
-        row["camt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("cgst_account"))), 0.0), 2
-        )
-
-        row["samt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("sgst_account"))), 0.0), 2
-        )
-
-        row["csamt"] += flt(
-            hsn.get(frappe.scrub(cstr(gst_accounts.get("cess_account"))), 0.0), 2
-        )
+        row["iamt"] += flt(hsn.get("igst_account"), 2)
+        row["camt"] += flt(hsn.get("cgst_account"), 2)
+        row["samt"] += flt(hsn.get("sgst_account"), 2)
+        row["csamt"] += flt(hsn.get("cess_account"), 2)
 
         data.append(row)
         count += 1
