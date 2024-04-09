@@ -1,6 +1,6 @@
 {
  "aggregate_function_based_on": "",
- "color": "#e02f2f",
+ "color": "#EC864B",
  "creation": "2023-08-04 11:30:55.485885",
  "docstatus": 0,
  "doctype": "Number Card",
@@ -12,7 +12,7 @@
  "is_public": 1,
  "is_standard": 1,
  "label": "Pending e-Waybills",
- "modified": "2023-10-12 17:16:39.286029",
+ "modified": "2024-04-09 11:46:27.074636",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Pending e-Waybill",
