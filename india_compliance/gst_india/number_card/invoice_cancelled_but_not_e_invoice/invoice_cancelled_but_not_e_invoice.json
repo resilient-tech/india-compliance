@@ -1,5 +1,6 @@
 {
  "aggregate_function_based_on": "",
+ "color": "#EC864B",
  "creation": "2023-07-25 18:33:55.452360",
  "docstatus": 0,
  "doctype": "Number Card",
@@ -12,7 +13,7 @@
  "is_standard": 1,
  "label": "Active e-Invoice, Cancelled Invoice",
  "method": "",
- "modified": "2024-02-23 11:37:11.634469",
+ "modified": "2024-04-09 11:46:37.126752",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Invoice Cancelled But Not e-Invoice",
