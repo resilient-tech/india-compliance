@@ -504,9 +504,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 **amount_fields,
             }
 
-        nne_invoices = {"Nil-Rated": set(), "Non-GST": set(), "Exempted": set()}
-        overlap_invoices = {"Nil-Rated": set(), "Non-GST": set(), "Exempted": set()}
-
         for row in invoices:
             category_key = summary[
                 row.get("invoice_sub_category", row["invoice_category"])
@@ -517,22 +514,35 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
             category_key["unique_records"].add(row.invoice_no)
 
-            if category_key["description"] in ["Nil-Rated", "Non-GST", "Exempted"]:
-                nne_invoices[category_key["description"]].add(row.invoice_no)
+        for category_key in summary.values():
+            category_key["no_of_records"] = len(category_key["unique_records"])
 
-        for row in summary.values():
-            for category in ["Nil-Rated", "Non-GST", "Exempted"]:
-                if row["description"] != category:
-                    overlap_invoices[category].update(
-                        nne_invoices[category].intersection(row["unique_records"])
-                    )
-
-        for row in summary.values():
-            row["no_of_records"] = len(row["unique_records"])
-
-            if row["description"] in ["Nil-Rated", "Non-GST", "Exempted"]:
-                row["no_of_records"] = (
-                    f"{row['no_of_records']} <span style='color: red;'>({len(overlap_invoices[row['description']])})</span>"
-                )
+        self.update_overlaping_invoice_summary(summary)
 
         return list(summary.values())
+
+    def update_overlaping_invoice_summary(self, summary):
+        nil_exempt_non_gst = ("Nil-Rated", "Exempted", "Non-GST")
+
+        # Get Unique Taxable Invoices
+        unique_invoices = set()
+        for category, row in summary.items():
+            if category in nil_exempt_non_gst:
+                continue
+
+            unique_invoices.update(row["unique_records"])
+
+        # Get Overlaping Invoices
+        overlaping_invoices = set()
+        for category in nil_exempt_non_gst:
+            category_invoices = summary[category]["unique_records"]
+
+            overlaping_invoices.update(category_invoices.intersection(unique_invoices))
+            unique_invoices.update(category_invoices)
+
+        # Update Summary
+        if overlaping_invoices:
+            summary["Overlaping Invoices"] = {
+                "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST",
+                "no_of_records": -len(overlaping_invoices),
+            }
