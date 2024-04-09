@@ -124,10 +124,14 @@ def validate_item_wise_tax_detail(doc, gst_accounts):
         return
 
     item_taxable_values = defaultdict(float)
+    item_qty_map = defaultdict(float)
+
+    cess_non_advol_account = get_gst_accounts_by_tax_type(doc.company, "cess_non_advol")
 
     for row in doc.items:
         item_key = row.item_code or row.item_name
         item_taxable_values[item_key] += row.taxable_value
+        item_qty_map[item_key] += row.qty
 
     for row in doc.taxes:
         if row.account_head not in gst_accounts:
@@ -150,15 +154,25 @@ def validate_item_wise_tax_detail(doc, gst_accounts):
 
             # Sales Invoice is created with manual tax amount. So, when a sales return is created,
             # the tax amount is not recalculated, causing the issue.
-            item_taxable_value = item_taxable_values.get(item_name, 0)
-            tax_difference = abs(item_taxable_value * tax_rate / 100 - tax_amount)
+
+            is_cess_non_advol = row.account_head in cess_non_advol_account
+            multiplier = (
+                item_qty_map.get(item_name, 0)
+                if is_cess_non_advol
+                else item_taxable_values.get(item_name, 0) / 100
+            )
+            tax_difference = abs(multiplier * tax_rate - tax_amount)
 
             if tax_difference > 1:
+                correct_charge_type = (
+                    "On Item Quantity" if is_cess_non_advol else "On Net Total"
+                )
+
                 frappe.throw(
                     _(
                         "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
-                        " is incorrect. Try setting the Charge Type to On Net Total."
-                    ).format(row.idx, tax_amount, bold(item_name))
+                        " is incorrect. Try setting the Charge Type to {3}"
+                    ).format(row.idx, tax_amount, bold(item_name), correct_charge_type)
                 )
 
 
@@ -452,12 +466,12 @@ def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, ta
         )
 
     if (
-        tax_row.charge_type != "On Item Quantity"
+        tax_row.charge_type not in ["On Item Quantity", "Actual"]
         and tax_row.account_head in cess_non_advol_accounts
     ):
         frappe.throw(
             _(
-                "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
+                "Row #{0}: Charge Type must be <strong>On Item Quantity / Actual</strong>"
                 " as it is a Cess Non Advol Account"
             ).format(tax_row.idx),
             title=_("Invalid Charge Type"),
