@@ -517,4 +517,32 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         for category_key in summary.values():
             category_key["no_of_records"] = len(category_key["unique_records"])
 
+        self.update_overlaping_invoice_summary(summary)
+
         return list(summary.values())
+
+    def update_overlaping_invoice_summary(self, summary):
+        nil_exempt_non_gst = ("Nil-Rated", "Exempted", "Non-GST")
+
+        # Get Unique Taxable Invoices
+        unique_invoices = set()
+        for category, row in summary.items():
+            if category in nil_exempt_non_gst:
+                continue
+
+            unique_invoices.update(row["unique_records"])
+
+        # Get Overlaping Invoices
+        overlaping_invoices = set()
+        for category in nil_exempt_non_gst:
+            category_invoices = summary[category]["unique_records"]
+
+            overlaping_invoices.update(category_invoices.intersection(unique_invoices))
+            unique_invoices.update(category_invoices)
+
+        # Update Summary
+        if overlaping_invoices:
+            summary["Overlaping Invoices"] = {
+                "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST",
+                "no_of_records": -len(overlaping_invoices),
+            }
