@@ -4,6 +4,9 @@
 frappe.provide("india_compliance");
 
 const DOCTYPE = "GSTR-1 Beta";
+const GSTR1_Categories = {
+    NIL_EXEMPT: "Nil-Rated, Exempted, Non-GST",
+}
 const GSTR1_SubCategories = {
     B2B_REGULAR: "B2B Regular",
     B2B_REVERSE_CHARGE: "B2B Reverse Charge",
@@ -414,6 +417,11 @@ class TabManager {
         }
 
         this.set_title(category);
+    }
+
+    get_row(data, category) {
+        if (category == "Nil-Rated, Exempted, Non-GST")
+            self.get_data_for_nil_exempted_non_gst(data);
     }
 
     // SETUP
@@ -919,6 +927,9 @@ class TabManager {
 
 class BooksTab extends TabManager {
     CATEGORY_COLUMNS = {
+        [GSTR1_Categories.NIL_EXEMPT]: this.get_document_columns,
+
+        // SUBCATEGORIES
         [GSTR1_SubCategories.B2B_REGULAR]: this.get_invoice_columns,
         [GSTR1_SubCategories.B2B_REVERSE_CHARGE]: this.get_invoice_columns,
         [GSTR1_SubCategories.SEZWP]: this.get_invoice_columns,
@@ -962,6 +973,18 @@ class BooksTab extends TabManager {
                 frappe.msgprint(r.message);
             },
         });
+    }
+
+    // DATA
+
+    get_data_for_nil_exempted_non_gst(data) {
+        const out = []
+        [GSTR1_SubCategories.NIL_RATED, GSTR1_SubCategories.EXEMPTED, GSTR1_SubCategories.NON_GST].forEach(category => {
+            if (data[category]) {
+                out.concat(data[category])
+            }
+        })
+        return out
     }
 
     // COLUMNS
@@ -1106,6 +1129,10 @@ class FiledTab extends TabManager {
             },
             ...this.get_tax_columns(),
         ];
+    }
+
+    get_nil_exempt_columns() {
+
     }
 
     get_nil_rated_columns() {
