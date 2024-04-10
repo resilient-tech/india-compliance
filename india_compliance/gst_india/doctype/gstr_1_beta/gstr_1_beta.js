@@ -4,7 +4,7 @@
 frappe.provide("india_compliance");
 
 const DOCTYPE = "GSTR-1 Beta";
-const GSTR_1_SUB_CATEGORIES = {
+const GSTR1_SubCategories = {
     B2B_REGULAR: "B2B Regular",
     B2B_REVERSE_CHARGE: "B2B Reverse Charge",
     SEZWP: "SEZ with Payment of Tax",
@@ -23,6 +23,39 @@ const GSTR_1_SUB_CATEGORIES = {
     TXP: "Advances Adjusted",
     HSN: "HSN Summary",
     DOC_ISSUE: "Document Issued",
+};
+
+const GSTR1_DataFields = {
+    TRANSACTION_TYPE: "transaction_type",
+    CUST_GSTIN: "customer_gstin",
+    CUST_NAME: "customer_name",
+    DOC_DATE: "document_date",
+    DOC_NUMBER: "document_number",
+    DOC_TYPE: "document_type",
+    DOC_VALUE: "document_value",
+    POS: "place_of_supply",
+    REVERSE_CHARGE: "reverse_charge",
+    TAXABLE_VALUE: "total_taxable_value",
+    TAX_RATE: "tax_rate",
+    IGST: "total_igst_amount",
+    CGST: "total_cgst_amount",
+    SGST: "total_sgst_amount",
+    CESS: "total_cess_amount",
+
+    SHIPPING_BILL_NUMBER: "shipping_bill_number",
+    SHIPPING_BILL_DATE: "shipping_bill_date",
+    SHIPPING_PORT_CODE: "shipping_port_code",
+
+    HSN_CODE: "hsn_code",
+    DESCRIPTION: "description",
+    UOM: "uom",
+    TOTAL_QUANTITY: "total_quantity",
+
+    FROM_SR: "from_sr_no",
+    TO_SR: "to_sr_no",
+    TOTAL_COUNT: "total_count",
+    DRAFT_COUNT: "draft_count",
+    CANCELLED_COUNT: "cancelled_count",
 };
 
 frappe.ui.form.on(DOCTYPE, {
@@ -213,8 +246,8 @@ class GSTR1 {
             return;
         }
 
-        const tab_name = (this.status === "Filed") ? "Filed" : "File";
-        const color = (this.status === "Filed") ? "green" : "orange";
+        const tab_name = this.status === "Filed" ? "Filed" : "File";
+        const color = this.status === "Filed" ? "green" : "orange";
 
         this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
         this.frm.page.set_indicator(this.status, color);
@@ -251,7 +284,7 @@ class GSTR1 {
                 label: "Description",
                 fieldname: "description",
                 fieldtype: "Autocomplete",
-                options: Object.values(GSTR_1_SUB_CATEGORIES),
+                options: Object.values(GSTR1_SubCategories),
             },
         ];
 
@@ -302,7 +335,7 @@ class GSTR1 {
                 {
                     fieldname: "description",
                     fieldtype: "Autocomplete",
-                    options: Object.values(GSTR_1_SUB_CATEGORIES),
+                    options: Object.values(GSTR1_SubCategories),
                     label: __("Category"),
                 },
             ],
@@ -321,7 +354,7 @@ class GSTR1 {
 }
 
 class TabManager {
-    CATEGORY_COLUMNS = {}
+    CATEGORY_COLUMNS = {};
     DEFAULT_SUMMARY = {
         description: "",
         total_docs: 0,
@@ -359,8 +392,9 @@ class TabManager {
 
         if (view === "Details") {
             const columns_func = this.CATEGORY_COLUMNS[category];
-            console.log(columns_func);
-            const columns = columns_func ? columns_func() : this.get_b2b_columns();
+            if (!columns_func) return;
+
+            const columns = columns_func.call(this);
             this.setup_datatable(this.wrapper, this.data[category], columns);
 
         } else if (view === "Summary") {
@@ -451,7 +485,7 @@ class TabManager {
 
     // DATA
     summarize_data() {
-        Object.values(GSTR_1_SUB_CATEGORIES).forEach(category => {
+        Object.values(GSTR1_SubCategories).forEach(category => {
             this.summary[category] = { ...this.DEFAULT_SUMMARY, description: category };
         });
         console.log(this.data)
@@ -483,55 +517,427 @@ class TabManager {
                 fieldname: "total_docs",
                 width: 100,
                 align: "center",
-                _value: (...args) => format_number(args[0]),
             },
             {
-                name: "Taxable Amomunt",
-                fieldname: "total_taxable_value",
+                name: "Taxable Value",
+                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
                 width: 180,
                 align: "center",
-                _value: (...args) => format_number(args[0]),
             },
             {
                 name: "IGST",
-                fieldname: "total_igst_amount",
+                fieldname: GSTR1_DataFields.IGST,
                 width: 150,
                 align: "center",
-                _value: (...args) => format_number(args[0]),
             },
             {
                 name: "CGST",
-                fieldname: "total_cgst_amount",
+                fieldname: GSTR1_DataFields.CGST,
                 width: 150,
                 align: "center",
-                _value: (...args) => format_number(args[0]),
             },
             {
                 name: "SGST",
-                fieldname: "total_sgst_amount",
+                fieldname: GSTR1_DataFields.SGST,
                 width: 150,
                 align: "center",
-                _value: (...args) => format_number(args[0]),
             },
             {
                 name: "CESS",
-                fieldname: "total_cess_amount",
+                fieldname: GSTR1_DataFields.CESS,
                 width: 150,
                 align: "center",
-                _value: (...args) => format_number(args[0]),
             },
         ];
     }
 
-    get_b2b_columns() { }
+    get_invoice_columns() {
+        return [
+            {
+                name: "Invoice Date",
+                fieldname: GSTR1_DataFields.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
+            },
+            {
+                name: "Invoice Number",
+                fieldname: GSTR1_DataFields.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 130,
+            },
+            {
+                name: "Customer GSTIN",
+                fieldname: GSTR1_DataFields.CUST_GSTIN,
+                width: 160,
+            },
+            {
+                name: "Customer Name",
+                fieldname: GSTR1_DataFields.CUST_NAME,
+                width: 200,
+            },
+            {
+                name: "Invoice Type",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 150,
+            },
+            {
+                name: "Reverse Charge",
+                fieldname: GSTR1_DataFields.REVERSE_CHARGE,
+                align: "center",
+                width: 120,
+            },
+            ...this.get_tax_columns(),
+            {
+                name: "Invoice Value",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+    get_export_columns() {
+        return [
+            {
+                name: "Invoice Date",
+                fieldname: GSTR1_DataFields.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
+            },
+            {
+                name: "Invoice Number",
+                fieldname: GSTR1_DataFields.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 130,
+            },
+            {
+                name: "Invoice Type",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 150,
+            },
+            {
+                name: "Shipping Bill Number",
+                fieldname: GSTR1_DataFields.SHIPPING_BILL_NUMBER,
+                width: 150,
+            },
+            {
+                name: "Shipping Bill Date",
+                fieldname: GSTR1_DataFields.SHIPPING_BILL_DATE,
+                width: 120,
+            },
+            {
+                name: "Port Code",
+                fieldname: GSTR1_DataFields.SHIPPING_PORT_CODE,
+                width: 100,
+            },
+            ...this.get_igst_tax_columns(),
+            {
+                name: "Invoice Value",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+    get_document_columns() {
+        // `Transaction Type` + Invoice Columns with `Document` as title instead of `Invoice`
+        return [
+            {
+                name: "Transaction Type",
+                fieldname: GSTR1_DataFields.TRANSACTION_TYPE,
+                width: 100,
+            },
+            {
+                name: "Document Date",
+                fieldname: GSTR1_DataFields.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
+            },
+            {
+                name: "Document Number",
+                fieldname: GSTR1_DataFields.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 130,
+            },
+            {
+                name: "Customer GSTIN",
+                fieldname: GSTR1_DataFields.CUST_GSTIN,
+                width: 160,
+            },
+            {
+                name: "Customer Name",
+                fieldname: GSTR1_DataFields.CUST_NAME,
+                width: 200,
+            },
+            {
+                name: "Document Type",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 150,
+            },
+            {
+                name: "Reverse Charge",
+                fieldname: GSTR1_DataFields.REVERSE_CHARGE,
+                align: "center",
+                width: 120,
+            },
+            ...this.get_tax_columns(),
+            {
+                name: "Document Value",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+    get_hsn_columns() {
+        return [
+            {
+                name: "HSN Code",
+                fieldname: GSTR1_DataFields.HSN_CODE,
+                width: 150,
+            },
+            {
+                name: "Description",
+                fieldname: GSTR1_DataFields.DESCRIPTION,
+                width: 300,
+            },
+            {
+                name: "UOM",
+                fieldname: GSTR1_DataFields.UOM,
+                width: 100,
+            },
+            {
+                name: "Total Quantity",
+                fieldname: GSTR1_DataFields.TOTAL_QUANTITY,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "Tax Rate",
+                fieldname: GSTR1_DataFields.TAX_RATE,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "Taxable Value",
+                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "IGST",
+                fieldname: GSTR1_DataFields.IGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CGST",
+                fieldname: GSTR1_DataFields.CGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "SGST",
+                fieldname: GSTR1_DataFields.SGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CESS",
+                fieldname: GSTR1_DataFields.CESS,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "Total Value",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+    get_documents_issued_columns() {
+        return [
+            {
+                name: "Document Type",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 200,
+            },
+            {
+                name: "Sr No From",
+                fieldname: GSTR1_DataFields.FROM_SR,
+                width: 150,
+            },
+            {
+                name: "Sr No To",
+                fieldname: GSTR1_DataFields.TO_SR,
+                width: 150,
+            },
+            {
+                name: "Total Count",
+                fieldname: GSTR1_DataFields.TOTAL_COUNT,
+                width: 120,
+            },
+            {
+                name: "Draft Count",
+                fieldname: GSTR1_DataFields.DRAFT_COUNT,
+                width: 120,
+            },
+            {
+                name: "Cancelled Count",
+                fieldname: GSTR1_DataFields.CANCELLED_COUNT,
+                width: 120,
+            },
+        ];
+    }
+
+    get_advances_received_columns() {
+        return [
+            ...this.get_tax_columns(),
+            {
+                name: "Amount Received",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+    get_advances_adjusted_columns() {
+        [
+            ...this.get_tax_columns(),
+            {
+                name: "Amount Adjusted",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+    // Common Columns
+
+    get_tax_columns() {
+        return [
+            {
+                name: "Place of Supply",
+                fieldname: GSTR1_DataFields.POS,
+                width: 150,
+            },
+            {
+                name: "Tax Rate",
+                fieldname: GSTR1_DataFields.TAX_RATE,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "Taxable Value",
+                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "IGST",
+                fieldname: GSTR1_DataFields.IGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CGST",
+                fieldname: GSTR1_DataFields.CGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "SGST",
+                fieldname: GSTR1_DataFields.SGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CESS",
+                fieldname: GSTR1_DataFields.CESS,
+                fieldtype: "Float",
+                width: 100,
+            },]
+
+    }
+
+    get_igst_tax_columns(with_pos) {
+        columns = []
+
+        if (with_pos)
+            columns.push({
+                name: "Place of Supply",
+                fieldname: GSTR1_DataFields.POS,
+                width: 150,
+            });
+
+        columns.push(
+            {
+                name: "Tax Rate",
+                fieldname: GSTR1_DataFields.TAX_RATE,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "Taxable Value",
+                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                fieldtype: "Float",
+                width: 150,
+            },
+            {
+                name: "IGST",
+                fieldname: GSTR1_DataFields.IGST,
+                fieldtype: "Float",
+                width: 100,
+            },
+            {
+                name: "CESS",
+                fieldname: GSTR1_DataFields.CESS,
+                fieldtype: "Float",
+                width: 100,
+            },
+        )
+
+        return columns
+
+    }
 }
 
 class BooksTab extends TabManager {
     CATEGORY_COLUMNS = {
-        "B2B Regular": this.get_invoice_columns,
-        "B2B Reverse Charge": this.get_invoice_columns,
-        "SEZ with Payment of Tax": this.get_invoice_columns,
-        "HSN Summary": this.get_hsn_columns,
+        [GSTR1_SubCategories.B2B_REGULAR]: this.get_invoice_columns,
+        [GSTR1_SubCategories.B2B_REVERSE_CHARGE]: this.get_invoice_columns,
+        [GSTR1_SubCategories.SEZWP]: this.get_invoice_columns,
+        [GSTR1_SubCategories.SEZWOP]: this.get_invoice_columns,
+        [GSTR1_SubCategories.DE]: this.get_invoice_columns,
+
+        [GSTR1_SubCategories.EXPWP]: this.get_export_columns,
+        [GSTR1_SubCategories.EXPWOP]: this.get_export_columns,
+
+        [GSTR1_SubCategories.B2CL]: this.get_invoice_columns,
+        [GSTR1_SubCategories.B2CS]: this.get_document_columns,
+
+        [GSTR1_SubCategories.NIL_RATED]: this.get_document_columns,
+        [GSTR1_SubCategories.EXEMPTED]: this.get_document_columns,
+        [GSTR1_SubCategories.NON_GST]: this.get_document_columns,
+
+        [GSTR1_SubCategories.CDNR]: this.get_document_columns,
+        [GSTR1_SubCategories.CDNUR]: this.get_document_columns,
+
+        [GSTR1_SubCategories.AT]: this.get_advances_received_columns,
+        [GSTR1_SubCategories.TXP]: this.get_advances_adjusted_columns,
+
+        [GSTR1_SubCategories.HSN]: this.get_hsn_columns,
+
+        [GSTR1_SubCategories.DOC_ISSUE]: this.get_documents_issued_columns,
     };
 
     setup_actions() {
@@ -554,120 +960,239 @@ class BooksTab extends TabManager {
 
     // COLUMNS
 
-    get_invoice_columns() {
+    get_advances_received_columns() {
         return [
             {
-                name: "Invoice Number",
-                fieldname: "invoice_number",
-                width: 150,
+                name: "Advance Date",
+                fieldname: GSTR1_DataFields.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
             },
             {
-                name: "Customer GSTIN",
-                fieldname: "customer_gstin",
-                width: 150,
+                name: "Payment Entry Number",
+                fieldname: GSTR1_DataFields.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Payment Entry",
+                width: 130,
             },
             {
-                name: "Invoice Value",
-                fieldname: "invoice_value",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
+                name: "Customer Name",
+                fieldname: GSTR1_DataFields.CUST_NAME,
+                width: 200,
             },
-            {
-                name: "Taxable Value",
-                fieldname: "taxable_value",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "IGST",
-                fieldname: "igst",
-                width: 100,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "CGST",
-                fieldname: "cgst",
-                width: 100,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "SGST",
-                fieldname: "sgst",
-                width: 100,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
+            ...super.get_advances_received_columns(),
         ];
     }
 
-    get_hsn_columns() {
+    get_advances_adjusted_columns() {
         return [
             {
-                name: "HSN Code",
-                fieldname: "hsn_code",
+                name: "Adjustment Date",
+                fieldname: GSTR1_DataFields.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
+            },
+            {
+                name: "Adjustment Entry Number",
+                fieldname: GSTR1_DataFields.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 130,
+            },
+            {
+                name: "Customer Name",
+                fieldname: GSTR1_DataFields.CUST_NAME,
+                width: 200,
+            },
+            ...this.get_tax_columns(),
+            {
+                name: "Amount Adjusted",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
                 width: 150,
-            },
-            {
-                name: "Description",
-                fieldname: "description",
-                width: 300,
-            },
-            {
-                name: "UQC",
-                fieldname: "uqc",
-                width: 100,
-            },
-            {
-                name: "Total Quantity",
-                fieldname: "total_quantity",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "Total Value",
-                fieldname: "total_value",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "Total Taxable Value",
-                fieldname: "total_taxable_value",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "Total Integrated Tax",
-                fieldname: "total_igst",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "Total Central Tax",
-                fieldname: "total_cgst",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
-            },
-            {
-                name: "Total State/UT Tax",
-                fieldname: "total_sgst",
-                width: 150,
-                align: "center",
-                _value: (...args) => format_number(args[0]),
             },
         ];
     }
 }
 
-class ReconcileTab extends TabManager {
+class FiledTab extends TabManager {
+    CATEGORY_COLUMNS = {
+        [GSTR1_SubCategories.B2B_REGULAR]: this.get_invoice_columns,
+        [GSTR1_SubCategories.B2B_REVERSE_CHARGE]: this.get_invoice_columns,
+        [GSTR1_SubCategories.SEZWP]: this.get_invoice_columns,
+        [GSTR1_SubCategories.SEZWOP]: this.get_invoice_columns,
+        [GSTR1_SubCategories.DE]: this.get_invoice_columns,
+
+        [GSTR1_SubCategories.EXPWP]: this.get_export_columns,
+        [GSTR1_SubCategories.EXPWOP]: this.get_export_columns,
+
+        [GSTR1_SubCategories.B2CL]: this.get_b2cl_columns,
+        [GSTR1_SubCategories.B2CS]: this.get_b2cs_columns,
+
+        [GSTR1_SubCategories.NIL_RATED]: this.get_nil_rated_columns,
+        [GSTR1_SubCategories.EXEMPTED]: this.get_exempted_columns,
+        [GSTR1_SubCategories.NON_GST]: this.get_non_gst_columns,
+
+        [GSTR1_SubCategories.CDNR]: this.get_document_columns,
+        [GSTR1_SubCategories.CDNUR]: this.get_cdnur_columns,
+
+        [GSTR1_SubCategories.AT]: this.get_advances_received_columns,
+        [GSTR1_SubCategories.TXP]: this.get_advances_adjusted_columns,
+
+        [GSTR1_SubCategories.HSN]: this.get_hsn_columns,
+        [GSTR1_SubCategories.DOC_ISSUE]: this.get_documents_issued_columns,
+    };
+
+    setup_actions() {
+        this.add_tab_custom_button("Download Excel", () =>
+            this.download_filed_as_excel()
+        );
+
+        console.log(this.status);
+        if (this.status === "Filed") return;
+
+        this.add_tab_custom_button("Download JSON", () => console.log("hi"));
+        this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
+    }
+
+    // ACTIONS
+
+    download_filed_as_excel() { }
+
+    // COLUMNS
+
+    get_b2cl_columns() {
+        return [
+            {
+                name: "Invoice Date",
+                fieldname: GSTR1_DataFields.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
+            },
+            {
+                name: "Invoice Number",
+                fieldname: GSTR1_DataFields.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 130,
+            },
+            {
+                name: "Customer Name",
+                fieldname: GSTR1_DataFields.CUST_NAME,
+                width: 200,
+            },
+            ...this.get_igst_tax_columns(true),
+            {
+                name: "Invoice Value",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+    get_b2cs_columns() {
+        return [
+            {
+                name: "Invoice Type",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 100,
+            },
+            ...this.get_tax_columns(),
+        ];
+    }
+
+    get_nil_rated_columns() {
+        return [
+            {
+                name: "Description",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 200,
+            },
+            {
+                name: "Nil Rated Supplies",
+                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ]
+    }
+
+    get_exempted_columns() {
+        return [
+            {
+                name: "Description",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 200,
+            },
+            {
+                name: "Exempted Supplies",
+                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ]
+    }
+
+    get_non_gst_columns() {
+        return [
+            {
+                name: "Description",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 200,
+            },
+            {
+                name: "Non-GST Supplies",
+                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ]
+    }
+
+    get_cdnur_columns() {
+        return [
+            {
+                name: "Transaction Type",
+                fieldname: GSTR1_DataFields.TRANSACTION_TYPE,
+                width: 100,
+            },
+            {
+                name: "Document Date",
+                fieldname: GSTR1_DataFields.DOC_DATE,
+                fieldtype: "Date",
+                width: 120,
+            },
+            {
+                name: "Document Number",
+                fieldname: GSTR1_DataFields.DOC_NUMBER,
+                fieldtype: "Link",
+                options: "Sales Invoice",
+                width: 130,
+            },
+            {
+                name: "Customer Name",
+                fieldname: GSTR1_DataFields.CUST_NAME,
+                width: 200,
+            },
+            {
+                name: "Document Type",
+                fieldname: GSTR1_DataFields.DOC_TYPE,
+                width: 150,
+            },
+            ...this.get_igst_tax_columns(true),
+            {
+                name: "Document Value",
+                fieldname: GSTR1_DataFields.DOC_VALUE,
+                fieldtype: "Currency",
+                width: 150,
+            },
+        ];
+    }
+
+}
+
+class ReconcileTab extends FiledTab {
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
             this.download_reconcile_as_excel()
@@ -682,20 +1207,6 @@ class ReconcileTab extends TabManager {
                 frappe.msgprint(r.message);
             },
         });
-    }
-}
-
-class FiledTab extends TabManager {
-    setup_actions() {
-        this.add_tab_custom_button("Download Excel", () =>
-            this.download_filed_as_excel()
-        );
-
-        console.log(this.status);
-        if (this.status === "Filed") return;
-
-        this.add_tab_custom_button("Download JSON", () => console.log("hi"));
-        this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
     }
 }
 
