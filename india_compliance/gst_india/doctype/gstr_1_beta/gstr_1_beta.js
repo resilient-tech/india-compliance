@@ -234,6 +234,7 @@ class GSTR1 {
         this.TABS.forEach(tab => {
             const wrapper = this.tab_group.get_field(`${tab.name}_html`).$wrapper;
             this.tabs[`${tab.name}_tab`].tabmanager = new tab._TabManager(
+                this,
                 wrapper,
                 this.apply_filters
             );
@@ -365,7 +366,8 @@ class TabManager {
         total_cess_amount: 0,
     };
 
-    constructor(wrapper, callback) {
+    constructor(instance, wrapper, callback) {
+        this.instance = instance;
         this.wrapper = wrapper;
         this.callback = callback;
         this.reset_data();
@@ -440,9 +442,13 @@ class TabManager {
             columns: _columns,
             data: _data,
             options: {
-                cellHeight: 55,
+                cellHeight: this.instance.active_view === "Summary" ? 55 : 35,
+                showTotalRow: true,
             },
             no_data_message: __("No data found"),
+            hooks: {
+                columnTotal: frappe.utils.report_column_total,
+            },
         });
 
         this.setup_datatable_listeners();
