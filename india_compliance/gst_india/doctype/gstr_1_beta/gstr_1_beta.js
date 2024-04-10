@@ -442,8 +442,8 @@ class TabManager {
             columns: _columns,
             data: _data,
             options: {
-                cellHeight: this.instance.active_view === "Summary" ? 55 : 35,
                 showTotalRow: true,
+                checkboxColumn: false,
             },
             no_data_message: __("No data found"),
             hooks: {
