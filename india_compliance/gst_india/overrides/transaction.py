@@ -1311,9 +1311,6 @@ def before_print(doc, method=None, print_settings=None):
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
-    if doc.get("group_same_items"):
-        ItemGSTDetails().update(doc)
-
     set_gst_breakup(doc)
 
 
