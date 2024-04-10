@@ -11,19 +11,6 @@ from frappe.utils import getdate
 
 B2C_LIMIT = 2_50_000
 
-
-class EnhancedEnum(Enum):
-    @classmethod
-    def get(cls, value):
-        return next(
-            (member for member in cls.__members__.values() if member.value == value),
-            None,
-        )
-
-    def __str__(self):
-        return str(self.value)
-
-
 # TODO: Enum for Invoice Type
 
 
@@ -537,7 +524,6 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         return filtered_invoices
 
     def get_overview(self):
-        # return list(self.get_sub_category_summary().values())
         final_summary = []
         sub_category_summary = self.get_sub_category_summary()
 
@@ -593,7 +579,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
         return summary
 
-    def update_overlaping_invoice_summary(self, summary, final_summary):
+    def update_overlaping_invoice_summary(self, sub_category_summary, final_summary):
         nil_exempt_non_gst = (
             GSTR1_SubCategories.NIL_RATED.value,
             GSTR1_SubCategories.EXEMPTED.value,
@@ -602,7 +588,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
         # Get Unique Taxable Invoices
         unique_invoices = set()
-        for category, row in summary.items():
+        for category, row in sub_category_summary.items():
             if category in nil_exempt_non_gst:
                 continue
 
@@ -611,7 +597,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         # Get Overlaping Invoices
         overlaping_invoices = set()
         for category in nil_exempt_non_gst:
-            category_invoices = summary[category]["unique_records"]
+            category_invoices = sub_category_summary[category]["unique_records"]
 
             overlaping_invoices.update(category_invoices.intersection(unique_invoices))
             unique_invoices.update(category_invoices)

@@ -41,9 +41,7 @@ def get_data(filters):
         invoices = _class.get_invoices_for_hsn_wise_summary()
 
     if filters.summary_by == "Overview":
-        overview = _class.get_overview()
-        overview.extend([{}, calculate_total(overview)])
-        return overview
+        return _class.get_overview()
 
     if filters.invoice_category:
         return _class.get_filtered_invoices(
@@ -53,31 +51,6 @@ def get_data(filters):
     _class.process_invoices(invoices)
 
     return invoices
-
-
-def calculate_total(data):
-    value_fields = [
-        "no_of_records",
-        "taxable_value",
-        "igst_amount",
-        "cgst_amount",
-        "sgst_amount",
-        "cess_amount",
-    ]
-    total_row = {
-        "description": _("Total"),
-        "indent": 0,
-        **{field: 0 for field in value_fields},
-    }
-
-    for row in data:
-        if row.get("indent") == 1:
-            continue
-
-        for field in value_fields:
-            total_row[field] += row.get(field, 0)
-
-    return total_row
 
 
 def get_columns(filters):

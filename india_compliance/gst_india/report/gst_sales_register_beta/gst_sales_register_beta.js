@@ -1,14 +1,20 @@
 // Copyright (c) 2024, Resilient Tech and contributors
 // For license information, please see license.txt
 const INVOICE_TYPE = {
-    "B2B, SEZ, DE": ["B2B Regular", "B2B Reverse Charge", "SEZWP", "SEZWOP", "Deemed Exports"],
+    "B2B, SEZ, DE": [
+        "B2B Regular",
+        "B2B Reverse Charge",
+        "SEZWP",
+        "SEZWOP",
+        "Deemed Exports",
+    ],
     "B2C (Large)": ["B2C (Large)"],
-    "Exports": ["EXPWP", "EXPWOP"],
+    Exports: ["EXPWP", "EXPWOP"],
     "B2C (Others)": ["B2C (Others)"],
     "Nil-Rated, Exempted, Non-GST": ["Nil-Rated", "Exempted", "Non-GST"],
     "Credit/Debit Notes (Registered)": ["CDNR"],
     "Credit/Debit Notes (Unregistered)": ["CDNUR"],
-}
+};
 
 frappe.query_reports["GST Sales Register Beta"] = {
     onload: set_sub_category_options,
@@ -47,8 +53,11 @@ frappe.query_reports["GST Sales Register Beta"] = {
             fieldname: "date_range",
             label: __("Date Range"),
             fieldtype: "DateRange",
-            default: [india_compliance.last_month_start(), india_compliance.last_month_end()],
-            width: "80"
+            default: [
+                india_compliance.last_month_start(),
+                india_compliance.last_month_end(),
+            ],
+            width: "80",
         },
         {
             fieldtype: "Select",
@@ -61,19 +70,22 @@ frappe.query_reports["GST Sales Register Beta"] = {
             fieldtype: "Autocomplete",
             fieldname: "invoice_category",
             label: __("Invoice Category"),
-            options: "B2B, SEZ, DE\nB2C (Large)\nExports\nB2C (Others)\nNil-Rated, Exempted, Non-GST\nCredit/Debit Notes (Registered)\nCredit/Debit Notes (Unregistered)",
+            options:
+                "B2B, SEZ, DE\nB2C (Large)\nExports\nB2C (Others)\nNil-Rated, Exempted, Non-GST\nCredit/Debit Notes (Registered)\nCredit/Debit Notes (Unregistered)",
             on_change(report) {
-                report.set_filter_value('invoice_sub_category', "");
+                report.set_filter_value("invoice_sub_category", "");
                 set_sub_category_options(report);
             },
-            depends_on: 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"'
+            depends_on:
+                'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
         },
         {
             fieldtype: "Autocomplete",
             fieldname: "invoice_sub_category",
             label: __("Invoice Sub Category"),
-            depends_on: 'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"'
-        }
+            depends_on:
+                'eval:doc.summary_by=="Summary by HSN" || doc.summary_by=="Summary by Item"',
+        },
     ],
 
     formatter: (value, row, column, data, default_formatter) => {
@@ -89,24 +101,32 @@ frappe.query_reports["GST Sales Register Beta"] = {
 
 function set_sub_category_options(report) {
     const invoice_category = frappe.query_report.get_filter_value("invoice_category");
-    report.get_filter('invoice_sub_category').set_data(INVOICE_TYPE[invoice_category] || []);
+    report
+        .get_filter("invoice_sub_category")
+        .set_data(INVOICE_TYPE[invoice_category] || []);
 
     if (invoice_category && INVOICE_TYPE[invoice_category].length === 1) {
-        report.set_filter_value("invoice_sub_category", INVOICE_TYPE[invoice_category][0])
+        report.set_filter_value(
+            "invoice_sub_category",
+            INVOICE_TYPE[invoice_category][0]
+        );
     }
 }
 
-// Hide loading is called at the end of the report generation process `refresh` method
-frappe_hide_loading_screen = frappe.query_report.hide_loading_screen;
+frappe_report_column_total = frappe.utils.report_column_total;
 
-function custom_hide_loading_screen() {
-    frappe_hide_loading_screen.apply(frappe.query_report);
+// Override datatable hook for column total calculation
+frappe.utils.report_column_total = function (...args) {
+    const summary_by = frappe.query_report.get_filter_value("summary_by");
+    if (summary_by !== "Overview") return frappe_report_column_total.apply(this, args);
 
-    const report = frappe.query_report;
-    if (report.get_filter_value('summary_by') === "Overview")
-        report.$report.find('.dt-footer').hide();
-    else
-        report.$report.find('.dt-footer').show();
-}
+    const column_field = args[1].column.fieldname;
+    if (column_field === "description") return;
 
-frappe.query_report.hide_loading_screen = custom_hide_loading_screen;
+    const total = this.datamanager.data.reduce((acc, row) => {
+        if (row.indent !== 1) acc += row[column_field] || 0;
+        return acc;
+    }, 0);
+
+    return total;
+};
