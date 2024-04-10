@@ -325,7 +325,7 @@ class TabManager {
     DEFAULT_SUMMARY = {
         description: "",
         total_docs: 0,
-        total_taxable_amount: 0,
+        total_taxable_value: 0,
         total_igst_amount: 0,
         total_cgst_amount: 0,
         total_sgst_amount: 0,
@@ -454,11 +454,11 @@ class TabManager {
         Object.values(GSTR_1_SUB_CATEGORIES).forEach(category => {
             this.summary[category] = { ...this.DEFAULT_SUMMARY, description: category };
         });
-
+        console.log(this.data)
         Object.entries(this.data).forEach(([category, rows]) => {
             this.summary[category] = rows.reduce((accumulator, row) => {
                 accumulator.total_docs += 1;
-                accumulator.total_taxable_amount += row.total_taxable_amount || 0;
+                accumulator.total_taxable_value += row.total_taxable_value || 0;
                 accumulator.total_igst_amount += row.total_igst_amount || 0;
                 accumulator.total_cgst_amount += row.total_cgst_amount || 0;
                 accumulator.total_sgst_amount += row.total_sgst_amount || 0;
@@ -487,7 +487,7 @@ class TabManager {
             },
             {
                 name: "Taxable Amomunt",
-                fieldname: "total_taxable_amount",
+                fieldname: "total_taxable_value",
                 width: 180,
                 align: "center",
                 _value: (...args) => format_number(args[0]),
