@@ -1,13 +1,22 @@
 import re
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_to_date, getdate
 from frappe.utils.data import format_date
+from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
+    make_regional_gl_entries,
+)
+from erpnext.controllers.accounts_controller import update_gl_dict_with_regional_fields
+from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
+from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+    update_regional_gl_entries,
+)
 
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
+    create_purchase_invoice,
     create_sales_invoice,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
@@ -299,4 +308,75 @@ class TestTransactionData(FrappeTestCase):
             frappe.exceptions.ValidationError,
             re.compile(r"^(Row #.*Grouping of items is not possible.)$"),
             doc.submit,
+        )
+
+    @change_settings(
+        "GST Settings",
+        {"round_off_gst_values": 1},
+    )
+    def test_get_regional_round_off_accounts(self):
+
+        data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
+        self.assertListEqual(
+            data,
+            [
+                "Input Tax CGST - _TIRC",
+                "Input Tax SGST - _TIRC",
+                "Input Tax IGST - _TIRC",
+                "Output Tax CGST - _TIRC",
+                "Output Tax SGST - _TIRC",
+                "Output Tax IGST - _TIRC",
+                "Input Tax CGST RCM - _TIRC",
+                "Input Tax SGST RCM - _TIRC",
+                "Input Tax IGST RCM - _TIRC",
+            ],
+        )
+
+    @change_settings(
+        "GST Settings",
+        {"round_off_gst_values": 0},
+    )
+    def test_get_regional_round_off_accounts_with_round_off_unchecked(self):
+
+        data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
+        self.assertListEqual(
+            data,
+            [],
+        )
+
+    def test_update_gl_dict_with_regional_fields(self):
+
+        doc = frappe.get_doc(
+            {"doctype": "Sales Order", "company_gstin": "29AAHCM7727Q1ZI"}
+        )
+        gl_entry = {}
+        update_gl_dict_with_regional_fields(doc, gl_entry)
+
+        self.assertEqual(gl_entry.get("company_gstin", ""), "29AAHCM7727Q1ZI")
+
+    def test_make_regional_gl_entries(self):
+        pi = create_purchase_invoice()
+        pi._has_ineligible_itc_items = True
+
+        gl_entries = {"company_gstin": "29AAHCM7727Q1ZI"}
+        frappe.flags.through_repost_accounting_ledger = True
+
+        make_regional_gl_entries(gl_entries, pi)
+
+        frappe.flags.through_repost_accounting_ledger = False
+        self.assertEqual(pi._has_ineligible_itc_items, False)
+
+    def test_update_regional_gl_entries(self):
+        gl_entry = {"company_gstin": "29AAHCM7727Q1ZI"}
+        doc = frappe.get_doc(
+            {
+                "doctype": "Sales Order",
+                "is_opening": "Yes",
+                "company_gstin": "29AAHCM7727Q1ZI",
+            }
+        )
+        return_entry = update_regional_gl_entries(gl_entry, doc)
+        self.assertDictEqual(
+            return_entry,
+            gl_entry,
         )
