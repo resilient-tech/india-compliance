@@ -73,7 +73,7 @@ CATEGORY_CONDITIONS = {
     "B2C (Large)": {"category": "is_b2cl_invoice", "sub_category": "set_for_b2cl"},
     "Exports": {"category": "is_export_invoice", "sub_category": "set_for_exports"},
     "B2C (Others)": {"category": "is_b2cs_invoice", "sub_category": "set_for_b2cs"},
-    "Nil-Rated,Exempted,Non-GST": {
+    "Nil-Rated, Exempted, Non-GST": {
         "category": "is_nil_rated_exempted_non_gst_invoice",
         "sub_category": "set_for_nil_exp_non_gst",
     },

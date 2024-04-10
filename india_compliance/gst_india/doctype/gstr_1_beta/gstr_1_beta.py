@@ -665,25 +665,17 @@ class GSTR1MappedData(GSTR1ProcessData):
 
         for invoice in data:
 
-            if invoice["invoice_sub_category"] in (
-                "B2B Regular",
-                "B2B Reverse Charge",
-                "SEZWP",
-                "SEZWOP",
-                "DE",
+            if invoice["invoice_category"] in (
+                "B2B,SEZ,DE",
                 "B2C (Large)",
                 "CDNR",
-                "CDNUR" "EXPWP",
-                "EXPWOP",
+                "CDNUR",
+                "Exports",
             ):
                 self.process_data_for_invoice_no_key(invoice, prepared_data)
-            elif invoice["invoice_sub_category"] in (
-                "Nil-Rated",
-                "Exempted",
-                "Non-GST",
-            ):
+            elif invoice["invoice_category"] == "Nil-Rated, Exempted, Non-GST":
                 self.process_data_for_document_category_key(invoice, prepared_data)
-            elif invoice["invoice_sub_category"] == "B2C (Others)":
+            elif invoice["invoice_category"] == "B2C (Others)":
                 self.process_data_for_b2cs(invoice, prepared_data)
 
         return prepared_data
