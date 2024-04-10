@@ -165,7 +165,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "taxable_value": -30000.0,
         "total_amount": -30000.0,
         "total_tax_amount": 0.0,
-        "invoice_category": "Nil-Rated,Exempted,Non-GST",
+        "invoice_category": "Nil-Rated, Exempted, Non-GST",
         "invoice_type": "Inter-State to registered persons",
         "invoice_sub_category": "Nil-Rated",
     },
@@ -184,7 +184,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "taxable_value": 400000.0,
         "total_amount": 472000.0,
         "total_tax_amount": 72000.0,
-        "invoice_category": "B2B,SEZ,DE",
+        "invoice_category": "B2B, SEZ, DE",
         "invoice_type": "Regular B2B",
         "invoice_sub_category": "B2B Regular",
     },
@@ -203,7 +203,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "taxable_value": 60000.0,
         "total_amount": 60000.0,
         "total_tax_amount": 0.0,
-        "invoice_category": "Nil-Rated,Exempted,Non-GST",
+        "invoice_category": "Nil-Rated, Exempted, Non-GST",
         "invoice_type": "Inter-State to registered persons",
         "invoice_sub_category": "Nil-Rated",
     },
@@ -240,7 +240,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "taxable_value": 5000.0,
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
-        "invoice_category": "Nil-Rated,Exempted,Non-GST",
+        "invoice_category": "Nil-Rated, Exempted, Non-GST",
         "invoice_type": "Intra-State to unregistered persons",
         "invoice_sub_category": "Nil-Rated",
     },
@@ -277,7 +277,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "taxable_value": 5000.0,
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
-        "invoice_category": "Nil-Rated,Exempted,Non-GST",
+        "invoice_category": "Nil-Rated, Exempted, Non-GST",
         "invoice_type": "Intra-State to unregistered persons",
         "invoice_sub_category": "Nil-Rated",
     },
@@ -314,7 +314,7 @@ EXPECTED_SUMMARY_BY_HSN = [
         "taxable_value": 5000.0,
         "total_amount": 5000.0,
         "total_tax_amount": 0.0,
-        "invoice_category": "Nil-Rated,Exempted,Non-GST",
+        "invoice_category": "Nil-Rated, Exempted, Non-GST",
         "invoice_type": "Inter-State to unregistered persons",
         "invoice_sub_category": "Nil-Rated",
     },
@@ -322,8 +322,17 @@ EXPECTED_SUMMARY_BY_HSN = [
 
 EXPECTED_OVERVIEW = [
     {
+        "description": "B2B, SEZ, DE",
+        "indent": 0,
+        "taxable_value": 400000.0,
+        "igst_amount": 72000.0,
+        "cgst_amount": 0.0,
+        "sgst_amount": 0.0,
+        "total_cess_amount": 0.0,
+    },
+    {
         "description": "B2B Regular",
-        "no_of_records": 1,
+        "indent": 1,
         "taxable_value": 400000.0,
         "igst_amount": 72000.0,
         "cgst_amount": 0.0,
@@ -332,7 +341,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "B2B Reverse Charge",
-        "no_of_records": 0,
+        "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -341,7 +350,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "SEZ with payment",
-        "no_of_records": 0,
+        "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -350,7 +359,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "SEZ without payment",
-        "no_of_records": 0,
+        "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -359,7 +368,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "Deemed Exports",
-        "no_of_records": 0,
+        "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -368,7 +377,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "B2C (Large)",
-        "no_of_records": 0,
+        "indent": 0,
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -376,8 +385,26 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0,
     },
     {
+        "description": "B2C (Large)",
+        "indent": 1,
+        "taxable_value": 0,
+        "igst_amount": 0,
+        "cgst_amount": 0,
+        "sgst_amount": 0,
+        "total_cess_amount": 0,
+    },
+    {
+        "description": "Exports",
+        "indent": 0,
+        "taxable_value": 690000.0,
+        "igst_amount": 0.0,
+        "cgst_amount": 0.0,
+        "sgst_amount": 0.0,
+        "total_cess_amount": 0.0,
+    },
+    {
         "description": "Exports with payment",
-        "no_of_records": 1,
+        "indent": 1,
         "taxable_value": 545000.0,
         "igst_amount": 0.0,
         "cgst_amount": 0.0,
@@ -386,7 +413,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "Exports without payment",
-        "no_of_records": 1,
+        "indent": 1,
         "taxable_value": 145000.0,
         "igst_amount": 0.0,
         "cgst_amount": 0.0,
@@ -395,7 +422,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "B2C (Others)",
-        "no_of_records": 3,
+        "indent": 0,
         "taxable_value": 121000.0,
         "igst_amount": 1800.0,
         "cgst_amount": 9990.0,
@@ -403,8 +430,26 @@ EXPECTED_OVERVIEW = [
         "total_cess_amount": 0.0,
     },
     {
+        "description": "B2C (Others)",
+        "indent": 1,
+        "taxable_value": 121000.0,
+        "igst_amount": 1800.0,
+        "cgst_amount": 9990.0,
+        "sgst_amount": 9990.0,
+        "total_cess_amount": 0.0,
+    },
+    {
+        "description": "Nil-Rated, Exempted, Non-GST",
+        "indent": 0,
+        "taxable_value": 45000.0,
+        "igst_amount": 0.0,
+        "cgst_amount": 0.0,
+        "sgst_amount": 0.0,
+        "total_cess_amount": 0.0,
+    },
+    {
         "description": "Nil-Rated",
-        "no_of_records": 5,
+        "indent": 1,
         "taxable_value": 45000.0,
         "igst_amount": 0.0,
         "cgst_amount": 0.0,
@@ -413,7 +458,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "Exempted",
-        "no_of_records": 0,
+        "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -422,7 +467,7 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "Non-GST",
-        "no_of_records": 0,
+        "indent": 1,
         "taxable_value": 0,
         "igst_amount": 0,
         "cgst_amount": 0,
@@ -431,7 +476,16 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "Credit/Debit Notes (Registered)",
-        "no_of_records": 1,
+        "indent": 0,
+        "taxable_value": -225000.0,
+        "igst_amount": -40500.0,
+        "cgst_amount": 0.0,
+        "sgst_amount": 0.0,
+        "total_cess_amount": 0.0,
+    },
+    {
+        "description": "Credit/Debit Notes (Registered)",
+        "indent": 1,
         "taxable_value": -225000.0,
         "igst_amount": -40500.0,
         "cgst_amount": 0.0,
@@ -440,15 +494,27 @@ EXPECTED_OVERVIEW = [
     },
     {
         "description": "Credit/Debit Notes (Unregistered)",
-        "no_of_records": 1,
+        "indent": 0,
         "taxable_value": -305000.0,
         "igst_amount": 0.0,
         "cgst_amount": 0.0,
         "sgst_amount": 0.0,
         "total_cess_amount": 0.0,
     },
+    {
+        "description": "Credit/Debit Notes (Unregistered)",
+        "indent": 1,
+        "taxable_value": -305000.0,
+        "igst_amount": 0.0,
+        "cgst_amount": 0.0,
+        "sgst_amount": 0.0,
+        "total_cess_amount": 0.0,
+    },
+    {
+        "description": "Overlaping Invoices in Nil-Rated/Exempt/Non-GST",
+        "no_of_records": -5,
+    },
 ]
-
 INVOICES = [
     {
         "customer": "_Test Unregistered Customer",
@@ -468,7 +534,6 @@ INVOICES = [
         ],
     },
     {
-        # B2CS
         "customer": "_Test Unregistered Customer",
         "place_of_supply": "24-Gujarat",
         "is_in_state": 1,
@@ -504,7 +569,6 @@ INVOICES = [
         ],
     },
     {
-        # B2B Regular
         "company_gstin": "24AAQCA8719H1ZC",
         "customer": "_Test Registered Composition Customer",
         "place_of_supply": "29-Karnataka",
