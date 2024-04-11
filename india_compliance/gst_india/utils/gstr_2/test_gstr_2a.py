@@ -7,7 +7,7 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import get_datetime
 
 from india_compliance.gst_india.utils import get_data_file_path
-from india_compliance.gst_india.utils.gstr import (
+from india_compliance.gst_india.utils.gstr_2 import (
     GSTRCategory,
     ReturnType,
     download_gstr_2a,
@@ -65,8 +65,8 @@ class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
         frappe.db.delete(cls.doctype, {"company_gstin": cls.gstin})
         frappe.db.delete(cls.log_doctype, {"gstin": cls.gstin})
 
-    @patch("india_compliance.gst_india.utils.gstr.save_gstr")
-    @patch("india_compliance.gst_india.utils.gstr.GSTR2aAPI")
+    @patch("india_compliance.gst_india.utils.gstr_2.save_gstr")
+    @patch("india_compliance.gst_india.utils.gstr_2.GSTR2aAPI")
     def test_download_gstr_2a(self, mock_gstr_2a_api, mock_save_gstr):
         def mock_get_data(action, return_period, otp):
             if action in ["B2B", "B2BA", "CDN", "CDNA"]:
