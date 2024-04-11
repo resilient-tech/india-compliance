@@ -6,13 +6,13 @@ from enum import Enum
 import frappe
 from frappe.model.document import Document
 
-from india_compliance.gst_india.utils.gstr.gstr_1 import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 # from frappe.utils import get_last_day, getdate
 
 
 class GSTR1_Categories(Enum):
-    B2B = "B2B,SEZ,DE"
+    B2B = "B2B, SEZ, DE"
     B2CL = "B2C (Large)"
     EXP = "Exports"
     B2CS = "B2C (Others)"
@@ -57,6 +57,7 @@ class DataFields(Enum):
     DOC_TYPE = "document_type"
     DOC_VALUE = "document_value"
     POS = "place_of_supply"
+    TAX_RATE = "gst_rate"
     REVERSE_CHARGE = "reverse_charge"
     TAXABLE_VALUE = "total_taxable_value"
     IGST = "total_igst_amount"
@@ -536,6 +537,7 @@ class GSTR1Beta(Document):
         #     "from_date": from_date,
         #     "to_date": to_date,
         # }
+
         self.data = DATA
 
 
@@ -646,7 +648,7 @@ class GSTR1ProcessData:
                 DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 DataFields.POS.value: invoice.place_of_supply,
                 DataFields.TAXABLE_VALUE.value: invoice.taxable_value,
-                "tax_rate": invoice.gst_rate,
+                DataFields.TAX_RATE.value: invoice.gst_rate,
                 DataFields.IGST.value: invoice.igst_amount,
                 DataFields.CGST.value: invoice.cgst_amount,
                 DataFields.SGST.value: invoice.sgst_amount,
@@ -654,6 +656,30 @@ class GSTR1ProcessData:
                 "e_commerce_gstin": invoice.e_commerce_gstin,
             }
         )
+
+    def process_data_for_hsn_summary(self, invoice, prepared_data):
+        key = (invoice.gst_hsn_code, invoice.gst_rate, invoice.uom)
+        mapped_dict = prepared_data.setdefault(
+            key,
+            {
+                DataFields.HSN_CODE.value: invoice.gst_hsn_code,
+                DataFields.UOM.value: invoice.uom,
+                DataFields.TOTAL_QUANTITY.value: 0,
+                DataFields.TAX_RATE.value: invoice.gst_rate,
+                DataFields.TAXABLE_VALUE.value: 0,
+                DataFields.IGST.value: 0,
+                DataFields.CGST.value: 0,
+                DataFields.SGST.value: 0,
+                DataFields.CESS.value: 0,
+            },
+        )
+
+        mapped_dict[DataFields.TAXABLE_VALUE.value] += invoice.taxable_value
+        mapped_dict[DataFields.IGST.value] += invoice.igst_amount
+        mapped_dict[DataFields.CGST.value] += invoice.cgst_amount
+        mapped_dict[DataFields.SGST.value] += invoice.sgst_amount
+        mapped_dict[DataFields.CESS.value] += invoice.total_cess_amount
+        mapped_dict[DataFields.TOTAL_QUANTITY.value] += invoice.qty
 
 
 class GSTR1MappedData(GSTR1ProcessData):
@@ -663,10 +689,12 @@ class GSTR1MappedData(GSTR1ProcessData):
         _class.process_invoices(data)
         prepared_data = {}
 
+        prepared_data["HSN Summary"] = self.prepare_hsn_summary(data)
+
         for invoice in data:
 
             if invoice["invoice_category"] in (
-                "B2B,SEZ,DE",
+                "B2B, SEZ, DE",
                 "B2C (Large)",
                 "CDNR",
                 "CDNUR",
@@ -677,5 +705,13 @@ class GSTR1MappedData(GSTR1ProcessData):
                 self.process_data_for_document_category_key(invoice, prepared_data)
             elif invoice["invoice_category"] == "B2C (Others)":
                 self.process_data_for_b2cs(invoice, prepared_data)
+
+        return prepared_data
+
+    def prepare_hsn_summary(self, data):
+        prepared_data = {}
+
+        for invoice in data:
+            self.process_data_for_hsn_summary(invoice, prepared_data)
 
         return prepared_data

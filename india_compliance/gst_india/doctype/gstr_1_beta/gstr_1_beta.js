@@ -502,7 +502,6 @@ class TabManager {
         Object.values(GSTR1_SubCategories).forEach(category => {
             this.summary[category] = { ...this.DEFAULT_SUMMARY, description: category };
         });
-        console.log(this.data)
         Object.entries(this.data).forEach(([category, rows]) => {
             this.summary[category] = rows.reduce((accumulator, row) => {
                 accumulator.total_docs += 1;

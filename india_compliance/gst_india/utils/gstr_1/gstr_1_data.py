@@ -145,6 +145,7 @@ class GSTR1Query:
             .on(self.si.return_against == returned_si.name)
             .select(
                 IfNull(self.si_item.item_code, self.si_item.item_name).as_("item_code"),
+                self.si_item.qty,
                 self.si_item.gst_hsn_code,
                 self.si_item.uom,
                 self.si.billing_address_gstin,
