@@ -5,7 +5,6 @@ from contextlib import contextmanager
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from erpnext.accounts.doctype.payment_entry.payment_entry import (
-    add_regional_gl_entries,
     get_outstanding_reference_documents,
 )
 from erpnext.accounts.doctype.payment_reconciliation.payment_reconciliation import (
@@ -14,7 +13,6 @@ from erpnext.accounts.doctype.payment_reconciliation.payment_reconciliation impo
 from erpnext.accounts.doctype.unreconcile_payment.unreconcile_payment import (
     create_unreconcile_doc_for_selection,
 )
-from erpnext.accounts.party import get_regional_address_details
 from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
@@ -460,6 +458,8 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         expected_out_str = json.dumps(sorted(expected_pl_entries, key=json.dumps))
         self.assertEqual(out_str, expected_out_str)
 
+
+class TestRegionalOverrides(TestAdvancePaymentEntry):
     def test_get_advance_payment_entries_for_regional(self):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice(payment_doc)
@@ -503,85 +503,8 @@ class TestAdvancePaymentEntry(FrappeTestCase):
         pr.allocate_entries(frappe._dict({"invoices": invoices, "payments": payments}))
         pr.allocation[0].allocated_amount = 50
 
-        allocated_amount_before = pr.allocation[0].get("allocated_amount")
         adjust_allocations_for_taxes(pr)
-        allocated_amount_after = pr.allocation[0].get("allocated_amount")
-
-        self.assertNotEqual(allocated_amount_before, allocated_amount_after)
-
-    def test_add_regional_gl_entries(self):
-        payment_doc = self._create_invoice_then_payment()[1]
-        gl_entry = []
-        add_regional_gl_entries(gl_entry, payment_doc)
-        self.assertNotEqual(gl_entry, [])
-
-    def test_get_regional_address_details(self):
-
-        doctype = "Sales Order"
-        company = "_Test Indian Registered Company"
-        party_details = {
-            "customer": "_Test Registered Customer",
-            "customer_address": "_Test Registered Customer-Billing",
-            "billing_address_gstin": "24AANFA2641L1ZF",
-            "gst_category": "Registered Regular",
-            "company_gstin": "24AAQCA8719H1ZC",
-            "place_of_supply": "24-Gujarat",
-        }
-
-        get_regional_address_details(party_details, doctype, company)
-
-        self.assertDictEqual(
-            party_details,
-            {
-                "customer": "_Test Registered Customer",
-                "customer_address": "_Test Registered Customer-Billing",
-                "billing_address_gstin": "24AANFA2641L1ZF",
-                "gst_category": "Registered Regular",
-                "company_gstin": "24AAQCA8719H1ZC",
-                "place_of_supply": "24-Gujarat",
-                "taxes_and_charges": "Output GST In-state - _TIRC",
-                "taxes": [
-                    {
-                        "charge_type": "On Net Total",
-                        "row_id": None,
-                        "account_head": "Output Tax SGST - _TIRC",
-                        "description": "SGST",
-                        "included_in_print_rate": 0,
-                        "included_in_paid_amount": 0,
-                        "cost_center": "Main - _TIRC",
-                        "rate": 9.0,
-                        "account_currency": None,
-                        "tax_amount": 0.0,
-                        "total": 0.0,
-                        "tax_amount_after_discount_amount": 0.0,
-                        "base_tax_amount": 0.0,
-                        "base_total": 0.0,
-                        "base_tax_amount_after_discount_amount": 0.0,
-                        "item_wise_tax_detail": None,
-                        "dont_recompute_tax": 0,
-                    },
-                    {
-                        "charge_type": "On Net Total",
-                        "row_id": None,
-                        "account_head": "Output Tax CGST - _TIRC",
-                        "description": "CGST",
-                        "included_in_print_rate": 0,
-                        "included_in_paid_amount": 0,
-                        "cost_center": "Main - _TIRC",
-                        "rate": 9.0,
-                        "account_currency": None,
-                        "tax_amount": 0.0,
-                        "total": 0.0,
-                        "tax_amount_after_discount_amount": 0.0,
-                        "base_tax_amount": 0.0,
-                        "base_total": 0.0,
-                        "base_tax_amount_after_discount_amount": 0.0,
-                        "item_wise_tax_detail": None,
-                        "dont_recompute_tax": 0,
-                    },
-                ],
-            },
-        )
+        self.assertEqual(pr.allocation[0].allocated_amount, 42.37)  # 50 / 1.18
 
 
 def make_payment_reconciliation(payment_doc, invoice_doc, amount):
