@@ -1,7 +1,7 @@
 import frappe
 
 from india_compliance.gst_india.utils import parse_datetime
-from india_compliance.gst_india.utils.gstr.gstr import GSTR, get_mapped_value
+from india_compliance.gst_india.utils.gstr_2.gstr import GSTR, get_mapped_value
 
 
 class GSTR2b(GSTR):

@@ -16,10 +16,9 @@ from india_compliance.gst_india.constants import GST_TAX_TYPES
 from india_compliance.gst_india.utils import (
     get_escaped_name,
     get_gst_accounts_by_type,
-    get_gstin_list,
     get_party_for_gstin,
 )
-from india_compliance.gst_india.utils.gstr import IMPORT_CATEGORY, ReturnType
+from india_compliance.gst_india.utils.gstr_2 import IMPORT_CATEGORY, ReturnType
 
 
 class Fields(Enum):
