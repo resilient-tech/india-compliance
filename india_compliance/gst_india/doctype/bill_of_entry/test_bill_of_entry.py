@@ -28,6 +28,7 @@ class TestBillofEntry(FrappeTestCase):
         pi = create_purchase_invoice(supplier="_Test Foreign Supplier", update_stock=1)
 
         # Create BOE
+
         boe = make_bill_of_entry(pi.name)
         boe.items[0].customs_duty = 100
         boe.bill_of_entry_no = "123"
