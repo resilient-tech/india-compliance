@@ -1,6 +1,6 @@
 {
  "aggregate_function_based_on": "",
- "color": "#ECAD4B",
+ "color": "#EC864B",
  "creation": "2023-07-25 15:10:39.976867",
  "docstatus": 0,
  "doctype": "Number Card",
@@ -14,7 +14,7 @@
  "is_standard": 1,
  "label": "Pending e-Invoices",
  "method": "",
- "modified": "2024-02-23 11:37:43.073988",
+ "modified": "2024-04-09 11:45:32.550901",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "Pending e-Invoices",
