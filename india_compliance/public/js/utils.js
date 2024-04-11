@@ -187,7 +187,7 @@ Object.assign(india_compliance, {
                 secondary_action_label: __("Resend OTP"),
                 secondary_action() {
                     frappe.call({
-                        method: "india_compliance.gst_india.utils.gstr.gstr.request_otp",
+                        method: "india_compliance.gst_india.utils.gstr_utils.request_otp",
                         args: { company_gstin },
                         callback: function () {
                             frappe.show_alert({
@@ -331,7 +331,7 @@ Object.assign(india_compliance, {
 
     async authenticate_company_gstins(company, company_gstin) {
         const { message: gstin_authentication_status } = await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr.gstr.validate_company_gstins",
+            method: "india_compliance.gst_india.utils.gstr_utils.validate_company_gstins",
             args: { company: company, company_gstin: company_gstin },
         });
 
@@ -346,7 +346,7 @@ Object.assign(india_compliance, {
 
     async authenticate_otp(gstin) {
         await frappe.call({
-            method: "india_compliance.gst_india.utils.gstr.gstr.request_otp",
+            method: "india_compliance.gst_india.utils.gstr_utils.request_otp",
             args: { company_gstin: gstin },
         });
 
@@ -357,7 +357,7 @@ Object.assign(india_compliance, {
             const otp = await this.get_gstin_otp(error_type, gstin);
 
             const { message } = await frappe.call({
-                method: "india_compliance.gst_india.utils.gstr.gstr.authenticate_otp",
+                method: "india_compliance.gst_india.utils.gstr_utils.authenticate_otp",
                 args: { company_gstin: gstin, otp: otp },
             });
 

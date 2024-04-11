@@ -5,22 +5,13 @@ from frappe import _
 from frappe.query_builder.terms import Criterion
 from frappe.utils import cint
 
-from india_compliance.gst_india.api_classes.returns import (
-    GSTR2aAPI,
-    GSTR2bAPI,
-    ReturnsAPI,
-)
+from india_compliance.gst_india.api_classes.returns import GSTR2aAPI, GSTR2bAPI
 from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
-    toggle_scheduled_jobs,
 )
 from india_compliance.gst_india.utils import get_party_for_gstin
-from india_compliance.gst_india.utils.gstr import gstr_2a, gstr_2b
-
-
-class ReturnType(Enum):
-    GSTR2A = "GSTR2a"
-    GSTR2B = "GSTR2b"
+from india_compliance.gst_india.utils.gstr_2 import gstr_2a, gstr_2b
+from india_compliance.gst_india.utils.gstr_utils import ReturnType
 
 
 class GSTRCategory(Enum):
@@ -334,6 +325,7 @@ def _download_gstr_2a(gstin, return_period, json_data):
     save_gstr_2a(gstin, return_period, json_data)
 
 
+<<<<<<< HEAD:india_compliance/gst_india/utils/gstr/__init__.py
 GSTR_FUNCTIONS = {
     ReturnType.GSTR2A.value: _download_gstr_2a,
     ReturnType.GSTR2B.value: save_gstr_2b,
@@ -396,6 +388,8 @@ def _download_queued_request(doc):
     GSTR_FUNCTIONS[doc.return_type](doc.gstin, doc.return_period, response)
 
 
+=======
+>>>>>>> e1af3d26 (refactor: commanify gstr_utils and make gstr_2 independent):india_compliance/gst_india/utils/gstr_2/__init__.py
 def show_queued_message():
     frappe.msgprint(
         _(
