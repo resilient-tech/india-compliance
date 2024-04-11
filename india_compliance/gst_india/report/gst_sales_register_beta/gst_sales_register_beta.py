@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from india_compliance.gst_india.utils.gstr.gstr_1 import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 
 def execute(filters=None):
