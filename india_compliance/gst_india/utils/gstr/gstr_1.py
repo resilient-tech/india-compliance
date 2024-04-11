@@ -9,6 +9,8 @@ import frappe
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
+from india_compliance.gst_india.utils import get_full_gst_uom
+
 B2C_LIMIT = 2_50_000
 
 # TODO: Enum for Invoice Type
@@ -453,9 +455,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         super().__init__(filters)
 
     def process_invoices(self, invoices):
+        settings = frappe.get_cached_doc("GST Settings")
+
         for invoice in invoices:
             self.invoice_conditions = {}
             self.assign_categories(invoice)
+            invoice["uom"] = get_full_gst_uom(invoice.get("uom"), settings)
 
     def assign_categories(self, invoice):
 
