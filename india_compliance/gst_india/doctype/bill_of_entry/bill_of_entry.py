@@ -250,9 +250,11 @@ class BillofEntry(Document):
     def validate_taxes(self):
         input_accounts = get_gst_accounts_by_type(self.company, "Input", throw=True)
         taxable_value_map = {}
+        item_qty_map = {}
 
         for row in self.get("items"):
             taxable_value_map[row.name] = row.taxable_value
+            item_qty_map[row.name] = row.qty
 
         for tax in self.taxes:
             if not tax.tax_amount:
@@ -274,33 +276,43 @@ class BillofEntry(Document):
                 [input_accounts.cess_non_advol_account], tax
             )
 
-            if tax.charge_type == "Actual":
+            if tax.charge_type != "Actual":
+                continue
 
-                item_wise_tax_rates = json.loads(tax.item_wise_tax_rates)
-                if not item_wise_tax_rates:
-                    frappe.throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, this would"
-                            " not compute item taxes, and your further reporting will be affected."
-                        ).format(tax.idx),
-                        title=_("Invalid Charge Type"),
-                    )
+            item_wise_tax_rates = json.loads(tax.item_wise_tax_rates)
+            if not item_wise_tax_rates:
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, this would"
+                        " not compute item taxes, and your further reporting will be affected."
+                    ).format(tax.idx),
+                    title=_("Invalid Charge Type"),
+                )
 
-                # validating total tax
-                total_tax = 0
-                for item, rate in item_wise_tax_rates.items():
-                    item_taxable_value = taxable_value_map.get(item, 0)
-                    total_tax += item_taxable_value * rate / 100
+            # validating total tax
+            total_tax = 0
+            is_non_cess_advol = (
+                tax.account_head == input_accounts.cess_non_advol_account
+            )
 
-                tax_difference = abs(total_tax - tax.tax_amount)
+            for item, rate in item_wise_tax_rates.items():
+                multiplier = (
+                    item_qty_map.get(item, 0)
+                    if is_non_cess_advol
+                    else taxable_value_map.get(item, 0) / 100
+                )
+                total_tax += multiplier * rate
 
-                if tax_difference > 1:
-                    frappe.throw(
-                        _(
-                            "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
-                            " is incorrect. Try setting the Charge Type to On Net Total."
-                        ).format(row.idx, tax.tax_amount)
-                    )
+            tax_difference = abs(total_tax - tax.tax_amount)
+
+            if tax_difference > 1:
+                column = "On Item Quantity" if is_non_cess_advol else "On Net Total"
+                frappe.throw(
+                    _(
+                        "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1}"
+                        " is incorrect. Try setting the Charge Type to {2}."
+                    ).format(row.idx, tax.tax_amount, column)
+                )
 
     def get_gl_entries(self):
         # company_currency is required by get_gl_dict
