@@ -1474,7 +1474,8 @@ class EWaybillData(GSTTransactionData):
             item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST")
             for item in doc.items
         ):
-            self.transaction_details.update(document_type="BIL")
+            document_type = "BIL" if not doc.is_return else "CHL"
+            self.transaction_details.update(document_type=document_type)
 
         if self.doc.doctype == "Purchase Invoice" and not self.doc.is_return:
             self.transaction_details.name = self.doc.bill_no or self.doc.name
