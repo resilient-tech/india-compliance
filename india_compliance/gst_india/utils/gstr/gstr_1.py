@@ -9,7 +9,7 @@ import frappe
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
-from india_compliance.gst_india.constants import UOM_MAP
+from india_compliance.gst_india.utils import get_full_gst_uom
 
 B2C_LIMIT = 2_50_000
 
@@ -252,20 +252,6 @@ def cache_invoice_condition(func):
     return wrapped
 
 
-def get_full_uom_as_per_gst(uom, settings=None):
-    settings = settings or frappe.get_cached_doc("GST Settings")
-    for row in settings.get("gst_uom_map"):
-        if row.uom == uom:
-            gst_uom = row.gst_uom.split("(")
-            return f"{gst_uom[0].strip().upper()}-{gst_uom[1][:-1].upper()}"
-
-    uom = uom.upper()
-    if uom in UOM_MAP:
-        return f"{uom}-{UOM_MAP[uom]}"
-
-    return next((k for k, v in UOM_MAP.items() if v == uom), "OTH-OTHERS")
-
-
 class GSTR1Conditions:
 
     @cache_invoice_condition
@@ -474,7 +460,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         for invoice in invoices:
             self.invoice_conditions = {}
             self.assign_categories(invoice)
-            invoice["uom"] = get_full_uom_as_per_gst(invoice.get("uom"), settings)
+            invoice["uom"] = get_full_gst_uom(invoice.get("uom"), settings)
 
     def assign_categories(self, invoice):
 
