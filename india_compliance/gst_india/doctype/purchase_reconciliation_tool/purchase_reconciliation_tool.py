@@ -10,6 +10,7 @@ from frappe.query_builder.functions import IfNull
 from frappe.utils import add_to_date, cint, now_datetime
 from frappe.utils.response import json_handler
 
+from india_compliance.gst_india.api_classes.returns import ReturnsAPI
 from india_compliance.gst_india.constants import ORIGINAL_VS_AMENDED
 from india_compliance.gst_india.doctype.purchase_reconciliation_tool import (
     BaseUtil,
@@ -24,11 +25,10 @@ from india_compliance.gst_india.utils import (
     is_api_enabled,
 )
 from india_compliance.gst_india.utils.exporter import ExcelExporter
-from india_compliance.gst_india.utils.gstr import (
+from india_compliance.gst_india.utils.gstr_2 import (
     ACTIONS,
     IMPORT_CATEGORY,
     GSTRCategory,
-    ReturnsAPI,
     ReturnType,
     download_gstr_2a,
     download_gstr_2b,
