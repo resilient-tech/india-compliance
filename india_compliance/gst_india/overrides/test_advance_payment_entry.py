@@ -12,13 +12,9 @@ from erpnext.accounts.doctype.payment_reconciliation.payment_reconciliation impo
 from erpnext.accounts.doctype.unreconcile_payment.unreconcile_payment import (
     create_unreconcile_doc_for_selection,
 )
-<<<<<<< HEAD
-=======
 from erpnext.controllers.accounts_controller import (
     get_advance_payment_entries_for_regional,
 )
-from erpnext.controllers.stock_controller import show_accounting_ledger_preview
->>>>>>> 35c48a29 (test: test-cases for regional_overrides (#2006))
 
 from india_compliance.gst_india.utils.tests import create_transaction
 
