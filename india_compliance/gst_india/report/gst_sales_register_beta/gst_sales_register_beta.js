@@ -9,7 +9,7 @@ const INVOICE_TYPE = {
         "Deemed Exports",
     ],
     "B2C (Large)": ["B2C (Large)"],
-    Exports: ["EXPWP", "EXPWOP"],
+    "Exports": ["EXPWP", "EXPWOP"],
     "B2C (Others)": ["B2C (Others)"],
     "Nil-Rated, Exempted, Non-GST": ["Nil-Rated", "Exempted", "Non-GST"],
     "Credit/Debit Notes (Registered)": ["CDNR"],
