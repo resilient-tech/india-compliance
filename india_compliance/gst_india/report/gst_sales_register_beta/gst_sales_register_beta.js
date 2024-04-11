@@ -97,6 +97,15 @@ frappe.query_reports["GST Sales Register Beta"] = {
 
         return value;
     },
+
+    // Override datatable hook for column total calculation
+    get_datatable_options(datatable_options) {
+        datatable_options.hooks = {
+            columnTotal: custom_report_column_total,
+        };
+
+        return datatable_options;
+    },
 };
 
 function set_sub_category_options(report) {
@@ -113,12 +122,10 @@ function set_sub_category_options(report) {
     }
 }
 
-frappe_report_column_total = frappe.utils.report_column_total;
-
-// Override datatable hook for column total calculation
-frappe.utils.report_column_total = function (...args) {
+custom_report_column_total = function (...args) {
     const summary_by = frappe.query_report.get_filter_value("summary_by");
-    if (summary_by !== "Overview") return frappe_report_column_total.apply(this, args);
+    if (summary_by !== "Overview")
+        return frappe.utils.report_column_total.apply(this, args);
 
     const column_field = args[1].column.fieldname;
     if (column_field === "description") return;
