@@ -8,6 +8,7 @@
   "filing_summary_section",
   "filing_status",
   "return_period",
+  "gstin",
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
@@ -64,11 +65,16 @@
    "fieldname": "computed_gstr1",
    "fieldtype": "Attach",
    "label": "Computed GSTR-1"
+  },
+  {
+   "fieldname": "gstin",
+   "fieldtype": "Data",
+   "label": "GSTIN"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-03-11 12:11:14.101288",
+ "modified": "2024-03-19 12:02:01.213545",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",
