@@ -533,6 +533,7 @@ class TabManager {
     }
 
     // DATA
+    // FIXME : remove inner for-each loop
     summarize_data() {
         let sub_category_summary = this.get_sub_category_summary();
 
@@ -550,13 +551,13 @@ class TabManager {
                     this.summary[category][key] += sub_category_row[key]
                 })
 
-                const uniqueDescription = `${category} - ${sub}`; // Unique description
-                this.summary[uniqueDescription] = sub_category_row;
+                const sub_category = `${category} - ${sub}`; // Unique description
+                this.summary[sub_category] = sub_category_row;
             });
         });
     }
 
-    // FIXME : remove  because computed data will be in 
+    // FIXME : remove `reduce`  because computed data will be in `data`
     get_sub_category_summary() {
         let sub_category_summary = {}
 
