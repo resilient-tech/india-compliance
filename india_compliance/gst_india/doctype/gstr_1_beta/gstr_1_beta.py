@@ -574,7 +574,9 @@ class GSTR1ProcessData:
                 DataFields.DOC_DATE.value: invoice.posting_date,
                 DataFields.DOC_VALUE.value: invoice.invoice_total,
                 DataFields.POS.value: invoice.place_of_supply,
-                DataFields.REVERSE_CHARGE.value: invoice.is_reverse_charge,
+                DataFields.REVERSE_CHARGE.value: (
+                    "Y" if invoice.is_reverse_charge else "N"
+                ),
                 DataFields.DOC_TYPE.value: invoice.invoice_category,
                 DataFields.TAXABLE_VALUE.value: 0,
                 DataFields.IGST.value: 0,
