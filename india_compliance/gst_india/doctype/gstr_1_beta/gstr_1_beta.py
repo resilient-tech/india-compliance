@@ -6,6 +6,7 @@ from enum import Enum
 import frappe
 from frappe.model.document import Document
 
+from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR1DocumentIssuedSummary
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 # from frappe.utils import get_last_day, getdate
@@ -683,12 +684,17 @@ class GSTR1ProcessData:
 
 
 class GSTR1MappedData(GSTR1ProcessData):
-    def prepare_mapped_data(self, filters):
-        _class = GSTR1Invoices(filters)
-        data = _class.get_invoices_for_item_wise_summary()
-        _class.process_invoices(data)
+    def __init__(self, filters):
+        self.filters = filters
+
+    def prepare_mapped_data(self):
         prepared_data = {}
 
+        _class = GSTR1Invoices(self.filters)
+        data = _class.get_invoices_for_item_wise_summary()
+        _class.process_invoices(data)
+
+        prepared_data["Document Issued"] = self.prepare_document_issued_summary()
         prepared_data["HSN Summary"] = self.prepare_hsn_summary(data)
 
         for invoice in data:
@@ -708,10 +714,15 @@ class GSTR1MappedData(GSTR1ProcessData):
 
         return prepared_data
 
+    def prepare_document_issued_summary(self):
+        doc_issued = GSTR1DocumentIssuedSummary(self.filters)
+
+        return doc_issued.get_data()
+
     def prepare_hsn_summary(self, data):
-        prepared_data = {}
+        hsn_summary_data = {}
 
         for invoice in data:
-            self.process_data_for_hsn_summary(invoice, prepared_data)
+            self.process_data_for_hsn_summary(invoice, hsn_summary_data)
 
-        return prepared_data
+        return hsn_summary_data
