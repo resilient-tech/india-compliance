@@ -39,6 +39,10 @@ frappe.ui.form.on("Sales Invoice", {
             return;
         }
 
+        // Custom Override
+        if (frm.doc.einvoice_status === "Not Applicable")
+            return;
+
         if (
             !frm.doc.irn &&
             frappe.perm.has_perm(frm.doctype, 0, "submit", frm.doc.name)
@@ -276,6 +280,13 @@ function is_e_invoice_applicable(frm, show_message = false) {
 
     let is_einv_applicable = true;
     let message_list = [];
+
+    if (frm.doc.__onload?.is_e_invoice_not_applicable) {
+        is_einv_applicable = false;
+        message_list.push(
+            "Custom Override: e-Invoice is not applicable for this transaction."
+        );
+    }
 
     if (!frm.doc.company_gstin) {
         is_einv_applicable = false;

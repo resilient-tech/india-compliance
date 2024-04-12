@@ -113,6 +113,9 @@ def generate_e_invoices(docnames, force=False):
 def generate_e_invoice(docname, throw=True, force=False):
     doc = load_doc("Sales Invoice", docname, "submit")
 
+    if doc.einvoice_status == "Not Applicable":
+        return
+
     settings = frappe.get_cached_doc("GST Settings")
 
     try:
@@ -335,6 +338,9 @@ def validate_e_invoice_applicability(doc, gst_settings=None, throw=True):
     def _throw(error):
         if throw:
             frappe.throw(error)
+
+    if frappe.flags.is_e_invoice_not_applicable:
+        return
 
     if doc.company_gstin == doc.billing_address_gstin:
         return _throw(

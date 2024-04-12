@@ -30,6 +30,9 @@ from india_compliance.gst_india.utils.transaction_data import (
 
 
 def onload(doc, method=None):
+    if frappe.flags.is_e_invoice_not_applicable:
+        doc.set_onload("is_e_invoice_not_applicable", True)
+
     if not doc.get("ewaybill"):
         if doc.gst_category == "Overseas" and is_e_waybill_applicable(doc):
             doc.set_onload(
