@@ -12,6 +12,10 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     create_import_log,
 )
 
+"""
+Download GSTR-1 and e-Invoices data from GST Portal
+"""
+
 GSTR1_ACTIONS = {
     "B2B": "B2B",
     "B2BA": "B2BA",

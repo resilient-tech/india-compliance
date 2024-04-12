@@ -1,61 +1,11 @@
-from enum import Enum
-
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.constants import STATE_NUMBERS, UOM_MAP
+from india_compliance.gst_india.utils.gstr_1 import DataFields, ItemFields
 
-
-class DataFields(Enum):
-    TRANSACTION_TYPE = "transaction_type"
-    CUST_GSTIN = "customer_gstin"
-    ECOMMERCE_GSTIN = "ecommerce_gstin"
-    CUST_NAME = "customer_name"
-    DOC_DATE = "document_date"
-    DOC_NUMBER = "document_number"
-    DOC_TYPE = "document_type"
-    DOC_VALUE = "document_value"
-    POS = "place_of_supply"
-    DIFF_PERCENTAGE = "diff_percentage"
-    REVERSE_CHARGE = "reverse_charge"
-    TAXABLE_VALUE = "total_taxable_value"
-    ITEMS = "items"
-    IGST = "total_igst_amount"
-    CGST = "total_cgst_amount"
-    SGST = "total_sgst_amount"
-    CESS = "total_cess_amount"
-
-    SHIPPING_BILL_NUMBER = "shipping_bill_number"
-    SHIPPING_BILL_DATE = "shipping_bill_date"
-    SHIPPING_PORT_CODE = "shipping_port_code"
-
-    EXEMPTED_AMOUNT = "exempted_amount"
-    NIL_RATED_AMOUNT = "nil_rated_amount"
-    NON_GST_AMOUNT = "non_gst_amount"
-
-    HSN_CODE = "hsn_code"
-    DESCRIPTION = "description"
-    UOM = "uom"
-    QUANTITY = "quantity"
-    TOTAL_QUANTITY = "total_quantity"
-    TOTAL_VALUE = "total_value"
-
-    FROM_SR = "from_sr_no"
-    TO_SR = "to_sr_no"
-    TOTAL_COUNT = "total_count"
-    DRAFT_COUNT = "draft_count"
-    CANCELLED_COUNT = "cancelled_count"
-
-
-class ItemFields(Enum):
-    INDEX = "idx"
-    TAXABLE_VALUE = "taxable_value"
-    IGST = "igst_amount"
-    CGST = "cgst_amount"
-    SGST = "sgst_amount"
-    CESS = "cess_amount"
-    TAX_RATE = "tax_rate"
-    ITEM_DETAILS = "item_details"
-    ADDITIONAL_AMOUNT = "additional_amount"
+"""
+Map Govt JSON to Internal Data Structure
+"""
 
 
 class DataMapper:

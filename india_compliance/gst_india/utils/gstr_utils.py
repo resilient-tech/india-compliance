@@ -10,7 +10,7 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     toggle_scheduled_jobs,
 )
 from india_compliance.gst_india.utils import get_gstin_list
-from india_compliance.gst_india.utils.gstr_2.gstr1 import (
+from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     save_einvoice_data,
     save_gstr_1_filed_data,
 )

@@ -1,86 +1,13 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from enum import Enum
 
 import frappe
 from frappe.model.document import Document
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR1DocumentIssuedSummary
+from india_compliance.gst_india.utils.gstr_1 import DataFields, GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
-
-# from frappe.utils import get_last_day, getdate
-
-
-class GSTR1_Categories(Enum):
-    B2B = "B2B, SEZ, DE"
-    B2CL = "B2C (Large)"
-    EXP = "Exports"
-    B2CS = "B2C (Others)"
-    NIL_EXEMPT = "Nil-Rated, Exempted, Non-GST"
-    CDNR = "Credit/Debit Notes (Registered)"
-    CDNUR = "Credit/Debit Notes (Unregistered)"
-    # Other Categories
-    AT = "Advances Received"
-    TXP = "Advances Adjusted"
-    DOC_ISSUE = "Document Issued"
-    HSN = "HSN Summary"
-
-
-class GSTR1_SubCategories(Enum):
-    B2B_REGULAR = "B2B Regular"  # Regular B2B
-    B2B_REVERSE_CHARGE = "B2B Reverse Charge"  # Regular B2B
-    SEZWP = "SEZWP"  # SEZ supplies with payment
-    SEZWOP = "SEZWOP"  # SEZ supplies without payment
-    DE = "Deemed Exports"  # Deemed Exp
-    B2CL = "B2C (Large)"  # NA
-    EXPWP = "EXPWP"  # WPAY
-    EXPWOP = "EXPWOP"  # WOPAY
-    B2CS = "B2C (Others)"  # NA
-    NIL_RATED = "Nil-Rated"  # Inter vs Intra & Regis vs UnRegis
-    EXEMPTED = "Exempted"  # Inter vs Intra & Regis vs UnRegis
-    NON_GST = "Non-GST"  # Inter vs Intra & Regis vs UnRegis
-    CDNR = "Credit/Debit Notes (Registered)"  # Like B2B
-    CDNUR = "Credit/Debit Notes (Unregistered)"  # B2CL vs EXPWP vs EXPWOP
-    # Other Sub-Categories
-    AT = "Advances Received"
-    TXP = "Advances Adjusted"
-    HSN = "HSN Summary"  # UOM as per GOvt
-    DOC_ISSUE = "Document Issued"
-
-
-class DataFields(Enum):
-    TRANSACTION_TYPE = "transaction_type"
-    CUST_GSTIN = "customer_gstin"
-    CUST_NAME = "customer_name"
-    DOC_DATE = "document_date"
-    DOC_NUMBER = "document_number"
-    DOC_TYPE = "document_type"
-    DOC_VALUE = "document_value"
-    POS = "place_of_supply"
-    TAX_RATE = "gst_rate"
-    REVERSE_CHARGE = "reverse_charge"
-    TAXABLE_VALUE = "total_taxable_value"
-    IGST = "total_igst_amount"
-    CGST = "total_cgst_amount"
-    SGST = "total_sgst_amount"
-    CESS = "total_cess_amount"
-
-    SHIPPING_BILL_NUMBER = "shipping_bill_number"
-    SHIPPING_BILL_DATE = "shipping_bill_date"
-    SHIPPING_PORT_CODE = "shipping_port_code"
-
-    HSN_CODE = "hsn_code"
-    DESCRIPTION = "description"
-    UOM = "uom"
-    TOTAL_QUANTITY = "total_quantity"
-
-    FROM_SR = "from_sr_no"
-    TO_SR = "to_sr_no"
-    TOTAL_COUNT = "total_count"
-    DRAFT_COUNT = "draft_count"
-    CANCELLED_COUNT = "cancelled_count"
-
 
 DATA = {
     "status": "Filed",
@@ -540,6 +467,13 @@ class GSTR1Beta(Document):
         # }
 
         self.data = DATA
+
+        # Check for the gstr-1 import log.
+        # If all data points are available, load the data from the log.
+
+        # If not, enqueue. Setup listener in front end to check if data is prepared. If prepared, Save the form again.
+
+        pass
 
 
 ####################################################################################################
