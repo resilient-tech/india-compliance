@@ -5,7 +5,18 @@ frappe.provide("india_compliance");
 
 const DOCTYPE = "GSTR-1 Beta";
 const GSTR1_Categories = {
+    B2B: "B2B, SEZ, DE",
+    B2CL: "B2C (Large)",
+    EXP: "Exports",
+    B2CS: "B2C (Others)",
     NIL_EXEMPT: "Nil-Rated, Exempted, Non-GST",
+    CDNR: "Credit/Debit Notes (Registered)",
+    CDNUR: "Credit/Debit Notes (Unregistered)",
+    // Other Categories
+    AT: "Advances Received",
+    TXP: "Advances Adjusted",
+    DOC_ISSUE: "Document Issued",
+    HSN: "HSN Summary",
 }
 const GSTR1_SubCategories = {
     B2B_REGULAR: "B2B Regular",
@@ -26,6 +37,29 @@ const GSTR1_SubCategories = {
     TXP: "Advances Adjusted",
     HSN: "HSN Summary",
     DOC_ISSUE: "Document Issued",
+};
+
+const INVOICE_TYPE = {
+    [GSTR1_Categories.B2B]: [
+        GSTR1_SubCategories.B2B_REGULAR,
+        GSTR1_SubCategories.B2B_REVERSE_CHARGE,
+        GSTR1_SubCategories.SEZWP,
+        GSTR1_SubCategories.SEZWOP,
+        GSTR1_SubCategories.DE,
+    ],
+    [GSTR1_Categories.B2CL]: [GSTR1_SubCategories.B2CL],
+    [GSTR1_Categories.EXP]: [GSTR1_SubCategories.EXPWP, GSTR1_SubCategories.EXPWOP],
+    [GSTR1_Categories.NIL_EXEMPT]: [
+        GSTR1_SubCategories.NIL_RATED,
+        GSTR1_SubCategories.EXEMPTED,
+        GSTR1_SubCategories.NON_GST,
+    ],
+    [GSTR1_Categories.CDNR]: [GSTR1_SubCategories.CDNR],
+    [GSTR1_Categories.CDNUR]: [GSTR1_SubCategories.CDNUR],
+    [GSTR1_Categories.AT]: [GSTR1_SubCategories.AT],
+    [GSTR1_Categories.TXP]: [GSTR1_SubCategories.TXP],
+    [GSTR1_Categories.HSN]: [GSTR1_SubCategories.HSN],
+    [GSTR1_Categories.DOC_ISSUE]: [GSTR1_SubCategories.DOC_ISSUE],
 };
 
 const GSTR1_DataFields = {
@@ -276,9 +310,9 @@ class GSTR1 {
 
     // ACTIONS
 
-    download_books_as_excel() {}
+    download_books_as_excel() { }
 
-    mark_as_filed() {}
+    mark_as_filed() { }
 
     // UTILS
 
@@ -360,7 +394,7 @@ class GSTR1 {
 class TabManager {
     CATEGORY_COLUMNS = {};
     DEFAULT_SUMMARY = {
-        description: "",
+        // description: "",
         total_docs: 0,
         total_taxable_value: 0,
         total_igst_amount: 0,
@@ -452,6 +486,7 @@ class TabManager {
             options: {
                 showTotalRow: true,
                 checkboxColumn: false,
+                treeView: true
             },
             no_data_message: __("No data found"),
             hooks: {
@@ -499,21 +534,55 @@ class TabManager {
 
     // DATA
     summarize_data() {
-        Object.values(GSTR1_SubCategories).forEach(category => {
-            this.summary[category] = { ...this.DEFAULT_SUMMARY, description: category };
-        });
-        Object.entries(this.data).forEach(([category, rows]) => {
-            this.summary[category] = rows.reduce((accumulator, row) => {
-                accumulator.total_docs += 1;
-                accumulator.total_taxable_value += row.total_taxable_value || 0;
-                accumulator.total_igst_amount += row.total_igst_amount || 0;
-                accumulator.total_cgst_amount += row.total_cgst_amount || 0;
-                accumulator.total_sgst_amount += row.total_sgst_amount || 0;
-                accumulator.total_cess_amount += row.total_cess_amount || 0;
-                return accumulator;
-            }, this.summary[category]);
+        let sub_category_summary = this.get_sub_category_summary();
+
+        Object.entries(INVOICE_TYPE).forEach(([category, sub_categories]) => {
+            this.summary[category] = {
+                ...this.DEFAULT_SUMMARY,
+                description: category,
+                indent: 0
+            };
+
+            sub_categories.forEach((sub) => {
+                let sub_category_row = sub_category_summary[sub];
+
+                Object.keys(this.DEFAULT_SUMMARY).forEach(key => {
+                    this.summary[category][key] += sub_category_row[key]
+                })
+
+                const uniqueDescription = `${category} - ${sub}`; // Unique description
+                this.summary[uniqueDescription] = sub_category_row;
+            });
         });
     }
+
+    // FIXME : remove  because computed data will be in 
+    get_sub_category_summary() {
+        let sub_category_summary = {}
+
+        Object.values(GSTR1_SubCategories).forEach(category => {
+            sub_category_summary[category] = {
+                ...this.DEFAULT_SUMMARY,
+                description: category,
+                indent: 1
+            }
+        })
+
+        Object.entries(this.data).forEach(([category, rows]) => {
+            sub_category_summary[category] = rows.reduce((accumulator, row) => {
+                accumulator.total_docs += 1;
+                accumulator.total_taxable_value += row.taxable_value || 0;
+                accumulator.total_igst_amount += row.igst_amount || 0;
+                accumulator.total_cgst_amount += row.cgst_amount || 0;
+                accumulator.total_sgst_amount += row.sgst_amount || 0;
+                accumulator.total_cess_amount += row.cess_amount || 0;
+                return accumulator;
+            }, sub_category_summary[category]);
+        });
+
+        return sub_category_summary;
+    }
+
 
     // COLUMNS
     get_summary_columns() {
@@ -926,7 +995,7 @@ class TabManager {
 
 class BooksTab extends TabManager {
     CATEGORY_COLUMNS = {
-        [GSTR1_Categories.NIL_EXEMPT]: this.get_document_columns,
+        // [GSTR1_Categories.NIL_EXEMPT]: this.get_document_columns,
 
         // SUBCATEGORIES
         [GSTR1_SubCategories.B2B_REGULAR]: this.get_invoice_columns,
