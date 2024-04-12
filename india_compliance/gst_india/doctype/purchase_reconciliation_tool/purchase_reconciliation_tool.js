@@ -73,18 +73,18 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
         new india_compliance.quick_info_popover(frm, tooltip_info);
 
         await frappe.require("purchase_reconciliation_tool.bundle.js");
+        frm.trigger("company");
         frm.purchase_reconciliation_tool = new PurchaseReconciliationTool(frm);
     },
 
     onload(frm) {
         if (frm.doc.is_modified) frm.doc.reconciliation_data = null;
-        frm.trigger("company");
         add_gstr2b_alert(frm);
     },
 
     async company(frm) {
         if (!frm.doc.company) return;
-        const options = await set_gstin_options(frm);
+        const options = await india_compliance.set_gstin_options(frm);
 
         if (!frm.doc.company_gstin) frm.set_value("company_gstin", options[0]);
     },
@@ -1703,17 +1703,3 @@ async function create_new_purchase_invoice(row, company, company_gstin) {
     frappe.new_doc("Purchase Invoice");
 }
 
-async function set_gstin_options(frm) {
-    const { query, params } = india_compliance.get_gstin_query(frm.doc.company);
-    const { message } = await frappe.call({
-        method: query,
-        args: params,
-    });
-
-    if (!message) return [];
-    message.unshift("All");
-
-    const gstin_field = frm.get_field("company_gstin");
-    gstin_field.set_data(message);
-    return message;
-}

@@ -85,7 +85,7 @@ def download_filed_gstr1(gstin, return_periods, otp=None):
         )
 
     if queued_message:
-        from india_compliance.gst_india.utils.gstr import show_queued_message
+        from india_compliance.gst_india.utils.gstr_2 import show_queued_message
 
         show_queued_message()
 
@@ -130,7 +130,7 @@ def download_e_invoices(gstin, return_periods, otp=None):
         create_gstr1_filed_log(gstin, return_period, "e_invoices", json_data)
 
     if queued_message:
-        from india_compliance.gst_india.utils.gstr import show_queued_message
+        from india_compliance.gst_india.utils.gstr_2 import show_queued_message
 
         show_queued_message()
 
