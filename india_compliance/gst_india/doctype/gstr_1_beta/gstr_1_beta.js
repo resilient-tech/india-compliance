@@ -532,6 +532,12 @@ class TabManager {
             .on("click", action);
     }
 
+    format_summary_table_cell(args) {
+        const isDescriptionCell = args[1]?.id === "description";
+        const value = args[2]?.indent == 0 ? `<strong>${args[0]}</strong>` : (isDescriptionCell ? `<p style="padding-left: 15px">${args[0]}</p>` : args[0]);
+        return `<a href="#" class="summary-description">${value}</a>`;
+    }
+
     // DATA
     // FIXME : remove inner for-each loop
     summarize_data() {
@@ -592,44 +598,49 @@ class TabManager {
                 name: "Description",
                 fieldname: "description",
                 width: 300,
-                _value: (...args) =>
-                    `<a href = "#" class="summary-description">${args[0]}</a>`,
+                _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "Total Docs",
                 fieldname: "total_docs",
                 width: 100,
                 align: "center",
+                _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "Taxable Value",
                 fieldname: GSTR1_DataFields.TAXABLE_VALUE,
                 width: 180,
                 align: "center",
+                _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "IGST",
                 fieldname: GSTR1_DataFields.IGST,
                 width: 150,
                 align: "center",
+                _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "CGST",
                 fieldname: GSTR1_DataFields.CGST,
                 width: 150,
                 align: "center",
+                _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "SGST",
                 fieldname: GSTR1_DataFields.SGST,
                 width: 150,
                 align: "center",
+                _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "CESS",
                 fieldname: GSTR1_DataFields.CESS,
                 width: 150,
                 align: "center",
+                _value: (...args) => this.format_summary_table_cell(args),
             },
         ];
     }
