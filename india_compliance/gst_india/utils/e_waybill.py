@@ -1470,9 +1470,13 @@ class EWaybillData(GSTTransactionData):
             if not doc.is_export_with_gst:
                 self.transaction_details.update(document_type="BIL")
 
-        if doc.doctype in ("Sales Invoice", "Purchase Invoice") and all(
-            item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST")
-            for item in doc.items
+        if (
+            doc.doctype in ("Sales Invoice", "Purchase Invoice")
+            and not doc.is_return
+            and all(
+                item.gst_treatment in ("Nil-Rated", "Exempted", "Non-GST")
+                for item in doc.items
+            )
         ):
             self.transaction_details.update(document_type="BIL")
 
