@@ -491,12 +491,30 @@ class TabManager {
             options: {
                 showTotalRow: true,
                 checkboxColumn: false,
-                treeView: true
+                treeView: true,
+                headerDropdown: [
+                    {
+                        label: 'Collapse All Node',
+                        action: () => {
+                            this.datatable.datatable.rowmanager.collapseAllNodes();
+                        }
+                    },
+                    {
+                        label: 'Expand All Node',
+                        action: () => {
+                            this.datatable.datatable.rowmanager.expandAllNodes();
+                        }
+                    }
+                ],
+                hooks: {
+                    columnTotal: (firstColumn, row) => {
+                        if (row.colIndex === 1 && row.isTotalRow && row.content == null) {
+                            row.content = "Total";
+                        }
+                    }
+                },
             },
             no_data_message: __("No data found"),
-            hooks: {
-                columnTotal: frappe.utils.report_column_total,
-            },
         });
 
         this.setup_datatable_listeners();
@@ -504,6 +522,7 @@ class TabManager {
         // Fix css
         this.wrapper.find(".dt-scrollable").css("margin-bottom", "0");
     }
+
 
     setup_datatable_listeners() {
         const me = this;
