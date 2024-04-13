@@ -251,7 +251,12 @@ class GSTR1 {
             this.tab_group.tabs.map(tab => [tab.df.fieldname, tab])
         );
 
+        // Fix css
         this.$wrapper.find(".form-tabs-list").append(`<div class="tab-actions"></div>`);
+
+        // Remove padding around data table
+        this.$wrapper.closest(".form-column").css("padding", "0px");
+        this.$wrapper.closest(".row.form-section").css("padding", "0px");
     }
 
     render_view_groups() {
@@ -495,6 +500,9 @@ class TabManager {
         });
 
         this.setup_datatable_listeners();
+
+        // Fix css
+        this.wrapper.find(".dt-scrollable").css("margin-bottom", "0");
     }
 
     setup_datatable_listeners() {

@@ -76,11 +76,6 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] > img {
     max-height: 100px;
 }
 
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] {
-    margin-bottom: var(--margin-sm);
-    border: 1px solid var(--border-color);
-    border-radius: var(--margin-xs);
-}
 
 div[data-page-route="GSTR-1 Beta"] .books_view_group,
 .reconcile_view_group,
