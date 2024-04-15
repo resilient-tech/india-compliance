@@ -94,9 +94,7 @@ div[data-page-route="GSTR-1 Beta"] .tab-actions {
     align-items: center;
 }
 
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="books_html"],
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="reconcile_html"],
-div[data-page-route="GSTR-1 Beta"] [data-fieldname="filed_html"] {
+div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
     margin-left: -11px;
     margin-right: -15px;
 }

@@ -175,6 +175,11 @@ class GSTR1 {
             _TabManager: BooksTab,
         },
         {
+            label: __("e-Invoice"),
+            name: "e_invoice",
+            _TabManager: eInvoiceTab,
+        },
+        {
             label: __("Reconcile"),
             name: "reconcile",
             _TabManager: ReconcileTab,
@@ -201,8 +206,17 @@ class GSTR1 {
     refresh_data(data) {
         if (data) this.data = data;
 
+        if (!this.data["filed"])
+            this.data["filed"] = this.data["books"];
+
         this.TABS.forEach(tab => {
-            if (tab.name == "reconcile" && !this.data[tab.name]) return this.hide_tab(tab.name);
+            if (!this.data[tab.name]) {
+                this.hide_tab(tab.name);
+                tab.shown = false;
+                return
+            }
+
+            tab.shown = true;
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_data(
                 this.data[tab.name],
                 this.status
@@ -213,6 +227,7 @@ class GSTR1 {
     refresh_view() {
         this.viewgroup.set_active_view(this.active_view);
         this.TABS.forEach(tab => {
+            if (!tab.shown) return;
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_view(
                 this.active_view,
                 this.filter_category
@@ -459,6 +474,8 @@ class TabManager {
         this.setup_actions();
         this.summarize_data();
         this.datatable.refresh(Object.values(this.summary));
+
+        this.set_default_title();
     }
 
     refresh_view(view, category) {
@@ -485,7 +502,7 @@ class TabManager {
             );
         }
 
-        this.set_title(category);
+        this.set_title(category || this.DEFAULT_TITLE);
     }
 
     get_row(data, category) {
@@ -498,6 +515,10 @@ class TabManager {
     set_title(category) {
         if (category) this.wrapper.find(".tab-title-text").text(category);
         else this.wrapper.find(".tab-title-text").html("&nbsp");
+    }
+
+    set_default_title() {
+        this.set_title(this.DEFAULT_TITLE);
     }
 
     setup_wrapper() {
@@ -1090,6 +1111,8 @@ class BooksTab extends TabManager {
         [GSTR1_SubCategories.DOC_ISSUE]: this.get_documents_issued_columns,
     };
 
+    DEFAULT_TITLE = "Summary of Books";
+
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
             this.download_books_as_excel()
@@ -1176,6 +1199,8 @@ class BooksTab extends TabManager {
     }
 }
 
+
+
 class FiledTab extends TabManager {
     CATEGORY_COLUMNS = {
         [GSTR1_SubCategories.B2B_REGULAR]: this.get_invoice_columns,
@@ -1201,6 +1226,8 @@ class FiledTab extends TabManager {
         [GSTR1_SubCategories.HSN]: this.get_hsn_columns,
         [GSTR1_SubCategories.DOC_ISSUE]: this.get_documents_issued_columns,
     };
+
+    DEFAULT_TITLE = "";
 
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
@@ -1336,7 +1363,27 @@ class FiledTab extends TabManager {
 
 }
 
+class eInvoiceTab extends FiledTab {
+    setup_actions() { }
+
+    set_default_title() {
+        this.DEFAULT_TITLE = "e-Invoices as in GSTR-1";
+        super.set_default_title();
+    }
+
+}
+
 class ReconcileTab extends FiledTab {
+
+    set_default_title() {
+        if (this.instance.data.status === "Filed")
+            this.DEFAULT_TITLE = "Difference between Books vs Filed";
+        else
+            this.DEFAULT_TITLE = "Difference between Books vs e-Invoices";
+
+        super.set_default_title();
+    }
+
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
             this.download_reconcile_as_excel()

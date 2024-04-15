@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "format:{return_period}-{gstin}",
  "creation": "2024-03-11 11:59:06.887429",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -145,10 +145,11 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-13 15:40:12.891741",
+ "modified": "2024-04-13 18:11:08.319085",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {
