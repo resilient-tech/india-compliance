@@ -322,16 +322,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         supply_type = "Inter-State" if is_interstate else "Intra-State"
 
         invoice.invoice_type = f"{supply_type} to {gst_registration} persons"
-
-        # INVOICE SUB CATEGORY
-        if self.is_nil_rated(invoice):
-            invoice.invoice_sub_category = GSTR1_SubCategories.NIL_RATED.value
-
-        elif self.is_exempted(invoice):
-            invoice.invoice_sub_category = GSTR1_SubCategories.EXEMPTED.value
-
-        elif self.is_non_gst(invoice):
-            invoice.invoice_sub_category = GSTR1_SubCategories.NON_GST.value
+        invoice.invoice_sub_category = GSTR1_SubCategories.NIL_EXEMPT.value
 
     def set_for_cdnr(self, invoice):
         self._set_invoice_type_for_b2b_and_cdnr(invoice)
@@ -532,27 +523,19 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         return summary
 
     def update_overlaping_invoice_summary(self, sub_category_summary, final_summary):
-        nil_exempt_non_gst = (
-            GSTR1_SubCategories.NIL_RATED.value,
-            GSTR1_SubCategories.EXEMPTED.value,
-            GSTR1_SubCategories.NON_GST.value,
-        )
+        nil_exempt = GSTR1_SubCategories.NIL_EXEMPT.value
 
         # Get Unique Taxable Invoices
         unique_invoices = set()
         for category, row in sub_category_summary.items():
-            if category in nil_exempt_non_gst:
+            if category == nil_exempt:
                 continue
 
             unique_invoices.update(row["unique_records"])
 
         # Get Overlaping Invoices
-        overlaping_invoices = set()
-        for category in nil_exempt_non_gst:
-            category_invoices = sub_category_summary[category]["unique_records"]
-
-            overlaping_invoices.update(category_invoices.intersection(unique_invoices))
-            unique_invoices.update(category_invoices)
+        category_invoices = sub_category_summary[nil_exempt]["unique_records"]
+        overlaping_invoices = category_invoices.intersection(unique_invoices)
 
         # Update Summary
         if overlaping_invoices:

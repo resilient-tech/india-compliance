@@ -78,9 +78,7 @@ class GSTR1_SubCategories(Enum):
     EXPWP = "Exports with payment"
     EXPWOP = "Exports without payment"
     B2CS = "B2C (Others)"
-    NIL_RATED = "Nil-Rated"
-    EXEMPTED = "Exempted"
-    NON_GST = "Non-GST"
+    NIL_EXEMPT = "Nil-Rated, Exempted, Non-GST"
     CDNR = "Credit/Debit Notes (Registered)"
     CDNUR = "Credit/Debit Notes (Unregistered)"
 
@@ -155,11 +153,5 @@ CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Categories.B2CL: (GSTR1_SubCategories.B2CL,),
     GSTR1_Categories.EXP: (GSTR1_SubCategories.EXPWP, GSTR1_SubCategories.EXPWOP),
     GSTR1_Categories.B2CS: (GSTR1_SubCategories.B2CS,),
-    GSTR1_Categories.NIL_EXEMPT: (
-        GSTR1_SubCategories.NIL_RATED,
-        GSTR1_SubCategories.EXEMPTED,
-        GSTR1_SubCategories.NON_GST,
-    ),
-    GSTR1_Categories.CDNR: (GSTR1_SubCategories.CDNR,),
-    GSTR1_Categories.CDNUR: (GSTR1_SubCategories.CDNUR,),
+    GSTR1_Categories.NIL_EXEMPT: (GSTR1_SubCategories.NIL_EXEMPT,),
 }
