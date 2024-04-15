@@ -7,6 +7,9 @@ from frappe import _
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.public import PublicAPI
+from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
+    process_gstr_1_returns_info,
+)
 from india_compliance.gst_india.utils import titlecase, validate_gstin
 
 GST_CATEGORIES = {
@@ -160,3 +163,33 @@ def _extract_address_lines(address):
 
 # "Non Resident Taxable Person"
 # "Government Department ID"
+
+
+####################################################################################################
+#### GSTIN RETURNS INFO ##########################################################################
+####################################################################################################
+
+
+def get_gstr_1_return_status(gstin, period, process_info=True):
+    """Returns Returns info for the given period"""
+    fy = get_fy(period)
+
+    response = PublicAPI().get_returns_info(gstin, fy)
+    if not response:
+        return
+
+    if process_info:
+        frappe.enqueue(process_gstr_1_returns_info, gstin, response)
+
+    for info in response.get("EFiledlist"):
+        if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
+            return info["status"]
+
+
+def get_fy(period):
+    month, year = period[:2], period[2:]
+
+    if int(month) < 4:
+        return f"{int(year) - 1}-{year[-2:]}"
+    else:
+        return f"{year}-{int(year[-2:]) + 1}"

@@ -12,6 +12,7 @@
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
+  "generation_status",
   "section_break_oisv",
   "e_invoice_data",
   "filed_gstr1",
@@ -141,11 +142,19 @@
    "fieldname": "computed_on",
    "fieldtype": "Datetime",
    "label": "Computed On"
+  },
+  {
+   "fieldname": "generation_status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Generation Status",
+   "options": "\nIn Progress\nGenerated",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-13 18:11:08.319085",
+ "modified": "2024-04-15 13:46:18.200410",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",

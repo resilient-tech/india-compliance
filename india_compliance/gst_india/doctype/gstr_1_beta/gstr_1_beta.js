@@ -17,7 +17,7 @@ const GSTR1_Categories = {
     TXP: "Advances Adjusted",
     DOC_ISSUE: "Document Issued",
     HSN: "HSN Summary",
-}
+};
 const GSTR1_SubCategories = {
     B2B_REGULAR: "B2B Regular",
     B2B_REVERSE_CHARGE: "B2B Reverse Charge",
@@ -120,8 +120,16 @@ frappe.ui.form.on(DOCTYPE, {
         //     });
         // })
 
-        frappe.realtime.on("gstr1_data_prepared", data => {
-            console.log(data);
+        frappe.realtime.on("gstr1_data_prepared", message => {
+            const { data, filters } = message;
+
+            if (
+                frm.doc.company_gstin !== filters.company_gstin ||
+                frm.doc.month != filters.month ||
+                frm.doc.year != filters.year
+            )
+                return;
+
             frm.doc.__onload = { data };
             frm.trigger("after_save");
             frm.refresh();
@@ -158,6 +166,11 @@ frappe.ui.form.on(DOCTYPE, {
 
     after_save(frm) {
         const data = frm.doc.__onload?.data;
+        if (data == "otp_requested") {
+            india_compliance.authenticate_otp(frm.doc.company_gstin).then(() => frm.save())
+            return;
+        }
+
         if (!data?.status) return;
 
         frm.gstr1.status = data.status;
@@ -206,14 +219,13 @@ class GSTR1 {
     refresh_data(data) {
         if (data) this.data = data;
 
-        if (!this.data["filed"])
-            this.data["filed"] = this.data["books"];
+        if (!this.data["filed"]) this.data["filed"] = this.data["books"];
 
         this.TABS.forEach(tab => {
             if (!this.data[tab.name]) {
                 this.hide_tab(tab.name);
                 tab.shown = false;
-                return
+                return;
             }
 
             tab.shown = true;
@@ -363,7 +375,10 @@ class GSTR1 {
     // UTILS
 
     hide_tab(tab_name) {
-        this.$wrapper.find(`[data-fieldname="${tab_name}_tab"]`).closest(".nav-item").hide();
+        this.$wrapper
+            .find(`[data-fieldname="${tab_name}_tab"]`)
+            .closest(".nav-item")
+            .hide();
     }
 
     show_tab(tab_name) { }
@@ -487,7 +502,6 @@ class TabManager {
 
             const columns = columns_func.call(this);
             this.setup_datatable(this.wrapper, this.data[category], columns);
-
         } else if (view === "Summary") {
             let filtered_summary = Object.values(this.summary);
             if (category)
@@ -545,33 +559,35 @@ class TabManager {
                 treeView: true,
                 headerDropdown: [
                     {
-                        label: 'Collapse All Node',
+                        label: "Collapse All Node",
                         action: () => {
                             this.datatable.datatable.rowmanager.collapseAllNodes();
-                        }
+                        },
                     },
                     {
-                        label: 'Expand All Node',
+                        label: "Expand All Node",
                         action: () => {
                             this.datatable.datatable.rowmanager.expandAllNodes();
-                        }
-                    }
+                        },
+                    },
                 ],
                 hooks: {
                     columnTotal: (firstColumn, row) => {
-                        if (row.colIndex === 1 && row.isTotalRow && row.content == null) {
+                        if (
+                            row.colIndex === 1 &&
+                            row.isTotalRow &&
+                            row.content == null
+                        ) {
                             row.content = "Total";
                         }
-                    }
+                    },
                 },
             },
             no_data_message: __("No data found"),
         });
 
         this.setup_datatable_listeners();
-
     }
-
 
     setup_datatable_listeners() {
         const me = this;
@@ -610,7 +626,12 @@ class TabManager {
 
     format_summary_table_cell(args) {
         const isDescriptionCell = args[1]?.id === "description";
-        const value = args[2]?.indent == 0 ? `<strong>${args[0]}</strong>` : (isDescriptionCell ? `<p style="padding-left: 15px">${args[0]}</p>` : args[0]);
+        const value =
+            args[2]?.indent == 0
+                ? `<strong>${args[0]}</strong>`
+                : isDescriptionCell
+                    ? `<p style="padding-left: 15px">${args[0]}</p>`
+                    : args[0];
         return `<a href="#" class="summary-description">${value}</a>`;
     }
 
@@ -623,15 +644,15 @@ class TabManager {
             this.summary[category] = {
                 ...this.DEFAULT_SUMMARY,
                 description: category,
-                indent: 0
+                indent: 0,
             };
 
-            sub_categories.forEach((sub) => {
+            sub_categories.forEach(sub => {
                 let sub_category_row = sub_category_summary[sub];
 
                 Object.keys(this.DEFAULT_SUMMARY).forEach(key => {
-                    this.summary[category][key] += sub_category_row[key]
-                })
+                    this.summary[category][key] += sub_category_row[key];
+                });
 
                 const sub_category = `${category} - ${sub}`; // Unique description
                 this.summary[sub_category] = sub_category_row;
@@ -641,15 +662,15 @@ class TabManager {
 
     // FIXME : remove `reduce`  because computed data will be in `data`
     get_sub_category_summary() {
-        let sub_category_summary = {}
+        let sub_category_summary = {};
 
         Object.values(GSTR1_SubCategories).forEach(category => {
             sub_category_summary[category] = {
                 ...this.DEFAULT_SUMMARY,
                 description: category,
-                indent: 1
-            }
-        })
+                indent: 1,
+            };
+        });
 
         Object.entries(this.data).forEach(([category, rows]) => {
             sub_category_summary[category] = rows.reduce((accumulator, row) => {
@@ -665,7 +686,6 @@ class TabManager {
 
         return sub_category_summary;
     }
-
 
     // COLUMNS
     get_summary_columns() {
@@ -1035,12 +1055,12 @@ class TabManager {
                 fieldname: GSTR1_DataFields.CESS,
                 fieldtype: "Float",
                 width: 100,
-            },]
-
+            },
+        ];
     }
 
     get_igst_tax_columns(with_pos) {
-        const columns = []
+        const columns = [];
 
         if (with_pos)
             columns.push({
@@ -1073,11 +1093,10 @@ class TabManager {
                 fieldname: GSTR1_DataFields.CESS,
                 fieldtype: "Float",
                 width: 100,
-            },
-        )
+            }
+        );
 
-        return columns
-
+        return columns;
     }
 }
 
@@ -1134,12 +1153,12 @@ class BooksTab extends TabManager {
     // DATA
 
     get_data_for_nil_exempted_non_gst(data) {
-        const out = []
+        const out = [];
         if (data[GSTR1_SubCategories.NIL_EXEMPT]) {
-            out.concat(data[GSTR1_SubCategories.NIL_EXEMPT])
-            }
+            out.concat(data[GSTR1_SubCategories.NIL_EXEMPT]);
+        }
 
-        return out
+        return out;
     }
 
     // COLUMNS
@@ -1198,8 +1217,6 @@ class BooksTab extends TabManager {
         ];
     }
 }
-
-
 
 class FiledTab extends TabManager {
     CATEGORY_COLUMNS = {
@@ -1318,7 +1335,7 @@ class FiledTab extends TabManager {
                 fieldtype: "Currency",
                 width: 150,
             },
-        ]
+        ];
     }
 
     get_cdnur_columns() {
@@ -1360,7 +1377,6 @@ class FiledTab extends TabManager {
             },
         ];
     }
-
 }
 
 class eInvoiceTab extends FiledTab {
@@ -1370,16 +1386,13 @@ class eInvoiceTab extends FiledTab {
         this.DEFAULT_TITLE = "e-Invoices as in GSTR-1";
         super.set_default_title();
     }
-
 }
 
 class ReconcileTab extends FiledTab {
-
     set_default_title() {
         if (this.instance.data.status === "Filed")
             this.DEFAULT_TITLE = "Difference between Books vs Filed";
-        else
-            this.DEFAULT_TITLE = "Difference between Books vs e-Invoices";
+        else this.DEFAULT_TITLE = "Difference between Books vs e-Invoices";
 
         super.set_default_title();
     }

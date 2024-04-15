@@ -4,11 +4,13 @@
 from datetime import datetime
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR1DocumentIssuedSummary
 from india_compliance.gst_india.utils.gstr_1 import DataFields, GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 DATA = {
     "status": "Filed",
@@ -466,57 +468,89 @@ class GSTR1Beta(Document):
             self.set_onload("data", data)
 
     def validate(self):
-        # from_date = getdate(f"1-{self.month}-{self.year}")
-        # to_date = get_last_day(from_date)
-        # filters = {
-        #     "company": self.company,
-        #     "company_gstin": self.company_gstin,
-        #     "from_date": from_date,
-        #     "to_date": to_date,
-        # }
+        period = self.get_period()
 
-        # Check for the gstr-1 import log.
-        # If all data points are available, load the data from the log.
+        if log_name := frappe.db.exists(
+            "GSTR-1 Filed Log", f"{period}-{self.company_gstin}"
+        ):
 
-        # If not, enqueue. Setup listener in front end to check if data is prepared. If prepared, Save the form again.
-        if not getattr(self, "data", None):
-            frappe.enqueue(generate_gstr1, filters=self, queue="long")
-            frappe.msgprint("GSTR-1 is being prepared", alert=True)
+            gstr1_log = frappe.get_doc("GSTR-1 Filed Log", log_name)
+
+            if gstr1_log.generation_status == "In Progress":
+                frappe.msgprint(
+                    _(
+                        "GSTR-1 is being prepared. Please wait for the process to complete."
+                    )
+                )
+
+                return
+
+        else:
+            gstr1_log = frappe.new_doc("GSTR-1 Filed Log")
+            gstr1_log.gstin = self.company_gstin
+            gstr1_log.return_period = period
+            gstr1_log.generation_status = "In Progress"
+            gstr1_log.insert()
+
+        settings = frappe.get_cached_doc("GST Settings")
+
+        if gstr1_log.has_all_files(settings):
+            self.data = gstr1_log.load_data()
+            return
+
+        if gstr1_log.is_sek_needed(settings) and not gstr1_log.is_sek_valid(settings):
+            request_otp(self.company_gstin)
+            self.data = "otp_requested"
+            return
+
+        self.gstr1_log = gstr1_log
+        self.settings = settings
+
+        frappe.enqueue(self.generate_gstr1, queue="long")
+        frappe.msgprint("GSTR-1 is being prepared", alert=True)
 
     def get_period(self):
         month_number = str(datetime.strptime(self.month, "%B").month).zfill(2)
         return f"{month_number}{self.year}"
 
+    def generate_gstr1(self):
+        data = {}
 
-def generate_gstr1(filters):
-    data = {}
+        settings = frappe.get_cached_doc("GST Settings")
 
-    settings = frappe.get_cached_doc("GST Settings")
+        # APIs Disabled
+        if not settings.analyze_filed_data:
+            data["status"] = "Not Filed"
+            data["books"] = compute_books_gstr1_data(self)
 
-    # APIs Disabled
-    if not settings.analyze_filed_data:
-        data["status"] = "Not Filed"
-        data["books"] = compute_books_gstr1_data(filters)
+            frappe.publish_realtime("gstr1_data_prepared", message=data)
+            return
 
-        frappe.publish_realtime("gstr1_data_prepared", message=data)
-        return
+        # APIs Enabled
+        status = get_gstr1_status(self)
 
-    # APIs Enabled
-    status = get_gstr1_status(filters)
+        if status == "Filed":
+            data_key = "filed"
+            gov_data = download_gov_gstr1_data(self)
+        else:
+            data_key = "e_invoice"
+            gov_data = download_e_invoice_gstr1_data(self)
 
-    if status == "Filed":
-        data_key = "filed"
-        gov_data = download_gov_gstr1_data(filters)
-    else:
-        data_key = "e_invoice"
-        gov_data = download_e_invoice_gstr1_data(filters)
+        data["status"] = status
+        data[data_key] = gov_data
+        data["books"] = compute_books_gstr1_data(self)
+        data["reconcile"] = reconcile_gstr1_data(self, gov_data, data["books"], status)
 
-    data["status"] = status
-    data[data_key] = gov_data
-    data["books"] = compute_books_gstr1_data(filters)
-    data["reconcile"] = reconcile_gstr1_data(filters, gov_data, data["books"], status)
-
-    frappe.publish_realtime("gstr1_data_prepared", message=data)
+        # TODO: Handle queueing of data
+        frappe.db.set_value(
+            "GSTR-1 Filed Log",
+            self.gstr1_log.name,
+            {"generation_status": "Generated", "is_latest_data": 1},
+        )
+        frappe.publish_realtime(
+            "gstr1_data_prepared",
+            message={"data": data, "filters": self},
+        )
 
 
 def get_gstr1_status(filters):

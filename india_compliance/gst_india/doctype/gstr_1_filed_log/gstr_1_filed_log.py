@@ -4,13 +4,117 @@ import gzip
 from datetime import datetime
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import add_to_date
 
 DOCTYPE = "GSTR-1 Filed Log"
 
 
 class GSTR1FiledLog(Document):
-    pass
+
+    def show_report(self):
+        # TODO: Implement
+        pass
+
+    def load_data(self):
+        pass
+
+    def is_sek_needed(self, settings=None):
+        if not settings:
+            settings = frappe.get_cached_doc("GST Settings")
+
+        if not settings.analyze_filed_data:
+            return False
+
+        if not self.e_invoice_data or self.filing_status != "Filed":
+            return True
+
+        if not self.filed_gstr1:
+            return True
+
+        return False
+
+    def is_sek_valid(self, settings=None):
+        if not settings:
+            settings = frappe.get_cached_doc("GST Settings")
+
+        for credential in settings.credentials:
+            if credential.service == "Returns" and credential.gstin == self.gstin:
+                break
+
+        else:
+            frappe.throw(
+                _("No credential found for the GSTIN {0} in the GST Settings").format(
+                    self.gstin
+                )
+            )
+
+        if credential.session_expiry and credential.session_expiry > add_to_date(
+            None, minutes=-30
+        ):
+            return True
+
+    def has_all_files(self, settings=None):
+        if not settings:
+            settings = frappe.get_cached_doc("GST Settings")
+
+        if not self.is_latest_data:
+            return False
+
+        files = [
+            "computed_gstr1",
+            "computed_gstr1_summary",
+        ]
+
+        if settings.analyze_filed_data:
+            files.extend(["reconciled_gstr1", "reconciled_gstr1_summary"])
+
+            if self.filing_status == "Filed":
+                files.extend(["filed_gstr1", "filed_gstr1_summary"])
+            else:
+                files.extend(["e_invoice_data", "e_invoice_summary"])
+
+        return all(getattr(self, file) for file in files)
+
+
+def process_gstr_1_returns_info(gstin, response):
+    return_info = {}
+
+    for info in response.get("EFiledlist"):
+        if info["rtntype"] == "GSTR1":
+            return_info[f"{info['ret_prd']}-{gstin}"] = info
+
+    filed_logs = frappe._dict(
+        frappe.get_all(
+            "GSTR-1 Filed Log",
+            filters={"name": ("in", list(return_info.keys()))},
+            fields=["name", "filing_status"],
+            as_list=1,
+        )
+    )
+
+    for key, info in return_info.items():
+        filing_details = {
+            "filing_status": info["status"],
+            "acknowledgement_number": info["arn"],
+            "filing_date": datetime.strptime(info["dof"], "%d-%m-%Y").date(),
+        }
+
+        if key in filed_logs:
+            if filed_logs[key] != info["status"]:
+                frappe.db.set_value("GSTR-1 Filed Log", key, filing_details)
+
+            continue
+
+        frappe.get_doc(
+            {
+                "doctype": "GSTR-1 Filed Log",
+                "gstin": gstin,
+                "return_period": info["ret_prd"],
+                **filing_details,
+            }
+        ).insert()
 
 
 def create_gstr1_filed_log(

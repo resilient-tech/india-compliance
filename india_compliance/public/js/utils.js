@@ -335,18 +335,22 @@ Object.assign(india_compliance, {
         for (let gstin of Object.keys(gstin_authentication_status)) {
             if (gstin_authentication_status[gstin]) continue;
 
-            gstin_authentication_status[gstin] = await this.authenticate_otp(gstin);
+            gstin_authentication_status[gstin] = await this.request_and_authenticate_otp(gstin);
         }
 
         return Object.keys(gstin_authentication_status);
     },
 
-    async authenticate_otp(gstin) {
+    async request_and_authenticate_otp(gstin) {
         await frappe.call({
             method: "india_compliance.gst_india.utils.gstr_utils.request_otp",
             args: { company_gstin: gstin },
         });
 
+        this.authenticate_otp(gstin);
+    },
+
+    async authenticate_otp(gstin) {
         let error_type = "otp_requested";
         let is_authenticated = false;
 
