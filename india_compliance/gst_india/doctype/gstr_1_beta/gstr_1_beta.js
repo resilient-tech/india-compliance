@@ -104,6 +104,26 @@ frappe.ui.form.on(DOCTYPE, {
             frm.trigger("company");
         });
         set_default_fields(frm);
+
+        frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
+            frappe.show_alert({
+                message: __("GSTR-1 Data Downloaded Successfully"),
+                indicator: "green",
+            });
+        })
+
+        frappe.realtime.on("compute_books_gstr1_data_complete", _ => {
+            frappe.show_alert({
+                message: __("GSTR-1 Data Computed Successfully"),
+                indicator: "green",
+            });
+        })
+
+        frappe.realtime.on("gstr1_data_prepared", data => {
+            frm.doc.__onload = { data };
+            frm.trigger("after_save");
+            frm.refresh();
+        });
     },
 
     async company(frm) {
@@ -136,6 +156,8 @@ frappe.ui.form.on(DOCTYPE, {
 
     after_save(frm) {
         const data = frm.doc.__onload?.data;
+        if (!data?.status) return;
+
         frm.gstr1.status = data.status;
         frm.gstr1.refresh_data(data);
     },
@@ -367,8 +389,6 @@ class GSTR1 {
         this.active_view = target_view;
 
         this.refresh_view();
-
-        console.log(this.active_view);
     };
 
     filter_category_dialog(view_group, target_view) {
@@ -519,8 +539,6 @@ class TabManager {
 
         this.setup_datatable_listeners();
 
-        // Fix css
-        this.wrapper.find(".dt-scrollable").css("margin-bottom", "0");
     }
 
 
@@ -1184,7 +1202,6 @@ class FiledTab extends TabManager {
             this.download_filed_as_excel()
         );
 
-        console.log(this.status);
         if (this.status === "Filed") return;
 
         this.add_tab_custom_button("Download JSON", () => console.log("hi"));

@@ -45,8 +45,8 @@ div[data-page-route="GSTR-1 Beta"] .tab-title-text {
 
 div[data-page-route="GSTR-1 Beta"] .datatable .dt-scrollable {
     overflow-y: auto !important;
-    margin-bottom: 2em;
     min-height: calc(100vh - 450px);
+    border-left: 1px solid var(--border-color);
 }
 
 div[data-page-route="GSTR-1 Beta"] .datatable .dt-row {

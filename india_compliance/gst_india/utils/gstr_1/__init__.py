@@ -39,8 +39,6 @@ UI:
 - Query => Process => Map => Save => Pass on the data for Reco
 - Process => Update => Save => Pass on the data for rendering
 
-- Render
-
 """
 
 

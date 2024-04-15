@@ -197,4 +197,4 @@ def save_gstr_1_filed_data(gstin, return_period, json_data):
 
 
 def save_einvoice_data(gstin, return_period, json_data):
-    save_gstr_1(gstin, return_period, "e_invoices", json_data)
+    save_gstr_1(gstin, return_period, "e_invoice_data", json_data)

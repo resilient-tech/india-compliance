@@ -466,14 +466,44 @@ class GSTR1Beta(Document):
         #     "to_date": to_date,
         # }
 
-        self.data = DATA
-
         # Check for the gstr-1 import log.
         # If all data points are available, load the data from the log.
 
         # If not, enqueue. Setup listener in front end to check if data is prepared. If prepared, Save the form again.
+        if not getattr(self, "data", None):
+            frappe.enqueue(generate_gstr1, filters=self, queue="long")
+            frappe.msgprint("GSTR-1 is being prepared", alert=True)
 
-        pass
+
+def generate_gstr1(filters):
+    data = {}
+
+    data["status"] = get_gstr1_status(filters)
+    data["filed"] = download_gov_gstr1_data(filters)
+    data["books"] = compute_books_gstr1_data(filters)
+
+    reconcile_gstr1_data(filters, data["filed"], data["books"])
+
+    frappe.publish_realtime("gstr1_data_prepared", message=DATA)
+
+
+def get_gstr1_status(filters):
+    return "Not Filed"
+
+
+def download_gov_gstr1_data(filters):
+    frappe.publish_realtime("download_gov_gstr1_data_complete", message=DATA)
+    return {}
+
+
+def compute_books_gstr1_data(filters):
+    frappe.publish_realtime("compute_books_gstr1_data_complete")
+    return {}
+
+
+def reconcile_gstr1_data(filters, gov_data, books_data):
+    frappe.publish_realtime("reconcile_gstr1_data_complete")
+    return {}
 
 
 ####################################################################################################

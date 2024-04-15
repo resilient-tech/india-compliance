@@ -13,9 +13,21 @@
   "filing_date",
   "acknowledgement_number",
   "section_break_oisv",
-  "e_invoices",
+  "e_invoice_data",
   "filed_gstr1",
-  "computed_gstr1"
+  "column_break_hxfu",
+  "e_invoice_summary",
+  "filed_gstr1_summary",
+  "computed_data_section",
+  "is_latest_data",
+  "computed_gstr1",
+  "column_break_eipk",
+  "computed_on",
+  "computed_gstr1_summary",
+  "reconciled_data_section",
+  "reconciled_gstr1",
+  "column_break_ndup",
+  "reconciled_gstr1_summary"
  ],
  "fields": [
   {
@@ -49,12 +61,8 @@
   },
   {
    "fieldname": "section_break_oisv",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "e_invoices",
-   "fieldtype": "Attach",
-   "label": "e-Invoices from GST Portal"
+   "fieldtype": "Section Break",
+   "label": "Government Data"
   },
   {
    "fieldname": "filed_gstr1",
@@ -70,11 +78,74 @@
    "fieldname": "gstin",
    "fieldtype": "Data",
    "label": "GSTIN"
+  },
+  {
+   "fieldname": "column_break_hxfu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "e_invoice_summary",
+   "fieldtype": "Attach",
+   "label": "e-Invoice Summary"
+  },
+  {
+   "fieldname": "filed_gstr1_summary",
+   "fieldtype": "Attach",
+   "label": "Filed GSTR-1 Summary"
+  },
+  {
+   "fieldname": "computed_data_section",
+   "fieldtype": "Section Break",
+   "label": "Computed Data"
+  },
+  {
+   "fieldname": "column_break_eipk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "computed_gstr1_summary",
+   "fieldtype": "Attach",
+   "label": "Computed GSTR-1 Summary"
+  },
+  {
+   "fieldname": "reconciled_data_section",
+   "fieldtype": "Section Break",
+   "label": "Reconciled Data"
+  },
+  {
+   "fieldname": "reconciled_gstr1",
+   "fieldtype": "Attach",
+   "label": "Reconciled GSTR-1"
+  },
+  {
+   "fieldname": "column_break_ndup",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reconciled_gstr1_summary",
+   "fieldtype": "Attach",
+   "label": "Reconciled GSTR-1 Summary"
+  },
+  {
+   "fieldname": "e_invoice_data",
+   "fieldtype": "Attach",
+   "label": "e-Invoice Data"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_latest_data",
+   "fieldtype": "Check",
+   "label": "Is Latest Data"
+  },
+  {
+   "fieldname": "computed_on",
+   "fieldtype": "Datetime",
+   "label": "Computed On"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-03-19 12:02:01.213545",
+ "modified": "2024-04-13 15:40:12.891741",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",
