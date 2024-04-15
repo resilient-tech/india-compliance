@@ -28,6 +28,7 @@ const GSTR1_SubCategories = {
     EXPWOP: "Export without Payment of Tax",
     B2CL: "B2C (Large)",
     B2CS: "B2C (Others)",
+    NIL_EXEMPT: "Nil-Rated, Exempted, Non-GST",
     NIL_RATED: "Nil-Rated",
     EXEMPTED: "Exempted",
     NON_GST: "Non-GST",
@@ -49,11 +50,7 @@ const INVOICE_TYPE = {
     ],
     [GSTR1_Categories.B2CL]: [GSTR1_SubCategories.B2CL],
     [GSTR1_Categories.EXP]: [GSTR1_SubCategories.EXPWP, GSTR1_SubCategories.EXPWOP],
-    [GSTR1_Categories.NIL_EXEMPT]: [
-        GSTR1_SubCategories.NIL_RATED,
-        GSTR1_SubCategories.EXEMPTED,
-        GSTR1_SubCategories.NON_GST,
-    ],
+    [GSTR1_Categories.NIL_EXEMPT]: [GSTR1_SubCategories.NIL_EXEMPT],
     [GSTR1_Categories.CDNR]: [GSTR1_SubCategories.CDNR],
     [GSTR1_Categories.CDNUR]: [GSTR1_SubCategories.CDNUR],
     [GSTR1_Categories.AT]: [GSTR1_SubCategories.AT],
@@ -83,6 +80,10 @@ const GSTR1_DataFields = {
     SHIPPING_BILL_DATE: "shipping_bill_date",
     SHIPPING_PORT_CODE: "shipping_port_code",
 
+    EXEMPTED_AMOUNT: "exempted_amount",
+    NIL_RATED_AMOUNT: "nil_rated_amount",
+    NON_GST_AMOUNT: "non_gst_amount",
+
     HSN_CODE: "hsn_code",
     DESCRIPTION: "description",
     UOM: "uom",
@@ -105,21 +106,22 @@ frappe.ui.form.on(DOCTYPE, {
         });
         set_default_fields(frm);
 
-        frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
-            frappe.show_alert({
-                message: __("GSTR-1 Data Downloaded Successfully"),
-                indicator: "green",
-            });
-        })
+        // frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
+        //     frappe.show_alert({
+        //         message: __("GSTR-1 Data Downloaded Successfully"),
+        //         indicator: "green",
+        //     });
+        // })
 
-        frappe.realtime.on("compute_books_gstr1_data_complete", _ => {
-            frappe.show_alert({
-                message: __("GSTR-1 Data Computed Successfully"),
-                indicator: "green",
-            });
-        })
+        // frappe.realtime.on("compute_books_gstr1_data_complete", _ => {
+        //     frappe.show_alert({
+        //         message: __("GSTR-1 Data Computed Successfully"),
+        //         indicator: "green",
+        //     });
+        // })
 
         frappe.realtime.on("gstr1_data_prepared", data => {
+            console.log(data);
             frm.doc.__onload = { data };
             frm.trigger("after_save");
             frm.refresh();
@@ -200,6 +202,7 @@ class GSTR1 {
         if (data) this.data = data;
 
         this.TABS.forEach(tab => {
+            if (tab.name == "reconcile" && !this.data[tab.name]) return this.hide_tab(tab.name);
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_data(
                 this.data[tab.name],
                 this.status
@@ -246,6 +249,7 @@ class GSTR1 {
                     fieldname: `${tab.name}_tab`,
                     label: __(tab.label),
                     active: tab.is_active ? 1 : 0,
+                    depends_on: tab.depends_on,
                 },
                 {
                     fieldtype: "HTML",
@@ -342,6 +346,12 @@ class GSTR1 {
     mark_as_filed() { }
 
     // UTILS
+
+    hide_tab(tab_name) {
+        this.$wrapper.find(`[data-fieldname="${tab_name}_tab"]`).closest(".nav-item").hide();
+    }
+
+    show_tab(tab_name) { }
 
     get_filter_fields() {
         const fields = [
@@ -1009,7 +1019,7 @@ class TabManager {
     }
 
     get_igst_tax_columns(with_pos) {
-        columns = []
+        const columns = []
 
         if (with_pos)
             columns.push({
@@ -1067,9 +1077,7 @@ class BooksTab extends TabManager {
         [GSTR1_SubCategories.B2CL]: this.get_invoice_columns,
         [GSTR1_SubCategories.B2CS]: this.get_document_columns,
 
-        [GSTR1_SubCategories.NIL_RATED]: this.get_document_columns,
-        [GSTR1_SubCategories.EXEMPTED]: this.get_document_columns,
-        [GSTR1_SubCategories.NON_GST]: this.get_document_columns,
+        [GSTR1_SubCategories.NIL_EXEMPT]: this.get_document_columns,
 
         [GSTR1_SubCategories.CDNR]: this.get_document_columns,
         [GSTR1_SubCategories.CDNUR]: this.get_document_columns,
@@ -1104,11 +1112,10 @@ class BooksTab extends TabManager {
 
     get_data_for_nil_exempted_non_gst(data) {
         const out = []
-        [GSTR1_SubCategories.NIL_RATED, GSTR1_SubCategories.EXEMPTED, GSTR1_SubCategories.NON_GST].forEach(category => {
-            if (data[category]) {
-                out.concat(data[category])
+        if (data[GSTR1_SubCategories.NIL_EXEMPT]) {
+            out.concat(data[GSTR1_SubCategories.NIL_EXEMPT])
             }
-        })
+
         return out
     }
 
@@ -1183,9 +1190,7 @@ class FiledTab extends TabManager {
         [GSTR1_SubCategories.B2CL]: this.get_b2cl_columns,
         [GSTR1_SubCategories.B2CS]: this.get_b2cs_columns,
 
-        [GSTR1_SubCategories.NIL_RATED]: this.get_nil_rated_columns,
-        [GSTR1_SubCategories.EXEMPTED]: this.get_exempted_columns,
-        [GSTR1_SubCategories.NON_GST]: this.get_non_gst_columns,
+        [GSTR1_SubCategories.NIL_EXEMPT]: this.get_nil_exempt_columns,
 
         [GSTR1_SubCategories.CDNR]: this.get_document_columns,
         [GSTR1_SubCategories.CDNUR]: this.get_cdnur_columns,
@@ -1256,10 +1261,6 @@ class FiledTab extends TabManager {
     }
 
     get_nil_exempt_columns() {
-
-    }
-
-    get_nil_rated_columns() {
         return [
             {
                 name: "Description",
@@ -1267,39 +1268,25 @@ class FiledTab extends TabManager {
                 width: 200,
             },
             {
-                name: "Nil Rated Supplies",
-                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                name: "Nil-Rated Supplies",
+                fieldname: GSTR1_DataFields.NIL_RATED_AMOUNT,
                 fieldtype: "Currency",
                 width: 150,
-            },
-        ]
-    }
-
-    get_exempted_columns() {
-        return [
-            {
-                name: "Description",
-                fieldname: GSTR1_DataFields.DOC_TYPE,
-                width: 200,
             },
             {
                 name: "Exempted Supplies",
-                fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                fieldname: GSTR1_DataFields.EXEMPTED_AMOUNT,
                 fieldtype: "Currency",
                 width: 150,
             },
-        ]
-    }
-
-    get_non_gst_columns() {
-        return [
-            {
-                name: "Description",
-                fieldname: GSTR1_DataFields.DOC_TYPE,
-                width: 200,
-            },
             {
                 name: "Non-GST Supplies",
+                fieldname: GSTR1_DataFields.NON_GST_AMOUNT,
+                fieldtype: "Currency",
+                width: 150,
+            },
+            {
+                name: "Total Taxable Value",
                 fieldname: GSTR1_DataFields.TAXABLE_VALUE,
                 fieldtype: "Currency",
                 width: 150,

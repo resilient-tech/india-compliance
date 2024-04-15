@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+from datetime import datetime
 
 import frappe
 from frappe.model.document import Document
@@ -11,9 +12,17 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 
 DATA = {
     "status": "Filed",
-    "reconcile": {},
+    "reconcile": {
+        GSTR1_SubCategories.NIL_EXEMPT.value: [
+            {
+                "document_category": "Inter-State supplies to registered persons",
+                "taxable_value": 2000,
+                "igst_amount": 0,
+            },
+        ],
+    },
     "filed": {
-        GSTR1_SubCategories.NIL_RATED.value: [
+        GSTR1_SubCategories.NIL_EXEMPT.value: [
             {
                 "document_category": "Inter-State supplies to registered persons",
                 "taxable_value": 2000,
@@ -409,7 +418,7 @@ DATA = {
                 ],
             },
         ],
-        GSTR1_SubCategories.NIL_RATED.value: [
+        GSTR1_SubCategories.NIL_EXEMPT.value: [
             {
                 "document_category": "Inter-State supplies to registered persons",
                 "taxable_value": 1000,
@@ -474,36 +483,64 @@ class GSTR1Beta(Document):
             frappe.enqueue(generate_gstr1, filters=self, queue="long")
             frappe.msgprint("GSTR-1 is being prepared", alert=True)
 
+    def get_period(self):
+        month_number = str(datetime.strptime(self.month, "%B").month).zfill(2)
+        return f"{month_number}{self.year}"
+
 
 def generate_gstr1(filters):
     data = {}
 
-    data["status"] = get_gstr1_status(filters)
-    data["filed"] = download_gov_gstr1_data(filters)
+    settings = frappe.get_cached_doc("GST Settings")
+
+    # APIs Disabled
+    if not settings.analyze_filed_data:
+        data["status"] = "Not Filed"
+        data["books"] = compute_books_gstr1_data(filters)
+
+        frappe.publish_realtime("gstr1_data_prepared", message=data)
+        return
+
+    # APIs Enabled
+    status = get_gstr1_status(filters)
+
+    if status == "Filed":
+        data_key = "filed"
+        gov_data = download_gov_gstr1_data(filters)
+    else:
+        data_key = "e_invoice"
+        gov_data = download_e_invoice_gstr1_data(filters)
+
+    data["status"] = status
+    data[data_key] = gov_data
     data["books"] = compute_books_gstr1_data(filters)
+    data["reconcile"] = reconcile_gstr1_data(filters, gov_data, data["books"], status)
 
-    reconcile_gstr1_data(filters, data["filed"], data["books"])
-
-    frappe.publish_realtime("gstr1_data_prepared", message=DATA)
+    frappe.publish_realtime("gstr1_data_prepared", message=data)
 
 
 def get_gstr1_status(filters):
     return "Not Filed"
 
 
-def download_gov_gstr1_data(filters):
-    frappe.publish_realtime("download_gov_gstr1_data_complete", message=DATA)
+def download_e_invoice_gstr1_data(filters):
+    frappe.publish_realtime("download_e_invoice_gstr1_data_complete")
     return {}
+
+
+def download_gov_gstr1_data(filters):
+    frappe.publish_realtime("download_gov_gstr1_data_complete")
+    return DATA.get("filed", {})
 
 
 def compute_books_gstr1_data(filters):
     frappe.publish_realtime("compute_books_gstr1_data_complete")
-    return {}
+    return DATA.get("books", {})
 
 
-def reconcile_gstr1_data(filters, gov_data, books_data):
+def reconcile_gstr1_data(filters, gov_data, books_data, status):
     frappe.publish_realtime("reconcile_gstr1_data_complete")
-    return {}
+    return DATA.get("reconcile", {})
 
 
 ####################################################################################################
