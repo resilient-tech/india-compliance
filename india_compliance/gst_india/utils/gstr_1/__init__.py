@@ -41,6 +41,24 @@ class GSTR1_Categories(Enum):
     HSN = "HSN Summary"
 
 
+class GSTR1_Gov_Categories(Enum):
+    """
+    Categories as per GSTR-1 Govt. Portal
+    """
+
+    B2B = "b2b"
+    B2CL = "b2cl"
+    EXP = "exp"
+    B2CS = "b2cs"
+    NIL_EXEMPT = "nil"
+    CDNR = "cdnr"
+    CDNUR = "cdnur"
+    AT = "at"
+    TXP = "txpd"
+    DOC_ISSUE = "doc_issue"
+    HSN = "hsn"
+
+
 class GSTR1_SubCategories(Enum):
     """
     Summary Page of GSTR-1
@@ -132,4 +150,30 @@ CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Categories.EXP: (GSTR1_SubCategories.EXPWP, GSTR1_SubCategories.EXPWOP),
     GSTR1_Categories.B2CS: (GSTR1_SubCategories.B2CS,),
     GSTR1_Categories.NIL_EXEMPT: (GSTR1_SubCategories.NIL_EXEMPT,),
+    GSTR1_Categories.CDNR: (GSTR1_SubCategories.CDNR,),
+    GSTR1_Categories.CDNUR: (GSTR1_SubCategories.CDNUR,),
+    GSTR1_Categories.AT: (GSTR1_SubCategories.AT,),
+    GSTR1_Categories.TXP: (GSTR1_SubCategories.TXP,),
+    GSTR1_Categories.DOC_ISSUE: (GSTR1_SubCategories.DOC_ISSUE,),
+    GSTR1_Categories.HSN: (GSTR1_SubCategories.HSN,),
+}
+
+
+SUB_CATEGORY_GOV_CATEGORY_MAPPING = {
+    GSTR1_SubCategories.B2B_REGULAR: GSTR1_Gov_Categories.B2B,
+    GSTR1_SubCategories.B2B_REVERSE_CHARGE: GSTR1_Gov_Categories.B2B,
+    GSTR1_SubCategories.SEZWP: GSTR1_Gov_Categories.B2B,
+    GSTR1_SubCategories.SEZWOP: GSTR1_Gov_Categories.B2B,
+    GSTR1_SubCategories.DE: GSTR1_Gov_Categories.B2B,
+    GSTR1_SubCategories.B2CL: GSTR1_Gov_Categories.B2CL,
+    GSTR1_SubCategories.EXPWP: GSTR1_Gov_Categories.EXP,
+    GSTR1_SubCategories.EXPWOP: GSTR1_Gov_Categories.EXP,
+    GSTR1_SubCategories.B2CS: GSTR1_Gov_Categories.B2CS,
+    GSTR1_SubCategories.NIL_EXEMPT: GSTR1_Gov_Categories.NIL_EXEMPT,
+    GSTR1_SubCategories.CDNR: GSTR1_Gov_Categories.CDNR,
+    GSTR1_SubCategories.CDNUR: GSTR1_Gov_Categories.CDNUR,
+    GSTR1_SubCategories.AT: GSTR1_Gov_Categories.AT,
+    GSTR1_SubCategories.TXP: GSTR1_Gov_Categories.TXP,
+    GSTR1_SubCategories.DOC_ISSUE: GSTR1_Gov_Categories.DOC_ISSUE,
+    GSTR1_SubCategories.HSN: GSTR1_Gov_Categories.HSN,
 }
