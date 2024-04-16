@@ -121,20 +121,24 @@ def _get_address(address):
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
 
+    unique_address = {}
     for key in address:
-        address[key] = address[key].strip(f"{whitespace},")
+        if address[key] not in unique_address.values():
+            unique_address[key] = address[key].strip(f"{whitespace},")
 
     address_line1 = ", ".join(
         titlecase(value)
         for key in ("bno", "flno", "bnm")
-        if (value := address.get(key))
+        if (value := unique_address.get(key))
     )
 
     address_line2 = ", ".join(
-        titlecase(value) for key in ("loc", "city") if (value := address.get(key))
+        titlecase(value)
+        for key in ("loc", "city")
+        if (value := unique_address.get(key))
     )
 
-    if not (street := address.get("st")):
+    if not (street := unique_address.get("st")):
         return address_line1, address_line2
 
     street = titlecase(street)
