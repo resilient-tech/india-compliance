@@ -470,6 +470,7 @@ class GSTR1Beta(Document):
     def validate(self):
         period = self.get_period()
 
+        # get gstr1 log
         if log_name := frappe.db.exists(
             "GSTR-1 Filed Log", f"{period}-{self.company_gstin}"
         ):
@@ -494,10 +495,12 @@ class GSTR1Beta(Document):
 
         settings = frappe.get_cached_doc("GST Settings")
 
+        # files are already present
         if gstr1_log.has_all_files(settings):
             self.data = gstr1_log.load_data()
             return
 
+        # request OTP
         if gstr1_log.is_sek_needed(settings) and not gstr1_log.is_sek_valid(settings):
             request_otp(self.company_gstin)
             self.data = "otp_requested"
@@ -506,6 +509,7 @@ class GSTR1Beta(Document):
         self.gstr1_log = gstr1_log
         self.settings = settings
 
+        # generate gstr1
         frappe.enqueue(self.generate_gstr1, queue="long")
         frappe.msgprint("GSTR-1 is being prepared", alert=True)
 
@@ -523,7 +527,9 @@ class GSTR1Beta(Document):
             data["status"] = "Not Filed"
             data["books"] = compute_books_gstr1_data(self)
 
-            frappe.publish_realtime("gstr1_data_prepared", message=data)
+            frappe.publish_realtime(
+                "gstr1_data_prepared", message={"data": data, "filters": self}
+            )
             return
 
         # APIs Enabled
@@ -540,6 +546,8 @@ class GSTR1Beta(Document):
         data[data_key] = gov_data
         data["books"] = compute_books_gstr1_data(self)
         data["reconcile"] = reconcile_gstr1_data(self, gov_data, data["books"], status)
+
+        # TODO: Normalize data
 
         # TODO: Handle queueing of data
         frappe.db.set_value(
@@ -558,21 +566,28 @@ def get_gstr1_status(filters):
 
 
 def download_e_invoice_gstr1_data(filters):
+    # Download / Map / Sumarize / Save & return
     frappe.publish_realtime("download_e_invoice_gstr1_data_complete")
     return {}
 
 
 def download_gov_gstr1_data(filters):
+    # Download / Map / Sumarize / Save & return
     frappe.publish_realtime("download_gov_gstr1_data_complete")
     return DATA.get("filed", {})
 
 
-def compute_books_gstr1_data(filters):
+def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
+    # Query / Process / Map / Sumarize / Optionally Save & Return
     frappe.publish_realtime("compute_books_gstr1_data_complete")
     return DATA.get("books", {})
 
 
 def reconcile_gstr1_data(filters, gov_data, books_data, status):
+    # Everything from gov_data compared with books_data
+    # Missing in gov_data
+    # Update books data (optionally if not filed)
+    # Prepare data / Sumarize / Save & Return / Optionally save books data
     frappe.publish_realtime("reconcile_gstr1_data_complete")
     return DATA.get("reconcile", {})
 

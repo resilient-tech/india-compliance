@@ -3,42 +3,20 @@ from enum import Enum
 """
 Steps:
 
-1. GST Settings to enable APIs for GSTR-1
-2. Go to GSTR-1 Beta and click Generate
-3. 3 processes will be enqueued
-    - Prepare GSTR-1 Data as per GST Portal (Same as above if not filed: To be handled in JS) and summarize
-    - Prepare GSTR-1 Data as per Books and summarize
-    - Prepare Reconciliation Data and summarize: Update books data with the status on GSTR-1 Portal (Optional: Use case??) (upload status only when not filed)
-
-4. Once the data is prepared, setup listeners to check the status and load the data in the front-end
 5. Export tool to be useful for the user to download the data in Excel or JSON format
 
 WHAT SETTINGS?
 - Use API
 - Quarterly or Monthly
 
-
-WHAT DATA to be SAVED?
-- 8 files to be saved in GSTR-1 Log
-
 GSTR-1 LOG:
-- is_latest_data (for books)
-- Show Report
 - Books data as on
 
 UI:
 - Books data as on
 - Listeners: Steps Download / Computing / Reconciling / Loading
 
-
-- GSTR1 Log Fields
 - Save utility (save data)
-- Render to return JSON
-
-- Download => Map => Save => Pass on the data for Reco
-- Query => Process => Map => Save => Pass on the data for Reco
-- Process => Update => Save => Pass on the data for rendering
-
 """
 
 
