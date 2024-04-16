@@ -151,7 +151,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
     const d = new frappe.ui.Dialog({
         title: frm.doc.ewaybill
             ? __("Cancel e-Invoice and e-Waybill")
-            : __("Cancel e-Invoice"),
+            : __("Cancel e-Invoice") + "<br>" + __("Sales Invoice will also be Cancelled"),
         fields: get_cancel_e_invoice_dialog_fields(frm),
         primary_action_label: frm.doc.ewaybill
             ? __("Cancel IRN & e-Waybill")
