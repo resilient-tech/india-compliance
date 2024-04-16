@@ -135,6 +135,19 @@ class BillofEntry(Document):
         self.ignore_linked_doctypes = ("GL Entry",)
         make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
 
+        if self.reconciliation_status == "Reconciled":
+            doc_name = frappe.get_list(
+                "GST Inward Supply", filters={"link_name": self.name}, pluck="name"
+            )
+            updated_data = {
+                "match_status": "",
+                "link_name": "",
+                "link_doctype": "",
+            }
+            if doc_name:
+                for name in doc_name:
+                    frappe.db.set_value("GST Inward Supply", name, updated_data)
+
     # Code adapted from AccountsController.on_trash
     def on_trash(self):
         if not frappe.db.get_single_value(

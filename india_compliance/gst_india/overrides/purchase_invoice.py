@@ -50,6 +50,21 @@ def validate(doc, method=None):
     set_reconciliation_status(doc)
 
 
+def on_cancel(doc, method=None):
+    if doc.reconciliation_status == "Reconciled":
+        doc_name = frappe.get_list(
+            "GST Inward Supply", filters={"link_name": doc.name}, pluck="name"
+        )
+        updated_data = {
+            "match_status": "",
+            "link_name": "",
+            "link_doctype": "",
+        }
+        if doc_name:
+            for name in doc_name:
+                frappe.db.set_value("GST Inward Supply", name, updated_data)
+
+
 def set_reconciliation_status(doc):
     reconciliation_status = "Not Applicable"
 

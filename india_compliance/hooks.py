@@ -142,6 +142,7 @@ doc_events = {
         "before_gl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "before_sl_preview": "india_compliance.gst_india.overrides.ineligible_itc.update_valuation_rate",
         "after_mapping": "india_compliance.gst_india.overrides.transaction.after_mapping",
+        "on_cancel": "india_compliance.gst_india.overrides.purchase_invoice.on_cancel",
     },
     "Purchase Order": {
         "onload": "india_compliance.gst_india.overrides.transaction.onload",
