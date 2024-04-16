@@ -8,6 +8,7 @@ from frappe import _
 from frappe.model.document import Document
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR1DocumentIssuedSummary
+from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import DataFields, GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 from india_compliance.gst_india.utils.gstr_utils import request_otp
@@ -461,8 +462,8 @@ DATA = {
 
 
 class GSTR1Beta(Document):
+
     def onload(self):
-        # TODO: enqueue settings and handle enqueue
         data = getattr(self, "data", None)
         if data is not None:
             self.set_onload("data", data)
@@ -519,21 +520,28 @@ class GSTR1Beta(Document):
 
     def generate_gstr1(self):
         data = {}
-
-        settings = frappe.get_cached_doc("GST Settings")
+        filters = {
+            "company_gstin": self.company_gstin,
+            "month": self.month,
+            "year": self.year,
+        }
 
         # APIs Disabled
-        if not settings.analyze_filed_data:
+        if not self.settings.analyze_filed_data:
             data["status"] = "Not Filed"
             data["books"] = compute_books_gstr1_data(self)
 
             frappe.publish_realtime(
-                "gstr1_data_prepared", message={"data": data, "filters": self}
+                "gstr1_data_prepared", message={"data": data, "filters": filters}
             )
             return
 
         # APIs Enabled
-        status = get_gstr1_status(self)
+        status = self.gstr1_log.filing_status
+        if not status:
+            status = get_gstr_1_return_status(
+                self.gstr1_log.gstin, self.gstr1_log.return_period
+            )
 
         if status == "Filed":
             data_key = "filed"
@@ -557,12 +565,12 @@ class GSTR1Beta(Document):
         )
         frappe.publish_realtime(
             "gstr1_data_prepared",
-            message={"data": data, "filters": self},
+            message={"data": data, "filters": filters},
         )
 
 
-def get_gstr1_status(filters):
-    return "Not Filed"
+def generate_gstr1():
+    pass
 
 
 def download_e_invoice_gstr1_data(filters):
