@@ -370,12 +370,13 @@ class TestRegionalOverrides(TestAdvancePaymentEntry):
         payment_doc = self._create_payment_entry()
         invoice_doc = self._create_sales_invoice(payment_doc)
 
-        conditions = frappe._dict({"company": invoice_doc.get("company")})
+        pe = frappe.qb.DocType("Payment Entry")
+        conditions = [pe.company == payment_doc.company]
 
         payment_entry = get_advance_payment_entries_for_regional(
             party_type="Customer",
             party=invoice_doc.customer,
-            party_account=[invoice_doc.debit_to],
+            party_account=invoice_doc.debit_to,
             order_list=[],
             order_doctype="Sales Order",
             include_unallocated=True,
