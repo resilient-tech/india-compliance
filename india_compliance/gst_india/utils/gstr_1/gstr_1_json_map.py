@@ -1,4 +1,5 @@
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt
 
 from india_compliance.gst_india.constants import STATE_NUMBERS, UOM_MAP
 from india_compliance.gst_india.utils.gstr_1 import (
@@ -416,10 +417,12 @@ class B2CS(DataMapper):
             invoice_data = self.format_data(invoice)
 
             output.setdefault(
-                (
-                    invoice_data.get("place_of_supply", ""),
-                    invoice_data.get("tax_rate", ""),
-                    invoice_data.get("ecommerce_gstin", ""),
+                " - ".join(
+                    (
+                        invoice_data.get("place_of_supply", ""),
+                        str(flt(invoice_data.get("tax_rate", ""))),
+                        invoice_data.get("ecommerce_gstin", ""),
+                    )
                 ),
                 [],
             ).append(invoice_data)
@@ -785,10 +788,12 @@ class HSNSUM(DataMapper):
 
         for invoice in input_data["data"]:
             output.setdefault(
-                (
-                    invoice.get("hsn_sc", ""),
-                    self.map_uom(invoice.get("uqc", "")),
-                    invoice.get("rt"),
+                " - ".join(
+                    (
+                        invoice.get("hsn_sc", ""),
+                        self.map_uom(invoice.get("uqc", "")),
+                        str(invoice.get("rt")),
+                    )
                 ),
                 [],
             ).append(self.format_data(invoice))
@@ -863,9 +868,11 @@ class AT(DataMapper):
                 item_data = invoice_data.copy()
                 item_data.update(item)
                 output[
-                    (
-                        invoice_data.get("place_of_supply", ""),
-                        item_data.get("tax_rate", ""),
+                    " - ".join(
+                        (
+                            invoice_data.get("place_of_supply", ""),
+                            str(flt(item_data.get("tax_rate", ""))),
+                        )
                     )
                 ] = item_data
 
@@ -960,14 +967,13 @@ class DOC_ISSUE(DataMapper):
 
         for document in input_data["doc_det"]:
             document_nature = self.get_document_nature(document.get("doc_num", ""))
-            output.setdefault(document_nature, []).extend(
-                [
-                    self.format_data(
-                        doc,
-                        {"document_nature": document_nature},
+            output.update(
+                {
+                    " - ".join((document_nature, doc.get("from"))): self.format_data(
+                        doc, {"document_nature": document_nature}
                     )
                     for doc in document["docs"]
-                ]
+                }
             )
 
         return {GSTR1_SubCategories.DOC_ISSUE.value: output}
@@ -977,9 +983,17 @@ class DOC_ISSUE(DataMapper):
         self.DOCUMENT_NATURE = {v: k for k, v in self.DOCUMENT_NATURE.items()}
 
         output = {"doc_det": []}
+        doc_nature_wise_data = {}
 
-        for doc_nature, documents in input_data.items():
-            output["doc_det"].append(
+        for invoice in input_data.values():
+            doc_nature_wise_data.setdefault(invoice["document_nature"], []).append(
+                invoice
+            )
+
+        input_data = doc_nature_wise_data
+
+        output = {
+            "doc_det": [
                 {
                     "doc_num": self.get_document_nature(doc_nature),
                     "docs": [
@@ -987,7 +1001,9 @@ class DOC_ISSUE(DataMapper):
                         for document in documents
                     ],
                 }
-            )
+                for doc_nature, documents in doc_nature_wise_data.items()
+            ]
+        }
 
         return output
 
@@ -1654,7 +1670,7 @@ class TestB2CS(FrappeTestCase):
         ]
         cls.mapped_data = {
             "B2C (Others)": {
-                ("05-Uttarakhand", 5, "01AABCE5507R1C4"): [
+                "05-Uttarakhand - 5.0 - 01AABCE5507R1C4": [
                     {
                         "taxable_value": 110,
                         "document_type": "E",
@@ -1666,7 +1682,7 @@ class TestB2CS(FrappeTestCase):
                         "cess_amount": 10,
                     }
                 ],
-                ("05-Uttarakhand", 5, ""): [
+                "05-Uttarakhand - 5.0 - ": [
                     {
                         "taxable_value": 100,
                         "document_type": "OE",
@@ -1923,7 +1939,7 @@ class TestHSNSUM(FrappeTestCase):
 
         cls.mapped_data = {
             "HSN Summary": {
-                ("1010", "KGS-KILOGRAMS", 0.1): [
+                "1010 - KGS-KILOGRAMS - 0.1": [
                     {
                         "idx": 1,
                         "hsn_code": "1010",
@@ -2004,7 +2020,7 @@ class TestAT(FrappeTestCase):
 
         cls.mapped_data = {
             "Advances Received": {
-                ("05-Uttarakhand", 5): {
+                "05-Uttarakhand - 5.0": {
                     "place_of_supply": "05-Uttarakhand",
                     "diff_percentage": 0.65,
                     "total_igst_amount": 9400,
@@ -2014,7 +2030,7 @@ class TestAT(FrappeTestCase):
                     "total_taxable_value": 100,
                     "tax_rate": 5,
                 },
-                ("05-Uttarakhand", 6): {
+                "05-Uttarakhand - 6.0": {
                     "place_of_supply": "05-Uttarakhand",
                     "diff_percentage": 0.65,
                     "total_igst_amount": 9400,
@@ -2024,7 +2040,7 @@ class TestAT(FrappeTestCase):
                     "total_taxable_value": 100,
                     "tax_rate": 6,
                 },
-                ("24-Gujarat", 5): {
+                "24-Gujarat - 5.0": {
                     "place_of_supply": "24-Gujarat",
                     "diff_percentage": 0.65,
                     "total_igst_amount": 9400,
@@ -2034,7 +2050,7 @@ class TestAT(FrappeTestCase):
                     "total_taxable_value": 100,
                     "tax_rate": 5,
                 },
-                ("24-Gujarat", 6): {
+                "24-Gujarat - 6.0": {
                     "place_of_supply": "24-Gujarat",
                     "diff_percentage": 0.65,
                     "total_igst_amount": 9400,
@@ -2067,16 +2083,16 @@ class TestDOC_ISSUE(FrappeTestCase):
                     "docs": [
                         {
                             "num": 1,
-                            "from": 1,
-                            "to": 10,
+                            "from": "1",
+                            "to": "10",
                             "totnum": 10,
                             "cancel": 0,
                             "net_issue": 10,
                         },
                         {
                             "num": 2,
-                            "from": 11,
-                            "to": 20,
+                            "from": "11",
+                            "to": "20",
                             "totnum": 10,
                             "cancel": 0,
                             "net_issue": 10,
@@ -2088,16 +2104,16 @@ class TestDOC_ISSUE(FrappeTestCase):
                     "docs": [
                         {
                             "num": 1,
-                            "from": 1,
-                            "to": 10,
+                            "from": "1",
+                            "to": "10",
                             "totnum": 10,
                             "cancel": 0,
                             "net_issue": 10,
                         },
                         {
                             "num": 2,
-                            "from": 11,
-                            "to": 20,
+                            "from": "11",
+                            "to": "20",
                             "totnum": 10,
                             "cancel": 0,
                             "net_issue": 10,
@@ -2108,42 +2124,38 @@ class TestDOC_ISSUE(FrappeTestCase):
         }
         cls.mapped_data = {
             "Document Issued": {
-                "Invoices for outward supply": [
-                    {
-                        "document_nature": "Invoices for outward supply",
-                        "idx": 1,
-                        "from_sr_no": 1,
-                        "to_sr_no": 10,
-                        "total_count": 10,
-                        "cancelled_count": 0,
-                    },
-                    {
-                        "document_nature": "Invoices for outward supply",
-                        "idx": 2,
-                        "from_sr_no": 11,
-                        "to_sr_no": 20,
-                        "total_count": 10,
-                        "cancelled_count": 0,
-                    },
-                ],
-                "Invoices for inward supply from unregistered person": [
-                    {
-                        "document_nature": "Invoices for inward supply from unregistered person",
-                        "idx": 1,
-                        "from_sr_no": 1,
-                        "to_sr_no": 10,
-                        "total_count": 10,
-                        "cancelled_count": 0,
-                    },
-                    {
-                        "document_nature": "Invoices for inward supply from unregistered person",
-                        "idx": 2,
-                        "from_sr_no": 11,
-                        "to_sr_no": 20,
-                        "total_count": 10,
-                        "cancelled_count": 0,
-                    },
-                ],
+                "Invoices for outward supply - 1": {
+                    "document_nature": "Invoices for outward supply",
+                    "idx": 1,
+                    "from_sr_no": "1",
+                    "to_sr_no": "10",
+                    "total_count": 10,
+                    "cancelled_count": 0,
+                },
+                "Invoices for outward supply - 11": {
+                    "document_nature": "Invoices for outward supply",
+                    "idx": 2,
+                    "from_sr_no": "11",
+                    "to_sr_no": "20",
+                    "total_count": 10,
+                    "cancelled_count": 0,
+                },
+                "Invoices for inward supply from unregistered person - 1": {
+                    "document_nature": "Invoices for inward supply from unregistered person",
+                    "idx": 1,
+                    "from_sr_no": "1",
+                    "to_sr_no": "10",
+                    "total_count": 10,
+                    "cancelled_count": 0,
+                },
+                "Invoices for inward supply from unregistered person - 11": {
+                    "document_nature": "Invoices for inward supply from unregistered person",
+                    "idx": 2,
+                    "from_sr_no": "11",
+                    "to_sr_no": "20",
+                    "total_count": 10,
+                    "cancelled_count": 0,
+                },
             }
         }
 
