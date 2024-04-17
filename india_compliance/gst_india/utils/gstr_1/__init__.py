@@ -103,7 +103,7 @@ class DataFields(Enum):
     CGST = "total_cgst_amount"
     SGST = "total_sgst_amount"
     CESS = "total_cess_amount"
-
+    TAX_RATE = "tax_rate"
     SHIPPING_BILL_NUMBER = "shipping_bill_number"
     SHIPPING_BILL_DATE = "shipping_bill_date"
     SHIPPING_PORT_CODE = "shipping_port_code"

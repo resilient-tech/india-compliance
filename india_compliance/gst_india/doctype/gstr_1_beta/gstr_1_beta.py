@@ -5,9 +5,15 @@ from datetime import datetime
 
 import frappe
 from frappe import _
+
+# from frappe.utils import flt, get_last_day, getdate
 from frappe.model.document import Document
 
-from india_compliance.gst_india.report.gstr_1.gstr_1 import GSTR1DocumentIssuedSummary
+from india_compliance.gst_india.report.gstr_1.gstr_1 import (
+    GSTR1DocumentIssuedSummary,
+    GSTR11A11BData,
+)
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import DataFields, GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
@@ -666,7 +672,7 @@ class GSTR1ProcessData:
         mapped_dict[DataFields.CESS.value] += invoice.total_cess_amount
 
     def process_data_for_document_category_key(self, invoice, prepared_data):
-        key = invoice.invoice_type
+        key = invoice.invoice_category
         mapped_dict = prepared_data.setdefault(key, [])
 
         for row in mapped_dict:
@@ -742,6 +748,34 @@ class GSTR1ProcessData:
         mapped_dict[DataFields.CESS.value] += invoice.total_cess_amount
         mapped_dict[DataFields.TOTAL_QUANTITY.value] += invoice.qty
 
+    def process_data_for_advances_received_or_adjusted(self, entry):
+        advances = {}
+
+        advances[DataFields.CUST_NAME.value] = entry["party"]
+        advances[DataFields.DOC_NUMBER.value] = entry["name"]
+        advances[DataFields.DOC_DATE.value] = entry["posting_date"]
+        advances[DataFields.POS.value] = entry["place_of_supply"]
+        advances[DataFields.TAXABLE_VALUE.value] = entry["taxable_value"]
+        advances[DataFields.TAX_RATE.value] = round(
+            ((entry["tax_amount"] / entry["taxable_value"]) * 100)
+        )
+        advances[DataFields.CESS.value] = entry["cess_amount"]
+
+        if entry.get("reference_name"):
+            advances["against_voucher"] = entry["reference_name"]
+
+        if entry["place_of_supply"][0:2] == entry["company_gstin"][0:2]:
+            advances[DataFields.CGST.value] = entry["tax_amount"] / 2
+            advances[DataFields.SGST.value] = entry["tax_amount"] / 2
+            advances[DataFields.IGST.value] = 0
+
+        else:
+            advances[DataFields.IGST.value] = entry["tax_amount"]
+            advances[DataFields.CGST.value] = 0
+            advances[DataFields.SGST.value] = 0
+
+        return advances
+
 
 class GSTR1MappedData(GSTR1ProcessData):
     def __init__(self, filters):
@@ -756,6 +790,8 @@ class GSTR1MappedData(GSTR1ProcessData):
 
         prepared_data["Document Issued"] = self.prepare_document_issued_summary()
         prepared_data["HSN Summary"] = self.prepare_hsn_summary(data)
+        prepared_data["Advances Received"] = self.prepare_advances_recevied_summary()
+        prepared_data["Advances Adjusted"] = self.prepare_advances_adjusted_summary()
 
         for invoice in data:
 
@@ -786,3 +822,41 @@ class GSTR1MappedData(GSTR1ProcessData):
             self.process_data_for_hsn_summary(invoice, hsn_summary_data)
 
         return hsn_summary_data
+
+    def prepare_advances_recevied_summary(self):
+        return self.prepare_advances_received_or_adjusted_summary("Advances")
+
+    def prepare_advances_adjusted_summary(self):
+        return self.prepare_advances_received_or_adjusted_summary("Adjustment")
+
+    def prepare_advances_received_or_adjusted_summary(self, type_of_business):
+        summary = []
+        self.filters.type_of_business = type_of_business
+        gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
+        _class = GSTR11A11BData(self.filters, gst_accounts)
+
+        if type_of_business == "Advances":
+            query = _class.get_11A_query()
+            fields = (
+                _class.pe.name,
+                _class.pe.party,
+                _class.pe.posting_date,
+                _class.pe.company_gstin,
+            )
+        elif type_of_business == "Adjustment":
+            query = _class.get_11B_query()
+            fields = (
+                _class.pe.name,
+                _class.pe.party,
+                _class.pe.posting_date,
+                _class.pe.company_gstin,
+                _class.pe_ref.reference_name,
+            )
+
+        query = query.select(*fields)
+        data = query.run(as_dict=True)
+
+        for entry in data:
+            summary.append(self.process_data_for_advances_received_or_adjusted(entry))
+
+        return summary
