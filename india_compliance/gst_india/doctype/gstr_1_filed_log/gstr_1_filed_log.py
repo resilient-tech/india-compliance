@@ -13,13 +13,64 @@ DOCTYPE = "GSTR-1 Filed Log"
 
 class GSTR1FiledLog(Document):
 
+    @property
+    def status(self):
+        return self.generation_status
+
+    def update_status(self, status):
+        self.db_set("generation_status", status)
+
     def show_report(self):
         # TODO: Implement
         pass
 
+    # FILE UTILITY
     def load_data(self):
-        pass
+        data = {}
+        file_fields = self.get_applicable_file_fields()
 
+        for file_field in file_fields:
+            if json_data := self.get_json_for(file_field):
+                data[file_field] = json_data
+
+        return data
+
+    def get_json_for(self, file_field):
+        if file := get_file_doc(self.name, file_field):
+            return get_decompressed_data(file.get_content())
+
+    def update_json_for(self, file_field, json_data, overwrite=True):
+        # existing file
+        if file := get_file_doc(self.name, file_field):
+            if overwrite:
+                new_json = json_data
+            else:
+                new_json = get_decompressed_data(file.get_content())
+                new_json.update(json_data)
+
+            content = get_compressed_data(new_json)
+
+            file.save_file(content=content, overwrite=True)
+            self.db_set(file_field, file.file_url)
+            return
+
+        # new file
+        content = get_compressed_data(json_data)
+        file_name = frappe.scrub("{0}-{1}.json.gz".format(self.name, file_field))
+        file = frappe.get_doc(
+            {
+                "doctype": "File",
+                "attached_to_doctype": DOCTYPE,
+                "attached_to_name": self.name,
+                "attached_to_field": file_field,
+                "file_name": file_name,
+                "is_private": 1,
+                "content": content,
+            }
+        ).insert()
+        self.db_set(file_field, file.file_url)
+
+    # GSTR 1 UTILITY
     def is_sek_needed(self, settings=None):
         if not settings:
             settings = frappe.get_cached_doc("GST Settings")
@@ -56,35 +107,38 @@ class GSTR1FiledLog(Document):
             return True
 
     def has_all_files(self, settings=None):
-        if not settings:
-            settings = frappe.get_cached_doc("GST Settings")
-
         if not self.is_latest_data:
             return False
 
-        files = [
-            "computed_gstr1",
-            "computed_gstr1_summary",
-        ]
+        file_fields = self.get_applicable_file_fields(settings)
+        return all(getattr(self, file_field) for file_field in file_fields)
+
+    def get_applicable_file_fields(self, settings=None):
+        if not settings:
+            settings = frappe.get_cached_doc("GST Settings")
+
+        fields = ["computed_gstr1", "computed_gstr1_summary"]
 
         if settings.analyze_filed_data:
-            files.extend(["reconciled_gstr1", "reconciled_gstr1_summary"])
+            fields.extend(["reconciled_gstr1", "reconciled_gstr1_summary"])
 
             if self.filing_status == "Filed":
-                files.extend(["filed_gstr1", "filed_gstr1_summary"])
+                fields.extend(["filed_gstr1", "filed_gstr1_summary"])
             else:
-                files.extend(["e_invoice_data", "e_invoice_summary"])
+                fields.extend(["e_invoice_data", "e_invoice_summary"])
 
-        return all(getattr(self, file) for file in files)
+        return fields
 
 
 def process_gstr_1_returns_info(gstin, response):
     return_info = {}
 
+    # compile gstr-1 returns info
     for info in response.get("EFiledlist"):
         if info["rtntype"] == "GSTR1":
             return_info[f"{info['ret_prd']}-{gstin}"] = info
 
+    # existing filed logs
     filed_logs = frappe._dict(
         frappe.get_all(
             "GSTR-1 Filed Log",
@@ -94,6 +148,7 @@ def process_gstr_1_returns_info(gstin, response):
         )
     )
 
+    # create or update filed logs
     for key, info in return_info.items():
         filing_details = {
             "filing_status": info["status"],
@@ -117,106 +172,24 @@ def process_gstr_1_returns_info(gstin, response):
         ).insert()
 
 
-def create_gstr1_filed_log(
-    gstin,
-    return_period,
-    gstr_1_log_type,
-    json_data,
-    returns_data=None,
-):
-    if gstr_1_filed_log := frappe.db.exists(
-        DOCTYPE, {"gstin": gstin, "return_period": return_period}
-    ):
-        gstr_1_filed_log = frappe.get_doc(DOCTYPE, gstr_1_filed_log)
-    else:
-        gstr_1_filed_log = frappe.new_doc(DOCTYPE)
-        gstr_1_filed_log.update({"gstin": gstin, "return_period": return_period}).save()
-
-    file = create_log_file(
-        gstin, gstr_1_log_type, return_period, json_data, gstr_1_filed_log
-    )
-
-    gstr_1_filed_log.update({gstr_1_log_type: file.file_url})
-
-    if returns_data:
-        gstr_1_filed_log.update(
+def get_file_doc(gstr1_log_name, attached_to_field):
+    try:
+        return frappe.get_doc(
+            "File",
             {
-                "filing_status": returns_data["status"],
-                "acknowledgement_number": returns_data["arn"],
-                "filing_date": datetime.strptime(
-                    returns_data["dof"], "%d-%m-%Y"
-                ).date(),
-            }
+                "attached_to_doctype": DOCTYPE,
+                "attached_to_name": gstr1_log_name,
+                "attached_to_field": attached_to_field,
+            },
         )
 
-    gstr_1_filed_log.save()
-
-
-def get_gstr1_data(gstin, return_period, log_types):
-    gstr1_filed_log_docname = get_gstr1_filed_log_doc(gstin, return_period)
-
-    if not gstr1_filed_log_docname:
-        return
-
-    if files := get_file_doc(gstr1_filed_log_docname, log_types):
-        return {file: get_decompressed_data(files[file]) for file in files}
-
-
-def get_gstr1_filed_log_doc(gstin, return_period):
-    gstr1_filed_log = frappe.get_all(
-        DOCTYPE,
-        fields=["name"],
-        filters={"gstin": gstin, "return_period": return_period},
-        pluck="name",
-    )
-
-    return gstr1_filed_log[0] if gstr1_filed_log else None
-
-
-def create_log_file(gstin, gstr_1_log_type, return_period, json_data, gstr_1_filed_log):
-    file_name = frappe.scrub(
-        "{0} {1} {2}.json.gz".format(gstin, gstr_1_log_type, return_period)
-    )
-    compressed_data = get_compressed_data(json_data)
-
-    if file := get_file_doc(gstr_1_filed_log.name, [gstr_1_log_type]):
-        file.save_file(content=compressed_data, overwrite=True)
-    else:
-        file = frappe.new_doc("File")
-        file.update(
-            {
-                "attached_to_name": gstr_1_filed_log.name,
-                "attached_to_doctype": DOCTYPE,
-                "attached_to_field": gstr_1_log_type,
-                "file_name": file_name,
-                "is_private": 1,
-                "content": compressed_data,
-            }
-        ).save()
-
-    return file
-
-
-def get_file_doc(docname, log_types):
-    files = frappe.get_all(
-        "File",
-        fields=["name", "attached_to_field"],
-        filters={
-            "attached_to_doctype": DOCTYPE,
-            "attached_to_name": docname,
-            "attached_to_field": ["in", log_types],
-        },
-    )
-
-    if len(log_types) == 1:
-        return frappe.get_doc("File", files[0].name) if files else None
-
-    return {file.attached_to_field: frappe.get_doc("File", file) for file in files}
+    except frappe.DoesNotExistError:
+        return None
 
 
 def get_compressed_data(json_data):
     return gzip.compress(frappe.safe_encode(frappe.as_json(json_data)))
 
 
-def get_decompressed_data(file):
-    return frappe.parse_json(frappe.safe_decode(gzip.decompress(file.get_content())))
+def get_decompressed_data(content):
+    return frappe.parse_json(frappe.safe_decode(gzip.decompress(content)))

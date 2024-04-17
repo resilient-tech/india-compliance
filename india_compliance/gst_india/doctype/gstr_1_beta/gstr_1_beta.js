@@ -120,6 +120,15 @@ frappe.ui.form.on(DOCTYPE, {
         //     });
         // })
 
+        frappe.realtime.on("gstr1_generation_failed", message => {
+            const { error, filters } = message;
+
+            frappe.msgprint({
+                title: __("GSTR-1 Generation Failed"),
+                message: error,
+            });
+        });
+
         frappe.realtime.on("gstr1_data_prepared", message => {
             const { data, filters } = message;
 
