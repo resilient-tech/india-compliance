@@ -59,10 +59,10 @@ def on_cancel(doc, method=None):
             "match_status": "",
             "link_name": "",
             "link_doctype": "",
+            "action": "No Action",
         }
         if doc_name:
-            for name in doc_name:
-                frappe.db.set_value("GST Inward Supply", name, updated_data)
+            frappe.db.set_value("GST Inward Supply", doc_name[0], updated_data)
 
 
 def set_reconciliation_status(doc):
