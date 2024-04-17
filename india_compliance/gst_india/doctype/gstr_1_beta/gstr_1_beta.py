@@ -5,9 +5,8 @@ from datetime import datetime
 
 import frappe
 from frappe import _
-
-# from frappe.utils import flt, get_last_day, getdate
 from frappe.model.document import Document
+from frappe.utils import flt
 
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
@@ -723,11 +722,10 @@ class GSTR1ProcessData:
         )
 
     def process_data_for_b2cs(self, invoice, prepared_data):
-        key = (invoice.place_of_supply, invoice.gst_rate, invoice.e_commerce_gstin)
-        mapped_dict = prepared_data.setdefault("B2C (Others)", {})
-        invoices_list = mapped_dict.setdefault(key, [])
+        key = f"{invoice.place_of_supply} - {flt(invoice.gst_rate)} - {invoice.e_commerce_gstin or ''}"
+        mapped_dict = prepared_data.setdefault("B2C (Others)", {}).setdefault(key, [])
 
-        for row in invoices_list:
+        for row in mapped_dict:
             if row[DataFields.DOC_NUMBER.value] == invoice.invoice_no:
                 row[DataFields.TAXABLE_VALUE.value] += invoice.taxable_value
                 row[DataFields.IGST.value] += invoice.igst_amount
@@ -736,7 +734,7 @@ class GSTR1ProcessData:
                 row[DataFields.CESS.value] += invoice.total_cess_amount
                 return
 
-        invoices_list.append(
+        mapped_dict.append(
             {
                 DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 DataFields.POS.value: invoice.place_of_supply,
@@ -751,7 +749,7 @@ class GSTR1ProcessData:
         )
 
     def process_data_for_hsn_summary(self, invoice, prepared_data):
-        key = (invoice.gst_hsn_code, invoice.gst_rate, invoice.uom)
+        key = f"{invoice.gst_hsn_code} - {flt(invoice.gst_rate)} - {invoice.uom})"
         mapped_dict = prepared_data.setdefault(
             key,
             {
@@ -774,33 +772,39 @@ class GSTR1ProcessData:
         mapped_dict[DataFields.CESS.value] += invoice.total_cess_amount
         mapped_dict[DataFields.TOTAL_QUANTITY.value] += invoice.qty
 
-    def process_data_for_advances_received_or_adjusted(self, entry):
+    def process_data_for_document_issued_summary(self, row, prepared_data):
+        key = f"{row['nature_of_document']} - {row['from_serial_no']}"
+        prepared_data.setdefault(key, {**row})
+
+    def process_data_for_advances_received_or_adjusted(self, row, prepared_data):
         advances = {}
+        tax_rate = round(((row["tax_amount"] / row["taxable_value"]) * 100))
+        key = f"{row['place_of_supply']} - {flt(tax_rate)}"
 
-        advances[DataFields.CUST_NAME.value] = entry["party"]
-        advances[DataFields.DOC_NUMBER.value] = entry["name"]
-        advances[DataFields.DOC_DATE.value] = entry["posting_date"]
-        advances[DataFields.POS.value] = entry["place_of_supply"]
-        advances[DataFields.TAXABLE_VALUE.value] = entry["taxable_value"]
-        advances[DataFields.TAX_RATE.value] = round(
-            ((entry["tax_amount"] / entry["taxable_value"]) * 100)
-        )
-        advances[DataFields.CESS.value] = entry["cess_amount"]
+        mapped_dict = prepared_data.setdefault(key, [])
 
-        if entry.get("reference_name"):
-            advances["against_voucher"] = entry["reference_name"]
+        advances[DataFields.CUST_NAME.value] = row["party"]
+        advances[DataFields.DOC_NUMBER.value] = row["name"]
+        advances[DataFields.DOC_DATE.value] = row["posting_date"]
+        advances[DataFields.POS.value] = row["place_of_supply"]
+        advances[DataFields.TAXABLE_VALUE.value] = row["taxable_value"]
+        advances[DataFields.TAX_RATE.value] = tax_rate
+        advances[DataFields.CESS.value] = row["cess_amount"]
 
-        if entry["place_of_supply"][0:2] == entry["company_gstin"][0:2]:
-            advances[DataFields.CGST.value] = entry["tax_amount"] / 2
-            advances[DataFields.SGST.value] = entry["tax_amount"] / 2
+        if row.get("reference_name"):
+            advances["against_voucher"] = row["reference_name"]
+
+        if row["place_of_supply"][0:2] == row["company_gstin"][0:2]:
+            advances[DataFields.CGST.value] = row["tax_amount"] / 2
+            advances[DataFields.SGST.value] = row["tax_amount"] / 2
             advances[DataFields.IGST.value] = 0
 
         else:
-            advances[DataFields.IGST.value] = entry["tax_amount"]
+            advances[DataFields.IGST.value] = row["tax_amount"]
             advances[DataFields.CGST.value] = 0
             advances[DataFields.SGST.value] = 0
 
-        return advances
+        mapped_dict.append(advances)
 
 
 class GSTR1MappedData(GSTR1ProcessData):
@@ -814,10 +818,10 @@ class GSTR1MappedData(GSTR1ProcessData):
         data = _class.get_invoices_for_item_wise_summary()
         _class.process_invoices(data)
 
-        prepared_data["Document Issued"] = self.prepare_document_issued_summary()
-        prepared_data["HSN Summary"] = self.prepare_hsn_summary(data)
-        prepared_data["Advances Received"] = self.prepare_advances_recevied_summary()
-        prepared_data["Advances Adjusted"] = self.prepare_advances_adjusted_summary()
+        prepared_data["Document Issued"] = self.prepare_document_issued_data()
+        prepared_data["HSN Summary"] = self.prepare_hsn_data(data)
+        prepared_data["Advances Received"] = self.prepare_advances_recevied_data()
+        prepared_data["Advances Adjusted"] = self.prepare_advances_adjusted_data()
 
         for invoice in data:
 
@@ -836,27 +840,31 @@ class GSTR1MappedData(GSTR1ProcessData):
 
         return prepared_data
 
-    def prepare_document_issued_summary(self):
-        doc_issued = GSTR1DocumentIssuedSummary(self.filters)
+    def prepare_document_issued_data(self):
+        doc_issued_data = {}
+        data = GSTR1DocumentIssuedSummary(self.filters).get_data()
 
-        return doc_issued.get_data()
+        for row in data:
+            self.process_data_for_document_issued_summary(row, doc_issued_data)
 
-    def prepare_hsn_summary(self, data):
+        return doc_issued_data
+
+    def prepare_hsn_data(self, data):
         hsn_summary_data = {}
 
-        for invoice in data:
-            self.process_data_for_hsn_summary(invoice, hsn_summary_data)
+        for row in data:
+            self.process_data_for_hsn_summary(row, hsn_summary_data)
 
         return hsn_summary_data
 
-    def prepare_advances_recevied_summary(self):
-        return self.prepare_advances_received_or_adjusted_summary("Advances")
+    def prepare_advances_recevied_data(self):
+        return self.prepare_advances_received_or_adjusted_data("Advances")
 
-    def prepare_advances_adjusted_summary(self):
-        return self.prepare_advances_received_or_adjusted_summary("Adjustment")
+    def prepare_advances_adjusted_data(self):
+        return self.prepare_advances_received_or_adjusted_data("Adjustment")
 
-    def prepare_advances_received_or_adjusted_summary(self, type_of_business):
-        summary = []
+    def prepare_advances_received_or_adjusted_data(self, type_of_business):
+        advances_data = {}
         self.filters.type_of_business = type_of_business
         gst_accounts = get_gst_accounts_by_type(self.filters.company, "Output")
         _class = GSTR11A11BData(self.filters, gst_accounts)
@@ -882,7 +890,7 @@ class GSTR1MappedData(GSTR1ProcessData):
         query = query.select(*fields)
         data = query.run(as_dict=True)
 
-        for entry in data:
-            summary.append(self.process_data_for_advances_received_or_adjusted(entry))
+        for row in data:
+            self.process_data_for_advances_received_or_adjusted(row, advances_data)
 
-        return summary
+        return advances_data
