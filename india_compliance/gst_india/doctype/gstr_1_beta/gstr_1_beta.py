@@ -17,6 +17,9 @@ from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import DataFields, GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
+from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
+    download_gstr1_json_data,
+)
 from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 DATA = {
@@ -484,10 +487,20 @@ class GSTR1Beta(Document):
 
             gstr1_log = frappe.get_doc("GSTR-1 Filed Log", log_name)
 
-            if gstr1_log.generation_status == "In Progress":
+            if gstr1_log.status == "In Progress":
                 frappe.msgprint(
                     _(
                         "GSTR-1 is being prepared. Please wait for the process to complete."
+                    ),
+                    title=_("GSTR-1 Generation In Progress"),
+                )
+
+                return
+
+            elif gstr1_log.status == "Queued":
+                frappe.msgprint(
+                    _(
+                        "GSTR-1 download is queued and could take some time. Please wait for the process to complete."
                     )
                 )
 
@@ -497,7 +510,7 @@ class GSTR1Beta(Document):
             gstr1_log = frappe.new_doc("GSTR-1 Filed Log")
             gstr1_log.gstin = self.company_gstin
             gstr1_log.return_period = period
-            gstr1_log.generation_status = "In Progress"
+            gstr1_log.update_status("In Progress")
             gstr1_log.insert()
 
         settings = frappe.get_cached_doc("GST Settings")
@@ -517,6 +530,7 @@ class GSTR1Beta(Document):
         self.settings = settings
 
         # generate gstr1
+        gstr1_log.update_status("In Progress")
         frappe.enqueue(self.generate_gstr1, queue="long")
         frappe.msgprint("GSTR-1 is being prepared", alert=True)
 
@@ -525,12 +539,29 @@ class GSTR1Beta(Document):
         return f"{month_number}{self.year}"
 
     def generate_gstr1(self):
-        data = {}
         filters = {
             "company_gstin": self.company_gstin,
             "month": self.month,
             "year": self.year,
         }
+
+        try:
+            self._generate_gstr1_data(filters)
+
+        except Exception as e:
+            # TODO: setup listener
+            frappe.publish_realtime(
+                "gstr1_generation_failed",
+                message={
+                    "error": f"Failed to generate GSTR-1\n\n: {e}",
+                    "filters": filters,
+                },
+            )
+
+            raise e
+
+    def _generate_gstr1_data(self, filters):
+        data = {}
 
         # APIs Disabled
         if not self.settings.analyze_filed_data:
@@ -548,18 +579,21 @@ class GSTR1Beta(Document):
             status = get_gstr_1_return_status(
                 self.gstr1_log.gstin, self.gstr1_log.return_period
             )
+            self.gstr1_log.filing_status = status
 
         if status == "Filed":
             data_key = "filed"
-            gov_data = download_gov_gstr1_data(self)
         else:
             data_key = "e_invoice"
-            gov_data = download_e_invoice_gstr1_data(self)
+
+        gov_data = get_gstr1_json_data(self.gstr1_log)[0]
+        books_data = compute_books_gstr1_data(self)
+        reconcile_data = reconcile_gstr1_data(self, gov_data, books_data, status)
 
         data["status"] = status
         data[data_key] = gov_data
-        data["books"] = compute_books_gstr1_data(self)
-        data["reconcile"] = reconcile_gstr1_data(self, gov_data, data["books"], status)
+        data["books"] = books_data
+        data["reconcile"] = reconcile_data
 
         # TODO: Normalize data
 
@@ -579,16 +613,8 @@ def generate_gstr1():
     pass
 
 
-def download_e_invoice_gstr1_data(filters):
-    # Download / Map / Sumarize / Save & return
-    frappe.publish_realtime("download_e_invoice_gstr1_data_complete")
-    return {}
-
-
-def download_gov_gstr1_data(filters):
-    # Download / Map / Sumarize / Save & return
-    frappe.publish_realtime("download_gov_gstr1_data_complete")
-    return DATA.get("filed", {})
+def get_gstr1_json_data(gstr1_log):
+    return download_gstr1_json_data(gstr1_log)
 
 
 def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
