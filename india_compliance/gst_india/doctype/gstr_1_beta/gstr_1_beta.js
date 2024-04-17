@@ -122,10 +122,11 @@ frappe.ui.form.on(DOCTYPE, {
 
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
+            let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month} - ${filters.year}.<br/><br/>${error}`
 
             frappe.msgprint({
                 title: __("GSTR-1 Generation Failed"),
-                message: error,
+                message: alert,
             });
         });
 

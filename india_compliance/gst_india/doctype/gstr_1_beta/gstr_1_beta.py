@@ -6,8 +6,11 @@ from datetime import datetime
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 
+from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
+    summarize_data,
+)
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
@@ -486,30 +489,26 @@ class GSTR1Beta(Document):
 
             gstr1_log = frappe.get_doc("GSTR-1 Filed Log", log_name)
 
+            message = None
             if gstr1_log.status == "In Progress":
-                frappe.msgprint(
-                    _(
-                        "GSTR-1 is being prepared. Please wait for the process to complete."
-                    ),
-                    title=_("GSTR-1 Generation In Progress"),
+                message = (
+                    "GSTR-1 is being prepared. Please wait for the process to complete."
                 )
-
-                return
 
             elif gstr1_log.status == "Queued":
-                frappe.msgprint(
-                    _(
-                        "GSTR-1 download is queued and could take some time. Please wait for the process to complete."
-                    )
+                message = (
+                    "GSTR-1 download is queued and could take some time. Please wait"
+                    " for the process to complete."
                 )
 
+            if message:
+                frappe.msgprint(_(message), title=_("GSTR-1 Generation In Progress"))
                 return
 
         else:
             gstr1_log = frappe.new_doc("GSTR-1 Filed Log")
             gstr1_log.gstin = self.company_gstin
             gstr1_log.return_period = period
-            gstr1_log.update_status("In Progress")
             gstr1_log.insert()
 
         settings = frappe.get_cached_doc("GST Settings")
@@ -517,6 +516,7 @@ class GSTR1Beta(Document):
         # files are already present
         if gstr1_log.has_all_files(settings):
             self.data = gstr1_log.load_data()
+            gstr1_log.update_status("Generated")
             return
 
         # request OTP
@@ -548,13 +548,13 @@ class GSTR1Beta(Document):
             self._generate_gstr1_data(filters)
 
         except Exception as e:
-            # TODO: setup listener
+            self.gstr1_log.update_status("Failed", commit=True)
+
             frappe.publish_realtime(
                 "gstr1_generation_failed",
-                message={
-                    "error": f"Failed to generate GSTR-1\n\n: {e}",
-                    "filters": filters,
-                },
+                message={"error": str(e), "filters": filters},
+                user=frappe.session.user,
+                doctype=self.doctype,
             )
 
             raise e
@@ -562,14 +562,26 @@ class GSTR1Beta(Document):
     def _generate_gstr1_data(self, filters):
         data = {}
 
-        # APIs Disabled
-        if not self.settings.analyze_filed_data:
-            data["status"] = "Not Filed"
-            data["books"] = compute_books_gstr1_data(self)
+        def on_generate():
+            self.gstr1_log.db_set(
+                {"generation_status": "Generated", "is_latest_data": 1}
+            )
 
             frappe.publish_realtime(
-                "gstr1_data_prepared", message={"data": data, "filters": filters}
+                "gstr1_data_prepared",
+                message={"data": data, "filters": filters},
+                user=frappe.session.user,
+                doctype=self.doctype,
             )
+
+        # APIs Disabled
+        if not self.settings.analyze_filed_data:
+            books_data = compute_books_gstr1_data(self)
+
+            data["status"] = "Not Filed"
+            data["books"] = self.normalize_data(books_data)
+
+            on_generate()
             return
 
         # APIs Enabled
@@ -582,30 +594,48 @@ class GSTR1Beta(Document):
 
         if status == "Filed":
             data_key = "filed"
+            gov_summary_field = "filed_gstr1_summary"
         else:
             data_key = "e_invoice"
+            gov_summary_field = "e_invoice_summary"
 
-        gov_data = get_gstr1_json_data(self.gstr1_log)[0]
+        # Get Data
+        gov_data, is_enqueued = get_gstr1_json_data(self.gstr1_log)
         books_data = compute_books_gstr1_data(self)
+
+        if is_enqueued:
+            return
+
         reconcile_data = reconcile_gstr1_data(self, gov_data, books_data, status)
 
+        # Compile Data
         data["status"] = status
-        data[data_key] = gov_data
-        data["books"] = books_data
-        data["reconcile"] = reconcile_data
 
-        # TODO: Normalize data
+        data["reconcile"] = self.gstr1_log.normalize_data(reconcile_data)
+        data[data_key] = self.gstr1_log.normalize_data(gov_data)
+        data["books"] = self.gstr1_log.normalize_data(books_data)
 
-        # TODO: Handle queueing of data
-        frappe.db.set_value(
-            "GSTR-1 Filed Log",
-            self.gstr1_log.name,
-            {"generation_status": "Generated", "is_latest_data": 1},
-        )
-        frappe.publish_realtime(
-            "gstr1_data_prepared",
-            message={"data": data, "filters": filters},
-        )
+        summary_fields = {
+            "reconcile": "reconciled_gstr1_summary",
+            f"{data_key}": gov_summary_field,
+            "books": "computed_gstr1_summary",
+        }
+
+        # Update Summary
+
+        for key, field in summary_fields.items():
+            if not data.get(key):
+                continue
+
+            if self.gstr1_log.get(field):
+                data[key + "_summary"] = self.gstr1_log.get_json_for(field)
+                continue
+
+            summary_data = summarize_data(data[key], for_books=key == "books")
+            self.gstr1_log.update_json_for(field, summary_data)
+            data[key + "_summary"] = summary_data
+
+        on_generate()
 
 
 def generate_gstr1():
@@ -613,13 +643,48 @@ def generate_gstr1():
 
 
 def get_gstr1_json_data(gstr1_log):
+    if gstr1_log.filing_status == "Filed":
+        data_field = "filed_gstr1"
+
+    else:
+        data_field = "e_invoice_data"
+
+    # data exists
+    if gstr1_log.get(data_field):
+        mapped_data = gstr1_log.get_json_for(data_field)
+        if mapped_data:
+            return mapped_data, False
+
     return download_gstr1_json_data(gstr1_log)
 
 
 def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     # Query / Process / Map / Sumarize / Optionally Save & Return
-    frappe.publish_realtime("compute_books_gstr1_data_complete")
-    return DATA.get("books", {})
+    data_field = "computed_gstr1"
+    gstr1_log = filters.gstr1_log
+    _filters = frappe._dict(
+        {
+            "company": filters.company,
+            "company_gstin": filters.company_gstin,
+            "from_date": getdate("2024-03-01"),
+            "to_date": getdate("2024-03-31"),
+        }
+    )
+
+    # data exists
+    if gstr1_log.is_latest_data and gstr1_log.get(data_field):
+        mapped_data = gstr1_log.get_json_for(data_field)
+
+        if mapped_data:
+            return mapped_data
+
+    # compute data
+    # TODO: compute from and to date for report
+    mapped_data = GSTR1MappedData(_filters).prepare_mapped_data()
+
+    gstr1_log.update_json_for(data_field, mapped_data)
+
+    return mapped_data
 
 
 def reconcile_gstr1_data(filters, gov_data, books_data, status):

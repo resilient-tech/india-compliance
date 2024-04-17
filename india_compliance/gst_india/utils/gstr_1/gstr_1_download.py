@@ -40,43 +40,33 @@ GSTR1_ACTIONS = [
 E_INVOICE_ACTIONS = ["B2B", "CDNR", "CDNUR", "EXP"]
 
 
-def download_gstr1_json_data(gstr_1_log):
-    gstin = gstr_1_log.gstin
-    return_period = gstr_1_log.return_period
+def download_gstr1_json_data(gstr1_log):
+    gstin = gstr1_log.gstin
+    return_period = gstr1_log.return_period
 
     is_queued = False
     json_data = frappe._dict()
     api = GSTR1API(gstin)
 
-    if gstr_1_log.filing_status == "Filed":
+    if gstr1_log.filing_status == "Filed":
         return_type = "GSTR1"
         actions = GSTR1_ACTIONS
         api_method = api.get_gstr_1_data
         data_field = "filed_gstr1"
-        summary_field = "filed_gstr1_summary"
 
     else:
         return_type = "e-Invoice"
         actions = E_INVOICE_ACTIONS
         api_method = api.get_einvoice_data
         data_field = "e_invoice_data"
-        summary_field = "e_invoice_summary"
-
-    # data exists
-    if mapped_data := gstr_1_log.get_json_for(data_field):
-        summarized_data = gstr_1_log.get_json_for(summary_field)
-
-        if not summarized_data:
-            summarized_data = mapped_data
-
-        return mapped_data, summarized_data, is_queued
 
     # download data
     for action in actions:
         response = api_method(action, return_period)
 
         if response.error_type in ["otp_requested", "invalid_otp"]:
-            return response, None, None
+            # TODO: Send message to UI (listener), update log status to OTP Requested
+            return response, None
 
         if response.error_type == "no_docs_found":
             continue
@@ -99,31 +89,29 @@ def download_gstr1_json_data(gstr_1_log):
 
         json_data.update(response)
 
-    # TODO: process json_data
     mapped_data = convert_to_internal_data_format(json_data)
-    gstr_1_log.update_json_for(data_field, mapped_data)
-
-    summarized_data = mapped_data
-    gstr_1_log.update_json_for(summary_field, summarized_data)
+    gstr1_log.update_json_for(data_field, mapped_data)
 
     if is_queued:
         # TODO: Send message to UI (listener), update log status to queued & restrict report generation
-        gstr_1_log.update_status("Queued")
+        gstr1_log.update_status("Queued")
+
         frappe.publish_realtime(
-            "gstr1_queued", {"gstin": gstin, "return_period": return_period}
+            "gstr1_queued",
+            message={"gstin": gstin, "return_period": return_period},
+            user=frappe.session.user,
+            doctype="GSTR-1 Beta",
         )
 
-    return mapped_data, summarized_data, is_queued
+    return mapped_data, is_queued
 
 
 def save_gstr_1(gstin, return_period, json_data, return_type):
     if return_type == "GSTR1":
         data_field = "filed_gstr1"
-        summary_field = "filed_gstr1_summary"
 
     elif return_type == "e-Invoice":
         data_field = "e_invoice_data"
-        summary_field = "e_invoice_summary"
 
     if not json_data:
         frappe.throw(
@@ -136,25 +124,8 @@ def save_gstr_1(gstin, return_period, json_data, return_type):
 
     mapped_data = convert_to_internal_data_format(json_data)
 
-    gstr_1_log = frappe.get_doc("GSTR-1 Filed Log", f"{return_period}-{gstin}")
-    gstr_1_log.update_json_for(data_field, mapped_data, overwrite=False)
-
-    if frappe.db.exists(
-        "GSTR Import Log",
-        {
-            "gstin": gstin,
-            "return_type": return_type,
-            "return_period": return_period,
-            "request_id": ["is", "set"],
-        },
-    ):
-        return
-
-    summarized_data = mapped_data
-    gstr_1_log.update_json_for(summary_field, summarized_data)
-
-    # TODO: reconcile data
-    gstr_1_log.update_status("Generated")
+    gstr1_log = frappe.get_doc("GSTR-1 Filed Log", f"{return_period}-{gstin}")
+    gstr1_log.update_json_for(data_field, mapped_data, overwrite=False)
 
 
 def save_gstr_1_filed_data(gstin, return_period, json_data):

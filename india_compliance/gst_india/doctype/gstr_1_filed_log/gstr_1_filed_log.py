@@ -1,12 +1,15 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 import gzip
+import itertools
 from datetime import datetime
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_to_date
+from frappe.utils import add_to_date, get_datetime
+
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 
 DOCTYPE = "GSTR-1 Filed Log"
 
@@ -17,8 +20,8 @@ class GSTR1FiledLog(Document):
     def status(self):
         return self.generation_status
 
-    def update_status(self, status):
-        self.db_set("generation_status", status)
+    def update_status(self, status, commit=False):
+        self.db_set("generation_status", status, commit=commit)
 
     def show_report(self):
         # TODO: Implement
@@ -40,6 +43,9 @@ class GSTR1FiledLog(Document):
             return get_decompressed_data(file.get_content())
 
     def update_json_for(self, file_field, json_data, overwrite=True):
+        if file_field == "computed_gstr1":
+            self.db_set("computed_on", get_datetime())
+
         # existing file
         if file := get_file_doc(self.name, file_field):
             if overwrite:
@@ -69,6 +75,29 @@ class GSTR1FiledLog(Document):
             }
         ).insert()
         self.db_set(file_field, file.file_url)
+
+    # DATA MODIFIERS
+    def normalize_data(self, data):
+        """
+        Helper function to convert complex objects to simple objects
+        Returns object list of rows for each sub-category
+        """
+        for subcategory, subcategory_data in data.items():
+            if isinstance(subcategory_data, list | tuple):
+                data[subcategory] = subcategory_data
+                continue
+
+            # get first key and value from subcategory_data
+            first_value = next(iter(subcategory_data.values()), None)
+
+            if isinstance(first_value, list | tuple):
+                # flatten the list of objects
+                data[subcategory] = list(itertools.chain(*subcategory_data.values()))
+
+            else:
+                data[subcategory] = [*subcategory_data.values()]
+
+        return data
 
     # GSTR 1 UTILITY
     def is_sek_needed(self, settings=None):
@@ -128,6 +157,55 @@ class GSTR1FiledLog(Document):
                 fields.extend(["e_invoice_data", "e_invoice_summary"])
 
         return fields
+
+
+def summarize_data(data, for_books=False):
+    """
+    Helper function to summarize data for each sub-category
+    """
+
+    summary = {}
+    AMOUNT_FIELDS = {
+        "total_taxable_value": 0,
+        "total_igst_amount": 0,
+        "total_cgst_amount": 0,
+        "total_sgst_amount": 0,
+        "total_cess_amount": 0,
+    }
+
+    for category in GSTR1_SubCategories:
+        category = category.value
+        summary[category] = {
+            "description": category,
+            "no_of_records": "",
+            "indent": 1,
+            "unique_records": set(),
+            **AMOUNT_FIELDS,
+        }
+
+    for category, _data in data.items():
+        summary_row = summary[category]
+
+        for row in _data:
+            for key in AMOUNT_FIELDS:
+                summary_row[key] += row.get(key, 0)
+
+            if doc_num := row.get("document_number"):
+                summary_row["unique_records"].add(doc_num)
+
+    for category in summary.copy().keys():
+        summary_row = summary[category]
+        count = len(summary_row["unique_records"])
+        if count:
+            summary_row["no_of_records"] = count
+
+        if sum(summary_row[field] for field in AMOUNT_FIELDS) == 0:
+            del summary[category]
+            continue
+
+        summary_row.pop("unique_records")
+
+    return summary
 
 
 def process_gstr_1_returns_info(gstin, response):
