@@ -35,6 +35,7 @@ SAMPLE_ITEM_LIST = [
     },
     {"item_code": "Test Service Item", "qty": 3, "rate": 500},
     {"item_code": "Test Ineligible Service Item", "qty": 2, "rate": 499},
+    {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 100},
 ]
 # Item Total
 # 20 * 5 + 19 * 3 + 1000 * 1 + 999 * 1 + 500 * 3 + 499 * 2 + 100 * 1 (Default) = 4754

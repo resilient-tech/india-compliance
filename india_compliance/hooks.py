@@ -154,7 +154,7 @@ doc_events = {
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
     },
     "Purchase Order Item": {
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit_item",
+        "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Purchase Receipt": {
         "onload": [
@@ -200,7 +200,7 @@ doc_events = {
         "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit",
     },
     "Sales Order Item": {
-        "before_update_after_submit": "india_compliance.gst_india.overrides.transaction.before_update_after_submit_item",
+        "on_change": "india_compliance.gst_india.overrides.transaction.on_change_item",
     },
     "Supplier": {
         "validate": [
@@ -375,7 +375,7 @@ scheduler_events = {
     "cron": {
         "*/5 * * * *": [
             "india_compliance.gst_india.utils.e_invoice.retry_e_invoice_e_waybill_generation",
-            "india_compliance.gst_india.utils.gstr.download_queued_request",
+            "india_compliance.gst_india.utils.gstr_utils.download_queued_request",
             "india_compliance.gst_india.doctype.purchase_reconciliation_tool.purchase_reconciliation_tool.auto_refresh_authtoken",
         ],
         "0 2 * * *": [
@@ -389,6 +389,15 @@ scheduler_events = {
         ],
     }
 }
+
+fields_for_group_similar_items = [
+    "taxable_value",
+    "cgst_amount",
+    "sgst_amount",
+    "igst_amount",
+    "cess_amount",
+    "cess_non_advol_amount",
+]
 
 
 # Includes in <head>
