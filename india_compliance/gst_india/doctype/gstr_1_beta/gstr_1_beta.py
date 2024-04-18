@@ -534,13 +534,24 @@ class GSTR1Beta(Document):
         frappe.msgprint("GSTR-1 is being prepared", alert=True)
 
     def get_period(self):
-        month_number = str(datetime.strptime(self.month, "%B").month).zfill(2)
+        if "-" in self.month_or_quarter:
+            quarter = self.month_or_quarter.split("-")
+            start_month_number = str(getdate(f"{quarter[0]}-{self.year}").month).zfill(
+                2
+            )
+            end_month_number = str(getdate(f"{quarter[1]}-{self.year}").month).zfill(2)
+
+            return f"{start_month_number}-{end_month_number}{self.year}"
+
+        month_number = str(datetime.strptime(self.month_or_quarter, "%B").month).zfill(
+            2
+        )
         return f"{month_number}{self.year}"
 
     def generate_gstr1(self):
         filters = {
             "company_gstin": self.company_gstin,
-            "month": self.month,
+            "month_quarter": self.month_or_quarter,
             "year": self.year,
         }
 
@@ -694,6 +705,13 @@ def reconcile_gstr1_data(filters, gov_data, books_data, status):
     # Prepare data / Sumarize / Save & Return / Optionally save books data
     frappe.publish_realtime("reconcile_gstr1_data_complete")
     return DATA.get("reconcile", {})
+
+
+###################
+@frappe.whitelist()
+def get_gstr1_filing_frequency():
+    gst_settings = frappe.get_cached_doc("GST Settings")
+    return gst_settings.filing_frequency
 
 
 ####################################################################################################

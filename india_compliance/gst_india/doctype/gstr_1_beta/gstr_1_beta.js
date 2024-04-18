@@ -96,16 +96,42 @@ const GSTR1_DataFields = {
     CANCELLED_COUNT: "cancelled_count",
 };
 
+const Quarter = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"]
+
+
 frappe.ui.form.on(DOCTYPE, {
-    setup(frm) {
+    async setup(frm) {
         // patch_set_active_tab(frm);
         patch_set_indicator(frm);
         frappe.require("gstr1.bundle.js").then(() => {
             frm.gstr1 = new GSTR1(frm);
             frm.trigger("company");
         });
-        set_default_fields(frm);
 
+        let filing_frequecy = await get_gstr1_filing_frequency()
+        frm.filing_frequecy = filing_frequecy
+
+        if (filing_frequecy === "Monthly") {
+            frm.set_df_property("month_or_quarter", "options", [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December"
+            ])
+        }
+        else if (filing_frequecy == "Quarterly") {
+            frm.set_df_property("month_or_quarter", "options",Quarter)
+        }
+
+        set_default_fields(frm);
         // frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
         //     frappe.show_alert({
         //         message: __("GSTR-1 Data Downloaded Successfully"),
@@ -122,7 +148,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
-            let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month} - ${filters.year}.<br/><br/>${error}`
+            let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`
 
             frappe.msgprint({
                 title: __("GSTR-1 Generation Failed"),
@@ -135,7 +161,7 @@ frappe.ui.form.on(DOCTYPE, {
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
-                frm.doc.month != filters.month ||
+                frm.doc.month_or_quarter != filters.month_or_quarter ||
                 frm.doc.year != filters.year
             )
                 return;
@@ -157,7 +183,7 @@ frappe.ui.form.on(DOCTYPE, {
 
     company_gstin: render_empty_state,
 
-    month: render_empty_state,
+    month_or_quarter: render_empty_state,
 
     year: render_empty_state,
 
@@ -1441,7 +1467,7 @@ function patch_set_indicator(frm) {
 function set_default_fields(frm) {
     set_default_company_gstin(frm);
     set_default_year(frm);
-    set_previous_month(frm);
+    set_previous_month_or_quarter(frm);
 }
 
 async function set_default_company_gstin(frm) {
@@ -1463,11 +1489,28 @@ function set_default_year(frm) {
     frm.set_value("year", year);
 }
 
-function set_previous_month(frm) {
-    var previous_month_date = new Date();
-    previous_month_date.setMonth(previous_month_date.getMonth() - 1);
-    const month = previous_month_date.toLocaleDateString("en", { month: "long" });
-    frm.set_value("month", month);
+function set_previous_month_or_quarter(frm) {
+    if (frm.filing_frequecy === "Monthly") {
+        var previous_month_date = new Date();
+        previous_month_date.setMonth(previous_month_date.getMonth() - 1);
+        const month = previous_month_date.toLocaleDateString("en", { month: "long" });
+        frm.set_value("month_or_quarter", month);
+    }
+    else if (frm.filing_frequecy === "Quarterly") {
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        let previousQuarter;
+        if (currentMonth >= 0 && currentMonth <= 2) {
+            previousQuarter = 3;
+        } else if (currentMonth >= 3 && currentMonth <= 5) {
+            previousQuarter = 0;
+        } else if (currentMonth >= 6 && currentMonth <= 8) {
+            previousQuarter = 1;
+        } else {
+            previousQuarter = 2;
+        }
+        frm.set_value("month_or_quarter",Quarter[previousQuarter])
+    }
 }
 
 function get_year_list(current_date) {
@@ -1484,4 +1527,15 @@ function get_year_list(current_date) {
 function render_empty_state(frm) {
     frm.doc.__onload = null;
     frm.refresh();
+}
+
+async function get_gstr1_filing_frequency() {
+    return new Promise((resolve, reject) => {
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_gstr1_filing_frequency",
+            callback: function (r) {
+                resolve(r.message);
+            }
+        });
+    });
 }
