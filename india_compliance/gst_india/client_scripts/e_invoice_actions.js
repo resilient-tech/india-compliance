@@ -154,7 +154,7 @@ function show_cancel_e_invoice_dialog(frm, callback) {
             : __("Cancel e-Invoice"),
         fields: get_cancel_e_invoice_dialog_fields(frm),
         primary_action_label: frm.doc.ewaybill
-            ? __("Cancel IRN & e-Waybill & Invoice")
+            ? __("Cancel IRN, e-Waybill & Invoice")
             : __("Cancel IRN & Invoice"),
         primary_action(values) {
             frappe.call({
