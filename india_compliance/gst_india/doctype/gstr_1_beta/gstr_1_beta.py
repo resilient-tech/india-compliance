@@ -733,6 +733,15 @@ def download_reconcile_as_excel(data):
 ##### Process Data #############
 ################################
 class GSTR1ProcessData:
+    def get_transaction_type(self, invoice):
+        if invoice.is_return:
+            if invoice.is_debit_note:
+                return "Debit Note"
+            else:
+                return "Credit Note"
+        else:
+            return "Invoice"
+
     def process_data_for_invoice_no_key(self, invoice, prepared_data):
         invoice_sub_category = invoice.invoice_sub_category
         invoice_no = invoice.invoice_no
@@ -740,7 +749,7 @@ class GSTR1ProcessData:
         mapped_dict = prepared_data.setdefault(invoice_sub_category, {}).setdefault(
             invoice_no,
             {
-                DataFields.TRANSACTION_TYPE.value: "Invoice",
+                DataFields.TRANSACTION_TYPE.value: self.get_transaction_type(invoice),
                 DataFields.CUST_GSTIN.value: invoice.billing_address_gstin,
                 DataFields.CUST_NAME.value: invoice.customer_name,
                 DataFields.DOC_DATE.value: invoice.posting_date,
@@ -794,6 +803,7 @@ class GSTR1ProcessData:
 
         mapped_dict.append(
             {
+                DataFields.TRANSACTION_TYPE.value: self.get_transaction_type(invoice),
                 DataFields.TAXABLE_VALUE.value: invoice.taxable_value,
                 DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 DataFields.DOC_DATE.value: invoice.posting_date,
@@ -819,6 +829,7 @@ class GSTR1ProcessData:
 
         mapped_dict.append(
             {
+                DataFields.TRANSACTION_TYPE.value: self.get_transaction_type(invoice),
                 DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 DataFields.POS.value: invoice.place_of_supply,
                 DataFields.TAXABLE_VALUE.value: invoice.taxable_value,
