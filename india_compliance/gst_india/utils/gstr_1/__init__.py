@@ -119,11 +119,66 @@ class DataFields(Enum):
     TOTAL_QUANTITY = "total_quantity"
     TOTAL_VALUE = "total_value"
 
+    DOCUMENT_NATURE = "document_nature"
     FROM_SR = "from_sr_no"
     TO_SR = "to_sr_no"
     TOTAL_COUNT = "total_count"
     DRAFT_COUNT = "draft_count"
     CANCELLED_COUNT = "cancelled_count"
+
+
+class GovDataFields(Enum):
+    CUST_GSTIN = "ctin"
+    ECOMMERCE_GSTIN = "etin"
+    DOC_DATE = "idt"
+    DOC_NUMBER = "inum"
+    DOC_VALUE = "val"
+    POS = "pos"
+    DIFF_PERCENTAGE = "diff_percent"
+    REVERSE_CHARGE = "rchrg"
+    TAXABLE_VALUE = "txval"
+    ITEMS = "itms"
+    IGST = "iamt"
+    CGST = "camt"
+    SGST = "samt"
+    CESS = "csamt"
+    TAX_RATE = "rt"
+    ITEM_DETAILS = "itm_det"
+    SHIPPING_BILL_NUMBER = "sbnum"
+    SHIPPING_BILL_DATE = "sbdt"
+    SHIPPING_PORT_CODE = "sbpcode"
+    SUPPLY_TYPE = "sply_ty"
+
+    EXEMPTED_AMOUNT = "expt_amt"
+    NIL_RATED_AMOUNT = "nil_amt"
+    NON_GST_AMOUNT = "ngsup_amt"
+
+    HSN_DATA = "data"
+    HSN_CODE = "hsn_sc"
+    DESCRIPTION = "desc"
+    UOM = "uqc"
+    QUANTITY = "qty"
+    ADDITIONAL_AMOUNT = "ad_amt"
+
+    INDEX = "num"
+    FROM_SR = "from"
+    TO_SR = "to"
+    TOTAL_COUNT = "totnum"
+    CANCELLED_COUNT = "cancel"
+    DOC_ISSUE_DETAILS = "doc_det"
+    DOC_ISSUE_NUMBER = "doc_num"
+    DOC_ISSUE_LIST = "docs"
+    NET_ISSUE = "net_issue"
+
+    INVOICE_TYPE = "inv_typ"
+    INVOICES = "inv"
+    EXPORT_TYPE = "exp_typ"
+    TYPE = "typ"
+
+    NOTE_TYPE = "ntty"
+    NOTE_NUMBER = "nt_num"
+    NOTE_DATE = "nt_dt"
+    NOTE_DETAILS = "nt"
 
 
 class ItemFields(Enum):
