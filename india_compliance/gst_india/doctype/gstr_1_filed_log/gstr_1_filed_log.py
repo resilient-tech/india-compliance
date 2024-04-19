@@ -184,7 +184,7 @@ class GSTR1FiledLog(Document):
                     no_of_records = summary_data[subcategory.value]["no_of_records"]
                     no_of_records = int(no_of_records) if no_of_records != "" else 0
 
-                    category_dict["no_of_records"] += str(no_of_records)
+                    category_dict["no_of_records"] += no_of_records
                     category_dict["total_cess_amount"] += summary_data[
                         subcategory.value
                     ]["total_cess_amount"]
