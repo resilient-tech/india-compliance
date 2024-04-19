@@ -17,6 +17,16 @@ UI:
 - Listeners: Steps Download / Computing / Reconciling / Loading
 
 - Save utility (save data)
+
+- Error Handelling for OTP
+
+- Compute Date
+- Summarize with category
+
+- Reconcile
+
+- Guess customer name
+
 """
 
 

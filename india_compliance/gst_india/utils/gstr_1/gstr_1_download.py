@@ -17,24 +17,17 @@ Download GSTR-1 and e-Invoices data from GST Portal
 
 GSTR1_ACTIONS = [
     "B2B",
-    "B2BA",
     "AT",
-    "ATA",
     "B2CL",
-    "B2CLA",
     "B2CS",
-    "B2CSA",
     "CDNR",
-    "CDNRA",
     "CDNUR",
-    "CDNURA",
     "DOCISS",
     "EXP",
-    "EXPA",
     "HSNSUM",
     "NIL",
     "TXP",
-    "TXPA",
+    "RETSUM",
 ]
 
 E_INVOICE_ACTIONS = ["B2B", "CDNR", "CDNUR", "EXP"]

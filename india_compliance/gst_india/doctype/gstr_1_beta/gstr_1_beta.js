@@ -96,8 +96,21 @@ const GSTR1_DataFields = {
     CANCELLED_COUNT: "cancelled_count",
 };
 
-const Quarter = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"]
-
+const QUARTER = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"];
+const MONTH = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
@@ -108,28 +121,12 @@ frappe.ui.form.on(DOCTYPE, {
             frm.trigger("company");
         });
 
-        let filing_frequecy = await get_gstr1_filing_frequency()
-        frm.filing_frequecy = filing_frequecy
+        let filing_frequecy = await get_gstr1_filing_frequency();
+        frm.filing_frequecy = filing_frequecy;
 
-        if (filing_frequecy === "Monthly") {
-            frm.set_df_property("month_or_quarter", "options", [
-                "January",
-                "February",
-                "March",
-                "April",
-                "May",
-                "June",
-                "July",
-                "August",
-                "September",
-                "October",
-                "November",
-                "December"
-            ])
-        }
-        else if (filing_frequecy == "Quarterly") {
-            frm.set_df_property("month_or_quarter", "options",Quarter)
-        }
+        if (filing_frequecy === "Monthly")
+            frm.set_df_property("month_or_quarter", "options", MONTH);
+        else frm.set_df_property("month_or_quarter", "options", QUARTER);
 
         set_default_fields(frm);
         // frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
@@ -148,7 +145,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
-            let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`
+            let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`;
 
             frappe.msgprint({
                 title: __("GSTR-1 Generation Failed"),
@@ -165,6 +162,8 @@ frappe.ui.form.on(DOCTYPE, {
                 frm.doc.year != filters.year
             )
                 return;
+
+            console.log("data loaded");
 
             frm.doc.__onload = { data };
             frm.trigger("after_save");
@@ -203,7 +202,9 @@ frappe.ui.form.on(DOCTYPE, {
     after_save(frm) {
         const data = frm.doc.__onload?.data;
         if (data == "otp_requested") {
-            india_compliance.authenticate_otp(frm.doc.company_gstin).then(() => frm.save())
+            india_compliance
+                .authenticate_otp(frm.doc.company_gstin)
+                .then(() => frm.save());
             return;
         }
 
@@ -1490,26 +1491,25 @@ function set_default_year(frm) {
 }
 
 function set_previous_month_or_quarter(frm) {
+    const currentDate = new Date();
     if (frm.filing_frequecy === "Monthly") {
-        var previous_month_date = new Date();
-        previous_month_date.setMonth(previous_month_date.getMonth() - 1);
-        const month = previous_month_date.toLocaleDateString("en", { month: "long" });
-        frm.set_value("month_or_quarter", month);
-    }
-    else if (frm.filing_frequecy === "Quarterly") {
-        const currentDate = new Date();
+        let prevMonthIdx = currentDate.getMonth() - 1;
+        prevMonthIdx = prevMonthIdx < 0 ? 11 : prevMonthIdx;
+
+        frm.set_value("month_or_quarter", MONTH[prevMonthIdx]);
+    } else {
         const currentMonth = currentDate.getMonth();
-        let previousQuarter;
-        if (currentMonth >= 0 && currentMonth <= 2) {
-            previousQuarter = 3;
-        } else if (currentMonth >= 3 && currentMonth <= 5) {
-            previousQuarter = 0;
-        } else if (currentMonth >= 6 && currentMonth <= 8) {
-            previousQuarter = 1;
+        let prevQuarterIdx;
+        if (currentMonth <= 2) {
+            prevQuarterIdx = 3;
+        } else if (currentMonth <= 5) {
+            prevQuarterIdx = 0;
+        } else if (currentMonth <= 8) {
+            prevQuarterIdx = 1;
         } else {
-            previousQuarter = 2;
+            prevQuarterIdx = 2;
         }
-        frm.set_value("month_or_quarter",Quarter[previousQuarter])
+        frm.set_value("month_or_quarter", QUARTER[prevQuarterIdx]);
     }
 }
 
@@ -1535,7 +1535,7 @@ async function get_gstr1_filing_frequency() {
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_gstr1_filing_frequency",
             callback: function (r) {
                 resolve(r.message);
-            }
+            },
         });
     });
 }

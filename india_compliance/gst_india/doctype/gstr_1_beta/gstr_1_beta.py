@@ -535,23 +535,22 @@ class GSTR1Beta(Document):
 
     def get_period(self):
         if "-" in self.month_or_quarter:
-            quarter = self.month_or_quarter.split("-")
-            start_month_number = str(getdate(f"{quarter[0]}-{self.year}").month).zfill(
-                2
-            )
-            end_month_number = str(getdate(f"{quarter[1]}-{self.year}").month).zfill(2)
+            # Quarterly
+            last_month = self.month_or_quarter.split("-")[1]
+            month_number = str(getdate(f"{last_month}-{self.year}").month).zfill(2)
 
-            return f"{start_month_number}-{end_month_number}{self.year}"
+        else:
+            # Monthly
+            month_number = str(
+                datetime.strptime(self.month_or_quarter, "%B").month
+            ).zfill(2)
 
-        month_number = str(datetime.strptime(self.month_or_quarter, "%B").month).zfill(
-            2
-        )
         return f"{month_number}{self.year}"
 
     def generate_gstr1(self):
         filters = {
             "company_gstin": self.company_gstin,
-            "month_quarter": self.month_or_quarter,
+            "month_or_quarter": self.month_or_quarter,
             "year": self.year,
         }
 
@@ -733,12 +732,12 @@ def download_reconcile_as_excel(data):
 ##### Process Data #############
 ################################
 class GSTR1ProcessData:
+
     def get_transaction_type(self, invoice):
-        if invoice.is_return:
-            if invoice.is_debit_note:
-                return "Debit Note"
-            else:
-                return "Credit Note"
+        if invoice.is_debit_note:
+            return "Debit Note"
+        elif invoice.is_return:
+            return "Credit Note"
         else:
             return "Invoice"
 

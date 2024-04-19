@@ -211,6 +211,15 @@ def summarize_data(data, for_books=False):
     Helper function to summarize data for each sub-category
     """
 
+    # Docs Count
+    # for Docs summary: Differently
+
+    # For Books:
+    # AT & TXP & HSN
+
+    # For Other than books:
+    # Nil, B2Cs, AT, TXP, HSN
+
     summary = {}
     AMOUNT_FIELDS = {
         "total_taxable_value": 0,
@@ -252,6 +261,12 @@ def summarize_data(data, for_books=False):
 
         summary_row.pop("unique_records")
 
+    # Category wise
+    final_summary = {}
+    for category in CATEGORY_SUB_CATEGORY_MAPPING:
+        final_summary[category.value] = {}
+
+    # TODO: Implement
     return summary
 
 
