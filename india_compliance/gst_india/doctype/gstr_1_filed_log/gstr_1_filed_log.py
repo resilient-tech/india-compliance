@@ -10,6 +10,9 @@ from frappe.model.document import Document
 from frappe.utils import add_to_date, get_datetime
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
+from india_compliance.gst_india.utils.gstr_1.__init__ import (
+    CATEGORY_SUB_CATEGORY_MAPPING,
+)
 
 DOCTYPE = "GSTR-1 Filed Log"
 
@@ -157,6 +160,50 @@ class GSTR1FiledLog(Document):
                 fields.extend(["e_invoice_data", "e_invoice_summary"])
 
         return fields
+
+    def summarize_filed_data(self):
+        summary_data = {}
+        gov_summary_data = self.get_json_for("filed_gstr1_summary")
+
+        for category, value in gov_summary_data.items():
+            gov_summary_data[category]["indent"] = 1
+            summary_data[category] = value
+
+        for category in CATEGORY_SUB_CATEGORY_MAPPING:
+            category_dict = {}
+            category_dict["indent"] = 0
+            category_dict["description"] = category.value
+            category_dict["no_of_records"] = 0
+            category_dict["total_cess_amount"] = 0
+            category_dict["total_cgst_amount"] = 0
+            category_dict["total_sgst_amount"] = 0
+            category_dict["total_igst_amount"] = 0
+            category_dict["total_taxable_value"] = 0
+            for subcategory in CATEGORY_SUB_CATEGORY_MAPPING[category]:
+                if summary_data.get(subcategory.value):
+                    no_of_records = summary_data[subcategory.value]["no_of_records"]
+                    no_of_records = int(no_of_records) if no_of_records != "" else 0
+
+                    category_dict["no_of_records"] += str(no_of_records)
+                    category_dict["total_cess_amount"] += summary_data[
+                        subcategory.value
+                    ]["total_cess_amount"]
+                    category_dict["total_cgst_amount"] += summary_data[
+                        subcategory.value
+                    ]["total_cgst_amount"]
+                    category_dict["total_sgst_amount"] += summary_data[
+                        subcategory.value
+                    ]["total_sgst_amount"]
+                    category_dict["total_igst_amount"] += summary_data[
+                        subcategory.value
+                    ]["total_igst_amount"]
+                    category_dict["total_taxable_value"] += summary_data[
+                        subcategory.value
+                    ]["total_taxable_value"]
+            if category_dict["no_of_records"]:
+                summary_data[category.value] = category_dict
+
+        return summary_data
 
 
 def summarize_data(data, for_books=False):
