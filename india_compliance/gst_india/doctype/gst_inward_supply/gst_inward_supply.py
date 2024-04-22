@@ -22,6 +22,11 @@ class GSTInwardSupply(Document):
         ):
             update_docs_for_amendment(self)
 
+    def on_trash(self):
+        frappe.db.set_value(
+            "Purchase Invoice", self.link_name, "reconciliation_status", "Unreconciled"
+        )
+
 
 def create_inward_supply(transaction):
     filters = {
