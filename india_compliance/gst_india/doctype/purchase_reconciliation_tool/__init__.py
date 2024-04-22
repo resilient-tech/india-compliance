@@ -1036,6 +1036,27 @@ class ReconciledData(BaseReconciliation):
             reconciliation_data.append(frappe._dict({"_purchase_invoice": doc}))
 
         self.process_data(reconciliation_data, retain_doc=retain_doc)
+
+        periods = BaseUtil._get_periods(
+            self.inward_supply_from_date, self.inward_supply_to_date
+        )
+
+        purchase_invoices = frappe.get_all(
+            "GST Inward Supply",
+            filters={
+                "action": "No Action",
+                "link_name": ["!=", ""],
+                "sup_return_period": ["in", periods],
+            },
+            pluck="link_name",
+        )
+        frappe.db.set_value(
+            "Purchase Invoice",
+            {"name": ("in", purchase_invoices)},
+            "reconciliation_status",
+            "Match Found",
+        )
+
         return reconciliation_data
 
     def get_all_inward_supply(
