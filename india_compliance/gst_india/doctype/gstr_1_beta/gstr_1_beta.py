@@ -24,6 +24,14 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
 
+AMOUNT_FIELDS = {
+    "total_taxable_value": 0,
+    "total_igst_amount": 0,
+    "total_cgst_amount": 0,
+    "total_sgst_amount": 0,
+    "total_cess_amount": 0,
+}
+
 DATA = {
     "status": "Filed",
     "reconcile": {
@@ -702,8 +710,110 @@ def reconcile_gstr1_data(filters, gov_data, books_data, status):
     # Missing in gov_data
     # Update books data (optionally if not filed)
     # Prepare data / Sumarize / Save & Return / Optionally save books data
+
+    reconciled_data = {}
+    for subcategory in GSTR1_SubCategories:
+        books_subdata = books_data.get(subcategory.value)
+        gov_subdata = gov_data.get(subcategory.value)
+
+        if not books_subdata and not gov_subdata:
+            continue
+
+        if not gov_subdata:
+            if isinstance(books_subdata, list):
+                reconciled_data[subcategory.value] = aggregate_books_data(books_subdata)
+            else:
+                reconciled_data[subcategory.value] = books_subdata
+
+            reconciled_data[subcategory.value]["no_of_records"] = len(books_subdata)
+            books_data.pop(subcategory.value)
+            continue
+
+        if not books_subdata:
+            if isinstance(gov_subdata, list):
+                reconciled_data[subcategory.value] = gov_subdata[0]
+            else:
+                reconciled_data[subcategory.value] = gov_subdata
+
+            reconciled_data[subcategory.value]["no_of_records"] = 1
+            gov_data.pop(subcategory.value)
+            continue
+
+        reconciled_data[subcategory.value] = {}
+        for key, value in books_subdata.copy().items():
+            reconciled_data[subcategory.value][key] = {
+                "no_of_records": 0,
+                **AMOUNT_FIELDS,
+            }
+
+            if isinstance(value, list):
+                aggregated = aggregate_books_data(value)
+
+                if not compare_amount_fields(aggregated, gov_subdata[key][0]):
+                    reconciled_data[subcategory.value][key] = {
+                        "no_of_records": 1,
+                        **{
+                            field: aggregated[field] - gov_subdata[key][0][field]
+                            for field in AMOUNT_FIELDS
+                        },
+                    }
+                    reconciled_data[subcategory.value][key]["no_of_records"] += 1
+            else:
+                if not compare_amount_fields(value, gov_subdata[key]):
+                    reconciled_data[subcategory.value][key] = {
+                        **{
+                            field: value[field] - gov_subdata[key][field]
+                            for field in AMOUNT_FIELDS
+                        },
+                    }
+                    reconciled_data[subcategory.value][key]["no_of_records"] += 1
+            gov_subdata.pop(key)
+            books_subdata.pop(key)
+
+        if gov_subdata:
+            for key, value in gov_data.copy().items():
+                if isinstance(value, dict):
+                    reconciled_data[subcategory.value][key] = value
+                else:
+                    reconciled_data[subcategory.value][key] = value[0]
+
+                reconciled_data[subcategory.value][key]["no_of_records"] += 1
+                gov_data.pop(key)
+
+        gov_data.pop(subcategory.value)
+        books_data.pop(subcategory.value)
+
     frappe.publish_realtime("reconcile_gstr1_data_complete")
-    return DATA.get("reconcile", {})
+    return reconciled_data
+
+
+def aggregate_books_data(books_data):
+    aggregated = {}
+    aggregated[DataFields.TAXABLE_VALUE.value] = sum(
+        row["total_taxable_value"] for row in books_data
+    )
+    aggregated[DataFields.IGST.value] = sum(
+        row["total_igst_amount"] for row in books_data
+    )
+    aggregated[DataFields.CGST.value] = sum(
+        row["total_cgst_amount"] for row in books_data
+    )
+    aggregated[DataFields.SGST.value] = sum(
+        row["total_sgst_amount"] for row in books_data
+    )
+    aggregated[DataFields.CESS.value] = sum(
+        row["total_cess_amount"] for row in books_data
+    )
+
+    return aggregated
+
+
+def compare_amount_fields(dict1, dict2):
+    for field in AMOUNT_FIELDS:
+        if dict1[field] != dict2[field]:
+            return False
+
+    return True
 
 
 ###################
@@ -789,7 +899,9 @@ class GSTR1ProcessData:
 
     def process_data_for_document_category_key(self, invoice, prepared_data):
         key = invoice.invoice_category
-        mapped_dict = prepared_data.setdefault(key, [])
+        mapped_dict = prepared_data.setdefault(key, {}).setdefault(
+            invoice.invoice_type, []
+        )
 
         for row in mapped_dict:
             if row[DataFields.DOC_NUMBER.value] == invoice.invoice_no:
@@ -842,7 +954,7 @@ class GSTR1ProcessData:
         )
 
     def process_data_for_hsn_summary(self, invoice, prepared_data):
-        key = f"{invoice.gst_hsn_code} - {flt(invoice.gst_rate)} - {invoice.uom})"
+        key = f"{invoice.gst_hsn_code} - {flt(invoice.gst_rate)} - {invoice.uom}"
         mapped_dict = prepared_data.setdefault(
             key,
             {
