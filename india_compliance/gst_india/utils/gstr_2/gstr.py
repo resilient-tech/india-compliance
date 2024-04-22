@@ -47,6 +47,7 @@ class GSTR:
         self.setup()
 
     def setup(self):
+        self.existing_transaction = {}
         pass
 
     def create_transactions(self, category, suppliers):
@@ -70,6 +71,20 @@ class GSTR:
                 user=frappe.session.user,
                 doctype="Purchase Reconciliation Tool",
             )
+
+            if transaction.get("unique_key") in self.existing_transaction:
+                self.existing_transaction.pop(transaction.get("unique_key"))
+
+        self.delete_missing_transactions()
+
+    def delete_missing_transactions(self):
+        """
+        For GSTR2a, transactions are reflected immediately after it's pushed to GSTR-1.
+        At times, it may later be removed from GSTR-1.
+
+        In such cases, we need to delete such unfilled transactions not present in the latest data.
+        """
+        return
 
     def get_all_transactions(self, category, suppliers):
         transactions = []
@@ -97,6 +112,7 @@ class GSTR:
             **self.get_supplier_details(supplier),
             **self.get_invoice_details(invoice),
             items=self.get_transaction_items(invoice),
+            unique_key=(supplier.ctin or "") + "-" + (invoice.inum or ""),
         )
 
     def get_supplier_details(self, supplier):
