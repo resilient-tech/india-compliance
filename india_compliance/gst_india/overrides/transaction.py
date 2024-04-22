@@ -1197,14 +1197,24 @@ def set_reverse_charge(doc):
         doc.is_reverse_charge,
     )
 
-    if default_tax:
-        doc.taxes_and_charges = default_tax
-        template = (
-            get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax)
-            or []
-        )
-        doc.set("taxes", template)
-        doc.run_method("calculate_taxes_and_totals")
+    if not default_tax:
+        return
+
+    template = (
+        get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax) or []
+    )
+
+    # all accounts in taxes are same as template
+    has_same_accounts = not (
+        set(row.account_head for row in template)
+        - set(row.account_head for row in doc.taxes)
+    )
+
+    if doc.taxes_and_charges == default_tax and has_same_accounts:
+        return
+
+    doc.taxes_and_charges = default_tax
+    doc.set("taxes", template)
 
 
 def validate_gstin_status(gstin, transaction_date):
@@ -1261,6 +1271,13 @@ def validate_company_address_field(doc):
         return False
 
 
+def before_validate_transaction(doc, method=None):
+    if ignore_gst_validations(doc):
+        return False
+
+    set_reverse_charge_as_per_gst_settings(doc)
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1313,8 +1330,6 @@ def validate_transaction(doc, method=None):
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
-
-    set_reverse_charge_as_per_gst_settings(doc)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
