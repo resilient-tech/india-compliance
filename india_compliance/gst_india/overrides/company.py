@@ -90,7 +90,7 @@ def modify_tax_defaults(default_taxes, gst_rate):
             for row in tax.get("taxes"):
                 rate = (
                     gst_rate
-                    if row["account_head"]["tax_rate"] == 18
+                    if abs(row["account_head"]["tax_rate"]) == 18
                     else flt(gst_rate / 2, 3)
                 )
 
