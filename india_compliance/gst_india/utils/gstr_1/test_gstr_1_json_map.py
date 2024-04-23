@@ -620,6 +620,8 @@ class TestB2CS(FrappeTestCase):
                 GovDataFields.POS.value: "05",
                 GovDataFields.TAXABLE_VALUE.value: 110,
                 GovDataFields.IGST.value: 10,
+                GovDataFields.CGST.value: 0,
+                GovDataFields.SGST.value: 0,
                 GovDataFields.CESS.value: 10,
             },
             {
@@ -629,6 +631,8 @@ class TestB2CS(FrappeTestCase):
                 GovDataFields.TYPE.value: "OE",
                 GovDataFields.TAXABLE_VALUE.value: 100,
                 GovDataFields.IGST.value: 10,
+                GovDataFields.CGST.value: 0,
+                GovDataFields.SGST.value: 0,
                 GovDataFields.CESS.value: 10,
                 GovDataFields.POS.value: "05",
             },
@@ -645,7 +649,9 @@ class TestB2CS(FrappeTestCase):
                         DataFields.TAX_RATE.value: 5,
                         ItemFields.IGST.value: 10,
                         ItemFields.CESS.value: 10,
-                    }
+                        ItemFields.CGST.value: 0,
+                        ItemFields.SGST.value: 0,
+                    },
                 ],
                 "05-Uttarakhand - 5.0 - ": [
                     {
@@ -656,6 +662,8 @@ class TestB2CS(FrappeTestCase):
                         DataFields.TAX_RATE.value: 5,
                         ItemFields.IGST.value: 10,
                         ItemFields.CESS.value: 10,
+                        ItemFields.CGST.value: 0,
+                        ItemFields.SGST.value: 0,
                     }
                 ],
             }
@@ -899,25 +907,45 @@ class TestHSNSUM(FrappeTestCase):
                     GovDataFields.IGST.value: 14.52,
                     GovDataFields.CESS.value: 500,
                     GovDataFields.TAX_RATE.value: 0.1,
-                }
+                },
+                {
+                    GovDataFields.INDEX.value: 1,
+                    GovDataFields.HSN_CODE.value: "999512",
+                    GovDataFields.DESCRIPTION.value: "Goods Description",
+                    GovDataFields.UOM.value: "NOS",
+                    GovDataFields.QUANTITY.value: 2.05,
+                    GovDataFields.TAXABLE_VALUE.value: 10.23,
+                    GovDataFields.IGST.value: 14.52,
+                    GovDataFields.CESS.value: 500,
+                    GovDataFields.TAX_RATE.value: 5.0,
+                },
             ]
         }
 
         cls.mapped_data = {
             "HSN Summary": {
-                "1010 - KGS-KILOGRAMS - 0.1": [
-                    {
-                        ItemFields.INDEX.value: 1,
-                        DataFields.HSN_CODE.value: "1010",
-                        DataFields.DESCRIPTION.value: "Goods Description",
-                        DataFields.UOM.value: "KGS-KILOGRAMS",
-                        DataFields.QUANTITY.value: 2.05,
-                        DataFields.TAXABLE_VALUE.value: 10.23,
-                        DataFields.IGST.value: 14.52,
-                        DataFields.CESS.value: 500,
-                        DataFields.TAX_RATE.value: 0.1,
-                    }
-                ]
+                "1010 - KGS-KILOGRAMS - 0.1": {
+                    ItemFields.INDEX.value: 1,
+                    DataFields.HSN_CODE.value: "1010",
+                    DataFields.DESCRIPTION.value: "Goods Description",
+                    DataFields.UOM.value: "KGS-KILOGRAMS",
+                    DataFields.QUANTITY.value: 2.05,
+                    DataFields.TAXABLE_VALUE.value: 10.23,
+                    DataFields.IGST.value: 14.52,
+                    DataFields.CESS.value: 500,
+                    DataFields.TAX_RATE.value: 0.1,
+                },
+                "999512 - NOS-NUMBERS - 5.0": {
+                    ItemFields.INDEX.value: 1,
+                    DataFields.HSN_CODE.value: "999512",
+                    DataFields.DESCRIPTION.value: "Goods Description",
+                    DataFields.UOM.value: "NOS-NUMBERS",
+                    DataFields.QUANTITY.value: 2.05,
+                    DataFields.TAXABLE_VALUE.value: 10.23,
+                    DataFields.IGST.value: 14.52,
+                    DataFields.CESS.value: 500,
+                    DataFields.TAX_RATE.value: 5,
+                },
             }
         }
 
@@ -986,46 +1014,54 @@ class TestAT(FrappeTestCase):
 
         cls.mapped_data = {
             "Advances Received": {
-                "05-Uttarakhand - 5.0": {
-                    DataFields.POS.value: "05-Uttarakhand",
-                    DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    DataFields.IGST.value: 9400,
-                    DataFields.CESS.value: 500,
-                    DataFields.CGST.value: 0,
-                    DataFields.SGST.value: 0,
-                    DataFields.TAXABLE_VALUE.value: 100,
-                    DataFields.TAX_RATE.value: 5,
-                },
-                "05-Uttarakhand - 6.0": {
-                    DataFields.POS.value: "05-Uttarakhand",
-                    DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    DataFields.IGST.value: 9400,
-                    DataFields.CESS.value: 500,
-                    DataFields.CGST.value: 0,
-                    DataFields.SGST.value: 0,
-                    DataFields.TAXABLE_VALUE.value: 100,
-                    DataFields.TAX_RATE.value: 6,
-                },
-                "24-Gujarat - 5.0": {
-                    DataFields.POS.value: "24-Gujarat",
-                    DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    DataFields.IGST.value: 9400,
-                    DataFields.CESS.value: 500,
-                    DataFields.CGST.value: 0,
-                    DataFields.SGST.value: 0,
-                    DataFields.TAXABLE_VALUE.value: 100,
-                    DataFields.TAX_RATE.value: 5,
-                },
-                "24-Gujarat - 6.0": {
-                    DataFields.POS.value: "24-Gujarat",
-                    DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    DataFields.IGST.value: 9400,
-                    DataFields.CESS.value: 500,
-                    DataFields.CGST.value: 0,
-                    DataFields.SGST.value: 0,
-                    DataFields.TAXABLE_VALUE.value: 100,
-                    DataFields.TAX_RATE.value: 6,
-                },
+                "05-Uttarakhand - 5.0": [
+                    {
+                        DataFields.POS.value: "05-Uttarakhand",
+                        DataFields.DIFF_PERCENTAGE.value: 0.65,
+                        DataFields.IGST.value: 9400,
+                        DataFields.CESS.value: 500,
+                        DataFields.CGST.value: 0,
+                        DataFields.SGST.value: 0,
+                        DataFields.TAXABLE_VALUE.value: 100,
+                        DataFields.TAX_RATE.value: 5,
+                    },
+                ],
+                "05-Uttarakhand - 6.0": [
+                    {
+                        DataFields.POS.value: "05-Uttarakhand",
+                        DataFields.DIFF_PERCENTAGE.value: 0.65,
+                        DataFields.IGST.value: 9400,
+                        DataFields.CESS.value: 500,
+                        DataFields.CGST.value: 0,
+                        DataFields.SGST.value: 0,
+                        DataFields.TAXABLE_VALUE.value: 100,
+                        DataFields.TAX_RATE.value: 6,
+                    }
+                ],
+                "24-Gujarat - 5.0": [
+                    {
+                        DataFields.POS.value: "24-Gujarat",
+                        DataFields.DIFF_PERCENTAGE.value: 0.65,
+                        DataFields.IGST.value: 9400,
+                        DataFields.CESS.value: 500,
+                        DataFields.CGST.value: 0,
+                        DataFields.SGST.value: 0,
+                        DataFields.TAXABLE_VALUE.value: 100,
+                        DataFields.TAX_RATE.value: 5,
+                    }
+                ],
+                "24-Gujarat - 6.0": [
+                    {
+                        DataFields.POS.value: "24-Gujarat",
+                        DataFields.DIFF_PERCENTAGE.value: 0.65,
+                        DataFields.IGST.value: 9400,
+                        DataFields.CESS.value: 500,
+                        DataFields.CGST.value: 0,
+                        DataFields.SGST.value: 0,
+                        DataFields.TAXABLE_VALUE.value: 100,
+                        DataFields.TAX_RATE.value: 6,
+                    }
+                ],
             }
         }
 

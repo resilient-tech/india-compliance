@@ -464,25 +464,20 @@ class B2CS(DataMapper):
         for invoice in input_data:
             invoice_data = self.format_data(invoice)
 
-            output.setdefault(
+            output[
                 " - ".join(
                     (
                         invoice_data.get(DataFields.POS.value, ""),
                         str(flt(invoice_data.get(DataFields.TAX_RATE.value, ""))),
                         invoice_data.get(DataFields.ECOMMERCE_GSTIN.value, ""),
                     )
-                ),
-                [],
-            ).append(invoice_data)
+                )
+            ] = [invoice_data]
 
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = [
-            invoice
-            for invoices in list(input_data[self.SUBCATEGORY].values())
-            for invoice in invoices
-        ]
+        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
 
         return [self.format_data(invoice, reverse=True) for invoice in input_data]
 
@@ -495,6 +490,24 @@ class B2CS(DataMapper):
             "INTER" if data[GovDataFields.IGST.value] > 0 else "INTRA"
         )
         return data
+
+    def aggregate_invoices(self, input_data):
+        output = []
+
+        keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
+
+        for key, invoices in input_data.items():
+            aggregated_invoice = invoices[0].copy()
+            aggregated_invoice.update(
+                {
+                    key: sum([invoice.get(key, 0) for invoice in invoices])
+                    for key in keys
+                }
+            )
+
+            output.append(aggregated_invoice)
+
+        return output
 
 
 class NilRated(DataMapper):
@@ -871,25 +884,20 @@ class HSNSUM(DataMapper):
         output = {}
 
         for invoice in input_data[GovDataFields.HSN_DATA.value]:
-            output.setdefault(
+            output[
                 " - ".join(
                     (
                         invoice.get(GovDataFields.HSN_CODE.value, ""),
                         self.map_uom(invoice.get(GovDataFields.UOM.value, "")),
-                        str(invoice.get(GovDataFields.TAX_RATE.value)),
+                        str(flt(invoice.get(GovDataFields.TAX_RATE.value))),
                     )
-                ),
-                [],
-            ).append(self.format_data(invoice))
+                )
+            ] = self.format_data(invoice)
 
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = [
-            invoice
-            for invoices in list(input_data[self.SUBCATEGORY].values())
-            for invoice in invoices
-        ]
+        input_data = list(input_data[self.SUBCATEGORY].values())
         return {
             GovDataFields.HSN_DATA.value: [
                 self.format_data(invoice, reverse=True) for invoice in input_data
@@ -960,12 +968,12 @@ class AT(DataMapper):
                             str(flt(item_data.get(DataFields.TAX_RATE.value, ""))),
                         )
                     )
-                ] = item_data
+                ] = [item_data]
 
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = list(input_data[self.SUBCATEGORY].values())
+        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
 
         pos_wise_data = {}
 
@@ -1019,6 +1027,24 @@ class AT(DataMapper):
             "INTER" if data[GovDataFields.IGST.value] > 0 else "INTRA"
         )
         return data
+
+    def aggregate_invoices(self, input_data):
+        keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
+
+        output = []
+
+        for key, invoices in input_data.items():
+            place_of_supply, tax_rate = key.split(" - ")
+            aggregated_invoice = invoices[0].copy()
+            aggregated_invoice.update(
+                {
+                    key: sum([invoice.get(key, 0) for invoice in invoices])
+                    for key in keys
+                }
+            )
+            output.append(aggregated_invoice)
+
+        return output
 
     def format_item_wise_json_data(self, items, *args):
         return [
