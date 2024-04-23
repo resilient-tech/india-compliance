@@ -31,16 +31,16 @@ class GSTR2a(GSTR):
         ).run(as_dict=True)
 
         return {
-            transaction.get("supplier_gstin")
-            + "-"
-            + transaction.get("bill_no"): transaction.get("name")
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
             for transaction in existing_transactions
         }
 
     def delete_missing_transactions(self):
         if self.existing_transaction:
-            for value in self.existing_transaction.values():
-                frappe.delete_doc("GST Inward Supply", value)
+            for inward_supply_name in self.existing_transaction.values():
+                frappe.delete_doc("GST Inward Supply", inward_supply_name)
 
     def get_supplier_details(self, supplier):
         supplier_details = {
