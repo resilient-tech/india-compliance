@@ -89,11 +89,9 @@ function is_gst_invoice(frm) {
                 item.gst_treatment == "Nil-Rated" || item.gst_treatment == "Exempted"
         );
 
-    if (frm.doc.place_of_supply === "96-Other Countries") {
+    if (frm.doc.items[0].gst_treatment === "Zero-Rated")
         return gst_invoice_conditions && frm.doc.is_export_with_gst;
-    } else {
-        return gst_invoice_conditions;
-    }
+    else return gst_invoice_conditions;
 }
 
 async function contains_gst_account(frm) {
