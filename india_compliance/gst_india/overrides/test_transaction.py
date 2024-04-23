@@ -6,9 +6,20 @@ from parameterized import parameterized_class
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import today
+from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import (
+    make_regional_gl_entries,
+)
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
-from erpnext.accounts.party import _get_party_details
+from erpnext.accounts.party import _get_party_details, get_regional_address_details
+from erpnext.controllers.accounts_controller import (
+    update_child_qty_rate,
+    update_gl_dict_with_regional_fields,
+)
+from erpnext.controllers.taxes_and_totals import get_regional_round_off_accounts
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
+from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+    update_regional_gl_entries,
+)
 
 from india_compliance.gst_india.constants import SALES_DOCTYPES
 from india_compliance.gst_india.overrides.transaction import (
@@ -18,6 +29,7 @@ from india_compliance.gst_india.overrides.transaction import (
 from india_compliance.gst_india.utils.tests import (
     _append_taxes,
     append_item,
+    create_purchase_invoice,
     create_transaction,
 )
 
@@ -934,3 +946,163 @@ def create_tax_accounts(account_name):
             **defaults,
         }
     ).insert(ignore_if_duplicate=True)
+
+
+class TestRegionalOverrides(FrappeTestCase):
+    @change_settings(
+        "GST Settings",
+        {"round_off_gst_values": 1},
+    )
+    def test_get_regional_round_off_accounts(self):
+
+        data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
+        self.assertListEqual(
+            data,
+            [
+                "Input Tax CGST - _TIRC",
+                "Input Tax SGST - _TIRC",
+                "Input Tax IGST - _TIRC",
+                "Output Tax CGST - _TIRC",
+                "Output Tax SGST - _TIRC",
+                "Output Tax IGST - _TIRC",
+                "Input Tax CGST RCM - _TIRC",
+                "Input Tax SGST RCM - _TIRC",
+                "Input Tax IGST RCM - _TIRC",
+            ],
+        )
+
+    @change_settings(
+        "GST Settings",
+        {"round_off_gst_values": 0},
+    )
+    def test_get_regional_round_off_accounts_with_round_off_unchecked(self):
+
+        data = get_regional_round_off_accounts("_Test Indian Registered Company", [])
+        self.assertListEqual(data, [])
+
+    def test_update_gl_dict_with_regional_fields(self):
+
+        doc = frappe.get_doc(
+            {"doctype": "Sales Invoice", "company_gstin": "29AAHCM7727Q1ZI"}
+        )
+        gl_entry = {}
+        update_gl_dict_with_regional_fields(doc, gl_entry)
+
+        self.assertEqual(gl_entry.get("company_gstin", ""), "29AAHCM7727Q1ZI")
+
+    def test_make_regional_gl_entries(self):
+        pi = create_purchase_invoice()
+        pi._has_ineligible_itc_items = True
+
+        gl_entries = {"company_gstin": "29AAHCM7727Q1ZI"}
+        frappe.flags.through_repost_accounting_ledger = True
+
+        make_regional_gl_entries(gl_entries, pi)
+
+        frappe.flags.through_repost_accounting_ledger = False
+        self.assertEqual(pi._has_ineligible_itc_items, False)
+
+    def test_update_regional_gl_entries(self):
+        gl_entry = {"company_gstin": "29AAHCM7727Q1ZI"}
+        doc = frappe.get_doc(
+            {
+                "doctype": "Sales Invoice",
+                "is_opening": "Yes",
+                "company_gstin": "29AAHCM7727Q1ZI",
+            }
+        )
+        return_entry = update_regional_gl_entries(gl_entry, doc)
+        self.assertDictEqual(return_entry, gl_entry)
+
+    def test_get_regional_address_details(self):
+        doctype = "Sales Order"
+        company = "_Test Indian Registered Company"
+        party_details = {
+            "customer": "_Test Registered Customer",
+            "customer_address": "_Test Registered Customer-Billing",
+            "billing_address_gstin": "24AANFA2641L1ZF",
+            "gst_category": "Registered Regular",
+            "company_gstin": "24AAQCA8719H1ZC",
+        }
+
+        get_regional_address_details(party_details, doctype, company)
+
+        self.assertEqual(
+            party_details.get("taxes_and_charges"), "Output GST In-state - _TIRC"
+        )
+        self.assertEqual(party_details.get("place_of_supply"), "24-Gujarat")
+        self.assertTrue(party_details.get("taxes"))
+
+
+class TestItemUpdate(FrappeTestCase):
+    DATA = {
+        "customer": "_Test Unregistered Customer",
+        "item_code": "_Test Trading Goods 1",
+        "qty": 1,
+        "rate": 100,
+        "is_in_state": 1,
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+
+    def create_order(self, doctype):
+        self.DATA["doctype"] = doctype
+        doc = create_transaction(**self.DATA)
+        return doc
+
+    def test_so_and_po_after_item_update(self):
+        for doctype in ["Sales Order", "Purchase Order"]:
+            doc = self.create_order(doctype)
+
+            self.assertDocumentEqual(
+                {
+                    "taxable_value": 100,
+                    "cgst_amount": 9,
+                    "sgst_amount": 9,
+                },
+                doc.items[0],
+            )
+
+            # Update Item Rate
+            item = doc.items[0]
+            item_to_update = [
+                {
+                    "item_code": item.item_code,
+                    "qty": item.qty,
+                    "rate": 200,
+                    "docname": item.name,
+                    "name": item.name,
+                    "idx": item.idx,
+                }
+            ]
+
+            update_child_qty_rate(doctype, json.dumps(item_to_update), doc.name)
+            doc = frappe.get_doc(doctype, doc.name)
+
+            self.assertDocumentEqual(
+                {
+                    "taxable_value": 200,
+                    "cgst_amount": 18,
+                    "sgst_amount": 18,
+                },
+                doc.items[0],
+            )
+
+            # Insert New Item
+            item_to_update.append(
+                {"item_code": "_Test Trading Goods 1", "qty": 1, "rate": 50, "idx": 2}
+            )
+
+            update_child_qty_rate(doctype, json.dumps(item_to_update), doc.name)
+            doc = frappe.get_doc(doctype, doc.name)
+
+            self.assertDocumentEqual(
+                {
+                    "taxable_value": 50,
+                    "cgst_amount": 4.5,
+                    "sgst_amount": 4.5,
+                },
+                doc.items[1],
+            )

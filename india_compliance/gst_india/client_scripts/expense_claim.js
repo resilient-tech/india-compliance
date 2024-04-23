@@ -8,5 +8,5 @@ frappe.ui.form.on("Expense Taxes and Charges", {
 });
 
 function toggle_gstin_for_expense_claim(frm) {
-	toggle_company_gstin(frm, taxes_table="taxes", account_field="account_head");
+    toggle_company_gstin(frm, "taxes", "account_head");
 }

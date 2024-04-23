@@ -154,8 +154,8 @@ function show_cancel_e_invoice_dialog(frm, callback) {
             : __("Cancel e-Invoice"),
         fields: get_cancel_e_invoice_dialog_fields(frm),
         primary_action_label: frm.doc.ewaybill
-            ? __("Cancel IRN & e-Waybill")
-            : __("Cancel IRN"),
+            ? __("Cancel IRN, e-Waybill & Invoice")
+            : __("Cancel IRN & Invoice"),
         primary_action(values) {
             frappe.call({
                 method: "india_compliance.gst_india.utils.e_invoice.cancel_e_invoice",
@@ -174,6 +174,12 @@ function show_cancel_e_invoice_dialog(frm, callback) {
 
     india_compliance.primary_to_danger_btn(d);
     d.show();
+
+    $(`
+        <div class="alert alert-warning" role="alert">
+            Sales invoice will be cancelled along with the IRN.
+        </div>
+    `).prependTo(d.wrapper);
 }
 
 function show_mark_e_invoice_as_cancelled_dialog(frm) {
@@ -304,7 +310,7 @@ function is_e_invoice_applicable(frm, show_message = false) {
     ) {
         is_einv_applicable = false;
         message_list.push(
-            "At least one item must be taxable or transaction is categorized as export."
+            "All items are either Nil-Rated/Exempted/Non-GST. At least one item must be taxable or the transaction should be categorised as export."
         );
     }
 

@@ -67,7 +67,9 @@ def create_transaction(**data):
         )
 
     company_abbr = frappe.get_cached_value("Company", data.company, "abbr") or "_TIRC"
-    append_item(transaction, data, company_abbr)
+
+    if not data.get("items"):
+        append_item(transaction, data, company_abbr)
 
     # Append taxes
     if data.is_in_state or data.is_in_state_rcm:
