@@ -1037,26 +1037,6 @@ class ReconciledData(BaseReconciliation):
 
         self.process_data(reconciliation_data, retain_doc=retain_doc)
 
-        periods = BaseUtil._get_periods(
-            self.inward_supply_from_date, self.inward_supply_to_date
-        )
-
-        purchase_invoices = frappe.get_all(
-            "GST Inward Supply",
-            filters={
-                "action": "No Action",
-                "link_name": ["!=", ""],
-                "sup_return_period": ["in", periods],
-            },
-            pluck="link_name",
-        )
-        frappe.db.set_value(
-            "Purchase Invoice",
-            {"name": ("in", purchase_invoices)},
-            "reconciliation_status",
-            "Match Found",
-        )
-
         return reconciliation_data
 
     def get_all_inward_supply(
@@ -1157,6 +1137,8 @@ class ReconciledData(BaseReconciliation):
             "classification": "",
         }
 
+        match_found = []
+
         for data in reconciliation_data:
             data.update(default_dict)
             method = data.get if retain_doc else data.pop
@@ -1164,12 +1146,28 @@ class ReconciledData(BaseReconciliation):
             purchase = method("_purchase_invoice", frappe._dict())
             inward_supply = method("_inward_supply", frappe._dict())
 
+            if (
+                inward_supply
+                and purchase
+                and inward_supply.get("action") == "No Action"
+                and inward_supply.get("link_name") != ""
+            ):
+                match_found.append(purchase.get("name"))
+
             self.update_fields(data, purchase, inward_supply)
             self.update_amount_difference(data, purchase, inward_supply)
             self.update_differences(data, purchase, inward_supply)
 
             if retain_doc and purchase:
                 BaseUtil.update_cess_amount(purchase)
+
+        for doc in ("Purchase Invoice", "Bill of Entry"):
+            frappe.db.set_value(
+                doc,
+                {"name": ("in", match_found)},
+                "reconciliation_status",
+                "Match Found",
+            )
 
     def update_fields(self, data, purchase, inward_supply):
         for field in ("supplier_name", "supplier_gstin", "bill_no", "bill_date"):
