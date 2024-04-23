@@ -104,7 +104,7 @@ class GSTR:
         ]
 
     def get_transaction(self, category, supplier, invoice):
-        return frappe._dict(
+        transaction = frappe._dict(
             company=self.company,
             company_gstin=self.gstin,
             # TODO: change classification to gstr_category
@@ -112,8 +112,13 @@ class GSTR:
             **self.get_supplier_details(supplier),
             **self.get_invoice_details(invoice),
             items=self.get_transaction_items(invoice),
-            unique_key=(supplier.ctin or "") + "-" + (invoice.inum or ""),
         )
+
+        transaction["unique_key"] = (
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}"
+        )
+
+        return transaction
 
     def get_supplier_details(self, supplier):
         return {}
