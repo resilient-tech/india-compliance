@@ -1148,11 +1148,10 @@ class ReconciledData(BaseReconciliation):
 
             if (
                 inward_supply
-                and purchase
                 and inward_supply.get("action") == "No Action"
                 and inward_supply.get("link_name") != ""
             ):
-                match_found.append(purchase.get("name"))
+                match_found.append(inward_supply.get("link_name"))
 
             self.update_fields(data, purchase, inward_supply)
             self.update_amount_difference(data, purchase, inward_supply)

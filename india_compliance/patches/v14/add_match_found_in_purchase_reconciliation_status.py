@@ -7,11 +7,13 @@ def execute():
         filters={"action": "No Action", "link_name": ("!=", "")},
         pluck="link_name",
     )
-    if pi_and_boe_list:
-        for doc in ("Purchase Invoice", "Bill of Entry"):
-            frappe.db.set_value(
-                doc,
-                {"name": ("in", pi_and_boe_list)},
-                "reconciliation_status",
-                "Match Found",
-            )
+    if not pi_and_boe_list:
+        return
+
+    for doc in ("Purchase Invoice", "Bill of Entry"):
+        frappe.db.set_value(
+            doc,
+            {"name": ("in", pi_and_boe_list)},
+            "reconciliation_status",
+            "Match Found",
+        )
