@@ -3,6 +3,7 @@ from frappe import _
 from frappe.utils import flt, rounded
 
 from india_compliance.gst_india.overrides.transaction import get_valid_accounts
+from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
 
 def validate(doc, method=None):
@@ -39,15 +40,24 @@ def validate_tax_rates(doc):
     if not intra_state_accounts and not inter_state_accounts:
         return
 
+    rcm_accounts = get_gst_accounts_by_type(
+        doc.company, "Sales Reverse Charge", throw=False
+    )
+
     invalid_tax_rates = {}
     for row in doc.taxes:
-        # check intra state
-        if row.tax_type in intra_state_accounts and doc.gst_rate != row.tax_rate * 2:
-            invalid_tax_rates[row.idx] = doc.gst_rate / 2
+        if row.tax_type not in (intra_state_accounts, inter_state_accounts):
+            continue
 
-        # check inter state
-        elif row.tax_type in inter_state_accounts and doc.gst_rate != row.tax_rate:
-            invalid_tax_rates[row.idx] = doc.gst_rate
+        gst_rate = (
+            doc.gst_rate / 2 if row.tax_type in intra_state_accounts else doc.gst_rate
+        )
+
+        if rcm_accounts and row.tax_type in rcm_accounts:
+            gst_rate = gst_rate * -1
+
+        if row.tax_rate != gst_rate:
+            invalid_tax_rates[row.idx] = gst_rate
 
     if not invalid_tax_rates:
         return

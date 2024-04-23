@@ -223,7 +223,7 @@ def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=Tr
 
     account_types = []
     if for_sales:
-        account_types.append("Output")
+        account_types.extend(["Output", "Sales Reverse Charge"])
 
     if for_purchase:
         account_types.extend(["Input", "Purchase Reverse Charge"])
@@ -302,6 +302,10 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             ).format(idx)
         )
 
+    validate_reverse_charge_accounts(
+        doc, rows_to_validate, _get_matched_idx, _throw, is_sales_transaction
+    )
+
     # Sales / Purchase Validations
     if is_sales_transaction:
         if is_export_without_payment_of_gst(doc) and (
@@ -311,15 +315,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 _(
                     "Cannot charge GST in Row #{0} since export is without"
                     " payment of GST"
-                ).format(idx)
-            )
-
-        if doc.get("is_reverse_charge") and (
-            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
-        ):
-            _throw(
-                _(
-                    "Cannot charge GST in Row #{0} since supply is under reverse charge"
                 ).format(idx)
             )
 
@@ -334,17 +329,6 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
         )
 
     elif not doc.is_reverse_charge:
-        if idx := _get_matched_idx(
-            rows_to_validate,
-            get_gst_accounts_by_type(doc.company, "Purchase Reverse Charge").values(),
-        ):
-            _throw(
-                _(
-                    "Cannot use Reverse Charge Account in Row #{0} since purchase is"
-                    " without Reverse Charge"
-                ).format(idx)
-            )
-
         if not doc.supplier_gstin and (
             idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
         ):
@@ -436,6 +420,32 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
             )
 
     return all_valid_accounts
+
+
+def validate_reverse_charge_accounts(
+    doc, rows_to_validate, _get_matched_idx, _throw, is_sales_transaction
+):
+    if doc.doctype == "Payment Entry" or doc.is_reverse_charge:
+        return
+
+    rcm_account_type = (
+        "Sales Reverse Charge" if is_sales_transaction else "Purchase Reverse Charge"
+    )
+
+    reverse_charge_accounts = get_gst_accounts_by_type(
+        doc.company, rcm_account_type
+    ).values()
+
+    if idx := _get_matched_idx(
+        rows_to_validate,
+        reverse_charge_accounts,
+    ):
+        _throw(
+            _(
+                "Cannot use Reverse Charge Account in Row #{0} since transaction is"
+                " without Reverse Charge"
+            ).format(idx)
+        )
 
 
 def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, tax_row):
@@ -711,13 +721,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
 
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
-        or (
-            is_sales_transaction
-            and (
-                is_export_without_payment_of_gst(party_details)
-                or party_details.is_reverse_charge
-            )
-        )
+        or (is_sales_transaction and (is_export_without_payment_of_gst(party_details)))
         or (
             not is_sales_transaction
             and (
@@ -833,32 +837,46 @@ def get_tax_template(
     return default_tax
 
 
-def validate_reverse_charge_transaction(doc, method=None):
+def validate_reverse_charge_transaction(doc, is_sales_transaction):
     base_gst_tax = 0
     base_reverse_charge_booked = 0
 
-    if not doc.is_reverse_charge:
+    if not doc.get("is_reverse_charge"):
         return
 
+    rcm_account_type = (
+        "Sales Reverse Charge" if is_sales_transaction else "Purchase Reverse Charge"
+    )
+
+    standard_account_type = "Output" if is_sales_transaction else "Input"
+
     reverse_charge_accounts = get_gst_accounts_by_type(
-        doc.company, "Purchase Reverse Charge"
+        doc.company, rcm_account_type
     ).values()
 
-    input_gst_accounts = get_gst_accounts_by_type(doc.company, "Input").values()
+    standard_gst_accounts = get_gst_accounts_by_type(
+        doc.company, standard_account_type
+    ).values()
 
     for tax in doc.get("taxes"):
-        if tax.account_head in input_gst_accounts:
-            if tax.add_deduct_tax == "Add":
+        if tax.account_head in standard_gst_accounts:
+            if tax.get("add_deduct_tax") == "Add":
                 base_gst_tax += tax.base_tax_amount_after_discount_amount
             else:
                 base_gst_tax += tax.base_tax_amount_after_discount_amount
         elif tax.account_head in reverse_charge_accounts:
-            if tax.add_deduct_tax == "Add":
+            if tax.get("add_deduct_tax") == "Add":
                 base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
             else:
                 base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
 
-    if base_gst_tax != base_reverse_charge_booked:
+    condition = (
+        base_gst_tax + base_reverse_charge_booked == 0
+        if is_sales_transaction
+        else base_gst_tax == base_reverse_charge_booked
+    )
+
+    if not condition:
         msg = _("Booked reverse charge is not equal to applied tax amount")
         msg += "<br>"
         msg += _(
@@ -1287,11 +1305,17 @@ def validate_transaction(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
         gstin = doc.billing_address_gstin
+        if doc.is_reverse_charge and not doc.billing_address_gstin:
+            frappe.throw(
+                _(
+                    "Transaction cannot be reverse charge since sales is to customer"
+                    " without GSTIN"
+                )
+            )
     elif doc.doctype == "Payment Entry":
         is_sales_transaction = True
         gstin = doc.billing_address_gstin
     else:
-        validate_reverse_charge_transaction(doc)
         gstin = doc.supplier_gstin
 
     validate_gstin_status(gstin, doc.get("posting_date") or doc.get("transaction_date"))
@@ -1303,6 +1327,7 @@ def validate_transaction(doc, method=None):
     set_reverse_charge_as_per_gst_settings(doc)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
+    validate_reverse_charge_transaction(doc, is_sales_transaction)
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
 
@@ -1322,6 +1347,19 @@ def onload(doc, method=None):
         return
 
     set_gst_breakup(doc)
+
+
+def set_reverse_charge_amount(doc, method=None, print_settings=None):
+    if not doc.is_reverse_charge:
+        return
+
+    total_reverse_charge_amount = 0
+
+    for row in doc.items:
+        for tax in GST_TAX_TYPES:
+            total_reverse_charge_amount += row.get(f"{tax}_amount")
+
+    doc.reverse_charge_amount = total_reverse_charge_amount
 
 
 def validate_ecommerce_gstin(doc):

@@ -500,7 +500,9 @@ class TestTransaction(FrappeTestCase):
 
         self.assertRaisesRegex(
             frappe.exceptions.ValidationError,
-            re.compile(r"^(.*since supply is under reverse charge.*)$"),
+            re.compile(
+                r"^(.*Booked reverse charge is not equal to applied tax amount*)$"
+            ),
             doc.insert,
         )
         frappe.db.set_single_value("GST Settings", "enable_reverse_charge_in_sales", 0)

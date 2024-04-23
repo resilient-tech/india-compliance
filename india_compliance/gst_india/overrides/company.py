@@ -108,6 +108,11 @@ def update_gst_settings(company):
         "Input Tax SGST RCM",
         "Input Tax IGST RCM",
     ]
+    sales_rcm_accounts = [
+        "Output Tax CGST RCM",
+        "Output Tax SGST RCM",
+        "Output Tax IGST RCM",
+    ]
     gst_settings = frappe.get_single("GST Settings")
     existing_account_list = []
 
@@ -122,7 +127,10 @@ def update_gst_settings(company):
                 "company": company,
                 "account_name": (
                     "in",
-                    input_account_names + output_account_names + purchase_rcm_accounts,
+                    input_account_names
+                    + output_account_names
+                    + purchase_rcm_accounts
+                    + sales_rcm_accounts,
                 ),
             },
             ["account_name", "name"],
@@ -153,6 +161,14 @@ def update_gst_settings(company):
         existing_account_list,
         gst_settings,
         "Purchase Reverse Charge",
+    )
+    add_accounts_in_gst_settings(
+        company,
+        sales_rcm_accounts,
+        gst_accounts,
+        existing_account_list,
+        gst_settings,
+        "Sales Reverse Charge",
     )
 
     # Ignore mandatory during install, some values may not be set by post install patch
