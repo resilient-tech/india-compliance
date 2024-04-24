@@ -16,6 +16,31 @@ class GSTR2a(GSTR):
     def setup(self):
         self.all_gstins = set()
         self.cancelled_gstins = {}
+        self.existing_transaction = self.get_existing_transaction()
+
+    def get_existing_transaction(self):
+        category = type(self).__name__[6:]
+
+        gst_is = frappe.qb.DocType("GST Inward Supply")
+        existing_transactions = (
+            frappe.qb.from_(gst_is)
+            .select(gst_is.name, gst_is.supplier_gstin, gst_is.bill_no)
+            .where(gst_is.sup_return_period == self.return_period)
+            .where(gst_is.classification == category)
+            .where(gst_is.gstr_1_filled == 0)
+        ).run(as_dict=True)
+
+        return {
+            f"{transaction.get('supplier_gstin', '')}-{transaction.get('bill_no', '')}": transaction.get(
+                "name"
+            )
+            for transaction in existing_transactions
+        }
+
+    def delete_missing_transactions(self):
+        if self.existing_transaction:
+            for inward_supply_name in self.existing_transaction.values():
+                frappe.delete_doc("GST Inward Supply", inward_supply_name)
 
     def get_supplier_details(self, supplier):
         supplier_details = {
