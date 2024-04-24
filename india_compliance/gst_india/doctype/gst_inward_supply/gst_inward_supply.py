@@ -24,7 +24,7 @@ class GSTInwardSupply(Document):
 
     def on_trash(self):
         frappe.db.set_value(
-            "Purchase Invoice", self.link_name, "reconciliation_status", "Unreconciled"
+            self.link_doctype, self.link_name, "reconciliation_status", "Unreconciled"
         )
 
 
