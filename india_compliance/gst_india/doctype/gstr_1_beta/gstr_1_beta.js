@@ -268,6 +268,7 @@ class GSTR1 {
             tab.shown = true;
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_data(
                 this.data[tab.name],
+                this.data[`${tab.name}_summary`],
                 this.status
             );
         });
@@ -497,7 +498,7 @@ class TabManager {
     CATEGORY_COLUMNS = {};
     DEFAULT_SUMMARY = {
         // description: "",
-        total_docs: 0,
+        no_of_records: 0,
         total_taxable_value: 0,
         total_igst_amount: 0,
         total_cgst_amount: 0,
@@ -520,12 +521,12 @@ class TabManager {
         this.summary = {};
     }
 
-    refresh_data(data, status) {
+    refresh_data(data, summary_data, status) {
         this.data = data;
+        this.summary = summary_data;
         this.status = status;
         this.setup_actions();
-        this.summarize_data();
-        this.datatable.refresh(Object.values(this.summary));
+        this.datatable.refresh(this.summary);
 
         this.set_default_title();
     }
@@ -540,7 +541,7 @@ class TabManager {
             const columns = columns_func.call(this);
             this.setup_datatable(this.wrapper, this.data[category], columns);
         } else if (view === "Summary") {
-            let filtered_summary = Object.values(this.summary);
+            let filtered_summary = this.summary;
             if (category)
                 filtered_summary = filtered_summary.filter(
                     row => row.description === category
@@ -673,56 +674,7 @@ class TabManager {
     }
 
     // DATA
-    // FIXME : remove inner for-each loop
-    summarize_data() {
-        let sub_category_summary = this.get_sub_category_summary();
 
-        Object.entries(INVOICE_TYPE).forEach(([category, sub_categories]) => {
-            this.summary[category] = {
-                ...this.DEFAULT_SUMMARY,
-                description: category,
-                indent: 0,
-            };
-
-            sub_categories.forEach(sub => {
-                let sub_category_row = sub_category_summary[sub];
-
-                Object.keys(this.DEFAULT_SUMMARY).forEach(key => {
-                    this.summary[category][key] += sub_category_row[key];
-                });
-
-                const sub_category = `${category} - ${sub}`; // Unique description
-                this.summary[sub_category] = sub_category_row;
-            });
-        });
-    }
-
-    // FIXME : remove `reduce`  because computed data will be in `data`
-    get_sub_category_summary() {
-        let sub_category_summary = {};
-
-        Object.values(GSTR1_SubCategories).forEach(category => {
-            sub_category_summary[category] = {
-                ...this.DEFAULT_SUMMARY,
-                description: category,
-                indent: 1,
-            };
-        });
-
-        Object.entries(this.data).forEach(([category, rows]) => {
-            sub_category_summary[category] = rows.reduce((accumulator, row) => {
-                accumulator.total_docs += 1;
-                accumulator.total_taxable_value += row.taxable_value || 0;
-                accumulator.total_igst_amount += row.igst_amount || 0;
-                accumulator.total_cgst_amount += row.cgst_amount || 0;
-                accumulator.total_sgst_amount += row.sgst_amount || 0;
-                accumulator.total_cess_amount += row.cess_amount || 0;
-                return accumulator;
-            }, sub_category_summary[category]);
-        });
-
-        return sub_category_summary;
-    }
 
     // COLUMNS
     get_summary_columns() {
@@ -735,7 +687,7 @@ class TabManager {
             },
             {
                 name: "Total Docs",
-                fieldname: "total_docs",
+                fieldname: "no_of_records",
                 width: 100,
                 align: "center",
                 _value: (...args) => this.format_summary_table_cell(args),

@@ -81,6 +81,7 @@ class GSTR1Beta(Document):
         # files are already present
         if gstr1_log.has_all_files(settings):
             self.data = gstr1_log.load_data()
+            self.data["status"] = gstr1_log.filing_status or "Not Filed"
             gstr1_log.update_status("Generated")
             return
 
@@ -154,7 +155,7 @@ class GSTR1Beta(Document):
             books_data = compute_books_gstr1_data(self)
 
             data["status"] = "Not Filed"
-            data["books"] = self.normalize_data(books_data)
+            data["books"] = self.gstr1_log.normalize_data(books_data)
 
             on_generate()
             return
@@ -168,10 +169,10 @@ class GSTR1Beta(Document):
             self.gstr1_log.filing_status = status
 
         if status == "Filed":
-            data_key = "filed"
+            gov_data_field = "filed"
             gov_summary_field = "filed_summary"
         else:
-            data_key = "e_invoice"
+            gov_data_field = "e_invoice"
             gov_summary_field = "e_invoice_summary"
 
         # Get Data
@@ -198,27 +199,26 @@ class GSTR1Beta(Document):
         data["status"] = status
 
         data["reconcile"] = self.gstr1_log.normalize_data(reconcile_data)
-        data[data_key] = self.gstr1_log.normalize_data(gov_data)
+        data[gov_data_field] = self.gstr1_log.normalize_data(gov_data)
         data["books"] = self.gstr1_log.normalize_data(books_data)
 
         summary_fields = {
             "reconcile": "reconcile_summary",
-            f"{data_key}": gov_summary_field,
+            f"{gov_data_field}": gov_summary_field,
             "books": "books_summary",
         }
 
-        # Update Summary
         for key, field in summary_fields.items():
             if not data.get(key):
                 continue
 
             if self.gstr1_log.get(field):
-                data[key + "_summary"] = self.gstr1_log.get_json_for(field)
+                data[field] = self.gstr1_log.get_json_for(field)
                 continue
 
-            summary_data = summarize_data(data[key], for_books=key == "books")
+            summary_data = summarize_data(data[key])
             self.gstr1_log.update_json_for(field, summary_data)
-            data[key + "_summary"] = summary_data
+            data[field] = summary_data
 
         on_generate()
 
@@ -516,7 +516,7 @@ class GSTR1ProcessData:
         )
 
     def process_data_for_b2cs(self, invoice, prepared_data):
-        key = f"{invoice.place_of_supply} - {flt(invoice.gst_rate)} - {invoice.e_commerce_gstin or ''}"
+        key = f"{invoice.place_of_supply} - {flt(invoice.gst_rate)} - {invoice.ecommerce_gstin or ''}"
         mapped_dict = prepared_data.setdefault("B2C (Others)", {}).setdefault(key, [])
 
         for row in mapped_dict:
@@ -539,7 +539,7 @@ class GSTR1ProcessData:
                 DataFields.CGST.value: invoice.cgst_amount,
                 DataFields.SGST.value: invoice.sgst_amount,
                 DataFields.CESS.value: invoice.total_cess_amount,
-                "e_commerce_gstin": invoice.e_commerce_gstin,
+                "ecommerce_gstin": invoice.ecommerce_gstin,
             }
         )
 

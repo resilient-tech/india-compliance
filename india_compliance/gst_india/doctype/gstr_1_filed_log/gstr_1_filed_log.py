@@ -37,6 +37,9 @@ class GSTR1FiledLog(Document):
 
         for file_field in file_fields:
             if json_data := self.get_json_for(file_field):
+                if "summary" not in file_field:
+                    json_data = self.normalize_data(json_data)
+
                 data[file_field] = json_data
 
         return data
@@ -182,65 +185,11 @@ class GSTR1FiledLog(Document):
 
         return fields
 
-    def summarize_filed_data(self):
-        summary_data = {}
-        gov_summary_data = self.get_json_for("filed_summary")
-
-        for category, value in gov_summary_data.items():
-            gov_summary_data[category]["indent"] = 1
-            summary_data[category] = value
-
-        for category in CATEGORY_SUB_CATEGORY_MAPPING:
-            category_dict = {}
-            category_dict["indent"] = 0
-            category_dict["description"] = category.value
-            category_dict["no_of_records"] = 0
-            category_dict["total_cess_amount"] = 0
-            category_dict["total_cgst_amount"] = 0
-            category_dict["total_sgst_amount"] = 0
-            category_dict["total_igst_amount"] = 0
-            category_dict["total_taxable_value"] = 0
-            for subcategory in CATEGORY_SUB_CATEGORY_MAPPING[category]:
-                if summary_data.get(subcategory.value):
-                    no_of_records = summary_data[subcategory.value]["no_of_records"]
-                    no_of_records = int(no_of_records) if no_of_records != "" else 0
-
-                    category_dict["no_of_records"] += no_of_records
-                    category_dict["total_cess_amount"] += summary_data[
-                        subcategory.value
-                    ]["total_cess_amount"]
-                    category_dict["total_cgst_amount"] += summary_data[
-                        subcategory.value
-                    ]["total_cgst_amount"]
-                    category_dict["total_sgst_amount"] += summary_data[
-                        subcategory.value
-                    ]["total_sgst_amount"]
-                    category_dict["total_igst_amount"] += summary_data[
-                        subcategory.value
-                    ]["total_igst_amount"]
-                    category_dict["total_taxable_value"] += summary_data[
-                        subcategory.value
-                    ]["total_taxable_value"]
-            if category_dict["no_of_records"]:
-                summary_data[category.value] = category_dict
-
-        return summary_data
-
 
 def summarize_data(data, for_books=False):
     """
     Helper function to summarize data for each sub-category
     """
-
-    # Docs Count
-    # for Docs summary: Differently
-
-    # For Books:
-    # AT & TXP & HSN
-
-    # For Other than books:
-    # Nil, B2Cs, AT, TXP, HSN
-
     summary = {}
     AMOUNT_FIELDS = {
         "total_taxable_value": 0,
@@ -283,12 +232,38 @@ def summarize_data(data, for_books=False):
         summary_row.pop("unique_records")
 
     # Category wise
-    final_summary = {}
-    for category in CATEGORY_SUB_CATEGORY_MAPPING:
-        final_summary[category.value] = {}
+    final_summary = []
+    for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
+        category = category.value
+        summary_row = {
+            "description": category,
+            "no_of_records": 0,
+            "indent": 0,
+            **AMOUNT_FIELDS,
+        }
 
-    # TODO: Implement
-    return summary
+        final_summary.append(summary_row)
+
+        for sub_category in sub_categories:
+            sub_category = sub_category.value
+            if sub_category not in summary:
+                continue
+
+            sub_category_row = summary[sub_category]
+            summary_row["no_of_records"] += sub_category_row["no_of_records"] or 0
+
+            for key in AMOUNT_FIELDS:
+                summary_row[key] += sub_category_row[key]
+
+            final_summary.append(sub_category_row)
+
+        if not summary_row["no_of_records"]:
+            summary_row["no_of_records"] = ""
+
+        if sum(summary_row[field] for field in AMOUNT_FIELDS) == 0:
+            final_summary.remove(summary_row)
+
+    return final_summary
 
 
 def process_gstr_1_returns_info(gstin, response):
