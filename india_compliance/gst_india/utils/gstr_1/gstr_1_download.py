@@ -45,20 +45,19 @@ def download_gstr1_json_data(gstr1_log):
         return_type = "GSTR1"
         actions = GSTR1_ACTIONS
         api_method = api.get_gstr_1_data
-        data_field = "filed_gstr1"
+        data_field = "filed"
 
     else:
         return_type = "e-Invoice"
         actions = E_INVOICE_ACTIONS
         api_method = api.get_einvoice_data
-        data_field = "e_invoice_data"
+        data_field = "e_invoice"
 
     # download data
     for action in actions:
         response = api_method(action, return_period)
 
         if response.error_type in ["otp_requested", "invalid_otp"]:
-            # TODO: Send message to UI (listener), update log status to OTP Requested
             return response, None
 
         if response.error_type == "no_docs_found":
@@ -101,10 +100,10 @@ def download_gstr1_json_data(gstr1_log):
 
 def save_gstr_1(gstin, return_period, json_data, return_type):
     if return_type == "GSTR1":
-        data_field = "filed_gstr1"
+        data_field = "filed"
 
     elif return_type == "e-Invoice":
-        data_field = "e_invoice_data"
+        data_field = "e_invoice"
 
     if not json_data:
         frappe.throw(

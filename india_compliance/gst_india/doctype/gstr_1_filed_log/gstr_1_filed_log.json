@@ -14,21 +14,21 @@
   "acknowledgement_number",
   "generation_status",
   "section_break_oisv",
-  "e_invoice_data",
-  "filed_gstr1",
+  "e_invoice",
+  "filed",
   "column_break_hxfu",
   "e_invoice_summary",
-  "filed_gstr1_summary",
+  "filed_summary",
   "computed_data_section",
   "is_latest_data",
-  "computed_gstr1",
+  "books",
   "column_break_eipk",
   "computed_on",
-  "computed_gstr1_summary",
+  "books_summary",
   "reconciled_data_section",
-  "reconciled_gstr1",
+  "reconcile",
   "column_break_ndup",
-  "reconciled_gstr1_summary"
+  "reconcile_summary"
  ],
  "fields": [
   {
@@ -66,16 +66,6 @@
    "label": "Government Data"
   },
   {
-   "fieldname": "filed_gstr1",
-   "fieldtype": "Attach",
-   "label": "Filed GSTR-1"
-  },
-  {
-   "fieldname": "computed_gstr1",
-   "fieldtype": "Attach",
-   "label": "Computed GSTR-1"
-  },
-  {
    "fieldname": "gstin",
    "fieldtype": "Data",
    "label": "GSTIN"
@@ -90,11 +80,6 @@
    "label": "e-Invoice Summary"
   },
   {
-   "fieldname": "filed_gstr1_summary",
-   "fieldtype": "Attach",
-   "label": "Filed GSTR-1 Summary"
-  },
-  {
    "fieldname": "computed_data_section",
    "fieldtype": "Section Break",
    "label": "Computed Data"
@@ -104,33 +89,13 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "computed_gstr1_summary",
-   "fieldtype": "Attach",
-   "label": "Computed GSTR-1 Summary"
-  },
-  {
    "fieldname": "reconciled_data_section",
    "fieldtype": "Section Break",
    "label": "Reconciled Data"
   },
   {
-   "fieldname": "reconciled_gstr1",
-   "fieldtype": "Attach",
-   "label": "Reconciled GSTR-1"
-  },
-  {
    "fieldname": "column_break_ndup",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "reconciled_gstr1_summary",
-   "fieldtype": "Attach",
-   "label": "Reconciled GSTR-1 Summary"
-  },
-  {
-   "fieldname": "e_invoice_data",
-   "fieldtype": "Attach",
-   "label": "e-Invoice Data"
   },
   {
    "default": "0",
@@ -150,11 +115,46 @@
    "label": "Generation Status",
    "options": "\nIn Progress\nGenerated",
    "read_only": 1
+  },
+  {
+   "fieldname": "e_invoice",
+   "fieldtype": "Attach",
+   "label": "e-Invoice Data"
+  },
+  {
+   "fieldname": "filed",
+   "fieldtype": "Attach",
+   "label": "Filed Data"
+  },
+  {
+   "fieldname": "filed_summary",
+   "fieldtype": "Attach",
+   "label": "Filed Summary"
+  },
+  {
+   "fieldname": "books",
+   "fieldtype": "Attach",
+   "label": "Books Data"
+  },
+  {
+   "fieldname": "books_summary",
+   "fieldtype": "Attach",
+   "label": "Books Summary"
+  },
+  {
+   "fieldname": "reconcile",
+   "fieldtype": "Attach",
+   "label": "Reconcile GSTR-1"
+  },
+  {
+   "fieldname": "reconcile_summary",
+   "fieldtype": "Attach",
+   "label": "Reconcile Summary"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-15 13:46:18.200410",
+ "modified": "2024-04-24 09:55:53.261203",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",

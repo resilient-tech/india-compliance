@@ -46,38 +46,59 @@ class GSTR1FiledLog(Document):
             return get_decompressed_data(file.get_content())
 
     def update_json_for(self, file_field, json_data, overwrite=True):
-        if file_field == "computed_gstr1":
+        if file_field == "books":
             self.db_set("computed_on", get_datetime())
 
-        # existing file
-        if file := get_file_doc(self.name, file_field):
-            if overwrite:
-                new_json = json_data
-            else:
-                new_json = get_decompressed_data(file.get_content())
-                new_json.update(json_data)
-
-            content = get_compressed_data(new_json)
-
-            file.save_file(content=content, overwrite=True)
+        # new file
+        if not getattr(self, file_field):
+            content = get_compressed_data(json_data)
+            file_name = frappe.scrub("{0}-{1}.json.gz".format(self.name, file_field))
+            file = frappe.get_doc(
+                {
+                    "doctype": "File",
+                    "attached_to_doctype": DOCTYPE,
+                    "attached_to_name": self.name,
+                    "attached_to_field": file_field,
+                    "file_name": file_name,
+                    "is_private": 1,
+                    "content": content,
+                }
+            ).insert()
             self.db_set(file_field, file.file_url)
             return
 
-        # new file
-        content = get_compressed_data(json_data)
-        file_name = frappe.scrub("{0}-{1}.json.gz".format(self.name, file_field))
-        file = frappe.get_doc(
-            {
-                "doctype": "File",
-                "attached_to_doctype": DOCTYPE,
-                "attached_to_name": self.name,
-                "attached_to_field": file_field,
-                "file_name": file_name,
-                "is_private": 1,
-                "content": content,
-            }
-        ).insert()
+        # existing file
+        file = get_file_doc(self.name, file_field)
+
+        # reset summary
+        if "summary" not in file_field:
+            self.remove_json_for(f"{file_field}_summary")
+
+        if overwrite:
+            new_json = json_data
+
+            # reset reconciled data
+            if file_field in ["books", "filed"]:
+                self.remove_json_for("reconcile")
+
+        else:
+            new_json = get_decompressed_data(file.get_content())
+            new_json.update(json_data)
+
+        content = get_compressed_data(new_json)
+
+        file.save_file(content=content, overwrite=True)
         self.db_set(file_field, file.file_url)
+
+    def remove_json_for(self, file_field):
+        if not self.get(file_field):
+            return
+
+        get_file_doc(self.name, file_field).delete()
+        self.db_set(file_field, None)
+
+        if "summary" not in file_field:
+            self.remove_json_for(f"{file_field}_summary")
 
     # DATA MODIFIERS
     def normalize_data(self, data):
@@ -110,10 +131,10 @@ class GSTR1FiledLog(Document):
         if not settings.analyze_filed_data:
             return False
 
-        if not self.e_invoice_data or self.filing_status != "Filed":
+        if not self.e_invoice or self.filing_status != "Filed":
             return True
 
-        if not self.filed_gstr1:
+        if not self.filed:
             return True
 
         return False
@@ -149,21 +170,21 @@ class GSTR1FiledLog(Document):
         if not settings:
             settings = frappe.get_cached_doc("GST Settings")
 
-        fields = ["computed_gstr1", "computed_gstr1_summary"]
+        fields = ["books", "books_summary"]
 
         if settings.analyze_filed_data:
-            fields.extend(["reconciled_gstr1", "reconciled_gstr1_summary"])
+            fields.extend(["reconcile", "reconcile_summary"])
 
             if self.filing_status == "Filed":
-                fields.extend(["filed_gstr1", "filed_gstr1_summary"])
+                fields.extend(["filed", "filed_summary"])
             else:
-                fields.extend(["e_invoice_data", "e_invoice_summary"])
+                fields.extend(["e_invoice", "e_invoice_summary"])
 
         return fields
 
     def summarize_filed_data(self):
         summary_data = {}
-        gov_summary_data = self.get_json_for("filed_gstr1_summary")
+        gov_summary_data = self.get_json_for("filed_summary")
 
         for category, value in gov_summary_data.items():
             gov_summary_data[category]["indent"] = 1

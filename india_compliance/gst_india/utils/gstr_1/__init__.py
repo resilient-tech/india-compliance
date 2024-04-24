@@ -95,6 +95,18 @@ class GSTR1_SubCategories(Enum):
     DOC_ISSUE = "Document Issued"
 
 
+E_INVOICE_SUB_CATEGORIES = [
+    "B2B Regular",
+    "B2B Reverse Charge",
+    "SEZ with payment",
+    "SEZ without payment",
+    "Deemed Exports",
+    "Exports with payment",
+    "Exports without payment",
+    "Credit/Debit Notes (Registered)",
+]
+
+
 class DataFields(Enum):
     TRANSACTION_TYPE = "transaction_type"
     CUST_GSTIN = "customer_gstin"

@@ -17,7 +17,11 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
-from india_compliance.gst_india.utils.gstr_1 import DataFields, GSTR1_SubCategories
+from india_compliance.gst_india.utils.gstr_1 import (
+    E_INVOICE_SUB_CATEGORIES,
+    DataFields,
+    GSTR1_SubCategories,
+)
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     download_gstr1_json_data,
@@ -30,453 +34,6 @@ AMOUNT_FIELDS = {
     "total_cgst_amount": 0,
     "total_sgst_amount": 0,
     "total_cess_amount": 0,
-}
-
-DATA = {
-    "status": "Filed",
-    "reconcile": {
-        GSTR1_SubCategories.NIL_EXEMPT.value: [
-            {
-                "document_category": "Inter-State supplies to registered persons",
-                "taxable_value": 2000,
-                "igst_amount": 0,
-            },
-        ],
-    },
-    "filed": {
-        GSTR1_SubCategories.NIL_EXEMPT.value: [
-            {
-                "document_category": "Inter-State supplies to registered persons",
-                "taxable_value": 2000,
-                "igst_amount": 0,
-            },
-        ],
-        GSTR1_SubCategories.B2CS.value: [
-            {
-                "document_category": "OE",
-                "place_of_supply": "01-JHARKHAND",
-                "taxable_value": 2000,
-                "igst_amount": 0,
-                "tax_rate": 12,
-                "cess_amount": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-            },
-            {
-                "document_category": "OE",
-                "place_of_supply": "01-JHARKHAND",
-                "taxable_value": 2000,
-                "igst_amount": 0,
-                "tax_rate": 18,
-                "cess_amount": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-            },
-        ],
-    },
-    "books": {
-        GSTR1_SubCategories.B2B_REGULAR.value: [
-            {
-                "document_type": "Invoice",
-                "customer_gstin": "29AABCE9602H1Z5",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-001",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "reverse_charge": "Y",
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2B, SEZ, DE",
-                "invoice_sub_category": "B2B Regular",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    },
-                    {
-                        "idx": 1,
-                        "tax_rate": 10,
-                        "taxable_value": 2000,
-                        "igst_amount": 200,
-                        "cess_amount": 50,
-                    },
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_gstin": "29AABCE9602H1Z5",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-002",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2B, SEZ, DE",
-                "invoice_sub_category": "B2B Reverse Charge",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_gstin": "29AABCE9602H1Z5",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-003",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2B, SEZ, DE",
-                "invoice_sub_category": "SEZWP",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_gstin": "29AABCE9602H1Z5",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-004",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2B, SEZ, DE",
-                "invoice_sub_category": "SEZWOP",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-005",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2B, SEZ, DE",
-                "invoice_sub_category": "Deemed Exports",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-006",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2C (Large)",
-                "invoice_sub_category": "B2C (Large)",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-007",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2C (Large)",
-                "invoice_sub_category": "B2C (Large)",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-008",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2C (Large)",
-                "invoice_sub_category": "B2C (Large)",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 18,
-                        "taxable_value": 1000,
-                        "igst_amount": 180,
-                        "cess_amount": 100,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-009",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "B2C (Others)",
-                "invoice_sub_category": "B2C (Others)",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 0,
-                        "taxable_value": 1000,
-                        "igst_amount": 0,
-                        "cess_amount": 0,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-010",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "Nil-Rated, Exempted, Non-GST",
-                "invoice_sub_category": "Nil-Rated",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 0,
-                        "taxable_value": 1000,
-                        "igst_amount": 0,
-                        "cess_amount": 0,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-011",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "Nil-Rated, Exempted, Non-GST",
-                "invoice_sub_category": "Exempted",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 0,
-                        "taxable_value": 1000,
-                        "igst_amount": 0,
-                        "cess_amount": 0,
-                    }
-                ],
-            },
-            {
-                "document_type": "Invoice",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-012",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "Nil-Rated, Exempted, Non-GST",
-                "invoice_sub_category": "Non-GST",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 0,
-                        "taxable_value": 1000,
-                        "igst_amount": 0,
-                        "cess_amount": 0,
-                    }
-                ],
-            },
-            {
-                "document_type": "Credit Note",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "invoice_number": "INV-013",
-                "document_date": "2024-04-01",
-                "invoice_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                "invoice_category": "Credit/Debit Notes (Registered)",
-                "invoice_sub_category": "Credit/Debit Notes (Registered)",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 0,
-                        "taxable_value": 1000,
-                        "igst_amount": 0,
-                        "cess_amount": 0,
-                    }
-                ],
-            },
-            {
-                "document_type": "Credit Note",
-                "document_category": "",
-                "customer_name": "ELECTROSTEEL CASTINGS LTD",
-                "document_number": "INV-014",
-                "document_date": "2024-04-01",
-                "document_value": 1280,
-                "place_of_supply": "01-JHARKHAND",
-                "is_reverse_charge": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-                # "shipping_bill_number": "123456",
-                # "shipping_bill_date": "2021-01-05",
-                # "shipping_port_code": "INMAA1",
-                "diff_percentage": 0,
-                "taxable_value": 1000,
-                "igst_amount": 0,
-                "cess_amount": 0,
-                "cgst_amount": 0,
-                "sgst_amount": 0,
-                "items": [
-                    {
-                        "idx": 1,
-                        "tax_rate": 0,
-                        "taxable_value": 1000,
-                        "igst_amount": 0,
-                        "cess_amount": 0,
-                    }
-                ],
-            },
-        ],
-        GSTR1_SubCategories.NIL_EXEMPT.value: [
-            {
-                "document_category": "Inter-State supplies to registered persons",
-                "taxable_value": 1000,
-                "document_number": "INV-015",
-                "document_date": "2024-04-01",
-                "igst_amount": 0,
-            },
-            {
-                "document_category": "Inter-State supplies to registered persons",
-                "taxable_value": 1000,
-                "document_number": "INV-015",
-                "document_date": "2024-04-01",
-                "igst_amount": 0,
-            },
-        ],
-        GSTR1_SubCategories.B2CS.value: [
-            {
-                "document_category": "OE",
-                "place_of_supply": "01-JHARKHAND",
-                "taxable_value": 1000,
-                "igst_amount": 0,
-                "tax_rate": 6,
-                "cess_amount": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-            },
-            {
-                "document_category": "OE",
-                "place_of_supply": "01-JHARKHAND",
-                "taxable_value": 1000,
-                "igst_amount": 0,
-                "tax_rate": 6,
-                "cess_amount": 0,
-                "e_commerce_gstin": "01AAACE9602H1Z5",
-            },
-        ],
-    },
 }
 
 
@@ -612,19 +169,30 @@ class GSTR1Beta(Document):
 
         if status == "Filed":
             data_key = "filed"
-            gov_summary_field = "filed_gstr1_summary"
+            gov_summary_field = "filed_summary"
         else:
             data_key = "e_invoice"
             gov_summary_field = "e_invoice_summary"
 
         # Get Data
         gov_data, is_enqueued = get_gstr1_json_data(self.gstr1_log)
+
+        if error_type := gov_data.get("error_type"):
+            # otp_requested, invalid_otp
+
+            if error_type == "invalid_otp":
+                request_otp(self.company_gstin)
+
+            data = "otp_requested"
+            on_generate()
+            return
+
         books_data = compute_books_gstr1_data(self)
 
         if is_enqueued:
             return
 
-        reconcile_data = reconcile_gstr1_data(self, gov_data, books_data, status)
+        reconcile_data = reconcile_gstr1_data(self.gstr1_log, gov_data, books_data)
 
         # Compile Data
         data["status"] = status
@@ -634,13 +202,12 @@ class GSTR1Beta(Document):
         data["books"] = self.gstr1_log.normalize_data(books_data)
 
         summary_fields = {
-            "reconcile": "reconciled_gstr1_summary",
+            "reconcile": "reconcile_summary",
             f"{data_key}": gov_summary_field,
-            "books": "computed_gstr1_summary",
+            "books": "books_summary",
         }
 
         # Update Summary
-
         for key, field in summary_fields.items():
             if not data.get(key):
                 continue
@@ -662,10 +229,10 @@ def generate_gstr1():
 
 def get_gstr1_json_data(gstr1_log):
     if gstr1_log.filing_status == "Filed":
-        data_field = "filed_gstr1"
+        data_field = "filed"
 
     else:
-        data_field = "e_invoice_data"
+        data_field = "e_invoice"
 
     # data exists
     if gstr1_log.get(data_field):
@@ -673,12 +240,13 @@ def get_gstr1_json_data(gstr1_log):
         if mapped_data:
             return mapped_data, False
 
+    # download data
     return download_gstr1_json_data(gstr1_log)
 
 
 def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     # Query / Process / Map / Sumarize / Optionally Save & Return
-    data_field = "computed_gstr1"
+    data_field = "books"
     gstr1_log = filters.gstr1_log
     _filters = frappe._dict(
         {
@@ -705,115 +273,137 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     return mapped_data
 
 
-def reconcile_gstr1_data(filters, gov_data, books_data, status):
+def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
     # Everything from gov_data compared with books_data
     # Missing in gov_data
     # Update books data (optionally if not filed)
     # Prepare data / Sumarize / Save & Return / Optionally save books data
+    if gstr1_log.reconcile:
+        return gstr1_log.get_json_for("reconcile")
 
     reconciled_data = {}
+    update_books_match = False if gstr1_log.filing_status == "Filed" else True
+
     for subcategory in GSTR1_SubCategories:
-        books_subdata = books_data.get(subcategory.value)
-        gov_subdata = gov_data.get(subcategory.value)
+        subcategory = subcategory.value
+        books_subdata = books_data.get(subcategory) or {}
+        gov_subdata = gov_data.get(subcategory) or {}
 
         if not books_subdata and not gov_subdata:
             continue
 
-        if not gov_subdata:
-            if isinstance(books_subdata, list):
-                reconciled_data[subcategory.value] = aggregate_books_data(books_subdata)
+        is_e_invoice_subcategory = subcategory in E_INVOICE_SUB_CATEGORIES
+        reconcile_subdata = reconciled_data.setdefault(subcategory, {})
+
+        # Books vs Gov
+        for key, books_value in books_subdata.items():
+            gov_value = gov_subdata.get(key)
+            reconcile_subdata[key] = get_reconciled_row(books_value, gov_value)
+
+            if not update_books_match or not is_e_invoice_subcategory:
+                continue
+
+            # Update Books Data
+            if not gov_value:
+                books_subdata[key]["upload_status"] = "Not Uploaded"
+
+            reconciliation_diff = has_reconciliation_diff(reconcile_subdata[key])
+
+            if reconciliation_diff:
+                books_subdata[key]["upload_status"] = "Mismatch"
             else:
-                reconciled_data[subcategory.value] = books_subdata
+                books_subdata[key]["upload_status"] = "Matched"
 
-            reconciled_data[subcategory.value]["no_of_records"] = len(books_subdata)
-            books_data.pop(subcategory.value)
-            continue
+        # In Gov but not in Books
+        for key, gov_value in gov_subdata.items():
+            if key in books_subdata:
+                continue
 
-        if not books_subdata:
-            if isinstance(gov_subdata, list):
-                reconciled_data[subcategory.value] = gov_subdata[0]
-            else:
-                reconciled_data[subcategory.value] = gov_subdata
+            reconcile_subdata[key] = get_reconciled_row(None, gov_value)
 
-            reconciled_data[subcategory.value]["no_of_records"] = 1
-            gov_data.pop(subcategory.value)
-            continue
+        gstr1_log.update_json_for("reconcile", reconciled_data)
 
-        reconciled_data[subcategory.value] = {}
-        for key, value in books_subdata.copy().items():
-            reconciled_data[subcategory.value][key] = {
-                "no_of_records": 0,
-                **AMOUNT_FIELDS,
-            }
+        if update_books_match:
+            gstr1_log.update_json_for("books", books_data)
 
-            if isinstance(value, list):
-                aggregated = aggregate_books_data(value)
-
-                if not compare_amount_fields(aggregated, gov_subdata[key][0]):
-                    reconciled_data[subcategory.value][key] = {
-                        "no_of_records": 1,
-                        **{
-                            field: aggregated[field] - gov_subdata[key][0][field]
-                            for field in AMOUNT_FIELDS
-                        },
-                    }
-                    reconciled_data[subcategory.value][key]["no_of_records"] += 1
-            else:
-                if not compare_amount_fields(value, gov_subdata[key]):
-                    reconciled_data[subcategory.value][key] = {
-                        **{
-                            field: value[field] - gov_subdata[key][field]
-                            for field in AMOUNT_FIELDS
-                        },
-                    }
-                    reconciled_data[subcategory.value][key]["no_of_records"] += 1
-            gov_subdata.pop(key)
-            books_subdata.pop(key)
-
-        if gov_subdata:
-            for key, value in gov_data.copy().items():
-                if isinstance(value, dict):
-                    reconciled_data[subcategory.value][key] = value
-                else:
-                    reconciled_data[subcategory.value][key] = value[0]
-
-                reconciled_data[subcategory.value][key]["no_of_records"] += 1
-                gov_data.pop(key)
-
-        gov_data.pop(subcategory.value)
-        books_data.pop(subcategory.value)
-
-    frappe.publish_realtime("reconcile_gstr1_data_complete")
     return reconciled_data
 
 
-def aggregate_books_data(books_data):
-    aggregated = {}
-    aggregated[DataFields.TAXABLE_VALUE.value] = sum(
-        row["total_taxable_value"] for row in books_data
-    )
-    aggregated[DataFields.IGST.value] = sum(
-        row["total_igst_amount"] for row in books_data
-    )
-    aggregated[DataFields.CGST.value] = sum(
-        row["total_cgst_amount"] for row in books_data
-    )
-    aggregated[DataFields.SGST.value] = sum(
-        row["total_sgst_amount"] for row in books_data
-    )
-    aggregated[DataFields.CESS.value] = sum(
-        row["total_cess_amount"] for row in books_data
-    )
+def get_reconciled_row(books_row, gov_row):
+    """
+    Compare books_row with gov_row and return the difference
 
-    return aggregated
+    Args:
+        books_row (dict|list): Books Row Data
+        gov_row (dict|list): Gov Row Data
+
+    Returns:
+        dict|list: Reconciled Row Data
+
+    Steps:
+        1. Get Empty Row with all values as 0
+        2. Prefer Gov Row if available to compute empty row
+        3. Compute comparable Gov and Books Row
+        4. Compare the rows
+    """
+    is_list = isinstance(gov_row if gov_row else books_row, list)
+
+    if is_list:
+        reconcile_row = get_empty_row(gov_row[0] if gov_row else books_row[0])
+        gov_row = gov_row[0] if gov_row else {}
+        books_row = get_aggregated_row(books_row) if books_row else {}
+
+    else:
+        reconcile_row = get_empty_row(gov_row or books_row)
+        gov_row = gov_row or {}
+        books_row = books_row or {}
+
+    for key, value in reconcile_row.items():
+        if isinstance(value, (int, float)):
+            reconcile_row[key] = (books_row.get(key) or 0) - (gov_row.get(key) or 0)
+
+    if is_list:
+        return [reconcile_row]
+
+    return reconcile_row
 
 
-def compare_amount_fields(dict1, dict2):
-    for field in AMOUNT_FIELDS:
-        if dict1[field] != dict2[field]:
-            return False
+def get_empty_row(row: dict):
+    empty_row = row.copy()
 
-    return True
+    for key, value in empty_row.items():
+        if isinstance(value, (int, float)):
+            empty_row[key] = 0
+
+    return empty_row
+
+
+def has_reconciliation_diff(reconciled_row: dict):
+    for value in reconciled_row.values():
+        if not isinstance(value, (int, float)):
+            continue
+
+        if value:
+            return True
+
+
+def get_aggregated_row(books_rows: list) -> dict:
+    """
+    There can be multiple rows in books data for a single row in gov data
+    Aggregate all the rows to a single row
+    """
+    aggregated_row = {}
+
+    for row in books_rows:
+        if not aggregated_row:
+            aggregated_row = row.copy()
+            continue
+
+        for key, value in row.items():
+            if isinstance(value, (int, float)):
+                aggregated_row[key] += value
+
+    return aggregated_row
 
 
 ###################
