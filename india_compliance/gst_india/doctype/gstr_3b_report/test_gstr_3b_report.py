@@ -43,6 +43,10 @@ class TestGSTR3BReport(FrappeTestCase):
             12: "December",
         }
 
+        gst_settings = frappe.get_cached_doc("GST Settings")
+        gst_settings.round_off_gst_values = 0
+        gst_settings.save()
+
         create_sales_invoices()
         create_purchase_invoices()
 
@@ -69,21 +73,21 @@ class TestGSTR3BReport(FrappeTestCase):
                 "sup_details": {
                     "isup_rev": {
                         "camt": 9.0,
-                        "csamt": 0,
-                        "iamt": 0,
+                        "csamt": 0.0,
+                        "iamt": 0.0,
                         "samt": 9.0,
                         "txval": 100.0,
                     },
                     "osup_det": {
                         "camt": 18.0,
-                        "csamt": 0,
-                        "iamt": 131.22,
+                        "csamt": 0.0,
+                        "iamt": 37.98,
                         "samt": 18.0,
-                        "txval": 744.0,
+                        "txval": 411.0,
                     },
                     "osup_nil_exmp": {"txval": 100.0},
                     "osup_nongst": {"txval": 222.0},
-                    "osup_zero": {"csamt": 0, "iamt": 99.9, "txval": 999.0},
+                    "osup_zero": {"csamt": 0.0, "iamt": 99.9, "txval": 999.0},
                 },
                 # 3.2
                 "inter_sup": {
@@ -131,13 +135,37 @@ class TestGSTR3BReport(FrappeTestCase):
                         },
                     ],
                     "itc_inelg": [
-                        {"camt": 0, "csamt": 0, "iamt": 0, "samt": 0, "ty": "RUL"},
-                        {"camt": 0, "csamt": 0, "iamt": 0, "samt": 0, "ty": "OTH"},
+                        {
+                            "camt": 0.0,
+                            "csamt": 0.0,
+                            "iamt": 0.0,
+                            "samt": 0.0,
+                            "ty": "RUL",
+                        },
+                        {
+                            "camt": 0.0,
+                            "csamt": 0.0,
+                            "iamt": 0.0,
+                            "samt": 0.0,
+                            "ty": "OTH",
+                        },
                     ],
                     "itc_net": {"camt": 40.5, "csamt": 0.0, "iamt": 0.0, "samt": 40.5},
                     "itc_rev": [
-                        {"camt": 0, "csamt": 0, "iamt": 0, "samt": 0, "ty": "RUL"},
-                        {"camt": 0, "csamt": 0, "iamt": 0, "samt": 0, "ty": "OTH"},
+                        {
+                            "camt": 0.0,
+                            "csamt": 0.0,
+                            "iamt": 0.0,
+                            "samt": 0.0,
+                            "ty": "RUL",
+                        },
+                        {
+                            "camt": 0.0,
+                            "csamt": 0.0,
+                            "iamt": 0.0,
+                            "samt": 0.0,
+                            "ty": "OTH",
+                        },
                     ],
                 },
                 # 5
@@ -151,7 +179,7 @@ class TestGSTR3BReport(FrappeTestCase):
         )
 
     def test_gst_rounding(self):
-        gst_settings = frappe.get_doc("GST Settings")
+        gst_settings = frappe.get_cached_doc("GST Settings")
         gst_settings.round_off_gst_values = 1
         gst_settings.save()
 
@@ -186,13 +214,8 @@ def create_sales_invoices():
         rate=111,
     )
 
-    # Nil Rated as Taxable
-    create_sales_invoice(
-        item_code="_Test Nil Rated Item", item_tax_template="GST 28% - _TIRC", rate=333
-    )
-
-    # Nil Rated
-    create_sales_invoice(item_code="_Test Nil Rated Item")
+    # Same Item Nil-Rated
+    create_sales_invoice(item_tax_template="Nil-Rated - _TIRC")
 
     # Non Gst item
     create_sales_invoice(item_code="_Test Non GST Item", rate=222)
