@@ -121,12 +121,10 @@ frappe.ui.form.on(DOCTYPE, {
             frm.trigger("company");
         });
 
-        let filing_frequecy = await get_gstr1_filing_frequency();
-        frm.filing_frequecy = filing_frequecy;
+        let filing_frequency = await get_gstr1_filing_frequency();
+        frm.filing_frequency = filing_frequency;
 
-        if (filing_frequecy === "Monthly")
-            frm.set_df_property("month_or_quarter", "options", MONTH);
-        else frm.set_df_property("month_or_quarter", "options", QUARTER);
+        set_options_for_month_or_quarter(frm)
 
         set_default_fields(frm);
         // frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
@@ -184,7 +182,10 @@ frappe.ui.form.on(DOCTYPE, {
 
     month_or_quarter: render_empty_state,
 
-    year: render_empty_state,
+    year(frm) {
+        render_empty_state(frm);
+        set_options_for_month_or_quarter(frm);
+    },
 
     refresh(frm) {
         // Primary Action
@@ -619,13 +620,11 @@ class TabManager {
                             if (row.indent !== 1) return acc;
                             if (
                                 row.consider_in_total_taxable_value &&
-                                [
-                                    "no_of_records",
-                                    "total_taxable_value",
-                                ].includes(column_field)
+                                ["no_of_records", "total_taxable_value"].includes(
+                                    column_field
+                                )
                             )
                                 acc += row[column_field] || 0;
-
                             else if (row.consider_in_total_tax)
                                 acc += row[column_field] || 0;
 
@@ -1417,6 +1416,43 @@ class ReconcileTab extends FiledTab {
     }
 }
 
+function set_options_for_month_or_quarter(frm) {
+    const today = new Date();
+    const current_year = today.getFullYear();
+    const current_month_idx = today.getMonth();
+
+    if (frm.doc.year === String(current_year)) {
+        if (frm.filing_frequency === "Monthly")
+            set_field_options("month_or_quarter", MONTH.slice(0, current_month_idx + 1));
+        else {
+            let quarter_idx;
+            if (current_month_idx <= 2) quarter_idx = 1;
+            else if (current_month_idx <= 5) quarter_idx = 2;
+            else if (current_month_idx <= 8) quarter_idx = 3;
+            else quarter_idx = 4;
+            set_field_options("month_or_quarter", QUARTER.slice(0, quarter_idx));
+        }
+        set_previous_month_or_quarter(frm)
+    }
+    else if (frm.doc.year === "2017") {
+        if (frm.filing_frequency === "Monthly") {
+            set_field_options("month_or_quarter", MONTH.slice(6));
+            frm.set_value("month_or_quarter", MONTH[6])
+        }
+        else {
+            set_field_options("month_or_quarter", QUARTER.slice(2));
+            frm.set_value("month_or_quarter", QUARTER[2])
+        }
+    }
+    else {
+        if (frm.filing_frequency === "Monthly")
+            set_field_options("month_or_quarter", MONTH);
+        else set_field_options("month_or_quarter", QUARTER);
+
+        set_previous_month_or_quarter(frm)
+    }
+}
+
 // UTILITY FUNCTIONS
 
 function patch_set_active_tab(frm) {
@@ -1434,7 +1470,6 @@ function patch_set_indicator(frm) {
 function set_default_fields(frm) {
     set_default_company_gstin(frm);
     set_default_year(frm);
-    set_previous_month_or_quarter(frm);
 }
 
 async function set_default_company_gstin(frm) {
@@ -1458,7 +1493,7 @@ function set_default_year(frm) {
 
 function set_previous_month_or_quarter(frm) {
     const currentDate = new Date();
-    if (frm.filing_frequecy === "Monthly") {
+    if (frm.filing_frequency === "Monthly") {
         let prevMonthIdx = currentDate.getMonth() - 1;
         prevMonthIdx = prevMonthIdx < 0 ? 11 : prevMonthIdx;
 

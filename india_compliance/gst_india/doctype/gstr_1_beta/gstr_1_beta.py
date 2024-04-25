@@ -6,7 +6,7 @@ from datetime import datetime
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt, getdate
+from frappe.utils import flt, get_last_day, getdate
 
 from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
     summarize_data,
@@ -248,12 +248,22 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     # Query / Process / Map / Sumarize / Optionally Save & Return
     data_field = "books"
     gstr1_log = filters.gstr1_log
+    filing_frequency = get_gstr1_filing_frequency()
+
+    if filing_frequency == "Monthly":
+        from_date = getdate(f"1-{filters.month_or_quarter}-{filters.year}")
+        to_date = get_last_day(from_date)
+    else:
+        splitted_quarter = filters.month_or_quarter.split("-")
+        from_date = getdate(f"1-{splitted_quarter[0]}-{filters.year}")
+        to_date = get_last_day(f"1-{splitted_quarter[-1]}-{filters.year}")
+
     _filters = frappe._dict(
         {
             "company": filters.company,
             "company_gstin": filters.company_gstin,
-            "from_date": getdate("2024-03-01"),
-            "to_date": getdate("2024-03-31"),
+            "from_date": from_date,
+            "to_date": to_date,
         }
     )
 
