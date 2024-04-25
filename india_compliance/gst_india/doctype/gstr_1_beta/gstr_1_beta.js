@@ -1417,11 +1417,23 @@ class ReconcileTab extends FiledTab {
 }
 
 function set_options_for_month_or_quarter(frm) {
+    /**
+     * Set options for Month or Quarter based on the year and current date
+     * 1. If the year is current year, then options are till current month
+     * 2. If the year is 2017, then options are from July to December
+     * 3. Else, options are all months or quarters
+     *
+     * @param {Object} frm
+     */
+
     const today = new Date();
     const current_year = today.getFullYear();
     const current_month_idx = today.getMonth();
 
+    if (!frm.doc.year) frm.doc.year = String(current_year);
+
     if (frm.doc.year === String(current_year)) {
+        // Options for current year till current month
         if (frm.filing_frequency === "Monthly")
             set_field_options("month_or_quarter", MONTH.slice(0, current_month_idx + 1));
         else {
@@ -1435,6 +1447,7 @@ function set_options_for_month_or_quarter(frm) {
         set_previous_month_or_quarter(frm)
     }
     else if (frm.doc.year === "2017") {
+        // Options for 2017 from July to December
         if (frm.filing_frequency === "Monthly") {
             set_field_options("month_or_quarter", MONTH.slice(6));
             frm.set_value("month_or_quarter", MONTH[6])
@@ -1448,8 +1461,6 @@ function set_options_for_month_or_quarter(frm) {
         if (frm.filing_frequency === "Monthly")
             set_field_options("month_or_quarter", MONTH);
         else set_field_options("month_or_quarter", QUARTER);
-
-        set_previous_month_or_quarter(frm)
     }
 }
 

@@ -16,9 +16,6 @@ UI:
 - Listeners: Steps Download / Computing / Reconciling / Loading
 - Highlight active tab
 - Save utility (save data)
-P - For current year, month selectable should not be more than current month or quarter
-P - Only from july 2017
-P - Date hardcoded
 
 
 Notes

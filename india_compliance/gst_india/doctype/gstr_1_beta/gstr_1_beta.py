@@ -251,12 +251,12 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     filing_frequency = get_gstr1_filing_frequency()
 
     if filing_frequency == "Monthly":
-        from_date = getdate(f"1-{filters.month_or_quarter}-{filters.year}")
+        from_date = getdate(f"{filters.year}-{filters.month_or_quarter}-01")
         to_date = get_last_day(from_date)
     else:
-        splitted_quarter = filters.month_or_quarter.split("-")
-        from_date = getdate(f"1-{splitted_quarter[0]}-{filters.year}")
-        to_date = get_last_day(f"1-{splitted_quarter[-1]}-{filters.year}")
+        start_month, end_month = filters.month_or_quarter.split("-")
+        from_date = getdate(f"{filters.year}-{start_month}-01")
+        to_date = get_last_day(f"{filters.year}-{end_month}-01")
 
     _filters = frappe._dict(
         {
