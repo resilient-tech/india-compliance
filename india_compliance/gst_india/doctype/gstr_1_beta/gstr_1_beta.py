@@ -312,7 +312,7 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
             if reconciliation_diff:
                 books_subdata[key]["upload_status"] = "Mismatch"
             else:
-                books_subdata[key]["upload_status"] = "Matched"
+                books_subdata[key]["upload_status"] = "Uploaded"
 
         # In Gov but not in Books
         for key, gov_value in gov_subdata.items():
@@ -320,6 +320,14 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
                 continue
 
             reconcile_subdata[key] = get_reconciled_row(None, gov_value)
+
+            books_data[key]["upload_status"] = "Missing in Books"
+
+        # 2 types of data to be downloaded (for JSON only)
+        # 1. Difference to be uploaded
+        #   - Upload all except uploaded. Missing in Books will come with zero values
+        # 2. All as per Books
+        #  - Upload all except missing in Books
 
         gstr1_log.update_json_for("reconcile", reconciled_data)
 

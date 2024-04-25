@@ -190,7 +190,7 @@ def summarize_data(data, for_books=False):
     """
     Helper function to summarize data for each sub-category
     """
-    summary = {}
+    subcategory_summary = {}
     AMOUNT_FIELDS = {
         "total_taxable_value": 0,
         "total_igst_amount": 0,
@@ -199,18 +199,41 @@ def summarize_data(data, for_books=False):
         "total_cess_amount": 0,
     }
 
-    for category in GSTR1_SubCategories:
-        category = category.value
-        summary[category] = {
-            "description": category,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE = [
+        GSTR1_SubCategories.HSN.value,
+        GSTR1_SubCategories.DOC_ISSUE.value,
+        GSTR1_SubCategories.SUPECOM_52.value,
+        GSTR1_SubCategories.SUPECOM_9_5.value,
+    ]
+
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
+        GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
+        *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+    ]
+
+    # Sub-category wise
+    for subcategory in GSTR1_SubCategories:
+        subcategory = subcategory.value
+        subcategory_summary[subcategory] = {
+            "description": subcategory,
             "no_of_records": "",
             "indent": 1,
+            "consider_in_total_taxable_value": (
+                False
+                if subcategory in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
+                else True
+            ),
+            "consider_in_total_tax": (
+                False
+                if subcategory in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
+                else True
+            ),
             "unique_records": set(),
             **AMOUNT_FIELDS,
         }
 
-    for category, _data in data.items():
-        summary_row = summary[category]
+    for subcategory, _data in data.items():
+        summary_row = subcategory_summary[subcategory]
 
         for row in _data:
             for key in AMOUNT_FIELDS:
@@ -219,21 +242,22 @@ def summarize_data(data, for_books=False):
             if doc_num := row.get("document_number"):
                 summary_row["unique_records"].add(doc_num)
 
-    for category in summary.copy().keys():
-        summary_row = summary[category]
+    for subcategory in subcategory_summary.copy().keys():
+        summary_row = subcategory_summary[subcategory]
         count = len(summary_row["unique_records"])
         if count:
             summary_row["no_of_records"] = count
 
         if sum(summary_row[field] for field in AMOUNT_FIELDS) == 0:
-            del summary[category]
+            del subcategory_summary[subcategory]
             continue
 
         summary_row.pop("unique_records")
 
     # Category wise
-    final_summary = []
+    cateogory_summary = []
     for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
+        # Init category row
         category = category.value
         summary_row = {
             "description": category,
@@ -242,28 +266,30 @@ def summarize_data(data, for_books=False):
             **AMOUNT_FIELDS,
         }
 
-        final_summary.append(summary_row)
+        cateogory_summary.append(summary_row)
 
-        for sub_category in sub_categories:
-            sub_category = sub_category.value
-            if sub_category not in summary:
+        for subcategory in sub_categories:
+            # update category row
+            subcategory = subcategory.value
+            if subcategory not in subcategory_summary:
                 continue
 
-            sub_category_row = summary[sub_category]
-            summary_row["no_of_records"] += sub_category_row["no_of_records"] or 0
+            subcategory_row = subcategory_summary[subcategory]
+            summary_row["no_of_records"] += subcategory_row["no_of_records"] or 0
 
             for key in AMOUNT_FIELDS:
-                summary_row[key] += sub_category_row[key]
+                summary_row[key] += subcategory_row[key]
 
-            final_summary.append(sub_category_row)
+            # add subcategory row
+            cateogory_summary.append(subcategory_row)
 
         if not summary_row["no_of_records"]:
             summary_row["no_of_records"] = ""
 
         if sum(summary_row[field] for field in AMOUNT_FIELDS) == 0:
-            final_summary.remove(summary_row)
+            cateogory_summary.remove(summary_row)
 
-    return final_summary
+    return cateogory_summary
 
 
 def process_gstr_1_returns_info(gstin, response):

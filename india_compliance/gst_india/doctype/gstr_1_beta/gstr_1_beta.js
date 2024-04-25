@@ -611,13 +611,28 @@ class TabManager {
                 ],
                 hooks: {
                     columnTotal: (firstColumn, row) => {
-                        if (
-                            row.colIndex === 1 &&
-                            row.isTotalRow &&
-                            row.content == null
-                        ) {
-                            row.content = "Total";
-                        }
+                        if (row.colIndex === 1) return (row.content = "Total");
+                        if (this.instance.active_view !== "Summary") return;
+
+                        const column_field = row.column.fieldname;
+                        const total = this.summary.reduce((acc, row) => {
+                            if (row.indent !== 1) return acc;
+                            if (
+                                row.consider_in_total_taxable_value &&
+                                [
+                                    "no_of_records",
+                                    "total_taxable_value",
+                                ].includes(column_field)
+                            )
+                                acc += row[column_field] || 0;
+
+                            else if (row.consider_in_total_tax)
+                                acc += row[column_field] || 0;
+
+                            return acc;
+                        }, 0);
+
+                        return total;
                     },
                 },
             },
@@ -674,7 +689,6 @@ class TabManager {
     }
 
     // DATA
-
 
     // COLUMNS
     get_summary_columns() {

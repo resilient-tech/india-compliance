@@ -9,23 +9,33 @@ WHAT SETTINGS?
 - Use API
 - Quarterly or Monthly
 
-GSTR-1 LOG:
-- Books data as on
-
 UI:
 - Books data as on
 - Listeners: Steps Download / Computing / Reconciling / Loading
-
+- Highlight active tab
 - Save utility (save data)
+P - For current year, month selectable should not be more than current month or quarter
+P - Only from july 2017
+P - Date hardcoded
 
-- Error Handelling for OTP
 
-- Compute Date
-- Summarize with category
+Notes
+S - Upload status in books
+S - Match status in reconcile
+S - Match POS and Customer GSTIN
+S - Reconciled data only with differences
+- Test with Actual Data
+- Refactor and cleanup
 
-- Reconcile
+Data Export
+P - Reconcile excel with all data export
+V & P- JSON export with upload status -> Option to export missing in Books with zero values
 
-- Guess customer name
+Future TODO;
+- e-Invoice regenerate / Return re-generate
+- Actions: create or cancel sales invoice
+- e-Commerece supplies
+- Bulk generation process
 
 """
 
