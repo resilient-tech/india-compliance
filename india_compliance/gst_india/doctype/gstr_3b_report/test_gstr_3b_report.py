@@ -2,9 +2,9 @@
 # See license.txt
 
 import json
-import unittest
 
 import frappe
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import getdate
 
 from india_compliance.gst_india.utils.tests import (
@@ -13,7 +13,7 @@ from india_compliance.gst_india.utils.tests import (
 )
 
 
-class TestGSTR3BReport(unittest.TestCase):
+class TestGSTR3BReport(FrappeTestCase):
     def setUp(self):
         frappe.set_user("Administrator")
         filters = {"company": "_Test Indian Registered Company"}
@@ -26,6 +26,7 @@ class TestGSTR3BReport(unittest.TestCase):
     def tearDownClass(cls):
         frappe.db.rollback()
 
+    @change_settings("GST Settings", {"enable_overseas_transactions": 1})
     def test_gstr_3b_report(self):
         month_number_mapping = {
             1: "January",
