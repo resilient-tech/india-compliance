@@ -13,6 +13,7 @@ from frappe.query_builder.functions import Extract, Sum
 from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
+from india_compliance.gst_india.overrides.transaction import is_inter_state_supply
 from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
     IneligibleITC,
 )
@@ -57,6 +58,7 @@ class GSTR3BReport(Document):
             self.set_inward_nil_exempt(inward_nil_exempt)
 
             self.missing_field_invoices = self.get_missing_field_invoices()
+            self.report_dict = format_values(self.report_dict)
             self.json_output = frappe.as_json(self.report_dict)
             self.generation_status = "Generated"
 
@@ -109,7 +111,7 @@ class GSTR3BReport(Document):
             itc_type = itc_eligible_type_map.get(d["ty"])
             for key in ["iamt", "camt", "samt", "csamt"]:
                 d[key] = flt(itc_details.get(itc_type, {}).get(key))
-                net_itc[key] += flt(d[key], 2)
+                net_itc[key] += d[key]
 
     def get_itc_reversal_entries(self):
         self.update_itc_reversal_from_journal_entry()
@@ -142,15 +144,15 @@ class GSTR3BReport(Document):
                     if key not in row:
                         continue
 
-                    self.report_dict["itc_elg"]["itc_rev"][0][key] += flt(row[key])
-                    self.report_dict["itc_elg"]["itc_net"][key] -= flt(row[key])
+                    self.report_dict["itc_elg"]["itc_rev"][0][key] += row[key]
+                    self.report_dict["itc_elg"]["itc_net"][key] -= row[key]
 
             elif row.itc_classification == "ITC restricted due to PoS rules":
                 for key in tax_amounts:
                     if key not in row:
                         continue
 
-                    self.report_dict["itc_elg"]["itc_inelg"][1][key] += flt(row[key])
+                    self.report_dict["itc_elg"]["itc_inelg"][1][key] += row[key]
 
     def update_itc_reversal_from_journal_entry(self):
         reversal_entries = frappe.db.sql(
@@ -178,10 +180,9 @@ class GSTR3BReport(Document):
 
             for key in ["camt", "samt", "iamt", "csamt"]:
                 if entry.account in self.account_heads.get(key):
-                    self.report_dict["itc_elg"]["itc_rev"][index][key] += flt(
-                        entry.amount
-                    )
-                    net_itc[key] -= flt(entry.amount)
+                    self.report_dict["itc_elg"]["itc_rev"][index][key] += entry.amount
+
+                    net_itc[key] -= entry.amount
 
     def get_itc_details(self):
         itc_amounts = frappe.db.sql(
@@ -325,18 +326,22 @@ class GSTR3BReport(Document):
         for doc, details in docs.items():
             item_wise_details[doc] = {}
             invoice_items = {}
+            item_code_gst_treatment_map = {}
 
             # Initialize invoice items with default values
             for item in details["items"]:
+                item_code_gst_treatment_map[item.item_code or item.item_name] = (
+                    item.gst_treatment
+                )
                 invoice_items.setdefault(
-                    item.item_code,
+                    item.gst_treatment,
                     {
                         "taxable_value": 0,
-                        "gst_treatment": item.gst_treatment,
-                        **item_defaults.copy(),
+                        **item_defaults,
                     },
                 )
-                invoice_items[item.item_code]["taxable_value"] += item.get(
+
+                invoice_items[item.gst_treatment]["taxable_value"] += item.get(
                     "taxable_value", 0
                 )
 
@@ -351,7 +356,8 @@ class GSTR3BReport(Document):
                     try:
                         item_wise_detail = json.loads(tax.item_wise_tax_detail)
                         for item_code, tax_amounts in item_wise_detail.items():
-                            invoice_items[item_code][gst_tax_type] += tax_amounts[1]
+                            gst_treatment = item_code_gst_treatment_map.get(item_code)
+                            invoice_items[gst_treatment][gst_tax_type] += tax_amounts[1]
 
                     except ValueError:
                         continue
@@ -452,34 +458,39 @@ class GSTR3BReport(Document):
             "Exempted": "osup_nil_exmp",
             "Zero-Rated": "osup_zero",
             "Non-GST": "osup_nongst",
+            "Taxable": "osup_det",
         }
 
-        keys_to_update = ["camt", "samt", "iamt", "csamt"]
-
         for inv, invoice_details in self.invoice_map.items():
-            items = self.invoice_item_wise_tax_details.get(inv, {})
+            gst_treatment_details = self.invoice_item_wise_tax_details.get(inv, {})
             gst_category = invoice_details.get("gst_category")
             place_of_supply = (
                 invoice_details.get("place_of_supply") or "00-Other Territory"
             )
-            is_inter_state = gst_category == "SEZ" or (
-                place_of_supply[:2] != self.gst_details.get("gstin")[:2]
+
+            doc = frappe._dict(
+                {
+                    "gst_category": gst_category,
+                    "place_of_supply": place_of_supply,
+                    "company_gstin": self.gst_details.get("gstin"),
+                }
             )
 
-            for item in items.values():
-                gst_treatment_section = gst_treatment_map.get(item.get("gst_treatment"))
-                taxable_value = item.get("taxable_value")
-                section_head = gst_treatment_section or "osup_det"  # default taxable
-                section = self.report_dict["sup_details"][section_head]
+            is_inter_state = is_inter_state_supply(doc)
+
+            for gst_treatment, details in gst_treatment_details.items():
+                gst_treatment_section = gst_treatment_map.get(gst_treatment)
+                section = self.report_dict["sup_details"][gst_treatment_section]
+
+                taxable_value = details.get("taxable_value")
 
                 # updating taxable value and tax value
-                section["txval"] += flt(taxable_value, 2)
+                section["txval"] += taxable_value
                 for key in section:
-                    if key in keys_to_update:
-                        section[key] += flt(item.get(key, 0), 2)
+                    section[key] += details.get(key, 0)
 
                 # section 3.2 details
-                if gst_treatment_section:
+                if not gst_treatment == "Taxable":
                     continue
 
                 if (
@@ -499,12 +510,13 @@ class GSTR3BReport(Document):
                             "iamt": 0.0,
                         },
                     )
+
                     inter_state_supply_details[(gst_category, place_of_supply)][
                         "txval"
-                    ] += flt(taxable_value, 2)
+                    ] += taxable_value
                     inter_state_supply_details[(gst_category, place_of_supply)][
                         "iamt"
-                    ] += flt(item.get("iamt"))
+                    ] += details.get("iamt")
 
         self.set_inter_state_supply(inter_state_supply_details)
 
@@ -513,7 +525,7 @@ class GSTR3BReport(Document):
         for inv, invoice_details in self.invoice_map.items():
             items = self.invoice_item_wise_tax_details.get(inv, {})
             for item in items.values():
-                section["txval"] += flt(item.get("taxable_value"), 2)
+                section["txval"] += item.get("taxable_value")
                 for key in section:
                     section[key] += item.get(key, 0)
 
@@ -523,6 +535,7 @@ class GSTR3BReport(Document):
             "Registered Composition": "comp_details",
             "UIN Holders": "uin_details",
         }
+
         for key, value in inter_state_supply.items():
             section = inter_state_supply_map.get(key[0])
 
@@ -628,6 +641,23 @@ def get_period(month, year=None):
         return str(month_no).zfill(2) + str(year)
     else:
         return month_no
+
+
+def format_values(data, precision=2):
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, (int, float)):
+                data[key] = flt(value, precision)
+            elif isinstance(value, dict) or isinstance(value, list):
+                format_values(value)
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            if isinstance(item, (int, float)):
+                data[i] = flt(item, precision)
+            elif isinstance(item, dict) or isinstance(item, list):
+                format_values(item)
+
+    return data
 
 
 @frappe.whitelist()
