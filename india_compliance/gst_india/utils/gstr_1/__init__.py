@@ -49,6 +49,7 @@ class GSTR1_Categories(Enum):
     TXP = "Advances Adjusted"
     DOC_ISSUE = "Document Issued"
     HSN = "HSN Summary"
+    SUPECOM = "Supplies made through E-commerce Operators"
 
 
 class GSTR1_Gov_Categories(Enum):
@@ -67,6 +68,7 @@ class GSTR1_Gov_Categories(Enum):
     TXP = "txpd"
     DOC_ISSUE = "doc_issue"
     HSN = "hsn"
+    SUPECOM = "sup_eco"
 
 
 class GSTR1_SubCategories(Enum):
@@ -93,6 +95,10 @@ class GSTR1_SubCategories(Enum):
     TXP = "Advances Adjusted"
     HSN = "HSN Summary"
     DOC_ISSUE = "Document Issued"
+
+    # E-Commerce
+    SUPECOM_52 = "TCS collected by E-commerce Operator u/s 52"
+    SUPECOM_9_5 = "GST Payable on RCM by E-commerce Operator u/s 9(5)"
 
 
 E_INVOICE_SUB_CATEGORIES = [
