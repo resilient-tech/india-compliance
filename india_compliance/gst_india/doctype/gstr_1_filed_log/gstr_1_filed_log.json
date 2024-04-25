@@ -113,7 +113,7 @@
    "fieldtype": "Select",
    "hidden": 1,
    "label": "Generation Status",
-   "options": "\nIn Progress\nGenerated",
+   "options": "\nIn Progress\nGenerated\nFailed",
    "read_only": 1
   },
   {
@@ -154,7 +154,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-24 09:55:53.261203",
+ "modified": "2024-04-25 16:53:33.497404",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",

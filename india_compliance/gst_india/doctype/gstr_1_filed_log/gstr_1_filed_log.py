@@ -214,6 +214,9 @@ def summarize_data(data, for_books=False):
     # Sub-category wise
     for subcategory in GSTR1_SubCategories:
         subcategory = subcategory.value
+        if subcategory not in data:
+            continue
+
         subcategory_summary[subcategory] = {
             "description": subcategory,
             "no_of_records": "",
@@ -242,15 +245,11 @@ def summarize_data(data, for_books=False):
             if doc_num := row.get("document_number"):
                 summary_row["unique_records"].add(doc_num)
 
-    for subcategory in subcategory_summary.copy().keys():
+    for subcategory in subcategory_summary.keys():
         summary_row = subcategory_summary[subcategory]
         count = len(summary_row["unique_records"])
         if count:
             summary_row["no_of_records"] = count
-
-        if sum(summary_row[field] for field in AMOUNT_FIELDS) == 0:
-            del subcategory_summary[subcategory]
-            continue
 
         summary_row.pop("unique_records")
 
@@ -267,6 +266,7 @@ def summarize_data(data, for_books=False):
         }
 
         cateogory_summary.append(summary_row)
+        remove_category_row = True
 
         for subcategory in sub_categories:
             # update category row
@@ -282,11 +282,12 @@ def summarize_data(data, for_books=False):
 
             # add subcategory row
             cateogory_summary.append(subcategory_row)
+            remove_category_row = False
 
         if not summary_row["no_of_records"]:
             summary_row["no_of_records"] = ""
 
-        if sum(summary_row[field] for field in AMOUNT_FIELDS) == 0:
+        if remove_category_row:
             cateogory_summary.remove(summary_row)
 
     return cateogory_summary

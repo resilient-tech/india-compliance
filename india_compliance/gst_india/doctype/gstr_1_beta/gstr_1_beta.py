@@ -4,7 +4,7 @@
 from datetime import datetime
 
 import frappe
-from frappe import _
+from frappe import _, unscrub
 from frappe.model.document import Document
 from frappe.utils import flt, get_last_day, getdate
 
@@ -308,7 +308,10 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         # Books vs Gov
         for key, books_value in books_subdata.items():
             gov_value = gov_subdata.get(key)
-            reconcile_subdata[key] = get_reconciled_row(books_value, gov_value)
+            reconcile_row = get_reconciled_row(books_value, gov_value)
+
+            if reconcile_row:
+                reconcile_subdata[key] = reconcile_row
 
             if not update_books_match or not is_e_invoice_subcategory:
                 continue
@@ -317,9 +320,7 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
             if not gov_value:
                 books_subdata[key]["upload_status"] = "Not Uploaded"
 
-            reconciliation_diff = has_reconciliation_diff(reconcile_subdata[key])
-
-            if reconciliation_diff:
+            if reconcile_row:
                 books_subdata[key]["upload_status"] = "Mismatch"
             else:
                 books_subdata[key]["upload_status"] = "Uploaded"
@@ -331,7 +332,12 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
 
             reconcile_subdata[key] = get_reconciled_row(None, gov_value)
 
-            books_data[key]["upload_status"] = "Missing in Books"
+            is_list = isinstance(gov_value, list)
+            books_subdata[key] = get_empty_row(gov_value[0] if is_list else gov_value)
+            books_subdata[key]["upload_status"] = "Missing in Books"
+
+        if not books_data.get(subcategory):
+            books_data[subcategory] = books_subdata
 
         # 2 types of data to be downloaded (for JSON only)
         # 1. Difference to be uploaded
@@ -339,10 +345,10 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         # 2. All as per Books
         #  - Upload all except missing in Books
 
-        gstr1_log.update_json_for("reconcile", reconciled_data)
+    gstr1_log.update_json_for("reconcile", reconciled_data)
 
-        if update_books_match:
-            gstr1_log.update_json_for("books", books_data)
+    if update_books_match:
+        gstr1_log.update_json_for("books", books_data)
 
     return reconciled_data
 
@@ -363,9 +369,12 @@ def get_reconciled_row(books_row, gov_row):
         2. Prefer Gov Row if available to compute empty row
         3. Compute comparable Gov and Books Row
         4. Compare the rows
+        5. Compute match status and differences
+        6. Return the reconciled row only if there are differences
     """
     is_list = isinstance(gov_row if gov_row else books_row, list)
 
+    # Get Empty Row
     if is_list:
         reconcile_row = get_empty_row(gov_row[0] if gov_row else books_row[0])
         gov_row = gov_row[0] if gov_row else {}
@@ -376,9 +385,38 @@ def get_reconciled_row(books_row, gov_row):
         gov_row = gov_row or {}
         books_row = books_row or {}
 
+    # Default Status
+    reconcile_row["match_status"] = "Matched"
+    reconcile_row["differences"] = []
+
+    if not gov_row:
+        reconcile_row["match_status"] = "Missing in GSTR-1"
+
+    if not books_row:
+        reconcile_row["match_status"] = "Missing in Books"
+
+    # Compute Differences
     for key, value in reconcile_row.items():
         if isinstance(value, (int, float)):
             reconcile_row[key] = (books_row.get(key) or 0) - (gov_row.get(key) or 0)
+            has_different_value = reconcile_row[key] != 0
+
+        elif key in ("customer_gstin", "place_of_supply"):
+            has_different_value = books_row.get(key) != gov_row.get(key)
+
+        else:
+            continue
+
+        if not has_different_value:
+            continue
+
+        if "Missing" not in reconcile_row["match_status"]:
+            reconcile_row["match_status"] = "Mismatch"
+            reconcile_row["differences"].append(unscrub(key))
+
+    # Return
+    if reconcile_row["match_status"] == "Matched":
+        return
 
     if is_list:
         return [reconcile_row]
@@ -394,15 +432,6 @@ def get_empty_row(row: dict):
             empty_row[key] = 0
 
     return empty_row
-
-
-def has_reconciliation_diff(reconciled_row: dict):
-    for value in reconciled_row.values():
-        if not isinstance(value, (int, float)):
-            continue
-
-        if value:
-            return True
 
 
 def get_aggregated_row(books_rows: list) -> dict:

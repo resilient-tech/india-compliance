@@ -8,6 +8,8 @@ Steps:
 WHAT SETTINGS?
 - Use API
 - Quarterly or Monthly
+V - Dates
+V - NIL Exempt ignore zero
 
 UI:
 - Books data as on
@@ -24,6 +26,7 @@ S - Upload status in books
 S - Match status in reconcile
 S - Match POS and Customer GSTIN
 S - Reconciled data only with differences
+S - Doc Issued not showing
 - Test with Actual Data
 - Refactor and cleanup
 
