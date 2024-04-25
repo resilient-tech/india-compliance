@@ -45,7 +45,7 @@ def create_or_update_tax_withholding_category(company):
             },
             pluck="name",
         )
-        if not existing_category_list:
+        if not existing_category_list and category_doc.get("rates"):
             doc = frappe.get_doc(category_doc)
             doc.insert(ignore_if_duplicate=True, ignore_mandatory=True)
 
