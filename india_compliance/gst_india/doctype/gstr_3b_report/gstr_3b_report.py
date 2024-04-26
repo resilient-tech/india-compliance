@@ -19,6 +19,8 @@ from india_compliance.gst_india.report.gstr_3b_details.gstr_3b_details import (
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
+VALUES_TO_UPDATE = ["iamt", "camt", "samt", "csamt"]
+
 
 class GSTR3BReport(Document):
     def validate(self):
@@ -109,7 +111,7 @@ class GSTR3BReport(Document):
 
         for d in self.report_dict["itc_elg"]["itc_avl"]:
             itc_type = itc_eligible_type_map.get(d["ty"])
-            for key in ["iamt", "camt", "samt", "csamt"]:
+            for key in VALUES_TO_UPDATE:
                 d[key] = flt(itc_details.get(itc_type, {}).get(key))
                 net_itc[key] += d[key]
 
@@ -136,7 +138,7 @@ class GSTR3BReport(Document):
         if not ineligible_credit:
             return
 
-        tax_amounts = ["camt", "samt", "iamt", "csamt"]
+        tax_amounts = VALUES_TO_UPDATE
 
         for row in ineligible_credit:
             if row.itc_classification == "Ineligible As Per Section 17(5)":
@@ -178,7 +180,7 @@ class GSTR3BReport(Document):
             else:
                 index = 1
 
-            for key in ["camt", "samt", "iamt", "csamt"]:
+            for key in VALUES_TO_UPDATE:
                 if entry.account in self.account_heads.get(key):
                     self.report_dict["itc_elg"]["itc_rev"][index][key] += entry.amount
 
@@ -487,7 +489,8 @@ class GSTR3BReport(Document):
                 # updating taxable value and tax value
                 section["txval"] += taxable_value
                 for key in section:
-                    section[key] += details.get(key, 0)
+                    if key in VALUES_TO_UPDATE:
+                        section[key] += details.get(key, 0)
 
                 # section 3.2 details
                 if not gst_treatment == "Taxable":
@@ -523,11 +526,12 @@ class GSTR3BReport(Document):
     def set_supplies_liable_to_reverse_charge(self):
         section = self.report_dict["sup_details"]["isup_rev"]
         for inv, invoice_details in self.invoice_map.items():
-            items = self.invoice_item_wise_tax_details.get(inv, {})
-            for item in items.values():
+            gst_treatment_section = self.invoice_item_wise_tax_details.get(inv, {})
+            for item in gst_treatment_section.values():
                 section["txval"] += item.get("taxable_value")
                 for key in section:
-                    section[key] += item.get(key, 0)
+                    if key in VALUES_TO_UPDATE:
+                        section[key] += item.get(key, 0)
 
     def set_inter_state_supply(self, inter_state_supply):
         inter_state_supply_map = {
