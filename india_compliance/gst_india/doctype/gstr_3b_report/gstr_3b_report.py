@@ -421,7 +421,7 @@ class GSTR3BReport(Document):
         item_details = frappe.db.sql(
             f"""
             SELECT
-                item_code, parent, taxable_value, gst_treatment
+                item_code, item_name, parent, taxable_value, gst_treatment
             FROM
                 `tab{doctype} Item`
             WHERE parent in ({", ".join(["%s"] * len(self.invoice_map))})
