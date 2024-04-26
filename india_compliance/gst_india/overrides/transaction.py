@@ -1450,7 +1450,7 @@ def validate_company_address_field(doc):
 
 
 def before_validate_transaction(doc, method=None):
-    if ignore_gst_validations(doc):
+    if ignore_gst_validations(doc, throw=False):
         return False
 
     if not doc.place_of_supply:
