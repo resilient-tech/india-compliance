@@ -78,7 +78,7 @@ class GSTR1_Gov_Categories(Enum):
     TXP = "txpd"
     HSN = "hsn"
     DOC_ISSUE = "doc_issue"
-    SUPECOM = "sup_eco"
+    SUPECOM = "supeco"
 
 
 class GSTR1_SubCategories(Enum):
@@ -145,6 +145,7 @@ class DataFields(Enum):
     SHIPPING_BILL_NUMBER = "shipping_bill_number"
     SHIPPING_BILL_DATE = "shipping_bill_date"
     SHIPPING_PORT_CODE = "shipping_port_code"
+    SUPPLIER_VALUE = "supplier_value"
 
     EXEMPTED_AMOUNT = "exempted_amount"
     NIL_RATED_AMOUNT = "nil_rated_amount"
@@ -186,6 +187,7 @@ class GovDataFields(Enum):
     SHIPPING_BILL_DATE = "sbdt"
     SHIPPING_PORT_CODE = "sbpcode"
     SUPPLY_TYPE = "sply_ty"
+    SUPPLIER_VALUE = "suppval"
 
     EXEMPTED_AMOUNT = "expt_amt"
     NIL_RATED_AMOUNT = "nil_amt"
@@ -217,6 +219,9 @@ class GovDataFields(Enum):
     NOTE_NUMBER = "nt_num"
     NOTE_DATE = "nt_dt"
     NOTE_DETAILS = "nt"
+
+    SUPECOM_52 = "clttx"
+    SUPECOM_9_5 = "paytx"
 
 
 class ItemFields(Enum):

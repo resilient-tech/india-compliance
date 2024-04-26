@@ -4,6 +4,7 @@ from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_f
 from india_compliance.gst_india.utils.gstr_1 import (
     DataFields,
     GovDataFields,
+    GSTR1_SubCategories,
     ItemFields,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
@@ -15,6 +16,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     CDNUR,
     DOC_ISSUE,
     HSNSUM,
+    SUPECOM,
     Exports,
     NilRated,
 )
@@ -144,12 +146,12 @@ class TestB2B(FrappeTestCase):
             },
         ]
         cls.mapped_data = {
-            "B2B Regular": {
+            GSTR1_SubCategories.B2B_REGULAR.value: {
                 "S008400": {
                     DataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
                     DataFields.CUST_NAME.value: get_party_for_gstin("24AANFA2641L1ZF"),
                     DataFields.DOC_NUMBER.value: "S008400",
-                    DataFields.DOC_DATE.value: "24-11-2016",
+                    DataFields.DOC_DATE.value: "2016-11-24",
                     DataFields.DOC_VALUE.value: 729248.16,
                     DataFields.POS.value: "06-Haryana",
                     DataFields.REVERSE_CHARGE.value: "N",
@@ -183,12 +185,12 @@ class TestB2B(FrappeTestCase):
                     DataFields.CESS.value: 1000,
                 }
             },
-            "B2B Reverse Charge": {
+            GSTR1_SubCategories.B2B_REVERSE_CHARGE.value: {
                 "S008401": {
                     DataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
                     DataFields.CUST_NAME.value: get_party_for_gstin("24AANFA2641L1ZF"),
                     DataFields.DOC_NUMBER.value: "S008401",
-                    DataFields.DOC_DATE.value: "24-11-2016",
+                    DataFields.DOC_DATE.value: "2016-11-24",
                     DataFields.DOC_VALUE.value: 729248.16,
                     DataFields.POS.value: "06-Haryana",
                     DataFields.REVERSE_CHARGE.value: "Y",
@@ -213,12 +215,12 @@ class TestB2B(FrappeTestCase):
                     DataFields.CESS.value: 500,
                 }
             },
-            "SEZ with payment": {
+            GSTR1_SubCategories.SEZWP.value: {
                 "S008402": {
                     DataFields.CUST_GSTIN.value: "29AABCR1718E1ZL",
                     DataFields.CUST_NAME.value: get_party_for_gstin("29AABCR1718E1ZL"),
                     DataFields.DOC_NUMBER.value: "S008402",
-                    DataFields.DOC_DATE.value: "24-11-2016",
+                    DataFields.DOC_DATE.value: "2016-11-24",
                     DataFields.DOC_VALUE.value: 729248.16,
                     DataFields.POS.value: "06-Haryana",
                     DataFields.REVERSE_CHARGE.value: "N",
@@ -243,12 +245,12 @@ class TestB2B(FrappeTestCase):
                     DataFields.CESS.value: 500,
                 }
             },
-            "Deemed Exports": {
+            GSTR1_SubCategories.DE.value: {
                 "S008403": {
                     DataFields.CUST_GSTIN.value: "29AABCR1718E1ZL",
                     DataFields.CUST_NAME.value: get_party_for_gstin("29AABCR1718E1ZL"),
                     DataFields.DOC_NUMBER.value: "S008403",
-                    DataFields.DOC_DATE.value: "24-11-2016",
+                    DataFields.DOC_DATE.value: "2016-11-24",
                     DataFields.DOC_VALUE.value: 729248.16,
                     DataFields.POS.value: "06-Haryana",
                     DataFields.REVERSE_CHARGE.value: "N",
@@ -391,12 +393,12 @@ class TestB2CL(FrappeTestCase):
             },
         ]
         cls.mapped_data = {
-            "B2C (Large)": {
+            GSTR1_SubCategories.B2CL.value: {
                 "92661": {
                     DataFields.POS.value: "05-Uttarakhand",
                     DataFields.DOC_TYPE.value: "B2C (Large)",
                     DataFields.DOC_NUMBER.value: "92661",
-                    DataFields.DOC_DATE.value: "10-01-2016",
+                    DataFields.DOC_DATE.value: "2016-01-10",
                     DataFields.DOC_VALUE.value: 784586.33,
                     DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     DataFields.DIFF_PERCENTAGE.value: 0.65,
@@ -424,7 +426,7 @@ class TestB2CL(FrappeTestCase):
                     DataFields.POS.value: "05-Uttarakhand",
                     DataFields.DOC_TYPE.value: "B2C (Large)",
                     DataFields.DOC_NUMBER.value: "92662",
-                    DataFields.DOC_DATE.value: "10-01-2016",
+                    DataFields.DOC_DATE.value: "2016-01-10",
                     DataFields.DOC_VALUE.value: 784586.33,
                     DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     DataFields.DIFF_PERCENTAGE.value: 0.65,
@@ -445,7 +447,7 @@ class TestB2CL(FrappeTestCase):
                     DataFields.POS.value: "24-Gujarat",
                     DataFields.DOC_TYPE.value: "B2C (Large)",
                     DataFields.DOC_NUMBER.value: "92663",
-                    DataFields.DOC_DATE.value: "10-01-2016",
+                    DataFields.DOC_DATE.value: "2016-01-10",
                     DataFields.DOC_VALUE.value: 784586.33,
                     DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     DataFields.DIFF_PERCENTAGE.value: 0.65,
@@ -473,7 +475,7 @@ class TestB2CL(FrappeTestCase):
                     DataFields.POS.value: "24-Gujarat",
                     DataFields.DOC_TYPE.value: "B2C (Large)",
                     DataFields.DOC_NUMBER.value: "92664",
-                    DataFields.DOC_DATE.value: "10-01-2016",
+                    DataFields.DOC_DATE.value: "2016-01-10",
                     DataFields.DOC_VALUE.value: 784586.33,
                     DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     DataFields.DIFF_PERCENTAGE.value: 0.65,
@@ -551,15 +553,15 @@ class TestExports(FrappeTestCase):
             },
         ]
         cls.mapped_data = {
-            "Exports with payment": {
+            GSTR1_SubCategories.EXPWP.value: {
                 "81542": {
                     DataFields.DOC_TYPE.value: "WPAY",
                     DataFields.DOC_NUMBER.value: "81542",
-                    DataFields.DOC_DATE.value: "12-02-2016",
+                    DataFields.DOC_DATE.value: "2016-02-12",
                     DataFields.DOC_VALUE.value: 995048.36,
                     DataFields.SHIPPING_PORT_CODE.value: "ASB991",
                     DataFields.SHIPPING_BILL_NUMBER.value: "7896542",
-                    DataFields.SHIPPING_BILL_DATE.value: "04-10-2016",
+                    DataFields.SHIPPING_BILL_DATE.value: "2016-10-04",
                     DataFields.ITEMS.value: [
                         {
                             ItemFields.TAXABLE_VALUE.value: 10000,
@@ -573,15 +575,15 @@ class TestExports(FrappeTestCase):
                     DataFields.CESS.value: 100,
                 }
             },
-            "Exports without payment": {
+            GSTR1_SubCategories.EXPWOP.value: {
                 "81543": {
                     DataFields.DOC_TYPE.value: "WOPAY",
                     DataFields.DOC_NUMBER.value: "81543",
-                    DataFields.DOC_DATE.value: "12-02-2016",
+                    DataFields.DOC_DATE.value: "2016-02-12",
                     DataFields.DOC_VALUE.value: 995048.36,
                     DataFields.SHIPPING_PORT_CODE.value: "ASB981",
                     DataFields.SHIPPING_BILL_NUMBER.value: "7896542",
-                    DataFields.SHIPPING_BILL_DATE.value: "04-10-2016",
+                    DataFields.SHIPPING_BILL_DATE.value: "2016-10-04",
                     DataFields.ITEMS.value: [
                         {
                             ItemFields.TAXABLE_VALUE.value: 10000,
@@ -638,7 +640,7 @@ class TestB2CS(FrappeTestCase):
             },
         ]
         cls.mapped_data = {
-            "B2C (Others)": {
+            GSTR1_SubCategories.B2CS.value: {
                 "05-Uttarakhand - 5.0 - 01AABCE5507R1C4": [
                     {
                         ItemFields.TAXABLE_VALUE.value: 110,
@@ -700,7 +702,7 @@ class TestNilRated(FrappeTestCase):
         }
 
         cls.mapped_data = {
-            "Nil-Rated, Exempted, Non-GST": {
+            GSTR1_SubCategories.NIL_EXEMPT.value: {
                 "Inter-State supplies to registered persons": [
                     {
                         DataFields.DOC_TYPE.value: "Inter-State supplies to registered persons",
@@ -777,13 +779,13 @@ class TestCDNR(FrappeTestCase):
             }
         ]
         cls.mappped_data = {
-            "Credit/Debit Notes (Registered)": {
+            GSTR1_SubCategories.CDNR.value: {
                 "533515": {
                     DataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
                     DataFields.CUST_NAME.value: get_party_for_gstin("24AANFA2641L1ZF"),
                     DataFields.TRANSACTION_TYPE.value: "Credit Note",
                     DataFields.DOC_NUMBER.value: "533515",
-                    DataFields.DOC_DATE.value: "23-09-2016",
+                    DataFields.DOC_DATE.value: "2016-09-23",
                     DataFields.POS.value: "03-Punjab",
                     DataFields.REVERSE_CHARGE.value: "Y",
                     DataFields.DOC_TYPE.value: "Deemed Exports",
@@ -856,12 +858,12 @@ class TestCDNUR(FrappeTestCase):
         ]
 
         cls.mapped_data = {
-            "Credit/Debit Notes (Unregistered)": {
+            GSTR1_SubCategories.CDNUR.value: {
                 "533515": {
                     DataFields.TRANSACTION_TYPE.value: "Credit Note",
                     DataFields.DOC_TYPE.value: "B2CL",
                     DataFields.DOC_NUMBER.value: "533515",
-                    DataFields.DOC_DATE.value: "23-09-2016",
+                    DataFields.DOC_DATE.value: "2016-09-23",
                     DataFields.DOC_VALUE.value: -64646,
                     DataFields.POS.value: "03-Punjab",
                     DataFields.DIFF_PERCENTAGE.value: 0.65,
@@ -923,7 +925,7 @@ class TestHSNSUM(FrappeTestCase):
         }
 
         cls.mapped_data = {
-            "HSN Summary": {
+            GSTR1_SubCategories.HSN.value: {
                 "1010 - KGS-KILOGRAMS - 0.1": {
                     ItemFields.INDEX.value: 1,
                     DataFields.HSN_CODE.value: "1010",
@@ -1013,7 +1015,7 @@ class TestAT(FrappeTestCase):
         ]
 
         cls.mapped_data = {
-            "Advances Received": {
+            GSTR1_SubCategories.AT.value: {
                 "05-Uttarakhand - 5.0": [
                     {
                         DataFields.POS.value: "05-Uttarakhand",
@@ -1125,7 +1127,7 @@ class TestDOC_ISSUE(FrappeTestCase):
             ]
         }
         cls.mapped_data = {
-            "Document Issued": {
+            GSTR1_SubCategories.DOC_ISSUE.value: {
                 "Invoices for outward supply - 1": {
                     DataFields.DOCUMENT_NATURE.value: "Invoices for outward supply",
                     ItemFields.INDEX.value: 1,
@@ -1167,4 +1169,65 @@ class TestDOC_ISSUE(FrappeTestCase):
 
     def test_convert_to_gov_data_format(self):
         output = DOC_ISSUE().convert_to_gov_data_format(self.mapped_data)
+        self.assertDictEqual(self.json_data, output)
+
+
+class TestSUPECOM(FrappeTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.json_data = {
+            GovDataFields.SUPECOM_52.value: [
+                {
+                    GovDataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    GovDataFields.SUPPLIER_VALUE.value: 10000,
+                    "igst": 1000,
+                    "cgst": 0,
+                    "sgst": 0,
+                    "cess": 0,
+                }
+            ],
+            GovDataFields.SUPECOM_9_5.value: [
+                {
+                    GovDataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    GovDataFields.SUPPLIER_VALUE.value: 10000,
+                    "igst": 1000,
+                    "cgst": 0,
+                    "sgst": 0,
+                    "cess": 0,
+                }
+            ],
+        }
+
+        cls.mapped_data = {
+            GSTR1_SubCategories.SUPECOM_52.value: {
+                "20ALYPD6528PQC5": {
+                    DataFields.DOC_TYPE.value: GSTR1_SubCategories.SUPECOM_52.value,
+                    DataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    DataFields.SUPPLIER_VALUE.value: 10000,
+                    ItemFields.IGST.value: 1000,
+                    ItemFields.CGST.value: 0,
+                    ItemFields.SGST.value: 0,
+                    ItemFields.CESS.value: 0,
+                }
+            },
+            GSTR1_SubCategories.SUPECOM_9_5.value: {
+                "20ALYPD6528PQC5": {
+                    DataFields.DOC_TYPE.value: GSTR1_SubCategories.SUPECOM_9_5.value,
+                    DataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    DataFields.SUPPLIER_VALUE.value: 10000,
+                    ItemFields.IGST.value: 1000,
+                    ItemFields.CGST.value: 0,
+                    ItemFields.SGST.value: 0,
+                    ItemFields.CESS.value: 0,
+                }
+            },
+        }
+
+    def test_convert_to_internal_data_format(self):
+        output = SUPECOM().convert_to_internal_data_format(self.json_data)
+        self.assertDictEqual(self.mapped_data, output)
+
+    def test_convert_to_gov_data_format(self):
+        output = SUPECOM().convert_to_gov_data_format(self.mapped_data)
         self.assertDictEqual(self.json_data, output)
