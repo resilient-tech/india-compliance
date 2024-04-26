@@ -1,5 +1,3 @@
-import re
-
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
@@ -26,18 +24,20 @@ class TestUtils(FrappeTestCase):
         self.assertEqual(party.gst_category, "Deemed Export")
 
     def test_validate_new_party_with_tcs(self):
+<<<<<<< HEAD
         party = frappe.new_doc("Customer")
         party.update(
             {
                 "customer_name": "Flipkart India Private Limited",
                 "gstin": "29AABCF8078M1C8",
             }
+=======
+        # Allow TCS GSTIN
+        party = frappe.new_doc(
+            "Customer",
+            customer_name="Flipkart India Private Limited",
+            gstin="29AABCF8078M1C8",
+>>>>>>> 76cf00d7 (fix: support tax collector as customer (#2066))
         )
 
-        self.assertRaisesRegex(
-            frappe.exceptions.ValidationError,
-            re.compile(
-                r"^(e-Commerce Operator \(TCS\) GSTIN is not allowed for transaction / party / address.*)$"
-            ),
-            party.insert,
-        )
+        party.insert()
