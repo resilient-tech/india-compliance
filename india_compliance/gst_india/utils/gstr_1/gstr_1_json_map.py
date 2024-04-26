@@ -1131,7 +1131,7 @@ class DOC_ISSUE(DataMapper):
                     " - ".join(
                         (document_nature, doc.get(GovDataFields.FROM_SR.value))
                     ): self.format_data(
-                        doc, {DataFields.DOCUMENT_NATURE.value: document_nature}
+                        doc, {DataFields.DOC_TYPE.value: document_nature}
                     )
                     for doc in document[GovDataFields.DOC_ISSUE_LIST.value]
                 }
@@ -1148,7 +1148,7 @@ class DOC_ISSUE(DataMapper):
 
         for invoice in input_data.values():
             doc_nature_wise_data.setdefault(
-                invoice[DataFields.DOCUMENT_NATURE.value], []
+                invoice[DataFields.DOC_TYPE.value], []
             ).append(invoice)
 
         input_data = doc_nature_wise_data

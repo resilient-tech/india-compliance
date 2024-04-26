@@ -20,6 +20,7 @@ from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import (
     E_INVOICE_SUB_CATEGORIES,
     DataFields,
+    GSTR1_Categories,
     GSTR1_SubCategories,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
@@ -212,7 +213,7 @@ class GSTR1Beta(Document):
             if not data.get(key):
                 continue
 
-            if self.gstr1_log.get(field):
+            if self.gstr1_log.is_latest_data and self.gstr1_log.get(field):
                 data[field] = self.gstr1_log.get_json_for(field)
                 continue
 
@@ -289,7 +290,7 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
     # Missing in gov_data
     # Update books data (optionally if not filed)
     # Prepare data / Sumarize / Save & Return / Optionally save books data
-    if gstr1_log.reconcile:
+    if gstr1_log.is_latest_data and gstr1_log.reconcile:
         return gstr1_log.get_json_for("reconcile")
 
     reconciled_data = {}
@@ -304,7 +305,7 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
             continue
 
         is_e_invoice_subcategory = subcategory in E_INVOICE_SUB_CATEGORIES
-        reconcile_subdata = reconciled_data.setdefault(subcategory, {})
+        reconcile_subdata = {}
 
         # Books vs Gov
         for key, books_value in books_subdata.items():
@@ -342,6 +343,9 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
 
         if update_books_match and not books_data.get(subcategory):
             books_data[subcategory] = books_subdata
+
+        if reconcile_subdata:
+            reconciled_data[subcategory] = reconcile_subdata
 
         # 2 types of data to be downloaded (for JSON only)
         # 1. Difference to be uploaded
@@ -401,8 +405,10 @@ def get_reconciled_row(books_row, gov_row):
 
     # Compute Differences
     for key, value in reconcile_row.items():
-        if isinstance(value, (int, float)):
-            reconcile_row[key] = (books_row.get(key) or 0) - (gov_row.get(key) or 0)
+        if isinstance(value, (int, float)) and key not in ("tax_rate"):
+            reconcile_row[key] = flt(
+                (books_row.get(key) or 0) - (gov_row.get(key) or 0), 2
+            )
             has_different_value = reconcile_row[key] != 0
 
         elif key in ("customer_gstin", "place_of_supply"):
@@ -421,6 +427,9 @@ def get_reconciled_row(books_row, gov_row):
     # Return
     if reconcile_row["match_status"] == "Matched":
         return
+
+    reconcile_row["books"] = books_row
+    reconcile_row["gov"] = gov_row
 
     if is_list:
         return [reconcile_row]
@@ -503,12 +512,13 @@ class GSTR1ProcessData:
                 DataFields.CUST_GSTIN.value: invoice.billing_address_gstin,
                 DataFields.CUST_NAME.value: invoice.customer_name,
                 DataFields.DOC_DATE.value: invoice.posting_date,
+                DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 DataFields.DOC_VALUE.value: invoice.invoice_total,
                 DataFields.POS.value: invoice.place_of_supply,
                 DataFields.REVERSE_CHARGE.value: (
                     "Y" if invoice.is_reverse_charge else "N"
                 ),
-                DataFields.DOC_TYPE.value: invoice.invoice_category,
+                DataFields.DOC_TYPE.value: invoice.invoice_type,
                 DataFields.TAXABLE_VALUE.value: 0,
                 DataFields.IGST.value: 0,
                 DataFields.CGST.value: 0,
@@ -531,12 +541,7 @@ class GSTR1ProcessData:
                 "cess_amount": invoice.total_cess_amount,
             }
         )
-
-        mapped_dict[DataFields.TAXABLE_VALUE.value] += invoice.taxable_value
-        mapped_dict[DataFields.IGST.value] += invoice.igst_amount
-        mapped_dict[DataFields.CGST.value] += invoice.cgst_amount
-        mapped_dict[DataFields.SGST.value] += invoice.sgst_amount
-        mapped_dict[DataFields.CESS.value] += invoice.total_cess_amount
+        self.update_totals(mapped_dict, invoice)
 
     def process_data_for_document_category_key(self, invoice, prepared_data):
         key = invoice.invoice_category
@@ -546,11 +551,7 @@ class GSTR1ProcessData:
 
         for row in mapped_dict:
             if row[DataFields.DOC_NUMBER.value] == invoice.invoice_no:
-                row[DataFields.TAXABLE_VALUE.value] += invoice.taxable_value
-                row[DataFields.IGST.value] += invoice.igst_amount
-                row[DataFields.CGST.value] += invoice.cgst_amount
-                row[DataFields.SGST.value] += invoice.sgst_amount
-                row[DataFields.CESS.value] += invoice.total_cess_amount
+                self.update_totals(row, invoice)
                 return
 
         mapped_dict.append(
@@ -572,11 +573,7 @@ class GSTR1ProcessData:
 
         for row in mapped_dict:
             if row[DataFields.DOC_NUMBER.value] == invoice.invoice_no:
-                row[DataFields.TAXABLE_VALUE.value] += invoice.taxable_value
-                row[DataFields.IGST.value] += invoice.igst_amount
-                row[DataFields.CGST.value] += invoice.cgst_amount
-                row[DataFields.SGST.value] += invoice.sgst_amount
-                row[DataFields.CESS.value] += invoice.total_cess_amount
+                self.update_totals(row, invoice)
                 return
 
         mapped_dict.append(
@@ -595,32 +592,45 @@ class GSTR1ProcessData:
         )
 
     def process_data_for_hsn_summary(self, invoice, prepared_data):
-        key = f"{invoice.gst_hsn_code} - {flt(invoice.gst_rate)} - {invoice.uom}"
-        mapped_dict = prepared_data.setdefault(
-            key,
-            {
-                DataFields.HSN_CODE.value: invoice.gst_hsn_code,
-                DataFields.UOM.value: invoice.uom,
-                DataFields.TOTAL_QUANTITY.value: 0,
-                DataFields.TAX_RATE.value: invoice.gst_rate,
-                DataFields.TAXABLE_VALUE.value: 0,
-                DataFields.IGST.value: 0,
-                DataFields.CGST.value: 0,
-                DataFields.SGST.value: 0,
-                DataFields.CESS.value: 0,
-            },
-        )
+        key = f"{invoice.gst_hsn_code} - {invoice.stock_uom} - {flt(invoice.gst_rate)}"
 
-        mapped_dict[DataFields.TAXABLE_VALUE.value] += invoice.taxable_value
-        mapped_dict[DataFields.IGST.value] += invoice.igst_amount
-        mapped_dict[DataFields.CGST.value] += invoice.cgst_amount
-        mapped_dict[DataFields.SGST.value] += invoice.sgst_amount
-        mapped_dict[DataFields.CESS.value] += invoice.total_cess_amount
-        mapped_dict[DataFields.TOTAL_QUANTITY.value] += invoice.qty
+        if key not in prepared_data:
+            mapped_dict = prepared_data.setdefault(
+                key,
+                {
+                    DataFields.HSN_CODE.value: invoice.gst_hsn_code,
+                    DataFields.DESCRIPTION.value: frappe.db.get_value(
+                        "GST HSN Code", invoice.gst_hsn_code, "description"
+                    ),
+                    DataFields.UOM.value: invoice.stock_uom,
+                    DataFields.QUANTITY.value: 0,
+                    DataFields.TAX_RATE.value: invoice.gst_rate,
+                    DataFields.TAXABLE_VALUE.value: 0,
+                    DataFields.IGST.value: 0,
+                    DataFields.CGST.value: 0,
+                    DataFields.SGST.value: 0,
+                    DataFields.CESS.value: 0,
+                },
+            )
+
+        else:
+            mapped_dict = prepared_data[key]
+
+        self.update_totals(mapped_dict, invoice, for_qty=True)
 
     def process_data_for_document_issued_summary(self, row, prepared_data):
         key = f"{row['nature_of_document']} - {row['from_serial_no']}"
-        prepared_data.setdefault(key, {**row})
+        prepared_data.setdefault(
+            key,
+            {
+                DataFields.DOC_TYPE.value: row["nature_of_document"],
+                DataFields.FROM_SR.value: row["from_serial_no"],
+                DataFields.TO_SR.value: row["to_serial_no"],
+                DataFields.TOTAL_COUNT.value: row["total_issued"],
+                DataFields.DRAFT_COUNT.value: row["total_draft"],
+                DataFields.CANCELLED_COUNT.value: row["cancelled"],
+            },
+        )
 
     def process_data_for_advances_received_or_adjusted(self, row, prepared_data):
         advances = {}
@@ -652,6 +662,36 @@ class GSTR1ProcessData:
 
         mapped_dict.append(advances)
 
+    # utils
+
+    def update_totals(self, mapped_dict, invoice, for_qty=False):
+        data_invoice_amount_map = {
+            DataFields.TAXABLE_VALUE.value: "taxable_value",
+            DataFields.IGST.value: "igst_amount",
+            DataFields.CGST.value: "cgst_amount",
+            DataFields.SGST.value: "sgst_amount",
+            DataFields.CESS.value: "total_cess_amount",
+        }
+
+        if for_qty:
+            data_invoice_amount_map[DataFields.QUANTITY.value] = "qty"
+
+        for key, field in data_invoice_amount_map.items():
+            mapped_dict[key] += invoice.get(field, 0)
+
+
+def test_gstr1_mapped_data():
+    filters = frappe._dict(
+        {
+            "company": "Shalibhadra Metal Corporation",
+            "company_gstin": "24AAUPV7468F1ZW",
+            "from_date": getdate("2024-03-01"),
+            "to_date": get_last_day("2024-03-01"),
+        }
+    )
+
+    return GSTR1MappedData(filters).prepare_mapped_data()
+
 
 class GSTR1MappedData(GSTR1ProcessData):
     def __init__(self, filters):
@@ -664,25 +704,30 @@ class GSTR1MappedData(GSTR1ProcessData):
         data = _class.get_invoices_for_item_wise_summary()
         _class.process_invoices(data)
 
-        prepared_data["Document Issued"] = self.prepare_document_issued_data()
-        prepared_data["HSN Summary"] = self.prepare_hsn_data(data)
-        prepared_data["Advances Received"] = self.prepare_advances_recevied_data()
-        prepared_data["Advances Adjusted"] = self.prepare_advances_adjusted_data()
-
         for invoice in data:
-
             if invoice["invoice_category"] in (
-                "B2B, SEZ, DE",
-                "B2C (Large)",
-                "CDNR",
-                "CDNUR",
-                "Exports",
+                GSTR1_Categories.B2B.value,
+                GSTR1_Categories.EXP.value,
+                GSTR1_Categories.B2CL.value,
+                GSTR1_Categories.CDNR.value,
+                GSTR1_Categories.CDNUR.value,
             ):
                 self.process_data_for_invoice_no_key(invoice, prepared_data)
-            elif invoice["invoice_category"] == "Nil-Rated, Exempted, Non-GST":
+            elif invoice["invoice_category"] == GSTR1_Categories.NIL_EXEMPT.value:
                 self.process_data_for_document_category_key(invoice, prepared_data)
-            elif invoice["invoice_category"] == "B2C (Others)":
+            elif invoice["invoice_category"] == GSTR1_Categories.B2CS.value:
                 self.process_data_for_b2cs(invoice, prepared_data)
+
+        other_categories = {
+            GSTR1_Categories.AT.value: self.prepare_advances_recevied_data(),
+            GSTR1_Categories.TXP.value: self.prepare_advances_adjusted_data(),
+            GSTR1_Categories.HSN.value: self.prepare_hsn_data(data),
+            GSTR1_Categories.DOC_ISSUE.value: self.prepare_document_issued_data(),
+        }
+
+        for category, data in other_categories.items():
+            if data:
+                prepared_data[category] = data
 
         return prepared_data
 

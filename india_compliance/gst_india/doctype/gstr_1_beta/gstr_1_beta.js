@@ -590,6 +590,7 @@ class TabManager {
     setup_datatable(wrapper, data, columns) {
         const _columns = columns || this.get_summary_columns();
         const _data = data || [];
+        const treeView = this.instance.active_view === "Summary";
 
         this.datatable = new india_compliance.DataTableManager({
             $wrapper: wrapper.find(".data-table"),
@@ -598,7 +599,7 @@ class TabManager {
             options: {
                 showTotalRow: true,
                 checkboxColumn: false,
-                treeView: true,
+                treeView: treeView,
                 headerDropdown: [
                     {
                         label: "Collapse All Node",
@@ -614,8 +615,8 @@ class TabManager {
                     },
                 ],
                 hooks: {
-                    columnTotal: (firstColumn, row) => {
-                        if (row.colIndex === 1) return (row.content = "Total");
+                    columnTotal: (_, row) => {
+                        if (row.colIndex === 1) return (row.content = "Total Liability");
                         if (this.instance.active_view !== "Summary") return;
 
                         const column_field = row.column.fieldname;
@@ -681,13 +682,22 @@ class TabManager {
 
     format_summary_table_cell(args) {
         const isDescriptionCell = args[1]?.id === "description";
-        const value =
+        let value = args[0];
+
+        if (args[1]?._fieldtype === "Currency") value = format_currency(value);
+        else if (args[1]?._fieldtype === "Float") value = format_number(value);
+
+        value =
             args[2]?.indent == 0
-                ? `<strong>${args[0]}</strong>`
+            ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<p style="padding-left: 15px">${args[0]}</p>`
-                    : args[0];
-        return `<a href="#" class="summary-description">${value}</a>`;
+                    ? `<a href="#" class="summary-description">
+                    <p style="padding-left: 15px">${value}</p>
+                    </a>`
+                    : value;
+
+
+        return value;
     }
 
     // DATA
@@ -704,6 +714,7 @@ class TabManager {
             {
                 name: "Total Docs",
                 fieldname: "no_of_records",
+                _fieldtype: "Float",
                 width: 100,
                 align: "center",
                 _value: (...args) => this.format_summary_table_cell(args),
@@ -711,36 +722,41 @@ class TabManager {
             {
                 name: "Taxable Value",
                 fieldname: GSTR1_DataFields.TAXABLE_VALUE,
+                _fieldtype: "Float",
                 width: 180,
-                align: "center",
+
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "IGST",
                 fieldname: GSTR1_DataFields.IGST,
+                _fieldtype: "Float",
                 width: 150,
-                align: "center",
+
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "CGST",
                 fieldname: GSTR1_DataFields.CGST,
+                _fieldtype: "Float",
                 width: 150,
-                align: "center",
+
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "SGST",
                 fieldname: GSTR1_DataFields.SGST,
+                _fieldtype: "Float",
                 width: 150,
-                align: "center",
+
                 _value: (...args) => this.format_summary_table_cell(args),
             },
             {
                 name: "CESS",
                 fieldname: GSTR1_DataFields.CESS,
+                _fieldtype: "Float",
                 width: 150,
-                align: "center",
+
                 _value: (...args) => this.format_summary_table_cell(args),
             },
         ];
@@ -759,7 +775,7 @@ class TabManager {
                 fieldname: GSTR1_DataFields.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
-                width: 130,
+                width: 160,
             },
             {
                 name: "Customer GSTIN",
@@ -779,7 +795,7 @@ class TabManager {
             {
                 name: "Reverse Charge",
                 fieldname: GSTR1_DataFields.REVERSE_CHARGE,
-                align: "center",
+
                 width: 120,
             },
             ...this.get_match_columns(),
@@ -806,7 +822,7 @@ class TabManager {
                 fieldname: GSTR1_DataFields.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
-                width: 130,
+                width: 160,
             },
             {
                 name: "Invoice Type",
@@ -866,7 +882,7 @@ class TabManager {
                 fieldname: GSTR1_DataFields.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
-                width: 130,
+                width: 160,
             },
             {
                 name: "Customer GSTIN",
@@ -886,7 +902,7 @@ class TabManager {
             {
                 name: "Reverse Charge",
                 fieldname: GSTR1_DataFields.REVERSE_CHARGE,
-                align: "center",
+
                 width: 120,
             },
             ...match_columns,
@@ -1207,7 +1223,7 @@ class BooksTab extends TabManager {
                 fieldname: GSTR1_DataFields.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Payment Entry",
-                width: 130,
+                width: 160,
             },
             {
                 name: "Customer Name",
@@ -1231,7 +1247,7 @@ class BooksTab extends TabManager {
                 fieldname: GSTR1_DataFields.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
-                width: 130,
+                width: 160,
             },
             {
                 name: "Customer Name",
@@ -1307,7 +1323,7 @@ class FiledTab extends TabManager {
                 fieldname: GSTR1_DataFields.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
-                width: 130,
+                width: 160,
             },
             {
                 name: "Customer Name",
@@ -1387,7 +1403,7 @@ class FiledTab extends TabManager {
                 fieldname: GSTR1_DataFields.DOC_NUMBER,
                 fieldtype: "Link",
                 options: "Sales Invoice",
-                width: 130,
+                width: 160,
             },
             {
                 name: "Customer Name",

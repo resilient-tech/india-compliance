@@ -7,11 +7,12 @@ from datetime import datetime
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_to_date, get_datetime
+from frappe.utils import add_to_date, flt, get_datetime
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    DataFields,
 )
 
 DOCTYPE = "GSTR-1 Filed Log"
@@ -219,7 +220,7 @@ def summarize_data(data, for_books=False):
 
         subcategory_summary[subcategory] = {
             "description": subcategory,
-            "no_of_records": "",
+            "no_of_records": 0,
             "indent": 1,
             "consider_in_total_taxable_value": (
                 False
@@ -244,6 +245,13 @@ def summarize_data(data, for_books=False):
 
             if doc_num := row.get("document_number"):
                 summary_row["unique_records"].add(doc_num)
+
+            if subcategory == GSTR1_SubCategories.DOC_ISSUE.value:
+                print(row)
+                count_doc_issue_summary(summary_row, row)
+
+            if subcategory == GSTR1_SubCategories.HSN.value:
+                count_hsn_summary(summary_row)
 
     for subcategory in subcategory_summary.keys():
         summary_row = subcategory_summary[subcategory]
@@ -290,7 +298,23 @@ def summarize_data(data, for_books=False):
         if remove_category_row:
             cateogory_summary.remove(summary_row)
 
+    # Round Values
+    for row in cateogory_summary:
+        for key, value in row.items():
+            if isinstance(value, (int, float)):
+                row[key] = flt(value, 2)
+
     return cateogory_summary
+
+
+def count_doc_issue_summary(summary_row, data_row):
+    summary_row["no_of_records"] += data_row.get(
+        DataFields.TOTAL_COUNT.value, 0
+    ) - data_row.get(DataFields.CANCELLED_COUNT.value, 0)
+
+
+def count_hsn_summary(summary_row):
+    summary_row["no_of_records"] += 1
 
 
 def process_gstr_1_returns_info(gstin, response):

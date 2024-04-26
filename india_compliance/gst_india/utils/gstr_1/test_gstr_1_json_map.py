@@ -1129,7 +1129,7 @@ class TestDOC_ISSUE(FrappeTestCase):
         cls.mapped_data = {
             GSTR1_SubCategories.DOC_ISSUE.value: {
                 "Invoices for outward supply - 1": {
-                    DataFields.DOCUMENT_NATURE.value: "Invoices for outward supply",
+                    DataFields.DOC_TYPE.value: "Invoices for outward supply",
                     ItemFields.INDEX.value: 1,
                     DataFields.FROM_SR.value: "1",
                     DataFields.TO_SR.value: "10",
@@ -1137,7 +1137,7 @@ class TestDOC_ISSUE(FrappeTestCase):
                     DataFields.CANCELLED_COUNT.value: 0,
                 },
                 "Invoices for outward supply - 11": {
-                    DataFields.DOCUMENT_NATURE.value: "Invoices for outward supply",
+                    DataFields.DOC_TYPE.value: "Invoices for outward supply",
                     ItemFields.INDEX.value: 2,
                     DataFields.FROM_SR.value: "11",
                     DataFields.TO_SR.value: "20",
@@ -1145,7 +1145,7 @@ class TestDOC_ISSUE(FrappeTestCase):
                     DataFields.CANCELLED_COUNT.value: 0,
                 },
                 "Invoices for inward supply from unregistered person - 1": {
-                    DataFields.DOCUMENT_NATURE.value: "Invoices for inward supply from unregistered person",
+                    DataFields.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
                     ItemFields.INDEX.value: 1,
                     DataFields.FROM_SR.value: "1",
                     DataFields.TO_SR.value: "10",
@@ -1153,7 +1153,7 @@ class TestDOC_ISSUE(FrappeTestCase):
                     DataFields.CANCELLED_COUNT.value: 0,
                 },
                 "Invoices for inward supply from unregistered person - 11": {
-                    DataFields.DOCUMENT_NATURE.value: "Invoices for inward supply from unregistered person",
+                    DataFields.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
                     ItemFields.INDEX.value: 2,
                     DataFields.FROM_SR.value: "11",
                     DataFields.TO_SR.value: "20",

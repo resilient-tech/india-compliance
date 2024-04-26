@@ -10,13 +10,19 @@ WHAT SETTINGS?
 - Quarterly or Monthly
 V - Dates
 V - NIL Exempt ignore zero
+V - HSN Summary: Idx
+V - Document Issued: Idx
+V - FLT: Json
 
 UI:
-- Books data as on
 - Listeners: Steps Download / Computing / Reconciling / Loading
-- Highlight active tab
+P - Highlight active tab
 - Save utility (save data)
-- Highlight if data is not latest
+P - Highlight if data is not latest
+P - Details view for reconciliation
+P - Summary of Ledger difference
+p - Collapse and Expand Button (this.tree_report query_report.js)
+P - Books data as on
 
 
 Notes
@@ -36,6 +42,10 @@ Future TODO;
 - Actions: create or cancel sales invoice
 - e-Commerece supplies
 - Bulk generation process
+
+BUGS:
+ - Not filed status
+ - Differences as comma separated
 
 """
 
@@ -155,10 +165,8 @@ class DataFields(Enum):
     DESCRIPTION = "description"
     UOM = "uom"
     QUANTITY = "quantity"
-    TOTAL_QUANTITY = "total_quantity"
     TOTAL_VALUE = "total_value"
 
-    DOCUMENT_NATURE = "document_nature"
     FROM_SR = "from_sr_no"
     TO_SR = "to_sr_no"
     TOTAL_COUNT = "total_count"

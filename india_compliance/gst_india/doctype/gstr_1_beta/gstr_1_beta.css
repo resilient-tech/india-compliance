@@ -43,12 +43,6 @@ div[data-page-route="GSTR-1 Beta"] .tab-title-text {
     font-size: 1.2rem;
 }
 
-div[data-page-route="GSTR-1 Beta"] .datatable .dt-scrollable {
-    overflow-y: auto !important;
-    min-height: calc(100vh - 450px);
-    border-left: 1px solid var(--border-color);
-}
-
 div[data-page-route="GSTR-1 Beta"] .datatable .dt-row {
     height: unset;
 }
