@@ -248,6 +248,14 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     # Query / Process / Map / Sumarize / Optionally Save & Return
     data_field = "books"
     gstr1_log = filters.gstr1_log
+
+    # data exists
+    if gstr1_log.is_latest_data and gstr1_log.get(data_field):
+        mapped_data = gstr1_log.get_json_for(data_field)
+
+        if mapped_data:
+            return mapped_data
+
     filing_frequency = get_gstr1_filing_frequency()
 
     if filing_frequency == "Monthly":
@@ -266,13 +274,6 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
             "to_date": to_date,
         }
     )
-
-    # data exists
-    if gstr1_log.is_latest_data and gstr1_log.get(data_field):
-        mapped_data = gstr1_log.get_json_for(data_field)
-
-        if mapped_data:
-            return mapped_data
 
     # compute data
     # TODO: compute from and to date for report
@@ -332,11 +333,14 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
 
             reconcile_subdata[key] = get_reconciled_row(None, gov_value)
 
+            if not update_books_match or not is_e_invoice_subcategory:
+                continue
+
             is_list = isinstance(gov_value, list)
             books_subdata[key] = get_empty_row(gov_value[0] if is_list else gov_value)
             books_subdata[key]["upload_status"] = "Missing in Books"
 
-        if not books_data.get(subcategory):
+        if update_books_match and not books_data.get(subcategory):
             books_data[subcategory] = books_subdata
 
         # 2 types of data to be downloaded (for JSON only)

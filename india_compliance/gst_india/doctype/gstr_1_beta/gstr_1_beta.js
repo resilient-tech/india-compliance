@@ -6,8 +6,8 @@ frappe.provide("india_compliance");
 const DOCTYPE = "GSTR-1 Beta";
 const GSTR1_Categories = {
     B2B: "B2B, SEZ, DE",
-    B2CL: "B2C (Large)",
     EXP: "Exports",
+    B2CL: "B2C (Large)",
     B2CS: "B2C (Others)",
     NIL_EXEMPT: "Nil-Rated, Exempted, Non-GST",
     CDNR: "Credit/Debit Notes (Registered)",
@@ -15,29 +15,30 @@ const GSTR1_Categories = {
     // Other Categories
     AT: "Advances Received",
     TXP: "Advances Adjusted",
-    DOC_ISSUE: "Document Issued",
     HSN: "HSN Summary",
+    DOC_ISSUE: "Document Issued",
 };
 const GSTR1_SubCategories = {
     B2B_REGULAR: "B2B Regular",
     B2B_REVERSE_CHARGE: "B2B Reverse Charge",
-    SEZWP: "SEZ with Payment of Tax",
-    SEZWOP: "SEZ without Payment of Tax",
+    SEZWP: "SEZ With Payment of Tax",
+    SEZWOP: "SEZ Without Payment of Tax",
     DE: "Deemed Exports",
-    EXPWP: "Export with Payment of Tax",
-    EXPWOP: "Export without Payment of Tax",
+    EXPWP: "Export With Payment of Tax",
+    EXPWOP: "Export Without Payment of Tax",
     B2CL: "B2C (Large)",
     B2CS: "B2C (Others)",
     NIL_EXEMPT: "Nil-Rated, Exempted, Non-GST",
-    NIL_RATED: "Nil-Rated",
-    EXEMPTED: "Exempted",
-    NON_GST: "Non-GST",
     CDNR: "Credit/Debit Notes (Registered)",
     CDNUR: "Credit/Debit Notes (Unregistered)",
+
     AT: "Advances Received",
     TXP: "Advances Adjusted",
     HSN: "HSN Summary",
     DOC_ISSUE: "Document Issued",
+
+    SUPECOM_52: "TCS collected by E-commerce Operator u/s 52",
+    SUPECOM_9_5: "GST Payable on RCM by E-commerce Operator u/s 9(5)",
 };
 
 const INVOICE_TYPE = {
@@ -124,7 +125,7 @@ frappe.ui.form.on(DOCTYPE, {
         let filing_frequency = await get_gstr1_filing_frequency();
         frm.filing_frequency = filing_frequency;
 
-        set_options_for_month_or_quarter(frm)
+        set_options_for_month_or_quarter(frm);
 
         set_default_fields(frm);
         // frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
@@ -535,6 +536,8 @@ class TabManager {
     refresh_view(view, category) {
         if (!category && view === "Details") return;
 
+        this.filter_category = category;
+
         if (view === "Details") {
             const columns_func = this.CATEGORY_COLUMNS[category];
             if (!columns_func) return;
@@ -779,6 +782,7 @@ class TabManager {
                 align: "center",
                 width: 120,
             },
+            ...this.get_match_columns(),
             ...this.get_tax_columns(),
             {
                 name: "Invoice Value",
@@ -824,6 +828,7 @@ class TabManager {
                 fieldname: GSTR1_DataFields.SHIPPING_PORT_CODE,
                 width: 100,
             },
+            ...this.get_tax_columns(),
             ...this.get_igst_tax_columns(),
             {
                 name: "Invoice Value",
@@ -836,6 +841,14 @@ class TabManager {
 
     get_document_columns() {
         // `Transaction Type` + Invoice Columns with `Document` as title instead of `Invoice`
+        let match_columns = this.get_match_columns();
+        if (
+            [GSTR1_SubCategories.NIL_EXEMPT, GSTR1_SubCategories.B2CS].includes(
+                this.filter_category
+            )
+        )
+            match_columns = [];
+
         return [
             {
                 name: "Transaction Type",
@@ -876,6 +889,7 @@ class TabManager {
                 align: "center",
                 width: 120,
             },
+            ...match_columns,
             ...this.get_tax_columns(),
             {
                 name: "Document Value",
@@ -1100,6 +1114,10 @@ class TabManager {
 
         return columns;
     }
+
+    get_match_columns() {
+        return [];
+    }
 }
 
 class BooksTab extends TabManager {
@@ -1164,6 +1182,17 @@ class BooksTab extends TabManager {
     }
 
     // COLUMNS
+
+    get_match_columns() {
+        if (this.status === "Filed") return [];
+        return [
+            {
+                name: "Upload Status",
+                fieldname: "upload_status",
+                width: 150,
+            },
+        ];
+    }
 
     get_advances_received_columns() {
         return [
@@ -1414,6 +1443,21 @@ class ReconcileTab extends FiledTab {
             },
         });
     }
+
+    get_match_columns() {
+        return [
+            {
+                name: "Match Status",
+                fieldname: "match_status",
+                width: 150,
+            },
+            {
+                name: "Differences",
+                fieldname: "differences",
+                width: 150,
+            },
+        ];
+    }
 }
 
 function set_options_for_month_or_quarter(frm) {
@@ -1427,41 +1471,46 @@ function set_options_for_month_or_quarter(frm) {
      */
 
     const today = new Date();
-    const current_year = today.getFullYear();
+    const current_year = String(today.getFullYear());
     const current_month_idx = today.getMonth();
+    let options;
 
-    if (!frm.doc.year) frm.doc.year = String(current_year);
+    if (!frm.doc.year) frm.doc.year = current_year;
 
-    if (frm.doc.year === String(current_year)) {
+    if (frm.doc.year === current_year) {
         // Options for current year till current month
         if (frm.filing_frequency === "Monthly")
-            set_field_options("month_or_quarter", MONTH.slice(0, current_month_idx + 1));
+            options = MONTH.slice(0, current_month_idx + 1);
+
         else {
             let quarter_idx;
             if (current_month_idx <= 2) quarter_idx = 1;
             else if (current_month_idx <= 5) quarter_idx = 2;
             else if (current_month_idx <= 8) quarter_idx = 3;
             else quarter_idx = 4;
-            set_field_options("month_or_quarter", QUARTER.slice(0, quarter_idx));
+
+            options = QUARTER.slice(0, quarter_idx);
         }
-        set_previous_month_or_quarter(frm)
-    }
-    else if (frm.doc.year === "2017") {
+    } else if (frm.doc.year === "2017") {
         // Options for 2017 from July to December
-        if (frm.filing_frequency === "Monthly") {
-            set_field_options("month_or_quarter", MONTH.slice(6));
-            frm.set_value("month_or_quarter", MONTH[6])
-        }
-        else {
-            set_field_options("month_or_quarter", QUARTER.slice(2));
-            frm.set_value("month_or_quarter", QUARTER[2])
-        }
-    }
-    else {
         if (frm.filing_frequency === "Monthly")
-            set_field_options("month_or_quarter", MONTH);
-        else set_field_options("month_or_quarter", QUARTER);
+            options = MONTH.slice(6);
+
+        else options = QUARTER.slice(2);
+    } else {
+        if (frm.filing_frequency === "Monthly")
+            options = MONTH;
+
+        else options = QUARTER;
     }
+
+    set_field_options("month_or_quarter", options);
+    if (frm.doc.year === current_year)
+        // set second last option as default
+        frm.set_value("month_or_quarter", options[options.length - 2]);
+    else
+        // set last option as default
+        frm.set_value("month_or_quarter", options[options.length - 1]);
 }
 
 // UTILITY FUNCTIONS
@@ -1500,29 +1549,6 @@ async function set_default_company_gstin(frm) {
 function set_default_year(frm) {
     const year = new Date().getFullYear().toString();
     frm.set_value("year", year);
-}
-
-function set_previous_month_or_quarter(frm) {
-    const currentDate = new Date();
-    if (frm.filing_frequency === "Monthly") {
-        let prevMonthIdx = currentDate.getMonth() - 1;
-        prevMonthIdx = prevMonthIdx < 0 ? 11 : prevMonthIdx;
-
-        frm.set_value("month_or_quarter", MONTH[prevMonthIdx]);
-    } else {
-        const currentMonth = currentDate.getMonth();
-        let prevQuarterIdx;
-        if (currentMonth <= 2) {
-            prevQuarterIdx = 3;
-        } else if (currentMonth <= 5) {
-            prevQuarterIdx = 0;
-        } else if (currentMonth <= 8) {
-            prevQuarterIdx = 1;
-        } else {
-            prevQuarterIdx = 2;
-        }
-        frm.set_value("month_or_quarter", QUARTER[prevQuarterIdx]);
-    }
 }
 
 function get_year_list(current_date) {

@@ -16,22 +16,22 @@ UI:
 - Listeners: Steps Download / Computing / Reconciling / Loading
 - Highlight active tab
 - Save utility (save data)
+- Highlight if data is not latest
 
 
 Notes
-S - Upload status in books
-S - Match status in reconcile
-S - Match POS and Customer GSTIN
-S - Reconciled data only with differences
-S - Doc Issued not showing
-- Test with Actual Data
-- Refactor and cleanup
+S - Test with Actual Data
+S - Refactor and cleanup
 
 Data Export
 P - Reconcile excel with all data export
 V & P- JSON export with upload status -> Option to export missing in Books with zero values
 
 Future TODO;
+- Update Sales Invoice Status
+- Mark as Filed
+- Lock transactions and it's related fixes
+
 - e-Invoice regenerate / Return re-generate
 - Actions: create or cancel sales invoice
 - e-Commerece supplies
@@ -47,8 +47,8 @@ class GSTR1_Categories(Enum):
 
     # Invoice Items Bifurcation
     B2B = "B2B, SEZ, DE"
-    B2CL = "B2C (Large)"
     EXP = "Exports"
+    B2CL = "B2C (Large)"
     B2CS = "B2C (Others)"
     NIL_EXEMPT = "Nil-Rated, Exempted, Non-GST"
     CDNR = "Credit/Debit Notes (Registered)"
@@ -57,8 +57,8 @@ class GSTR1_Categories(Enum):
     # Other Categories
     AT = "Advances Received"
     TXP = "Advances Adjusted"
-    DOC_ISSUE = "Document Issued"
     HSN = "HSN Summary"
+    DOC_ISSUE = "Document Issued"
     SUPECOM = "Supplies made through E-commerce Operators"
 
 
@@ -68,16 +68,16 @@ class GSTR1_Gov_Categories(Enum):
     """
 
     B2B = "b2b"
-    B2CL = "b2cl"
     EXP = "exp"
+    B2CL = "b2cl"
     B2CS = "b2cs"
     NIL_EXEMPT = "nil"
     CDNR = "cdnr"
     CDNUR = "cdnur"
     AT = "at"
     TXP = "txpd"
-    DOC_ISSUE = "doc_issue"
     HSN = "hsn"
+    DOC_ISSUE = "doc_issue"
     SUPECOM = "sup_eco"
 
 
@@ -89,12 +89,12 @@ class GSTR1_SubCategories(Enum):
     # Invoice Items Bifurcation
     B2B_REGULAR = "B2B Regular"
     B2B_REVERSE_CHARGE = "B2B Reverse Charge"
-    SEZWP = "SEZ with payment"
-    SEZWOP = "SEZ without payment"
+    SEZWP = "SEZ With Payment of Tax"
+    SEZWOP = "SEZ Without Payment of Tax"
     DE = "Deemed Exports"
+    EXPWP = "Export With Payment of Tax"
+    EXPWOP = "Export Without Payment of Tax"
     B2CL = "B2C (Large)"
-    EXPWP = "Exports with payment"
-    EXPWOP = "Exports without payment"
     B2CS = "B2C (Others)"
     NIL_EXEMPT = "Nil-Rated, Exempted, Non-GST"
     CDNR = "Credit/Debit Notes (Registered)"
@@ -112,14 +112,14 @@ class GSTR1_SubCategories(Enum):
 
 
 E_INVOICE_SUB_CATEGORIES = [
-    "B2B Regular",
-    "B2B Reverse Charge",
-    "SEZ with payment",
-    "SEZ without payment",
-    "Deemed Exports",
-    "Exports with payment",
-    "Exports without payment",
-    "Credit/Debit Notes (Registered)",
+    GSTR1_SubCategories.B2B_REGULAR.value,
+    GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
+    GSTR1_SubCategories.SEZWP.value,
+    GSTR1_SubCategories.SEZWOP.value,
+    GSTR1_SubCategories.DE.value,
+    GSTR1_SubCategories.EXPWP.value,
+    GSTR1_SubCategories.EXPWOP.value,
+    GSTR1_SubCategories.CDNR.value,
 ]
 
 
