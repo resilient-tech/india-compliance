@@ -374,7 +374,7 @@
   },
   {
    "default": "1",
-   "description": "Ensures valid GSTIN and GST Transporter ID in transactions by refreshing status periodically from government database",
+   "description": "Ensures valid GSTIN in transactions by refreshing status periodically from government database",
    "fieldname": "validate_gstin_status",
    "fieldtype": "Check",
    "label": "Refresh and Validate GSTIN Status in Transactions"

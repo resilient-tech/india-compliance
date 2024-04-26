@@ -22,14 +22,15 @@ frappe.ui.form.on(DOCTYPE, {
         frm.set_value("gst_transporter_id", frm.doc.gstin);
     },
 
-    gst_transporter_id(frm) {
-        if (
-            !frm.doc.gst_transporter_id ||
-            frm.doc.gst_transporter_id.length < 15
-        )
-            return;
+    // TODO: Refactor
+    // gst_transporter_id(frm) {
+    //     if (
+    //         !frm.doc.gst_transporter_id ||
+    //         frm.doc.gst_transporter_id.length < 15
+    //     )
+    //         return;
 
-        gst_transporter_id_field = frm.get_field("gst_transporter_id");
-        india_compliance.set_gstin_status(gst_transporter_id_field);
-    },
+    //     gst_transporter_id_field = frm.get_field("gst_transporter_id");
+    //     india_compliance.set_gstin_status(gst_transporter_id_field);
+    // },
 });
