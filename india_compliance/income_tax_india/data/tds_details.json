@@ -1045,6 +1045,13 @@
         "tax_withholding_rate": 5,
         "single_threshold": 15000,
         "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
       }
     ]
   },
@@ -1063,6 +1070,13 @@
         "tax_withholding_rate": 5,
         "single_threshold": 15000,
         "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
+        "tax_withholding_rate": 5,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
       }
     ]
   },
@@ -1078,6 +1092,13 @@
       {
         "from_date": "2023-04-01",
         "to_date": "2024-03-31",
+        "tax_withholding_rate": 20,
+        "single_threshold": 15000,
+        "cumulative_threshold": 0
+      },
+      {
+        "from_date": "2024-04-01",
+        "to_date": "2025-03-31",
         "tax_withholding_rate": 20,
         "single_threshold": 15000,
         "cumulative_threshold": 0

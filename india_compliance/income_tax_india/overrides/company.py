@@ -98,6 +98,9 @@ def get_tds_category_details(accounts):
         )
     )
     for rule in tds_rules:
+        rates = get_prospective_tds_rates(rule["rates"])
+        if not rates:
+            continue
         tds_details.append(
             {
                 "name": rule.get("name"),
@@ -111,7 +114,7 @@ def get_tds_category_details(accounts):
                     "consider_party_ledger_amount"
                 ),
                 "tax_on_excess_amount": rule.get("tax_on_excess_amount"),
-                "rates": get_prospective_tds_rates(rule["rates"]),
+                "rates": rates,
             }
         )
 
