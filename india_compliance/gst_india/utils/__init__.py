@@ -212,13 +212,6 @@ def validate_gst_category(gst_category, gstin):
             )
         )
 
-    if TCS.match(gstin):
-        frappe.throw(
-            _(
-                "e-Commerce Operator (TCS) GSTIN is not allowed for transaction / party / address"
-            ),
-        )
-
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
     if not valid_gstin_format.match(gstin):
         frappe.throw(
@@ -301,6 +294,9 @@ def guess_gst_category(
 
     if GSTIN_FORMATS["Tax Deductor"].match(gstin):
         return "Tax Deductor"
+
+    if GSTIN_FORMATS["Tax Collector"].match(gstin):
+        return "Tax Collector"
 
     if GSTIN_FORMATS["Registered Regular"].match(gstin):
         if gst_category in (
