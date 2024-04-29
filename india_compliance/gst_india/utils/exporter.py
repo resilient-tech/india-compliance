@@ -66,7 +66,6 @@ class Worksheet:
             "height": 20,
             "vertical": "center",
             "wrap_text": False,
-            "bg_color": "f2f2f2",
         }
     )
     filter_format = data_format.copy().update({"bg_color": None, "bold": True})
@@ -81,7 +80,6 @@ class Worksheet:
             "height": 30,
             "vertical": "center",
             "wrap_text": True,
-            "bg_color": "d9d9d9",
         }
     )
     default_styles = frappe._dict(
@@ -106,9 +104,17 @@ class Worksheet:
         filters=None,
         merged_headers=None,
         add_totals=True,
+        default_data_format=None,
+        default_header_format=None,
     ):
         """Create worksheet"""
         self.headers = headers
+
+        if default_data_format:
+            self.data_format.update(default_data_format)
+
+        if default_header_format:
+            self.header_format.update(default_header_format)
 
         self.ws = workbook.create_sheet(sheet_name)
         self.add_data(filters, is_filter=True)

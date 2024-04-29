@@ -171,7 +171,7 @@ def validate_gstin(
             title=_("Invalid {0}").format(label),
         )
 
-    if not (is_transporter_id and gstin.startswith("88")):
+    if not is_transporter_id:
         validate_gstin_check_digit(gstin, label)
 
     if is_tcs_gstin and not TCS.match(gstin):
@@ -210,13 +210,6 @@ def validate_gst_category(gst_category, gstin):
             _(
                 "GST Category cannot be Unregistered for party with GSTIN",
             )
-        )
-
-    if TCS.match(gstin):
-        frappe.throw(
-            _(
-                "e-Commerce Operator (TCS) GSTIN is not allowed for transaction / party / address"
-            ),
         )
 
     valid_gstin_format = GSTIN_FORMATS.get(gst_category)
@@ -301,6 +294,9 @@ def guess_gst_category(
 
     if GSTIN_FORMATS["Tax Deductor"].match(gstin):
         return "Tax Deductor"
+
+    if GSTIN_FORMATS["Tax Collector"].match(gstin):
+        return "Tax Collector"
 
     if GSTIN_FORMATS["Registered Regular"].match(gstin):
         if gst_category in (
@@ -675,6 +671,11 @@ def is_autofill_party_info_enabled():
 
 def can_enable_api(settings):
     return settings.api_secret or frappe.conf.ic_api_secret
+
+
+def get_full_gst_uom(uom, settings=None):
+    uom = get_gst_uom(uom, settings=settings)
+    return f"{uom}-{UOM_MAP.get(uom)}"
 
 
 def get_gst_uom(uom, settings=None):

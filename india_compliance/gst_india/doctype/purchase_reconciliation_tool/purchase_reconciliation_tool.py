@@ -772,6 +772,8 @@ class BuildExcel:
             filters=self.filters,
             headers=self.match_summary_header,
             data=self.get_match_summary_data(),
+            default_data_format={"bg_color": self.COLOR_PALLATE.light_gray},
+            default_header_format={"bg_color": self.COLOR_PALLATE.dark_gray},
         )
 
         if not self.is_supplier_specific:
@@ -780,6 +782,8 @@ class BuildExcel:
                 filters=self.filters,
                 headers=self.supplier_header,
                 data=self.get_supplier_data(),
+                default_data_format={"bg_color": self.COLOR_PALLATE.light_gray},
+                default_header_format={"bg_color": self.COLOR_PALLATE.dark_gray},
             )
 
         excel.create_sheet(
@@ -788,6 +792,8 @@ class BuildExcel:
             merged_headers=self.get_merge_headers(),
             headers=self.invoice_header,
             data=self.get_invoice_data(),
+            default_data_format={"bg_color": self.COLOR_PALLATE.light_gray},
+            default_header_format={"bg_color": self.COLOR_PALLATE.dark_gray},
         )
 
         excel.remove_sheet("Sheet")

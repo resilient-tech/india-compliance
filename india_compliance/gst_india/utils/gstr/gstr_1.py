@@ -9,6 +9,8 @@ import frappe
 from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
+from india_compliance.gst_india.utils import get_full_gst_uom
+
 B2C_LIMIT = 2_50_000
 
 # TODO: Enum for Invoice Type
@@ -198,6 +200,12 @@ class GSTR1Query:
             .where(self.si.docstatus == 1)
             .where(self.si.is_opening != "Yes")
             .where(IfNull(self.si.billing_address_gstin, "") != self.si.company_gstin)
+            .orderby(
+                self.si.posting_date,
+                self.si.name,
+                self.si_item.item_code,
+                order=Order.desc,
+            )
         )
 
         if self.additional_si_columns:
@@ -447,9 +455,12 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         super().__init__(filters)
 
     def process_invoices(self, invoices):
+        settings = frappe.get_cached_doc("GST Settings")
+
         for invoice in invoices:
             self.invoice_conditions = {}
             self.assign_categories(invoice)
+            invoice["uom"] = get_full_gst_uom(invoice.get("uom"), settings)
 
     def assign_categories(self, invoice):
 
@@ -494,7 +505,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 query.gst_treatment,
                 query.uom,
             )
-            .orderby(query.posting_date, query.invoice_no, order=Order.desc)
+            .orderby(
+                query.posting_date, query.invoice_no, query.item_code, order=Order.desc
+            )
         )
 
         return query.run(as_dict=True)

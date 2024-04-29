@@ -129,10 +129,14 @@ def validate_item_wise_tax_detail(doc, gst_accounts):
         return
 
     item_taxable_values = defaultdict(float)
+    item_qty_map = defaultdict(float)
+
+    cess_non_advol_account = get_gst_accounts_by_tax_type(doc.company, "cess_non_advol")
 
     for row in doc.items:
         item_key = row.item_code or row.item_name
         item_taxable_values[item_key] += row.taxable_value
+        item_qty_map[item_key] += row.qty
 
     for row in doc.taxes:
         if row.account_head not in gst_accounts:
@@ -155,15 +159,25 @@ def validate_item_wise_tax_detail(doc, gst_accounts):
 
             # Sales Invoice is created with manual tax amount. So, when a sales return is created,
             # the tax amount is not recalculated, causing the issue.
-            item_taxable_value = item_taxable_values.get(item_name, 0)
-            tax_difference = abs(item_taxable_value * tax_rate / 100 - tax_amount)
+
+            is_cess_non_advol = row.account_head in cess_non_advol_account
+            multiplier = (
+                item_qty_map.get(item_name, 0)
+                if is_cess_non_advol
+                else item_taxable_values.get(item_name, 0) / 100
+            )
+            tax_difference = abs(multiplier * tax_rate - tax_amount)
 
             if tax_difference > 1:
+                correct_charge_type = (
+                    "On Item Quantity" if is_cess_non_advol else "On Net Total"
+                )
+
                 frappe.throw(
                     _(
                         "Tax Row #{0}: Charge Type is set to Actual. However, Tax Amount {1} as computed for Item {2}"
-                        " is incorrect. Try setting the Charge Type to On Net Total."
-                    ).format(row.idx, tax_amount, bold(item_name))
+                        " is incorrect. Try setting the Charge Type to {3}"
+                    ).format(row.idx, tax_amount, bold(item_name), correct_charge_type)
                 )
 
 
@@ -213,6 +227,44 @@ def validate_mandatory_fields(doc, fields, error_message=None):
             error_message.format(bold(_(doc.meta.get_label(field)))),
             title=_("Missing Required Field"),
         )
+
+
+def get_applicable_gst_accounts(
+    company, *, for_sales, is_inter_state, is_reverse_charge=False
+):
+    all_gst_accounts = set()
+    applicable_gst_accounts = set()
+
+    if for_sales:
+        account_types = ["Output"]
+    else:
+        account_types = ["Input"]
+
+    if is_reverse_charge:
+        account_types.append("Reverse Charge")
+
+    for account_type in account_types:
+        accounts = get_gst_accounts_by_type(company, account_type, throw=True)
+
+        if not accounts:
+            continue
+
+        for account_type, account_name in accounts.items():
+            if not account_name:
+                continue
+
+            if is_inter_state and account_type in ["cgst_account", "sgst_account"]:
+                all_gst_accounts.add(account_name)
+                continue
+
+            if not is_inter_state and account_type == "igst_account":
+                all_gst_accounts.add(account_name)
+                continue
+
+            applicable_gst_accounts.add(account_name)
+            all_gst_accounts.add(account_name)
+
+    return all_gst_accounts, applicable_gst_accounts
 
 
 @frappe.whitelist()
@@ -471,12 +523,12 @@ def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, ta
         )
 
     if (
-        tax_row.charge_type != "On Item Quantity"
+        tax_row.charge_type not in ["On Item Quantity", "Actual"]
         and tax_row.account_head in cess_non_advol_accounts
     ):
         frappe.throw(
             _(
-                "Row #{0}: Charge Type must be <strong>On Item Quantity</strong>"
+                "Row #{0}: Charge Type must be <strong>On Item Quantity / Actual</strong>"
                 " as it is a Cess Non Advol Account"
             ).format(tax_row.idx),
             title=_("Invalid Charge Type"),
@@ -790,6 +842,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
+    # Party/Address Defaults
     party_address_field = (
         "customer_address" if is_sales_transaction else "supplier_address"
     )
@@ -801,6 +854,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             party_details.update(party_gst_details)
             gst_details.update(party_gst_details)
 
+    # POS
     gst_details.place_of_supply = (
         party_details.place_of_supply
         if (not update_place_of_supply and party_details.place_of_supply)
@@ -830,6 +884,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     if doctype == "Payment Entry":
         return gst_details
 
+    # Taxes Not Applicable
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
         or (
@@ -861,6 +916,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         else "Purchase Taxes and Charges Template"
     )
 
+    # Tax Category in Transaction
     tax_template_by_category = get_tax_template_based_on_category(
         master_doctype, company, party_details
     )
@@ -875,6 +931,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     if not gst_details.place_of_supply or not party_details.company_gstin:
         return gst_details
 
+    # Fetch template by perceived tax
     if default_tax := get_tax_template(
         master_doctype,
         company,
@@ -1295,22 +1352,47 @@ def set_reverse_charge_as_per_gst_settings(doc):
 
 def set_reverse_charge(doc):
     doc.is_reverse_charge = 1
+    is_inter_state = is_inter_state_supply(doc)
+
+    # get defaults
     default_tax = get_tax_template(
         "Purchase Taxes and Charges Template",
         doc.company,
-        is_inter_state_supply(doc),
+        is_inter_state,
         doc.company_gstin[:2],
         doc.is_reverse_charge,
     )
 
-    if default_tax:
-        doc.taxes_and_charges = default_tax
-        template = (
-            get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax)
-            or []
-        )
-        doc.set("taxes", template)
-        doc.run_method("calculate_taxes_and_totals")
+    if not default_tax:
+        return
+
+    template = (
+        get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax) or []
+    )
+
+    # compare accounts
+    all_gst_accounts, applicable_gst_accounts = get_applicable_gst_accounts(
+        doc.company,
+        for_sales=False,
+        is_inter_state=is_inter_state,
+        is_reverse_charge=True,
+    )
+    existing_accounts = set(
+        row.account_head for row in doc.taxes if row.account_head in all_gst_accounts
+    )
+    has_invalid_accounts = existing_accounts - applicable_gst_accounts
+
+    if has_invalid_accounts:
+        return
+
+    has_same_accounts = not (applicable_gst_accounts - existing_accounts)
+
+    # update taxes
+    if doc.taxes_and_charges == default_tax and has_same_accounts:
+        return
+
+    doc.taxes_and_charges = default_tax
+    doc.set("taxes", template)
 
 
 def validate_gstin_status(gstin, transaction_date):
@@ -1367,6 +1449,16 @@ def validate_company_address_field(doc):
         return False
 
 
+def before_validate_transaction(doc, method=None):
+    if ignore_gst_validations(doc, throw=False):
+        return False
+
+    if not doc.place_of_supply:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+    set_reverse_charge_as_per_gst_settings(doc)
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1417,8 +1509,6 @@ def validate_transaction(doc, method=None):
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
-
-    set_reverse_charge_as_per_gst_settings(doc)
 
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
