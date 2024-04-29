@@ -247,7 +247,6 @@ def summarize_data(data, for_books=False):
                 summary_row["unique_records"].add(doc_num)
 
             if subcategory == GSTR1_SubCategories.DOC_ISSUE.value:
-                print(row)
                 count_doc_issue_summary(summary_row, row)
 
             if subcategory == GSTR1_SubCategories.HSN.value:

@@ -142,9 +142,6 @@ frappe.ui.form.on(DOCTYPE, {
         //     });
         // })
 
-        await is_latest_data(frm)
-
-
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
             let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`;
@@ -164,8 +161,6 @@ frappe.ui.form.on(DOCTYPE, {
                 frm.doc.year != filters.year
             )
                 return;
-
-            console.log("data loaded");
 
             frm.doc.__onload = { data };
             frm.trigger("after_save");
@@ -278,6 +273,7 @@ class GSTR1 {
                 return;
             }
 
+            this.show_tab(tab.name);
             tab.shown = true;
             this.tabs[`${tab.name}_tab`].tabmanager.refresh_data(
                 this.data[tab.name],
@@ -432,7 +428,12 @@ class GSTR1 {
             .hide();
     }
 
-    show_tab(tab_name) { }
+    show_tab(tab_name) {
+        this.$wrapper
+            .find(`[data-fieldname="${tab_name}_tab"]`)
+            .closest(".nav-item")
+            .show();
+    }
 
     get_filter_fields() {
         const fields = [

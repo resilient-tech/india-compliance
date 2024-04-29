@@ -353,10 +353,10 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         # 2. All as per Books
         #  - Upload all except missing in Books
 
-    gstr1_log.update_json_for("reconcile", reconciled_data)
-
     if update_books_match:
         gstr1_log.update_json_for("books", books_data)
+
+    gstr1_log.update_json_for("reconcile", reconciled_data)
 
     return reconciled_data
 
