@@ -11,6 +11,7 @@ from frappe.utils import flt, get_last_day, getdate
 from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
     summarize_data,
 )
+from india_compliance.gst_india.report.gst_balance.gst_balance import execute
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
@@ -46,7 +47,7 @@ class GSTR1Beta(Document):
             self.set_onload("data", data)
 
     def validate(self):
-        period = self.get_period()
+        period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
         if log_name := frappe.db.exists(
@@ -99,20 +100,6 @@ class GSTR1Beta(Document):
         gstr1_log.update_status("In Progress")
         frappe.enqueue(self.generate_gstr1, queue="long")
         frappe.msgprint("GSTR-1 is being prepared", alert=True)
-
-    def get_period(self):
-        if "-" in self.month_or_quarter:
-            # Quarterly
-            last_month = self.month_or_quarter.split("-")[1]
-            month_number = str(getdate(f"{last_month}-{self.year}").month).zfill(2)
-
-        else:
-            # Monthly
-            month_number = str(
-                datetime.strptime(self.month_or_quarter, "%B").month
-            ).zfill(2)
-
-        return f"{month_number}{self.year}"
 
     def generate_gstr1(self):
         filters = {
@@ -222,6 +209,19 @@ class GSTR1Beta(Document):
             data[field] = summary_data
 
         on_generate()
+
+
+def get_period(month_or_quarter, year):
+    if "-" in month_or_quarter:
+        # Quarterly
+        last_month = month_or_quarter.split("-")[1]
+        month_number = str(getdate(f"{last_month}-{year}").month).zfill(2)
+
+    else:
+        # Monthly
+        month_number = str(datetime.strptime(month_or_quarter, "%B").month).zfill(2)
+
+    return f"{month_number}{year}"
 
 
 def generate_gstr1():
@@ -471,6 +471,53 @@ def get_aggregated_row(books_rows: list) -> dict:
 def get_gstr1_filing_frequency():
     gst_settings = frappe.get_cached_doc("GST Settings")
     return gst_settings.filing_frequency
+
+
+@frappe.whitelist()
+def is_latest_data(month_or_quarter, year, company_gstin):
+    period = get_period(month_or_quarter, year)
+    if log_name := frappe.db.exists("GSTR-1 Filed Log", f"{period}-{company_gstin}"):
+        gstr1_log = frappe.get_doc("GSTR-1 Filed Log", log_name)
+        return gstr1_log.is_latest_data
+
+    return True
+
+
+@frappe.whitelist()
+def get_gst_balance(company, company_gstin, from_date, to_date, show_summary=False):
+    filters = frappe._dict(
+        {
+            "company": company,
+            "company_gstin": company_gstin,
+            "from_date": from_date,
+            "to_date": to_date,
+            "show_summary": False,
+        }
+    )
+    data = execute(filters)[1]
+    gst_ledger = {
+        DataFields.CGST.value: 0,
+        DataFields.IGST.value: 0,
+        DataFields.SGST.value: 0,
+    }
+    for row in data:
+        if "CGST" in row["account"]:
+            gst_ledger[DataFields.CGST.value] += (
+                row["closing_debit"] + row["closing_credit"]
+            )
+            continue
+        if "SGST" in row["account"]:
+            gst_ledger[DataFields.SGST.value] += (
+                row["closing_debit"] + row["closing_credit"]
+            )
+            continue
+        if "IGST" in row["account"]:
+            gst_ledger[DataFields.IGST.value] += (
+                row["closing_debit"] + row["closing_credit"]
+            )
+            continue
+
+    return gst_ledger
 
 
 ####################################################################################################

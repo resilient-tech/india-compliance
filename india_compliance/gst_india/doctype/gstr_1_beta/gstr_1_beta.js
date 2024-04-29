@@ -142,6 +142,9 @@ frappe.ui.form.on(DOCTYPE, {
         //     });
         // })
 
+        await is_latest_data(frm)
+
+
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
             let alert = `GSTR-1 Generation Failed for ${filters.company_gstin} - ${filters.month_or_quarter} - ${filters.year}.<br/><br/>${error}`;
@@ -177,15 +180,23 @@ frappe.ui.form.on(DOCTYPE, {
         const options = await india_compliance.set_gstin_options(frm);
 
         frm.set_value("company_gstin", options[0]);
+
+
     },
 
     company_gstin: render_empty_state,
 
-    month_or_quarter: render_empty_state,
+    async month_or_quarter(frm) {
+        render_empty_state(frm)
+        await is_latest_data(frm)
 
-    year(frm) {
+    },
+
+    async year(frm) {
         render_empty_state(frm);
         set_options_for_month_or_quarter(frm);
+        await is_latest_data(frm)
+
     },
 
     refresh(frm) {
@@ -689,7 +700,7 @@ class TabManager {
 
         value =
             args[2]?.indent == 0
-            ? `<strong>${value}</strong>`
+                ? `<strong>${value}</strong>`
                 : isDescriptionCell
                     ? `<a href="#" class="summary-description">
                     <p style="padding-left: 15px">${value}</p>
@@ -1589,6 +1600,20 @@ async function get_gstr1_filing_frequency() {
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_gstr1_filing_frequency",
             callback: function (r) {
                 resolve(r.message);
+            },
+        });
+    });
+}
+
+async function is_latest_data(frm) {
+    return new Promise((resolve, reject) => {
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.is_latest_data",
+            args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin },
+            callback: function (r) {
+                if (!r.message) {
+                    frm.set_intro("Your Books data is not latest data. Please generate latest books data.", "red")
+                }
             },
         });
     });

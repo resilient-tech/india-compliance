@@ -99,8 +99,8 @@ class GSTR1_SubCategories(Enum):
     # Invoice Items Bifurcation
     B2B_REGULAR = "B2B Regular"
     B2B_REVERSE_CHARGE = "B2B Reverse Charge"
-    SEZWP = "SEZ With Payment of Tax"
-    SEZWOP = "SEZ Without Payment of Tax"
+    SEZWP = "SEZ with payment"
+    SEZWOP = "SEZ without payment"
     DE = "Deemed Exports"
     EXPWP = "Export With Payment of Tax"
     EXPWOP = "Export Without Payment of Tax"
