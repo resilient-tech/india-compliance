@@ -171,7 +171,7 @@ def validate_gstin(
             title=_("Invalid {0}").format(label),
         )
 
-    if not (is_transporter_id and gstin.startswith("88")):
+    if not is_transporter_id:
         validate_gstin_check_digit(gstin, label)
 
     if is_tcs_gstin and not TCS.match(gstin):
