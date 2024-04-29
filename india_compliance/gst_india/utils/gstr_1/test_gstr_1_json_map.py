@@ -911,7 +911,7 @@ class TestHSNSUM(FrappeTestCase):
                     GovDataFields.TAX_RATE.value: 0.1,
                 },
                 {
-                    GovDataFields.INDEX.value: 1,
+                    GovDataFields.INDEX.value: 2,
                     GovDataFields.HSN_CODE.value: "999512",
                     GovDataFields.DESCRIPTION.value: "Goods Description",
                     GovDataFields.UOM.value: "NOS",
@@ -927,7 +927,6 @@ class TestHSNSUM(FrappeTestCase):
         cls.mapped_data = {
             GSTR1_SubCategories.HSN.value: {
                 "1010 - KGS-KILOGRAMS - 0.1": {
-                    ItemFields.INDEX.value: 1,
                     DataFields.HSN_CODE.value: "1010",
                     DataFields.DESCRIPTION.value: "Goods Description",
                     DataFields.UOM.value: "KGS-KILOGRAMS",
@@ -938,7 +937,6 @@ class TestHSNSUM(FrappeTestCase):
                     DataFields.TAX_RATE.value: 0.1,
                 },
                 "999512 - NOS-NUMBERS - 5.0": {
-                    ItemFields.INDEX.value: 1,
                     DataFields.HSN_CODE.value: "999512",
                     DataFields.DESCRIPTION.value: "Goods Description",
                     DataFields.UOM.value: "NOS-NUMBERS",
@@ -1130,7 +1128,6 @@ class TestDOC_ISSUE(FrappeTestCase):
             GSTR1_SubCategories.DOC_ISSUE.value: {
                 "Invoices for outward supply - 1": {
                     DataFields.DOC_TYPE.value: "Invoices for outward supply",
-                    ItemFields.INDEX.value: 1,
                     DataFields.FROM_SR.value: "1",
                     DataFields.TO_SR.value: "10",
                     DataFields.TOTAL_COUNT.value: 10,
@@ -1138,7 +1135,6 @@ class TestDOC_ISSUE(FrappeTestCase):
                 },
                 "Invoices for outward supply - 11": {
                     DataFields.DOC_TYPE.value: "Invoices for outward supply",
-                    ItemFields.INDEX.value: 2,
                     DataFields.FROM_SR.value: "11",
                     DataFields.TO_SR.value: "20",
                     DataFields.TOTAL_COUNT.value: 10,
@@ -1146,7 +1142,6 @@ class TestDOC_ISSUE(FrappeTestCase):
                 },
                 "Invoices for inward supply from unregistered person - 1": {
                     DataFields.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
-                    ItemFields.INDEX.value: 1,
                     DataFields.FROM_SR.value: "1",
                     DataFields.TO_SR.value: "10",
                     DataFields.TOTAL_COUNT.value: 10,
@@ -1154,7 +1149,6 @@ class TestDOC_ISSUE(FrappeTestCase):
                 },
                 "Invoices for inward supply from unregistered person - 11": {
                     DataFields.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
-                    ItemFields.INDEX.value: 2,
                     DataFields.FROM_SR.value: "11",
                     DataFields.TO_SR.value: "20",
                     DataFields.TOTAL_COUNT.value: 10,

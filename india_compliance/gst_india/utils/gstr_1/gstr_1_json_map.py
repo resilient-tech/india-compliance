@@ -891,7 +891,7 @@ class CDNUR(DataMapper):
 class HSNSUM(DataMapper):
     SUBCATEGORY = GSTR1_SubCategories.HSN.value
     KEY_MAPPING = {
-        GovDataFields.INDEX.value: ItemFields.INDEX.value,
+        # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         GovDataFields.HSN_CODE.value: DataFields.HSN_CODE.value,
         GovDataFields.DESCRIPTION.value: DataFields.DESCRIPTION.value,
         GovDataFields.UOM.value: DataFields.UOM.value,
@@ -930,7 +930,10 @@ class HSNSUM(DataMapper):
         input_data = list(input_data[self.SUBCATEGORY].values())
         return {
             GovDataFields.HSN_DATA.value: [
-                self.format_data(invoice, reverse=True) for invoice in input_data
+                self.format_data(
+                    invoice, {GovDataFields.INDEX.value: index + 1}, reverse=True
+                )
+                for index, invoice in enumerate(input_data)
             ]
         }
 
@@ -1095,7 +1098,7 @@ class TXPD(AT):
 
 class DOC_ISSUE(DataMapper):
     KEY_MAPPING = {
-        GovDataFields.INDEX.value: ItemFields.INDEX.value,
+        # GovDataFields.INDEX.value: ItemFields.INDEX.value,
         GovDataFields.FROM_SR.value: DataFields.FROM_SR.value,
         GovDataFields.TO_SR.value: DataFields.TO_SR.value,
         GovDataFields.TOTAL_COUNT.value: DataFields.TOTAL_COUNT.value,
@@ -1160,8 +1163,12 @@ class DOC_ISSUE(DataMapper):
                         doc_nature
                     ),
                     GovDataFields.DOC_ISSUE_LIST.value: [
-                        self.format_data(document, reverse=True)
-                        for document in documents
+                        self.format_data(
+                            document,
+                            {GovDataFields.INDEX.value: index + 1},
+                            reverse=True,
+                        )
+                        for index, document in enumerate(documents)
                     ],
                 }
                 for doc_nature, documents in doc_nature_wise_data.items()
