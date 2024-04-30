@@ -6,17 +6,17 @@ from datetime import datetime
 import frappe
 from frappe import _, unscrub
 from frappe.model.document import Document
+from frappe.query_builder.functions import Date, Sum
 from frappe.utils import flt, get_last_day, getdate
 
 from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
     summarize_data,
 )
-from india_compliance.gst_india.report.gst_balance.gst_balance import execute
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
 )
-from india_compliance.gst_india.utils import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.__init__ import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import (
     E_INVOICE_SUB_CATEGORIES,
@@ -85,6 +85,7 @@ class GSTR1Beta(Document):
             self.data = gstr1_log.load_data()
             self.data["status"] = gstr1_log.filing_status or "Not Filed"
             gstr1_log.update_status("Generated")
+            self.data["computed_on"] = gstr1_log.computed_on.date()
             return
 
         # request OTP
@@ -257,15 +258,7 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
         if mapped_data:
             return mapped_data
 
-    filing_frequency = get_gstr1_filing_frequency()
-
-    if filing_frequency == "Monthly":
-        from_date = getdate(f"{filters.year}-{filters.month_or_quarter}-01")
-        to_date = get_last_day(from_date)
-    else:
-        start_month, end_month = filters.month_or_quarter.split("-")
-        from_date = getdate(f"{filters.year}-{start_month}-01")
-        to_date = get_last_day(f"{filters.year}-{end_month}-01")
+    from_date, to_date = get_from_and_to_date(filters.month_or_quarter, filters.year)
 
     _filters = frappe._dict(
         {
@@ -283,6 +276,20 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     gstr1_log.update_json_for(data_field, mapped_data)
 
     return mapped_data
+
+
+def get_from_and_to_date(month_or_quarter, year):
+    filing_frequency = get_gstr1_filing_frequency()
+
+    if filing_frequency == "Monthly":
+        from_date = getdate(f"{year}-{month_or_quarter}-01")
+        to_date = get_last_day(from_date)
+    else:
+        start_month, end_month = month_or_quarter.split("-")
+        from_date = getdate(f"{year}-{start_month}-01")
+        to_date = get_last_day(f"{year}-{end_month}-01")
+
+    return from_date, to_date
 
 
 def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
@@ -484,38 +491,46 @@ def is_latest_data(month_or_quarter, year, company_gstin):
 
 
 @frappe.whitelist()
-def get_gst_balance(company, company_gstin, from_date, to_date, show_summary=False):
+def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
+    from_date, to_date = get_from_and_to_date(month_or_quarter, year)
+
     filters = frappe._dict(
         {
             "company": company,
             "company_gstin": company_gstin,
             "from_date": from_date,
             "to_date": to_date,
-            "show_summary": False,
         }
     )
-    data = execute(filters)[1]
-    gst_ledger = {
-        DataFields.CGST.value: 0,
-        DataFields.IGST.value: 0,
-        DataFields.SGST.value: 0,
-    }
-    for row in data:
-        if "CGST" in row["account"]:
-            gst_ledger[DataFields.CGST.value] += (
-                row["closing_debit"] + row["closing_credit"]
+    accounts = get_gst_accounts_by_type(company, "Output")
+
+    gl_entry = frappe.qb.DocType("GL Entry")
+    gst_ledger = frappe._dict(
+        frappe.qb.from_(gl_entry)
+        .select(gl_entry.account, (Sum(gl_entry.debit) - Sum(gl_entry.credit)))
+        .where(
+            gl_entry.account.isin(
+                [
+                    accounts["cgst_account"],
+                    accounts["sgst_account"],
+                    accounts["igst_account"],
+                ]
             )
-            continue
-        if "SGST" in row["account"]:
-            gst_ledger[DataFields.SGST.value] += (
-                row["closing_debit"] + row["closing_credit"]
-            )
-            continue
-        if "IGST" in row["account"]:
-            gst_ledger[DataFields.IGST.value] += (
-                row["closing_debit"] + row["closing_credit"]
-            )
-            continue
+        )
+        .where(gl_entry.company == filters.company)
+        .where(Date(gl_entry.posting_date) >= getdate(filters.from_date))
+        .where(Date(gl_entry.posting_date) <= getdate(filters.to_date))
+        .where(gl_entry.company_gstin == filters.company_gstin)
+        .groupby(gl_entry.account)
+        .run(debug=True)
+    )
+    gst_ledger["total_igst_amount"] = gst_ledger[accounts["igst_account"]]
+    gst_ledger["total_cgst_amount"] = gst_ledger[accounts["cgst_account"]]
+    gst_ledger["total_sgst_amount"] = gst_ledger[accounts["sgst_account"]]
+
+    del gst_ledger[accounts["igst_account"]]
+    del gst_ledger[accounts["cgst_account"]]
+    del gst_ledger[accounts["sgst_account"]]
 
     return gst_ledger
 

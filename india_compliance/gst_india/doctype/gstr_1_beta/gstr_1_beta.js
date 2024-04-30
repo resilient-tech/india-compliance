@@ -113,6 +113,8 @@ const MONTH = [
     "December",
 ];
 
+let output_gst_ledger;
+let computed_on;
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         // patch_set_active_tab(frm);
@@ -207,7 +209,7 @@ frappe.ui.form.on(DOCTYPE, {
         frm.doc.__unsaved = true;
     },
 
-    after_save(frm) {
+    async after_save(frm) {
         const data = frm.doc.__onload?.data;
         if (data == "otp_requested") {
             india_compliance
@@ -217,7 +219,8 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         if (!data?.status) return;
-
+        await get_output_gst_legder(frm)
+        computed_on=data.computed_on
         frm.gstr1.status = data.status;
         frm.gstr1.refresh_data(data);
     },
@@ -521,12 +524,16 @@ class TabManager {
     };
 
     constructor(instance, wrapper, callback) {
+        this.total_igst_amount = 0
+        this.total_cgst_amount = 0
+        this.total_sgst_amount = 0
         this.instance = instance;
         this.wrapper = wrapper;
         this.callback = callback;
         this.reset_data();
         this.setup_wrapper();
         this.setup_datatable(wrapper);
+        this.setup_footer(wrapper)
     }
 
     reset_data() {
@@ -541,8 +548,9 @@ class TabManager {
         this.status = status;
         this.setup_actions();
         this.datatable.refresh(this.summary);
-
+        this.set_output_gst_ledger()
         this.set_default_title();
+        this.set_computed_on();
     }
 
     refresh_view(view, category) {
@@ -571,6 +579,7 @@ class TabManager {
         }
 
         this.set_title(category || this.DEFAULT_TITLE);
+        this.setup_footer(this.wrapper)
     }
 
     get_row(data, category) {
@@ -596,6 +605,12 @@ class TabManager {
                 <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
             </div>
             <div class="data-table"></div>
+            <div class="tree-footer col-md-6">
+        <button class="m-3 btn btn-xs btn-default expand" data-action="expand_all_rows">
+            ${__("Expand All")}</button>
+        <button class="mt-3 btn btn-xs btn-default collapse" data-action="collapse_all_rows">
+            ${__("Collapse All")}</button>
+    </div>
         `);
     }
 
@@ -647,6 +662,12 @@ class TabManager {
                             return acc;
                         }, 0);
 
+
+                        if (row.colIndex === 4) this.total_igst_amount = total;
+                        else if (row.colIndex === 5) this.total_cgst_amount = total
+                        else if (row.colIndex === 6) this.total_sgst_amount = total
+
+
                         return total;
                     },
                 },
@@ -657,6 +678,48 @@ class TabManager {
         this.setup_datatable_listeners();
     }
 
+    setup_footer(wrapper) {
+        const treeView = this.instance.active_view === "Summary";
+        if (!treeView) {
+            $(wrapper).find("[data-action=collapse_all_rows]").hide();
+            $(wrapper).find("[data-action=expand_all_rows]").hide();
+        }
+        else {
+            $(wrapper).find("[data-action=collapse_all_rows]").show();
+            $(wrapper).find("[data-action=expand_all_rows]").hide();
+        }
+
+        this.setup_footer_actions(wrapper)
+
+    }
+    setup_footer_actions(wrapper) {
+        this.expand_all_rows(wrapper)
+        this.collapse_all_rows(wrapper)
+    }
+    expand_all_rows(wrapper) {
+        const me = this;
+        $(wrapper).on("click", ".expand",
+            function (e) {
+                e.preventDefault();
+                me.datatable.datatable.rowmanager.expandAllNodes()
+                $(wrapper).find("[data-action=collapse_all_rows]").show();
+                $(wrapper).find("[data-action=expand_all_rows]").hide();
+
+            })
+
+    }
+
+    collapse_all_rows(wrapper) {
+        const me = this;
+        $(wrapper).on("click", ".collapse",
+            function (e) {
+                e.preventDefault();
+                me.datatable.datatable.rowmanager.collapseAllNodes()
+                $(wrapper).find("[data-action=collapse_all_rows]").hide();
+                $(wrapper).find("[data-action=expand_all_rows]").show();
+
+            })
+    }
     setup_datatable_listeners() {
         const me = this;
         this.datatable.$datatable.on(
@@ -669,6 +732,42 @@ class TabManager {
                 me.callback && me.callback(summary_description);
             }
         );
+    }
+
+    set_output_gst_ledger() {
+        if (this instanceof BooksTab) {
+            //Checks if gst-ledger-difference element is there and removes if already present
+            if ($('.gst-ledger-difference').length) {
+                $('.gst-ledger-difference').remove();
+            }
+
+            const differences = {
+                IGST: this.total_igst_amount - (output_gst_ledger["total_igst_amount"] || 0),
+                CGST: this.total_cgst_amount - (output_gst_ledger["total_cgst_amount"] || 0),
+                SGST: this.total_sgst_amount - (output_gst_ledger["total_sgst_amount"] || 0)
+            };
+
+            //prepending the gst-legder-difference element
+            let output_gst_ledger_html = `
+    <div class="gst-ledger-difference m-3 d-flex justify-content-around align-items-center">
+        ${Object.entries(differences).map(([type, difference]) => `
+            <div>
+                <h5>Difference in ${type} Amount</h5>
+                <h4 class="text-center ${difference > 0 ? 'text-info' : 'text-success'}">${format_currency(difference)}</h4>
+            </div>
+        `).join('')}
+    </div>`;
+            this.wrapper.prepend(output_gst_ledger_html)
+        }
+    }
+
+    set_computed_on(){
+        if(this instanceof BooksTab){
+            if ($('.computed-on').length) {
+                $('.computed-on').remove();
+            }
+            this.wrapper.append(`<h5 class="computed-on mr-3 text-right">Computed On : <b>${computed_on}</b></h5>`)
+        }
     }
 
     setup_actions() { }
@@ -1614,8 +1713,23 @@ async function is_latest_data(frm) {
             callback: function (r) {
                 if (!r.message) {
                     frm.set_intro("Your Books data is not latest data. Please generate latest books data.", "red")
+                    resolve()
                 }
             },
         });
     });
+}
+
+async function get_output_gst_legder(frm) {
+    return new Promise((resolve, reject) => {
+        frappe.call({
+            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_output_gst_balance",
+            args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin, company: frm.doc.company },
+            callback: function (r) {
+                output_gst_ledger = r.message
+                resolve()
+            },
+        });
+    });
+
 }
