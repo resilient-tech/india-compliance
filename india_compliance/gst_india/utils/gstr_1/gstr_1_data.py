@@ -385,6 +385,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
 
             if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
                 invoice["stock_uom"] = "OTH-OTHERS"
+                invoice["qty"] = 0
                 continue
 
             stock_uom = invoice.get("stock_uom", "")

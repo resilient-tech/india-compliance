@@ -218,27 +218,29 @@ def summarize_data(data, for_books=False):
         if subcategory not in data:
             continue
 
-        subcategory_summary[subcategory] = {
-            "description": subcategory,
-            "no_of_records": 0,
-            "indent": 1,
-            "consider_in_total_taxable_value": (
-                False
-                if subcategory in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
-                else True
-            ),
-            "consider_in_total_tax": (
-                False
-                if subcategory in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
-                else True
-            ),
-            "unique_records": set(),
-            **AMOUNT_FIELDS,
-        }
+        summary_row = subcategory_summary.setdefault(
+            subcategory,
+            {
+                "description": subcategory,
+                "no_of_records": 0,
+                "indent": 1,
+                "consider_in_total_taxable_value": (
+                    False
+                    if subcategory
+                    in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
+                    else True
+                ),
+                "consider_in_total_tax": (
+                    False
+                    if subcategory in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
+                    else True
+                ),
+                "unique_records": set(),
+                **AMOUNT_FIELDS,
+            },
+        )
 
-    for subcategory, _data in data.items():
-        summary_row = subcategory_summary[subcategory]
-
+        _data = data[subcategory]
         for row in _data:
             for key in AMOUNT_FIELDS:
                 summary_row[key] += row.get(key, 0)

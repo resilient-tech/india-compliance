@@ -103,7 +103,7 @@ class TestB2B(FrappeTestCase):
                         GovDataFields.POS.value: "06",
                         GovDataFields.REVERSE_CHARGE.value: "N",
                         GovDataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
-                        GovDataFields.INVOICE_TYPE.value: "SEZWP",
+                        GovDataFields.INVOICE_TYPE.value: "SEWP",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
                             {

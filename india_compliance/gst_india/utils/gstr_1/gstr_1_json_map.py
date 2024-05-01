@@ -160,7 +160,7 @@ class B2B(DataMapper):
     # value formatting constants
     DOCUMENT_CATEGORIES = {
         "R": "Regular B2B",
-        "SEZWP": "SEZ supplies with payment",
+        "SEWP": "SEZ supplies with payment",
         "SEWOP": "SEZ supplies without payment",
         "DE": "Deemed Exports",
     }
@@ -168,7 +168,7 @@ class B2B(DataMapper):
     SUBCATEGORIES = {
         # "B2B": GSTR1_SubCategories.B2B_REGULAR.value,
         # "B2B": GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
-        "SEZWP": GSTR1_SubCategories.SEZWP.value,
+        "SEWP": GSTR1_SubCategories.SEZWP.value,
         "SEWOP": GSTR1_SubCategories.SEZWOP.value,
         "DE": GSTR1_SubCategories.DE.value,
     }
@@ -649,7 +649,7 @@ class CDNR(DataMapper):
 
     DOCUMENT_CATEGORIES = {
         "R": "Regular B2B",
-        "SEZWP": "SEZ supplies with payment",
+        "SEWP": "SEZ supplies with payment",
         "SEWOP": "SEZ supplies without payment",
         "DE": "Deemed Exports",
     }

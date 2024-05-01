@@ -8,10 +8,6 @@ Steps:
 WHAT SETTINGS?
 - Use API
 - Quarterly or Monthly
-V - Dates
-V - NIL Exempt ignore zero
-V - HSN Summary: Idx
-V - Document Issued: Idx
 V - FLT: Json
 
 UI:
@@ -28,6 +24,7 @@ P - Books data as on
 Notes
 S - Test with Actual Data
 S - Refactor and cleanup
+S - Qty for services
 
 Data Export
 P - Reconcile excel with all data export
