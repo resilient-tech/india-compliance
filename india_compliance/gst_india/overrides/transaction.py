@@ -224,6 +224,44 @@ def validate_mandatory_fields(doc, fields, error_message=None):
         )
 
 
+def get_applicable_gst_accounts(
+    company, *, for_sales, is_inter_state, is_reverse_charge=False
+):
+    all_gst_accounts = set()
+    applicable_gst_accounts = set()
+
+    if for_sales:
+        account_types = ["Output"]
+    else:
+        account_types = ["Input"]
+
+    if is_reverse_charge:
+        account_types.append("Reverse Charge")
+
+    for account_type in account_types:
+        accounts = get_gst_accounts_by_type(company, account_type, throw=True)
+
+        if not accounts:
+            continue
+
+        for account_type, account_name in accounts.items():
+            if not account_name:
+                continue
+
+            if is_inter_state and account_type in ["cgst_account", "sgst_account"]:
+                all_gst_accounts.add(account_name)
+                continue
+
+            if not is_inter_state and account_type == "igst_account":
+                all_gst_accounts.add(account_name)
+                continue
+
+            applicable_gst_accounts.add(account_name)
+            all_gst_accounts.add(account_name)
+
+    return all_gst_accounts, applicable_gst_accounts
+
+
 @frappe.whitelist()
 def get_valid_gst_accounts(company):
     frappe.has_permission("Item Tax Template", "read", throw=True)
@@ -735,6 +773,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     party_details = frappe.parse_json(party_details)
     gst_details = frappe._dict()
 
+    # Party/Address Defaults
     party_address_field = (
         "customer_address" if is_sales_transaction else "supplier_address"
     )
@@ -746,6 +785,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
             party_details.update(party_gst_details)
             gst_details.update(party_gst_details)
 
+    # POS
     gst_details.place_of_supply = (
         party_details.place_of_supply
         if (not update_place_of_supply and party_details.place_of_supply)
@@ -775,6 +815,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     if doctype == "Payment Entry":
         return gst_details
 
+    # Taxes Not Applicable
     if (
         (destination_gstin and destination_gstin == source_gstin)  # Internal transfer
         or (is_sales_transaction and (is_export_without_payment_of_gst(party_details)))
@@ -800,6 +841,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
         else "Purchase Taxes and Charges Template"
     )
 
+    # Tax Category in Transaction
     tax_template_by_category = get_tax_template_based_on_category(
         master_doctype, company, party_details
     )
@@ -814,6 +856,7 @@ def get_gst_details(party_details, doctype, company, *, update_place_of_supply=F
     if not gst_details.place_of_supply or not party_details.company_gstin:
         return gst_details
 
+    # Fetch template by perceived tax
     if default_tax := get_tax_template(
         master_doctype,
         company,
@@ -1269,22 +1312,47 @@ def set_reverse_charge_as_per_gst_settings(doc):
 
 def set_reverse_charge(doc):
     doc.is_reverse_charge = 1
+    is_inter_state = is_inter_state_supply(doc)
+
+    # get defaults
     default_tax = get_tax_template(
         "Purchase Taxes and Charges Template",
         doc.company,
-        is_inter_state_supply(doc),
+        is_inter_state,
         doc.company_gstin[:2],
         doc.is_reverse_charge,
     )
 
-    if default_tax:
-        doc.taxes_and_charges = default_tax
-        template = (
-            get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax)
-            or []
-        )
-        doc.set("taxes", template)
-        doc.run_method("calculate_taxes_and_totals")
+    if not default_tax:
+        return
+
+    template = (
+        get_taxes_and_charges("Purchase Taxes and Charges Template", default_tax) or []
+    )
+
+    # compare accounts
+    all_gst_accounts, applicable_gst_accounts = get_applicable_gst_accounts(
+        doc.company,
+        for_sales=False,
+        is_inter_state=is_inter_state,
+        is_reverse_charge=True,
+    )
+    existing_accounts = set(
+        row.account_head for row in doc.taxes if row.account_head in all_gst_accounts
+    )
+    has_invalid_accounts = existing_accounts - applicable_gst_accounts
+
+    if has_invalid_accounts:
+        return
+
+    has_same_accounts = not (applicable_gst_accounts - existing_accounts)
+
+    # update taxes
+    if doc.taxes_and_charges == default_tax and has_same_accounts:
+        return
+
+    doc.taxes_and_charges = default_tax
+    doc.set("taxes", template)
 
 
 def validate_gstin_status(gstin, transaction_date):
@@ -1341,6 +1409,16 @@ def validate_company_address_field(doc):
         return False
 
 
+def before_validate_transaction(doc, method=None):
+    if ignore_gst_validations(doc):
+        return False
+
+    if not doc.place_of_supply:
+        doc.place_of_supply = get_place_of_supply(doc, doc.doctype)
+
+    set_reverse_charge_as_per_gst_settings(doc)
+
+
 def validate_transaction(doc, method=None):
     if ignore_gst_validations(doc):
         return False
@@ -1393,8 +1471,6 @@ def validate_transaction(doc, method=None):
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
-
-    set_reverse_charge_as_per_gst_settings(doc)
 
     valid_accounts = GSTAccounts().validate(doc, is_sales_transaction) or ()
     validate_reverse_charge_transaction(doc, is_sales_transaction)
