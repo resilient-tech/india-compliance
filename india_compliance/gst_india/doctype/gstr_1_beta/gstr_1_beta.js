@@ -166,7 +166,6 @@ frappe.ui.form.on(DOCTYPE, {
 
             frm.doc.__onload = { data };
             frm.trigger("after_save");
-            frm.refresh();
         });
     },
 
@@ -177,8 +176,6 @@ frappe.ui.form.on(DOCTYPE, {
         const options = await india_compliance.set_gstin_options(frm);
 
         frm.set_value("company_gstin", options[0]);
-
-
     },
 
     company_gstin: render_empty_state,
@@ -200,9 +197,6 @@ frappe.ui.form.on(DOCTYPE, {
         // Primary Action
         frm.disable_save();
         frm.page.set_primary_action(__("Generate"), () => frm.save());
-
-        // Indicators
-        frm.gstr1?.render_indicator();
     },
 
     before_save(frm) {
@@ -265,9 +259,13 @@ class GSTR1 {
     }
 
     refresh_data(data) {
-        if (data) this.data = data;
+        this.render_indicator();
 
-        if (!this.data["filed"]) this.data["filed"] = this.data["books"];
+        if (data) this.data = data;
+        if (!this.data["filed"]) {
+            this.data["filed"] = this.data["books"];
+            this.data["filed_summary"] = this.data["books_summary"];
+        }
 
         this.TABS.forEach(tab => {
             if (!this.data[tab.name]) {
@@ -397,6 +395,7 @@ class GSTR1 {
 
         this.$wrapper.find(`[data-fieldname="filed_tab"]`).html(tab_name);
         this.frm.page.set_indicator(this.status, color);
+        this.frm.refresh();
     }
 
     // SETUP

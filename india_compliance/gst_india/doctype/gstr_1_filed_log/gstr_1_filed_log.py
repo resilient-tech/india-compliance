@@ -242,6 +242,9 @@ def summarize_data(data, for_books=False):
 
         _data = data[subcategory]
         for row in _data:
+            if row.get("upload_status") == "Missing in Books":
+                continue
+
             for key in AMOUNT_FIELDS:
                 summary_row[key] += row.get(key, 0)
 
