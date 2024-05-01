@@ -365,15 +365,15 @@ class GSTTransactionData:
             for tax in GST_TAX_TYPES[:3]
         )
 
-        total_value = self.rounded(item_details.taxable_value)
+        total_value = item_details.taxable_value
 
+        # for reverse charge total amount is equal to taxable value.
         if not (self.doc.doctype == "Sales Invoice" and self.doc.is_reverse_charge):
             total_value += sum(
-                self.rounded(item_details.get(f"{tax}_amount", 0))
-                for tax in GST_TAX_TYPES
+                item_details.get(f"{tax}_amount", 0) for tax in GST_TAX_TYPES
             )
 
-        total_value = abs(total_value)
+        total_value = abs(self.rounded(total_value))
 
         validate_gst_tax_rate(tax_rate, item)
 

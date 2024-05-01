@@ -40,17 +40,10 @@ def validate_tax_rates(doc):
     if not intra_state_accounts and not inter_state_accounts:
         return
 
-    valid_accounts = inter_state_accounts + inter_state_accounts
-    rcm_accounts = []
-
-    for account_type in ("Sales Reverse Charge", "Purchase Reverse Charge"):
-        rcm_accounts.extend(
-            list(
-                (
-                    get_gst_accounts_by_type(doc.company, account_type, throw=False)
-                ).values()
-            )
-        )
+    valid_accounts = intra_state_accounts + inter_state_accounts
+    rcm_accounts = (
+        get_gst_accounts_by_type(doc.company, "Sales Reverse Charge", throw=False)
+    ).values()
 
     invalid_tax_rates = {}
     for row in doc.taxes:

@@ -19,9 +19,9 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
     update_valuation_rate,
 )
 from india_compliance.gst_india.overrides.transaction import (
+    GSTAccounts,
     ItemGSTDetails,
     ItemGSTTreatment,
-    GSTAccounts,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 

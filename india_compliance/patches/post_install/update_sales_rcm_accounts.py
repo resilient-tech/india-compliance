@@ -25,18 +25,32 @@ def execute():
 
     companies = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
     for company in companies:
+        # skipping if account already exists
+        if frappe.get_all(
+            "Account",
+            {
+                "company": company,
+                "account_name": ("in", SALES_RCM_ACCOUNTS),
+            },
+            ["account_name", "name"],
+            as_list=1,
+        ):
+            continue
+
         # determinig default gst rate
         output_igst_account = get_gst_accounts_by_type(company, "Output").igst_account
 
-        default_gst_rate = frappe.db.get_value(
-            "Sales Taxes and Charges",
-            filters={"account_head": output_igst_account},
-            fieldname="rate",
+        default_gst_rate = (
+            frappe.db.get_value(
+                "Sales Taxes and Charges",
+                filters={"account_head": output_igst_account},
+                fieldname="rate",
+            )
+            or 18
         )
 
         create_default_sales_rcm_templates(company, default_gst_rate)
         update_gst_settings(company)
-        update_item_tax_template(company)
 
 
 def create_default_sales_rcm_templates(company, gst_rate):
@@ -44,12 +58,10 @@ def create_default_sales_rcm_templates(company, gst_rate):
     sales_tax_templates = (
         default_taxes.get("chart_of_accounts").get("*").get("sales_tax_templates")
     )
-    sales_rcm_tax_templates = []
     for template in sales_tax_templates:
-        if template.get("title") in SALES_RCM_TEMPLATES:
-            sales_rcm_tax_templates.append(template)
+        if not template.get("title") in SALES_RCM_TEMPLATES:
+            continue
 
-    for template in sales_rcm_tax_templates:
         for row in template.get("taxes"):
             if gst_rate == 18:
                 continue
@@ -100,42 +112,3 @@ def update_gst_settings(company):
     )
 
     gst_settings.save()
-
-
-def update_item_tax_template(company):
-    gst_accounts = get_gst_accounts_by_type(
-        company, "Sales Reverse Charge", throw=False
-    )
-
-    if not gst_accounts:
-        return
-
-    item_tax_templates = frappe.get_all(
-        "Item Tax Template",
-        {"company": company},
-        pluck="name",
-    )
-
-    for template_name in item_tax_templates:
-        doc = frappe.get_doc("Item Tax Template", template_name)
-        existing_account_list = []
-
-        if not doc.gst_rate:
-            continue
-
-        for tax in doc.taxes:
-            existing_account_list.append(tax.tax_type)
-
-        for type, account in gst_accounts.items():
-            if not account:
-                continue
-
-            if account in existing_account_list:
-                continue
-
-            tax_rate = (
-                doc.gst_rate if type == "igst_account" else doc.gst_rate / 2
-            ) * -1
-            doc.append("taxes", {"tax_type": account, "tax_rate": tax_rate})
-
-        doc.save()

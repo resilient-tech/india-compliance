@@ -268,6 +268,12 @@ def get_valid_gst_accounts(company):
     return get_valid_accounts(company, for_sales=True, for_purchase=True, throw=False)
 
 
+@frappe.whitelist()
+def get_valid_gst_accounts_by_type(company, tax_type):
+    frappe.has_permission("Item Tax Template", "read", throw=True)
+    return get_gst_accounts_by_type(company, tax_type, throw=True)
+
+
 def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=True):
     all_valid_accounts = []
     intra_state_accounts = []
@@ -1490,19 +1496,6 @@ def onload(doc, method=None):
         return
 
     set_gst_breakup(doc)
-
-
-def set_reverse_charge_amount(doc, method=None, print_settings=None):
-    if not doc.is_reverse_charge:
-        return
-
-    total_reverse_charge_amount = 0
-
-    for row in doc.items:
-        for tax in GST_TAX_TYPES:
-            total_reverse_charge_amount += row.get(f"{tax}_amount")
-
-    doc.reverse_charge_amount = total_reverse_charge_amount
 
 
 def validate_ecommerce_gstin(doc):
