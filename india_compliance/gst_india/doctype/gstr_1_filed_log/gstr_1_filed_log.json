@@ -14,10 +14,10 @@
   "acknowledgement_number",
   "generation_status",
   "section_break_oisv",
-  "e_invoice",
+  "unfiled",
   "filed",
   "column_break_hxfu",
-  "e_invoice_summary",
+  "unfiled_summary",
   "filed_summary",
   "computed_data_section",
   "is_latest_data",
@@ -75,11 +75,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "e_invoice_summary",
-   "fieldtype": "Attach",
-   "label": "e-Invoice Summary"
-  },
-  {
    "fieldname": "computed_data_section",
    "fieldtype": "Section Break",
    "label": "Computed Data"
@@ -117,11 +112,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "e_invoice",
-   "fieldtype": "Attach",
-   "label": "e-Invoice Data"
-  },
-  {
    "fieldname": "filed",
    "fieldtype": "Attach",
    "label": "Filed Data"
@@ -150,11 +140,21 @@
    "fieldname": "reconcile_summary",
    "fieldtype": "Attach",
    "label": "Reconcile Summary"
+  },
+  {
+   "fieldname": "unfiled",
+   "fieldtype": "Attach",
+   "label": "Unfiled Invoices"
+  },
+  {
+   "fieldname": "unfiled_summary",
+   "fieldtype": "Attach",
+   "label": "Unfiled Summary"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-25 16:53:33.497404",
+ "modified": "2024-05-01 16:07:43.167344",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",

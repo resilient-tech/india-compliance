@@ -118,7 +118,7 @@ class GSTR1_SubCategories(Enum):
     SUPECOM_9_5 = "GST Payable on RCM by E-commerce Operator u/s 9(5)"
 
 
-E_INVOICE_SUB_CATEGORIES = [
+INVOICE_SUB_CATEGORIES = [
     GSTR1_SubCategories.B2B_REGULAR.value,
     GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
     GSTR1_SubCategories.SEZWP.value,
@@ -127,6 +127,8 @@ E_INVOICE_SUB_CATEGORIES = [
     GSTR1_SubCategories.EXPWP.value,
     GSTR1_SubCategories.EXPWOP.value,
     GSTR1_SubCategories.CDNR.value,
+    GSTR1_SubCategories.B2CL.value,
+    GSTR1_SubCategories.CDNUR.value,
 ]
 
 

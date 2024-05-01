@@ -82,7 +82,7 @@ class GSTR1FiledLog(Document):
             new_json = json_data
 
             # reset reconciled data
-            if file_field in ["books", "filed"]:
+            if file_field in ["books", "filed", "unfiled"]:
                 self.remove_json_for("reconcile")
 
         else:
@@ -135,7 +135,7 @@ class GSTR1FiledLog(Document):
         if not settings.analyze_filed_data:
             return False
 
-        if not self.e_invoice or self.filing_status != "Filed":
+        if not self.unfiled or self.filing_status != "Filed":
             return True
 
         if not self.filed:
@@ -182,7 +182,7 @@ class GSTR1FiledLog(Document):
             if self.filing_status == "Filed":
                 fields.extend(["filed", "filed_summary"])
             else:
-                fields.extend(["e_invoice", "e_invoice_summary"])
+                fields.extend(["unfiled", "unfiled_summary"])
 
         return fields
 

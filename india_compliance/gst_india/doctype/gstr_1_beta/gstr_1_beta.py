@@ -19,7 +19,7 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
 from india_compliance.gst_india.utils.__init__ import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import (
-    E_INVOICE_SUB_CATEGORIES,
+    INVOICE_SUB_CATEGORIES,
     DataFields,
     GSTR1_Categories,
     GSTR1_SubCategories,
@@ -159,10 +159,8 @@ class GSTR1Beta(Document):
 
         if status == "Filed":
             gov_data_field = "filed"
-            gov_summary_field = "filed_summary"
         else:
-            gov_data_field = "e_invoice"
-            gov_summary_field = "e_invoice_summary"
+            gov_data_field = "unfiled"
 
         # Get Data
         gov_data, is_enqueued = get_gstr1_json_data(self.gstr1_log)
@@ -193,7 +191,7 @@ class GSTR1Beta(Document):
 
         summary_fields = {
             "reconcile": "reconcile_summary",
-            f"{gov_data_field}": gov_summary_field,
+            f"{gov_data_field}": f"{gov_data_field}_summary",
             "books": "books_summary",
         }
 
@@ -234,7 +232,7 @@ def get_gstr1_json_data(gstr1_log):
         data_field = "filed"
 
     else:
-        data_field = "e_invoice"
+        data_field = "unfiled"
 
     # data exists
     if gstr1_log.get(data_field):
@@ -301,7 +299,12 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         return gstr1_log.get_json_for("reconcile")
 
     reconciled_data = {}
-    update_books_match = False if gstr1_log.filing_status == "Filed" else True
+    if gstr1_log.filing_status == "Filed":
+        update_books_match = False
+        reconcile_only_invoices = False
+    else:
+        update_books_match = True
+        reconcile_only_invoices = True
 
     for subcategory in GSTR1_SubCategories:
         subcategory = subcategory.value
@@ -311,7 +314,12 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         if not books_subdata and not gov_subdata:
             continue
 
-        is_e_invoice_subcategory = subcategory in E_INVOICE_SUB_CATEGORIES
+        is_invoice_subcategory = subcategory in INVOICE_SUB_CATEGORIES
+
+        if reconcile_only_invoices and not is_invoice_subcategory:
+            print("Skipping", subcategory)
+            continue
+
         reconcile_subdata = {}
 
         # Books vs Gov
@@ -322,7 +330,7 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
             if reconcile_row:
                 reconcile_subdata[key] = reconcile_row
 
-            if not update_books_match or not is_e_invoice_subcategory:
+            if not update_books_match or not is_invoice_subcategory:
                 continue
 
             # Update Books Data
@@ -341,7 +349,7 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
 
             reconcile_subdata[key] = get_reconciled_row(None, gov_value)
 
-            if not update_books_match or not is_e_invoice_subcategory:
+            if not update_books_match or not is_invoice_subcategory:
                 continue
 
             is_list = isinstance(gov_value, list)
@@ -522,7 +530,7 @@ def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
         .where(Date(gl_entry.posting_date) <= getdate(filters.to_date))
         .where(gl_entry.company_gstin == filters.company_gstin)
         .groupby(gl_entry.account)
-        .run(debug=True)
+        .run()
     )
     gst_ledger["total_igst_amount"] = gst_ledger[accounts["igst_account"]]
     gst_ledger["total_cgst_amount"] = gst_ledger[accounts["cgst_account"]]

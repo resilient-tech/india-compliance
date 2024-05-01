@@ -236,9 +236,9 @@ class GSTR1 {
             _TabManager: BooksTab,
         },
         {
-            label: __("e-Invoice"),
-            name: "e_invoice",
-            _TabManager: eInvoiceTab,
+            label: __("Unfiled"),
+            name: "unfiled",
+            _TabManager: UnfiledTab,
         },
         {
             label: __("Reconcile"),
@@ -1537,11 +1537,11 @@ class FiledTab extends TabManager {
     }
 }
 
-class eInvoiceTab extends FiledTab {
+class UnfiledTab extends FiledTab {
     setup_actions() { }
 
     set_default_title() {
-        this.DEFAULT_TITLE = "e-Invoices as in GSTR-1";
+        this.DEFAULT_TITLE = "Invoices as visible in GSTR-1";
         super.set_default_title();
     }
 }
@@ -1550,7 +1550,7 @@ class ReconcileTab extends FiledTab {
     set_default_title() {
         if (this.instance.data.status === "Filed")
             this.DEFAULT_TITLE = "Difference between Books vs Filed";
-        else this.DEFAULT_TITLE = "Difference between Books vs e-Invoices";
+        else this.DEFAULT_TITLE = "Difference between Books vs Unfiled GSTR-1";
 
         super.set_default_title();
     }

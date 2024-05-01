@@ -11,7 +11,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 )
 
 """
-Download GSTR-1 and e-Invoices data from GST Portal
+Download GSTR-1 and Unfiled GSTR1 data from GST Portal
 """
 
 
@@ -30,7 +30,7 @@ GSTR1_ACTIONS = [
     "RETSUM",
 ]
 
-E_INVOICE_ACTIONS = ["B2B", "CDNR", "CDNUR", "EXP"]
+INVOICE_ACTIONS = ["B2B", "B2CL", "CDNR", "CDNUR", "EXP"]
 
 
 def download_gstr1_json_data(gstr1_log):
@@ -44,18 +44,16 @@ def download_gstr1_json_data(gstr1_log):
     if gstr1_log.filing_status == "Filed":
         return_type = "GSTR1"
         actions = GSTR1_ACTIONS
-        api_method = api.get_gstr_1_data
         data_field = "filed"
 
     else:
-        return_type = "e-Invoice"
-        actions = E_INVOICE_ACTIONS
-        api_method = api.get_einvoice_data
-        data_field = "e_invoice"
+        return_type = "Unfiled GSTR1"
+        actions = INVOICE_ACTIONS
+        data_field = "unfiled"
 
     # download data
     for action in actions:
-        response = api_method(action, return_period)
+        response = api.get_gstr_1_data(action, return_period)
 
         if response.error_type in ["otp_requested", "invalid_otp"]:
             return response, None
@@ -102,8 +100,8 @@ def save_gstr_1(gstin, return_period, json_data, return_type):
     if return_type == "GSTR1":
         data_field = "filed"
 
-    elif return_type == "e-Invoice":
-        data_field = "e_invoice"
+    elif return_type == "Unfiled GSTR1":
+        data_field = "unfiled"
 
     if not json_data:
         frappe.throw(
@@ -124,5 +122,5 @@ def save_gstr_1_filed_data(gstin, return_period, json_data):
     save_gstr_1(gstin, return_period, json_data, "GSTR1")
 
 
-def save_einvoice_data(gstin, return_period, json_data):
-    save_gstr_1(gstin, return_period, json_data, "e-Invoice")
+def save_gstr_1_invoice_data(gstin, return_period, json_data):
+    save_gstr_1(gstin, return_period, json_data, "Unfiled GSTR1")
