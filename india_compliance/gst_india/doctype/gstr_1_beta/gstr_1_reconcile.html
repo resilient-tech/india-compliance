@@ -1,0 +1,39 @@
+<div class="container">
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr class="text-center">
+                <th></th>
+                <th>Gov</th>
+                <th>Books</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% var field_keys = Object.keys(gov) %}
+            {% if field_keys.length > 0 %}
+                {% for fieldname in field_keys %}
+                    {%if fieldname_map[fieldname]%}
+                        <tr>
+                        <td><b>{{ fieldname_map[fieldname]}}</b></td>
+                        <td>{{gov[fieldname]}}</td>
+                        <td>{{books[fieldname] || "-" }}</td>
+                        </tr>
+                    {%endif%}
+                {% endfor %}
+            {% else %}
+            {% var field_keys=Object.keys(books)%}
+            {% if field_keys.length > 0 %}
+                {% for fieldname in field_keys %}
+                    {%if fieldname_map[fieldname]%}
+                        <tr>
+                        <td><b>{{ fieldname_map[fieldname] }}</b></td>
+                        <td>{{gov[fieldname] || "-"}}</td>
+                        <td>{{books[fieldname] }}</td>
+                        </tr>
+                    {%endif%}
+  	            {% endfor %}
+
+            {% endif %}
+            {% endif %}
+        </tbody>
+    </table>
+</div>

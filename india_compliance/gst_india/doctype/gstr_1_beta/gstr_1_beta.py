@@ -85,7 +85,7 @@ class GSTR1Beta(Document):
             self.data = gstr1_log.load_data()
             self.data["status"] = gstr1_log.filing_status or "Not Filed"
             gstr1_log.update_status("Generated")
-            self.data["computed_on"] = gstr1_log.computed_on.date()
+            self.data["computed_on"] = gstr1_log.computed_on
             return
 
         # request OTP
@@ -515,16 +515,8 @@ def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
     gl_entry = frappe.qb.DocType("GL Entry")
     gst_ledger = frappe._dict(
         frappe.qb.from_(gl_entry)
-        .select(gl_entry.account, (Sum(gl_entry.debit) - Sum(gl_entry.credit)))
-        .where(
-            gl_entry.account.isin(
-                [
-                    accounts["cgst_account"],
-                    accounts["sgst_account"],
-                    accounts["igst_account"],
-                ]
-            )
-        )
+        .select(gl_entry.account, (Sum(gl_entry.credit) - Sum(gl_entry.debit)))
+        .where(gl_entry.account.isin(list(accounts.values())))
         .where(gl_entry.company == filters.company)
         .where(Date(gl_entry.posting_date) >= getdate(filters.from_date))
         .where(Date(gl_entry.posting_date) <= getdate(filters.to_date))
@@ -532,15 +524,15 @@ def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
         .groupby(gl_entry.account)
         .run()
     )
-    gst_ledger["total_igst_amount"] = gst_ledger[accounts["igst_account"]]
-    gst_ledger["total_cgst_amount"] = gst_ledger[accounts["cgst_account"]]
-    gst_ledger["total_sgst_amount"] = gst_ledger[accounts["sgst_account"]]
+    net_output_balance = {
+        "total_igst_amount": gst_ledger.get(accounts["igst_account"], 0),
+        "total_cgst_amount": gst_ledger.get(accounts["cgst_account"], 0),
+        "total_sgst_amount": gst_ledger.get(accounts["sgst_account"], 0),
+        "total_cess_amount": gst_ledger.get(accounts["cess_account"], 0)
+        + gst_ledger.get(accounts["cess_non_advol_account"], 0),
+    }
 
-    del gst_ledger[accounts["igst_account"]]
-    del gst_ledger[accounts["cgst_account"]]
-    del gst_ledger[accounts["sgst_account"]]
-
-    return gst_ledger
+    return net_output_balance
 
 
 ####################################################################################################

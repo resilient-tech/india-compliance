@@ -113,7 +113,27 @@ const MONTH = [
     "December",
 ];
 
-let output_gst_ledger;
+const FIELDNAME_MAP = {
+    "hsn_code": "HSN Code",
+    "quantity": "Quantity",
+    "tax_rate": "Tax Rate",
+    "total_taxable_value": "Taxable Value",
+    "total_cess_amount": "CESS",
+    "total_igst_amount": "IGST",
+    "total_cgst_amount": "CGST",
+    "total_sgst_amount": "SGST",
+    "uom": "UOM",
+    "customer_gstin": "Customer GSTIN",
+    "customer_name": "Customer Name",
+    "document_date": "Invoice Date",
+    "document_number": "Invoice Number",
+    "document_type": "Invoice Type",
+    "place_of_supply": "Place of Supply",
+    "reverse_charge": "Reverse Charge",
+    "from_sr_no": "Sr No From",
+    "to_sr_no": "Sr No To",
+}
+let net_balance_during_period;
 let computed_on;
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
@@ -214,7 +234,7 @@ frappe.ui.form.on(DOCTYPE, {
 
         if (!data?.status) return;
         await get_output_gst_legder(frm)
-        computed_on=data.computed_on
+        computed_on = data.computed_on
         frm.gstr1.status = data.status;
         frm.gstr1.refresh_data(data);
     },
@@ -523,9 +543,6 @@ class TabManager {
     };
 
     constructor(instance, wrapper, callback) {
-        this.total_igst_amount = 0
-        this.total_cgst_amount = 0
-        this.total_sgst_amount = 0
         this.instance = instance;
         this.wrapper = wrapper;
         this.callback = callback;
@@ -550,9 +567,15 @@ class TabManager {
         this.set_output_gst_ledger()
         this.set_default_title();
         this.set_computed_on();
+
+        if (this instanceof ReconcileTab) {
+            this.setup_eye_click_listener()
+        }
     }
 
     refresh_view(view, category) {
+        if(view=="Summary" && !category)this.set_output_gst_ledger()
+
         if (!category && view === "Details") return;
 
         this.filter_category = category;
@@ -579,7 +602,9 @@ class TabManager {
 
         this.set_title(category || this.DEFAULT_TITLE);
         this.setup_footer(this.wrapper)
+
     }
+
 
     get_row(data, category) {
         if (category == "Nil-Rated, Exempted, Non-GST")
@@ -661,12 +686,6 @@ class TabManager {
                             return acc;
                         }, 0);
 
-
-                        if (row.colIndex === 4) this.total_igst_amount = total;
-                        else if (row.colIndex === 5) this.total_cgst_amount = total
-                        else if (row.colIndex === 6) this.total_sgst_amount = total
-
-
                         return total;
                     },
                 },
@@ -735,33 +754,39 @@ class TabManager {
 
     set_output_gst_ledger() {
         if (this instanceof BooksTab) {
+            console.log(this)
             //Checks if gst-ledger-difference element is there and removes if already present
             if ($('.gst-ledger-difference').length) {
                 $('.gst-ledger-difference').remove();
             }
 
+
             const differences = {
-                IGST: this.total_igst_amount - (output_gst_ledger["total_igst_amount"] || 0),
-                CGST: this.total_cgst_amount - (output_gst_ledger["total_cgst_amount"] || 0),
-                SGST: this.total_sgst_amount - (output_gst_ledger["total_sgst_amount"] || 0)
+                IGST: net_balance_during_period["total_igst_amount"] || 0,
+                CGST: net_balance_during_period["total_cgst_amount"] || 0,
+                SGST: net_balance_during_period["total_sgst_amount"] || 0,
+                CESS: net_balance_during_period["total_cess_amount"] || 0
             };
 
             //prepending the gst-legder-difference element
-            let output_gst_ledger_html = `
-    <div class="gst-ledger-difference m-3 d-flex justify-content-around align-items-center">
+            let output_gst_ledger_html = `<div class="gst-ledger-difference w-100">
+            <div class="m-3 text-center"><h4>Net Transactions (Credit - Debit) during the period</h4></div>
+    <div class="m-3 d-flex justify-content-around align-items-center">
         ${Object.entries(differences).map(([type, difference]) => `
             <div>
-                <h5>Difference in ${type} Amount</h5>
-                <h4 class="text-center ${difference > 0 ? 'text-info' : 'text-success'}">${format_currency(difference)}</h4>
+                <h5>Net Balance of ${type} Account</h5>
+                <h4 class="text-center">${format_currency(difference)}</h4>
             </div>
         `).join('')}
+    </div>
     </div>`;
-            this.wrapper.prepend(output_gst_ledger_html)
+            let element = $('[data-fieldname="data_section"]');
+            element.prepend(output_gst_ledger_html)
         }
     }
 
-    set_computed_on(){
-        if(this instanceof BooksTab){
+    set_computed_on() {
+        if (this instanceof BooksTab) {
             if ($('.computed-on').length) {
                 $('.computed-on').remove();
             }
@@ -874,6 +899,7 @@ class TabManager {
 
     get_invoice_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "Invoice Date",
                 fieldname: GSTR1_DataFields.DOC_DATE,
@@ -921,6 +947,7 @@ class TabManager {
 
     get_export_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "Invoice Date",
                 fieldname: GSTR1_DataFields.DOC_DATE,
@@ -977,6 +1004,7 @@ class TabManager {
 
         return [
             {
+                ...this.get_detailed_view_column(),
                 name: "Transaction Type",
                 fieldname: GSTR1_DataFields.TRANSACTION_TYPE,
                 width: 100,
@@ -1028,6 +1056,7 @@ class TabManager {
 
     get_hsn_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "HSN Code",
                 fieldname: GSTR1_DataFields.HSN_CODE,
@@ -1096,6 +1125,7 @@ class TabManager {
 
     get_documents_issued_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "Document Type",
                 fieldname: GSTR1_DataFields.DOC_TYPE,
@@ -1308,7 +1338,9 @@ class BooksTab extends TabManager {
     }
 
     // COLUMNS
-
+    get_detailed_view_column() {
+        return [];
+    }
     get_match_columns() {
         if (this.status === "Filed") return [];
         return [
@@ -1461,6 +1493,11 @@ class FiledTab extends TabManager {
         ];
     }
 
+    get_detailed_view_column() {
+        return [];
+    }
+
+
     get_nil_exempt_columns() {
         return [
             {
@@ -1570,6 +1607,40 @@ class ReconcileTab extends FiledTab {
         });
     }
 
+    get_detailed_view_column() {
+        return [
+            {
+                fieldname: "detail_view",
+                fieldtype: "html",
+                width: 60,
+                align: "center",
+                _value: (...args) => this.get_icon(...args, "eye")
+            }
+        ]
+    }
+    get_icon(value, column, data, icon) {
+        if (!data) return ""
+        console.log(data)
+        // const hash = get_hash(data);
+        return `<button class="btn ${icon}" data-gov='${JSON.stringify(data["gov"])}' data-books='${JSON.stringify(data["books"])}' >
+                <i class="fa fa-${icon}"></i>
+            </button>`;
+
+    }
+
+    setup_eye_click_listener() {
+        const me = this;
+        console.log(this)
+        this.datatable.$wrapper.on("click", ".btn.eye", function (e) {
+
+            let gov_data = JSON.parse($(this).attr("data-gov"))
+            let books_data = JSON.parse($(this).attr("data-books"))
+            console.log(gov_data)
+            console.log(books_data)
+            me.dm = new DetailViewDialog(gov_data, books_data)
+        });
+    }
+
     get_match_columns() {
         return [
             {
@@ -1585,6 +1656,48 @@ class ReconcileTab extends FiledTab {
         ];
     }
 }
+
+
+class DetailViewDialog {
+
+    constructor(gov, books) {
+        this.gov = gov
+        this.books = books
+        this.render_dialog()
+        this.dialog.show()
+    }
+    init_dialog() {
+        this.dialog = new frappe.ui.Dialog({
+            title: 'Detail View',
+            fields: [
+                {
+                    fieldtype: "HTML",
+                    fieldname: "reconcile_data"
+                }
+            ]
+        })
+    }
+    render_dialog() {
+        this.init_dialog()
+        this.render_table()
+    }
+    render_table() {
+        const detail_table = this.dialog.fields_dict.reconcile_data;
+
+        detail_table.html(
+            frappe.render_template("gstr_1_reconcile", {
+                gov: this.gov,
+                books: this.books,
+                fieldname_map: FIELDNAME_MAP
+            })
+        )
+    }
+}
+
+
+
+
+
 
 function set_options_for_month_or_quarter(frm) {
     /**
@@ -1725,7 +1838,7 @@ async function get_output_gst_legder(frm) {
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_output_gst_balance",
             args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin, company: frm.doc.company },
             callback: function (r) {
-                output_gst_ledger = r.message
+                net_balance_during_period = r.message
                 resolve()
             },
         });
