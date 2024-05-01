@@ -232,11 +232,13 @@ def get_applicable_gst_accounts(
 
     if for_sales:
         account_types = ["Output"]
+        reverse_charge_type = "Sales Reverse Charge"
     else:
         account_types = ["Input"]
+        reverse_charge_type = "Purchase Reverse Charge"
 
     if is_reverse_charge:
-        account_types.append("Reverse Charge")
+        account_types.append(reverse_charge_type)
 
     for account_type in account_types:
         accounts = get_gst_accounts_by_type(company, account_type, throw=True)
