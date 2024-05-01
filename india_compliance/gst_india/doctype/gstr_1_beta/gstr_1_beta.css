@@ -43,6 +43,10 @@ div[data-page-route="GSTR-1 Beta"] .tab-title-text {
     font-size: 1.2rem;
 }
 
+div[data-page-route="GSTR-1 Beta"] .tab-subtitle-text {
+    font-size: 0.8rem;
+}
+
 div[data-page-route="GSTR-1 Beta"] .datatable .dt-row {
     height: unset;
 }

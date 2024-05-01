@@ -543,6 +543,8 @@ class TabManager {
     };
 
     constructor(instance, wrapper, callback) {
+        this.DEFAULT_TITLE = "";
+        this.DEFAULT_SUBTITLE = "";
         this.instance = instance;
         this.wrapper = wrapper;
         this.callback = callback;
@@ -579,6 +581,7 @@ class TabManager {
         if (!category && view === "Details") return;
 
         this.filter_category = category;
+        let subtitle = ""
 
         if (view === "Details") {
             const columns_func = this.CATEGORY_COLUMNS[category];
@@ -598,9 +601,10 @@ class TabManager {
                 filtered_summary,
                 this.get_summary_columns()
             );
+            subtitle = this.DEFAULT_SUBTITLE;
         }
 
-        this.set_title(category || this.DEFAULT_TITLE);
+        this.set_title(category || this.DEFAULT_TITLE, subtitle);
         this.setup_footer(this.wrapper)
 
     }
@@ -613,19 +617,25 @@ class TabManager {
 
     // SETUP
 
-    set_title(category) {
-        if (category) this.wrapper.find(".tab-title-text").text(category);
+    set_title(title, subtitle) {
+        if (title) this.wrapper.find(".tab-title-text").text(title);
         else this.wrapper.find(".tab-title-text").html("&nbsp");
+
+        if (subtitle) this.wrapper.find(".tab-subtitle-text").text(subtitle);
+        else this.wrapper.find(".tab-subtitle-text").html("");
     }
 
     set_default_title() {
-        this.set_title(this.DEFAULT_TITLE);
+        this.set_title(this.DEFAULT_TITLE, this.DEFAULT_SUBTITLE);
     }
 
     setup_wrapper() {
         this.wrapper.append(`
             <div class="tab-title m-3 d-flex justify-content-between align-items-center">
-                <div class="tab-title-text">&nbsp</div>
+                <div>
+                    <div class="tab-title-text">&nbsp</div>
+                    <div class="tab-subtitle-text"></div>
+                </div>
                 <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
             </div>
             <div class="data-table"></div>
@@ -1433,8 +1443,6 @@ class FiledTab extends TabManager {
         [GSTR1_SubCategories.DOC_ISSUE]: this.get_documents_issued_columns,
     };
 
-    DEFAULT_TITLE = "";
-
     setup_actions() {
         this.add_tab_custom_button("Download Excel", () =>
             this.download_filed_as_excel()
@@ -1444,6 +1452,13 @@ class FiledTab extends TabManager {
 
         this.add_tab_custom_button("Download JSON", () => console.log("hi"));
         this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
+    }
+
+    set_default_title() {
+        if (this.status === "Filed") this.DEFAULT_TITLE = "Summary of Filed GSTR-1";
+        else this.DEFAULT_TITLE = "Summary of Draft GSTR-1";
+
+        super.set_default_title();
     }
 
     // ACTIONS
@@ -1577,18 +1592,20 @@ class UnfiledTab extends FiledTab {
     setup_actions() { }
 
     set_default_title() {
-        this.DEFAULT_TITLE = "Invoices as visible in GSTR-1";
-        super.set_default_title();
+        this.DEFAULT_TITLE = "Summary of Invoices as on Portal";
+        this.DEFAULT_SUBTITLE = "Excluding B2CS, Nil-Exempt";
+        TabManager.prototype.set_default_title.call(this);
     }
 }
 
 class ReconcileTab extends FiledTab {
     set_default_title() {
         if (this.instance.data.status === "Filed")
-            this.DEFAULT_TITLE = "Difference between Books vs Filed";
-        else this.DEFAULT_TITLE = "Difference between Books vs Unfiled GSTR-1";
+            this.DEFAULT_TITLE = "Books vs Filed";
+        else this.DEFAULT_TITLE = "Books vs Unfiled";
 
-        super.set_default_title();
+        this.DEFAULT_SUBTITLE = "Only differences";
+        TabManager.prototype.set_default_title.call(this);
     }
 
     setup_actions() {
