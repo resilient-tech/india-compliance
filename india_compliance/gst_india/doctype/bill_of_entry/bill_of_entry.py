@@ -21,7 +21,7 @@ from india_compliance.gst_india.overrides.ineligible_itc import (
 from india_compliance.gst_india.overrides.transaction import (
     ItemGSTDetails,
     ItemGSTTreatment,
-    validate_charge_type_for_cess_non_advol_accounts,
+    GSTAccounts,
 )
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 
@@ -290,7 +290,7 @@ class BillofEntry(Document):
                     ).format(tax.idx)
                 )
 
-            validate_charge_type_for_cess_non_advol_accounts(
+            GSTAccounts.validate_charge_type_for_cess_non_advol_accounts(
                 [input_accounts.cess_non_advol_account], tax
             )
 

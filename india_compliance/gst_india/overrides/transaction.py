@@ -255,175 +255,248 @@ def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=Tr
     return all_valid_accounts, intra_state_accounts, inter_state_accounts
 
 
-def validate_gst_accounts(doc, is_sales_transaction=False):
-    """
-    Validate GST accounts
-    - Only Valid Accounts should be allowed
-    - No GST account should be specified for transactions where Company GSTIN = Party GSTIN
-    - If export is made without GST, then no GST account should be specified
-    - SEZ / Inter-State supplies should not have CGST or SGST account
-    - Intra-State supplies should not have IGST account
-    """
-    if not doc.taxes:
-        return
+class GSTAccounts:
+    def validate(self, doc, is_sales_transaction=False):
+        self.doc = doc
+        self.is_sales_transaction = is_sales_transaction
 
-    if not (
-        rows_to_validate := [
-            row
-            for row in doc.taxes
-            if row.tax_amount and row.account_head in get_all_gst_accounts(doc.company)
-        ]
-    ):
-        return
+        if not self.doc.taxes:
+            return
 
-    # Helper functions
+        if self.has_no_gst_accounts():
+            return
 
-    def _get_matched_idx(rows_to_search, account_head_list):
-        return next(
-            (
-                row.idx
-                for row in rows_to_search
-                if row.account_head in account_head_list
-            ),
-            None,
+        self.setup_defaults()
+
+        self.validate_for_invalid_accounts()
+        self.validate_same_party_gstin()
+        self.validate_reverse_charge_accounts()
+        self.validate_sales_transaction()
+        self.validate_purchase_transaction()
+        self.validate_for_invalid_account_type()
+        self.validate_for_charge_type()
+        self.validate_missing_accounts_in_item_tax_template()
+
+        return self.all_valid_accounts
+
+    def setup_defaults(self):
+        (
+            self.all_valid_accounts,
+            self.intra_state_accounts,
+            self.inter_state_accounts,
+        ) = get_valid_accounts(
+            self.doc.company,
+            for_sales=self.is_sales_transaction,
+            for_purchase=not self.is_sales_transaction,
         )
 
-    def _throw(message, title=None):
-        frappe.throw(message, title=title or _("Invalid GST Account"))
+        self.first_gst_idx = self._get_matched_idx(
+            self.gst_tax_rows, self.all_valid_accounts
+        )
+        self.used_accounts = set(row.account_head for row in self.gst_tax_rows)
 
-    all_valid_accounts, intra_state_accounts, inter_state_accounts = get_valid_accounts(
-        doc.company,
-        for_sales=is_sales_transaction,
-        for_purchase=not is_sales_transaction,
-    )
-    cess_non_advol_accounts = get_gst_accounts_by_tax_type(
-        doc.company, "cess_non_advol"
-    )
+    def has_no_gst_accounts(self):
+        self.gst_tax_rows = [
+            row
+            for row in self.doc.taxes
+            if row.tax_amount
+            and row.account_head in get_all_gst_accounts(self.doc.company)
+        ]
 
-    # Company GSTIN = Party GSTIN
-    party_gstin = (
-        doc.billing_address_gstin if is_sales_transaction else doc.supplier_gstin
-    )
-    if (
-        party_gstin
-        and doc.company_gstin == party_gstin
-        and (idx := _get_matched_idx(rows_to_validate, all_valid_accounts))
-    ):
-        _throw(
+        return not self.gst_tax_rows
+
+    def validate_for_invalid_accounts(self):
+        """
+        - Only Valid Accounts should be allowed.
+        eg: Output accounts not allowed in Purchase Invoice
+        """
+        for row in self.gst_tax_rows:
+            if row.account_head in self.all_valid_accounts:
+                continue
+
+            self._throw(
+                _(
+                    "Row #{0}: {1} is not a valid GST account for this transaction"
+                ).format(row.idx, bold(row.account_head))
+            )
+
+    def validate_same_party_gstin(self):
+        party_gstin = (
+            self.doc.billing_address_gstin
+            if self.is_sales_transaction
+            else self.doc.supplier_gstin
+        )
+
+        if not party_gstin or self.doc.company_gstin != party_gstin:
+            return
+
+        self._throw(
             _(
                 "Cannot charge GST in Row #{0} since Company GSTIN and Party GSTIN are"
                 " same"
-            ).format(idx)
+            ).format(self.first_gst_idx)
         )
 
-    validate_reverse_charge_accounts(
-        doc, rows_to_validate, _get_matched_idx, _throw, is_sales_transaction
-    )
+    def validate_reverse_charge_accounts(self):
+        """
+        - RCM accounts should not be used in transactions without Reverse Charge
+        """
+        if self.doc.doctype == "Payment Entry" or self.doc.is_reverse_charge:
+            return
 
-    # Sales / Purchase Validations
-    if is_sales_transaction:
-        if is_export_without_payment_of_gst(doc) and (
-            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
-        ):
-            _throw(
+        rcm_account_type = (
+            "Sales Reverse Charge"
+            if self.is_sales_transaction
+            else "Purchase Reverse Charge"
+        )
+
+        reverse_charge_accounts = get_gst_accounts_by_type(
+            self.doc.company, rcm_account_type
+        ).values()
+
+        if idx := self._get_matched_idx(self.gst_tax_rows, reverse_charge_accounts):
+            self._throw(
                 _(
-                    "Cannot charge GST in Row #{0} since export is without"
-                    " payment of GST"
+                    "Cannot use Reverse Charge Account in Row #{0} since transaction is"
+                    " without Reverse Charge"
                 ).format(idx)
             )
 
-    elif doc.gst_category == "Registered Composition" and (
-        idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
-    ):
-        _throw(
-            _(
-                "Cannot claim Input GST in Row #{0} since purchase is being made from a"
-                " dealer registered under Composition Scheme"
-            ).format(idx)
-        )
+    def validate_sales_transaction(self):
+        if not self.is_sales_transaction:
+            return
 
-    elif not doc.is_reverse_charge:
-        if not doc.supplier_gstin and (
-            idx := _get_matched_idx(rows_to_validate, all_valid_accounts)
-        ):
-            _throw(
+        if is_export_without_payment_of_gst(self.doc):
+            self._throw(
+                _(
+                    "Cannot charge GST in Row #{0} since export is without payment of GST"
+                ).format(self.first_gst_idx)
+            )
+
+    def validate_purchase_transaction(self):
+        if self.is_sales_transaction:
+            return
+
+        if self.doc.gst_category == "Registered Composition":
+            self._throw(
+                _(
+                    "Cannot claim Input GST in Row #{0} since purchase is being made from a"
+                    " dealer registered under Composition Scheme"
+                ).format(self.first_gst_idx)
+            )
+
+        if not self.doc.is_reverse_charge and not self.doc.supplier_gstin:
+            self._throw(
                 _(
                     "Cannot charge GST in Row #{0} since purchase is from a Supplier"
                     " without GSTIN"
-                ).format(idx)
+                ).format(self.first_gst_idx)
             )
 
-    is_inter_state = is_inter_state_supply(doc)
-    previous_row_references = set()
+    def validate_for_invalid_account_type(self):
+        """
+        - SEZ / Inter-State supplies should not have CGST or SGST account
+        - Intra-State supplies should not have IGST account
+        - If Intra-State, ensure both CGST and SGST accounts are used
+        """
+        is_inter_state = is_inter_state_supply(self.doc)
+        for row in self.gst_tax_rows:
+            if is_inter_state:
+                if row.account_head in self.intra_state_accounts:
+                    self._throw(
+                        _(
+                            "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
+                        ).format(row.idx)
+                    )
 
-    for row in rows_to_validate:
-        account_head = row.account_head
-        if account_head not in all_valid_accounts:
-            _throw(
-                _("{0} is not a valid GST account for this transaction").format(
-                    bold(account_head)
-                ),
-            )
-
-        # Inter State supplies should not have CGST or SGST account
-        if is_inter_state:
-            if account_head in intra_state_accounts:
-                _throw(
-                    _(
-                        "Row #{0}: Cannot charge CGST/SGST for inter-state supplies"
-                    ).format(row.idx),
+            elif row.account_head in self.inter_state_accounts:
+                self._throw(
+                    _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
+                        row.idx
+                    )
                 )
 
-        # Intra State supplies should not have IGST account
-        elif account_head in inter_state_accounts:
-            _throw(
-                _("Row #{0}: Cannot charge IGST for intra-state supplies").format(
-                    row.idx
-                ),
-            )
+        if is_inter_state:
+            return
 
-        if row.charge_type == "On Previous Row Amount":
-            _throw(
-                _(
-                    "Row #{0}: Charge Type cannot be <strong>On Previous Row"
-                    " Amount</strong> for a GST Account"
-                ).format(row.idx),
-                title=_("Invalid Charge Type"),
-            )
-
-        if row.charge_type == "On Previous Row Total":
-            previous_row_references.add(row.row_id)
-
-        # validating charge type "On Item Quantity" and non_cess_advol_account
-        validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, row)
-
-    used_accounts = set(row.account_head for row in rows_to_validate)
-    if not is_inter_state:
-        if used_accounts and not set(intra_state_accounts[:2]).issubset(used_accounts):
-            _throw(
+        if self.used_accounts and not set(self.intra_state_accounts[:2]).issubset(
+            self.used_accounts
+        ):
+            self._throw(
                 _(
                     "Cannot use only one of CGST or SGST account for intra-state"
                     " supplies"
-                ),
-                title=_("Invalid GST Accounts"),
+                )
             )
 
-    if len(previous_row_references) > 1:
-        _throw(
-            _(
-                "Only one row can be selected as a Reference Row for GST Accounts with"
-                " Charge Type <strong>On Previous Row Total</strong>"
-            ),
-            title=_("Invalid Reference Row"),
+    def validate_for_charge_type(self):
+        cess_non_advol_accounts = get_gst_accounts_by_tax_type(
+            self.doc.company, "cess_non_advol"
         )
+        previous_row_references = set()
+        for row in self.gst_tax_rows:
+            if row.charge_type == "On Previous Row Amount":
+                self._throw(
+                    _(
+                        "Row #{0}: Charge Type cannot be <strong>On Previous Row"
+                        " Amount</strong> for a GST Account"
+                    ).format(row.idx),
+                    title=_("Invalid Charge Type"),
+                )
 
-    for row in doc.get("items") or []:
-        if not row.item_tax_template:
-            continue
+            if row.charge_type == "On Previous Row Total":
+                previous_row_references.add(row.row_id)
 
-        for account in used_accounts:
-            if account in row.item_tax_rate:
+            # validating charge type "On Item Quantity" and non_cess_advol_account
+            self.validate_charge_type_for_cess_non_advol_accounts(
+                cess_non_advol_accounts, row
+            )
+
+        if len(previous_row_references) > 1:
+            self._throw(
+                _(
+                    "Only one row can be selected as a Reference Row for GST Accounts with"
+                    " Charge Type <strong>On Previous Row Total</strong>"
+                ),
+                title=_("Invalid Reference Row"),
+            )
+
+    @staticmethod
+    def validate_charge_type_for_cess_non_advol_accounts(
+        cess_non_advol_accounts, tax_row
+    ):
+        if (
+            tax_row.charge_type == "On Item Quantity"
+            and tax_row.account_head not in cess_non_advol_accounts
+        ):
+            frappe.throw(
+                _(
+                    "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
+                    " as it is not a Cess Non Advol Account"
+                ).format(tax_row.idx),
+                title=_("Invalid Charge Type"),
+            )
+
+        if (
+            tax_row.charge_type not in ["On Item Quantity", "Actual"]
+            and tax_row.account_head in cess_non_advol_accounts
+        ):
+            frappe.throw(
+                _(
+                    "Row #{0}: Charge Type must be <strong>On Item Quantity / Actual</strong>"
+                    " as it is a Cess Non Advol Account"
+                ).format(tax_row.idx),
+                title=_("Invalid Charge Type"),
+            )
+
+    def validate_missing_accounts_in_item_tax_template(self):
+        for row in self.doc.get("items") or []:
+            if not row.item_tax_template:
                 continue
+
+            for account in self.used_accounts:
+                if account in row.item_tax_rate:
+                    continue
 
             frappe.msgprint(
                 _(
@@ -433,59 +506,18 @@ def validate_gst_accounts(doc, is_sales_transaction=False):
                 indicator="orange",
             )
 
-    return all_valid_accounts
-
-
-def validate_reverse_charge_accounts(
-    doc, rows_to_validate, _get_matched_idx, _throw, is_sales_transaction
-):
-    if doc.doctype == "Payment Entry" or doc.is_reverse_charge:
-        return
-
-    rcm_account_type = (
-        "Sales Reverse Charge" if is_sales_transaction else "Purchase Reverse Charge"
-    )
-
-    reverse_charge_accounts = get_gst_accounts_by_type(
-        doc.company, rcm_account_type
-    ).values()
-
-    if idx := _get_matched_idx(
-        rows_to_validate,
-        reverse_charge_accounts,
-    ):
-        _throw(
-            _(
-                "Cannot use Reverse Charge Account in Row #{0} since transaction is"
-                " without Reverse Charge"
-            ).format(idx)
+    def _get_matched_idx(self, rows_to_search, account_head_list):
+        return next(
+            (
+                row.idx
+                for row in rows_to_search
+                if row.account_head in account_head_list
+            ),
+            None,
         )
 
-
-def validate_charge_type_for_cess_non_advol_accounts(cess_non_advol_accounts, tax_row):
-    if (
-        tax_row.charge_type == "On Item Quantity"
-        and tax_row.account_head not in cess_non_advol_accounts
-    ):
-        frappe.throw(
-            _(
-                "Row #{0}: Charge Type cannot be <strong>On Item Quantity</strong>"
-                " as it is not a Cess Non Advol Account"
-            ).format(tax_row.idx),
-            title=_("Invalid Charge Type"),
-        )
-
-    if (
-        tax_row.charge_type not in ["On Item Quantity", "Actual"]
-        and tax_row.account_head in cess_non_advol_accounts
-    ):
-        frappe.throw(
-            _(
-                "Row #{0}: Charge Type must be <strong>On Item Quantity / Actual</strong>"
-                " as it is a Cess Non Advol Account"
-            ).format(tax_row.idx),
-            title=_("Invalid Charge Type"),
-        )
+    def _throw(self, message, title=None):
+        frappe.throw(message, title=title or _("Invalid GST Account"))
 
 
 def validate_items(doc):
@@ -585,6 +617,16 @@ def validate_hsn_codes(doc):
         return
 
     return _validate_hsn_codes(doc, valid_hsn_length, message=None)
+
+
+def validate_sales_reverse_charge(doc):
+    if doc.is_reverse_charge and not doc.billing_address_gstin:
+        frappe.throw(
+            _(
+                "Transaction cannot be reverse charge since sales is to customer"
+                " without GSTIN"
+            )
+        )
 
 
 def _validate_hsn_codes(doc, valid_hsn_length, message=None):
@@ -858,37 +900,60 @@ def validate_reverse_charge_transaction(doc, is_sales_transaction):
     if not doc.get("is_reverse_charge"):
         return
 
-    rcm_account_type = (
-        "Sales Reverse Charge" if is_sales_transaction else "Purchase Reverse Charge"
-    )
-
-    standard_account_type = "Output" if is_sales_transaction else "Input"
+    if is_sales_transaction:
+        rcm_account_type = "Sales Reverse Charge"
+        non_rcm_account_type = "Output"
+    else:
+        rcm_account_type = "Purchase Reverse Charge"
+        non_rcm_account_type = "Input"
 
     reverse_charge_accounts = get_gst_accounts_by_type(
         doc.company, rcm_account_type
     ).values()
 
-    standard_gst_accounts = get_gst_accounts_by_type(
-        doc.company, standard_account_type
+    non_rcm_accounts = get_gst_accounts_by_type(
+        doc.company, non_rcm_account_type
     ).values()
 
     for tax in doc.get("taxes"):
-        if tax.account_head in standard_gst_accounts:
-            if tax.get("add_deduct_tax") == "Add":
-                base_gst_tax += tax.base_tax_amount_after_discount_amount
-            else:
-                base_gst_tax += tax.base_tax_amount_after_discount_amount
+        if tax.account_head in non_rcm_accounts:
+            # NON RCM should be positive
+            if (
+                tax.get("add_deduct_tax", "Add") != "Add"
+                or tax.base_tax_amount_after_discount_amount < 0
+            ):
+                frappe.throw(
+                    _(
+                        "Row #{0}: Tax amount should be positive for GST Account {1}"
+                    ).format(tax.idx, tax.account_head)
+                )
+
+            base_gst_tax += tax.base_tax_amount_after_discount_amount
+
         elif tax.account_head in reverse_charge_accounts:
-            if tax.get("add_deduct_tax") == "Add":
-                base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
+            # Using Deduct for RCM
+            if tax.get("add_deduct_tax") == "Deduct":
+                if tax.base_tax_amount_after_discount_amount < 0:
+                    frappe.throw(
+                        _(
+                            "Row #{0}: Tax amount should be positive for GST Account {1}"
+                            " as you are Deducting Tax"
+                        ).format(tax.idx, tax.account_head)
+                    )
+
+                base_reverse_charge_booked -= tax.base_tax_amount_after_discount_amount
+
             else:
+                if tax.base_tax_amount_after_discount_amount > 0:
+                    frappe.throw(
+                        _(
+                            "Row #{0}: Tax amount should be negative for GST Account {1}"
+                        ).format(tax.idx, tax.account_head)
+                    )
+
                 base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
 
-    condition = (
-        base_gst_tax + base_reverse_charge_booked == 0
-        if is_sales_transaction
-        else base_gst_tax == base_reverse_charge_booked
-    )
+    condition = flt(base_gst_tax + base_reverse_charge_booked, 2) == 0
 
     if not condition:
         msg = _("Booked reverse charge is not equal to applied tax amount")
@@ -904,9 +969,6 @@ def validate_reverse_charge_transaction(doc, is_sales_transaction):
         )
 
         frappe.throw(msg)
-
-    if doc.get("itc_classification") == "All Other ITC":
-        doc.itc_classification = "ITC on Reverse Charge"
 
 
 def is_export_without_payment_of_gst(doc):
@@ -1318,14 +1380,8 @@ def validate_transaction(doc, method=None):
 
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
+        validate_sales_reverse_charge(doc)
         gstin = doc.billing_address_gstin
-        if doc.is_reverse_charge and not doc.billing_address_gstin:
-            frappe.throw(
-                _(
-                    "Transaction cannot be reverse charge since sales is to customer"
-                    " without GSTIN"
-                )
-            )
     elif doc.doctype == "Payment Entry":
         is_sales_transaction = True
         gstin = doc.billing_address_gstin
@@ -1340,7 +1396,7 @@ def validate_transaction(doc, method=None):
 
     set_reverse_charge_as_per_gst_settings(doc)
 
-    valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
+    valid_accounts = GSTAccounts().validate(doc, is_sales_transaction) or ()
     validate_reverse_charge_transaction(doc, is_sales_transaction)
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
@@ -1479,7 +1535,7 @@ def before_update_after_submit(doc, method=None):
     if is_sales_transaction := doc.doctype in SALES_DOCTYPES:
         validate_hsn_codes(doc)
 
-    valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
+    valid_accounts = GSTAccounts().validate(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
     update_gst_details(doc)
