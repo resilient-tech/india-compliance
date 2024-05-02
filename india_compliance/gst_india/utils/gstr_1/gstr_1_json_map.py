@@ -5,6 +5,7 @@ from frappe.utils import flt
 from india_compliance.gst_india.constants import STATE_NUMBERS, UOM_MAP
 from india_compliance.gst_india.utils.__init__ import get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
+    CATEGORY_SUB_CATEGORY_MAPPING,
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
     DataFields,
     GovDataFields,
@@ -28,6 +29,16 @@ class DataMapper:
         ItemFields.CGST.value: 0,
         ItemFields.SGST.value: 0,
         ItemFields.CESS.value: 0,
+    }
+
+    FLOAT_FIELDS = {
+        GovDataFields.DOC_VALUE.value,
+        GovDataFields.TAXABLE_VALUE.value,
+        GovDataFields.DIFF_PERCENTAGE.value,
+        GovDataFields.IGST.value,
+        GovDataFields.CGST.value,
+        GovDataFields.SGST.value,
+        GovDataFields.CESS.value,
     }
 
     def __init__(self):
@@ -67,6 +78,9 @@ class DataMapper:
                 output[new_key] = value_formatter(invoice_data_value, data)
             else:
                 output[new_key] = invoice_data_value
+
+            if new_key in self.FLOAT_FIELDS:
+                output[new_key] = flt(output[new_key], 2)
 
         return output
 
@@ -1293,7 +1307,9 @@ def convert_to_gov_data_format(data):
 
 class RETSUM(DataMapper):
     KEY_MAPPING = {
-        "ttl_rec": "number_of_records",
+        "sec_nm": DataFields.DESCRIPTION.value,
+        "typ": DataFields.DESCRIPTION.value,
+        "ttl_rec": "no_of_records",
         "ttl_val": "total_document_value",
         "ttl_igst": DataFields.IGST.value,
         "ttl_cgst": DataFields.CGST.value,
@@ -1306,6 +1322,11 @@ class RETSUM(DataMapper):
         "act_cgst": "actual_cgst",
         "act_cess": "actual_cess",
         "act_tax": "actual_taxable_value",
+        "ttl_expt_amt": f"total_{DataFields.EXEMPTED_AMOUNT.value}",
+        "ttl_ngsup_amt": f"total_{DataFields.NON_GST_AMOUNT.value}",
+        "ttl_nilsup_amt": f"total_{DataFields.NIL_RATED_AMOUNT.value}",
+        "ttl_doc_issued": DataFields.TOTAL_COUNT.value,
+        "ttl_doc_cancelled": DataFields.CANCELLED_COUNT.value,
     }
 
     SECTION_NAMES = {
@@ -1355,11 +1376,120 @@ class RETSUM(DataMapper):
         "TTL_LIAB": "Total Liability",
     }
 
+    SECTIONS_WITH_SUBSECTIONS = {
+        "SUPECOM": {
+            "SUPECOM_14A": GSTR1_SubCategories.SUPECOM_52.value,
+            "SUPECOM_14B": GSTR1_SubCategories.SUPECOM_9_5.value,
+        },
+        "SUPECOMA": {
+            "SUPECOMA_14A": f"{GSTR1_SubCategories.SUPECOM_52.value} (Amended)",
+            "SUPECOMA_14B": f"{GSTR1_SubCategories.SUPECOM_9_5.value} (Amended)",
+        },
+        "EXP": {
+            "EXPWP": GSTR1_SubCategories.EXPWP.value,
+            "EXPWOP": GSTR1_SubCategories.EXPWOP.value,
+        },
+        "EXPA": {
+            "EXPWP": f"{GSTR1_SubCategories.EXPWP.value} (Amended)",
+            "EXPWOP": f"{GSTR1_SubCategories.EXPWOP.value} (Amended)",
+        },
+    }
+
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {}
-        self.data_value_formatters = {}
+        self.json_value_formatters = {
+            "sec_nm": self.map_document_types,
+            "typ": self.map_document_types,
+        }
 
     def convert_to_internal_data_format(self, input_data):
-        return {invoice["sec_nm"]: self.format_data(invoice) for invoice in input_data}
+        output = {}
+
+        for section_data in input_data["sec_sum"]:
+            section = section_data.get("sec_nm")
+            output[self.SECTION_NAMES.get(section, section)] = self.format_data(
+                section_data
+            )
+
+            if section not in self.SECTIONS_WITH_SUBSECTIONS:
+                continue
+
+            for subsection_data in section_data["sub_sections"]:
+                formatted_data = self.format_subsection_data(section, subsection_data)
+                output[formatted_data[DataFields.DESCRIPTION.value]] = formatted_data
+
+        return output
+
+    def format_subsection_data(self, section, subsection_data):
+        subsection = subsection_data.get("typ") or subsection_data.get("sec_nm")
+        formatted_data = self.format_data(subsection_data)
+
+        formatted_data[DataFields.DESCRIPTION.value] = self.SECTIONS_WITH_SUBSECTIONS[
+            section
+        ].get(subsection, subsection)
+        return formatted_data
+
+    def map_document_types(self, doc_type, *args):
+        return self.SECTION_NAMES.get(doc_type, doc_type)
+
+
+def summarize_retsum_data(input_data):
+    summarized_data = []
+    total_values_keys = [
+        "total_igst_amount",
+        "total_cgst_amount",
+        "total_sgst_amount",
+        "total_cess_amount",
+        "total_taxable_value",
+    ]
+    amended_data = {key: 0 for key in total_values_keys}
+
+    for category in CATEGORY_SUB_CATEGORY_MAPPING:
+        if category.value not in input_data:
+            continue
+
+        summarized_data.append(
+            {
+                **input_data.get(category.value),
+                "indent": 0,
+            }
+        )
+
+        amended_category_data = input_data.get(f"{category.value} (Amended)", {})
+        amended_data = {
+            key: amended_data[key] + amended_category_data.get(key, 0)
+            for key in total_values_keys
+        }
+
+        for sub_category in CATEGORY_SUB_CATEGORY_MAPPING[category]:
+            if sub_category.value not in input_data:
+                continue
+
+            summarized_data.append(
+                {
+                    **input_data.get(sub_category.value),
+                    "indent": 1,
+                }
+            )
+
+            amended_sub_category_data = input_data.get(
+                f"{sub_category.value} (Amended)", {}
+            )
+            amended_data = {
+                key: amended_data[key] + amended_sub_category_data.get(key, 0)
+                for key in total_values_keys
+            }
+
+    summarized_data.extend(
+        [
+            {
+                "description": "Total Amended",
+                **amended_data,
+                "indent": 0,
+            },
+            input_data.get("Total Liability"),
+        ]
+    )
+
+    return summarized_data

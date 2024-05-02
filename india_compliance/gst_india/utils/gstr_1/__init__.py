@@ -274,6 +274,10 @@ CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Categories.TXP: (GSTR1_SubCategories.TXP,),
     GSTR1_Categories.DOC_ISSUE: (GSTR1_SubCategories.DOC_ISSUE,),
     GSTR1_Categories.HSN: (GSTR1_SubCategories.HSN,),
+    GSTR1_Categories.SUPECOM: (
+        GSTR1_SubCategories.SUPECOM_52,
+        GSTR1_SubCategories.SUPECOM_9_5,
+    ),
 }
 
 
@@ -294,4 +298,6 @@ SUB_CATEGORY_GOV_CATEGORY_MAPPING = {
     GSTR1_SubCategories.TXP: GSTR1_Gov_Categories.TXP,
     GSTR1_SubCategories.DOC_ISSUE: GSTR1_Gov_Categories.DOC_ISSUE,
     GSTR1_SubCategories.HSN: GSTR1_Gov_Categories.HSN,
+    GSTR1_SubCategories.SUPECOM_52: GSTR1_Gov_Categories.SUPECOM,
+    GSTR1_SubCategories.SUPECOM_9_5: GSTR1_Gov_Categories.SUPECOM,
 }
