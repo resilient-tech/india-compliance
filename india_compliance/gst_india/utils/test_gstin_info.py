@@ -14,7 +14,7 @@ class TestGstinInfo(unittest.TestCase):
                     "addr": {
                         "bnm": "",
                         "bno": "8-A",
-                        "city": "",
+                        "city": "Vadodara",
                         "dst": "Vadodara",
                         "flno": "Saimee society No.2",
                         "lg": "",
