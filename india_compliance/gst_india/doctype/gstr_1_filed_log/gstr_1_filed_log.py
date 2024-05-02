@@ -34,9 +34,13 @@ class GSTR1FiledLog(Document):
         pass
 
     # FILE UTILITY
-    def load_data(self):
+    def load_data(self, file_field=None):
         data = {}
-        file_fields = self.get_applicable_file_fields()
+
+        if file_field:
+            file_fields = [file_field]
+        else:
+            file_fields = self.get_applicable_file_fields()
 
         for file_field in file_fields:
             if json_data := self.get_json_for(file_field):

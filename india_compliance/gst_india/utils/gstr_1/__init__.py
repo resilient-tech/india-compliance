@@ -5,10 +5,8 @@ Steps:
 
 5. Export tool to be useful for the user to download the data in Excel or JSON format
 
-WHAT SETTINGS?
-- Use API
-- Quarterly or Monthly
-V - FLT: Json
+V - Export to Excel filed data
+V - Json Download
 
 UI:
 P - Highlight active tab
@@ -53,9 +51,6 @@ Future TODO;
 - e-Commerece supplies
 - Bulk generation process
 
-BUGS:
- - Not filed status
- - Differences as comma separated
 
 """
 

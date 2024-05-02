@@ -1505,6 +1505,37 @@ class FiledTab extends TabManager {
         this.instance.frm.call("re_download_gstr1", { file_field });
     }
 
+    download_filed_json() {
+        const dialog = new frappe.ui.Dialog({
+            title: __("Download JSON"),
+            fields: [
+                {
+                    fieldname: "include_uploaded",
+                    label: __("Include Already Uploaded Invoices"),
+                    description: __("This will include invoices already uploaded to GSTN (possibly e-Invoices) and overwrite them in GST Portal."),
+                    fieldtype: "Check",
+                },
+                {
+                    fieldname: "overwrite_missing",
+                    label: __("Overwrite Missing Invoices in ERP"),
+                    description: __("This will overwrite invoices that are not present in ERP but are present in GST Portal with zero values."),
+                    fieldtype: "Check",
+                }
+            ],
+            primary_action: () => {
+                frappe.call({
+                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_filed_json",
+                    args: dialog.get_values(),
+                    callback: r => {
+                        frappe.msgprint(r.message);
+                    },
+                });
+            }
+        })
+
+        dialog.show();
+    }
+
     // COLUMNS
 
     get_b2cl_columns() {
