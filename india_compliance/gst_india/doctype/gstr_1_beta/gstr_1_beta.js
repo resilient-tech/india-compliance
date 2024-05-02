@@ -576,7 +576,6 @@ class TabManager {
     }
 
     refresh_view(view, category) {
-        if(view=="Summary" && !category)this.set_output_gst_ledger()
 
         if (!category && view === "Details") return;
 
