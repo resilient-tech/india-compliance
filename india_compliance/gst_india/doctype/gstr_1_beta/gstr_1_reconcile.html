@@ -8,32 +8,16 @@
             </tr>
         </thead>
         <tbody>
-            {% var field_keys = Object.keys(gov) %}
-            {% if field_keys.length > 0 %}
+            {% var field_keys =   Object.keys(gov).length > 0?Object.keys(gov):Object.keys(books) %}
                 {% for fieldname in field_keys %}
-                    {%if fieldname_map[fieldname]%}
+                    {% if fieldname_map[fieldname] %}
                         <tr>
-                        <td><b>{{ fieldname_map[fieldname]}}</b></td>
-                        <td>{{gov[fieldname]}}</td>
-                        <td>{{books[fieldname] || "-" }}</td>
+                            <td><b>{{ fieldname_map[fieldname] }}</b></td>
+                            <td>{{ gov[fieldname]  || '-' }}</td>
+                            <td>{{ books[fieldname] || '-' }}</td>
                         </tr>
-                    {%endif%}
+                    {% endif %}
                 {% endfor %}
-            {% else %}
-            {% var field_keys=Object.keys(books)%}
-            {% if field_keys.length > 0 %}
-                {% for fieldname in field_keys %}
-                    {%if fieldname_map[fieldname]%}
-                        <tr>
-                        <td><b>{{ fieldname_map[fieldname] }}</b></td>
-                        <td>{{gov[fieldname] || "-"}}</td>
-                        <td>{{books[fieldname] }}</td>
-                        </tr>
-                    {%endif%}
-  	            {% endfor %}
-
-            {% endif %}
-            {% endif %}
         </tbody>
     </table>
 </div>
