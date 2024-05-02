@@ -273,7 +273,7 @@ def get_valid_gst_accounts(company):
 @frappe.whitelist()
 def get_valid_gst_accounts_by_type(company, tax_type):
     frappe.has_permission("Item Tax Template", "read", throw=True)
-    return get_gst_accounts_by_type(company, tax_type, throw=True)
+    return get_gst_accounts_by_type(company, tax_type, throw=False)
 
 
 def get_valid_accounts(company, *, for_sales=False, for_purchase=False, throw=True):
@@ -982,6 +982,7 @@ def validate_reverse_charge_transaction(doc, is_sales_transaction):
             base_gst_tax += tax.base_tax_amount_after_discount_amount
 
         elif tax.account_head in reverse_charge_accounts:
+            print("here")
             # Using Deduct for RCM
             if tax.get("add_deduct_tax") == "Deduct":
                 if tax.base_tax_amount_after_discount_amount < 0:
@@ -1004,6 +1005,7 @@ def validate_reverse_charge_transaction(doc, is_sales_transaction):
 
                 base_reverse_charge_booked += tax.base_tax_amount_after_discount_amount
 
+    print(base_gst_tax, base_reverse_charge_booked)
     condition = flt(base_gst_tax + base_reverse_charge_booked, 2) == 0
 
     if not condition:
