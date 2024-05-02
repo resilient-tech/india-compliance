@@ -121,11 +121,14 @@ def _get_address(address):
 
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
-
     unique_values = set()
-    for key, value in address.items():
+    # key list as per priority
+    keys = ["dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city"]
+
+    for key in keys:
+        value = address.get(key, "")
         value = value.strip(f"{whitespace},")
-        address[key] = value if value not in unique_values else None
+        address[key] = value if value not in unique_values else ""
         unique_values.add(value)
 
     address_line1 = ", ".join(
