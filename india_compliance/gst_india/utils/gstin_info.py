@@ -22,6 +22,11 @@ GST_CATEGORIES = {
     "URP": "Unregistered",
 }
 
+# order of address keys is important
+KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city")
+KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city"))
+CHARACTERS_TO_STRIP = f"{whitespace},"
+
 
 @frappe.whitelist()
 def get_gstin_info(gstin, *, throw_error=True):
@@ -122,14 +127,20 @@ def _get_address(address):
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
     unique_values = set()
-    # key list as per priority
-    keys = ["dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city"]
 
-    for key in keys:
-        value = address.get(key, "")
-        value = value.strip(f"{whitespace},")
-        address[key] = value if value not in unique_values else ""
-        unique_values.add(value)
+    for key in KEYS_TO_SANITIZE:
+        value = address.get(key, "").strip(CHARACTERS_TO_STRIP)
+
+        if key not in KEYS_TO_FILTER_DUPLICATES:
+            address[key] = value
+            continue
+
+        if value not in unique_values:
+            address[key] = value
+            unique_values.add(value)
+            continue
+
+        address[key] = ""
 
     address_line1 = ", ".join(
         titlecase(value)
