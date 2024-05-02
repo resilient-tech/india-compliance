@@ -114,25 +114,25 @@ const MONTH = [
 ];
 
 const FIELDNAME_MAP = {
-    "hsn_code": "HSN Code",
-    "quantity": "Quantity",
-    "tax_rate": "Tax Rate",
-    "total_taxable_value": "Taxable Value",
-    "total_cess_amount": "CESS",
-    "total_igst_amount": "IGST",
-    "total_cgst_amount": "CGST",
-    "total_sgst_amount": "SGST",
-    "uom": "UOM",
-    "customer_gstin": "Customer GSTIN",
-    "customer_name": "Customer Name",
-    "document_date": "Invoice Date",
-    "document_number": "Invoice Number",
-    "document_type": "Invoice Type",
-    "place_of_supply": "Place of Supply",
-    "reverse_charge": "Reverse Charge",
-    "from_sr_no": "Sr No From",
-    "to_sr_no": "Sr No To",
-}
+    hsn_code: "HSN Code",
+    quantity: "Quantity",
+    tax_rate: "Tax Rate",
+    total_taxable_value: "Taxable Value",
+    total_cess_amount: "CESS",
+    total_igst_amount: "IGST",
+    total_cgst_amount: "CGST",
+    total_sgst_amount: "SGST",
+    uom: "UOM",
+    customer_gstin: "Customer GSTIN",
+    customer_name: "Customer Name",
+    document_date: "Invoice Date",
+    document_number: "Invoice Number",
+    document_type: "Invoice Type",
+    place_of_supply: "Place of Supply",
+    reverse_charge: "Reverse Charge",
+    from_sr_no: "Sr No From",
+    to_sr_no: "Sr No To",
+};
 let net_balance_during_period;
 let computed_on;
 frappe.ui.form.on(DOCTYPE, {
@@ -163,6 +163,24 @@ frappe.ui.form.on(DOCTYPE, {
         //         indicator: "green",
         //     });
         // })
+
+        frappe.realtime.on("is_not_latest_data", message => {
+            const { filters } = message;
+            if (
+                frm.doc.company_gstin !== filters.company_gstin ||
+                frm.doc.month_or_quarter != filters.month_or_quarter ||
+                frm.doc.year != filters.year
+            )
+                return;
+
+            if (frm.$wrapper.find(".form-message.orange").length) return;
+            frm.set_intro(
+                __(
+                    "Books data was updated after the computation of GSTR-1 data. Please generate GSTR-1 again."
+                ),
+                "orange"
+            );
+        });
 
         frappe.realtime.on("gstr1_generation_failed", message => {
             const { error, filters } = message;
@@ -200,17 +218,13 @@ frappe.ui.form.on(DOCTYPE, {
 
     company_gstin: render_empty_state,
 
-    async month_or_quarter(frm) {
-        render_empty_state(frm)
-        await is_latest_data(frm)
-
+    month_or_quarter(frm) {
+        render_empty_state(frm);
     },
 
-    async year(frm) {
+    year(frm) {
         render_empty_state(frm);
         set_options_for_month_or_quarter(frm);
-        await is_latest_data(frm)
-
     },
 
     refresh(frm) {
@@ -233,8 +247,8 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         if (!data?.status) return;
-        await get_output_gst_legder(frm)
-        computed_on = data.computed_on
+        await get_output_gst_legder(frm);
+        computed_on = data.computed_on;
         frm.gstr1.status = data.status;
         frm.gstr1.refresh_data(data);
     },
@@ -287,6 +301,14 @@ class GSTR1 {
             this.data["filed_summary"] = this.data["books_summary"];
         }
 
+        if (this.data["reconcile"]) {
+            Object.values(this.data["reconcile"]).forEach(category => {
+                category.forEach((row, idx) => {
+                    row.idx = idx;
+                });
+            });
+        }
+
         this.TABS.forEach(tab => {
             if (!this.data[tab.name]) {
                 this.hide_tab(tab.name);
@@ -333,6 +355,7 @@ class GSTR1 {
         this.setup_filter_button();
         this.render_view_groups();
         this.render_tabs();
+        this.setup_detail_view_listener();
     }
 
     render_tab_group() {
@@ -432,6 +455,15 @@ class GSTR1 {
                 this.filters = this.filter_group.get_filters();
                 this.refresh_filter();
             },
+        });
+    }
+
+    setup_detail_view_listener() {
+        const me = this;
+        this.$wrapper.on("click", ".btn.eye.reconcile-row", function (e) {
+            const row_index = $(this).attr("data-row-index");
+            const { gov, books } = me.data.reconcile[me.filter_category][row_index];
+            new DetailViewDialog(gov, books);
         });
     }
 
@@ -551,7 +583,7 @@ class TabManager {
         this.reset_data();
         this.setup_wrapper();
         this.setup_datatable(wrapper);
-        this.setup_footer(wrapper)
+        this.setup_footer(wrapper);
     }
 
     reset_data() {
@@ -564,23 +596,19 @@ class TabManager {
         this.data = data;
         this.summary = summary_data;
         this.status = status;
+        this.remove_tab_custom_buttons();
         this.setup_actions();
         this.datatable.refresh(this.summary);
-        this.set_output_gst_ledger()
+        this.set_output_gst_ledger();
         this.set_default_title();
         this.set_computed_on();
-
-        if (this instanceof ReconcileTab) {
-            this.setup_eye_click_listener()
-        }
     }
 
     refresh_view(view, category) {
-
         if (!category && view === "Details") return;
 
         this.filter_category = category;
-        let subtitle = ""
+        let subtitle = "";
 
         if (view === "Details") {
             const columns_func = this.CATEGORY_COLUMNS[category];
@@ -604,10 +632,8 @@ class TabManager {
         }
 
         this.set_title(category || this.DEFAULT_TITLE, subtitle);
-        this.setup_footer(this.wrapper)
-
+        this.setup_footer(this.wrapper);
     }
-
 
     get_row(data, category) {
         if (category == "Nil-Rated, Exempted, Non-GST")
@@ -676,7 +702,8 @@ class TabManager {
                 ],
                 hooks: {
                     columnTotal: (_, row) => {
-                        if (row.colIndex === 1) return (row.content = "Total Liability");
+                        if (row.colIndex === 1)
+                            return (row.content = "Total Liability");
                         if (this.instance.active_view !== "Summary") return;
 
                         const column_field = row.column.fieldname;
@@ -710,42 +737,35 @@ class TabManager {
         if (!treeView) {
             $(wrapper).find("[data-action=collapse_all_rows]").hide();
             $(wrapper).find("[data-action=expand_all_rows]").hide();
-        }
-        else {
+        } else {
             $(wrapper).find("[data-action=collapse_all_rows]").show();
             $(wrapper).find("[data-action=expand_all_rows]").hide();
         }
 
-        this.setup_footer_actions(wrapper)
-
+        this.setup_footer_actions(wrapper);
     }
     setup_footer_actions(wrapper) {
-        this.expand_all_rows(wrapper)
-        this.collapse_all_rows(wrapper)
+        this.expand_all_rows(wrapper);
+        this.collapse_all_rows(wrapper);
     }
     expand_all_rows(wrapper) {
         const me = this;
-        $(wrapper).on("click", ".expand",
-            function (e) {
-                e.preventDefault();
-                me.datatable.datatable.rowmanager.expandAllNodes()
-                $(wrapper).find("[data-action=collapse_all_rows]").show();
-                $(wrapper).find("[data-action=expand_all_rows]").hide();
-
-            })
-
+        $(wrapper).on("click", ".expand", function (e) {
+            e.preventDefault();
+            me.datatable.datatable.rowmanager.expandAllNodes();
+            $(wrapper).find("[data-action=collapse_all_rows]").show();
+            $(wrapper).find("[data-action=expand_all_rows]").hide();
+        });
     }
 
     collapse_all_rows(wrapper) {
         const me = this;
-        $(wrapper).on("click", ".collapse",
-            function (e) {
-                e.preventDefault();
-                me.datatable.datatable.rowmanager.collapseAllNodes()
-                $(wrapper).find("[data-action=collapse_all_rows]").hide();
-                $(wrapper).find("[data-action=expand_all_rows]").show();
-
-            })
+        $(wrapper).on("click", ".collapse", function (e) {
+            e.preventDefault();
+            me.datatable.datatable.rowmanager.collapseAllNodes();
+            $(wrapper).find("[data-action=collapse_all_rows]").hide();
+            $(wrapper).find("[data-action=expand_all_rows]").show();
+        });
     }
     setup_datatable_listeners() {
         const me = this;
@@ -763,43 +783,50 @@ class TabManager {
 
     set_output_gst_ledger() {
         if (this instanceof BooksTab) {
-            console.log(this)
+            console.log(this);
             //Checks if gst-ledger-difference element is there and removes if already present
-            if ($('.gst-ledger-difference').length) {
-                $('.gst-ledger-difference').remove();
+            if ($(".gst-ledger-difference").length) {
+                $(".gst-ledger-difference").remove();
             }
 
-
-            const differences = {
+            const net_transactions = {
                 IGST: net_balance_during_period["total_igst_amount"] || 0,
                 CGST: net_balance_during_period["total_cgst_amount"] || 0,
                 SGST: net_balance_during_period["total_sgst_amount"] || 0,
-                CESS: net_balance_during_period["total_cess_amount"] || 0
+                CESS: net_balance_during_period["total_cess_amount"] || 0,
             };
 
+            // <div class="m-2 text-center"><h6>Net Transactions (Credit - Debit) during the period</h6></div>
             //prepending the gst-legder-difference element
-            let output_gst_ledger_html = `<div class="gst-ledger-difference w-100">
-            <div class="m-3 text-center"><h4>Net Transactions (Credit - Debit) during the period</h4></div>
-    <div class="m-3 d-flex justify-content-around align-items-center">
-        ${Object.entries(differences).map(([type, difference]) => `
-            <div>
-                <h5>Net Balance of ${type} Account</h5>
-                <h4 class="text-center">${format_currency(difference)}</h4>
+            let output_gst_ledger_html = `
+            <div class="gst-ledger-difference w-100" style="border-bottom: 1px solid var(--border-color);">
+                <div class="m-3 d-flex justify-content-around align-items-center">
+                    ${Object.entries(net_transactions)
+                    .map(
+                        ([type, net_amount]) => `
+                        <div>
+                            <h5>${type} Account</h5>
+                            <h4 class="text-center">${format_currency(net_amount)}</h4>
+                        </div>
+                    `
+                        )
+                .join("")}
+                </div>
             </div>
-        `).join('')}
-    </div>
-    </div>`;
+            `;
             let element = $('[data-fieldname="data_section"]');
-            element.prepend(output_gst_ledger_html)
+            element.prepend(output_gst_ledger_html);
         }
     }
 
     set_computed_on() {
         if (this instanceof BooksTab) {
-            if ($('.computed-on').length) {
-                $('.computed-on').remove();
+            if ($(".computed-on").length) {
+                $(".computed-on").remove();
             }
-            this.wrapper.append(`<h5 class="computed-on mr-3 text-right">Computed On : <b>${computed_on}</b></h5>`)
+            this.wrapper.append(
+                `<h5 class="computed-on mr-3 text-right">Computed On : <b>${computed_on}</b></h5>`
+            );
         }
     }
 
@@ -824,6 +851,10 @@ class TabManager {
             .on("click", action);
     }
 
+    remove_tab_custom_buttons() {
+        this.wrapper.find(".custom-button-group").empty();
+    }
+
     format_summary_table_cell(args) {
         const isDescriptionCell = args[1]?.id === "description";
         let value = args[0];
@@ -835,11 +866,10 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="summary-description">
+                ? `<a href="#" class="summary-description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                     : value;
-
 
         return value;
     }
@@ -1283,6 +1313,10 @@ class TabManager {
     get_match_columns() {
         return [];
     }
+
+    get_detailed_view_column() {
+        return [];
+    }
 }
 
 class BooksTab extends TabManager {
@@ -1347,9 +1381,7 @@ class BooksTab extends TabManager {
     }
 
     // COLUMNS
-    get_detailed_view_column() {
-        return [];
-    }
+
     get_match_columns() {
         if (this.status === "Filed") return [];
         return [
@@ -1447,10 +1479,14 @@ class FiledTab extends TabManager {
             this.download_filed_as_excel()
         );
 
-        if (this.status === "Filed") return;
-
-        this.add_tab_custom_button("Download JSON", () => console.log("hi"));
-        this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
+        if (this.status === "Filed")
+            this.add_tab_custom_button("Sync with GSTN", () =>
+                this.re_download("filed")
+            );
+        else {
+            this.add_tab_custom_button("Download JSON", () => console.log("hi"));
+            this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
+        }
     }
 
     set_default_title() {
@@ -1463,6 +1499,11 @@ class FiledTab extends TabManager {
     // ACTIONS
 
     download_filed_as_excel() { }
+
+    re_download(file_field) {
+        render_empty_state(this.instance.frm);
+        this.instance.frm.call("re_download_gstr1", { file_field });
+    }
 
     // COLUMNS
 
@@ -1506,11 +1547,6 @@ class FiledTab extends TabManager {
             ...this.get_tax_columns(),
         ];
     }
-
-    get_detailed_view_column() {
-        return [];
-    }
-
 
     get_nil_exempt_columns() {
         return [
@@ -1588,7 +1624,9 @@ class FiledTab extends TabManager {
 }
 
 class UnfiledTab extends FiledTab {
-    setup_actions() { }
+    setup_actions() {
+        this.add_tab_custom_button("Sync with GSTN", () => this.re_download("unfiled"));
+    }
 
     set_default_title() {
         this.DEFAULT_TITLE = "Summary of Invoices as on Portal";
@@ -1630,31 +1668,19 @@ class ReconcileTab extends FiledTab {
                 fieldtype: "html",
                 width: 60,
                 align: "center",
-                _value: (...args) => this.get_icon(...args, "eye")
-            }
-        ]
+                _value: (...args) => this.get_icon(...args, "eye"),
+            },
+        ];
     }
     get_icon(value, column, data, icon) {
-        if (!data) return ""
-        console.log(data)
-        // const hash = get_hash(data);
-        return `<button class="btn ${icon}" data-gov='${JSON.stringify(data["gov"])}' data-books='${JSON.stringify(data["books"])}' >
-                <i class="fa fa-${icon}"></i>
-            </button>`;
-
-    }
-
-    setup_eye_click_listener() {
-        const me = this;
-        console.log(this)
-        this.datatable.$wrapper.on("click", ".btn.eye", function (e) {
-
-            let gov_data = JSON.parse($(this).attr("data-gov"))
-            let books_data = JSON.parse($(this).attr("data-books"))
-            console.log(gov_data)
-            console.log(books_data)
-            me.dm = new DetailViewDialog(gov_data, books_data)
-        });
+        if (!data) return "";
+        return `
+        <button
+            class="btn ${icon} reconcile-row" 
+            data-row-index='${data.idx}'
+        >
+            <i class="fa fa-${icon}"></i>
+        </button>`;
     }
 
     get_match_columns() {
@@ -1673,29 +1699,27 @@ class ReconcileTab extends FiledTab {
     }
 }
 
-
 class DetailViewDialog {
-
     constructor(gov, books) {
-        this.gov = gov
-        this.books = books
-        this.render_dialog()
-        this.dialog.show()
+        this.gov = gov;
+        this.books = books;
+        this.render_dialog();
+        this.dialog.show();
     }
     init_dialog() {
         this.dialog = new frappe.ui.Dialog({
-            title: 'Detail View',
+            title: "Detail View",
             fields: [
                 {
                     fieldtype: "HTML",
-                    fieldname: "reconcile_data"
-                }
-            ]
-        })
+                    fieldname: "reconcile_data",
+                },
+            ],
+        });
     }
     render_dialog() {
-        this.init_dialog()
-        this.render_table()
+        this.init_dialog();
+        this.render_table();
     }
     render_table() {
         const detail_table = this.dialog.fields_dict.reconcile_data;
@@ -1704,16 +1728,11 @@ class DetailViewDialog {
             frappe.render_template("gstr_1_reconcile", {
                 gov: this.gov,
                 books: this.books,
-                fieldname_map: FIELDNAME_MAP
+                fieldname_map: FIELDNAME_MAP,
             })
-        )
+        );
     }
 }
-
-
-
-
-
 
 function set_options_for_month_or_quarter(frm) {
     /**
@@ -1736,7 +1755,6 @@ function set_options_for_month_or_quarter(frm) {
         // Options for current year till current month
         if (frm.filing_frequency === "Monthly")
             options = MONTH.slice(0, current_month_idx + 1);
-
         else {
             let quarter_idx;
             if (current_month_idx <= 2) quarter_idx = 1;
@@ -1748,14 +1766,10 @@ function set_options_for_month_or_quarter(frm) {
         }
     } else if (frm.doc.year === "2017") {
         // Options for 2017 from July to December
-        if (frm.filing_frequency === "Monthly")
-            options = MONTH.slice(6);
-
+        if (frm.filing_frequency === "Monthly") options = MONTH.slice(6);
         else options = QUARTER.slice(2);
     } else {
-        if (frm.filing_frequency === "Monthly")
-            options = MONTH;
-
+        if (frm.filing_frequency === "Monthly") options = MONTH;
         else options = QUARTER;
     }
 
@@ -1763,9 +1777,8 @@ function set_options_for_month_or_quarter(frm) {
     if (frm.doc.year === current_year)
         // set second last option as default
         frm.set_value("month_or_quarter", options[options.length - 2]);
-    else
         // set last option as default
-        frm.set_value("month_or_quarter", options[options.length - 1]);
+    else frm.set_value("month_or_quarter", options[options.length - 1]);
 }
 
 // UTILITY FUNCTIONS
@@ -1833,31 +1846,20 @@ async function get_gstr1_filing_frequency() {
     });
 }
 
-async function is_latest_data(frm) {
-    return new Promise((resolve, reject) => {
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.is_latest_data",
-            args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin },
-            callback: function (r) {
-                if (!r.message) {
-                    frm.set_intro("Your Books data is not latest data. Please generate latest books data.", "red")
-                    resolve()
-                }
-            },
-        });
-    });
-}
-
 async function get_output_gst_legder(frm) {
     return new Promise((resolve, reject) => {
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_output_gst_balance",
-            args: { month_or_quarter: frm.doc.month_or_quarter, year: frm.doc.year, company_gstin: frm.doc.company_gstin, company: frm.doc.company },
+            args: {
+                month_or_quarter: frm.doc.month_or_quarter,
+                year: frm.doc.year,
+                company_gstin: frm.doc.company_gstin,
+                company: frm.doc.company,
+            },
             callback: function (r) {
-                net_balance_during_period = r.message
-                resolve()
+                net_balance_during_period = r.message;
+                resolve();
             },
         });
     });
-
 }

@@ -82,7 +82,7 @@ class GSTR1FiledLog(Document):
             new_json = json_data
 
             # reset reconciled data
-            if file_field in ["books", "filed", "unfiled"]:
+            if file_field in ("books", "filed", "unfiled"):
                 self.remove_json_for("reconcile")
 
         else:

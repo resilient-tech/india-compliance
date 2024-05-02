@@ -11,20 +11,33 @@ WHAT SETTINGS?
 V - FLT: Json
 
 UI:
-- Listeners: Steps Download / Computing / Reconciling / Loading
 P - Highlight active tab
 - Save utility (save data)
-P - Highlight if data is not latest
+S - Highlight if data is not latest
 P - Details view for reconciliation
 P - Summary of Ledger difference
-p - Collapse and Expand Button (this.tree_report query_report.js)
-P - Books data as on
 
+P - Pretty Date & Postion  of date
+P - Tooltip
+P - eye button center
+
+Dialog:
+P - Try Medium
+P - Consistent column size
+P - Highlight difference if present
+P - Match status
+P - Customer Name or Document Type
+P - Books and then GSTR-1
+p - Move set_output gst ledger in GSTR-1 class
 
 Notes
 S - Test with Actual Data
 S - Refactor and cleanup
-S - Qty for services
+
+S - Freeze Data
+S - On change of Sales Invoice / Payment Entry (Is Latest Data)
+ - GSTR -1 Section 14 ecommerce
+S - Listner for Is Latest Data
 
 Data Export
 P - Reconcile excel with all data export

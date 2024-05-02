@@ -46,7 +46,14 @@ class GSTR1Beta(Document):
         if data is not None:
             self.set_onload("data", data)
 
-    def validate(self):
+    @frappe.whitelist()
+    def re_download_gstr1(self, file_field):
+        if not self.has_permission("write"):
+            frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+        self.validate(re_download_file=file_field)
+
+    def validate(self, re_download_file=None):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
@@ -79,6 +86,10 @@ class GSTR1Beta(Document):
             gstr1_log.insert()
 
         settings = frappe.get_cached_doc("GST Settings")
+
+        if re_download_file:
+            gstr1_log.remove_json_for(re_download_file)
+            gstr1_log.remove_json_for("reconcile")
 
         # files are already present
         if gstr1_log.has_all_files(settings):
@@ -317,7 +328,6 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         is_invoice_subcategory = subcategory in INVOICE_SUB_CATEGORIES
 
         if reconcile_only_invoices and not is_invoice_subcategory:
-            print("Skipping", subcategory)
             continue
 
         reconcile_subdata = {}
@@ -486,16 +496,6 @@ def get_aggregated_row(books_rows: list) -> dict:
 def get_gstr1_filing_frequency():
     gst_settings = frappe.get_cached_doc("GST Settings")
     return gst_settings.filing_frequency
-
-
-@frappe.whitelist()
-def is_latest_data(month_or_quarter, year, company_gstin):
-    period = get_period(month_or_quarter, year)
-    if log_name := frappe.db.exists("GSTR-1 Filed Log", f"{period}-{company_gstin}"):
-        gstr1_log = frappe.get_doc("GSTR-1 Filed Log", log_name)
-        return gstr1_log.is_latest_data
-
-    return True
 
 
 @frappe.whitelist()
