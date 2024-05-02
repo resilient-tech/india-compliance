@@ -12,6 +12,9 @@ from frappe.utils import flt, get_last_day, getdate
 from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
     summarize_data,
 )
+from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+    summarize_retsum_data,
+)
 from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR1DocumentIssuedSummary,
     GSTR11A11BData,
@@ -214,7 +217,11 @@ class GSTR1Beta(Document):
                 data[field] = self.gstr1_log.get_json_for(field)
                 continue
 
-            summary_data = summarize_data(data[key])
+            if key == "filed":
+                summary_data = summarize_retsum_data(data[key].get("summary"))
+            else:
+                summary_data = summarize_data(data[key])
+
             self.gstr1_log.update_json_for(field, summary_data)
             data[field] = summary_data
 

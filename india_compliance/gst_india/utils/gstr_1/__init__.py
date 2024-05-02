@@ -99,6 +99,7 @@ class GSTR1_Gov_Categories(Enum):
     HSN = "hsn"
     DOC_ISSUE = "doc_issue"
     SUPECOM = "supeco"
+    RET_SUM = "sec_sum"
 
 
 class GSTR1_SubCategories(Enum):
@@ -301,3 +302,16 @@ SUB_CATEGORY_GOV_CATEGORY_MAPPING = {
     GSTR1_SubCategories.SUPECOM_52: GSTR1_Gov_Categories.SUPECOM,
     GSTR1_SubCategories.SUPECOM_9_5: GSTR1_Gov_Categories.SUPECOM,
 }
+
+
+SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE = [
+    GSTR1_SubCategories.HSN.value,
+    GSTR1_SubCategories.DOC_ISSUE.value,
+    GSTR1_SubCategories.SUPECOM_52.value,
+    GSTR1_SubCategories.SUPECOM_9_5.value,
+]
+
+SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
+    GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
+    *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+]

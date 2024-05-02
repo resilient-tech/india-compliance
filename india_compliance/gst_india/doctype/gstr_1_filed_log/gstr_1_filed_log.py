@@ -13,6 +13,8 @@ from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     DataFields,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
 )
 
 DOCTYPE = "GSTR-1 Filed Log"
@@ -199,18 +201,6 @@ def summarize_data(data, for_books=False):
         "total_sgst_amount": 0,
         "total_cess_amount": 0,
     }
-
-    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE = [
-        GSTR1_SubCategories.HSN.value,
-        GSTR1_SubCategories.DOC_ISSUE.value,
-        GSTR1_SubCategories.SUPECOM_52.value,
-        GSTR1_SubCategories.SUPECOM_9_5.value,
-    ]
-
-    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
-        GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
-        *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-    ]
 
     # Sub-category wise
     for subcategory in GSTR1_SubCategories:

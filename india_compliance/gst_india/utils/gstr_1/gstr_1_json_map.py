@@ -13,6 +13,8 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_Gov_Categories,
     GSTR1_SubCategories,
     ItemFields,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
 )
 
 """
@@ -209,7 +211,6 @@ class B2B(DataMapper):
 
         for customer_data in input_data:
             customer_gstin = customer_data.get(GovDataFields.CUST_GSTIN.value)
-            # TODO: Guess customer name
 
             default_invoice_data = {
                 DataFields.CUST_GSTIN.value: customer_gstin,
@@ -1253,58 +1254,6 @@ class SUPECOM(DataMapper):
         return output
 
 
-CLASS_MAP = {
-    GSTR1_Gov_Categories.B2B.value: B2B,
-    GSTR1_Gov_Categories.B2CL.value: B2CL,
-    GSTR1_Gov_Categories.EXP.value: Exports,
-    GSTR1_Gov_Categories.B2CS.value: B2CS,
-    GSTR1_Gov_Categories.NIL_EXEMPT.value: NilRated,
-    GSTR1_Gov_Categories.CDNR.value: CDNR,
-    GSTR1_Gov_Categories.CDNUR.value: CDNUR,
-    GSTR1_Gov_Categories.HSN.value: HSNSUM,
-    GSTR1_Gov_Categories.DOC_ISSUE.value: DOC_ISSUE,
-    GSTR1_Gov_Categories.AT.value: AT,
-    GSTR1_Gov_Categories.TXP.value: TXPD,
-    GSTR1_Gov_Categories.SUPECOM.value: SUPECOM,
-}
-
-
-def convert_to_internal_data_format(data):
-    output = {}
-
-    for category, mapper_class in CLASS_MAP.items():
-        if not data.get(category):
-            continue
-
-        output.update(
-            mapper_class().convert_to_internal_data_format(data.get(category))
-        )
-
-    return output
-
-
-def convert_to_gov_data_format(data):
-    category_wise_data = {}
-    for subcategory, category in SUB_CATEGORY_GOV_CATEGORY_MAPPING.items():
-        if not data.get(subcategory.value):
-            continue
-
-        category_wise_data.setdefault(category.value, {})[subcategory.value] = data.get(
-            subcategory.value, {}
-        )
-
-    output = {}
-    for category, mapper_class in CLASS_MAP.items():
-        if not category_wise_data.get(category):
-            continue
-
-        output[category] = mapper_class().convert_to_gov_data_format(
-            category_wise_data.get(category)
-        )
-
-    return output
-
-
 class RETSUM(DataMapper):
     KEY_MAPPING = {
         "sec_nm": DataFields.DESCRIPTION.value,
@@ -1406,7 +1355,7 @@ class RETSUM(DataMapper):
     def convert_to_internal_data_format(self, input_data):
         output = {}
 
-        for section_data in input_data["sec_sum"]:
+        for section_data in input_data:
             section = section_data.get("sec_nm")
             output[self.SECTION_NAMES.get(section, section)] = self.format_data(
                 section_data
@@ -1419,7 +1368,7 @@ class RETSUM(DataMapper):
                 formatted_data = self.format_subsection_data(section, subsection_data)
                 output[formatted_data[DataFields.DESCRIPTION.value]] = formatted_data
 
-        return output
+        return {"summary": output}
 
     def format_subsection_data(self, section, subsection_data):
         subsection = subsection_data.get("typ") or subsection_data.get("sec_nm")
@@ -1434,7 +1383,63 @@ class RETSUM(DataMapper):
         return self.SECTION_NAMES.get(doc_type, doc_type)
 
 
+CLASS_MAP = {
+    GSTR1_Gov_Categories.B2B.value: B2B,
+    GSTR1_Gov_Categories.B2CL.value: B2CL,
+    GSTR1_Gov_Categories.EXP.value: Exports,
+    GSTR1_Gov_Categories.B2CS.value: B2CS,
+    GSTR1_Gov_Categories.NIL_EXEMPT.value: NilRated,
+    GSTR1_Gov_Categories.CDNR.value: CDNR,
+    GSTR1_Gov_Categories.CDNUR.value: CDNUR,
+    GSTR1_Gov_Categories.HSN.value: HSNSUM,
+    GSTR1_Gov_Categories.DOC_ISSUE.value: DOC_ISSUE,
+    GSTR1_Gov_Categories.AT.value: AT,
+    GSTR1_Gov_Categories.TXP.value: TXPD,
+    GSTR1_Gov_Categories.SUPECOM.value: SUPECOM,
+    GSTR1_Gov_Categories.RET_SUM.value: RETSUM,
+}
+
+
+def convert_to_internal_data_format(data):
+    output = {}
+
+    for category, mapper_class in CLASS_MAP.items():
+        if not data.get(category):
+            continue
+
+        output.update(
+            mapper_class().convert_to_internal_data_format(data.get(category))
+        )
+
+    return output
+
+
+def convert_to_gov_data_format(data):
+    category_wise_data = {}
+    for subcategory, category in SUB_CATEGORY_GOV_CATEGORY_MAPPING.items():
+        if not data.get(subcategory.value):
+            continue
+
+        category_wise_data.setdefault(category.value, {})[subcategory.value] = data.get(
+            subcategory.value, {}
+        )
+
+    output = {}
+    for category, mapper_class in CLASS_MAP.items():
+        if not category_wise_data.get(category):
+            continue
+
+        output[category] = mapper_class().convert_to_gov_data_format(
+            category_wise_data.get(category)
+        )
+
+    return output
+
+
 def summarize_retsum_data(input_data):
+    if not input_data:
+        return []
+
     summarized_data = []
     total_values_keys = [
         "total_igst_amount",
@@ -1445,51 +1450,66 @@ def summarize_retsum_data(input_data):
     ]
     amended_data = {key: 0 for key in total_values_keys}
 
-    for category in CATEGORY_SUB_CATEGORY_MAPPING:
-        if category.value not in input_data:
+    input_data = {row.get("description"): row for row in input_data}
+
+    def _sum(row):
+        return flt(sum([row.get(key, 0) for key in total_values_keys]), 2)
+
+    for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
+        category = category.value
+        if category not in input_data:
             continue
 
-        summarized_data.append(
-            {
-                **input_data.get(category.value),
-                "indent": 0,
-            }
-        )
+        # compute total liability and total amended data
+        amended_category_data = input_data.get(f"{category} (Amended)", {})
+        for key in total_values_keys:
+            amended_data[key] += amended_category_data.get(key, 0)
 
-        amended_category_data = input_data.get(f"{category.value} (Amended)", {})
-        amended_data = {
-            key: amended_data[key] + amended_category_data.get(key, 0)
-            for key in total_values_keys
-        }
+        # add category data
+        if _sum(input_data[category]) == 0:
+            continue
 
-        for sub_category in CATEGORY_SUB_CATEGORY_MAPPING[category]:
-            if sub_category.value not in input_data:
+        summarized_data.append({**input_data.get(category), "indent": 0})
+
+        # add subcategory data
+        for sub_category in sub_categories:
+            sub_category = sub_category.value
+            if sub_category not in input_data:
+                continue
+
+            if _sum(input_data[sub_category]) == 0:
                 continue
 
             summarized_data.append(
                 {
-                    **input_data.get(sub_category.value),
+                    **input_data.get(sub_category),
                     "indent": 1,
+                    "consider_in_total_taxable_value": (
+                        False
+                        if sub_category
+                        in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
+                        else True
+                    ),
+                    "consider_in_total_tax": (
+                        False
+                        if sub_category in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
+                        else True
+                    ),
                 }
             )
 
-            amended_sub_category_data = input_data.get(
-                f"{sub_category.value} (Amended)", {}
-            )
-            amended_data = {
-                key: amended_data[key] + amended_sub_category_data.get(key, 0)
-                for key in total_values_keys
-            }
-
-    summarized_data.extend(
-        [
-            {
-                "description": "Total Amended",
-                **amended_data,
-                "indent": 0,
-            },
-            input_data.get("Total Liability"),
-        ]
-    )
+    if _sum(amended_data) != 0:
+        summarized_data.extend(
+            [
+                {
+                    "description": "Net Liability from Amendments",
+                    **amended_data,
+                    "indent": 0,
+                    "consider_in_total_taxable_value": True,
+                    "consider_in_total_tax": True,
+                    "no_of_records": 0,
+                }
+            ]
+        )
 
     return summarized_data
