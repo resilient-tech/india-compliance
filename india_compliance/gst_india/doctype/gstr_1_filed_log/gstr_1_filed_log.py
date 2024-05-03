@@ -7,7 +7,7 @@ from datetime import datetime
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_to_date, flt, get_datetime
+from frappe.utils import add_to_date, flt, get_datetime, getdate, get_last_day
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
@@ -333,6 +333,14 @@ def process_gstr_1_returns_info(gstin, response):
         )
     )
 
+    existing_gstr_1_filed_upto = frappe.get_cached_value(
+        "GST Settings", None, "gstr_1_filed_upto"
+    )
+
+    def _update_gstr_1_filed_upto(filing_date):
+        if not existing_gstr_1_filed_upto or filing_date > existing_gstr_1_filed_upto:
+            frappe.db.set_value("GST Settings", None, "gstr_1_filed_upto", filing_date)
+
     # create or update filed logs
     for key, info in return_info.items():
         filing_details = {
@@ -341,10 +349,16 @@ def process_gstr_1_returns_info(gstin, response):
             "filing_date": datetime.strptime(info["dof"], "%d-%m-%Y").date(),
         }
 
+        filed_upto = get_last_day(
+            getdate(f"{info['ret_prd'][2:]}-{info['ret_prd'][0:2]}-01")
+        )
+
         if key in filed_logs:
             if filed_logs[key] != info["status"]:
                 frappe.db.set_value("GSTR-1 Filed Log", key, filing_details)
+                _update_gstr_1_filed_upto(filed_upto)
 
+            # No updates if status is same
             continue
 
         frappe.get_doc(
@@ -355,6 +369,7 @@ def process_gstr_1_returns_info(gstin, response):
                 **filing_details,
             }
         ).insert()
+        _update_gstr_1_filed_upto(filed_upto)
 
 
 def get_file_doc(gstr1_log_name, attached_to_field):

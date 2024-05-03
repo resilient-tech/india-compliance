@@ -389,3 +389,54 @@ def update_not_applicable_status(e_invoice_applicability_date=None, company=None
         company = query.where(sales_invoice.company == company)
 
     query.run()
+
+
+def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=None):
+    """
+    Check if the user is allowed to modify transactions before the GSTR-1 filing date
+    Additionally, update the `is_not_latest_gstr1_data` field in the GSTR-1 Filed Log
+    """
+    posting_date = getdate(posting_date)
+
+    if not gst_settings:
+        gst_settings = frappe.get_cached_doc("GST Settings")
+
+    restrict = True
+
+    if not gst_settings.restrict_changes_after_gstr_1:
+        restrict = False
+
+    if posting_date > getdate(gst_settings.gstr_1_filed_upto):
+        restrict = False
+
+    if (
+        gst_settings.role_allowed_to_modify in frappe.get_roles()
+        or frappe.session.user == "Administrator"
+    ):
+        restrict = False
+
+    if restrict:
+        return gst_settings.gstr_1_filed_upto
+
+    update_is_not_latest_gstr1_data(posting_date, company_gstin)
+
+    return None
+
+
+def update_is_not_latest_gstr1_data(posting_date, company_gstin):
+    period = posting_date.strftime("%m%Y")
+
+    frappe.db.set_value(
+        "GSTR-1 Filed Log", f"{period}-{company_gstin}", "is_latest_data", 0
+    )
+
+    frappe.publish_realtime(
+        "is_not_latest_data",
+        message={
+            "filters": {
+                "company_gstin": company_gstin,
+                "month": posting_date.month,
+                "year": posting_date.year,
+            }
+        },
+    )

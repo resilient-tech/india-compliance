@@ -113,26 +113,7 @@ const MONTH = [
     "December",
 ];
 
-const CURRENCY_FIELD_MAP = {
-    total_taxable_value: "Taxable Value",
-    total_cess_amount: "CESS",
-    total_igst_amount: "IGST",
-    total_cgst_amount: "CGST",
-    total_sgst_amount: "SGST",
-}
 
-const FIELDNAME_MAP = {
-    hsn_code: "HSN Code",
-    quantity: "Quantity",
-    tax_rate: "Tax Rate",
-    uom: "UOM",
-    document_date: "Invoice Date",
-    place_of_supply: "Place of Supply",
-    reverse_charge: "Reverse Charge",
-    from_sr_no: "Sr No From",
-    to_sr_no: "Sr No To",
-    ...CURRENCY_FIELD_MAP
-};
 
 let net_balance_during_period;
 let computed_on;
@@ -167,9 +148,14 @@ frappe.ui.form.on(DOCTYPE, {
 
         frappe.realtime.on("is_not_latest_data", message => {
             const { filters } = message;
+
+            const month = MONTH[filters.month - 1];
+            const quarter = QUARTER[Math.floor(filters.month / 3)];
+
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
-                frm.doc.month_or_quarter != filters.month_or_quarter ||
+                (frm.doc.month_or_quarter != month &&
+                    frm.doc.month_or_quarter != quarter) ||
                 frm.doc.year != filters.year
             )
                 return;
@@ -215,8 +201,6 @@ frappe.ui.form.on(DOCTYPE, {
         const options = await india_compliance.set_gstin_options(frm);
 
         frm.set_value("company_gstin", options[0]);
-
-
     },
 
     company_gstin: render_empty_state,
@@ -250,10 +234,12 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         if (!data?.status) return;
-        computed_on = frappe.utils.to_title_case(frappe.datetime.prettyDate(data.computed_on));
+        computed_on = frappe.utils.to_title_case(
+            frappe.datetime.prettyDate(data.computed_on)
+        );
         frm.gstr1.status = data.status;
         await get_output_gst_legder(frm);
-        frm.gstr1.set_output_gst_ledger()
+        frm.gstr1.set_output_gst_ledger();
         frm.gstr1.refresh_data(data);
     },
 });
@@ -470,7 +456,11 @@ class GSTR1 {
         this.$wrapper.on("click", ".btn.eye.reconcile-row", function (e) {
             const row_index = $(this).attr("data-row-index");
             const data = me.data.reconcile[me.filter_category][row_index];
-            new DetailViewDialog(data);
+
+            const category_columns = me.tabs.filed_tab.tabmanager.category_columns;
+            const field_label_map = category_columns.map(col => [col.fieldname, col.name])
+
+            new DetailViewDialog(data, field_label_map);
         });
     }
 
@@ -574,8 +564,8 @@ class GSTR1 {
             $(".gst-ledger-difference").remove();
         }
         $(function () {
-            $('[data-toggle="tooltip"]').tooltip()
-          })
+            $('[data-toggle="tooltip"]').tooltip();
+        });
 
         const net_transactions = {
             IGST: net_balance_during_period["total_igst_amount"] || 0,
@@ -590,17 +580,22 @@ class GSTR1 {
         <div class="gst-ledger-difference w-100" style="border-bottom: 1px solid var(--border-color);">
             <div class="m-3 d-flex justify-content-around align-items-center">
                 ${Object.entries(net_transactions)
-                .map(
-                    ([type, net_amount]) => `
+            .map(
+                ([type, net_amount]) => `
                     <div>
-                        <h5>${type} Account
-                            <i class="fa fa-info-circle info-icon" data-toggle="tooltip" data-placement="top" title="Net Transactions (Credit - Debit) during the selected period in ${type} Account"></i>
+                        <h5>${type} Account&nbsp;
+                            <i
+                            class="fa fa-info-circle info-icon"
+                            style="font-size: small;"
+                            data-toggle="tooltip"
+                            data-placement="top" title="Net Transactions (Credit - Debit) during the selected period in ${type} Account"
+                            ></i>
                         </h5>
                         <h4 class="text-center">${format_currency(net_amount)}</h4>
                     </div>
                 `
-                )
-                .join("")}
+        )
+            .join("")}
             </div>
         </div>
         `;
@@ -661,8 +656,8 @@ class TabManager {
             const columns_func = this.CATEGORY_COLUMNS[category];
             if (!columns_func) return;
 
-            const columns = columns_func.call(this);
-            this.setup_datatable(this.wrapper, this.data[category], columns);
+            this.category_columns = columns_func.call(this);
+            this.setup_datatable(this.wrapper, this.data[category], this.category_columns);
         } else if (view === "Summary") {
             let filtered_summary = this.summary;
             if (category)
@@ -711,10 +706,10 @@ class TabManager {
                 <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
             </div>
             <div class="data-table"></div>
-            <div class="custom-footer ">
-        <button class="m-3 btn btn-xs btn-default expand" data-action="expand_all_rows">
+            <div class="report-footer" style="padding: var(--padding-sm)">
+        <button class="btn btn-xs btn-default expand" data-action="expand_all_rows">
             ${__("Expand All")}</button>
-        <button class="m-3 btn btn-xs btn-default collapse" data-action="collapse_all_rows">
+        <button class="btn btn-xs btn-default collapse" data-action="collapse_all_rows">
             ${__("Collapse All")}</button>
     </div>
         `);
@@ -834,9 +829,11 @@ class TabManager {
             if ($(".computed-on").length) {
                 $(".computed-on").remove();
             }
-            this.wrapper.find(".custom-footer").append(
-                `<h5 class="computed-on m-3 text-right float-right">Computed On : <b>${computed_on}</b></h5>`
-            );
+            this.wrapper
+                .find(".report-footer")
+                .append(
+                    `<div class="computed-on text-muted float-right">Computed ${computed_on}</div>`
+                );
         }
     }
 
@@ -876,7 +873,7 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="summary-description">
+                ? `<a href="#" class="summary-description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                     : value;
@@ -1522,15 +1519,19 @@ class FiledTab extends TabManager {
                 {
                     fieldname: "include_uploaded",
                     label: __("Include Already Uploaded Invoices"),
-                    description: __("This will include invoices already uploaded to GSTN (possibly e-Invoices) and overwrite them in GST Portal."),
+                    description: __(
+                        "This will include invoices already uploaded to GSTN (possibly e-Invoices) and overwrite them in GST Portal."
+                    ),
                     fieldtype: "Check",
                 },
                 {
                     fieldname: "overwrite_missing",
                     label: __("Overwrite Missing Invoices in ERP"),
-                    description: __("This will overwrite invoices that are not present in ERP but are present in GST Portal with zero values."),
+                    description: __(
+                        "This will overwrite invoices that are not present in ERP but are present in GST Portal with zero values."
+                    ),
                     fieldtype: "Check",
-                }
+                },
             ],
             primary_action: () => {
                 frappe.call({
@@ -1540,8 +1541,8 @@ class FiledTab extends TabManager {
                         frappe.msgprint(r.message);
                     },
                 });
-            }
-        })
+            },
+        });
 
         dialog.show();
     }
@@ -1743,8 +1744,26 @@ class ReconcileTab extends FiledTab {
 }
 
 class DetailViewDialog {
-    constructor(data) {
+    CURRENCY_FIELD_MAP = {
+        [GSTR1_DataFields.TAXABLE_VALUE]: "Taxable Value",
+        [GSTR1_DataFields.IGST]: "IGST",
+        [GSTR1_DataFields.CGST]: "CGST",
+        [GSTR1_DataFields.SGST]: "SGST",
+        [GSTR1_DataFields.CESS]: "CESS",
+        [GSTR1_DataFields.DOC_VALUE]: "Invoice Value",
+
+    };
+
+    IGNORED_FIELDS = [
+        GSTR1_DataFields.CUST_NAME,
+        GSTR1_DataFields.DOC_NUMBER,
+        GSTR1_DataFields.DOC_TYPE,
+        "match_status",
+    ]
+
+    constructor(data, field_label_map) {
         this.data = data;
+        this.field_label_map = field_label_map;
         this.render_dialog();
         this.dialog.show();
     }
@@ -1765,12 +1784,14 @@ class DetailViewDialog {
     }
     render_table() {
         const detail_table = this.dialog.fields_dict.reconcile_data;
+        const field_label_map = this.field_label_map.filter(field => !this.IGNORED_FIELDS.includes(field[0]));
+
 
         detail_table.html(
-            frappe.render_template("gstr_1_reconcile", {
+            frappe.render_template("gstr_1_detail_comparision", {
                 data: this.data,
-                fieldname_map: FIELDNAME_MAP,
-                currency_map: CURRENCY_FIELD_MAP
+                fieldname_map: field_label_map,
+                currency_map: this.CURRENCY_FIELD_MAP,
             })
         );
     }

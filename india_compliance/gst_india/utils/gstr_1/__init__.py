@@ -9,33 +9,18 @@ V - Export to Excel filed data
 V - Json Download
 
 UI:
-P - Highlight active tab -done
 - Save utility (save data)
-S - Highlight if data is not latest
-P - Details view for reconciliation -done
-P - Summary of Ledger difference -done
-
-P - Pretty Date & Postion  of date -done
-P - Tooltip -done
-P - eye button center -done
 
 Dialog:
-P - Try Medium -done
-P - Consistent column size  -done
-P - Highlight difference if present -done
-P - Match status -done
-P - Customer Name or Document Type -done
-P - Books and then GSTR-1 -done
-p - Move set_output gst ledger in GSTR-1 class -done
+P - Highlight difference if present
 
 Notes
 S - Test with Actual Data
 S - Refactor and cleanup
 
-S - Freeze Data
-S - On change of Sales Invoice / Payment Entry (Is Latest Data)
+S - Quarterly freeze and return status
+S - On change of Payment Entry (Is Latest Data)
  - GSTR -1 Section 14 ecommerce
-S - Listner for Is Latest Data
 
 Data Export
 P - Reconcile excel with all data export

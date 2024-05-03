@@ -130,14 +130,12 @@ class GSTR1Beta(Document):
             raise e
 
     def _generate_gstr1_data(self, filters):
-        data = {}
+        data = {"computed_on": self.gstr1_log.computed_on}
 
         def on_generate():
             self.gstr1_log.db_set(
                 {"generation_status": "Generated", "is_latest_data": 1}
             )
-
-            data["computed_on"] = self.gstr1_log.computed_on
 
             frappe.publish_realtime(
                 "gstr1_data_prepared",

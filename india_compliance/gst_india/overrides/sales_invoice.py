@@ -1,6 +1,6 @@
 import frappe
 from frappe import _, bold
-from frappe.utils import flt, fmt_money
+from frappe.utils import flt, fmt_money, format_date
 
 from india_compliance.gst_india.overrides.payment_entry import get_taxes_summary
 from india_compliance.gst_india.overrides.transaction import (
@@ -26,6 +26,9 @@ from india_compliance.gst_india.utils.e_invoice import (
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
+)
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    restrict_gstr_1_transaction_for,
 )
 
 
@@ -57,6 +60,7 @@ def validate(doc, method=None):
 
     gst_settings = frappe.get_cached_doc("GST Settings")
 
+    validate_backdated_transaction(doc, gst_settings)
     validate_invoice_number(doc)
     validate_credit_debit_note(doc)
     validate_fields_and_set_status_for_e_invoice(doc, gst_settings)
@@ -64,6 +68,18 @@ def validate(doc, method=None):
     validate_port_address(doc)
     set_and_validate_advances_with_gst(doc)
     set_e_waybill_status(doc, gst_settings)
+
+
+def validate_backdated_transaction(doc, gst_settings=None, action="create"):
+    if gstr_1_filed_upto := restrict_gstr_1_transaction_for(
+        doc.posting_date, doc.company_gstin, gst_settings
+    ):
+        frappe.throw(
+            _(
+                "You are not allowed to {0} Sales Invoice as GSTR-1 has been filed upto {1}"
+            ).format(action, frappe.bold(format_date(gstr_1_filed_upto))),
+            title=_("Restricted Changes"),
+        )
 
 
 def validate_credit_debit_note(doc):
@@ -174,6 +190,10 @@ def on_submit(doc, method=None):
 
 
 def before_cancel(doc, method=None):
+    if ignore_gst_validations(doc):
+        return
+
+    validate_backdated_transaction(doc, action="cancel")
     validate_fields_and_set_status_for_e_invoice(doc)
     payment_references = frappe.get_all(
         "Payment Entry Reference",

@@ -42,9 +42,11 @@
   "e_invoice_applicable_companies",
   "gstr_1_section_break",
   "analyze_filed_data",
-  "freeze_transactions",
-  "column_break_cxmn",
   "filing_frequency",
+  "column_break_cxmn",
+  "restrict_changes_after_gstr_1",
+  "role_allowed_to_modify",
+  "gstr_1_filed_upto",
   "other_apis_section",
   "autofill_party_info",
   "archive_party_info_days",
@@ -574,7 +576,7 @@
   {
    "default": "0",
    "depends_on": "eval: india_compliance.is_api_enabled(doc)",
-   "description": "Compare Books with GSTR 1 Filed or e-Invoice data",
+   "description": "Compare Books with GSTR 1 Filed or Invoice data before filing",
    "fieldname": "analyze_filed_data",
    "fieldtype": "Check",
    "label": "Analyze Filed Data"
@@ -590,10 +592,22 @@
    "options": "Monthly\nQuarterly"
   },
   {
+   "fieldname": "role_allowed_to_modify",
+   "fieldtype": "Link",
+   "label": "Role Allowed to Modify Transactions",
+   "options": "User Role Profile"
+  },
+  {
+   "fieldname": "gstr_1_filed_upto",
+   "fieldtype": "Date",
+   "label": "GSTR-1 Filed Upto",
+   "read_only": 1
+  },
+  {
    "default": "0",
    "depends_on": "eval: india_compliance.is_api_enabled(doc)",
-   "description": "Ensures restrictions to modify or create transactions after return is marked as filed",
-   "fieldname": "freeze_transactions",
+   "description": "Ensures restrictions to cancel or create transactions after return is marked as filed",
+   "fieldname": "restrict_changes_after_gstr_1",
    "fieldtype": "Check",
    "label": "Restrict changes after GSTR 1 is filed"
   }
@@ -601,7 +615,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-04-13 17:19:16.522015",
+ "modified": "2024-05-03 15:45:20.672133",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
