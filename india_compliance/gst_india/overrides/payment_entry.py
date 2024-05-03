@@ -2,7 +2,7 @@ import frappe
 from frappe import _
 from frappe.contacts.doctype.address.address import get_default_address
 from frappe.query_builder.functions import Sum
-from frappe.utils import flt, getdate
+from frappe.utils import flt, getdate, format_date
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.accounts.utils import create_payment_ledger_entry
 from erpnext.controllers.accounts_controller import get_advance_payment_entries
@@ -10,8 +10,12 @@ from erpnext.controllers.accounts_controller import get_advance_payment_entries
 from india_compliance.gst_india.overrides.transaction import get_gst_details
 from india_compliance.gst_india.overrides.transaction import (
     validate_transaction as validate_transaction_for_advance_payment,
+    validate_backdated_transaction as _validate_backdated_transaction,
 )
-from india_compliance.gst_india.utils import get_all_gst_accounts
+from india_compliance.gst_india.utils import (
+    get_all_gst_accounts,
+    get_gst_accounts_by_type,
+)
 
 
 @frappe.whitelist()
@@ -98,6 +102,21 @@ def on_submit(doc, method=None):
 
 def on_update_after_submit(doc, method=None):
     make_gst_revesal_entry_from_advance_payment(doc)
+
+
+def before_cancel(doc, method=None):
+    if not doc.taxes:
+        return
+
+    validate_backdated_transaction(doc)
+
+
+def validate_backdated_transaction(doc):
+    gst_accounts = get_gst_accounts_by_type(doc.company, "Output")
+    for row in doc.taxes:
+        if row.account_head in gst_accounts and row.tax_amount != 0:
+            _validate_backdated_transaction(doc, action="cancel")
+            break
 
 
 @frappe.whitelist()

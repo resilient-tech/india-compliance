@@ -7,6 +7,7 @@ from india_compliance.gst_india.overrides.transaction import (
     ignore_gst_validations,
     validate_mandatory_fields,
     validate_transaction,
+    validate_backdated_transaction,
 )
 from india_compliance.gst_india.overrides.unreconcile_payment import (
     reverse_gst_adjusted_against_payment_entry,
@@ -26,9 +27,6 @@ from india_compliance.gst_india.utils.e_invoice import (
 from india_compliance.gst_india.utils.e_waybill import get_e_waybill_info
 from india_compliance.gst_india.utils.transaction_data import (
     validate_unique_hsn_and_uom,
-)
-from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
-    restrict_gstr_1_transaction_for,
 )
 
 
@@ -68,18 +66,6 @@ def validate(doc, method=None):
     validate_port_address(doc)
     set_and_validate_advances_with_gst(doc)
     set_e_waybill_status(doc, gst_settings)
-
-
-def validate_backdated_transaction(doc, gst_settings=None, action="create"):
-    if gstr_1_filed_upto := restrict_gstr_1_transaction_for(
-        doc.posting_date, doc.company_gstin, gst_settings
-    ):
-        frappe.throw(
-            _(
-                "You are not allowed to {0} Sales Invoice as GSTR-1 has been filed upto {1}"
-            ).format(action, frappe.bold(format_date(gstr_1_filed_upto))),
-            title=_("Restricted Changes"),
-        )
 
 
 def validate_credit_debit_note(doc):

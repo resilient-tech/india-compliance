@@ -11,15 +11,11 @@ V - Json Download
 UI:
 - Save utility (save data)
 
-Dialog:
-P - Highlight difference if present
-
 Notes
 S - Test with Actual Data
 S - Refactor and cleanup
 
 S - Quarterly freeze and return status
-S - On change of Payment Entry (Is Latest Data)
  - GSTR -1 Section 14 ecommerce
 
 Data Export
