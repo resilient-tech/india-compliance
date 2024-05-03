@@ -113,26 +113,27 @@ const MONTH = [
     "December",
 ];
 
-const FIELDNAME_MAP = {
-    hsn_code: "HSN Code",
-    quantity: "Quantity",
-    tax_rate: "Tax Rate",
+const CURRENCY_FIELD_MAP = {
     total_taxable_value: "Taxable Value",
     total_cess_amount: "CESS",
     total_igst_amount: "IGST",
     total_cgst_amount: "CGST",
     total_sgst_amount: "SGST",
+}
+
+const FIELDNAME_MAP = {
+    hsn_code: "HSN Code",
+    quantity: "Quantity",
+    tax_rate: "Tax Rate",
     uom: "UOM",
-    customer_gstin: "Customer GSTIN",
-    customer_name: "Customer Name",
     document_date: "Invoice Date",
-    document_number: "Invoice Number",
-    document_type: "Invoice Type",
     place_of_supply: "Place of Supply",
     reverse_charge: "Reverse Charge",
     from_sr_no: "Sr No From",
     to_sr_no: "Sr No To",
+    ...CURRENCY_FIELD_MAP
 };
+
 let net_balance_during_period;
 let computed_on;
 frappe.ui.form.on(DOCTYPE, {
@@ -214,6 +215,8 @@ frappe.ui.form.on(DOCTYPE, {
         const options = await india_compliance.set_gstin_options(frm);
 
         frm.set_value("company_gstin", options[0]);
+
+
     },
 
     company_gstin: render_empty_state,
@@ -247,9 +250,10 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         if (!data?.status) return;
-        await get_output_gst_legder(frm);
-        computed_on = data.computed_on;
+        computed_on = frappe.utils.to_title_case(frappe.datetime.prettyDate(data.computed_on));
         frm.gstr1.status = data.status;
+        await get_output_gst_legder(frm);
+        frm.gstr1.set_output_gst_ledger()
         frm.gstr1.refresh_data(data);
     },
 });
@@ -465,8 +469,8 @@ class GSTR1 {
         const me = this;
         this.$wrapper.on("click", ".btn.eye.reconcile-row", function (e) {
             const row_index = $(this).attr("data-row-index");
-            const { gov, books } = me.data.reconcile[me.filter_category][row_index];
-            new DetailViewDialog(gov, books);
+            const data = me.data.reconcile[me.filter_category][row_index];
+            new DetailViewDialog(data);
         });
     }
 
@@ -563,6 +567,46 @@ class GSTR1 {
 
         dialog.show();
     }
+
+    set_output_gst_ledger() {
+        //Checks if gst-ledger-difference element is there and removes if already present
+        if ($(".gst-ledger-difference").length) {
+            $(".gst-ledger-difference").remove();
+        }
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+          })
+
+        const net_transactions = {
+            IGST: net_balance_during_period["total_igst_amount"] || 0,
+            CGST: net_balance_during_period["total_cgst_amount"] || 0,
+            SGST: net_balance_during_period["total_sgst_amount"] || 0,
+            CESS: net_balance_during_period["total_cess_amount"] || 0,
+        };
+
+        // <div class="m-2 text-center"><h6>Net Transactions (Credit - Debit) during the period</h6></div>
+        //prepending the gst-legder-difference element
+        let output_gst_ledger_html = `
+        <div class="gst-ledger-difference w-100" style="border-bottom: 1px solid var(--border-color);">
+            <div class="m-3 d-flex justify-content-around align-items-center">
+                ${Object.entries(net_transactions)
+                .map(
+                    ([type, net_amount]) => `
+                    <div>
+                        <h5>${type} Account
+                            <i class="fa fa-info-circle info-icon" data-toggle="tooltip" data-placement="top" title="Net Transactions (Credit - Debit) during the selected period in ${type} Account"></i>
+                        </h5>
+                        <h4 class="text-center">${format_currency(net_amount)}</h4>
+                    </div>
+                `
+                )
+                .join("")}
+            </div>
+        </div>
+        `;
+        let element = $('[data-fieldname="data_section"]');
+        element.prepend(output_gst_ledger_html);
+    }
 }
 
 class TabManager {
@@ -603,7 +647,6 @@ class TabManager {
         this.remove_tab_custom_buttons();
         this.setup_actions();
         this.datatable.refresh(this.summary);
-        this.set_output_gst_ledger();
         this.set_default_title();
         this.set_computed_on();
     }
@@ -668,10 +711,10 @@ class TabManager {
                 <div class="custom-button-group page-actions custom-actions hidden-xs hidden-md"></div>
             </div>
             <div class="data-table"></div>
-            <div class="tree-footer col-md-6">
+            <div class="custom-footer ">
         <button class="m-3 btn btn-xs btn-default expand" data-action="expand_all_rows">
             ${__("Expand All")}</button>
-        <button class="mt-3 btn btn-xs btn-default collapse" data-action="collapse_all_rows">
+        <button class="m-3 btn btn-xs btn-default collapse" data-action="collapse_all_rows">
             ${__("Collapse All")}</button>
     </div>
         `);
@@ -786,51 +829,13 @@ class TabManager {
         );
     }
 
-    set_output_gst_ledger() {
-        if (this instanceof BooksTab) {
-            console.log(this);
-            //Checks if gst-ledger-difference element is there and removes if already present
-            if ($(".gst-ledger-difference").length) {
-                $(".gst-ledger-difference").remove();
-            }
-
-            const net_transactions = {
-                IGST: net_balance_during_period["total_igst_amount"] || 0,
-                CGST: net_balance_during_period["total_cgst_amount"] || 0,
-                SGST: net_balance_during_period["total_sgst_amount"] || 0,
-                CESS: net_balance_during_period["total_cess_amount"] || 0,
-            };
-
-            // <div class="m-2 text-center"><h6>Net Transactions (Credit - Debit) during the period</h6></div>
-            //prepending the gst-legder-difference element
-            let output_gst_ledger_html = `
-            <div class="gst-ledger-difference w-100" style="border-bottom: 1px solid var(--border-color);">
-                <div class="m-3 d-flex justify-content-around align-items-center">
-                    ${Object.entries(net_transactions)
-                    .map(
-                        ([type, net_amount]) => `
-                        <div>
-                            <h5>${type} Account</h5>
-                            <h4 class="text-center">${format_currency(net_amount)}</h4>
-                        </div>
-                    `
-                        )
-                .join("")}
-                </div>
-            </div>
-            `;
-            let element = $('[data-fieldname="data_section"]');
-            element.prepend(output_gst_ledger_html);
-        }
-    }
-
     set_computed_on() {
         if (this instanceof BooksTab) {
             if ($(".computed-on").length) {
                 $(".computed-on").remove();
             }
-            this.wrapper.append(
-                `<h5 class="computed-on mr-3 text-right">Computed On : <b>${computed_on}</b></h5>`
+            this.wrapper.find(".custom-footer").append(
+                `<h5 class="computed-on m-3 text-right float-right">Computed On : <b>${computed_on}</b></h5>`
             );
         }
     }
@@ -871,7 +876,7 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="summary-description">
+                    ? `<a href="#" class="summary-description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                     : value;
@@ -1714,7 +1719,7 @@ class ReconcileTab extends FiledTab {
         if (!data) return "";
         return `
         <button
-            class="btn ${icon} reconcile-row" 
+            class="btn ${icon} reconcile-row"
             data-row-index='${data.idx}'
         >
             <i class="fa fa-${icon}"></i>
@@ -1738,9 +1743,8 @@ class ReconcileTab extends FiledTab {
 }
 
 class DetailViewDialog {
-    constructor(gov, books) {
-        this.gov = gov;
-        this.books = books;
+    constructor(data) {
+        this.data = data;
         this.render_dialog();
         this.dialog.show();
     }
@@ -1764,9 +1768,9 @@ class DetailViewDialog {
 
         detail_table.html(
             frappe.render_template("gstr_1_reconcile", {
-                gov: this.gov,
-                books: this.books,
+                data: this.data,
                 fieldname_map: FIELDNAME_MAP,
+                currency_map: CURRENCY_FIELD_MAP
             })
         );
     }
@@ -1815,7 +1819,7 @@ function set_options_for_month_or_quarter(frm) {
     if (frm.doc.year === current_year)
         // set second last option as default
         frm.set_value("month_or_quarter", options[options.length - 2]);
-        // set last option as default
+    // set last option as default
     else frm.set_value("month_or_quarter", options[options.length - 1]);
 }
 
@@ -1869,6 +1873,9 @@ function get_year_list(current_date) {
 }
 
 function render_empty_state(frm) {
+    if ($(".gst-ledger-difference").length) {
+        $(".gst-ledger-difference").remove();
+    }
     frm.doc.__onload = null;
     frm.refresh();
 }

@@ -102,13 +102,35 @@ div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
 }
 
 .custom-tabs > .nav-item > .nav-link.active {
-    background-color: var(--control-bg);
+    background-color: #e2e2e2;
+    color: var(--primary);
 }
-
+.custom-tabs > .nav-item:first-child:hover{
+    background-color: var(--btn-default-hover-bg);
+    border-radius: 0.4rem 0 0 0.4rem;
+    color: var(--text-color);
+}
+.custom-tabs > .nav-item:last-child:hover{
+    background-color: var(--btn-default-hover-bg);
+    border-radius: 0 0.4rem 0.4rem 0;
+    color: var(--text-color);
+}
+.custom-tabs > .nav-item> .nav-link.active:hover{
+    background-color: #ededed;
+    color: var(--primary);
+}
 .custom-tabs > .nav-item:first-child > .nav-link {
     border-radius: 0.4rem 0 0 0.4rem;
 }
 
 .custom-tabs > .nav-item:last-child > .nav-link {
     border-radius: 0 0.4rem 0.4rem 0;
+}
+
+
+.reconcile-row{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }

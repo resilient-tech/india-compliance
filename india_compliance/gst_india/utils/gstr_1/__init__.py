@@ -9,24 +9,24 @@ V - Export to Excel filed data
 V - Json Download
 
 UI:
-P - Highlight active tab
+P - Highlight active tab -done
 - Save utility (save data)
 S - Highlight if data is not latest
-P - Details view for reconciliation
-P - Summary of Ledger difference
+P - Details view for reconciliation -done
+P - Summary of Ledger difference -done
 
-P - Pretty Date & Postion  of date
-P - Tooltip
-P - eye button center
+P - Pretty Date & Postion  of date -done
+P - Tooltip -done
+P - eye button center -done
 
 Dialog:
-P - Try Medium
-P - Consistent column size
-P - Highlight difference if present
-P - Match status
-P - Customer Name or Document Type
-P - Books and then GSTR-1
-p - Move set_output gst ledger in GSTR-1 class
+P - Try Medium -done
+P - Consistent column size  -done
+P - Highlight difference if present -done
+P - Match status -done
+P - Customer Name or Document Type -done
+P - Books and then GSTR-1 -done
+p - Move set_output gst ledger in GSTR-1 class -done
 
 Notes
 S - Test with Actual Data
