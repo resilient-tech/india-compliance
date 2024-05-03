@@ -38,8 +38,6 @@ var books = data.books%}
         <tbody>
             {% var gov_keys=Object.keys(data.gov);
             var books_keys=Object.keys(data.books);
-            var tr_class= (gov_keys.length && books_keys.length) ? "font-weight-bold" :
-            "font-weight-light";
             var field_keys = gov_keys.length ? gov_keys : books_keys
             %}
             {% for fieldmap in fieldname_map %}
@@ -76,8 +74,8 @@ var books = data.books%}
 
             <tr class="text-center">
                 <td style="width: 30%"><b>{{ column_title }}</b></td>
-                <td style="width: 35%" class={{tr_class}}>{{ book_value }}</td>
-                <td style="width: 35%" class={{tr_class}}>{{ gov_value }} </td>
+                <td style="width: 35%" data-label={{fieldname}}>{{ book_value }}</td>
+                <td style="width: 35%"  data-label={{fieldname}}>{{ gov_value }} </td>
             </tr>
             {% endfor %}
         </tbody>

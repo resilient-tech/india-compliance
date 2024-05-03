@@ -134,3 +134,6 @@ div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
     left: 50%;
     transform: translate(-50%, -50%);
 }
+.not-matched{
+    color: red;
+}

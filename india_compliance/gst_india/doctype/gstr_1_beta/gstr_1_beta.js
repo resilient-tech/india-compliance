@@ -1794,6 +1794,28 @@ class DetailViewDialog {
                 currency_map: this.CURRENCY_FIELD_MAP,
             })
         );
+        // console.log(detail_table)
+        this._set_value_color(detail_table.$wrapper,this.data);
+    }
+
+    _set_value_color(wrapper,data) {
+        console.log(Object.keys(data.gov).length)
+        console.log(Object.keys(data.books).length)
+        if(!Object.keys(data.gov).length || !Object.keys(data.books).length)return
+
+        let gov_data=data.gov;
+        let books_data=data.books
+
+        for(const key in gov_data){
+            console.log(key)
+            console.log(gov_data[key],books_data[key])
+            if(gov_data[key]===books_data[key] || key==="description")continue;
+
+            wrapper
+                .find(`[data-label='${key}'], [data-label='${key}']`)
+                .addClass("not-matched");
+        }
+
     }
 }
 
