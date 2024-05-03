@@ -295,6 +295,9 @@ class GSTR1 {
     refresh_data(data) {
         this.render_indicator();
 
+        // clear filters if any
+        this.filter_group.filter_x_button.click();
+
         if (data) this.data = data;
         if (!this.data["filed"]) {
             this.data["filed"] = this.data["books"];
@@ -563,6 +566,7 @@ class GSTR1 {
 }
 
 class TabManager {
+    DEFAULT_NO_DATA_MESSAGE = __("No Data");
     CATEGORY_COLUMNS = {};
     DEFAULT_SUMMARY = {
         // description: "",
@@ -686,6 +690,7 @@ class TabManager {
                 showTotalRow: true,
                 checkboxColumn: false,
                 treeView: treeView,
+                noDataMessage: this.DEFAULT_NO_DATA_MESSAGE,
                 headerDropdown: [
                     {
                         label: "Collapse All Node",
@@ -1667,6 +1672,8 @@ class UnfiledTab extends FiledTab {
 }
 
 class ReconcileTab extends FiledTab {
+    DEFAULT_NO_DATA_MESSAGE = __("No differences found");
+
     set_default_title() {
         if (this.instance.data.status === "Filed")
             this.DEFAULT_TITLE = "Books vs Filed";

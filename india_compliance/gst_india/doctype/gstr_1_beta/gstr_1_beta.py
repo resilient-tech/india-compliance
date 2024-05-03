@@ -25,6 +25,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     INVOICE_SUB_CATEGORIES,
     DataFields,
     GSTR1_Categories,
+    ItemFields,
     GSTR1_SubCategories,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
@@ -145,6 +146,8 @@ class GSTR1Beta(Document):
             self.gstr1_log.db_set(
                 {"generation_status": "Generated", "is_latest_data": 1}
             )
+
+            data["computed_on"] = self.gstr1_log.computed_on
 
             frappe.publish_realtime(
                 "gstr1_data_prepared",
@@ -593,7 +596,7 @@ class GSTR1ProcessData:
                 DataFields.CGST.value: 0,
                 DataFields.SGST.value: 0,
                 DataFields.CESS.value: 0,
-                "diff_percentage": 0,
+                DataFields.DIFF_PERCENTAGE.value: 0,
                 "items": [],
             },
         )
@@ -602,12 +605,12 @@ class GSTR1ProcessData:
 
         mapped_dict["items"].append(
             {
-                "idx": idx,
-                "taxable_value": invoice.taxable_value,
-                "igst_amount": invoice.igst_amount,
-                "cgst_amount": invoice.cgst_amount,
-                "sgst_amount": invoice.sgst_amount,
-                "cess_amount": invoice.total_cess_amount,
+                ItemFields.INDEX.value: idx,
+                ItemFields.TAXABLE_VALUE.value: invoice.taxable_value,
+                ItemFields.IGST.value: invoice.igst_amount,
+                ItemFields.CGST.value: invoice.cgst_amount,
+                ItemFields.SGST.value: invoice.sgst_amount,
+                ItemFields.CESS.value: invoice.total_cess_amount,
             }
         )
         self.update_totals(mapped_dict, invoice)
@@ -626,13 +629,9 @@ class GSTR1ProcessData:
         mapped_dict.append(
             {
                 DataFields.TRANSACTION_TYPE.value: self.get_transaction_type(invoice),
-                DataFields.TAXABLE_VALUE.value: invoice.taxable_value,
                 DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 DataFields.DOC_DATE.value: invoice.posting_date,
-                DataFields.IGST.value: invoice.igst_amount,
-                DataFields.CGST.value: invoice.cgst_amount,
-                DataFields.SGST.value: invoice.sgst_amount,
-                DataFields.CESS.value: invoice.total_cess_amount,
+                **self.get_invoice_values(invoice),
             }
         )
 
@@ -650,13 +649,9 @@ class GSTR1ProcessData:
                 DataFields.TRANSACTION_TYPE.value: self.get_transaction_type(invoice),
                 DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 DataFields.POS.value: invoice.place_of_supply,
-                DataFields.TAXABLE_VALUE.value: invoice.taxable_value,
                 DataFields.TAX_RATE.value: invoice.gst_rate,
-                DataFields.IGST.value: invoice.igst_amount,
-                DataFields.CGST.value: invoice.cgst_amount,
-                DataFields.SGST.value: invoice.sgst_amount,
-                DataFields.CESS.value: invoice.total_cess_amount,
-                "ecommerce_gstin": invoice.ecommerce_gstin,
+                DataFields.ECOMMERCE_GSTIN.value: invoice.ecommerce_gstin,
+                **self.get_invoice_values(invoice),
             }
         )
 
@@ -735,11 +730,11 @@ class GSTR1ProcessData:
 
     def update_totals(self, mapped_dict, invoice, for_qty=False):
         data_invoice_amount_map = {
-            DataFields.TAXABLE_VALUE.value: "taxable_value",
-            DataFields.IGST.value: "igst_amount",
-            DataFields.CGST.value: "cgst_amount",
-            DataFields.SGST.value: "sgst_amount",
-            DataFields.CESS.value: "total_cess_amount",
+            DataFields.TAXABLE_VALUE.value: ItemFields.TAXABLE_VALUE.value,
+            DataFields.IGST.value: ItemFields.IGST.value,
+            DataFields.CGST.value: ItemFields.CGST.value,
+            DataFields.SGST.value: ItemFields.SGST.value,
+            DataFields.CESS.value: ItemFields.CESS.value,
         }
 
         if for_qty:
@@ -747,6 +742,15 @@ class GSTR1ProcessData:
 
         for key, field in data_invoice_amount_map.items():
             mapped_dict[key] += invoice.get(field, 0)
+
+    def get_invoice_values(self, invoice):
+        return {
+            DataFields.TAXABLE_VALUE.value: invoice.taxable_value,
+            DataFields.IGST.value: invoice.igst_amount,
+            DataFields.CGST.value: invoice.cgst_amount,
+            DataFields.SGST.value: invoice.sgst_amount,
+            DataFields.CESS.value: invoice.total_cess_amount,
+        }
 
 
 def test_gstr1_mapped_data():
@@ -798,7 +802,18 @@ class GSTR1MappedData(GSTR1ProcessData):
             if data:
                 prepared_data[category] = data
 
+        for sub_category_data in prepared_data.values():
+            self.set_rounded_values(sub_category_data)
+
         return prepared_data
+
+    def set_rounded_values(self, data):
+        for row in data.values():
+            for key in AMOUNT_FIELDS:
+                if key not in row:
+                    continue
+
+                row[key] = flt(row[key], 2)
 
     def prepare_document_issued_data(self):
         doc_issued_data = {}

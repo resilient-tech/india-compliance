@@ -125,7 +125,7 @@ india_compliance.DataTableManager = class DataTableManager {
             dynamicRowHeight: true,
             checkboxColumn: true,
             inlineFilters: true,
-            noDataMessage: "No Matching Data Found!",
+            noDataMessage: __("No Matching Data Found!"),
             // clusterize: false,
             events: {
                 onCheckRow: () => {
