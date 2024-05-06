@@ -78,6 +78,7 @@ const GSTR1_DataFields = {
     CGST: "total_cgst_amount",
     SGST: "total_sgst_amount",
     CESS: "total_cess_amount",
+    UPLOAD_STATUS: "upload_status",
 
     SHIPPING_BILL_NUMBER: "shipping_bill_number",
     SHIPPING_BILL_DATE: "shipping_bill_date",
@@ -580,8 +581,8 @@ class GSTR1 {
         <div class="gst-ledger-difference w-100" style="border-bottom: 1px solid var(--border-color);">
             <div class="m-3 d-flex justify-content-around align-items-center">
                 ${Object.entries(net_transactions)
-            .map(
-                ([type, net_amount]) => `
+                .map(
+                    ([type, net_amount]) => `
                     <div>
                         <h5>${type} Account&nbsp;
                             <i
@@ -594,8 +595,8 @@ class GSTR1 {
                         <h4 class="text-center">${format_currency(net_amount)}</h4>
                     </div>
                 `
-        )
-            .join("")}
+                )
+                .join("")}
             </div>
         </div>
         `;
@@ -892,7 +893,7 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                ? `<a href="#" class="summary-description">
+                    ? `<a href="#" class="summary-description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                     : value;
@@ -1068,8 +1069,8 @@ class TabManager {
             match_columns = [];
 
         return [
+            ...this.get_detailed_view_column(),
             {
-                ...this.get_detailed_view_column(),
                 name: "Transaction Type",
                 fieldname: GSTR1_DataFields.TRANSACTION_TYPE,
                 width: 100,
@@ -1381,12 +1382,276 @@ class BooksTab extends TabManager {
     // ACTIONS
 
     download_books_as_excel() {
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_books_as_excel",
-            args: { data: this.data },
-            callback: r => {
-                frappe.msgprint(r.message);
+
+        let document_headers = [{
+            "label": "Document Date",
+            "fieldname": GSTR1_DataFields.DOC_DATE,
+        },
+        {
+            "label": "Document Number",
+            "fieldname": GSTR1_DataFields.DOC_NUMBER,
+        },
+        {
+            "label": "Customer GSTIN",
+            "fieldname": GSTR1_DataFields.CUST_GSTIN,
+        },
+        {
+            "label": "Customer Name",
+            "fieldname": GSTR1_DataFields.CUST_NAME,
+        },
+        {
+            "label":"Transaction Type",
+            "fieldname":GSTR1_DataFields.TRANSACTION_TYPE
+        },
+        {
+            "label": "Document Type",
+            "fieldname": GSTR1_DataFields.DOC_TYPE,
+        },
+        {
+            "label": "Shipping Bill Number",
+            "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER,
+        },
+        {
+            "label": "Shipping Bill Date",
+            "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE,
+        },
+        {
+            "label": "Port Code",
+            "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE,
+        },
+        {
+            "label": "Reverse Charge",
+            "fieldname": GSTR1_DataFields.REVERSE_CHARGE,
+        },
+        {
+            "label": "Upload Status",
+            "fieldname": GSTR1_DataFields.UPLOAD_STATUS,
+        },
+        {
+            "label": "Place of Supply",
+            "fieldname": GSTR1_DataFields.POS,
+        },
+        {
+            "label": "Tax Rate",
+            "fieldname": GSTR1_DataFields.TAX_RATE,
+        },
+        {
+            "label": "Taxable Value",
+            "fieldname": GSTR1_DataFields.TAXABLE_VALUE,
+        },
+        {
+            "label": "IGST",
+            "fieldname": GSTR1_DataFields.IGST,
+        },
+        {
+            "label": "CGST",
+            "fieldname": GSTR1_DataFields.CGST,
+        },
+        {
+            "label": "SGST",
+            "fieldname": GSTR1_DataFields.SGST,
+        },
+        {
+            "label": "CESS",
+            "fieldname": GSTR1_DataFields.CESS,
+        },
+        {
+            "label": "Document Value",
+            "fieldname": GSTR1_DataFields.DOC_VALUE,
+        }
+        ]
+
+        let at_received_headers = [
+            {
+                "label": "Advance Date",
+                "fieldname": GSTR1_DataFields.DOC_DATE,
             },
+            {
+                "label": "Payment Entry Number",
+                "fieldname": GSTR1_DataFields.DOC_NUMBER,
+
+            },
+            {
+                "label": "Customer",
+                "fieldname": GSTR1_DataFields.CUST_NAME,
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": GSTR1_DataFields.POS,
+            },
+            {
+                "label": "Tax Rate",
+                "fieldname": GSTR1_DataFields.TAX_RATE,
+
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": GSTR1_DataFields.TAXABLE_VALUE,
+
+            },
+            {
+                "label": "IGST",
+                "fieldname": GSTR1_DataFields.IGST,
+
+            },
+            {
+                "label": "CGST",
+                "fieldname": GSTR1_DataFields.CGST,
+
+            },
+            {
+                "label": "SGST",
+                "fieldname": GSTR1_DataFields.SGST,
+            },
+            {
+                "label": "CESS",
+                "fieldname": GSTR1_DataFields.CESS,
+            },
+            {
+                "label": "Amount Received",
+                "fieldname": GSTR1_DataFields.DOC_VALUE,
+            }
+        ]
+
+        let at_adjusted_headers = [
+            {
+                "label": "Adjustment Date",
+                "fieldname": GSTR1_DataFields.DOC_DATE,
+            },
+            {
+                "label": "Adjustment Entry Number",
+                "fieldname": GSTR1_DataFields.DOC_NUMBER,
+
+            },
+            {
+                "label": "Customer ",
+                "fieldname": GSTR1_DataFields.CUST_NAME,
+
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": GSTR1_DataFields.POS,
+
+            },
+            {
+                "label": "Tax Rate",
+                "fieldname": GSTR1_DataFields.TAX_RATE,
+
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": GSTR1_DataFields.TAXABLE_VALUE,
+
+            },
+            {
+                "label": "IGST",
+                "fieldname": GSTR1_DataFields.IGST,
+
+            },
+            {
+                "label": "CGST",
+                "fieldname": GSTR1_DataFields.CGST,
+
+            },
+            {
+                "label": "SGST",
+                "fieldname": GSTR1_DataFields.SGST,
+
+            },
+            {
+                "label": "CESS",
+                "fieldname": GSTR1_DataFields.CESS,
+
+            },
+            {
+                "label": "Amount Adjusted",
+                "fieldname": GSTR1_DataFields.DOC_VALUE,
+
+            },
+        ]
+
+        let hsn_summary_headers = [
+            {
+                "label": "HSN Code",
+                "fieldname": GSTR1_DataFields.HSN_CODE,
+            },
+            {
+                "label": "Description",
+                "fieldname": GSTR1_DataFields.DESCRIPTION,
+            },
+            {
+                "label": "UOM",
+                "fieldname": GSTR1_DataFields.UOM,
+            },
+            {
+                "label": "Total Quantity",
+                "fieldname": GSTR1_DataFields.QUANTITY,
+            },
+            {
+                "label": "Tax Rate",
+                "fieldname": GSTR1_DataFields.TAX_RATE,
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": GSTR1_DataFields.TAXABLE_VALUE,
+            },
+            {
+                "label": "IGST",
+                "fieldname": GSTR1_DataFields.IGST,
+            },
+            {
+                "label": "CGST",
+                "fieldname": GSTR1_DataFields.CGST,
+            },
+            {
+                "label": "SGST",
+                "fieldname": GSTR1_DataFields.SGST,
+            },
+            {
+                "label": "CESS",
+                "fieldname": GSTR1_DataFields.CESS,
+            }
+        ]
+
+        let doc_issue_headers=[
+            {
+                "label": "Document Type",
+                "fieldname": GSTR1_DataFields.DOC_TYPE,
+            },
+            {
+                "label": "Sr No From",
+                "fieldname": GSTR1_DataFields.FROM_SR,
+            },
+            {
+                "label": "Sr No To",
+                "fieldname": GSTR1_DataFields.TO_SR,
+            },
+            {
+                "label": "Total Count",
+                "fieldname": GSTR1_DataFields.TOTAL_COUNT,
+            },
+            {
+                "label": "Draft Count",
+                "fieldname": GSTR1_DataFields.DRAFT_COUNT,
+            },
+            {
+                "label": "Cancelled Count",
+                "fieldname": GSTR1_DataFields.CANCELLED_COUNT,
+            },
+        ]
+
+        const url =
+            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_books_as_excel";
+        open_url_post(`/api/method/${url}`, {
+
+            data: JSON.stringify(this.data),
+            doc: JSON.stringify(this.instance.frm.doc),
+            document_headers: JSON.stringify(document_headers),
+            at_received_headers: JSON.stringify(at_received_headers),
+            at_adjusted_headers:JSON.stringify(at_adjusted_headers),
+            hsn_summary_headers: JSON.stringify(hsn_summary_headers),
+            doc_issue_headers:JSON.stringify(doc_issue_headers)
+
         });
     }
 
@@ -1413,7 +1678,7 @@ class BooksTab extends TabManager {
         return [
             {
                 name: "Upload Status",
-                fieldname: "upload_status",
+                fieldname: GSTR1_DataFields.UPLOAD_STATUS,
                 width: 150,
             },
         ];

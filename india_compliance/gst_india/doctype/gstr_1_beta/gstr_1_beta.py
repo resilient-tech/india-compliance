@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
+import json
 from datetime import datetime
 
 import frappe
@@ -17,13 +18,14 @@ from india_compliance.gst_india.report.gstr_1.gstr_1 import (
     GSTR11A11BData,
 )
 from india_compliance.gst_india.utils.__init__ import get_gst_accounts_by_type
+from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import (
     INVOICE_SUB_CATEGORIES,
-    GSTR1_DataFields,
     GSTR1_Categories,
-    GSTR1_SubCategories,
+    GSTR1_DataFields,
     GSTR1_ItemFields,
+    GSTR1_SubCategories,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
@@ -561,8 +563,104 @@ def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
 
 
 @frappe.whitelist()
-def download_books_as_excel(data):
+def download_books_as_excel(
+    data,
+    doc,
+    document_headers,
+    at_received_headers,
+    at_adjusted_headers,
+    hsn_summary_headers,
+    doc_issue_headers,
+):
+    data = frappe._dict(json.loads(data))
+    doc = frappe._dict(json.loads(doc))
+
+    document_headers = json.loads(document_headers)
+    at_received_headers = json.loads(at_received_headers)
+    at_adjusted_headers = json.loads(at_adjusted_headers)
+    hsn_summary_headers = json.loads(hsn_summary_headers)
+    doc_issue_headers = json.loads(doc_issue_headers)
+
+    filename = ["GSTR-1", "Books", doc.company_gstin, doc.month_or_quarter, doc.year]
+
+    category = [
+        GSTR1_SubCategories.B2B_REGULAR.value,
+        GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
+        GSTR1_SubCategories.SEZWP.value,
+        GSTR1_SubCategories.SEZWOP.value,
+        GSTR1_SubCategories.DE.value,
+        GSTR1_SubCategories.EXPWP.value,
+        GSTR1_SubCategories.EXPWOP.value,
+        GSTR1_SubCategories.B2CL.value,
+        GSTR1_SubCategories.B2CS.value,
+        GSTR1_SubCategories.NIL_EXEMPT.value,
+        GSTR1_SubCategories.CDNR.value,
+        GSTR1_SubCategories.CDNUR.value,
+    ]
+
+    excel = ExcelExporter()
+    excel.remove_sheet("Sheet")
+
+    category_data = []
+    for key, values in data.items():
+        if key not in category:
+            continue
+
+        if key in (
+            GSTR1_SubCategories.B2CS.value,
+            GSTR1_SubCategories.NIL_EXEMPT.value,
+        ):
+            category_data.extend(values)
+            continue
+
+        for row in values:
+            dict = row
+            for item in row["items"]:
+                category_data.extend([{**dict, **item}])
+
+    create_excel_sheet(excel, "Sales Invoice", document_headers, category_data)
+
+    if data.get("HSN Summary"):
+        create_excel_sheet(
+            excel,
+            GSTR1_SubCategories.HSN.value,
+            hsn_summary_headers,
+            data.get(GSTR1_SubCategories.HSN.value),
+        )
+
+    if data.get(GSTR1_SubCategories.AT.value):
+        create_excel_sheet(
+            excel,
+            GSTR1_SubCategories.AT.value,
+            at_received_headers,
+            data.get(GSTR1_SubCategories.AT.value),
+        )
+
+    if data.get(GSTR1_SubCategories.TXP.value):
+        create_excel_sheet(
+            excel,
+            GSTR1_SubCategories.TXP.value,
+            at_adjusted_headers,
+            data.get(GSTR1_SubCategories.TXP.value),
+        )
+
+    if data.get(GSTR1_SubCategories.DOC_ISSUE.value):
+        create_excel_sheet(
+            excel,
+            GSTR1_SubCategories.DOC_ISSUE.value,
+            doc_issue_headers,
+            data.get(GSTR1_SubCategories.DOC_ISSUE.value),
+        )
+
+    excel.export(" - ".join(filename))
+
     return "Data Downloaded to Excel Successfully"
+
+
+def create_excel_sheet(excel, sheet_name, headers, data, add_totals=False):
+    excel.create_sheet(
+        sheet_name=sheet_name, headers=headers, data=data, add_totals=add_totals
+    )
 
 
 @frappe.whitelist()
@@ -613,18 +711,29 @@ class GSTR1ProcessData:
             },
         )
 
-        idx = len(mapped_dict["items"]) + 1
+        items = mapped_dict["items"]
 
-        mapped_dict["items"].append(
+        for item in items:
+            if item[GSTR1_ItemFields.TAX_RATE.value] == invoice.gst_rate:
+                item[GSTR1_ItemFields.TAXABLE_VALUE.value] += invoice.taxable_value
+                item[GSTR1_ItemFields.IGST.value] += invoice.igst_amount
+                item[GSTR1_ItemFields.CGST.value] += invoice.cgst_amount
+                item[GSTR1_ItemFields.SGST.value] += invoice.sgst_amount
+                item[GSTR1_ItemFields.CESS.value] += invoice.total_cess_amount
+                self.update_totals(mapped_dict, invoice)
+                return
+
+        items.append(
             {
-                GSTR1_ItemFields.INDEX.value: idx,
                 GSTR1_ItemFields.TAXABLE_VALUE.value: invoice.taxable_value,
                 GSTR1_ItemFields.IGST.value: invoice.igst_amount,
                 GSTR1_ItemFields.CGST.value: invoice.cgst_amount,
                 GSTR1_ItemFields.SGST.value: invoice.sgst_amount,
                 GSTR1_ItemFields.CESS.value: invoice.total_cess_amount,
+                GSTR1_ItemFields.TAX_RATE.value: invoice.gst_rate,
             }
         )
+
         self.update_totals(mapped_dict, invoice)
 
     def process_data_for_document_category_key(self, invoice, prepared_data):
