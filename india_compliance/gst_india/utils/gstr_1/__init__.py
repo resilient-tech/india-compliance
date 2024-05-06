@@ -23,11 +23,8 @@ P - Reconcile excel with all data export
 V & P- JSON export with upload status -> Option to export missing in Books with zero values
 
 Future TODO;
-- Update Sales Invoice Status
 - Mark as Filed
-- Lock transactions and it's related fixes
 
-- e-Invoice regenerate / Return re-generate
 - Actions: create or cancel sales invoice
 - e-Commerece supplies
 - Bulk generation process
