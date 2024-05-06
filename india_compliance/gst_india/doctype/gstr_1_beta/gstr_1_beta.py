@@ -51,10 +51,14 @@ class GSTR1Beta(Document):
             self.set_onload("data", data)
 
     @frappe.whitelist()
+    def recompute_books(self):
+        self.validate(recompute_books=True)
+
+    @frappe.whitelist()
     def sync_with_gstn(self, sync_for):
         self.validate(sync_for=sync_for)
 
-    def validate(self, sync_for=None):
+    def validate(self, sync_for=None, recompute_books=False):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
@@ -90,6 +94,9 @@ class GSTR1Beta(Document):
 
         if sync_for:
             gstr1_log.remove_json_for(sync_for)
+
+        if recompute_books:
+            gstr1_log.remove_json_for("books")
 
         # files are already present
         if gstr1_log.has_all_files(settings):

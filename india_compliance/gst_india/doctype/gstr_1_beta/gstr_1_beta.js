@@ -1375,6 +1375,7 @@ class BooksTab extends TabManager {
         this.add_tab_custom_button("Download Excel", () =>
             this.download_books_as_excel()
         );
+        this.add_tab_custom_button("Re-compute", () => this.recompute_books());
     }
 
     // ACTIONS
@@ -1387,6 +1388,11 @@ class BooksTab extends TabManager {
                 frappe.msgprint(r.message);
             },
         });
+    }
+
+    recompute_books() {
+        render_empty_state(this.instance.frm);
+        this.instance.frm.call("recompute_books");
     }
 
     // DATA
