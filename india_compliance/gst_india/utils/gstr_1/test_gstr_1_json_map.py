@@ -2,10 +2,10 @@ from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
-    GSTR1_DataFields,
     GovDataFields,
-    GSTR1_SubCategories,
+    GSTR1_DataFields,
     GSTR1_ItemFields,
+    GSTR1_SubCategories,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     AT,
@@ -162,7 +162,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CGST.value: 0,
@@ -171,7 +170,6 @@ class TestB2B(FrappeTestCase):
                             GSTR1_DataFields.TAX_RATE.value: 5,
                         },
                         {
-                            GSTR1_ItemFields.INDEX.value: 2,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CGST.value: 0,
@@ -203,7 +201,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CGST.value: 0,
@@ -235,7 +232,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CGST.value: 0,
@@ -267,7 +263,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CGST.value: 0,
@@ -412,14 +407,12 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CESS.value: 500,
                             GSTR1_DataFields.TAX_RATE.value: 5,
                         },
                         {
-                            GSTR1_ItemFields.INDEX.value: 2,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CESS.value: 500,
@@ -440,7 +433,6 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CESS.value: 500,
@@ -461,14 +453,12 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CESS.value: 500,
                             GSTR1_DataFields.TAX_RATE.value: 5,
                         },
                         {
-                            GSTR1_ItemFields.INDEX.value: 2,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CESS.value: 500,
@@ -489,7 +479,6 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
                             GSTR1_ItemFields.IGST.value: 325,
                             GSTR1_ItemFields.CESS.value: 500,
@@ -803,7 +792,6 @@ class TestCDNR(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: -5225.28,
                             GSTR1_ItemFields.IGST.value: -339.64,
                             GSTR1_ItemFields.CGST.value: 0,
@@ -812,7 +800,6 @@ class TestCDNR(FrappeTestCase):
                             GSTR1_DataFields.TAX_RATE.value: 10,
                         },
                         {
-                            GSTR1_ItemFields.INDEX.value: 2,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: -5225.28,
                             GSTR1_ItemFields.IGST.value: -339.64,
                             GSTR1_ItemFields.CGST.value: 0,
@@ -879,7 +866,6 @@ class TestCDNUR(FrappeTestCase):
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.INDEX.value: 1,
                             GSTR1_ItemFields.TAXABLE_VALUE.value: -5225.28,
                             GSTR1_ItemFields.IGST.value: -339.64,
                             GSTR1_ItemFields.CESS.value: -789.52,

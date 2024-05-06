@@ -7,14 +7,14 @@ from india_compliance.gst_india.utils.__init__ import get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUB_CATEGORY_GOV_CATEGORY_MAPPING,
-    GSTR1_DataFields,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     GovDataFields,
     GSTR1_Categories,
+    GSTR1_DataFields,
     GSTR1_Gov_Categories,
-    GSTR1_SubCategories,
     GSTR1_ItemFields,
-    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
+    GSTR1_SubCategories,
 )
 
 """
@@ -118,7 +118,6 @@ class DataMapper:
     def format_item_wise_json_data(self, items, *args):
         return [
             {
-                GSTR1_ItemFields.INDEX.value: item[GovDataFields.INDEX.value],
                 **self.DEFAULT_ITEM_AMOUNTS.copy(),
                 **self.format_data(item.get(GovDataFields.ITEM_DETAILS.value, {})),
             }
@@ -128,10 +127,10 @@ class DataMapper:
     def format_item_wise_internal_data(self, items, *args):
         return [
             {
-                GovDataFields.INDEX.value: item[GSTR1_ItemFields.INDEX.value],
+                GovDataFields.INDEX.value: index + 1,
                 GovDataFields.ITEM_DETAILS.value: self.format_data(item, reverse=True),
             }
-            for item in items
+            for index, item in enumerate(items)
         ]
 
     def guess_customer_name(self, gstin):
