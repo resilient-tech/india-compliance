@@ -46,7 +46,9 @@ from india_compliance.gst_india.utils.e_waybill import (
     log_and_process_e_waybill_generation,
 )
 from india_compliance.gst_india.utils.transaction_data import GSTTransactionData
-
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    get_e_invoice_applicability_date,
+)
 
 @frappe.whitelist()
 def enqueue_bulk_e_invoice_generation(docnames):
@@ -410,24 +412,6 @@ def validate_taxable_item(doc, throw=True):
     frappe.throw(
         _("e-Invoice is not applicable for invoice with only Nil-Rated/Exempted items"),
     )
-
-
-def get_e_invoice_applicability_date(company, settings=None, throw=True):
-    if not settings:
-        settings = frappe.get_cached_doc("GST Settings")
-
-    e_invoice_applicable_from = settings.e_invoice_applicable_from
-
-    if settings.apply_e_invoice_only_for_selected_companies:
-        for row in settings.e_invoice_applicable_companies:
-            if company == row.company:
-                e_invoice_applicable_from = row.applicable_from
-                break
-
-        else:
-            return
-
-    return e_invoice_applicable_from
 
 
 def validate_if_e_invoice_can_be_cancelled(doc):

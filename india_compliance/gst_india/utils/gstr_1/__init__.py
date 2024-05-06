@@ -122,7 +122,7 @@ INVOICE_SUB_CATEGORIES = [
 ]
 
 
-class DataFields(Enum):
+class GSTR1_DataFields(Enum):
     TRANSACTION_TYPE = "transaction_type"
     CUST_GSTIN = "customer_gstin"
     ECOMMERCE_GSTIN = "ecommerce_gstin"
@@ -141,10 +141,10 @@ class DataFields(Enum):
     SGST = "total_sgst_amount"
     CESS = "total_cess_amount"
     TAX_RATE = "tax_rate"
+
     SHIPPING_BILL_NUMBER = "shipping_bill_number"
     SHIPPING_BILL_DATE = "shipping_bill_date"
     SHIPPING_PORT_CODE = "shipping_port_code"
-    SUPPLIER_VALUE = "supplier_value"
 
     EXEMPTED_AMOUNT = "exempted_amount"
     NIL_RATED_AMOUNT = "nil_rated_amount"
@@ -154,7 +154,6 @@ class DataFields(Enum):
     DESCRIPTION = "description"
     UOM = "uom"
     QUANTITY = "quantity"
-    TOTAL_VALUE = "total_value"
 
     FROM_SR = "from_sr_no"
     TO_SR = "to_sr_no"
@@ -184,7 +183,7 @@ class GovDataFields(Enum):
     SHIPPING_BILL_DATE = "sbdt"
     SHIPPING_PORT_CODE = "sbpcode"
     SUPPLY_TYPE = "sply_ty"
-    SUPPLIER_VALUE = "suppval"
+    NET_TAXABLE_VALUE = "suppval"
 
     EXEMPTED_AMOUNT = "expt_amt"
     NIL_RATED_AMOUNT = "nil_amt"
@@ -221,7 +220,7 @@ class GovDataFields(Enum):
     SUPECOM_9_5 = "paytx"
 
 
-class ItemFields(Enum):
+class GSTR1_ItemFields(Enum):
     INDEX = "idx"
     TAXABLE_VALUE = "taxable_value"
     IGST = "igst_amount"

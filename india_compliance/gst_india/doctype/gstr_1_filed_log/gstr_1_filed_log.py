@@ -12,7 +12,7 @@ from frappe.utils import add_to_date, flt, get_datetime, getdate, get_last_day
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
-    DataFields,
+    GSTR1_DataFields,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
 )
@@ -307,8 +307,8 @@ def summarize_data(data, for_books=False):
 
 def count_doc_issue_summary(summary_row, data_row):
     summary_row["no_of_records"] += data_row.get(
-        DataFields.TOTAL_COUNT.value, 0
-    ) - data_row.get(DataFields.CANCELLED_COUNT.value, 0)
+        GSTR1_DataFields.TOTAL_COUNT.value, 0
+    ) - data_row.get(GSTR1_DataFields.CANCELLED_COUNT.value, 0)
 
 
 def count_hsn_summary(summary_row):

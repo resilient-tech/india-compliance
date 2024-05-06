@@ -63,12 +63,14 @@ const INVOICE_TYPE = {
 const GSTR1_DataFields = {
     TRANSACTION_TYPE: "transaction_type",
     CUST_GSTIN: "customer_gstin",
+    ECOMMERCE_GSTIN: "ecommerce_gstin",
     CUST_NAME: "customer_name",
     DOC_DATE: "document_date",
     DOC_NUMBER: "document_number",
     DOC_TYPE: "document_type",
     DOC_VALUE: "document_value",
     POS: "place_of_supply",
+    DIFF_PERCENTAGE: "diff_percentage",
     REVERSE_CHARGE: "reverse_charge",
     TAXABLE_VALUE: "total_taxable_value",
     TAX_RATE: "tax_rate",
@@ -88,7 +90,7 @@ const GSTR1_DataFields = {
     HSN_CODE: "hsn_code",
     DESCRIPTION: "description",
     UOM: "uom",
-    TOTAL_QUANTITY: "total_quantity",
+    QUANTITY: "quantity",
 
     FROM_SR: "from_sr_no",
     TO_SR: "to_sr_no",
@@ -1120,7 +1122,7 @@ class TabManager {
             },
             {
                 name: "Total Quantity",
-                fieldname: GSTR1_DataFields.TOTAL_QUANTITY,
+                fieldname: GSTR1_DataFields.QUANTITY,
                 fieldtype: "Float",
                 width: 150,
             },
@@ -1159,12 +1161,6 @@ class TabManager {
                 fieldname: GSTR1_DataFields.CESS,
                 fieldtype: "Float",
                 width: 100,
-            },
-            {
-                name: "Total Value",
-                fieldname: GSTR1_DataFields.DOC_VALUE,
-                fieldtype: "Currency",
-                width: 150,
             },
         ];
     }
@@ -1759,6 +1755,7 @@ class DetailViewDialog {
         GSTR1_DataFields.DOC_NUMBER,
         GSTR1_DataFields.DOC_TYPE,
         "match_status",
+        GSTR1_DataFields.DESCRIPTION,
     ]
 
     constructor(data, field_label_map) {

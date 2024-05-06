@@ -19,7 +19,6 @@ from india_compliance.gst_india.page.india_compliance_account import (
 )
 from india_compliance.gst_india.utils import can_enable_api, is_api_enabled
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
-from india_compliance.gst_india.utils.e_invoice import get_e_invoice_applicability_date
 from india_compliance.gst_india.utils.gstin_info import get_gstin_info
 
 E_INVOICE_START_DATE = "2021-01-01"
@@ -338,6 +337,24 @@ def update_e_invoice_status():
 
         update_pending_status(e_invoice_applicability_date, company)
         update_not_applicable_status(e_invoice_applicability_date, company)
+
+
+def get_e_invoice_applicability_date(company, settings=None, throw=True):
+    if not settings:
+        settings = frappe.get_cached_doc("GST Settings")
+
+    e_invoice_applicable_from = settings.e_invoice_applicable_from
+
+    if settings.apply_e_invoice_only_for_selected_companies:
+        for row in settings.e_invoice_applicable_companies:
+            if company == row.company:
+                e_invoice_applicable_from = row.applicable_from
+                break
+
+        else:
+            return
+
+    return e_invoice_applicable_from
 
 
 def update_pending_status(e_invoice_applicability_date, company=None):
