@@ -7,7 +7,14 @@ from datetime import datetime
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_to_date, flt, get_datetime, getdate, get_last_day
+from frappe.utils import (
+    add_to_date,
+    get_datetime,
+    flt,
+    getdate,
+    get_last_day,
+    get_datetime_str,
+)
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
@@ -56,8 +63,13 @@ class GSTR1FiledLog(Document):
             return get_decompressed_data(file.get_content())
 
     def update_json_for(self, file_field, json_data, overwrite=True):
-        if file_field == "books":
-            self.db_set("computed_on", get_datetime())
+        if "summary" not in file_field:
+            json_data["creation"] = get_datetime_str(get_datetime())
+            self.remove_json_for(f"{file_field}_summary")
+
+        # reset reconciled data
+        if overwrite and file_field in ("books", "filed", "unfiled"):
+            self.remove_json_for("reconcile")
 
         # new file
         if not getattr(self, file_field):
@@ -80,16 +92,8 @@ class GSTR1FiledLog(Document):
         # existing file
         file = get_file_doc(self.name, file_field)
 
-        # reset summary
-        if "summary" not in file_field:
-            self.remove_json_for(f"{file_field}_summary")
-
         if overwrite:
             new_json = json_data
-
-            # reset reconciled data
-            if file_field in ("books", "filed", "unfiled"):
-                self.remove_json_for("reconcile")
 
         else:
             new_json = get_decompressed_data(file.get_content())
@@ -117,7 +121,7 @@ class GSTR1FiledLog(Document):
         Returns object list of rows for each sub-category
         """
         for subcategory, subcategory_data in data.items():
-            if isinstance(subcategory_data, list | tuple):
+            if isinstance(subcategory_data, list | tuple | str):
                 data[subcategory] = subcategory_data
                 continue
 

@@ -115,10 +115,7 @@ const MONTH = [
     "December",
 ];
 
-
-
 let net_balance_during_period;
-let computed_on;
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         // patch_set_active_tab(frm);
@@ -236,9 +233,6 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
         if (!data?.status) return;
-        computed_on = frappe.utils.to_title_case(
-            frappe.datetime.prettyDate(data.computed_on)
-        );
         frm.gstr1.status = data.status;
         await get_output_gst_legder(frm);
         frm.gstr1.set_output_gst_ledger();
@@ -298,9 +292,10 @@ class GSTR1 {
 
         if (this.data["reconcile"]) {
             Object.values(this.data["reconcile"]).forEach(category => {
-                category.forEach((row, idx) => {
-                    row.idx = idx;
-                });
+                category instanceof Array &&
+                    category.forEach((row, idx) => {
+                        row.idx = idx;
+                    });
             });
         }
 
@@ -460,7 +455,10 @@ class GSTR1 {
             const data = me.data.reconcile[me.filter_category][row_index];
 
             const category_columns = me.tabs.filed_tab.tabmanager.category_columns;
-            const field_label_map = category_columns.map(col => [col.fieldname, col.name])
+            const field_label_map = category_columns.map(col => [
+                col.fieldname,
+                col.name,
+            ]);
 
             new DetailViewDialog(data, field_label_map);
         });
@@ -622,9 +620,12 @@ class TabManager {
     constructor(instance, wrapper, callback) {
         this.DEFAULT_TITLE = "";
         this.DEFAULT_SUBTITLE = "";
+        this.creation_time_string = "";
+
         this.instance = instance;
         this.wrapper = wrapper;
         this.callback = callback;
+
         this.reset_data();
         this.setup_wrapper();
         this.setup_datatable(wrapper);
@@ -645,7 +646,7 @@ class TabManager {
         this.setup_actions();
         this.datatable.refresh(this.summary);
         this.set_default_title();
-        this.set_computed_on();
+        this.set_creation_time_string();
     }
 
     refresh_view(view, category) {
@@ -659,7 +660,11 @@ class TabManager {
             if (!columns_func) return;
 
             this.category_columns = columns_func.call(this);
-            this.setup_datatable(this.wrapper, this.data[category], this.category_columns);
+            this.setup_datatable(
+                this.wrapper,
+                this.data[category],
+                this.category_columns
+            );
         } else if (view === "Summary") {
             let filtered_summary = this.summary;
             if (category)
@@ -677,6 +682,7 @@ class TabManager {
 
         this.set_title(category || this.DEFAULT_TITLE, subtitle);
         this.setup_footer(this.wrapper);
+        this.set_creation_time_string();
     }
 
     get_row(data, category) {
@@ -826,17 +832,28 @@ class TabManager {
         );
     }
 
-    set_computed_on() {
-        if (this instanceof BooksTab) {
-            if ($(".computed-on").length) {
-                $(".computed-on").remove();
-            }
-            this.wrapper
-                .find(".report-footer")
-                .append(
-                    `<div class="computed-on text-muted float-right">Computed ${computed_on}</div>`
-                );
-        }
+    set_creation_time_string() {
+        const creation_time_string = this.get_creation_time_string();
+        if (!creation_time_string) return;
+
+        if ($(this.wrapper).find(".creation-time").length)
+            $(this.wrapper).find(".creation-time").remove();
+
+        this.wrapper
+            .find(".report-footer")
+            .append(
+                `<div class="creation-time text-muted float-right">${creation_time_string}</div>`
+            );
+    }
+
+    get_creation_time_string() {
+        if (!this.data.creation) return;
+
+        const creation = frappe.utils.to_title_case(
+            frappe.datetime.prettyDate(this.data.creation)
+        );
+
+        return `Created ${creation}`;
     }
 
     setup_actions() { }
@@ -1484,7 +1501,7 @@ class FiledTab extends TabManager {
 
         if (this.status === "Filed")
             this.add_tab_custom_button("Sync with GSTN", () =>
-                this.re_download("filed")
+                this.sync_with_gstn("filed")
             );
         else {
             this.add_tab_custom_button("Download JSON", () => console.log("hi"));
@@ -1503,9 +1520,9 @@ class FiledTab extends TabManager {
 
     download_filed_as_excel() { }
 
-    re_download(file_field) {
+    sync_with_gstn(sync_for) {
         render_empty_state(this.instance.frm);
-        this.instance.frm.call("re_download_gstr1", { file_field });
+        this.instance.frm.call("sync_with_gstn", { sync_for });
     }
 
     download_filed_json() {
@@ -1663,7 +1680,9 @@ class FiledTab extends TabManager {
 
 class UnfiledTab extends FiledTab {
     setup_actions() {
-        this.add_tab_custom_button("Sync with GSTN", () => this.re_download("unfiled"));
+        this.add_tab_custom_button("Sync with GSTN", () =>
+            this.sync_with_gstn("unfiled")
+        );
     }
 
     set_default_title() {
@@ -1700,6 +1719,8 @@ class ReconcileTab extends FiledTab {
             },
         });
     }
+
+    get_creation_time_string() { }
 
     get_detailed_view_column() {
         return [
@@ -1747,7 +1768,6 @@ class DetailViewDialog {
         [GSTR1_DataFields.SGST]: "SGST",
         [GSTR1_DataFields.CESS]: "CESS",
         [GSTR1_DataFields.DOC_VALUE]: "Invoice Value",
-
     };
 
     IGNORED_FIELDS = [
@@ -1756,7 +1776,7 @@ class DetailViewDialog {
         GSTR1_DataFields.DOC_TYPE,
         "match_status",
         GSTR1_DataFields.DESCRIPTION,
-    ]
+    ];
 
     constructor(data, field_label_map) {
         this.data = data;
@@ -1781,8 +1801,9 @@ class DetailViewDialog {
     }
     render_table() {
         const detail_table = this.dialog.fields_dict.reconcile_data;
-        const field_label_map = this.field_label_map.filter(field => !this.IGNORED_FIELDS.includes(field[0]));
-
+        const field_label_map = this.field_label_map.filter(
+            field => !this.IGNORED_FIELDS.includes(field[0])
+        );
 
         detail_table.html(
             frappe.render_template("gstr_1_detail_comparision", {
@@ -1791,28 +1812,22 @@ class DetailViewDialog {
                 currency_map: this.CURRENCY_FIELD_MAP,
             })
         );
-        // console.log(detail_table)
-        this._set_value_color(detail_table.$wrapper,this.data);
+        this._set_value_color(detail_table.$wrapper, this.data);
     }
 
-    _set_value_color(wrapper,data) {
-        console.log(Object.keys(data.gov).length)
-        console.log(Object.keys(data.books).length)
-        if(!Object.keys(data.gov).length || !Object.keys(data.books).length)return
+    _set_value_color(wrapper, data) {
+        if (!Object.keys(data.gov).length || !Object.keys(data.books).length) return;
 
-        let gov_data=data.gov;
-        let books_data=data.books
+        let gov_data = data.gov;
+        let books_data = data.books;
 
-        for(const key in gov_data){
-            console.log(key)
-            console.log(gov_data[key],books_data[key])
-            if(gov_data[key]===books_data[key] || key==="description")continue;
+        for (const key in gov_data) {
+            if (gov_data[key] === books_data[key] || key === "description") continue;
 
             wrapper
                 .find(`[data-label='${key}'], [data-label='${key}']`)
                 .addClass("not-matched");
         }
-
     }
 }
 

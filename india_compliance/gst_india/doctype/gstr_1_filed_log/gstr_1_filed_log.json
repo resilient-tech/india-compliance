@@ -21,9 +21,9 @@
   "filed_summary",
   "computed_data_section",
   "is_latest_data",
+  "section_break_emlz",
   "books",
-  "column_break_eipk",
-  "computed_on",
+  "column_break_ehcm",
   "books_summary",
   "reconciled_data_section",
   "reconcile",
@@ -77,11 +77,8 @@
   {
    "fieldname": "computed_data_section",
    "fieldtype": "Section Break",
+   "hide_border": 1,
    "label": "Computed Data"
-  },
-  {
-   "fieldname": "column_break_eipk",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "reconciled_data_section",
@@ -97,11 +94,6 @@
    "fieldname": "is_latest_data",
    "fieldtype": "Check",
    "label": "Is Latest Data"
-  },
-  {
-   "fieldname": "computed_on",
-   "fieldtype": "Datetime",
-   "label": "Computed On"
   },
   {
    "fieldname": "generation_status",
@@ -150,11 +142,19 @@
    "fieldname": "unfiled_summary",
    "fieldtype": "Attach",
    "label": "Unfiled Summary"
+  },
+  {
+   "fieldname": "section_break_emlz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_ehcm",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-05-01 16:07:43.167344",
+ "modified": "2024-05-06 16:50:31.699395",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",

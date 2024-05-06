@@ -50,7 +50,11 @@ class GSTR1Beta(Document):
         if data is not None:
             self.set_onload("data", data)
 
-    def validate(self):
+    @frappe.whitelist()
+    def sync_with_gstn(self, sync_for):
+        self.validate(sync_for=sync_for)
+
+    def validate(self, sync_for=None):
         period = get_period(self.month_or_quarter, self.year)
 
         # get gstr1 log
@@ -84,13 +88,14 @@ class GSTR1Beta(Document):
 
         settings = frappe.get_cached_doc("GST Settings")
 
+        if sync_for:
+            gstr1_log.remove_json_for(sync_for)
+
         # files are already present
         if gstr1_log.has_all_files(settings):
             self.data = gstr1_log.load_data()
             self.data["status"] = gstr1_log.filing_status or "Not Filed"
             gstr1_log.update_status("Generated")
-            self.data["computed_on"] = gstr1_log.computed_on
-
             return
 
         # request OTP
@@ -130,7 +135,7 @@ class GSTR1Beta(Document):
             raise e
 
     def _generate_gstr1_data(self, filters):
-        data = {"computed_on": self.gstr1_log.computed_on}
+        data = {}
 
         def on_generate():
             self.gstr1_log.db_set(
@@ -326,7 +331,6 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         is_invoice_subcategory = subcategory in INVOICE_SUB_CATEGORIES
 
         if reconcile_only_invoices and not is_invoice_subcategory:
-            print("Skipping", subcategory)
             continue
 
         reconcile_subdata = {}
