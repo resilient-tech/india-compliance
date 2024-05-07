@@ -246,7 +246,7 @@ data() {
 }
 .links a:hover {
   color: var(--text-color);
-  color: var(--primary);
+  color: var(--heading-color);
   text-decoration: none;
 }
 .links a:hover li {

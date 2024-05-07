@@ -6,7 +6,7 @@
     --bg-red: var(--red-100);
 
     .text-highlight {
-        color: var(--primary-color) !important;
+        color: var(--heading-color) !important;
     }
 
     /* Page styles */
@@ -30,9 +30,8 @@
         padding: 2em 3.5em;
         flex: 1;
         border-radius: var(--border-radius-md);
-        box-shadow: var(--card-shadow);
         background-color: var(--card-bg);
-        border: 0 solid black;
+        border: 1px solid var(--border-color);
     }
 
     .ic-account-page .main-content .card .title {
