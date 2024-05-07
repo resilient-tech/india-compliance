@@ -356,6 +356,9 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
             if not update_books_match or not is_invoice_subcategory:
                 continue
 
+            if books_subdata[key].get("upload_status"):
+                update_books_match = False
+
             # Update Books Data
             if not gov_value:
                 books_subdata[key]["upload_status"] = "Not Uploaded"
@@ -690,6 +693,9 @@ def download_gstr_1_json(
 
     for subcategory, subcategory_data in data.items():
         discard_invoices = []
+
+        if isinstance(subcategory_data, str):
+            continue
 
         for key, row in subcategory_data.items():
             if not row.get("upload_status"):
