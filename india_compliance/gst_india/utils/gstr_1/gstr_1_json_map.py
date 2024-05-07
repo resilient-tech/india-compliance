@@ -43,6 +43,10 @@ class DataMapper:
         GovDataFields.CESS.value,
     }
 
+    DISCARD_IF_ZERO_FIELDS = {
+        GovDataFields.DIFF_PERCENTAGE.value,
+    }
+
     def __init__(self):
         self.set_total_defaults()
 
@@ -70,6 +74,9 @@ class DataMapper:
 
         for old_key, new_key in key_mapping.items():
             invoice_data_value = data.get(old_key, "")
+
+            if new_key in self.DISCARD_IF_ZERO_FIELDS and not invoice_data_value:
+                continue
 
             if not (invoice_data_value or invoice_data_value == 0):
                 continue
@@ -930,7 +937,10 @@ class HSNSUM(DataMapper):
     def __init__(self):
         super().__init__()
         self.json_value_formatters = {GovDataFields.UOM.value: self.map_uom}
-        self.data_value_formatters = {GSTR1_DataFields.UOM.value: self.map_uom}
+        self.data_value_formatters = {
+            GSTR1_DataFields.UOM.value: self.map_uom,
+            GSTR1_DataFields.DESCRIPTION.value: lambda x, *args: x[:30],
+        }
 
     def convert_to_internal_data_format(self, input_data):
         output = {}
@@ -959,14 +969,18 @@ class HSNSUM(DataMapper):
             ]
         }
 
-    def map_uom(self, uom, *args):
+    def map_uom(self, uom, data):
         uom = uom.upper()
 
         if "-" in uom:
-            return uom.split("-")[0]
+            return (
+                "NA"
+                if data.get(GSTR1_DataFields.HSN_CODE.value).startswith("99")
+                else uom.split("-")[0]
+            )
 
         if uom in UOM_MAP:
-            return f"{uom}-{UOM_MAP.get(uom)}"
+            return f"{uom}-{UOM_MAP[uom]}"
 
         return f"OTH-{UOM_MAP.get('OTH')}"
 
