@@ -32,6 +32,7 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     download_gstr1_json_data,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
+    convert_to_gov_data_format,
     summarize_retsum_data,
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
@@ -118,7 +119,7 @@ class GSTR1Beta(Document):
 
         # generate gstr1
         gstr1_log.update_status("In Progress")
-        frappe.enqueue(self.generate_gstr1, queue="long")
+        frappe.enqueue(self.generate_gstr1, queue="short", now=True)
         frappe.msgprint("GSTR-1 is being prepared", alert=True)
 
     def generate_gstr1(self):
@@ -666,6 +667,53 @@ def create_excel_sheet(excel, sheet_name, headers, data, add_totals=False):
 @frappe.whitelist()
 def download_reconcile_as_excel(data):
     return "Data Downloaded to Excel Successfully"
+
+
+@frappe.whitelist()
+def download_gstr_1_json(
+    company_gstin,
+    year,
+    month_or_quarter,
+    include_uploaded=False,
+    overwrite_missing=False,
+):
+    if isinstance(include_uploaded, str):
+        include_uploaded = json.loads(include_uploaded)
+
+    if isinstance(overwrite_missing, str):
+        overwrite_missing = json.loads(overwrite_missing)
+
+    period = get_period(month_or_quarter, year)
+    gstr1_log = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{company_gstin}")
+
+    data = gstr1_log.get_json_for("books")
+
+    for subcategory, subcategory_data in data.items():
+        discard_invoices = []
+
+        for key, row in subcategory_data.items():
+            if not row.get("upload_status"):
+                continue
+
+            if row.get("upload_status") == "Uploaded" and not include_uploaded:
+                discard_invoices.append(key)
+
+            if row.get("upload_status") == "Missing in Books" and not overwrite_missing:
+                discard_invoices.append(key)
+
+        for key in discard_invoices:
+            subcategory_data.pop(key)
+
+    return {
+        "data": {
+            "version": "GST3.0.4",
+            "gstin": company_gstin,
+            "hash": "hash",
+            "fp": period,
+            **convert_to_gov_data_format(data),
+        },
+        "filename": f"{period}-{company_gstin}.json",
+    }
 
 
 #################################

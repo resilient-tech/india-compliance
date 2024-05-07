@@ -1775,7 +1775,7 @@ class FiledTab extends TabManager {
                 this.sync_with_gstn("filed")
             );
         else {
-            this.add_tab_custom_button("Download JSON", () => console.log("hi"));
+            this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
             this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
         }
     }
@@ -1819,10 +1819,19 @@ class FiledTab extends TabManager {
             ],
             primary_action: () => {
                 frappe.call({
-                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_filed_json",
-                    args: dialog.get_values(),
+                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_gstr_1_json",
+                    args: {
+                        include_uploaded: dialog.get_value("include_uploaded"),
+                        overwrite_missing: dialog.get_value("overwrite_missing"),
+                        company_gstin: this.instance.frm.doc.company_gstin,
+                        year: this.instance.frm.doc.year,
+                        month_or_quarter: this.instance.frm.doc.month_or_quarter,
+                    },
                     callback: r => {
-                        frappe.msgprint(r.message);
+                        india_compliance.trigger_file_download(
+                            JSON.stringify(r.message.data),
+                            r.message.filename
+                        );
                     },
                 });
             },
