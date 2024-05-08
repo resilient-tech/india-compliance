@@ -88,8 +88,8 @@ export default {
   justify-content: space-between;
   padding: 45px 0;
   border-radius: var(--border-radius-md);
-  box-shadow: var(--card-shadow);
   background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
 }
 
 .auth-form .title {
