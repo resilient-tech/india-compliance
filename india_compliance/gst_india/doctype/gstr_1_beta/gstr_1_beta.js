@@ -189,8 +189,10 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            frm.doc.__onload = { data };
-            frm.trigger("after_save");
+            frappe.after_ajax(() => { 
+                frm.doc.__onload = { data };
+                frm.trigger("after_save");
+            });
         });
     },
 
