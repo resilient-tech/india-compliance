@@ -1,6 +1,7 @@
 import frappe
 from frappe.utils import flt
 from erpnext.setup.setup_wizard.operations.taxes_setup import (
+    make_tax_category,
     make_taxes_and_charges_template,
 )
 
@@ -22,7 +23,7 @@ TEMPLATE = [
                 "account_head": {
                     "account_name": "sgst_account",
                     "tax_rate": 9.0,
-                    "account_type": "account_type",
+                    "account_type": "Tax",
                 },
                 "description": "SGST",
             },
@@ -80,9 +81,7 @@ TEMPLATE = [
 
 def execute():
     # skipping setup for new installations
-    if frappe.db.get_all(
-        "GST Account", {"account_type": ["=", "Sales Reverse Charge"]}
-    ):
+    if frappe.db.exists("GST Account", {"account_type": ["=", "Sales Reverse Charge"]}):
         return
 
     companies = frappe.get_all("Company", filters={"country": "India"}, pluck="name")
@@ -97,31 +96,41 @@ def execute():
         ):
             continue
 
-        gst_accounts = get_gst_accounts_by_type(company, "Output")
-        account_names = get_account_names(gst_accounts)
-        tax_categories = get_tax_categories()
-        gst_rate = get_default_gst_rate(gst_accounts)
+        output_gst_accounts = get_gst_accounts_by_type(company, "Output", throw=False)
 
-        for template in TEMPLATE:
-            template["tax_category"] = tax_categories.get(template["tax_category"], "")
+        if not output_gst_accounts:
+            continue
 
-            for row in template.get("taxes"):
-                taxes = row["account_head"]
-                update_account_name(gst_accounts, account_names, taxes)
-                update_tax_rate(gst_rate, taxes)
-
-            make_taxes_and_charges_template(
-                company, "Sales Taxes and Charges Template", template
-            )
-
+        setup_rcm_template(company, output_gst_accounts)
         update_gst_settings(company)
 
 
-def get_default_gst_rate(gst_accounts):
+def setup_rcm_template(company, output_gst_accounts):
+    account_name_map = get_account_name_map(output_gst_accounts)
+    tax_category_map = get_tax_category_make()
+    gst_rate = get_default_gst_rate(output_gst_accounts)
+
+    for template in TEMPLATE:
+        template["tax_category"] = tax_category_map.get(template["tax_category"])
+
+        for row in template.get("taxes"):
+            taxes = row["account_head"]
+            update_account_name(output_gst_accounts, account_name_map, taxes)
+            update_tax_rate(gst_rate, taxes)
+
+        make_taxes_and_charges_template(
+            company, "Sales Taxes and Charges Template", template
+        )
+
+
+def get_default_gst_rate(output_gst_accounts):
     gst_rate = (
         frappe.db.get_value(
             "Sales Taxes and Charges",
-            filters={"account_head": gst_accounts.igst_account},
+            filters={
+                "account_head": output_gst_accounts.igst_account,
+                "parenttype": "Sales Taxes and Charges Template",
+            },
             fieldname="rate",
         )
         or 18
@@ -130,10 +139,10 @@ def get_default_gst_rate(gst_accounts):
     return gst_rate
 
 
-def get_account_names(gst_accounts):
+def get_account_name_map(output_gst_accounts):
     accounts = frappe.get_all(
         "Account",
-        filters={"name": ["in", gst_accounts.values()]},
+        filters={"name": ["in", output_gst_accounts.values()]},
         fields=["name", "account_name", "root_type"],
     )
 
@@ -159,32 +168,42 @@ def update_account_name(gst_accounts, account_names, taxes):
 
 
 def update_tax_rate(gst_rate, taxes):
+    # update tax_rate for row
     if gst_rate == 18:
         return
 
-    rate = gst_rate if taxes["tax_rate"] == 18 else flt(gst_rate / 2, 3)
+    is_interstate_tax = taxes["tax_rate"] == 18
+
+    rate = gst_rate if is_interstate_tax else flt(gst_rate / 2, 3)
 
     taxes["tax_rate"] = rate
 
 
-def get_tax_categories():
-    rcm_tax_categories = {}
+def get_tax_category_make():
+    rcm_tax_categories = {
+        "Reverse Charge In-State": "",
+        "Reverse Charge Out-State": "",
+    }
 
-    tax_categories = frappe.get_all(
-        "Tax Category",
-        filters={"is_reverse_charge": 1, "disabled": 0},
-        fields=["name", "is_inter_state"],
-    )
-
-    for category in tax_categories:
-        rcm_tax_category = (
-            "Reverse Charge Out-State"
-            if category.is_inter_state
-            else "Reverse Charge In-State"
-        )
-        rcm_tax_categories[rcm_tax_category] = category.name
+    for category in rcm_tax_categories.keys():
+        # Handle interstate tax category
+        get_or_create_tax_category(rcm_tax_categories, category)
 
     return rcm_tax_categories
+
+
+def get_or_create_tax_category(rcm_tax_categories, category):
+    filters = {"is_reverse_charge": 1, "disabled": 0}
+    is_interstate = 1 if category == "Reverse Charge Out-State" else 0
+    filters["is_interstate"] = is_interstate
+
+    template_name = frappe.db.get_value("Tax Category", filters=filters)
+
+    if not template_name:
+        make_tax_category({"title": category, **filters})
+        template_name = category
+
+    rcm_tax_categories[category] = template_name
 
 
 def update_gst_settings(company):
@@ -209,6 +228,9 @@ def update_gst_settings(company):
             as_list=1,
         )
     )
+
+    if len(gst_accounts) != 3:
+        return
 
     add_accounts_in_gst_settings(
         company,
