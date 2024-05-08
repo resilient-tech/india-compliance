@@ -1773,6 +1773,42 @@ class FiledTab extends TabManager {
     }
 
     download_filed_json() {
+        function get_json_data(dialog) {
+            const { include_uploaded, overwrite_missing } = dialog
+                ? dialog.get_values()
+                : {
+                    include_uploaded: true,
+                    overwrite_missing: false,
+                };
+
+            const doc = this.instance.frm.doc;
+
+            frappe.call({
+                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_gstr_1_json",
+                args: {
+                    include_uploaded,
+                    overwrite_missing,
+                    company: doc.company,
+                    year: doc.year,
+                    month_or_quarter: doc.month_or_quarter
+                },
+                callback: r => {
+                    india_compliance.trigger_file_download(
+                        JSON.stringify(r.message.data),
+                        r.message.filename
+                    );
+                    dialog && dialog.hide();
+                },
+            });
+        }
+
+        // without API
+        if (!gst_settings.analyze_filed_data) {
+            get_json_data();
+            return;
+        }
+
+        // with API
         const dialog = new frappe.ui.Dialog({
             title: __("Download JSON"),
             fields: [
@@ -1793,24 +1829,7 @@ class FiledTab extends TabManager {
                     fieldtype: "Check",
                 },
             ],
-            primary_action: () => {
-                frappe.call({
-                    method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_gstr_1_json",
-                    args: {
-                        include_uploaded: dialog.get_value("include_uploaded"),
-                        overwrite_missing: dialog.get_value("overwrite_missing"),
-                        company_gstin: this.instance.frm.doc.company_gstin,
-                        year: this.instance.frm.doc.year,
-                        month_or_quarter: this.instance.frm.doc.month_or_quarter,
-                    },
-                    callback: r => {
-                        india_compliance.trigger_file_download(
-                            JSON.stringify(r.message.data),
-                            r.message.filename
-                        );
-                    },
-                });
-            },
+            primary_action: () => get_json_data(dialog),
         });
 
         dialog.show();

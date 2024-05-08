@@ -184,6 +184,29 @@ class GSTR1Beta(Document):
                 doctype=self.doctype,
             )
 
+        def _summarize_data(gov_data_field=None):
+            summary_fields = {
+                "reconcile": "reconcile_summary",
+                f"{gov_data_field}": f"{gov_data_field}_summary",
+                "books": "books_summary",
+            }
+
+            for key, field in summary_fields.items():
+                if not data.get(key):
+                    continue
+
+                if self.gstr1_log.is_latest_data and self.gstr1_log.get(field):
+                    data[field] = self.gstr1_log.get_json_for(field)
+                    continue
+
+                if key == "filed":
+                    summary_data = summarize_retsum_data(data[key].get("summary"))
+                else:
+                    summary_data = summarize_data(data[key])
+
+                self.gstr1_log.update_json_for(field, summary_data)
+                data[field] = summary_data
+
         # APIs Disabled
         if not self.settings.analyze_filed_data:
             books_data = compute_books_gstr1_data(self)
@@ -191,6 +214,7 @@ class GSTR1Beta(Document):
             data["status"] = "Not Filed"
             data["books"] = self.gstr1_log.normalize_data(books_data)
 
+            _summarize_data()
             on_generate()
             return
 
@@ -236,28 +260,7 @@ class GSTR1Beta(Document):
         data[gov_data_field] = self.gstr1_log.normalize_data(gov_data)
         data["books"] = self.gstr1_log.normalize_data(books_data)
 
-        summary_fields = {
-            "reconcile": "reconcile_summary",
-            f"{gov_data_field}": f"{gov_data_field}_summary",
-            "books": "books_summary",
-        }
-
-        for key, field in summary_fields.items():
-            if not data.get(key):
-                continue
-
-            if self.gstr1_log.is_latest_data and self.gstr1_log.get(field):
-                data[field] = self.gstr1_log.get_json_for(field)
-                continue
-
-            if key == "filed":
-                summary_data = summarize_retsum_data(data[key].get("summary"))
-            else:
-                summary_data = summarize_data(data[key])
-
-            self.gstr1_log.update_json_for(field, summary_data)
-            data[field] = summary_data
-
+        _summarize_data(gov_data_field)
         on_generate()
 
 
