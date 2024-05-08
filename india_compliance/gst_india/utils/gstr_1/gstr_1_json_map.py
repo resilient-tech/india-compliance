@@ -969,15 +969,14 @@ class HSNSUM(DataMapper):
             ]
         }
 
-    def map_uom(self, uom, data):
+    def map_uom(self, uom, data=None):
         uom = uom.upper()
 
         if "-" in uom:
-            return (
-                "NA"
-                if data.get(GSTR1_DataFields.HSN_CODE.value).startswith("99")
-                else uom.split("-")[0]
-            )
+            if data and data.get(GovDataFields.HSN_CODE.value).startswith("99"):
+                return "NA"
+            else:
+                return uom.split("-")[0]
 
         if uom in UOM_MAP:
             return f"{uom}-{UOM_MAP[uom]}"

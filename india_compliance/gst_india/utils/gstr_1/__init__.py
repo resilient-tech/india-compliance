@@ -1,37 +1,5 @@
 from enum import Enum
 
-"""
-Steps:
-
-5. Export tool to be useful for the user to download the data in Excel or JSON format
-
-V - Export to Excel filed data
-V - Json Download
-
-UI:
-- Save utility (save data)
-
-Notes
-S - Test with Actual Data
-S - Refactor and cleanup
-
-S - Quarterly freeze and return status
- - GSTR -1 Section 14 ecommerce
-
-Data Export
-P - Reconcile excel with all data export
-V & P- JSON export with upload status -> Option to export missing in Books with zero values
-
-Future TODO;
-- Mark as Filed
-
-- Actions: create or cancel sales invoice
-- e-Commerece supplies
-- Bulk generation process
-
-
-"""
-
 
 class GSTR1_Categories(Enum):
     """

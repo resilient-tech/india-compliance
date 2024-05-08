@@ -100,21 +100,6 @@ const GSTR1_DataFields = {
     CANCELLED_COUNT: "cancelled_count",
 };
 
-const QUARTER = ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"];
-const MONTH = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-];
 
 let net_balance_during_period;
 frappe.ui.form.on(DOCTYPE, {
@@ -126,37 +111,22 @@ frappe.ui.form.on(DOCTYPE, {
             frm.trigger("company");
         });
 
-        let filing_frequency = await get_gstr1_filing_frequency();
-        frm.filing_frequency = filing_frequency;
+        frm.filing_frequency = gst_settings.filing_frequency;
 
         set_options_for_month_or_quarter(frm);
-
         set_default_fields(frm);
-        // frappe.realtime.on("download_gov_gstr1_data_complete", _ => {
-        //     frappe.show_alert({
-        //         message: __("GSTR-1 Data Downloaded Successfully"),
-        //         indicator: "green",
-        //     });
-        // })
 
-        // frappe.realtime.on("compute_books_gstr1_data_complete", _ => {
-        //     frappe.show_alert({
-        //         message: __("GSTR-1 Data Computed Successfully"),
-        //         indicator: "green",
-        //     });
-        // })
+        frm.__setup_complete = true;
 
         frappe.realtime.on("is_not_latest_data", message => {
             const { filters } = message;
 
-            const month = MONTH[filters.month - 1];
-            const quarter = QUARTER[Math.floor(filters.month / 3)];
+            const [month_or_quarter, year] = india_compliance.get_month_year_from_period(filters.period);
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
-                (frm.doc.month_or_quarter != month &&
-                    frm.doc.month_or_quarter != quarter) ||
-                frm.doc.year != filters.year
+                frm.doc.month_or_quarter != month_or_quarter ||
+                frm.doc.year != year
             )
                 return;
 
@@ -189,11 +159,15 @@ frappe.ui.form.on(DOCTYPE, {
             )
                 return;
 
-            frappe.after_ajax(() => { 
+            frappe.after_ajax(() => {
                 frm.doc.__onload = { data };
                 frm.trigger("after_save");
             });
         });
+    },
+
+    show_gstr1(frm, month_or_quarter, year, gstin) {
+        console.log("show_gstr1", month_or_quarter, year, gstin);
     },
 
     async company(frm) {
@@ -2133,7 +2107,7 @@ function set_options_for_month_or_quarter(frm) {
     if (frm.doc.year === current_year) {
         // Options for current year till current month
         if (frm.filing_frequency === "Monthly")
-            options = MONTH.slice(0, current_month_idx + 1);
+            options = india_compliance.MONTH.slice(0, current_month_idx + 1);
         else {
             let quarter_idx;
             if (current_month_idx <= 2) quarter_idx = 1;
@@ -2141,15 +2115,15 @@ function set_options_for_month_or_quarter(frm) {
             else if (current_month_idx <= 8) quarter_idx = 3;
             else quarter_idx = 4;
 
-            options = QUARTER.slice(0, quarter_idx);
+            options = india_compliance.QUARTER.slice(0, quarter_idx);
         }
     } else if (frm.doc.year === "2017") {
         // Options for 2017 from July to December
-        if (frm.filing_frequency === "Monthly") options = MONTH.slice(6);
-        else options = QUARTER.slice(2);
+        if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH.slice(6);
+        else options = india_compliance.QUARTER.slice(2);
     } else {
-        if (frm.filing_frequency === "Monthly") options = MONTH;
-        else options = QUARTER;
+        if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH;
+        else options = india_compliance.QUARTER;
     }
 
     set_field_options("month_or_quarter", options);
@@ -2215,17 +2189,6 @@ function render_empty_state(frm) {
     }
     frm.doc.__onload = null;
     frm.refresh();
-}
-
-async function get_gstr1_filing_frequency() {
-    return new Promise((resolve, reject) => {
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_gstr1_filing_frequency",
-            callback: function (r) {
-                resolve(r.message);
-            },
-        });
-    });
 }
 
 async function get_output_gst_legder(frm) {

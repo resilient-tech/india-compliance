@@ -12,6 +12,42 @@ frappe.provide("india_compliance");
 window.gst_settings = frappe.boot.gst_settings;
 
 Object.assign(india_compliance, {
+    MONTH: [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ],
+
+    QUARTER: ["Jan-Mar", "Apr-Jun", "Jul-Sep", "Oct-Dec"],
+
+    get_month_year_from_period(period) {
+        /**
+         * Returns month or quarter and year from the period
+         * Month or quarter depends on the filing frequency set in GST Settings
+         *
+         * @param {String} period - period in format MMYYYY
+         * @returns {Array} - [month_or_quarter, year]
+         */
+
+        const { filing_frequency } = gst_settings;
+        const month_number = period.slice(0, 2);
+        const year = period.slice(2);
+
+        if (filing_frequency === "Monthly")
+            return [this.MONTH[month_number - 1], year];
+
+        else return [this.QUARTER[Math.floor(month_number / 3)], year];
+    },
+
     get_gstin_query(party, party_type = "Company") {
         if (!party) {
             frappe.show_alert({

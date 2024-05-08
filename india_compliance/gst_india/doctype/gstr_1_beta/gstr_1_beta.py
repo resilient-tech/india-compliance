@@ -292,7 +292,6 @@ def compute_books_gstr1_data(filters, save=False, periodicity="Monthly"):
     )
 
     # compute data
-    # TODO: compute from and to date for report
     mapped_data = GSTR1MappedData(_filters).prepare_mapped_data()
 
     gstr1_log.update_json_for(data_field, mapped_data)
@@ -508,7 +507,6 @@ def get_aggregated_row(books_rows: list) -> dict:
 
 
 ###################
-@frappe.whitelist()
 def get_gstr1_filing_frequency():
     gst_settings = frappe.get_cached_doc("GST Settings")
     return gst_settings.filing_frequency
@@ -981,19 +979,7 @@ class GSTR1MappedData(GSTR1ProcessData):
             if data:
                 prepared_data[category] = data
 
-        for sub_category_data in prepared_data.values():
-            self.set_rounded_values(sub_category_data)
-
         return prepared_data
-
-    def set_rounded_values(self, data):
-        value_fields = [*AMOUNT_FIELDS.keys(), GSTR1_DataFields.QUANTITY.value]
-        for row in data.values():
-            for key in value_fields:
-                if key not in row:
-                    continue
-
-                row[key] = flt(row[key], 2)
 
     def prepare_document_issued_data(self):
         doc_issued_data = {}

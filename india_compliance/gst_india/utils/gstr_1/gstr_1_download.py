@@ -83,7 +83,6 @@ def download_gstr1_json_data(gstr1_log):
     gstr1_log.update_json_for(data_field, mapped_data)
 
     if is_queued:
-        # TODO: Send message to UI (listener), update log status to queued & restrict report generation
         gstr1_log.update_status("Queued")
 
         frappe.publish_realtime(
