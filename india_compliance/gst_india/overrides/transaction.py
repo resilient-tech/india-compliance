@@ -1161,6 +1161,8 @@ class ItemGSTDetails:
 
             old = json.loads(row.item_wise_tax_detail)
 
+            tax_difference = row.tax_amount
+
             # update item taxes
             for item_name in old:
                 if item_name not in tax_details:
@@ -1171,12 +1173,18 @@ class ItemGSTDetails:
                 item_taxes = tax_details[item_name]
                 tax_rate, tax_amount = old[item_name]
 
+                tax_difference -= tax_amount
+
                 # cases when charge type == "Actual"
                 if tax_amount and not tax_rate:
                     continue
 
                 item_taxes[tax_rate_field] = tax_rate
                 item_taxes[tax_amount_field] += tax_amount
+
+            # Handle rounding errors
+            if tax_difference:
+                item_taxes[tax_amount_field] += tax_difference
 
         self.item_tax_details = tax_details
 
