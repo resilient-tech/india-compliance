@@ -9,19 +9,19 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import (
     add_to_date,
-    get_datetime,
     flt,
-    getdate,
-    get_last_day,
+    get_datetime,
     get_datetime_str,
+    get_last_day,
+    getdate,
 )
 
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
-    GSTR1_DataFields,
-    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
+    SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
+    GSTR1_DataFields,
 )
 
 DOCTYPE = "GSTR-1 Filed Log"
@@ -319,7 +319,7 @@ def count_hsn_summary(summary_row):
     summary_row["no_of_records"] += 1
 
 
-def process_gstr_1_returns_info(gstin, response):
+def process_gstr_1_returns_info(company, gstin, response):
     return_info = {}
 
     # compile gstr-1 returns info
@@ -368,6 +368,7 @@ def process_gstr_1_returns_info(gstin, response):
         frappe.get_doc(
             {
                 "doctype": "GSTR-1 Filed Log",
+                "company": company,
                 "gstin": gstin,
                 "return_period": info["ret_prd"],
                 **filing_details,

@@ -1752,7 +1752,7 @@ class FiledTab extends TabManager {
             );
         else {
             this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
-            this.add_tab_custom_button("Mark as Filed", () => console.log("hi"));
+            this.add_tab_custom_button("Mark as Filed", () => this.mark_as_filed());
         }
     }
 
@@ -1814,6 +1814,11 @@ class FiledTab extends TabManager {
         });
 
         dialog.show();
+    }
+
+    mark_as_filed() {
+        render_empty_state(this.instance.frm);
+        this.instance.frm.call("mark_as_filed").then(() => this.instance.frm.trigger("after_save"));
     }
 
     // COLUMNS

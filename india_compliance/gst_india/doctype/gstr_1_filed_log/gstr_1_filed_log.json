@@ -8,10 +8,11 @@
   "filing_summary_section",
   "filing_status",
   "return_period",
-  "gstin",
+  "company",
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
+  "gstin",
   "generation_status",
   "section_break_oisv",
   "unfiled",
@@ -150,11 +151,17 @@
   {
    "fieldname": "column_break_ehcm",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-05-06 16:50:31.699395",
+ "modified": "2024-05-08 15:59:51.863611",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",

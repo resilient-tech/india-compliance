@@ -20,9 +20,10 @@ frappe.ui.form.on("GSTR-1 Filed Log", {
 
 			}).then(async () => {
 				await cur_frm.set_value({
-					"month_or_quarter": month_or_quarter,
-					"year": year,
+					"company": frm.doc.company,
 					"company_gstin": frm.doc.gstin,
+					"year": year,
+					"month_or_quarter": month_or_quarter,
 				});
 				cur_frm.save();
 

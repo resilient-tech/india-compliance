@@ -6,6 +6,7 @@ from datetime import datetime
 
 import frappe
 from frappe import _, unscrub
+from frappe.desk.form.load import run_onload
 from frappe.model.document import Document
 from frappe.query_builder.functions import Date, Sum
 from frappe.utils import flt, get_last_day, getdate
@@ -61,6 +62,29 @@ class GSTR1Beta(Document):
     def sync_with_gstn(self, sync_for):
         self.validate(sync_for=sync_for)
 
+    @frappe.whitelist()
+    def mark_as_filed(self):
+        period = get_period(self.month_or_quarter, self.year)
+        return_status = get_gstr_1_return_status(
+            self.company, self.company_gstin, period
+        )
+
+        if return_status != "Filed":
+            frappe.msgprint(
+                _("GSTR-1 is not yet filed on the GST Portal"), indicator="red"
+            )
+
+        else:
+            frappe.db.set_value(
+                "GSTR-1 Filed Log",
+                f"{period}-{self.company_gstin}",
+                "filing_status",
+                return_status,
+            )
+
+        self.validate()
+        run_onload(self)
+
     def validate(self, sync_for=None, recompute_books=False):
         period = get_period(self.month_or_quarter, self.year)
 
@@ -89,6 +113,7 @@ class GSTR1Beta(Document):
 
         else:
             gstr1_log = frappe.new_doc("GSTR-1 Filed Log")
+            gstr1_log.company = self.company
             gstr1_log.gstin = self.company_gstin
             gstr1_log.return_period = period
             gstr1_log.insert()
@@ -173,7 +198,9 @@ class GSTR1Beta(Document):
         status = self.gstr1_log.filing_status
         if not status:
             status = get_gstr_1_return_status(
-                self.gstr1_log.gstin, self.gstr1_log.return_period
+                self.gstr1_log.company,
+                self.gstr1_log.gstin,
+                self.gstr1_log.return_period,
             )
             self.gstr1_log.filing_status = status
 

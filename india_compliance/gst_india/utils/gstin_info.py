@@ -171,7 +171,9 @@ def _extract_address_lines(address):
 ####################################################################################################
 
 
-def get_gstr_1_return_status(gstin, period, process_info=True, year_increment=0):
+def get_gstr_1_return_status(
+    company, gstin, period, process_info=True, year_increment=0
+):
     """Returns Returns info for the given period"""
     fy = get_fy(period, year_increment=year_increment)
 
@@ -180,7 +182,9 @@ def get_gstr_1_return_status(gstin, period, process_info=True, year_increment=0)
         return
 
     if process_info:
-        frappe.enqueue(process_gstr_1_returns_info, gstin=gstin, response=response)
+        frappe.enqueue(
+            process_gstr_1_returns_info, company=company, gstin=gstin, response=response
+        )
 
     for info in response.get("EFiledlist"):
         # TODO: Check for quarterly with iff
@@ -191,7 +195,7 @@ def get_gstr_1_return_status(gstin, period, process_info=True, year_increment=0)
         # late filing possibility (limitation: only checks for the next FY: good enough)
         if not year_increment and get_current_fy() != fy:
             get_gstr_1_return_status(
-                gstin, period, process_info=process_info, year_increment=1
+                company, gstin, period, process_info=process_info, year_increment=1
             )
 
         return "Not Filed"
