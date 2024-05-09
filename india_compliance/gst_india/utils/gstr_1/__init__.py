@@ -125,6 +125,7 @@ class GSTR1_DataFields(Enum):
     TOTAL_COUNT = "total_count"
     DRAFT_COUNT = "draft_count"
     CANCELLED_COUNT = "cancelled_count"
+    UPLOAD_STATUS = "upload_status"
 
 
 class GovDataFields(Enum):

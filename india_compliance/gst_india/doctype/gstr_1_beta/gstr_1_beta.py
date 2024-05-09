@@ -38,6 +38,19 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 )
 from india_compliance.gst_india.utils.gstr_utils import request_otp
 
+COLOR_PALLATE = frappe._dict(
+    {
+        "dark_gray": "d9d9d9",
+        "light_gray": "f2f2f2",
+        "dark_pink": "e6b9b8",
+        "light_pink": "f2dcdb",
+        "sky_blue": "c6d9f1",
+        "light_blue": "dce6f2",
+        "green": "d7e4bd",
+        "light_green": "ebf1de",
+    }
+)
+
 AMOUNT_FIELDS = {
     GSTR1_DataFields.TAXABLE_VALUE.value: 0,
     GSTR1_DataFields.IGST.value: 0,
@@ -543,7 +556,7 @@ def get_gstr1_filing_frequency():
 
 
 @frappe.whitelist()
-def is_latest_data(month_or_quarter, year, company_gstin):
+def is_latest_data(company_gstin, month_or_quarter, year):
     period = get_period(month_or_quarter, year)
     if log_name := frappe.db.exists("GSTR-1 Filed Log", f"{period}-{company_gstin}"):
         gstr1_log = frappe.get_doc("GSTR-1 Filed Log", log_name)
@@ -595,108 +608,20 @@ def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
 
 
 @frappe.whitelist()
-def download_books_as_excel(
-    data,
-    doc,
-    document_headers,
-    at_received_headers,
-    at_adjusted_headers,
-    hsn_summary_headers,
-    doc_issue_headers,
-):
-    data = frappe._dict(json.loads(data))
-    doc = frappe._dict(json.loads(doc))
+def download_books_as_excel(company_gstin, month_or_quarter, year):
 
-    document_headers = json.loads(document_headers)
-    at_received_headers = json.loads(at_received_headers)
-    at_adjusted_headers = json.loads(at_adjusted_headers)
-    hsn_summary_headers = json.loads(hsn_summary_headers)
-    doc_issue_headers = json.loads(doc_issue_headers)
-
-    filename = ["GSTR-1", "Books", doc.company_gstin, doc.month_or_quarter, doc.year]
-
-    category = [
-        GSTR1_SubCategories.B2B_REGULAR.value,
-        GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
-        GSTR1_SubCategories.SEZWP.value,
-        GSTR1_SubCategories.SEZWOP.value,
-        GSTR1_SubCategories.DE.value,
-        GSTR1_SubCategories.EXPWP.value,
-        GSTR1_SubCategories.EXPWOP.value,
-        GSTR1_SubCategories.B2CL.value,
-        GSTR1_SubCategories.B2CS.value,
-        GSTR1_SubCategories.NIL_EXEMPT.value,
-        GSTR1_SubCategories.CDNR.value,
-        GSTR1_SubCategories.CDNUR.value,
-    ]
-
-    excel = ExcelExporter()
-    excel.remove_sheet("Sheet")
-
-    category_data = []
-    for key, values in data.items():
-        if key not in category:
-            continue
-
-        if key in (
-            GSTR1_SubCategories.B2CS.value,
-            GSTR1_SubCategories.NIL_EXEMPT.value,
-        ):
-            category_data.extend(values)
-            continue
-
-        for row in values:
-            dict = row
-            for item in row["items"]:
-                category_data.extend([{**dict, **item}])
-
-    create_excel_sheet(excel, "Sales Invoice", document_headers, category_data)
-
-    if data.get("HSN Summary"):
-        create_excel_sheet(
-            excel,
-            GSTR1_SubCategories.HSN.value,
-            hsn_summary_headers,
-            data.get(GSTR1_SubCategories.HSN.value),
-        )
-
-    if data.get(GSTR1_SubCategories.AT.value):
-        create_excel_sheet(
-            excel,
-            GSTR1_SubCategories.AT.value,
-            at_received_headers,
-            data.get(GSTR1_SubCategories.AT.value),
-        )
-
-    if data.get(GSTR1_SubCategories.TXP.value):
-        create_excel_sheet(
-            excel,
-            GSTR1_SubCategories.TXP.value,
-            at_adjusted_headers,
-            data.get(GSTR1_SubCategories.TXP.value),
-        )
-
-    if data.get(GSTR1_SubCategories.DOC_ISSUE.value):
-        create_excel_sheet(
-            excel,
-            GSTR1_SubCategories.DOC_ISSUE.value,
-            doc_issue_headers,
-            data.get(GSTR1_SubCategories.DOC_ISSUE.value),
-        )
-
-    excel.export(" - ".join(filename))
+    books_excel = BooksExcel(company_gstin, month_or_quarter, year)
+    books_excel.export_data()
 
     return "Data Downloaded to Excel Successfully"
 
 
-def create_excel_sheet(excel, sheet_name, headers, data, add_totals=False):
-    excel.create_sheet(
-        sheet_name=sheet_name, headers=headers, data=data, add_totals=add_totals
-    )
-
-
 @frappe.whitelist()
-def download_reconcile_as_excel(data):
+def download_reconcile_as_excel(company_gstin, month_or_quarter, year):
+
+    reconcile_excel = ReconcileExcel(company_gstin, month_or_quarter, year)
+    reconcile_excel.export_data()
+
     return "Data Downloaded to Excel Successfully"
 
 
@@ -1065,3 +990,1707 @@ class GSTR1MappedData(GSTR1ProcessData):
             self.process_data_for_advances_received_or_adjusted(row, advances_data)
 
         return advances_data
+
+
+class BooksExcel:
+
+    AMOUNT_HEADERS = [
+        {"fieldname": GSTR1_DataFields.IGST.value, "label": "IGST"},
+        {"fieldname": GSTR1_DataFields.CGST.value, "label": "CGST"},
+        {"fieldname": GSTR1_DataFields.SGST.value, "label": "SGST"},
+        {"fieldname": GSTR1_DataFields.CESS.value, "label": "CESS"},
+    ]
+
+    def __init__(self, company_gstin, month_or_quarter, year):
+        self.company_gstin = company_gstin
+        self.month_or_quarter = month_or_quarter
+        self.year = year
+
+        period = get_period(month_or_quarter, year)
+        doc = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{company_gstin}")
+        self.data = doc.load_data("books")["books"]
+
+    def export_data(self):
+        excel = ExcelExporter()
+        excel.remove_sheet("Sheet")
+
+        excel.create_sheet(
+            sheet_name="Sales Invoice",
+            headers=self.get_document_headers(),
+            data=self.get_document_data(),
+            add_totals=False,
+        )
+        if hsn_data := self.data.get(GSTR1_SubCategories.HSN.value):
+            excel.create_sheet(
+                sheet_name=GSTR1_SubCategories.HSN.value,
+                headers=self.get_hsn_summary_headers(),
+                data=hsn_data,
+                add_totals=False,
+            )
+
+        if at_received_data := self.data.get(GSTR1_SubCategories.AT.value):
+            excel.create_sheet(
+                sheet_name=GSTR1_SubCategories.AT.value,
+                headers=self.get_at_received_headers(),
+                data=at_received_data,
+                add_totals=False,
+            )
+
+        if at_adjusted_data := self.data.get(GSTR1_SubCategories.TXP.value):
+            excel.create_sheet(
+                sheet_name=GSTR1_SubCategories.TXP.value,
+                headers=self.get_at_adjusted_headers(),
+                data=at_adjusted_data,
+                add_totals=False,
+            )
+
+        if doc_issued_data := self.data.get(GSTR1_SubCategories.DOC_ISSUE.value):
+            excel.create_sheet(
+                sheet_name=GSTR1_SubCategories.DOC_ISSUE.value,
+                headers=self.get_doc_issue_headers(),
+                data=doc_issued_data,
+                add_totals=False,
+            )
+
+        excel.export(self.get_file_name())
+
+    def get_file_name(self):
+        filename = [
+            "GSTR-1",
+            "Books",
+            self.company_gstin,
+            self.month_or_quarter,
+            self.year,
+        ]
+        return " - ".join(filename)
+
+    def get_document_data(self):
+        category = [
+            GSTR1_SubCategories.B2B_REGULAR.value,
+            GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
+            GSTR1_SubCategories.SEZWP.value,
+            GSTR1_SubCategories.SEZWOP.value,
+            GSTR1_SubCategories.DE.value,
+            GSTR1_SubCategories.EXPWP.value,
+            GSTR1_SubCategories.EXPWOP.value,
+            GSTR1_SubCategories.B2CL.value,
+            GSTR1_SubCategories.B2CS.value,
+            GSTR1_SubCategories.NIL_EXEMPT.value,
+            GSTR1_SubCategories.CDNR.value,
+            GSTR1_SubCategories.CDNUR.value,
+        ]
+
+        category_data = []
+        for key, values in self.data.items():
+            if key not in category:
+                continue
+
+            if key in (
+                GSTR1_SubCategories.B2CS.value,
+                GSTR1_SubCategories.NIL_EXEMPT.value,
+            ):
+                category_data.extend(values)
+                continue
+
+            for row in values:
+                dict = row
+                for item in row["items"]:
+                    category_data.extend([{**dict, **item}])
+
+        return category_data
+
+    def get_document_headers(self):
+        return [
+            {
+                "label": "Transaction Type",
+                "fieldname": GSTR1_DataFields.TRANSACTION_TYPE.value,
+            },
+            {
+                "label": "Document Date",
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+            },
+            {
+                "label": "Document Number",
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+            },
+            {
+                "label": "Customer GSTIN",
+                "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+            },
+            {
+                "label": "Customer Name",
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+            },
+            {
+                "label": "Document Type",
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+            },
+            {
+                "label": "Shipping Bill Number",
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
+            },
+            {
+                "label": "Shipping Bill Date",
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
+            },
+            {
+                "label": "Port Code",
+                "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE.value,
+            },
+            {
+                "label": "Reverse Charge",
+                "fieldname": GSTR1_DataFields.REVERSE_CHARGE.value,
+            },
+            {
+                "label": "Upload Status",
+                "fieldname": GSTR1_DataFields.UPLOAD_STATUS.value,
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": GSTR1_DataFields.POS.value,
+            },
+            *self.AMOUNT_HEADERS,
+            {
+                "label": "Document Value",
+                "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+            },
+        ]
+
+    def get_at_received_headers(self):
+        return [
+            {
+                "label": "Advance Date",
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+            },
+            {
+                "label": "Payment Entry Number",
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+            },
+            {
+                "label": "Customer",
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": GSTR1_DataFields.POS.value,
+            },
+            *self.AMOUNT_HEADERS,
+            {
+                "label": "Amount Received",
+                "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+            },
+        ]
+
+    def get_at_adjusted_headers(self):
+        return [
+            {
+                "label": "Adjustment Date",
+                "fieldname": GSTR1_DataFields.DOC_DATE,
+            },
+            {
+                "label": "Adjustment Entry Number",
+                "fieldname": GSTR1_DataFields.DOC_NUMBER,
+            },
+            {
+                "label": "Customer ",
+                "fieldname": GSTR1_DataFields.CUST_NAME,
+            },
+            {
+                "label": "Place of Supply",
+                "fieldname": GSTR1_DataFields.POS,
+            },
+            *self.AMOUNT_HEADERS,
+            {
+                "label": "Amount Adjusted",
+                "fieldname": GSTR1_DataFields.DOC_VALUE,
+            },
+        ]
+
+    def get_hsn_summary_headers(self):
+        return [
+            {
+                "label": "HSN Code",
+                "fieldname": GSTR1_DataFields.HSN_CODE.value,
+            },
+            {
+                "label": "Description",
+                "fieldname": GSTR1_DataFields.DESCRIPTION.value,
+            },
+            {
+                "label": "UOM",
+                "fieldname": GSTR1_DataFields.UOM.value,
+            },
+            {
+                "label": "Total Quantity",
+                "fieldname": GSTR1_DataFields.QUANTITY.value,
+            },
+            *self.AMOUNT_HEADERS,
+        ]
+
+    def get_doc_issue_headers(self):
+        return [
+            {
+                "label": "Document Type",
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+            },
+            {
+                "label": "Sr No From",
+                "fieldname": GSTR1_DataFields.FROM_SR.value,
+            },
+            {
+                "label": "Sr No To",
+                "fieldname": GSTR1_DataFields.TO_SR.value,
+            },
+            {
+                "label": "Total Count",
+                "fieldname": GSTR1_DataFields.TOTAL_COUNT.value,
+            },
+            {
+                "label": "Draft Count",
+                "fieldname": GSTR1_DataFields.DRAFT_COUNT.value,
+            },
+            {
+                "label": "Cancelled Count",
+                "fieldname": GSTR1_DataFields.CANCELLED_COUNT.value,
+            },
+        ]
+
+
+class ReconcileExcel:
+
+    def __init__(self, company_gstin, month_or_quarter, year):
+        self.company_gstin = company_gstin
+        self.month_or_quarter = month_or_quarter
+        self.year = year
+
+        period = get_period(month_or_quarter, year)
+        doc = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{company_gstin}")
+
+        self.summary = doc.load_data("reconcile_summary")["reconcile_summary"]
+        self.data = doc.load_data("reconcile")["reconcile"]
+
+    def export_data(self):
+        excel = ExcelExporter()
+        excel.remove_sheet("Sheet")
+
+        excel.create_sheet(
+            sheet_name="Reconciled Summary",
+            headers=self.get_reconcile_summary_headers(),
+            data=self.get_reconcile_summary_data(),
+            add_totals=False,
+        )
+
+        if b2b_data := self.get_b2b_data():
+            excel.create_sheet(
+                sheet_name="B2B",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_b2b_headers(),
+                data=b2b_data,
+                add_totals=False,
+            )
+
+        if b2cl_data := self.get_b2cl_data():
+            excel.create_sheet(
+                sheet_name="B2C (Large)",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_b2cl_headers(),
+                data=b2cl_data,
+                add_totals=False,
+            )
+
+        if exports_data := self.get_exports_data():
+            excel.create_sheet(
+                sheet_name="Exports",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_exports_headers(),
+                data=exports_data,
+                add_totals=False,
+            )
+
+        if b2cs_data := self.get_b2cs_data():
+            excel.create_sheet(
+                sheet_name="B2C (Others)",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_b2cs_headers(),
+                data=b2cs_data,
+                add_totals=False,
+            )
+
+        if nil_exempt_data := self.get_nil_exempt_data():
+            excel.create_sheet(
+                sheet_name="Nil,Exemped,Non-GST",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_nil_exempt_headers(),
+                data=nil_exempt_data,
+                add_totals=False,
+            )
+
+        if cdnr_data := self.get_cdnr_data():
+            excel.create_sheet(
+                sheet_name="CDNR",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_cdnr_headers(),
+                data=cdnr_data,
+                add_totals=False,
+            )
+
+        if cdnur_data := self.get_cdnur_data():
+            excel.create_sheet(
+                sheet_name="CDNUR",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_cdnur_headers(),
+                data=cdnur_data,
+                add_totals=False,
+            )
+
+        if doc_issue_data := self.get_doc_issue_data():
+            excel.create_sheet(
+                sheet_name="Doc Issue",
+                merged_headers=self.get_merge_headers_for_doc_issue(),
+                headers=self.get_doc_issue_headers(),
+                data=doc_issue_data,
+                add_totals=False,
+            )
+
+        if hsn_data := self.get_hsn_summary_data():
+            excel.create_sheet(
+                sheet_name="HSN Summary",
+                merged_headers=self.get_merge_headers_for_hsn_summary(),
+                headers=self.get_hsn_summary_headers(),
+                data=hsn_data,
+                add_totals=False,
+            )
+
+        if at_data := self.get_at_data():
+            excel.create_sheet(
+                sheet_name="AT",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_at_txp_headers(),
+                data=at_data,
+                add_totals=False,
+            )
+
+        if txp_data := self.get_txp_data():
+            excel.create_sheet(
+                sheet_name="TXP",
+                merged_headers=self.get_merge_headers(),
+                headers=self.get_at_txp_headers(),
+                data=txp_data,
+                add_totals=False,
+            )
+
+        excel.export(self.get_file_name())
+
+    def get_file_name(self):
+        filename = [
+            "GSTR-1",
+            "Reconcile",
+            self.company_gstin,
+            self.month_or_quarter,
+            self.year,
+        ]
+        return " - ".join(filename)
+
+    def get_merge_headers(self):
+        return frappe._dict(
+            {
+                "Books": [
+                    "books_" + GSTR1_DataFields.POS.value,
+                    "books_" + GSTR1_DataFields.CESS.value,
+                ],
+                "GSTR-1": [
+                    "gstr_1_" + GSTR1_DataFields.POS.value,
+                    "gstr_1_" + GSTR1_DataFields.CESS.value,
+                ],
+            }
+        )
+
+    def get_merge_headers_for_doc_issue(self):
+        return frappe._dict(
+            {
+                "Books": [
+                    "books_" + GSTR1_DataFields.FROM_SR.value,
+                    "books_" + GSTR1_DataFields.CANCELLED_COUNT.value,
+                ],
+                "GSTR-1": [
+                    "gstr_1_" + GSTR1_DataFields.FROM_SR.value,
+                    "gstr_1_" + GSTR1_DataFields.CANCELLED_COUNT.value,
+                ],
+            }
+        )
+
+    def get_merge_headers_for_hsn_summary(self):
+        return frappe._dict(
+            {
+                "Books": [
+                    "books_" + GSTR1_DataFields.UOM.value,
+                    "books_" + GSTR1_DataFields.CESS.value,
+                ],
+                "GSTR-1": [
+                    "gstr_1_" + GSTR1_DataFields.UOM.value,
+                    "gstr_1_" + GSTR1_DataFields.CESS.value,
+                ],
+            }
+        )
+
+    def get_common_headers(self):
+        return [
+            {
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+                "label": "Document Type",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "label": "Document Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Document No",
+            },
+            {
+                "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+                "label": "Customer GSTIN",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+    def get_reconcile_summary_headers(self):
+        headers = [
+            {
+                "fieldname": "description",
+                "label": "Description",
+            },
+            {
+                "fieldname": "total_taxable_value",
+                "label": "Taxable Value",
+            },
+            {
+                "fieldname": "total_igst_amount",
+                "label": "IGST",
+            },
+            {
+                "fieldname": "total_cgst_amount",
+                "label": "CGST",
+            },
+            {
+                "fieldname": "total_sgst_amount",
+                "label": "SGST",
+            },
+            {
+                "fieldname": "total_cess_amount",
+                "label": "CESS",
+            },
+        ]
+        return headers
+
+    def get_reconcile_summary_data(self):
+        excel_data = []
+        for row in self.summary:
+            if row["indent"] == 1:
+                continue
+            excel_data.append(row)
+
+        return excel_data
+
+    def get_b2b_headers(self):
+        headers = [
+            *self.get_common_headers(),
+        ]
+
+        return headers
+
+    def get_b2b_data(self):
+        b2b_regular = self.data.get(GSTR1_SubCategories.B2B_REGULAR.value, [])
+        b2b_reverse_charge = self.data.get(
+            GSTR1_SubCategories.B2B_REVERSE_CHARGE.value, []
+        )
+        sezwop = self.data.get(GSTR1_SubCategories.SEZWOP.value, [])
+        sezwp = self.data.get(GSTR1_SubCategories.SEZWP.value, [])
+        deemed_export = self.data.get(GSTR1_SubCategories.DE.value, [])
+
+        b2b_data = b2b_regular + b2b_reverse_charge + sezwop + sezwp + deemed_export
+
+        excel_data = []
+
+        for row in b2b_data:
+            row_dict = self.get_row_dict(row)
+
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_b2cl_headers(self):
+        headers = [
+            *self.get_common_headers(),
+        ]
+
+        return headers
+
+    def get_b2cl_data(self):
+        b2cl_data = self.data.get(GSTR1_SubCategories.B2CL.value, [])
+
+        excel_data = []
+
+        for row in b2cl_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_exports_headers(self):
+        headers = [
+            {
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
+                "label": "Shipping Bill Number",
+            },
+            {
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
+                "label": "Shipping Bill Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE.value,
+                "label": "Shipping Port Code",
+            },
+            *self.get_common_headers(),
+        ]
+
+        return headers
+
+    def get_exports_data(self):
+        expwp = self.data.get(GSTR1_SubCategories.EXPWP.value, [])
+        expwop = self.data.get(GSTR1_SubCategories.EXPWOP.value, [])
+
+        exports_data = expwp + expwop
+
+        excel_data = []
+
+        for row in exports_data:
+            row_dict = self.get_row_dict(row)
+            row_dict.update(
+                {
+                    GSTR1_DataFields.SHIPPING_BILL_NUMBER.value: row.get(
+                        "shipping_bill_number"
+                    ),
+                    GSTR1_DataFields.SHIPPING_BILL_DATE.value: row.get(
+                        "shipping_bill_date"
+                    ),
+                    GSTR1_DataFields.SHIPPING_PORT_CODE.value: row.get(
+                        "shipping_port_code"
+                    ),
+                }
+            )
+
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_b2cs_headers(self):
+        headers = [
+            *self.get_common_headers(),
+        ]
+
+        return headers
+
+    def get_b2cs_data(self):
+        b2cs_data = self.data.get(GSTR1_SubCategories.B2CS.value, [])
+
+        excel_data = []
+
+        for row in b2cs_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_nil_exempt_headers(self):
+        headers = [
+            *self.get_common_headers(),
+        ]
+
+        return headers
+
+    def get_nil_exempt_data(self):
+        nil_exempt_data = self.data.get(GSTR1_SubCategories.NIL_EXEMPT.value, [])
+
+        excel_data = []
+
+        for row in nil_exempt_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_cdnr_headers(self):
+        headers = [
+            *self.get_common_headers(),
+        ]
+
+        return headers
+
+    def get_cdnr_data(self):
+        cdnr_data = self.data.get(GSTR1_SubCategories.CDNR.value, [])
+
+        excel_data = []
+
+        for row in cdnr_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_cdnur_headers(self):
+        headers = [
+            *self.get_common_headers(),
+        ]
+
+        return headers
+
+    def get_cdnur_data(self):
+        cdnr_data = self.data.get(GSTR1_SubCategories.CDNUR.value, [])
+
+        excel_data = []
+
+        for row in cdnr_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_doc_issue_headers(self):
+        headers = [
+            {"fieldname": GSTR1_DataFields.DOC_TYPE.value, "label": "Document Type"},
+            {
+                "fieldname": "match_status",
+                "label": "Match Status",
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.FROM_SR.value,
+                "label": "SR No From",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.FROM_SR.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TO_SR.value,
+                "label": "SR No To",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TO_SR.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TOTAL_COUNT.value,
+                "label": "Total Count",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TOTAL_COUNT.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CANCELLED_COUNT.value,
+                "label": "Cancelled Count",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CANCELLED_COUNT.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.FROM_SR.value,
+                "label": "Sr No From",
+                "compare_with": "books_" + GSTR1_DataFields.FROM_SR.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TO_SR.value,
+                "label": "Sr No To",
+                "compare_with": "books_" + GSTR1_DataFields.TO_SR.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TOTAL_COUNT.value,
+                "label": "Total Count",
+                "compare_with": "books_" + GSTR1_DataFields.TOTAL_COUNT.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CANCELLED_COUNT.value,
+                "label": "Cancelled Count",
+                "compare_with": "books_" + GSTR1_DataFields.CANCELLED_COUNT.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+        return headers
+
+    def get_doc_issue_data(self):
+        doc_issue_data = self.data.get(GSTR1_SubCategories.DOC_ISSUE.value, [])
+
+        excel_data = []
+
+        for row in doc_issue_data:
+            books = row.get("books", {})
+            gstr_1 = row.get("gov", {})
+            row_dict = {
+                GSTR1_DataFields.DOC_TYPE.value: row.get(
+                    GSTR1_DataFields.DOC_TYPE.value
+                ),
+                "match_status": row.get("match_status"),
+                "books_"
+                + GSTR1_DataFields.FROM_SR.value: books.get(
+                    GSTR1_DataFields.FROM_SR.value
+                ),
+                "books_"
+                + GSTR1_DataFields.TO_SR.value: books.get(GSTR1_DataFields.TO_SR.value),
+                "books_"
+                + GSTR1_DataFields.TOTAL_COUNT.value: books.get(
+                    GSTR1_DataFields.TOTAL_COUNT.value
+                ),
+                "books_"
+                + GSTR1_DataFields.CANCELLED_COUNT.value: (
+                    books.get(GSTR1_DataFields.CANCELLED_COUNT.value) or 0
+                )
+                + (books.get(GSTR1_DataFields.DRAFT_COUNT.value) or 0),
+                "gstr_1_"
+                + GSTR1_DataFields.FROM_SR.value: gstr_1.get(
+                    GSTR1_DataFields.FROM_SR.value
+                ),
+                "gstr_1_"
+                + GSTR1_DataFields.TO_SR.value: gstr_1.get(
+                    GSTR1_DataFields.TO_SR.value
+                ),
+                "gstr_1_"
+                + GSTR1_DataFields.TOTAL_COUNT.value: gstr_1.get(
+                    GSTR1_DataFields.TOTAL_COUNT.value
+                ),
+                "gstr_1_"
+                + GSTR1_DataFields.CANCELLED_COUNT.value: (
+                    gstr_1.get(GSTR1_DataFields.CANCELLED_COUNT.value) or 0
+                )
+                + (gstr_1.get(GSTR1_DataFields.DRAFT_COUNT.value) or 0),
+            }
+
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_hsn_summary_headers(self):
+        headers = [
+            {"fieldname": GSTR1_DataFields.HSN_CODE.value, "label": "HSN Code"},
+            {"fieldname": GSTR1_DataFields.DESCRIPTION.value, "label": "Description"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.UOM.value,
+                "label": "UQC",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.UOM.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.QUANTITY.value,
+                "label": "Quantity",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.QUANTITY.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST Amount",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST Amount",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST Amount",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS Amount",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.UOM.value,
+                "label": "UQC",
+                "compare_with": "books_" + GSTR1_DataFields.UOM.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.QUANTITY.value,
+                "label": "Quantity",
+                "compare_with": "books_" + GSTR1_DataFields.QUANTITY.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST Amount",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST Amount",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST Amount",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS Amount",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+        return headers
+
+    def get_hsn_summary_data(self):
+        hsn_summary_data = self.data.get(GSTR1_SubCategories.HSN.value, [])
+
+        excel_data = []
+
+        for row in hsn_summary_data:
+            books = row.get("books", {})
+            gstr_1 = row.get("gov", {})
+
+            row_dict = {
+                GSTR1_DataFields.HSN_CODE.value: row.get(
+                    GSTR1_DataFields.HSN_CODE.value
+                ),
+                GSTR1_DataFields.DESCRIPTION.value: row.get(
+                    GSTR1_DataFields.DESCRIPTION.value
+                ),
+                "match_status": row.get("match_status"),
+                "books_"
+                + GSTR1_DataFields.UOM.value: books.get(GSTR1_DataFields.UOM.value),
+                "books_"
+                + GSTR1_DataFields.QUANTITY.value: books.get(
+                    GSTR1_DataFields.QUANTITY.value
+                ),
+                "books_"
+                + GSTR1_DataFields.TAX_RATE.value: books.get(
+                    GSTR1_DataFields.TAX_RATE.value
+                ),
+                "books_"
+                + GSTR1_DataFields.TAXABLE_VALUE.value: books.get(
+                    GSTR1_DataFields.TAXABLE_VALUE.value
+                ),
+                "books_"
+                + GSTR1_DataFields.IGST.value: books.get(GSTR1_DataFields.IGST.value),
+                "books_"
+                + GSTR1_DataFields.CGST.value: books.get(GSTR1_DataFields.CGST.value),
+                "books_"
+                + GSTR1_DataFields.SGST.value: books.get(GSTR1_DataFields.SGST.value),
+                "books_"
+                + GSTR1_DataFields.CESS.value: books.get(GSTR1_DataFields.CESS.value),
+                "gstr_1_"
+                + GSTR1_DataFields.UOM.value: gstr_1.get(GSTR1_DataFields.UOM.value),
+                "gstr_1_"
+                + GSTR1_DataFields.QUANTITY.value: gstr_1.get(
+                    GSTR1_DataFields.QUANTITY.value
+                ),
+                "gstr_1_"
+                + GSTR1_DataFields.TAX_RATE.value: gstr_1.get(
+                    GSTR1_DataFields.TAX_RATE.value
+                ),
+                "gstr_1_"
+                + GSTR1_DataFields.TAXABLE_VALUE.value: gstr_1.get(
+                    GSTR1_DataFields.TAXABLE_VALUE.value
+                ),
+                "gstr_1_"
+                + GSTR1_DataFields.IGST.value: gstr_1.get(GSTR1_DataFields.IGST.value),
+                "gstr_1_"
+                + GSTR1_DataFields.CGST.value: gstr_1.get(GSTR1_DataFields.CGST.value),
+                "gstr_1_"
+                + GSTR1_DataFields.SGST.value: gstr_1.get(GSTR1_DataFields.SGST.value),
+                "gstr_1_"
+                + GSTR1_DataFields.CESS.value: gstr_1.get(GSTR1_DataFields.CESS.value),
+            }
+
+            self.get_taxable_value_difference(row_dict)
+            self.get_tax_difference(row_dict)
+
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_at_txp_headers(self):
+        # headers = [
+        #     {
+        #         "fieldname": GSTR1_DataFields.DOC_DATE.value,
+        #         "label": "Advance Date",
+        #     },
+        #     {
+        #         "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+        #         "label": "Payment Entry Number",
+        #     },
+        #     {
+        #         "fieldname": GSTR1_DataFields.CUST_NAME.value,
+        #         "label": "Customer Name",
+        #     },
+        #     {
+        #         "fieldname":"match_status",
+        #         "label": "Match Status",
+        #     },
+        #     {
+        #         "fieldname": "taxable_value_difference",
+        #         "label": "Taxable Value Difference",
+        #     },
+        #     {"fieldname": "tax_difference", "label": "Tax Difference"},
+        #     {
+        #         "fieldname": "books_" + GSTR1_DataFields.POS.value,
+        #         "label": "POS",
+        #         "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_green,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.green,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+        #         "label": "Tax Rate",
+        #         "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_green,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.green,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+        #         "label": "IGST",
+        #         "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_green,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.green,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+        #         "label": "CGST",
+        #         "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_green,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.green,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+        #         "label": "SGST",
+        #         "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_green,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.green,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+        #         "label": "CESS",
+        #         "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_green,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.green,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+        #         "label": "POS",
+        #         "compare_with": "books_" + GSTR1_DataFields.POS.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_pink,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.dark_pink,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+        #         "label": "Tax Rate",
+        #         "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_pink,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.dark_pink,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+        #         "label": "Taxable Value",
+        #         "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_pink,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.dark_pink,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+        #         "label": "IGST",
+        #         "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_pink,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.dark_pink,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+        #         "label": "CGST",
+        #         "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_pink,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.dark_pink,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+        #         "label": "SGST",
+        #         "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_pink,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.dark_pink,
+        #         },
+        #     },
+        #     {
+        #         "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+        #         "label": "CESS",
+        #         "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+        #         "data_format": {
+        #             "bg_color": COLOR_PALLATE.light_pink,
+        #         },
+        #         "header_format": {
+        #             "bg_color": COLOR_PALLATE.dark_pink,
+        #         },
+        #     },
+        # ]
+        headers = [
+            {"fieldname": GSTR1_DataFields.DOC_DATE.value, "label": "Advance Date"},
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Payment Entry Number",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "POS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "POS",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+        return headers
+
+    def get_at_data(self):
+        at_data = self.data.get(GSTR1_SubCategories.AT.value, [])
+
+        excel_data = []
+        for row in at_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_txp_data(self):
+        txp_adjusted = self.data.get(GSTR1_SubCategories.TXP.value, [])
+
+        excel_data = []
+        for row in txp_adjusted:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_row_dict(self, row):
+        books = row.get("books", {})
+        gstr_1 = row.get("gov", {})
+
+        row_dict = {
+            GSTR1_DataFields.DOC_DATE.value: row.get(GSTR1_DataFields.DOC_DATE.value),
+            GSTR1_DataFields.DOC_NUMBER.value: row.get(
+                GSTR1_DataFields.DOC_NUMBER.value
+            ),
+            GSTR1_DataFields.CUST_NAME.value: row.get(GSTR1_DataFields.CUST_NAME.value),
+            GSTR1_DataFields.CUST_GSTIN.value: row.get(
+                GSTR1_DataFields.CUST_GSTIN.value
+            ),
+            GSTR1_DataFields.DOC_TYPE.value: row.get(GSTR1_DataFields.DOC_TYPE.value),
+            "match_status": row.get("match_status"),
+            "books_"
+            + GSTR1_DataFields.POS.value: books.get(GSTR1_DataFields.POS.value),
+            "books_"
+            + GSTR1_DataFields.TAX_RATE.value: books.get(
+                GSTR1_DataFields.TAX_RATE.value
+            ),
+            "books_"
+            + GSTR1_DataFields.REVERSE_CHARGE.value: books.get(
+                GSTR1_DataFields.REVERSE_CHARGE.value
+            ),
+            "books_"
+            + GSTR1_DataFields.TAXABLE_VALUE.value: books.get(
+                GSTR1_DataFields.TAXABLE_VALUE.value
+            ),
+            "books_"
+            + GSTR1_DataFields.IGST.value: books.get(GSTR1_DataFields.IGST.value),
+            "books_"
+            + GSTR1_DataFields.CGST.value: books.get(GSTR1_DataFields.CGST.value),
+            "books_"
+            + GSTR1_DataFields.SGST.value: books.get(GSTR1_DataFields.SGST.value),
+            "books_"
+            + GSTR1_DataFields.CESS.value: books.get(GSTR1_DataFields.CESS.value),
+            "gstr_1_"
+            + GSTR1_DataFields.POS.value: gstr_1.get(GSTR1_DataFields.POS.value),
+            "gstr_1_"
+            + GSTR1_DataFields.TAX_RATE.value: gstr_1.get(
+                GSTR1_DataFields.TAX_RATE.value
+            ),
+            "gstr_1_"
+            + GSTR1_DataFields.REVERSE_CHARGE.value: gstr_1.get(
+                GSTR1_DataFields.REVERSE_CHARGE.value
+            ),
+            "gstr_1_"
+            + GSTR1_DataFields.TAXABLE_VALUE.value: gstr_1.get(
+                GSTR1_DataFields.TAXABLE_VALUE.value
+            ),
+            "gstr_1_"
+            + GSTR1_DataFields.IGST.value: gstr_1.get(GSTR1_DataFields.IGST.value),
+            "gstr_1_"
+            + GSTR1_DataFields.CGST.value: gstr_1.get(GSTR1_DataFields.CGST.value),
+            "gstr_1_"
+            + GSTR1_DataFields.SGST.value: gstr_1.get(GSTR1_DataFields.SGST.value),
+            "gstr_1_"
+            + GSTR1_DataFields.CESS.value: gstr_1.get(GSTR1_DataFields.CESS.value),
+        }
+
+        self.get_taxable_value_difference(row_dict)
+        self.get_tax_difference(row_dict)
+
+        return row_dict
+
+    def get_taxable_value_difference(self, row_dict):
+        row_dict["taxable_value_difference"] = (
+            row_dict["books_" + GSTR1_DataFields.TAXABLE_VALUE.value] or 0
+        ) - (row_dict["gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value] or 0)
+
+    def get_tax_difference(self, row_dict):
+        row_dict["tax_difference"] = (
+            (row_dict["books_" + GSTR1_DataFields.IGST.value] or 0)
+            - (row_dict["gstr_1_" + GSTR1_DataFields.IGST.value] or 0)
+            + (
+                (row_dict["books_" + GSTR1_DataFields.CGST.value] or 0)
+                - (row_dict["gstr_1_" + GSTR1_DataFields.CGST.value] or 0)
+            )
+            + (
+                (row_dict["books_" + GSTR1_DataFields.SGST.value] or 0)
+                - (row_dict["gstr_1_" + GSTR1_DataFields.SGST.value] or 0)
+            )
+            + (
+                (row_dict["books_" + GSTR1_DataFields.CESS.value] or 0)
+                - (row_dict["gstr_1_" + GSTR1_DataFields.CESS.value] or 0)
+            )
+        )
