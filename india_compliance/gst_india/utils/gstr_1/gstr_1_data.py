@@ -302,7 +302,7 @@ class GSTR1Conditions:
 
     @cache_invoice_condition
     def is_b2cl_inv(self, invoice):
-        return abs(invoice.total_amount) > B2C_LIMIT and self.is_inter_state(invoice)
+        return abs(invoice.invoice_total) > B2C_LIMIT and self.is_inter_state(invoice)
 
 
 class GSTR1CategoryConditions(GSTR1Conditions):
