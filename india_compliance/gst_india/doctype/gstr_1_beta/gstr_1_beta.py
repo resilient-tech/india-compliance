@@ -1433,7 +1433,817 @@ class ReconcileExcel:
             }
         )
 
-    def get_common_headers(self):
+    def get_reconcile_summary_headers(self):
+        headers = [
+            {
+                "fieldname": "description",
+                "label": "Description",
+            },
+            {
+                "fieldname": "total_taxable_value",
+                "label": "Taxable Value",
+            },
+            {
+                "fieldname": "total_igst_amount",
+                "label": "IGST",
+            },
+            {
+                "fieldname": "total_cgst_amount",
+                "label": "CGST",
+            },
+            {
+                "fieldname": "total_sgst_amount",
+                "label": "SGST",
+            },
+            {
+                "fieldname": "total_cess_amount",
+                "label": "CESS",
+            },
+        ]
+        return headers
+
+    def get_reconcile_summary_data(self):
+        excel_data = []
+        for row in self.summary:
+            if row["indent"] == 1:
+                continue
+            excel_data.append(row)
+
+        return excel_data
+
+    def get_b2b_headers(self):
+        return [
+            {
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+                "label": "Document Type",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "label": "Document Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Document No",
+            },
+            {
+                "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+                "label": "Customer GSTIN",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+    def get_b2b_data(self):
+        b2b_regular = self.data.get(GSTR1_SubCategories.B2B_REGULAR.value, [])
+        b2b_reverse_charge = self.data.get(
+            GSTR1_SubCategories.B2B_REVERSE_CHARGE.value, []
+        )
+        sezwop = self.data.get(GSTR1_SubCategories.SEZWOP.value, [])
+        sezwp = self.data.get(GSTR1_SubCategories.SEZWP.value, [])
+        deemed_export = self.data.get(GSTR1_SubCategories.DE.value, [])
+
+        b2b_data = b2b_regular + b2b_reverse_charge + sezwop + sezwp + deemed_export
+
+        excel_data = []
+
+        for row in b2b_data:
+            row_dict = self.get_row_dict(row)
+
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_b2cl_headers(self):
+        return [
+            {
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+                "label": "Document Type",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "label": "Document Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Document No",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+    def get_b2cl_data(self):
+        b2cl_data = self.data.get(GSTR1_SubCategories.B2CL.value, [])
+
+        excel_data = []
+
+        for row in b2cl_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_exports_headers(self):
+        return [
+            {
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+                "label": "Document Type",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "label": "Document Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Document No",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
+                "label": "Shipping Bill Number",
+            },
+            {
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
+                "label": "Shipping Bill Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE.value,
+                "label": "Shipping Port Code",
+            },
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+    def get_exports_data(self):
+        expwp = self.data.get(GSTR1_SubCategories.EXPWP.value, [])
+        expwop = self.data.get(GSTR1_SubCategories.EXPWOP.value, [])
+
+        exports_data = expwp + expwop
+
+        excel_data = []
+
+        for row in exports_data:
+            row_dict = self.get_row_dict(row)
+            row_dict.update(
+                {
+                    GSTR1_DataFields.SHIPPING_BILL_NUMBER.value: row.get(
+                        "shipping_bill_number"
+                    ),
+                    GSTR1_DataFields.SHIPPING_BILL_DATE.value: row.get(
+                        "shipping_bill_date"
+                    ),
+                    GSTR1_DataFields.SHIPPING_PORT_CODE.value: row.get(
+                        "shipping_port_code"
+                    ),
+                }
+            )
+
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_b2cs_headers(self):
+        return [
+            {
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+                "label": "Document Type",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "label": "Document Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Document No",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+        ]
+
+    def get_b2cs_data(self):
+        b2cs_data = self.data.get(GSTR1_SubCategories.B2CS.value, [])
+
+        excel_data = []
+
+        for row in b2cs_data:
+            row_dict = self.get_row_dict(row)
+            excel_data.append(row_dict)
+
+        return excel_data
+
+    def get_nil_exempt_headers(self):
         return [
             {
                 "fieldname": GSTR1_DataFields.DOC_TYPE.value,
@@ -1636,161 +2446,6 @@ class ReconcileExcel:
             },
         ]
 
-    def get_reconcile_summary_headers(self):
-        headers = [
-            {
-                "fieldname": "description",
-                "label": "Description",
-            },
-            {
-                "fieldname": "total_taxable_value",
-                "label": "Taxable Value",
-            },
-            {
-                "fieldname": "total_igst_amount",
-                "label": "IGST",
-            },
-            {
-                "fieldname": "total_cgst_amount",
-                "label": "CGST",
-            },
-            {
-                "fieldname": "total_sgst_amount",
-                "label": "SGST",
-            },
-            {
-                "fieldname": "total_cess_amount",
-                "label": "CESS",
-            },
-        ]
-        return headers
-
-    def get_reconcile_summary_data(self):
-        excel_data = []
-        for row in self.summary:
-            if row["indent"] == 1:
-                continue
-            excel_data.append(row)
-
-        return excel_data
-
-    def get_b2b_headers(self):
-        headers = [
-            *self.get_common_headers(),
-        ]
-
-        return headers
-
-    def get_b2b_data(self):
-        b2b_regular = self.data.get(GSTR1_SubCategories.B2B_REGULAR.value, [])
-        b2b_reverse_charge = self.data.get(
-            GSTR1_SubCategories.B2B_REVERSE_CHARGE.value, []
-        )
-        sezwop = self.data.get(GSTR1_SubCategories.SEZWOP.value, [])
-        sezwp = self.data.get(GSTR1_SubCategories.SEZWP.value, [])
-        deemed_export = self.data.get(GSTR1_SubCategories.DE.value, [])
-
-        b2b_data = b2b_regular + b2b_reverse_charge + sezwop + sezwp + deemed_export
-
-        excel_data = []
-
-        for row in b2b_data:
-            row_dict = self.get_row_dict(row)
-
-            excel_data.append(row_dict)
-
-        return excel_data
-
-    def get_b2cl_headers(self):
-        headers = [
-            *self.get_common_headers(),
-        ]
-
-        return headers
-
-    def get_b2cl_data(self):
-        b2cl_data = self.data.get(GSTR1_SubCategories.B2CL.value, [])
-
-        excel_data = []
-
-        for row in b2cl_data:
-            row_dict = self.get_row_dict(row)
-            excel_data.append(row_dict)
-
-        return excel_data
-
-    def get_exports_headers(self):
-        headers = [
-            {
-                "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
-                "label": "Shipping Bill Number",
-            },
-            {
-                "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
-                "label": "Shipping Bill Date",
-            },
-            {
-                "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE.value,
-                "label": "Shipping Port Code",
-            },
-            *self.get_common_headers(),
-        ]
-
-        return headers
-
-    def get_exports_data(self):
-        expwp = self.data.get(GSTR1_SubCategories.EXPWP.value, [])
-        expwop = self.data.get(GSTR1_SubCategories.EXPWOP.value, [])
-
-        exports_data = expwp + expwop
-
-        excel_data = []
-
-        for row in exports_data:
-            row_dict = self.get_row_dict(row)
-            row_dict.update(
-                {
-                    GSTR1_DataFields.SHIPPING_BILL_NUMBER.value: row.get(
-                        "shipping_bill_number"
-                    ),
-                    GSTR1_DataFields.SHIPPING_BILL_DATE.value: row.get(
-                        "shipping_bill_date"
-                    ),
-                    GSTR1_DataFields.SHIPPING_PORT_CODE.value: row.get(
-                        "shipping_port_code"
-                    ),
-                }
-            )
-
-            excel_data.append(row_dict)
-
-        return excel_data
-
-    def get_b2cs_headers(self):
-        headers = [
-            *self.get_common_headers(),
-        ]
-
-        return headers
-
-    def get_b2cs_data(self):
-        b2cs_data = self.data.get(GSTR1_SubCategories.B2CS.value, [])
-
-        excel_data = []
-
-        for row in b2cs_data:
-            row_dict = self.get_row_dict(row)
-            excel_data.append(row_dict)
-
-        return excel_data
-
-    def get_nil_exempt_headers(self):
-        headers = [
-            *self.get_common_headers(),
-        ]
-
-        return headers
-
     def get_nil_exempt_data(self):
         nil_exempt_data = self.data.get(GSTR1_SubCategories.NIL_EXEMPT.value, [])
 
@@ -1803,11 +2458,207 @@ class ReconcileExcel:
         return excel_data
 
     def get_cdnr_headers(self):
-        headers = [
-            *self.get_common_headers(),
+        return [
+            {
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+                "label": "Document Type",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "label": "Document Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Document No",
+            },
+            {
+                "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+                "label": "Customer GSTIN",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
         ]
-
-        return headers
 
     def get_cdnr_data(self):
         cdnr_data = self.data.get(GSTR1_SubCategories.CDNR.value, [])
@@ -1821,11 +2672,207 @@ class ReconcileExcel:
         return excel_data
 
     def get_cdnur_headers(self):
-        headers = [
-            *self.get_common_headers(),
+        return [
+            {
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+                "label": "Document Type",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "label": "Document Date",
+            },
+            {
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "label": "Document No",
+            },
+            {
+                "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+                "label": "Customer GSTIN",
+            },
+            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {"fieldname": "match_status", "label": "Match Status"},
+            {
+                "fieldname": "taxable_value_difference",
+                "label": "Taxable Value Difference",
+            },
+            {"fieldname": "tax_difference", "label": "Tax Difference"},
+            {
+                "fieldname": "books_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "books_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_green,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.green,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
+                "label": "Place of Supply",
+                "compare_with": "books_" + GSTR1_DataFields.POS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
+                "label": "Tax Rate",
+                "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "label": "Reverse Charge",
+                "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "label": "Taxable Value",
+                "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
+                "label": "IGST",
+                "compare_with": "books_" + GSTR1_DataFields.IGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
+                "label": "CGST",
+                "compare_with": "books_" + GSTR1_DataFields.CGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
+                "label": "SGST",
+                "compare_with": "books_" + GSTR1_DataFields.SGST.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
+            {
+                "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
+                "label": "CESS",
+                "compare_with": "books_" + GSTR1_DataFields.CESS.value,
+                "data_format": {
+                    "bg_color": COLOR_PALLATE.light_pink,
+                },
+                "header_format": {
+                    "bg_color": COLOR_PALLATE.dark_pink,
+                },
+            },
         ]
-
-        return headers
 
     def get_cdnur_data(self):
         cdnr_data = self.data.get(GSTR1_SubCategories.CDNUR.value, [])
@@ -2249,173 +3296,7 @@ class ReconcileExcel:
         return excel_data
 
     def get_at_txp_headers(self):
-        # headers = [
-        #     {
-        #         "fieldname": GSTR1_DataFields.DOC_DATE.value,
-        #         "label": "Advance Date",
-        #     },
-        #     {
-        #         "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
-        #         "label": "Payment Entry Number",
-        #     },
-        #     {
-        #         "fieldname": GSTR1_DataFields.CUST_NAME.value,
-        #         "label": "Customer Name",
-        #     },
-        #     {
-        #         "fieldname":"match_status",
-        #         "label": "Match Status",
-        #     },
-        #     {
-        #         "fieldname": "taxable_value_difference",
-        #         "label": "Taxable Value Difference",
-        #     },
-        #     {"fieldname": "tax_difference", "label": "Tax Difference"},
-        #     {
-        #         "fieldname": "books_" + GSTR1_DataFields.POS.value,
-        #         "label": "POS",
-        #         "compare_with": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_green,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.green,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "books_" + GSTR1_DataFields.TAX_RATE.value,
-        #         "label": "Tax Rate",
-        #         "compare_with": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_green,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.green,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "books_" + GSTR1_DataFields.IGST.value,
-        #         "label": "IGST",
-        #         "compare_with": "gstr_1_" + GSTR1_DataFields.IGST.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_green,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.green,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "books_" + GSTR1_DataFields.CGST.value,
-        #         "label": "CGST",
-        #         "compare_with": "gstr_1_" + GSTR1_DataFields.CGST.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_green,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.green,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "books_" + GSTR1_DataFields.SGST.value,
-        #         "label": "SGST",
-        #         "compare_with": "gstr_1_" + GSTR1_DataFields.SGST.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_green,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.green,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "books_" + GSTR1_DataFields.CESS.value,
-        #         "label": "CESS",
-        #         "compare_with": "gstr_1_" + GSTR1_DataFields.CESS.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_green,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.green,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "gstr_1_" + GSTR1_DataFields.POS.value,
-        #         "label": "POS",
-        #         "compare_with": "books_" + GSTR1_DataFields.POS.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_pink,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.dark_pink,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "gstr_1_" + GSTR1_DataFields.TAX_RATE.value,
-        #         "label": "Tax Rate",
-        #         "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_pink,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.dark_pink,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "gstr_1_" + GSTR1_DataFields.TAXABLE_VALUE.value,
-        #         "label": "Taxable Value",
-        #         "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_pink,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.dark_pink,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "gstr_1_" + GSTR1_DataFields.IGST.value,
-        #         "label": "IGST",
-        #         "compare_with": "books_" + GSTR1_DataFields.IGST.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_pink,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.dark_pink,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "gstr_1_" + GSTR1_DataFields.CGST.value,
-        #         "label": "CGST",
-        #         "compare_with": "books_" + GSTR1_DataFields.CGST.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_pink,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.dark_pink,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "gstr_1_" + GSTR1_DataFields.SGST.value,
-        #         "label": "SGST",
-        #         "compare_with": "books_" + GSTR1_DataFields.SGST.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_pink,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.dark_pink,
-        #         },
-        #     },
-        #     {
-        #         "fieldname": "gstr_1_" + GSTR1_DataFields.CESS.value,
-        #         "label": "CESS",
-        #         "compare_with": "books_" + GSTR1_DataFields.CESS.value,
-        #         "data_format": {
-        #             "bg_color": COLOR_PALLATE.light_pink,
-        #         },
-        #         "header_format": {
-        #             "bg_color": COLOR_PALLATE.dark_pink,
-        #         },
-        #     },
-        # ]
-        headers = [
+        return [
             {"fieldname": GSTR1_DataFields.DOC_DATE.value, "label": "Advance Date"},
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
@@ -2583,8 +3464,6 @@ class ReconcileExcel:
                 },
             },
         ]
-
-        return headers
 
     def get_at_data(self):
         at_data = self.data.get(GSTR1_SubCategories.AT.value, [])
