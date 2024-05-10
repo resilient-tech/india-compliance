@@ -973,7 +973,7 @@ class HSNSUM(DataMapper):
         uom = uom.upper()
 
         if "-" in uom:
-            if data and data.get(GovDataFields.HSN_CODE.value).startswith("99"):
+            if data and data.get(GSTR1_DataFields.HSN_CODE.value).startswith("99"):
                 return "NA"
             else:
                 return uom.split("-")[0]

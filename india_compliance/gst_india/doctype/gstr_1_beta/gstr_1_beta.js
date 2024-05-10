@@ -1509,6 +1509,7 @@ class FiledTab extends TabManager {
     }
 
     download_filed_json() {
+        const me = this;
         function get_json_data(dialog) {
             const { include_uploaded, overwrite_missing } = dialog
                 ? dialog.get_values()
@@ -1517,7 +1518,7 @@ class FiledTab extends TabManager {
                     overwrite_missing: false,
                 };
 
-            const doc = this.instance.frm.doc;
+                const doc = me.instance.frm.doc;
 
             frappe.call({
                 method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_gstr_1_json",
@@ -1526,7 +1527,8 @@ class FiledTab extends TabManager {
                     overwrite_missing,
                     company: doc.company,
                     year: doc.year,
-                    month_or_quarter: doc.month_or_quarter
+                    month_or_quarter: doc.month_or_quarter,
+                    company_gstin: doc.company_gstin,
                 },
                 callback: r => {
                     india_compliance.trigger_file_download(
