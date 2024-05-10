@@ -368,6 +368,43 @@ Object.assign(india_compliance, {
             is_authenticated = true;
             return true;
         }
+    },
+    show_communication:(args) => {
+
+        frappe.ui.hide_open_dialog()
+
+        if(args == "Cancel")
+            return;
+
+        var error_report_message = [
+            "<h5>Please type some additional information that could help us reproduce this issue:</h5>",
+            '<div style="min-height: 100px; border: 1px solid #bbb; \
+                border-radius: 5px; padding: 15px; margin-bottom: 15px;"></div>',
+            "<hr>",
+            "<h5>App Versions</h5>",
+            "<pre>" + JSON.stringify(args.app_version) + "</pre>",
+            "<h5>Route</h5>",
+            "<pre>" + "frappe.get_route_str()"  +"</pre>",
+            "<hr>",
+            "<h5>Error Report</h5>",
+            "<pre>" + JSON.stringify(args.traceback) + "</pre>",
+            "<hr>",
+            "<h5>Request Data</h5>",
+            "<pre>" + JSON.stringify(args.request_data) + "</pre>",
+            "<hr>",
+            "<h5>Response JSON</h5>",
+            "<pre>" + JSON.stringify(args.response) + "</pre>",
+        ].join("\n");
+
+        var communication_composer = new frappe.views.CommunicationComposer({
+                subject: "Error Report [" + frappe.datetime.nowdate() + "]",
+                recipients: "",
+                message: error_report_message,
+                doc: {
+                    doctype: "User",
+                    name: frappe.session.user,
+                },
+            });
     }
 });
 

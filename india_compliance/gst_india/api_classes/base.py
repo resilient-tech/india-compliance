@@ -5,6 +5,7 @@ import requests
 import frappe
 from frappe import _
 from frappe.utils import sbool
+from frappe.utils.change_log import get_versions
 
 from india_compliance.exceptions import GatewayTimeoutError, GSPServerError
 from india_compliance.gst_india.utils import is_api_enabled
@@ -138,7 +139,7 @@ class BaseAPI:
                 pass
 
             # Raise special error for certain HTTP codes
-            self.handle_http_code(response.status_code, response_json)
+            self.handle_http_code(response.status_code, response_json, request_args)
 
             # Raise HTTPError for other HTTP codes
             response.raise_for_status()
@@ -216,8 +217,7 @@ class BaseAPI:
         # Override in subclass, return truthy value to stop frappe.throw
         pass
 
-    def handle_http_code(self, status_code, response_json):
-        # TODO: add link to account page / support email
+    def handle_http_code(self, status_code, response_json, request_args):
 
         # GSP connectivity issues
         if status_code == 401 or (
@@ -225,13 +225,44 @@ class BaseAPI:
             and response_json
             and response_json.get("error") == "access_denied"
         ):
-            frappe.throw(
-                _("Error establishing connection to GSP. Please contact {0}.").format(
+
+            ic_api_key = frappe.conf.ic_api_key
+            if not ic_api_key:
+                request_data = {
+                    "type": frappe.request.method,
+                    "args": request_args.params or {},
+                    "headers": request_args.headers or {},
+                    "url": request_args.url,
+                }
+
+                app_version = {}
+                installed_apps_info = get_versions()
+                for app in installed_apps_info:
+                    app_version[app] = installed_apps_info[app]["version"]
+
+                args = {
+                    "app_version": app_version,
+                    "response": response_json.message,
+                    "request_data": request_data,
+                    "traceback": frappe.get_traceback(),
+                }
+
+            frappe.msgprint(
+                msg=_(
+                    "Error establishing connection to GSP. Please contact {0}."
+                ).format(
                     _("your Service Provider")
-                    if frappe.conf.ic_api_key
+                    if ic_api_key
                     else _("India Compliance API Support")
                 ),
                 title=_("GSP Connection Error"),
+                indicator="red",
+                raise_exception=frappe.ValidationError,
+                primary_action={
+                    "label": "Send Email" if not ic_api_key else "Cancel",
+                    "client_action": "india_compliance.show_communication",
+                    "args": args if not ic_api_key else "Cancel",
+                },
             )
 
         # ASP connectivity issues
