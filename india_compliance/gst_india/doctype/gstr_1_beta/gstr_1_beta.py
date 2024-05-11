@@ -1578,10 +1578,10 @@ class ReconcileExcel:
                 "label": "Place of Supply",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1589,10 +1589,10 @@ class ReconcileExcel:
                 "label": "Reverse Charge",
                 "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1600,10 +1600,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1611,10 +1611,10 @@ class ReconcileExcel:
                 "label": "IGST",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1622,10 +1622,10 @@ class ReconcileExcel:
                 "label": "CGST",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1633,10 +1633,10 @@ class ReconcileExcel:
                 "label": "SGST",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1644,10 +1644,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -1753,10 +1753,10 @@ class ReconcileExcel:
                 "label": "Place of Supply",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1764,10 +1764,10 @@ class ReconcileExcel:
                 "label": "Reverse Charge",
                 "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1775,10 +1775,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1786,10 +1786,10 @@ class ReconcileExcel:
                 "label": "IGST",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1797,10 +1797,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -1942,10 +1942,10 @@ class ReconcileExcel:
                 "label": "Place of Supply",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1953,10 +1953,10 @@ class ReconcileExcel:
                 "label": "Tax Rate",
                 "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1964,10 +1964,10 @@ class ReconcileExcel:
                 "label": "Reverse Charge",
                 "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1975,10 +1975,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1986,10 +1986,10 @@ class ReconcileExcel:
                 "label": "IGST",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -1997,10 +1997,10 @@ class ReconcileExcel:
                 "label": "CGST",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2008,10 +2008,10 @@ class ReconcileExcel:
                 "label": "SGST",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2019,10 +2019,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -2158,10 +2158,10 @@ class ReconcileExcel:
                 "label": "Place of Supply",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2169,10 +2169,10 @@ class ReconcileExcel:
                 "label": "Tax Rate",
                 "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2180,10 +2180,10 @@ class ReconcileExcel:
                 "label": "Reverse Charge",
                 "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2191,10 +2191,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2202,10 +2202,10 @@ class ReconcileExcel:
                 "label": "CGST",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2213,10 +2213,10 @@ class ReconcileExcel:
                 "label": "SGST",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2224,10 +2224,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -2361,10 +2361,10 @@ class ReconcileExcel:
                 "label": "Place of Supply",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2372,10 +2372,10 @@ class ReconcileExcel:
                 "label": "Tax Rate",
                 "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2383,10 +2383,10 @@ class ReconcileExcel:
                 "label": "Reverse Charge",
                 "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2394,10 +2394,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2405,10 +2405,10 @@ class ReconcileExcel:
                 "label": "IGST",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2416,10 +2416,10 @@ class ReconcileExcel:
                 "label": "CGST",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2427,10 +2427,10 @@ class ReconcileExcel:
                 "label": "SGST",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2438,10 +2438,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -2575,10 +2575,10 @@ class ReconcileExcel:
                 "label": "Place of Supply",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2586,10 +2586,10 @@ class ReconcileExcel:
                 "label": "Tax Rate",
                 "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2597,10 +2597,10 @@ class ReconcileExcel:
                 "label": "Reverse Charge",
                 "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2608,10 +2608,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2619,10 +2619,10 @@ class ReconcileExcel:
                 "label": "IGST",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2630,10 +2630,10 @@ class ReconcileExcel:
                 "label": "CGST",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2641,10 +2641,10 @@ class ReconcileExcel:
                 "label": "SGST",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2652,10 +2652,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -2789,10 +2789,10 @@ class ReconcileExcel:
                 "label": "Place of Supply",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2800,10 +2800,10 @@ class ReconcileExcel:
                 "label": "Tax Rate",
                 "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2811,10 +2811,10 @@ class ReconcileExcel:
                 "label": "Reverse Charge",
                 "compare_with": "books_" + GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2822,10 +2822,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2833,10 +2833,10 @@ class ReconcileExcel:
                 "label": "IGST",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2844,10 +2844,10 @@ class ReconcileExcel:
                 "label": "CGST",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2855,10 +2855,10 @@ class ReconcileExcel:
                 "label": "SGST",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2866,10 +2866,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -2941,10 +2941,10 @@ class ReconcileExcel:
                 "label": "Sr No From",
                 "compare_with": "books_" + GSTR1_DataFields.FROM_SR.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2952,10 +2952,10 @@ class ReconcileExcel:
                 "label": "Sr No To",
                 "compare_with": "books_" + GSTR1_DataFields.TO_SR.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2963,10 +2963,10 @@ class ReconcileExcel:
                 "label": "Total Count",
                 "compare_with": "books_" + GSTR1_DataFields.TOTAL_COUNT.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -2974,10 +2974,10 @@ class ReconcileExcel:
                 "label": "Cancelled Count",
                 "compare_with": "books_" + GSTR1_DataFields.CANCELLED_COUNT.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -3138,10 +3138,10 @@ class ReconcileExcel:
                 "label": "UQC",
                 "compare_with": "books_" + GSTR1_DataFields.UOM.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3149,10 +3149,10 @@ class ReconcileExcel:
                 "label": "Quantity",
                 "compare_with": "books_" + GSTR1_DataFields.QUANTITY.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3160,10 +3160,10 @@ class ReconcileExcel:
                 "label": "Tax Rate",
                 "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3171,10 +3171,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3182,10 +3182,10 @@ class ReconcileExcel:
                 "label": "IGST Amount",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3193,10 +3193,10 @@ class ReconcileExcel:
                 "label": "CGST Amount",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3204,10 +3204,10 @@ class ReconcileExcel:
                 "label": "SGST Amount",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3215,10 +3215,10 @@ class ReconcileExcel:
                 "label": "CESS Amount",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
@@ -3391,10 +3391,10 @@ class ReconcileExcel:
                 "label": "POS",
                 "compare_with": "books_" + GSTR1_DataFields.POS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3402,10 +3402,10 @@ class ReconcileExcel:
                 "label": "Tax Rate",
                 "compare_with": "books_" + GSTR1_DataFields.TAX_RATE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3413,10 +3413,10 @@ class ReconcileExcel:
                 "label": "Taxable Value",
                 "compare_with": "books_" + GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3424,10 +3424,10 @@ class ReconcileExcel:
                 "label": "IGST",
                 "compare_with": "books_" + GSTR1_DataFields.IGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3435,10 +3435,10 @@ class ReconcileExcel:
                 "label": "CGST",
                 "compare_with": "books_" + GSTR1_DataFields.CGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3446,10 +3446,10 @@ class ReconcileExcel:
                 "label": "SGST",
                 "compare_with": "books_" + GSTR1_DataFields.SGST.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
             {
@@ -3457,10 +3457,10 @@ class ReconcileExcel:
                 "label": "CESS",
                 "compare_with": "books_" + GSTR1_DataFields.CESS.value,
                 "data_format": {
-                    "bg_color": COLOR_PALLATE.light_pink,
+                    "bg_color": COLOR_PALLATE.light_blue,
                 },
                 "header_format": {
-                    "bg_color": COLOR_PALLATE.dark_pink,
+                    "bg_color": COLOR_PALLATE.sky_blue,
                 },
             },
         ]
