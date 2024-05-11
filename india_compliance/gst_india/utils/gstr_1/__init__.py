@@ -25,7 +25,7 @@ class GSTR1_Categories(Enum):
 
 class GSTR1_Gov_Categories(Enum):
     """
-    Categories as per GSTR-1 Govt. Portal
+    Categories as per GSTR-1 Govt. Portal for JSON file
     """
 
     B2B = "b2b"
@@ -41,6 +41,24 @@ class GSTR1_Gov_Categories(Enum):
     DOC_ISSUE = "doc_issue"
     SUPECOM = "supeco"
     RET_SUM = "sec_sum"
+
+
+class GSTR1_Excel_Categories(Enum):
+    """
+    Categories as per GSTR-1 Excel file
+    """
+
+    B2B = "b2b, sez, de"
+    EXP = "exp"
+    B2CL = "b2cl"
+    B2CS = "b2cs"
+    NIL_EXEMPT = "exemp"
+    CDNR = "cdnr"
+    CDNUR = "cdnur"
+    AT = "at"
+    TXP = "atadj"
+    HSN = "hsn"
+    DOC_ISSUE = "docs"
 
 
 class GSTR1_SubCategories(Enum):
@@ -198,6 +216,22 @@ class GSTR1_ItemFields(Enum):
     ADDITIONAL_AMOUNT = "additional_amount"
 
 
+class GSTR1_ExcelFields(Enum):
+    CUST_GSTIN = "GSTIN/UIN of Recipient"
+    CUST_NAME = "Receiver Name"
+    INVOICE_NUMBER = "Invoice Number"
+    INVOICE_DATE = "Invoice date"
+    INVOICE_VALUE = "Invoice Value"
+    POS = "Place Of Supply"
+    REVERSE_CHARGE = "Reverse Charge"
+    DIFF_PERCENTAGE = "Applicable % of Tax Rate"
+    INVOICE_TYPE = "Invoice Type"
+    TAXABLE_VALUE = "Taxable Value"
+    ECOMMERCE_GSTIN = "E-Commerce GSTIN"
+    TAX_RATE = "Rate"
+    CESS = "Cess Amount"
+
+
 CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Categories.B2B: (
         GSTR1_SubCategories.B2B_REGULAR,
@@ -256,3 +290,17 @@ SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX = [
     GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
     *SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
 ]
+
+JSON_CATEGORY_EXCEL_CATEGORY_MAPPING = {
+    GSTR1_Gov_Categories.B2B.value: GSTR1_Excel_Categories.B2B.value,
+    GSTR1_Gov_Categories.EXP.value: GSTR1_Excel_Categories.EXP.value,
+    GSTR1_Gov_Categories.B2CL.value: GSTR1_Excel_Categories.B2CL.value,
+    GSTR1_Gov_Categories.B2CS.value: GSTR1_Excel_Categories.B2CS.value,
+    GSTR1_Gov_Categories.NIL_EXEMPT.value: GSTR1_Excel_Categories.NIL_EXEMPT.value,
+    GSTR1_Gov_Categories.CDNR.value: GSTR1_Excel_Categories.CDNR.value,
+    GSTR1_Gov_Categories.CDNUR.value: GSTR1_Excel_Categories.CDNUR.value,
+    GSTR1_Gov_Categories.AT.value: GSTR1_Excel_Categories.AT.value,
+    GSTR1_Gov_Categories.TXP.value: GSTR1_Excel_Categories.TXP.value,
+    GSTR1_Gov_Categories.HSN.value: GSTR1_Excel_Categories.HSN.value,
+    GSTR1_Gov_Categories.DOC_ISSUE.value: GSTR1_Excel_Categories.DOC_ISSUE.value,
+}

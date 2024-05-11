@@ -1438,7 +1438,7 @@ def convert_to_internal_data_format(data):
     return output
 
 
-def convert_to_gov_data_format(data):
+def get_category_wise_data(data):
     category_wise_data = {}
     for subcategory, category in SUB_CATEGORY_GOV_CATEGORY_MAPPING.items():
         if not data.get(subcategory.value):
@@ -1447,6 +1447,11 @@ def convert_to_gov_data_format(data):
         category_wise_data.setdefault(category.value, {})[subcategory.value] = data.get(
             subcategory.value, {}
         )
+    return category_wise_data
+
+
+def convert_to_gov_data_format(data):
+    category_wise_data = get_category_wise_data(data)
 
     output = {}
     for category, mapper_class in CLASS_MAP.items():
