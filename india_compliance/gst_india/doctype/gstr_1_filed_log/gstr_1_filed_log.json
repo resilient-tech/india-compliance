@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "autoname": "format:{return_period}-{gstin}",
  "creation": "2024-03-11 11:59:06.887429",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -8,14 +8,28 @@
   "filing_summary_section",
   "filing_status",
   "return_period",
-  "gstin",
+  "company",
   "column_break_sqwh",
   "filing_date",
   "acknowledgement_number",
+  "gstin",
+  "generation_status",
   "section_break_oisv",
-  "e_invoices",
-  "filed_gstr1",
-  "computed_gstr1"
+  "unfiled",
+  "filed",
+  "column_break_hxfu",
+  "unfiled_summary",
+  "filed_summary",
+  "computed_data_section",
+  "is_latest_data",
+  "section_break_emlz",
+  "books",
+  "column_break_ehcm",
+  "books_summary",
+  "reconciled_data_section",
+  "reconcile",
+  "column_break_ndup",
+  "reconcile_summary"
  ],
  "fields": [
   {
@@ -49,35 +63,109 @@
   },
   {
    "fieldname": "section_break_oisv",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "e_invoices",
-   "fieldtype": "Attach",
-   "label": "e-Invoices from GST Portal"
-  },
-  {
-   "fieldname": "filed_gstr1",
-   "fieldtype": "Attach",
-   "label": "Filed GSTR-1"
-  },
-  {
-   "fieldname": "computed_gstr1",
-   "fieldtype": "Attach",
-   "label": "Computed GSTR-1"
+   "fieldtype": "Section Break",
+   "label": "Government Data"
   },
   {
    "fieldname": "gstin",
    "fieldtype": "Data",
    "label": "GSTIN"
+  },
+  {
+   "fieldname": "column_break_hxfu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "computed_data_section",
+   "fieldtype": "Section Break",
+   "hide_border": 1,
+   "label": "Computed Data"
+  },
+  {
+   "fieldname": "reconciled_data_section",
+   "fieldtype": "Section Break",
+   "label": "Reconciled Data"
+  },
+  {
+   "fieldname": "column_break_ndup",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_latest_data",
+   "fieldtype": "Check",
+   "label": "Is Latest Data"
+  },
+  {
+   "fieldname": "generation_status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Generation Status",
+   "options": "\nIn Progress\nGenerated\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filed",
+   "fieldtype": "Attach",
+   "label": "Filed Data"
+  },
+  {
+   "fieldname": "filed_summary",
+   "fieldtype": "Attach",
+   "label": "Filed Summary"
+  },
+  {
+   "fieldname": "books",
+   "fieldtype": "Attach",
+   "label": "Books Data"
+  },
+  {
+   "fieldname": "books_summary",
+   "fieldtype": "Attach",
+   "label": "Books Summary"
+  },
+  {
+   "fieldname": "reconcile",
+   "fieldtype": "Attach",
+   "label": "Reconcile GSTR-1"
+  },
+  {
+   "fieldname": "reconcile_summary",
+   "fieldtype": "Attach",
+   "label": "Reconcile Summary"
+  },
+  {
+   "fieldname": "unfiled",
+   "fieldtype": "Attach",
+   "label": "Unfiled Invoices"
+  },
+  {
+   "fieldname": "unfiled_summary",
+   "fieldtype": "Attach",
+   "label": "Unfiled Summary"
+  },
+  {
+   "fieldname": "section_break_emlz",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_ehcm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-03-19 12:02:01.213545",
+ "modified": "2024-05-08 15:59:51.863611",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

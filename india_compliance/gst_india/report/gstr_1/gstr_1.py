@@ -1071,31 +1071,27 @@ class GSTR11A11BData:
 
     def get_data(self):
         if self.filters.get("type_of_business") == "Advances":
-            records = self.get_11A_data()
-
+            records = self.get_11A_query().run(as_dict=True)
         elif self.filters.get("type_of_business") == "Adjustment":
-            records = self.get_11B_data()
+            records = self.get_11B_query().run(as_dict=True)
 
         return self.process_data(records)
 
-    def get_11A_data(self):
+    def get_11A_query(self):
         return (
             self.get_query()
             .select(self.pe.paid_amount.as_("taxable_value"))
             .groupby(self.pe.name)
-            .run(as_dict=True)
         )
 
-    def get_11B_data(self):
-        query = (
+    def get_11B_query(self):
+        return (
             self.get_query()
             .join(self.pe_ref)
             .on(self.pe_ref.name == self.gl_entry.voucher_detail_no)
             .select(self.pe_ref.allocated_amount.as_("taxable_value"))
             .groupby(self.gl_entry.voucher_detail_no)
         )
-
-        return query.run(as_dict=True)
 
     def get_query(self):
         cr_or_dr = (

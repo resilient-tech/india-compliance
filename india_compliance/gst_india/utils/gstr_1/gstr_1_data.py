@@ -1,8 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from enum import Enum
-
 from pypika import Order
 
 import frappe
@@ -10,87 +8,19 @@ from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import getdate
 
 from india_compliance.gst_india.utils import get_full_gst_uom
+from india_compliance.gst_india.utils.gstr_1 import (
+    CATEGORY_SUB_CATEGORY_MAPPING,
+    GSTR1_Categories,
+    GSTR1_SubCategories,
+)
+
+"""
+Compile data as per books of accounts for GSTR-1
+"""
 
 B2C_LIMIT = 2_50_000
 
 # TODO: Enum for Invoice Type
-
-
-class GSTR1_Categories(Enum):
-    """
-    Overview Page of GSTR-1
-    """
-
-    # Invoice Items Bifurcation
-    B2B = "B2B, SEZ, DE"
-    B2CL = "B2C (Large)"
-    EXP = "Exports"
-    B2CS = "B2C (Others)"
-    NIL_EXEMPT = "Nil-Rated, Exempted, Non-GST"
-    CDNR = "Credit/Debit Notes (Registered)"
-    CDNUR = "Credit/Debit Notes (Unregistered)"
-    # Other Categories
-    AT = "Advances Received"
-    TXP = "Advances Adjusted"
-    DOC_ISSUE = "Document Issued"
-    HSN = "HSN Summary"
-
-
-class GSTR1_SubCategories(Enum):
-    """
-    Summary Page of GSTR-1
-    """
-
-    # Invoice Items Bifurcation
-    B2B_REGULAR = "B2B Regular"  # Regular B2B
-    B2B_REVERSE_CHARGE = "B2B Reverse Charge"  # Regular B2B
-    SEZWP = "SEZWP"  # SEZ supplies with payment
-    SEZWOP = "SEZWOP"  # SEZ supplies without payment
-    DE = "Deemed Exports"  # Deemed Exp
-    B2CL = "B2C (Large)"  # NA
-    EXPWP = "EXPWP"  # WPAY
-    EXPWOP = "EXPWOP"  # WOPAY
-    B2CS = "B2C (Others)"  # NA
-    NIL_RATED = "Nil-Rated"  # Inter vs Intra & Regis vs UnRegis
-    EXEMPTED = "Exempted"  # Inter vs Intra & Regis vs UnRegis
-    NON_GST = "Non-GST"  # Inter vs Intra & Regis vs UnRegis
-    CDNR = "CDNR"  # Like B2B
-    CDNUR = "CDNUR"  # B2CL vs EXPWP vs EXPWOP
-    # Other Sub-Categories
-    # AT = "Advances Received"
-    # TXP = "Advances Adjusted"
-    # HSN = "HSN Summary"
-    # DOC_ISSUE = "Document Issued"
-
-
-CATEGORY_SUB_CATEGORY_MAPPING = {
-    GSTR1_Categories.B2B: (
-        GSTR1_SubCategories.B2B_REGULAR,
-        GSTR1_SubCategories.B2B_REVERSE_CHARGE,
-        GSTR1_SubCategories.SEZWP,
-        GSTR1_SubCategories.SEZWOP,
-        GSTR1_SubCategories.DE,
-    ),
-    GSTR1_Categories.B2CL: (GSTR1_SubCategories.B2CL,),
-    GSTR1_Categories.EXP: (GSTR1_SubCategories.EXPWP, GSTR1_SubCategories.EXPWOP),
-    GSTR1_Categories.B2CS: (GSTR1_SubCategories.B2CS,),
-    GSTR1_Categories.NIL_EXEMPT: (
-        GSTR1_SubCategories.NIL_RATED,
-        GSTR1_SubCategories.EXEMPTED,
-        GSTR1_SubCategories.NON_GST,
-    ),
-    GSTR1_Categories.CDNR: (GSTR1_SubCategories.CDNR,),
-    GSTR1_Categories.CDNUR: (GSTR1_SubCategories.CDNUR,),
-}
-
-SUB_CATEGORIES_DESCRIPTION = {
-    GSTR1_SubCategories.SEZWP: "SEZ with payment",
-    GSTR1_SubCategories.SEZWOP: "SEZ without payment",
-    GSTR1_SubCategories.EXPWP: "Exports with payment",
-    GSTR1_SubCategories.EXPWOP: "Exports without payment",
-    GSTR1_SubCategories.CDNR: "Credit/Debit Notes (Registered)",
-    GSTR1_SubCategories.CDNUR: "Credit/Debit Notes (Unregistered)",
-}
 
 CATEGORY_CONDITIONS = {
     GSTR1_Categories.B2B.value: {
@@ -147,7 +77,7 @@ class GSTR1Query:
                 IfNull(self.si_item.item_code, self.si_item.item_name).as_("item_code"),
                 self.si_item.qty,
                 self.si_item.gst_hsn_code,
-                self.si_item.uom,
+                self.si_item.stock_uom,
                 self.si.billing_address_gstin,
                 self.si.company_gstin,
                 self.si.customer_name,
@@ -392,16 +322,7 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
         supply_type = "Inter-State" if is_interstate else "Intra-State"
 
         invoice.invoice_type = f"{supply_type} to {gst_registration} persons"
-
-        # INVOICE SUB CATEGORY
-        if self.is_nil_rated(invoice):
-            invoice.invoice_sub_category = GSTR1_SubCategories.NIL_RATED.value
-
-        elif self.is_exempted(invoice):
-            invoice.invoice_sub_category = GSTR1_SubCategories.EXEMPTED.value
-
-        elif self.is_non_gst(invoice):
-            invoice.invoice_sub_category = GSTR1_SubCategories.NON_GST.value
+        invoice.invoice_sub_category = GSTR1_SubCategories.NIL_EXEMPT.value
 
     def set_for_cdnr(self, invoice):
         self._set_invoice_type_for_b2b_and_cdnr(invoice)
@@ -462,13 +383,18 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
             self.invoice_conditions = {}
             self.assign_categories(invoice)
 
-            uom = invoice.get("uom", "")
-            if uom in identified_uom:
-                invoice["uom"] = identified_uom[uom]
+            if invoice.gst_hsn_code and invoice.gst_hsn_code.startswith("99"):
+                invoice["stock_uom"] = "OTH-OTHERS"
+                invoice["qty"] = 0
+                continue
+
+            stock_uom = invoice.get("stock_uom", "")
+            if stock_uom in identified_uom:
+                invoice["stock_uom"] = identified_uom[stock_uom]
             else:
-                gst_uom = get_full_gst_uom(uom, settings)
-                identified_uom[uom] = gst_uom
-                invoice["uom"] = gst_uom
+                gst_uom = get_full_gst_uom(stock_uom, settings)
+                identified_uom[stock_uom] = gst_uom
+                invoice["stock_uom"] = gst_uom
 
     def assign_categories(self, invoice):
 
@@ -511,7 +437,7 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
                 query.gst_hsn_code,
                 query.gst_rate,
                 query.gst_treatment,
-                query.uom,
+                query.stock_uom,
             )
             .orderby(
                 query.posting_date, query.invoice_no, query.item_code, order=Order.desc
@@ -577,8 +503,9 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         summary = {}
 
         for category in GSTR1_SubCategories:
-            summary[category.value] = {
-                "description": SUB_CATEGORIES_DESCRIPTION.get(category, category.value),
+            category = category.value
+            summary[category] = {
+                "description": category,
                 "no_of_records": 0,
                 "indent": 1,
                 "unique_records": set(),
@@ -601,27 +528,19 @@ class GSTR1Invoices(GSTR1Query, GSTR1Subcategory):
         return summary
 
     def update_overlaping_invoice_summary(self, sub_category_summary, final_summary):
-        nil_exempt_non_gst = (
-            GSTR1_SubCategories.NIL_RATED.value,
-            GSTR1_SubCategories.EXEMPTED.value,
-            GSTR1_SubCategories.NON_GST.value,
-        )
+        nil_exempt = GSTR1_SubCategories.NIL_EXEMPT.value
 
         # Get Unique Taxable Invoices
         unique_invoices = set()
         for category, row in sub_category_summary.items():
-            if category in nil_exempt_non_gst:
+            if category == nil_exempt:
                 continue
 
             unique_invoices.update(row["unique_records"])
 
         # Get Overlaping Invoices
-        overlaping_invoices = set()
-        for category in nil_exempt_non_gst:
-            category_invoices = sub_category_summary[category]["unique_records"]
-
-            overlaping_invoices.update(category_invoices.intersection(unique_invoices))
-            unique_invoices.update(category_invoices)
+        category_invoices = sub_category_summary[nil_exempt]["unique_records"]
+        overlaping_invoices = category_invoices.intersection(unique_invoices)
 
         # Update Summary
         if overlaping_invoices:

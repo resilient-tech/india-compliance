@@ -4,9 +4,13 @@ from string import whitespace
 
 import frappe
 from frappe import _
+from frappe.utils import getdate
 
 from india_compliance.gst_india.api_classes.base import BASE_URL
 from india_compliance.gst_india.api_classes.public import PublicAPI
+from india_compliance.gst_india.doctype.gstr_1_filed_log.gstr_1_filed_log import (
+    process_gstr_1_returns_info,
+)
 from india_compliance.gst_india.utils import titlecase, validate_gstin
 
 GST_CATEGORIES = {
@@ -160,3 +164,54 @@ def _extract_address_lines(address):
 
 # "Non Resident Taxable Person"
 # "Government Department ID"
+
+
+####################################################################################################
+#### GSTIN RETURNS INFO ##########################################################################
+####################################################################################################
+
+
+def get_gstr_1_return_status(
+    company, gstin, period, process_info=True, year_increment=0
+):
+    """Returns Returns info for the given period"""
+    fy = get_fy(period, year_increment=year_increment)
+
+    response = PublicAPI().get_returns_info(gstin, fy)
+    if not response:
+        return
+
+    if process_info:
+        frappe.enqueue(
+            process_gstr_1_returns_info, company=company, gstin=gstin, response=response
+        )
+
+    for info in response.get("EFiledlist"):
+        # TODO: Check for quarterly with iff
+        if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
+            return info["status"]
+
+    else:
+        # late filing possibility (limitation: only checks for the next FY: good enough)
+        if not year_increment and get_current_fy() != fy:
+            get_gstr_1_return_status(
+                company, gstin, period, process_info=process_info, year_increment=1
+            )
+
+        return "Not Filed"
+
+
+def get_fy(period, year_increment=0):
+    month, year = period[:2], period[2:]
+    year = str(int(year) + year_increment)
+
+    # For the month of March, it's filed in the next FY
+    if int(month) < 3:
+        return f"{int(year) - 1}-{year[-2:]}"
+    else:
+        return f"{year}-{int(year[-2:]) + 1}"
+
+
+def get_current_fy():
+    period = getdate().strftime("%m%Y")
+    return get_fy(period)

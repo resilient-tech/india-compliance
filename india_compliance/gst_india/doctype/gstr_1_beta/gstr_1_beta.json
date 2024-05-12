@@ -10,9 +10,9 @@
   "column_break_ejve",
   "company_gstin",
   "column_break_ldkv",
-  "month",
-  "column_break_qcor",
   "year",
+  "column_break_qcor",
+  "month_or_quarter",
   "data_section",
   "tabs_html",
   "tabs_empty_state",
@@ -36,13 +36,6 @@
    "fieldname": "company_gstin",
    "fieldtype": "Autocomplete",
    "label": "Company GSTIN",
-   "reqd": 1
-  },
-  {
-   "fieldname": "month",
-   "fieldtype": "Select",
-   "label": "Month",
-   "options": "January\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember",
    "reqd": 1
   },
   {
@@ -84,13 +77,19 @@
   {
    "fieldname": "data_section",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "month_or_quarter",
+   "fieldtype": "Select",
+   "label": "Month/Quarter",
+   "reqd": 1
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-04-09 17:04:49.608743",
+ "modified": "2024-04-18 11:48:42.958572",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",

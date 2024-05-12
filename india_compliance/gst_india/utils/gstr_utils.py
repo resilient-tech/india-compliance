@@ -10,8 +10,8 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
     toggle_scheduled_jobs,
 )
 from india_compliance.gst_india.utils import get_gstin_list
-from india_compliance.gst_india.utils.gstr_2.gstr1 import (
-    save_einvoice_data,
+from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
+    save_gstr_1_invoice_data,
     save_gstr_1_filed_data,
 )
 
@@ -20,7 +20,7 @@ class ReturnType(Enum):
     GSTR2A = "GSTR2a"
     GSTR2B = "GSTR2b"
     GSTR1 = "GSTR1"
-    eInvoice = "e-Invoice"
+    UnfiledGSTR1 = "Unfiled GSTR1"
 
 
 @frappe.whitelist()
@@ -134,7 +134,7 @@ def _download_queued_request(doc):
         ReturnType.GSTR2A.value: _download_gstr_2a,
         ReturnType.GSTR2B.value: save_gstr_2b,
         ReturnType.GSTR1.value: save_gstr_1_filed_data,
-        ReturnType.eInvoice.value: save_einvoice_data,
+        ReturnType.UnfiledGSTR1.value: save_gstr_1_invoice_data,
     }
 
     try:

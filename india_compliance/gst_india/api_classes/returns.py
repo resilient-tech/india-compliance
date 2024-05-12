@@ -228,6 +228,7 @@ class ReturnsAPI(ReturnsAuthenticate):
         "RET11417": "no_docs_found",  # GSTR-1 Exports
         "RET2B1018": "requested_before_cutoff_date",
         "RTN_24": "queued",
+        "AUTH158": "invalid_otp",  # Invalid OTP
         "AUTH4033": "invalid_otp",  # Invalid Session
         # "AUTH4034": "invalid_otp",  # Invalid OTP
         "AUTH4038": "authorization_failed",  # Session Expired
