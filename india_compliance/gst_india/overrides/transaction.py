@@ -1181,6 +1181,9 @@ class ItemGSTDetails:
                 item_taxes[tax_rate_field] = tax_rate
                 item_taxes[tax_amount_field] += tax_amount
 
+            # Floating point errors
+            tax_difference = flt(tax_difference, 5)
+
             # Handle rounding errors
             if tax_difference:
                 item_taxes[tax_amount_field] += tax_difference
