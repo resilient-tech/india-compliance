@@ -25,6 +25,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     INVOICE_SUB_CATEGORIES,
     GSTR1_Categories,
     GSTR1_DataFields,
+    GSTR1_Excel_Categories,
     GSTR1_ItemFields,
     GSTR1_SubCategories,
 )
@@ -1022,7 +1023,7 @@ class BooksExcel:
         )
         if hsn_data := self.data.get(GSTR1_SubCategories.HSN.value):
             excel.create_sheet(
-                sheet_name="hsn",
+                sheet_name=GSTR1_Excel_Categories.HSN.value,
                 headers=self.get_hsn_summary_headers(),
                 data=hsn_data,
                 add_totals=False,
@@ -1030,7 +1031,7 @@ class BooksExcel:
 
         if at_received_data := self.data.get(GSTR1_SubCategories.AT.value):
             excel.create_sheet(
-                sheet_name="at",
+                sheet_name=GSTR1_Excel_Categories.AT.value,
                 headers=self.get_at_received_headers(),
                 data=at_received_data,
                 add_totals=False,
@@ -1038,7 +1039,7 @@ class BooksExcel:
 
         if at_adjusted_data := self.data.get(GSTR1_SubCategories.TXP.value):
             excel.create_sheet(
-                sheet_name="txp",
+                sheet_name=GSTR1_Excel_Categories.TXP.value,
                 headers=self.get_at_adjusted_headers(),
                 data=at_adjusted_data,
                 add_totals=False,
@@ -1046,7 +1047,7 @@ class BooksExcel:
 
         if doc_issued_data := self.data.get(GSTR1_SubCategories.DOC_ISSUE.value):
             excel.create_sheet(
-                sheet_name="doc issue",
+                sheet_name=GSTR1_Excel_Categories.DOC_ISSUE.value,
                 headers=self.get_doc_issue_headers(),
                 data=doc_issued_data,
                 add_totals=False,
@@ -1276,7 +1277,7 @@ class ReconcileExcel:
 
         if b2b_data := self.get_b2b_data():
             excel.create_sheet(
-                sheet_name="b2b",
+                sheet_name=GSTR1_Excel_Categories.B2B.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_b2b_headers(),
                 data=b2b_data,
@@ -1285,7 +1286,7 @@ class ReconcileExcel:
 
         if b2cl_data := self.get_b2cl_data():
             excel.create_sheet(
-                sheet_name="b2cl",
+                sheet_name=GSTR1_Excel_Categories.B2CL.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_b2cl_headers(),
                 data=b2cl_data,
@@ -1294,7 +1295,7 @@ class ReconcileExcel:
 
         if exports_data := self.get_exports_data():
             excel.create_sheet(
-                sheet_name="exports",
+                sheet_name=GSTR1_Excel_Categories.EXP.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_exports_headers(),
                 data=exports_data,
@@ -1303,7 +1304,7 @@ class ReconcileExcel:
 
         if b2cs_data := self.get_b2cs_data():
             excel.create_sheet(
-                sheet_name="bc2s(others)",
+                sheet_name=GSTR1_Excel_Categories.B2CS.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_b2cs_headers(),
                 data=b2cs_data,
@@ -1312,7 +1313,7 @@ class ReconcileExcel:
 
         if nil_exempt_data := self.get_nil_exempt_data():
             excel.create_sheet(
-                sheet_name="nil,expempt,non-gst",
+                sheet_name=GSTR1_Excel_Categories.NIL_EXEMPT.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_nil_exempt_headers(),
                 data=nil_exempt_data,
@@ -1321,7 +1322,7 @@ class ReconcileExcel:
 
         if cdnr_data := self.get_cdnr_data():
             excel.create_sheet(
-                sheet_name="CDNR",
+                sheet_name=GSTR1_Excel_Categories.CDNR.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_cdnr_headers(),
                 data=cdnr_data,
@@ -1330,7 +1331,7 @@ class ReconcileExcel:
 
         if cdnur_data := self.get_cdnur_data():
             excel.create_sheet(
-                sheet_name="cdnur",
+                sheet_name=GSTR1_Excel_Categories.CDNUR.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_cdnur_headers(),
                 data=cdnur_data,
@@ -1339,7 +1340,7 @@ class ReconcileExcel:
 
         if doc_issue_data := self.get_doc_issue_data():
             excel.create_sheet(
-                sheet_name="doc issue",
+                sheet_name=GSTR1_Excel_Categories.DOC_ISSUE.value,
                 merged_headers=self.get_merge_headers_for_doc_issue(),
                 headers=self.get_doc_issue_headers(),
                 data=doc_issue_data,
@@ -1348,7 +1349,7 @@ class ReconcileExcel:
 
         if hsn_data := self.get_hsn_summary_data():
             excel.create_sheet(
-                sheet_name="hsn",
+                sheet_name=GSTR1_Excel_Categories.HSN.value,
                 merged_headers=self.get_merge_headers_for_hsn_summary(),
                 headers=self.get_hsn_summary_headers(),
                 data=hsn_data,
@@ -1357,7 +1358,7 @@ class ReconcileExcel:
 
         if at_data := self.get_at_data():
             excel.create_sheet(
-                sheet_name="at",
+                sheet_name=GSTR1_Excel_Categories.AT.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_at_txp_headers(),
                 data=at_data,
@@ -1366,7 +1367,7 @@ class ReconcileExcel:
 
         if txp_data := self.get_txp_data():
             excel.create_sheet(
-                sheet_name="txp",
+                sheet_name=GSTR1_Excel_Categories.TXP.value,
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_at_txp_headers(),
                 data=txp_data,
