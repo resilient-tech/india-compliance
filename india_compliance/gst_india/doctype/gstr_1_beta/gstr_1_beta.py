@@ -1006,8 +1006,8 @@ class BooksExcel:
         self.month_or_quarter = month_or_quarter
         self.year = year
 
-        period = get_period(month_or_quarter, year)
-        doc = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{company_gstin}")
+        self.period = get_period(month_or_quarter, year)
+        doc = frappe.get_doc("GSTR-1 Filed Log", f"{self.period}-{company_gstin}")
         self.data = doc.load_data("books")["books"]
 
     def export_data(self):
@@ -1015,14 +1015,14 @@ class BooksExcel:
         excel.remove_sheet("Sheet")
 
         excel.create_sheet(
-            sheet_name="Sales Invoice",
+            sheet_name="sales invoice",
             headers=self.get_document_headers(),
             data=self.get_document_data(),
             add_totals=False,
         )
         if hsn_data := self.data.get(GSTR1_SubCategories.HSN.value):
             excel.create_sheet(
-                sheet_name=GSTR1_SubCategories.HSN.value,
+                sheet_name="hsn",
                 headers=self.get_hsn_summary_headers(),
                 data=hsn_data,
                 add_totals=False,
@@ -1030,7 +1030,7 @@ class BooksExcel:
 
         if at_received_data := self.data.get(GSTR1_SubCategories.AT.value):
             excel.create_sheet(
-                sheet_name=GSTR1_SubCategories.AT.value,
+                sheet_name="at",
                 headers=self.get_at_received_headers(),
                 data=at_received_data,
                 add_totals=False,
@@ -1038,7 +1038,7 @@ class BooksExcel:
 
         if at_adjusted_data := self.data.get(GSTR1_SubCategories.TXP.value):
             excel.create_sheet(
-                sheet_name=GSTR1_SubCategories.TXP.value,
+                sheet_name="txp",
                 headers=self.get_at_adjusted_headers(),
                 data=at_adjusted_data,
                 add_totals=False,
@@ -1046,7 +1046,7 @@ class BooksExcel:
 
         if doc_issued_data := self.data.get(GSTR1_SubCategories.DOC_ISSUE.value):
             excel.create_sheet(
-                sheet_name=GSTR1_SubCategories.DOC_ISSUE.value,
+                sheet_name="doc issue",
                 headers=self.get_doc_issue_headers(),
                 data=doc_issued_data,
                 add_totals=False,
@@ -1055,14 +1055,8 @@ class BooksExcel:
         excel.export(self.get_file_name())
 
     def get_file_name(self):
-        filename = [
-            "GSTR-1",
-            "Books",
-            self.company_gstin,
-            self.month_or_quarter,
-            self.year,
-        ]
-        return " - ".join(filename)
+        filename = ["gstr1", "books", self.company_gstin, self.period]
+        return "-".join(filename)
 
     def get_document_data(self):
         category = [
@@ -1263,8 +1257,8 @@ class ReconcileExcel:
         self.month_or_quarter = month_or_quarter
         self.year = year
 
-        period = get_period(month_or_quarter, year)
-        doc = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{company_gstin}")
+        self.period = get_period(month_or_quarter, year)
+        doc = frappe.get_doc("GSTR-1 Filed Log", f"{self.period}-{company_gstin}")
 
         self.summary = doc.load_data("reconcile_summary")["reconcile_summary"]
         self.data = doc.load_data("reconcile")["reconcile"]
@@ -1274,7 +1268,7 @@ class ReconcileExcel:
         excel.remove_sheet("Sheet")
 
         excel.create_sheet(
-            sheet_name="Reconciled Summary",
+            sheet_name="reconcile summary",
             headers=self.get_reconcile_summary_headers(),
             data=self.get_reconcile_summary_data(),
             add_totals=False,
@@ -1282,7 +1276,7 @@ class ReconcileExcel:
 
         if b2b_data := self.get_b2b_data():
             excel.create_sheet(
-                sheet_name="B2B",
+                sheet_name="b2b",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_b2b_headers(),
                 data=b2b_data,
@@ -1291,7 +1285,7 @@ class ReconcileExcel:
 
         if b2cl_data := self.get_b2cl_data():
             excel.create_sheet(
-                sheet_name="B2C (Large)",
+                sheet_name="b2cl",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_b2cl_headers(),
                 data=b2cl_data,
@@ -1300,7 +1294,7 @@ class ReconcileExcel:
 
         if exports_data := self.get_exports_data():
             excel.create_sheet(
-                sheet_name="Exports",
+                sheet_name="exports",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_exports_headers(),
                 data=exports_data,
@@ -1309,7 +1303,7 @@ class ReconcileExcel:
 
         if b2cs_data := self.get_b2cs_data():
             excel.create_sheet(
-                sheet_name="B2C (Others)",
+                sheet_name="bc2s(others)",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_b2cs_headers(),
                 data=b2cs_data,
@@ -1318,7 +1312,7 @@ class ReconcileExcel:
 
         if nil_exempt_data := self.get_nil_exempt_data():
             excel.create_sheet(
-                sheet_name="Nil,Exemped,Non-GST",
+                sheet_name="nil,expempt,non-gst",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_nil_exempt_headers(),
                 data=nil_exempt_data,
@@ -1336,7 +1330,7 @@ class ReconcileExcel:
 
         if cdnur_data := self.get_cdnur_data():
             excel.create_sheet(
-                sheet_name="CDNUR",
+                sheet_name="cdnur",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_cdnur_headers(),
                 data=cdnur_data,
@@ -1345,7 +1339,7 @@ class ReconcileExcel:
 
         if doc_issue_data := self.get_doc_issue_data():
             excel.create_sheet(
-                sheet_name="Doc Issue",
+                sheet_name="doc issue",
                 merged_headers=self.get_merge_headers_for_doc_issue(),
                 headers=self.get_doc_issue_headers(),
                 data=doc_issue_data,
@@ -1354,7 +1348,7 @@ class ReconcileExcel:
 
         if hsn_data := self.get_hsn_summary_data():
             excel.create_sheet(
-                sheet_name="HSN Summary",
+                sheet_name="hsn",
                 merged_headers=self.get_merge_headers_for_hsn_summary(),
                 headers=self.get_hsn_summary_headers(),
                 data=hsn_data,
@@ -1363,7 +1357,7 @@ class ReconcileExcel:
 
         if at_data := self.get_at_data():
             excel.create_sheet(
-                sheet_name="AT",
+                sheet_name="at",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_at_txp_headers(),
                 data=at_data,
@@ -1372,7 +1366,7 @@ class ReconcileExcel:
 
         if txp_data := self.get_txp_data():
             excel.create_sheet(
-                sheet_name="TXP",
+                sheet_name="txp",
                 merged_headers=self.get_merge_headers(),
                 headers=self.get_at_txp_headers(),
                 data=txp_data,
@@ -1382,14 +1376,8 @@ class ReconcileExcel:
         excel.export(self.get_file_name())
 
     def get_file_name(self):
-        filename = [
-            "GSTR-1",
-            "Reconcile",
-            self.company_gstin,
-            self.month_or_quarter,
-            self.year,
-        ]
-        return " - ".join(filename)
+        filename = ["gstr1", "reconcile", self.company_gstin, self.period]
+        return "-".join(filename)
 
     def get_merge_headers(self):
         return frappe._dict(
