@@ -1518,14 +1518,14 @@ class FiledTab extends TabManager {
                     overwrite_missing: false,
                 };
 
-                const doc = me.instance.frm.doc;
+            const doc = me.instance.frm.doc;
 
             frappe.call({
                 method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_gstr_1_json",
                 args: {
+                    company_gstin: doc.company_gstin,
                     include_uploaded,
                     overwrite_missing,
-                    company: doc.company,
                     year: doc.year,
                     month_or_quarter: doc.month_or_quarter,
                     company_gstin: doc.company_gstin,

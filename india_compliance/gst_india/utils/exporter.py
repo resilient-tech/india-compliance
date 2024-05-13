@@ -62,7 +62,6 @@ class Worksheet:
             "bold": False,
             "horizontal": "general",
             "number_format": "General",
-            "width": 20,
             "height": 20,
             "vertical": "center",
             "wrap_text": False,
@@ -219,7 +218,9 @@ class Worksheet:
         if style.bg_color:
             cell.fill = PatternFill(fill_type="solid", fgColor=style.bg_color)
 
-        self.ws.column_dimensions[get_column_letter(column)].width = style.width
+        if style.get("width"):
+            self.ws.column_dimensions[get_column_letter(column)].width = style.width
+
         self.ws.row_dimensions[row].height = style.height
 
     def apply_conditional_formatting(self, has_totals):
