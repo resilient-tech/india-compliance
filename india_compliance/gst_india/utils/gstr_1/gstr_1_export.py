@@ -21,15 +21,28 @@ class GovExcel:
     Export GSTR-1 data to excel
     """
 
+    AMOUNT_DATA_FORMAT = {
+        "number_format": "#,##0.00",
+    }
+
+    PERCENTAGE_DATA_FORMAT = {
+        "number_format": "0.00",
+    }
+
+    DATE_FORMAT = {
+        "number_format": "dd-mmm-yy",
+    }
+
     def generate(self, gstin, period):
         """
         Build excel file
         """
-
+        self.gstin = gstin
+        self.period = period
         gstr_1_log = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{gstin}")
 
-        file_field = "filed" if gstr_1_log.filed else "books"
-        data = gstr_1_log.load_data(file_field)[file_field]
+        self.file_field = "filed" if gstr_1_log.filed else "books"
+        data = gstr_1_log.load_data(self.file_field)[self.file_field]
         data = process_data(data)
         self.build_excel(data)
 
@@ -40,18 +53,24 @@ class GovExcel:
                 sheet_name=JSON_CATEGORY_EXCEL_CATEGORY_MAPPING.get(category, category),
                 headers=self.get_category_headers(category),
                 data=cat_data,
+                add_totals=False,
             )
 
         excel.remove_sheet("Sheet")
-        # TODO: Proper file name
-        # gstr1_period_gstin
-        # gstin in caps also for json files
-        excel.export("test_file.xlsx")
+        excel.export(self.get_file_name())
+
+    def get_file_name(self):
+        filename = [
+            "GSTR-1",
+            self.file_field,
+            self.gstin,
+            self.period,
+        ]
+
+        return "-".join(filename)
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
-
-    # TODO: rename below methods according to the categories
 
     def get_b2b_headers(self):
         return [
@@ -70,10 +89,12 @@ class GovExcel:
             {
                 "label": "Invoice date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "data_format": self.DATE_FORMAT,
             },
             {
                 "label": "Invoice Value",
                 "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Place Of Supply",
@@ -82,10 +103,12 @@ class GovExcel:
             {
                 "label": "Reverse Charge",
                 "fieldname": GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Invoice Type",
@@ -94,14 +117,17 @@ class GovExcel:
             {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_ItemFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -122,6 +148,7 @@ class GovExcel:
             {
                 "label": "Invoice Value",
                 "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Port Code",
@@ -134,18 +161,22 @@ class GovExcel:
             {
                 "label": "Shipping Bill Date",
                 "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
+                "data_format": self.DATE_FORMAT,
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_ItemFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -158,10 +189,12 @@ class GovExcel:
             {
                 "label": "Invoice date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "data_format": self.DATE_FORMAT,
             },
             {
                 "label": "Invoice Value",
                 "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Place Of Supply",
@@ -170,18 +203,22 @@ class GovExcel:
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_ItemFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "E-Commerce GSTIN",
@@ -202,18 +239,22 @@ class GovExcel:
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_ItemFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "E-Commerce GSTIN",
@@ -230,14 +271,17 @@ class GovExcel:
             {
                 "label": "Nil Rated Supplies",
                 "fieldname": GSTR1_DataFields.NIL_RATED_AMOUNT.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Exempted(other than nil rated/non GST supply)",
                 "fieldname": GSTR1_DataFields.EXEMPTED_AMOUNT.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Non-GST Supplies",
                 "fieldname": GSTR1_DataFields.NON_GST_AMOUNT.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -258,6 +302,7 @@ class GovExcel:
             {
                 "label": "Note date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "data_format": self.DATE_FORMAT,
             },
             {
                 "label": "Note Type",
@@ -270,6 +315,7 @@ class GovExcel:
             {
                 "label": "Reverse Charge",
                 "fieldname": GSTR1_DataFields.REVERSE_CHARGE.value,
+                "data_format": {"horizontal": "center"},
             },
             {
                 "label": "Note Supply Type",
@@ -278,22 +324,27 @@ class GovExcel:
             {
                 "label": "Note Value",
                 "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_ItemFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -310,6 +361,7 @@ class GovExcel:
             {
                 "label": "Note date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "data_format": self.DATE_FORMAT,
             },
             {
                 "label": "Note Type",
@@ -322,22 +374,27 @@ class GovExcel:
             {
                 "label": "Note Value",
                 "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_ItemFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -350,18 +407,22 @@ class GovExcel:
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Gross Advance Received",
                 "fieldname": GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_DataFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -381,26 +442,32 @@ class GovExcel:
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
             },
             {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Integrated Tax Amount",
                 "fieldname": GSTR1_DataFields.IGST.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Central Tax Amount",
                 "fieldname": GSTR1_DataFields.CGST.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "State/UT Tax Amount",
                 "fieldname": GSTR1_DataFields.SGST.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
                 "fieldname": GSTR1_DataFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -440,7 +507,7 @@ CATEGORIES_WITH_ITEMS = {
 
 # TODO: API to export GSTR-1 data to excel
 @frappe.whitelist()
-def export_gstr_1_to_excel(gstin, period):
+def export_gstr_1_to_excel(gstin="24AAUPV7468F1ZW", period="042024"):
     GovExcel().generate(gstin, period)
 
 

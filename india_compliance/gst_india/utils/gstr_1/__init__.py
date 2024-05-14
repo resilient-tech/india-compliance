@@ -232,6 +232,18 @@ class GSTR1_ExcelFields(Enum):
     CESS = "Cess Amount"
 
 
+class ExcelWidth(Enum):
+    GSTIN = 15
+    NAME = 35
+    INVOICE_NUMBER = 15
+    DATE = 10
+    REVERSE_CHARGE = 10
+    DIFF_PERCENTAGE = 10
+    TAX_RATE = 10
+    INVOICE_COUNT = 10
+    QUANTITY = 10
+
+
 CATEGORY_SUB_CATEGORY_MAPPING = {
     GSTR1_Categories.B2B: (
         GSTR1_SubCategories.B2B_REGULAR,
