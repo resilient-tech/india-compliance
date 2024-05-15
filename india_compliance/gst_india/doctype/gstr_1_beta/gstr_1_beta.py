@@ -23,6 +23,7 @@ from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import (
     INVOICE_SUB_CATEGORIES,
+    ExcelWidth,
     GSTR1_Categories,
     GSTR1_DataFields,
     GSTR1_Excel_Categories,
@@ -1103,18 +1104,22 @@ class BooksExcel:
             {
                 "label": "Document Date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "label": "Document Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "label": "Customer GSTIN",
                 "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+                "header_format": {"width": ExcelWidth.GSTIN.value},
             },
             {
                 "label": "Customer Name",
                 "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "header_format": {"width": ExcelWidth.NAME.value},
             },
             {
                 "label": "Document Type",
@@ -1123,10 +1128,12 @@ class BooksExcel:
             {
                 "label": "Shipping Bill Number",
                 "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "label": "Shipping Bill Date",
                 "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "label": "Port Code",
@@ -1135,6 +1142,7 @@ class BooksExcel:
             {
                 "label": "Reverse Charge",
                 "fieldname": GSTR1_DataFields.REVERSE_CHARGE.value,
+                "header_format": {"width": ExcelWidth.REVERSE_CHARGE.value},
             },
             {
                 "label": "Upload Status",
@@ -1143,6 +1151,7 @@ class BooksExcel:
             {
                 "label": "Place of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {"width": ExcelWidth.POS.value},
             },
             *self.AMOUNT_HEADERS,
             {
@@ -1156,18 +1165,22 @@ class BooksExcel:
             {
                 "label": "Advance Date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "label": "Payment Entry Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "label": "Customer",
                 "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "header_format": {"width": ExcelWidth.NAME.value},
             },
             {
                 "label": "Place of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {"width": ExcelWidth.POS.value},
             },
             *self.AMOUNT_HEADERS,
             {
@@ -1181,18 +1194,22 @@ class BooksExcel:
             {
                 "label": "Adjustment Date",
                 "fieldname": GSTR1_DataFields.DOC_DATE,
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "label": "Adjustment Entry Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER,
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "label": "Customer ",
                 "fieldname": GSTR1_DataFields.CUST_NAME,
+                "header_format": {"width": ExcelWidth.NAME.value},
             },
             {
                 "label": "Place of Supply",
                 "fieldname": GSTR1_DataFields.POS,
+                "header_format": {"width": ExcelWidth.POS.value},
             },
             *self.AMOUNT_HEADERS,
             {
@@ -1210,6 +1227,7 @@ class BooksExcel:
             {
                 "label": "Description",
                 "fieldname": GSTR1_DataFields.DESCRIPTION.value,
+                "header_format": {"width": ExcelWidth.DESCRIPTION.value},
             },
             {
                 "label": "UOM",
@@ -1218,6 +1236,7 @@ class BooksExcel:
             {
                 "label": "Total Quantity",
                 "fieldname": GSTR1_DataFields.QUANTITY.value,
+                "header_format": {"width": ExcelWidth.QUANTITY.value},
             },
             *self.AMOUNT_HEADERS,
         ]
@@ -1239,14 +1258,17 @@ class BooksExcel:
             {
                 "label": "Total Count",
                 "fieldname": GSTR1_DataFields.TOTAL_COUNT.value,
+                "header_format": {"width": ExcelWidth.INVOICE_COUNT.value},
             },
             {
                 "label": "Draft Count",
                 "fieldname": GSTR1_DataFields.DRAFT_COUNT.value,
+                "header_format": {"width": ExcelWidth.INVOICE_COUNT.value},
             },
             {
                 "label": "Cancelled Count",
                 "fieldname": GSTR1_DataFields.CANCELLED_COUNT.value,
+                "header_format": {"width": ExcelWidth.INVOICE_COUNT.value},
             },
         ]
 
@@ -1427,6 +1449,7 @@ class ReconcileExcel:
             {
                 "fieldname": "description",
                 "label": "Description",
+                "header_format": {"width": ExcelWidth.DESCRIPTION.value},
             },
             {
                 "fieldname": "total_taxable_value",
@@ -1469,16 +1492,23 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "label": "Document Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Document No",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
                 "label": "Customer GSTIN",
+                "header_format": {"width": ExcelWidth.GSTIN.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {"fieldname": "match_status", "label": "Match Status"},
             {
                 "fieldname": "taxable_value_difference",
@@ -1494,6 +1524,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -1505,6 +1536,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -1571,6 +1603,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -1582,6 +1615,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -1670,12 +1704,18 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "label": "Document Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Document No",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {"fieldname": "match_status", "label": "Match Status"},
             {
                 "fieldname": "taxable_value_difference",
@@ -1691,6 +1731,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -1702,6 +1743,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -1746,6 +1788,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -1757,6 +1800,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -1814,19 +1858,27 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "label": "Document Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Document No",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {
                 "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
                 "label": "Shipping Bill Number",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
                 "label": "Shipping Bill Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE.value,
@@ -1847,6 +1899,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -1858,6 +1911,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -1869,6 +1923,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -1935,6 +1990,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -1946,6 +2002,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -1957,6 +2014,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2053,12 +2111,18 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "label": "Document Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Document No",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {"fieldname": "match_status", "label": "Match Status"},
             {
                 "fieldname": "taxable_value_difference",
@@ -2074,6 +2138,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -2085,6 +2150,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2096,6 +2162,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2162,6 +2229,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2173,6 +2241,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2241,16 +2310,23 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "label": "Document Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Document No",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
                 "label": "Customer GSTIN",
+                "header_format": {"width": ExcelWidth.GSTIN.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {"fieldname": "match_status", "label": "Match Status"},
             {
                 "fieldname": "taxable_value_difference",
@@ -2266,6 +2342,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -2277,6 +2354,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2288,6 +2366,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2354,6 +2433,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -2365,6 +2445,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2376,6 +2457,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2455,16 +2537,23 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "label": "Document Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Document No",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
                 "label": "Customer GSTIN",
+                "header_format": {"width": ExcelWidth.GSTIN.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {"fieldname": "match_status", "label": "Match Status"},
             {
                 "fieldname": "taxable_value_difference",
@@ -2491,6 +2580,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2502,6 +2592,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2568,6 +2659,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -2579,6 +2671,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2669,16 +2762,23 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "label": "Document Date",
+                "header_format": {"width": ExcelWidth.DATE.value},
             },
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Document No",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
                 "label": "Customer GSTIN",
+                "header_format": {"width": ExcelWidth.GSTIN.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {"fieldname": "match_status", "label": "Match Status"},
             {
                 "fieldname": "taxable_value_difference",
@@ -2694,6 +2794,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -2705,6 +2806,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2716,6 +2818,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2782,6 +2885,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -2793,6 +2897,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -2804,6 +2909,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
                 },
             },
             {
@@ -2912,6 +3018,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.INVOICE_COUNT.value,
                 },
             },
             {
@@ -2923,6 +3030,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.INVOICE_COUNT.value,
                 },
             },
             {
@@ -2956,6 +3064,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.INVOICE_COUNT.value,
                 },
             },
             {
@@ -2967,6 +3076,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.INVOICE_COUNT.value,
                 },
             },
         ]
@@ -3054,6 +3164,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.QUANTITY.value,
                 },
             },
             {
@@ -3065,6 +3176,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -3142,6 +3254,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.QUANTITY.value,
                 },
             },
             {
@@ -3153,6 +3266,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -3290,8 +3404,13 @@ class ReconcileExcel:
             {
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
                 "label": "Payment Entry Number",
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
-            {"fieldname": GSTR1_DataFields.CUST_NAME.value, "label": "Customer Name"},
+            {
+                "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "label": "Customer Name",
+                "header_format": {"width": ExcelWidth.NAME.value},
+            },
             {"fieldname": "match_status", "label": "Match Status"},
             {
                 "fieldname": "taxable_value_difference",
@@ -3307,6 +3426,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -3318,6 +3438,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.green,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {
@@ -3384,6 +3505,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.POS.value,
                 },
             },
             {
@@ -3395,6 +3517,7 @@ class ReconcileExcel:
                 },
                 "header_format": {
                     "bg_color": COLOR_PALLATE.sky_blue,
+                    "width": ExcelWidth.TAX_RATE.value,
                 },
             },
             {

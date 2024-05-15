@@ -242,6 +242,8 @@ class ExcelWidth(Enum):
     TAX_RATE = 10
     INVOICE_COUNT = 10
     QUANTITY = 10
+    POS = 30
+    DESCRIPTION = 35
 
 
 CATEGORY_SUB_CATEGORY_MAPPING = {
