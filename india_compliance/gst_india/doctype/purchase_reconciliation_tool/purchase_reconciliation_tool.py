@@ -139,7 +139,6 @@ class PurchaseReconciliationTool(Document):
 
         data = {}
         for period in periods:
-            # TODO: skip if today is not greater than 14th return period's next months
             data[period] = []
             status = "🟢 &nbsp; Downloaded"
             for category in GSTRCategory:

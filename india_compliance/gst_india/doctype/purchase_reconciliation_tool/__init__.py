@@ -998,7 +998,6 @@ class ReconciledData(BaseReconciliation):
         return reconciliation_data[0]
 
     def get(self, purchase_names: list = None, inward_supply_names: list = None):
-        # TODO: update cess amount in purchase invoice
         """
         Get Reconciliation data based on standard filters
         Returns
