@@ -2,11 +2,15 @@
 Export GSTR-1 data to excel or json
 """
 
+from datetime import datetime
+
 import frappe
 
+from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import get_period
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstr_1 import (
     JSON_CATEGORY_EXCEL_CATEGORY_MAPPING,
+    ExcelWidth,
     GSTR1_DataFields,
     GSTR1_Gov_Categories,
     GSTR1_ItemFields,
@@ -77,19 +81,31 @@ class GovExcel:
             {
                 "label": "GSTIN/UIN of Recipient",
                 "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+                "header_format": {
+                    "width": ExcelWidth.GSTIN.value,
+                },
             },
             {
                 "label": "Receiver Name",
                 "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "header_format": {
+                    "width": ExcelWidth.NAME.value,
+                },
             },
             {
                 "label": "Invoice Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
             },
             {
                 "label": "Invoice date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
             },
             {
                 "label": "Invoice Value",
@@ -99,16 +115,25 @@ class GovExcel:
             {
                 "label": "Place Of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {
+                    "width": ExcelWidth.POS.value,
+                },
             },
             {
                 "label": "Reverse Charge",
                 "fieldname": GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {"horizontal": "center"},
+                "header_format": {
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
+                },
             },
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DIFF_PERCENTAGE.value,
+                },
             },
             {
                 "label": "Invoice Type",
@@ -123,6 +148,9 @@ class GovExcel:
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Cess Amount",
@@ -140,10 +168,17 @@ class GovExcel:
             {
                 "label": "Invoice Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
             },
             {
                 "label": "Invoice date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
             },
             {
                 "label": "Invoice Value",
@@ -157,16 +192,25 @@ class GovExcel:
             {
                 "label": "Shipping Bill Number",
                 "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
             },
             {
                 "label": "Shipping Bill Date",
                 "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
                 "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Taxable Value",
@@ -185,11 +229,17 @@ class GovExcel:
             {
                 "label": "Invoice Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
             },
             {
                 "label": "Invoice date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
             },
             {
                 "label": "Invoice Value",
@@ -199,16 +249,25 @@ class GovExcel:
             {
                 "label": "Place Of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {
+                    "width": ExcelWidth.POS.value,
+                },
             },
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DIFF_PERCENTAGE.value,
+                },
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Taxable Value",
@@ -235,16 +294,25 @@ class GovExcel:
             {
                 "label": "Place Of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {
+                    "width": ExcelWidth.POS.value,
+                },
             },
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DIFF_PERCENTAGE.value,
+                },
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Taxable Value",
@@ -290,19 +358,31 @@ class GovExcel:
             {
                 "label": "GSTIN/UIN of Recipient",
                 "fieldname": GSTR1_DataFields.CUST_GSTIN.value,
+                "header_format": {
+                    "width": ExcelWidth.GSTIN.value,
+                },
             },
             {
                 "label": "Receiver Name",
                 "fieldname": GSTR1_DataFields.CUST_NAME.value,
+                "header_format": {
+                    "width": ExcelWidth.NAME.value,
+                },
             },
             {
                 "label": "Note Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
             },
             {
                 "label": "Note date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
             },
             {
                 "label": "Note Type",
@@ -311,11 +391,17 @@ class GovExcel:
             {
                 "label": "Place Of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {
+                    "width": ExcelWidth.POS.value,
+                },
             },
             {
                 "label": "Reverse Charge",
                 "fieldname": GSTR1_DataFields.REVERSE_CHARGE.value,
                 "data_format": {"horizontal": "center"},
+                "header_format": {
+                    "width": ExcelWidth.REVERSE_CHARGE.value,
+                },
             },
             {
                 "label": "Note Supply Type",
@@ -330,11 +416,17 @@ class GovExcel:
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DIFF_PERCENTAGE.value,
+                },
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Taxable Value",
@@ -357,11 +449,17 @@ class GovExcel:
             {
                 "label": "Note Number",
                 "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
             },
             {
                 "label": "Note date",
                 "fieldname": GSTR1_DataFields.DOC_DATE.value,
                 "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
             },
             {
                 "label": "Note Type",
@@ -370,6 +468,9 @@ class GovExcel:
             {
                 "label": "Place Of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {
+                    "width": ExcelWidth.POS.value,
+                },
             },
             {
                 "label": "Note Value",
@@ -380,11 +481,17 @@ class GovExcel:
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DIFF_PERCENTAGE.value,
+                },
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Taxable Value",
@@ -403,16 +510,25 @@ class GovExcel:
             {
                 "label": "Place Of Supply",
                 "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {
+                    "width": ExcelWidth.POS.value,
+                },
             },
             {
                 "label": "Applicable % of Tax Rate",
                 "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DIFF_PERCENTAGE.value,
+                },
             },
             {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Gross Advance Received",
@@ -434,6 +550,9 @@ class GovExcel:
             {
                 "label": "Total Quantity",
                 "fieldname": GSTR1_DataFields.QUANTITY.value,
+                "header_format": {
+                    "width": ExcelWidth.QUANTITY.value,
+                },
             },
             {
                 "label": "Total Value",
@@ -443,6 +562,9 @@ class GovExcel:
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
             },
             {
                 "label": "Taxable Value",
@@ -480,18 +602,22 @@ class GovExcel:
             {
                 "label": "Sr. No. From",
                 "fieldname": GSTR1_DataFields.FROM_SR.value,
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "label": "Sr. No. To",
                 "fieldname": GSTR1_DataFields.TO_SR.value,
+                "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
                 "label": "Total Number",
                 "fieldname": GSTR1_DataFields.TOTAL_COUNT.value,
+                "header_format": {"width": ExcelWidth.INVOICE_COUNT.value},
             },
             {
                 "label": "Cancelled",
                 "fieldname": GSTR1_DataFields.CANCELLED_COUNT.value,
+                "header_format": {"width": ExcelWidth.INVOICE_COUNT.value},
             },
         ]
 
@@ -505,10 +631,9 @@ CATEGORIES_WITH_ITEMS = {
 }
 
 
-# TODO: API to export GSTR-1 data to excel
 @frappe.whitelist()
-def export_gstr_1_to_excel(gstin="24AAUPV7468F1ZW", period="042024"):
-    GovExcel().generate(gstin, period)
+def export_gstr_1_to_excel(company_gstin, month_or_quarter, year):
+    GovExcel().generate(company_gstin, get_period(month_or_quarter, year))
 
 
 def get_category_wise_data(input_data):
@@ -541,15 +666,36 @@ def flatten_invoice_items_to_rows(input_data):
     ]
 
 
+FIELD_TRANSFORMATIONS = {
+    GSTR1_DataFields.DIFF_PERCENTAGE.value: lambda value: (
+        value * 100 if value != 0 else None
+    ),
+    GSTR1_DataFields.DOC_DATE.value: lambda value: datetime.strptime(value, "%Y-%m-%d"),
+    GSTR1_DataFields.SHIPPING_BILL_DATE.value: lambda value: datetime.strptime(
+        value, "%Y-%m-%d"
+    ),
+}
+
+
+def modify_row(row):
+    for field, modifier in FIELD_TRANSFORMATIONS.items():
+        if field in row:
+            row[field] = modifier(row[field])
+    return row
+
+
 def process_data(input_data):
     category_wise_data = get_category_wise_data(input_data)
 
     processed_data = {
-        category: (
-            flatten_invoice_items_to_rows(data)
-            if category in CATEGORIES_WITH_ITEMS
-            else data
-        )
+        category: [
+            modify_row(row)
+            for row in (
+                flatten_invoice_items_to_rows(data)
+                if category in CATEGORIES_WITH_ITEMS
+                else data
+            )
+        ]
         for category, data in category_wise_data.items()
     }
 

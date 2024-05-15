@@ -673,7 +673,7 @@ def download_gstr_1_json(
             "fp": period,
             **convert_to_gov_data_format(data),
         },
-        "filename": f"{period}-{company_gstin}.json",
+        "filename": f"GSTR-1-books-{company_gstin}-{period}.json",
     }
 
 

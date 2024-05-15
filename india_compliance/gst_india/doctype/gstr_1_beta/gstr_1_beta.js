@@ -1501,7 +1501,14 @@ class FiledTab extends TabManager {
 
     // ACTIONS
 
-    download_filed_as_excel() { }
+    download_filed_as_excel() {
+        const url = "india_compliance.gst_india.utils.gstr_1.gstr_1_export.export_gstr_1_to_excel";
+        open_url_post(`/api/method/${url}`, {
+            company_gstin:this.instance.frm.doc.company_gstin,
+            month_or_quarter: this.instance.frm.doc.month_or_quarter,
+            year: this.instance.frm.doc.year
+        });
+    }
 
     sync_with_gstn(sync_for) {
         render_empty_state(this.instance.frm);
