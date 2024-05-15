@@ -1,7 +1,7 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
-
 import json
+import re
 from typing import List
 
 import frappe
@@ -854,8 +854,7 @@ class BuildExcel:
             prefix="inward_supply",
         )
 
-        # TODO: Sanitize supplier name and gstin
-        self.supplier_name = data[0].get("supplier_name")
+        self.supplier_name = re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name"))
         self.supplier_gstin = data[0].get("supplier_gstin")
 
         return self.process_data(data, self.invoice_header)
