@@ -29,6 +29,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_Excel_Categories,
     GSTR1_ItemFields,
     GSTR1_SubCategories,
+    get_file_name,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_data import GSTR1Invoices
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
@@ -1067,11 +1068,7 @@ class BooksExcel:
                 add_totals=False,
             )
 
-        excel.export(self.get_file_name())
-
-    def get_file_name(self):
-        filename = ["gstr1", "books", self.company_gstin, self.period]
-        return "-".join(filename)
+        excel.export(get_file_name("books", self.company_gstin, self.period))
 
     def get_document_data(self):
         category = [
@@ -1448,11 +1445,7 @@ class ReconcileExcel:
                 add_totals=False,
             )
 
-        excel.export(self.get_file_name())
-
-    def get_file_name(self):
-        filename = ["gstr1", "reconcile", self.company_gstin, self.period]
-        return "-".join(filename)
+        excel.export(get_file_name("reconcile", self.company_gstin, self.period))
 
     def get_merge_headers(self):
         return frappe._dict(

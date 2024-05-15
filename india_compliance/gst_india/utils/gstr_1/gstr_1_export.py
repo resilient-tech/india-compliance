@@ -14,6 +14,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_DataFields,
     GSTR1_Gov_Categories,
     GSTR1_ItemFields,
+    get_file_name,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     get_category_wise_data as _get_category_wise_data,
@@ -58,20 +59,11 @@ class GovExcel:
                 headers=self.get_category_headers(category),
                 data=cat_data,
                 add_totals=False,
+                default_data_format={"height": 15},
             )
 
         excel.remove_sheet("Sheet")
-        excel.export(self.get_file_name())
-
-    def get_file_name(self):
-        filename = [
-            "GSTR-1",
-            self.file_field,
-            self.gstin,
-            self.period,
-        ]
-
-        return "-".join(filename)
+        excel.export(get_file_name("gov", self.gstin, self.period))
 
     def get_category_headers(self, category):
         return getattr(self, f"get_{category.lower()}_headers")()
@@ -548,6 +540,18 @@ class GovExcel:
     def get_hsn_headers(self):
         return [
             {
+                "label": "HSN",
+                "fieldname": GSTR1_DataFields.HSN_CODE.value,
+            },
+            {
+                "label": "Description",
+                "fieldname": GSTR1_DataFields.DESCRIPTION.value,
+            },
+            {
+                "label": "UQC",
+                "fieldname": GSTR1_DataFields.UOM.value,
+            },
+            {
                 "label": "Total Quantity",
                 "fieldname": GSTR1_DataFields.QUANTITY.value,
                 "header_format": {
@@ -557,6 +561,7 @@ class GovExcel:
             {
                 "label": "Total Value",
                 "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Rate",
@@ -698,5 +703,17 @@ def process_data(input_data):
         ]
         for category, data in category_wise_data.items()
     }
+
+    # calculate document_value for HSN
+    for row in processed_data.get(GSTR1_Gov_Categories.HSN.value, []):
+        row[GSTR1_DataFields.DOC_VALUE.value] = sum(
+            (
+                row.get(GSTR1_DataFields.TAXABLE_VALUE.value, 0),
+                row.get(GSTR1_DataFields.IGST.value, 0),
+                row.get(GSTR1_DataFields.CGST.value, 0),
+                row.get(GSTR1_DataFields.SGST.value, 0),
+                row.get(GSTR1_DataFields.CESS.value, 0),
+            )
+        )
 
     return processed_data

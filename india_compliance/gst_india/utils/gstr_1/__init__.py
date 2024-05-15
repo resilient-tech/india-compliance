@@ -318,3 +318,7 @@ JSON_CATEGORY_EXCEL_CATEGORY_MAPPING = {
     GSTR1_Gov_Categories.HSN.value: GSTR1_Excel_Categories.HSN.value,
     GSTR1_Gov_Categories.DOC_ISSUE.value: GSTR1_Excel_Categories.DOC_ISSUE.value,
 }
+
+
+def get_file_name(field_name, gstin, period):
+    return f"GSTR-1-{field_name}-{gstin}-{period}"
