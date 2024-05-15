@@ -258,6 +258,7 @@ def cancel_e_invoice(docname, values):
         doc, values, result, "e-Invoice cancelled successfully"
     )
 
+    doc.cancel()
     return send_updated_doc(doc)
 
 
