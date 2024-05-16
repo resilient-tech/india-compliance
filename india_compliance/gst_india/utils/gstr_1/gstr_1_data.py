@@ -77,7 +77,6 @@ class GSTR1Query:
                 self.si_item.qty,
                 self.si_item.gst_hsn_code,
                 self.si_item.stock_uom,
-                self.si_item.uom,
                 self.si.billing_address_gstin,
                 self.si.company_gstin,
                 self.si.customer_name,
