@@ -165,7 +165,7 @@ class B2B(DataMapper):
         GovDataFields.DOC_VALUE.value: GSTR1_DataFields.DOC_VALUE.value,
         GovDataFields.POS.value: GSTR1_DataFields.POS.value,
         GovDataFields.REVERSE_CHARGE.value: GSTR1_DataFields.REVERSE_CHARGE.value,
-        GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
+        # GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
         GovDataFields.INVOICE_TYPE.value: GSTR1_DataFields.DOC_TYPE.value,
         GovDataFields.DIFF_PERCENTAGE.value: GSTR1_DataFields.DIFF_PERCENTAGE.value,
         GovDataFields.ITEMS.value: GSTR1_DataFields.ITEMS.value,
@@ -297,7 +297,7 @@ class B2CL(DataMapper):
         GovDataFields.DOC_NUMBER.value: GSTR1_DataFields.DOC_NUMBER.value,
         GovDataFields.DOC_DATE.value: GSTR1_DataFields.DOC_DATE.value,
         GovDataFields.DOC_VALUE.value: GSTR1_DataFields.DOC_VALUE.value,
-        GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
+        # GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
         GovDataFields.DIFF_PERCENTAGE.value: GSTR1_DataFields.DIFF_PERCENTAGE.value,
         GovDataFields.ITEMS.value: GSTR1_DataFields.ITEMS.value,
         # GovDataFields.INDEX.value: ItemFields.INDEX.value,
@@ -481,16 +481,16 @@ class B2CS(DataMapper):
     SUBCATEGORY = GSTR1_SubCategories.B2CS.value
     KEY_MAPPING = {
         # GovDataFields.SUPPLY_TYPE.value: "supply_type",
-        GovDataFields.TAXABLE_VALUE.value: GSTR1_ItemFields.TAXABLE_VALUE.value,
+        GovDataFields.TAXABLE_VALUE.value: GSTR1_DataFields.TAXABLE_VALUE.value,
         GovDataFields.TYPE.value: GSTR1_DataFields.DOC_TYPE.value,
-        GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
+        # GovDataFields.ECOMMERCE_GSTIN.value: GSTR1_DataFields.ECOMMERCE_GSTIN.value,
         GovDataFields.DIFF_PERCENTAGE.value: GSTR1_DataFields.DIFF_PERCENTAGE.value,
         GovDataFields.POS.value: GSTR1_DataFields.POS.value,
-        GovDataFields.TAX_RATE.value: GSTR1_ItemFields.TAX_RATE.value,
-        GovDataFields.IGST.value: GSTR1_ItemFields.IGST.value,
-        GovDataFields.CGST.value: GSTR1_ItemFields.CGST.value,
-        GovDataFields.SGST.value: GSTR1_ItemFields.SGST.value,
-        GovDataFields.CESS.value: GSTR1_ItemFields.CESS.value,
+        GovDataFields.TAX_RATE.value: GSTR1_DataFields.TAX_RATE.value,
+        GovDataFields.IGST.value: GSTR1_DataFields.IGST.value,
+        GovDataFields.CGST.value: GSTR1_DataFields.CGST.value,
+        GovDataFields.SGST.value: GSTR1_DataFields.SGST.value,
+        GovDataFields.CESS.value: GSTR1_DataFields.CESS.value,
     }
 
     def __init__(self):
@@ -516,7 +516,7 @@ class B2CS(DataMapper):
                     (
                         invoice_data.get(GSTR1_DataFields.POS.value, ""),
                         str(flt(invoice_data.get(GSTR1_DataFields.TAX_RATE.value, ""))),
-                        invoice_data.get(GSTR1_DataFields.ECOMMERCE_GSTIN.value, ""),
+                        # invoice_data.get(GSTR1_DataFields.ECOMMERCE_GSTIN.value, ""),
                     )
                 )
             ] = [invoice_data]

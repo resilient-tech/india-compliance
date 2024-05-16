@@ -640,29 +640,29 @@ class TestB2CS(FrappeTestCase):
             GSTR1_SubCategories.B2CS.value: {
                 "05-Uttarakhand - 5.0 - 01AABCE5507R1C4": [
                     {
-                        GSTR1_ItemFields.TAXABLE_VALUE.value: 110,
+                        GSTR1_DataFields.TAXABLE_VALUE.value: 110,
                         GSTR1_DataFields.DOC_TYPE.value: "E",
                         GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                         GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                         GSTR1_DataFields.POS.value: "05-Uttarakhand",
                         GSTR1_DataFields.TAX_RATE.value: 5,
-                        GSTR1_ItemFields.IGST.value: 10,
-                        GSTR1_ItemFields.CESS.value: 10,
-                        GSTR1_ItemFields.CGST.value: 0,
-                        GSTR1_ItemFields.SGST.value: 0,
+                        GSTR1_DataFields.IGST.value: 10,
+                        GSTR1_DataFields.CESS.value: 10,
+                        GSTR1_DataFields.CGST.value: 0,
+                        GSTR1_DataFields.SGST.value: 0,
                     },
                 ],
                 "05-Uttarakhand - 5.0 - ": [
                     {
-                        GSTR1_ItemFields.TAXABLE_VALUE.value: 100,
+                        GSTR1_DataFields.TAXABLE_VALUE.value: 100,
                         GSTR1_DataFields.DOC_TYPE.value: "OE",
                         GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                         GSTR1_DataFields.POS.value: "05-Uttarakhand",
                         GSTR1_DataFields.TAX_RATE.value: 5,
-                        GSTR1_ItemFields.IGST.value: 10,
-                        GSTR1_ItemFields.CESS.value: 10,
-                        GSTR1_ItemFields.CGST.value: 0,
-                        GSTR1_ItemFields.SGST.value: 0,
+                        GSTR1_DataFields.IGST.value: 10,
+                        GSTR1_DataFields.CESS.value: 10,
+                        GSTR1_DataFields.CGST.value: 0,
+                        GSTR1_DataFields.SGST.value: 0,
                     }
                 ],
             }

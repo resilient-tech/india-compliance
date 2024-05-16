@@ -759,7 +759,7 @@ class GSTR1ProcessData:
         )
 
     def process_data_for_b2cs(self, invoice, prepared_data):
-        key = f"{invoice.place_of_supply} - {flt(invoice.gst_rate)} - {invoice.ecommerce_gstin or ''}"
+        key = f"{invoice.place_of_supply} - {flt(invoice.gst_rate)}"
         mapped_dict = prepared_data.setdefault("B2C (Others)", {}).setdefault(key, [])
 
         for row in mapped_dict:
@@ -769,10 +769,14 @@ class GSTR1ProcessData:
 
         mapped_dict.append(
             {
+                GSTR1_DataFields.DOC_DATE.value: invoice.posting_date,
+                GSTR1_DataFields.DOC_NUMBER.value: invoice.invoice_no,
+                GSTR1_DataFields.CUST_NAME.value: invoice.customer_name,
+                # currently other value is not supported in GSTR-1
+                GSTR1_DataFields.DOC_TYPE.value: "OE",
                 GSTR1_DataFields.TRANSACTION_TYPE.value: self.get_transaction_type(
                     invoice
                 ),
-                GSTR1_DataFields.DOC_NUMBER.value: invoice.invoice_no,
                 GSTR1_DataFields.POS.value: invoice.place_of_supply,
                 GSTR1_DataFields.TAX_RATE.value: invoice.gst_rate,
                 GSTR1_DataFields.ECOMMERCE_GSTIN.value: invoice.ecommerce_gstin,

@@ -100,7 +100,6 @@ const GSTR1_DataFields = {
     CANCELLED_COUNT: "cancelled_count",
 };
 
-
 let net_balance_during_period;
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
@@ -121,7 +120,8 @@ frappe.ui.form.on(DOCTYPE, {
         frappe.realtime.on("is_not_latest_data", message => {
             const { filters } = message;
 
-            const [month_or_quarter, year] = india_compliance.get_month_year_from_period(filters.period);
+            const [month_or_quarter, year] =
+                india_compliance.get_month_year_from_period(filters.period);
 
             if (
                 frm.doc.company_gstin !== filters.company_gstin ||
@@ -557,8 +557,8 @@ class GSTR1 {
         <div class="gst-ledger-difference w-100" style="border-bottom: 1px solid var(--border-color);">
             <div class="m-3 d-flex justify-content-around align-items-center">
                 ${Object.entries(net_transactions)
-                .map(
-                    ([type, net_amount]) => `
+            .map(
+                ([type, net_amount]) => `
                     <div>
                         <h5>${type} Account&nbsp;
                             <i
@@ -571,8 +571,8 @@ class GSTR1 {
                         <h4 class="text-center">${format_currency(net_amount)}</h4>
                     </div>
                 `
-                )
-                .join("")}
+        )
+            .join("")}
             </div>
         </div>
         `;
@@ -869,7 +869,7 @@ class TabManager {
             args[2]?.indent == 0
                 ? `<strong>${value}</strong>`
                 : isDescriptionCell
-                    ? `<a href="#" class="summary-description">
+                ? `<a href="#" class="summary-description">
                     <p style="padding-left: 15px">${value}</p>
                     </a>`
                     : value;
@@ -1331,7 +1331,7 @@ class BooksTab extends TabManager {
         [GSTR1_SubCategories.EXPWOP]: this.get_export_columns,
 
         [GSTR1_SubCategories.B2CL]: this.get_invoice_columns,
-        [GSTR1_SubCategories.B2CS]: this.get_document_columns,
+        [GSTR1_SubCategories.B2CS]: this.get_b2cs_columns,
 
         [GSTR1_SubCategories.NIL_EXEMPT]: this.get_document_columns,
 
@@ -1361,9 +1361,9 @@ class BooksTab extends TabManager {
         const url =
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_books_as_excel";
         open_url_post(`/api/method/${url}`, {
-            company_gstin:this.instance.frm.doc.company_gstin,
+            company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
-            year: this.instance.frm.doc.year
+            year: this.instance.frm.doc.year,
         });
     }
 
@@ -1394,6 +1394,19 @@ class BooksTab extends TabManager {
                 width: 150,
             },
         ];
+    }
+
+    get_b2cs_columns() {
+        let columns = this.get_document_columns();
+        columns = columns.filter(
+            col =>
+                ![
+                    GSTR1_DataFields.CUST_GSTIN,
+                    GSTR1_DataFields.REVERSE_CHARGE,
+                ].includes(col.fieldname)
+        );
+
+        return columns;
     }
 
     get_advances_received_columns() {
@@ -1487,7 +1500,9 @@ class FiledTab extends TabManager {
                 this.sync_with_gstn("filed")
             );
         else {
-            this.add_tab_custom_button("Download JSON", () => this.download_filed_json());
+            this.add_tab_custom_button("Download JSON", () =>
+                this.download_filed_json()
+            );
             this.add_tab_custom_button("Mark as Filed", () => this.mark_as_filed());
         }
     }
@@ -1502,11 +1517,12 @@ class FiledTab extends TabManager {
     // ACTIONS
 
     download_filed_as_excel() {
-        const url = "india_compliance.gst_india.utils.gstr_1.gstr_1_export.export_gstr_1_to_excel";
+        const url =
+            "india_compliance.gst_india.utils.gstr_1.gstr_1_export.export_gstr_1_to_excel";
         open_url_post(`/api/method/${url}`, {
-            company_gstin:this.instance.frm.doc.company_gstin,
+            company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
-            year: this.instance.frm.doc.year
+            year: this.instance.frm.doc.year,
         });
     }
 
@@ -1582,7 +1598,9 @@ class FiledTab extends TabManager {
 
     mark_as_filed() {
         render_empty_state(this.instance.frm);
-        this.instance.frm.call("mark_as_filed").then(() => this.instance.frm.trigger("after_save"));
+        this.instance.frm
+            .call("mark_as_filed")
+            .then(() => this.instance.frm.trigger("after_save"));
     }
 
     // COLUMNS
@@ -1736,11 +1754,11 @@ class ReconcileTab extends FiledTab {
     }
 
     download_reconcile_as_excel() {
-        console.log(this)
+        console.log(this);
         const url =
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_reconcile_as_excel";
         open_url_post(`/api/method/${url}`, {
-            company_gstin:this.instance.frm.doc.company_gstin,
+            company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
             year: this.instance.frm.doc.year,
         });
@@ -1889,7 +1907,8 @@ function set_options_for_month_or_quarter(frm) {
         }
     } else if (frm.doc.year === "2017") {
         // Options for 2017 from July to December
-        if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH.slice(6);
+        if (frm.filing_frequency === "Monthly")
+            options = india_compliance.MONTH.slice(6);
         else options = india_compliance.QUARTER.slice(2);
     } else {
         if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH;

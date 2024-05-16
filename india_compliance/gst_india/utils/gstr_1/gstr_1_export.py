@@ -132,6 +132,11 @@ class GovExcel:
                 "fieldname": GSTR1_DataFields.DOC_TYPE.value,
             },
             {
+                "label": "E-Commerce GSTIN",
+                # Ignore value, just keep the column
+                "fieldname": f"_{GSTR1_DataFields.ECOMMERCE_GSTIN.value}",
+            },
+            {
                 "label": "Taxable Value",
                 "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
                 "data_format": self.AMOUNT_DATA_FORMAT,
@@ -273,7 +278,8 @@ class GovExcel:
             },
             {
                 "label": "E-Commerce GSTIN",
-                "fieldname": GSTR1_DataFields.ECOMMERCE_GSTIN.value,
+                # Ignore value, just keep the column
+                "fieldname": f"_{GSTR1_DataFields.ECOMMERCE_GSTIN.value}",
             },
         ]
 
@@ -308,17 +314,18 @@ class GovExcel:
             },
             {
                 "label": "Taxable Value",
-                "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "fieldname": GSTR1_DataFields.TAXABLE_VALUE.value,
                 "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "Cess Amount",
-                "fieldname": GSTR1_ItemFields.CESS.value,
+                "fieldname": GSTR1_DataFields.CESS.value,
                 "data_format": self.AMOUNT_DATA_FORMAT,
             },
             {
                 "label": "E-Commerce GSTIN",
-                "fieldname": GSTR1_DataFields.ECOMMERCE_GSTIN.value,
+                # Ignore value, just keep the column
+                "fieldname": f"_{GSTR1_DataFields.ECOMMERCE_GSTIN.value}",
             },
         ]
 
