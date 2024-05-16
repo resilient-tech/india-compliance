@@ -600,17 +600,14 @@ class NilRated(DataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = input_data[self.SUBCATEGORY]
+        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
-        output = {GovDataFields.INVOICES.value: []}
-
-        for document_type, invoices in input_data.items():
-            invoice = self.aggregate_invoices(document_type, invoices)
-            invoice = self.format_data(invoice, reverse=True)
-            output[GovDataFields.INVOICES.value].append(invoice)
-
-        return output
+        return {
+            GovDataFields.INVOICES.value: [
+                self.format_data(invoice, reverse=True) for invoice in input_data
+            ]
+        }
 
     def format_data(self, data, default_data=None, reverse=False):
         invoice_data = super().format_data(data, default_data, reverse)
@@ -630,20 +627,27 @@ class NilRated(DataMapper):
         invoice_data[GSTR1_DataFields.TAXABLE_VALUE.value] = sum(amounts)
         return invoice_data
 
-    def aggregate_invoices(self, document_type, invoices):
+    def aggregate_invoices(self, input_data):
+        output = []
+
         keys = [
             GSTR1_DataFields.EXEMPTED_AMOUNT.value,
             GSTR1_DataFields.NIL_RATED_AMOUNT.value,
             GSTR1_DataFields.NON_GST_AMOUNT.value,
         ]
-        invoice = {key: 0 for key in keys}
-        invoice[GSTR1_DataFields.DOC_TYPE.value] = document_type
 
-        for inv in invoices:
-            for key in keys:
-                invoice[key] += inv.get(key, 0)
+        for invoices in input_data.values():
+            aggregated_invoice = invoices[0].copy()
+            aggregated_invoice.update(
+                {
+                    key: sum([invoice.get(key, 0) for invoice in invoices])
+                    for key in keys
+                }
+            )
 
-        return invoice
+            output.append(aggregated_invoice)
+
+        return output
 
     # value formatters
     def document_category_mapping(self, doc_category, data):
@@ -1104,8 +1108,7 @@ class AT(DataMapper):
 
         output = []
 
-        for key, invoices in input_data.items():
-            place_of_supply, tax_rate = key.split(" - ")
+        for invoices in input_data.values():
             aggregated_invoice = invoices[0].copy()
             aggregated_invoice.update(
                 {
