@@ -160,7 +160,7 @@ class B2B(DataMapper):
     KEY_MAPPING = {
         # GovDataFields.CUST_GSTIN.value: DataFields.CUST_GSTIN.value,
         # GovDataFields.INVOICES.value: "invoices",
-        # "flag":"flag",
+        GovDataFields.FLAG.value: "flag",
         GovDataFields.DOC_NUMBER.value: GSTR1_DataFields.DOC_NUMBER.value,
         GovDataFields.DOC_DATE.value: GSTR1_DataFields.DOC_DATE.value,
         GovDataFields.DOC_VALUE.value: GSTR1_DataFields.DOC_VALUE.value,
@@ -294,7 +294,7 @@ class B2CL(DataMapper):
     KEY_MAPPING = {
         # GovDataFields.POS.value: DataFields.POS.value,
         # GovDataFields.INVOICES.value: "invoices",
-        # "flag":"flag",
+        GovDataFields.FLAG.value: "flag",
         GovDataFields.DOC_NUMBER.value: GSTR1_DataFields.DOC_NUMBER.value,
         GovDataFields.DOC_DATE.value: GSTR1_DataFields.DOC_DATE.value,
         GovDataFields.DOC_VALUE.value: GSTR1_DataFields.DOC_VALUE.value,
@@ -380,7 +380,7 @@ class Exports(DataMapper):
     KEY_MAPPING = {
         # GovDataFields.POS.value: DataFields.POS.value,
         # GovDataFields.INVOICES.value: "invoices",
-        # "flag":"flag",
+        GovDataFields.FLAG.value: "flag",
         # GovDataFields.EXPORT_TYPE.value: DataFields.DOC_TYPE.value,
         GovDataFields.DOC_NUMBER.value: GSTR1_DataFields.DOC_NUMBER.value,
         GovDataFields.DOC_DATE.value: GSTR1_DataFields.DOC_DATE.value,
@@ -481,6 +481,7 @@ class Exports(DataMapper):
 class B2CS(DataMapper):
     SUBCATEGORY = GSTR1_SubCategories.B2CS.value
     KEY_MAPPING = {
+        GovDataFields.FLAG.value: "flag",
         # GovDataFields.SUPPLY_TYPE.value: "supply_type",
         GovDataFields.TAXABLE_VALUE.value: GSTR1_DataFields.TAXABLE_VALUE.value,
         GovDataFields.TYPE.value: GSTR1_DataFields.DOC_TYPE.value,
@@ -544,7 +545,7 @@ class B2CS(DataMapper):
 
         keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
 
-        for key, invoices in input_data.items():
+        for invoices in input_data.values():
             aggregated_invoice = invoices[0].copy()
             aggregated_invoice.update(
                 {
@@ -658,7 +659,7 @@ class CDNR(DataMapper):
     SUBCATEGORY = GSTR1_SubCategories.CDNR.value
     KEY_MAPPING = {
         # GovDataFields.CUST_GSTIN.value: DataFields.CUST_GSTIN.value,
-        # "flag": "flag",
+        GovDataFields.FLAG.value: "flag",
         # GovDataFields.NOTE_DETAILS.value: "credit_debit_note_details",
         GovDataFields.NOTE_TYPE.value: GSTR1_DataFields.TRANSACTION_TYPE.value,
         GovDataFields.NOTE_NUMBER.value: GSTR1_DataFields.DOC_NUMBER.value,
@@ -818,7 +819,7 @@ class CDNUR(DataMapper):
         GSTR1_ItemFields.CESS.value: 0,
     }
     KEY_MAPPING = {
-        # "flag": "flag",
+        GovDataFields.FLAG.value: "flag",
         GovDataFields.TYPE.value: GSTR1_DataFields.DOC_TYPE.value,
         GovDataFields.NOTE_TYPE.value: GSTR1_DataFields.TRANSACTION_TYPE.value,
         GovDataFields.NOTE_NUMBER.value: GSTR1_DataFields.DOC_NUMBER.value,
@@ -992,7 +993,7 @@ class HSNSUM(DataMapper):
 class AT(DataMapper):
     SUBCATEGORY = GSTR1_SubCategories.AT.value
     KEY_MAPPING = {
-        # "flag": "flag",
+        GovDataFields.FLAG.value: "flag",
         GovDataFields.POS.value: GSTR1_DataFields.POS.value,
         GovDataFields.DIFF_PERCENTAGE.value: GSTR1_DataFields.DIFF_PERCENTAGE.value,
         GovDataFields.ITEMS.value: GSTR1_DataFields.ITEMS.value,
@@ -1245,6 +1246,7 @@ class SUPECOM(DataMapper):
         "cgst": GSTR1_ItemFields.CGST.value,
         "sgst": GSTR1_ItemFields.SGST.value,
         "cess": GSTR1_ItemFields.CESS.value,
+        GovDataFields.FLAG.value: "flag",
     }
     DOCUMENT_CATEGORIES = {
         GovDataFields.SUPECOM_52.value: GSTR1_SubCategories.SUPECOM_52.value,

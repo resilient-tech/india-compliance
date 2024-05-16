@@ -22,7 +22,6 @@ from india_compliance.gst_india.utils.__init__ import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.exporter import ExcelExporter
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 from india_compliance.gst_india.utils.gstr_1 import (
-    INVOICE_SUB_CATEGORIES,
     ExcelWidth,
     GSTR1_Categories,
     GSTR1_DataFields,
@@ -360,10 +359,8 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
     reconciled_data = {}
     if gstr1_log.filing_status == "Filed":
         update_books_match = False
-        reconcile_only_invoices = False
     else:
         update_books_match = True
-        reconcile_only_invoices = True
 
     for subcategory in GSTR1_SubCategories:
         subcategory = subcategory.value
@@ -373,61 +370,65 @@ def reconcile_gstr1_data(gstr1_log, gov_data, books_data):
         if not books_subdata and not gov_subdata:
             continue
 
-        is_invoice_subcategory = subcategory in INVOICE_SUB_CATEGORIES
-
-        if reconcile_only_invoices and not is_invoice_subcategory:
-            continue
+        ignore_upload_status = subcategory in [
+            GSTR1_SubCategories.HSN.value,
+            GSTR1_SubCategories.DOC_ISSUE.value,
+        ]
+        is_list = False
 
         reconcile_subdata = {}
 
         # Books vs Gov
         for key, books_value in books_subdata.items():
+            if not reconcile_subdata:
+                is_list = isinstance(books_value, list)
+
             gov_value = gov_subdata.get(key)
             reconcile_row = get_reconciled_row(books_value, gov_value)
 
             if reconcile_row:
                 reconcile_subdata[key] = reconcile_row
 
-            if not update_books_match or not is_invoice_subcategory:
+            if not update_books_match or ignore_upload_status:
                 continue
 
-            if books_subdata[key].get("upload_status"):
+            books_value = books_value[0] if is_list else books_value
+
+            if books_value.get("upload_status"):
                 update_books_match = False
 
             # Update Books Data
             if not gov_value:
-                books_subdata[key]["upload_status"] = "Not Uploaded"
+                books_value["upload_status"] = "Not Uploaded"
 
             if reconcile_row:
-                books_subdata[key]["upload_status"] = "Mismatch"
+                books_value["upload_status"] = "Mismatch"
             else:
-                books_subdata[key]["upload_status"] = "Uploaded"
+                books_value["upload_status"] = "Uploaded"
 
         # In Gov but not in Books
         for key, gov_value in gov_subdata.items():
             if key in books_subdata:
                 continue
 
+            if not reconcile_subdata:
+                is_list = isinstance(gov_value, list)
+
             reconcile_subdata[key] = get_reconciled_row(None, gov_value)
 
-            if not update_books_match or not is_invoice_subcategory:
+            if not update_books_match or ignore_upload_status:
                 continue
 
-            is_list = isinstance(gov_value, list)
-            books_subdata[key] = get_empty_row(gov_value[0] if is_list else gov_value)
-            books_subdata[key]["upload_status"] = "Missing in Books"
+            books_empty_row = get_empty_row(gov_value[0] if is_list else gov_value)
+            books_empty_row["upload_status"] = "Missing in Books"
+
+            books_subdata[key] = [books_empty_row] if is_list else books_empty_row
 
         if update_books_match and not books_data.get(subcategory):
             books_data[subcategory] = books_subdata
 
         if reconcile_subdata:
             reconciled_data[subcategory] = reconcile_subdata
-
-        # 2 types of data to be downloaded (for JSON only)
-        # 1. Difference to be uploaded
-        #   - Upload all except uploaded. Missing in Books will come with zero values
-        # 2. All as per Books
-        #  - Upload all except missing in Books
 
     if update_books_match:
         gstr1_log.update_json_for("books", books_data)
@@ -624,34 +625,40 @@ def download_gstr_1_json(
     year,
     month_or_quarter,
     include_uploaded=False,
-    overwrite_missing=False,
+    delete_missing=False,
 ):
     if isinstance(include_uploaded, str):
         include_uploaded = json.loads(include_uploaded)
 
-    if isinstance(overwrite_missing, str):
-        overwrite_missing = json.loads(overwrite_missing)
+    if isinstance(delete_missing, str):
+        delete_missing = json.loads(delete_missing)
 
     period = get_period(month_or_quarter, year)
     gstr1_log = frappe.get_doc("GSTR-1 Filed Log", f"{period}-{company_gstin}")
 
     data = gstr1_log.get_json_for("books")
 
-    for subcategory, subcategory_data in data.items():
+    for subcategory_data in data.values():
         discard_invoices = []
 
         if isinstance(subcategory_data, str):
             continue
 
         for key, row in subcategory_data.items():
+            if isinstance(row, list):
+                row = row[0]
+
             if not row.get("upload_status"):
                 continue
 
             if row.get("upload_status") == "Uploaded" and not include_uploaded:
                 discard_invoices.append(key)
 
-            if row.get("upload_status") == "Missing in Books" and not overwrite_missing:
-                discard_invoices.append(key)
+            if row.get("upload_status") == "Missing in Books":
+                if delete_missing:
+                    row["flag"] = "D"
+                else:
+                    discard_invoices.append(key)
 
         for key in discard_invoices:
             subcategory_data.pop(key)
@@ -664,7 +671,7 @@ def download_gstr_1_json(
             "fp": period,
             **convert_to_gov_data_format(data),
         },
-        "filename": f"GSTR-1-books-{company_gstin}-{period}.json",
+        "filename": f"GSTR-1-gov-{company_gstin}-{period}.json",
     }
 
 

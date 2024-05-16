@@ -91,20 +91,6 @@ class GSTR1_SubCategories(Enum):
     SUPECOM_9_5 = "GST Payable on RCM by E-commerce Operator u/s 9(5)"
 
 
-INVOICE_SUB_CATEGORIES = [
-    GSTR1_SubCategories.B2B_REGULAR.value,
-    GSTR1_SubCategories.B2B_REVERSE_CHARGE.value,
-    GSTR1_SubCategories.SEZWP.value,
-    GSTR1_SubCategories.SEZWOP.value,
-    GSTR1_SubCategories.DE.value,
-    GSTR1_SubCategories.EXPWP.value,
-    GSTR1_SubCategories.EXPWOP.value,
-    GSTR1_SubCategories.CDNR.value,
-    GSTR1_SubCategories.B2CL.value,
-    GSTR1_SubCategories.CDNUR.value,
-]
-
-
 class GSTR1_DataFields(Enum):
     TRANSACTION_TYPE = "transaction_type"
     CUST_GSTIN = "customer_gstin"
@@ -202,6 +188,8 @@ class GovDataFields(Enum):
 
     SUPECOM_52 = "clttx"
     SUPECOM_9_5 = "paytx"
+
+    FLAG = "flag"
 
 
 class GSTR1_ItemFields(Enum):

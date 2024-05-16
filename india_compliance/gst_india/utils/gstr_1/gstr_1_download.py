@@ -14,23 +14,20 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
 Download GSTR-1 and Unfiled GSTR1 data from GST Portal
 """
 
-
-GSTR1_ACTIONS = [
+UNFILED_ACTIONS = [
     "B2B",
-    "AT",
     "B2CL",
     "B2CS",
     "CDNR",
     "CDNUR",
-    "DOCISS",
     "EXP",
-    "HSNSUM",
     "NIL",
+    "AT",
     "TXP",
-    "RETSUM",
+    "SUPECO",
 ]
 
-INVOICE_ACTIONS = ["B2B", "B2CL", "CDNR", "CDNUR", "EXP"]
+FILED_ACTIONS = [*UNFILED_ACTIONS, "HSNSUM", "DOCISS", "RETSUM"]
 
 
 def download_gstr1_json_data(gstr1_log):
@@ -43,12 +40,12 @@ def download_gstr1_json_data(gstr1_log):
 
     if gstr1_log.filing_status == "Filed":
         return_type = "GSTR1"
-        actions = GSTR1_ACTIONS
+        actions = FILED_ACTIONS
         data_field = "filed"
 
     else:
         return_type = "Unfiled GSTR1"
-        actions = INVOICE_ACTIONS
+        actions = UNFILED_ACTIONS
         data_field = "unfiled"
 
     # download data

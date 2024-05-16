@@ -1534,11 +1534,11 @@ class FiledTab extends TabManager {
     download_filed_json() {
         const me = this;
         function get_json_data(dialog) {
-            const { include_uploaded, overwrite_missing } = dialog
+            const { include_uploaded, delete_missing } = dialog
                 ? dialog.get_values()
                 : {
                     include_uploaded: true,
-                    overwrite_missing: false,
+                    delete_missing: false,
                 };
 
             const doc = me.instance.frm.doc;
@@ -1548,7 +1548,7 @@ class FiledTab extends TabManager {
                 args: {
                     company_gstin: doc.company_gstin,
                     include_uploaded,
-                    overwrite_missing,
+                    delete_missing,
                     year: doc.year,
                     month_or_quarter: doc.month_or_quarter,
                     company_gstin: doc.company_gstin,
@@ -1575,17 +1575,19 @@ class FiledTab extends TabManager {
             fields: [
                 {
                     fieldname: "include_uploaded",
-                    label: __("Include Already Uploaded Invoices"),
+                    label: __("Include Already Uploaded (matching) Invoices"),
                     description: __(
-                        "This will include invoices already uploaded to GSTN (possibly e-Invoices) and overwrite them in GST Portal."
+                        `This will include invoices already uploaded (and matching)
+                         to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
+                         This is <strong>not recommended</strong> if e-Invoice is applicable to you.`
                     ),
                     fieldtype: "Check",
                 },
                 {
-                    fieldname: "overwrite_missing",
-                    label: __("Overwrite Missing Invoices in ERP"),
+                    fieldname: "delete_missing",
+                    label: __("Delete Invoices Missing in ERP from GST Portal"),
                     description: __(
-                        "This will overwrite invoices that are not present in ERP but are present in GST Portal with zero values."
+                        "This will delete invoices that are not present in ERP but are present in GST Portal."
                     ),
                     fieldtype: "Check",
                 },
