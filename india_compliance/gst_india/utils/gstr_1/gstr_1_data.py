@@ -1,8 +1,6 @@
 # Copyright (c) 2024, Resilient Tech and contributors
 # For license information, please see license.txt
 
-from enum import Enum
-
 from pypika import Order
 
 import frappe
@@ -12,6 +10,7 @@ from frappe.utils import getdate
 from india_compliance.gst_india.utils import get_full_gst_uom
 from india_compliance.gst_india.utils.gstr_1 import (
     CATEGORY_SUB_CATEGORY_MAPPING,
+    GSTR1_B2B_InvoiceTypes,
     GSTR1_Categories,
     GSTR1_SubCategories,
 )
@@ -21,8 +20,6 @@ Compile data as per books of accounts for GSTR-1
 """
 
 B2C_LIMIT = 2_50_000
-
-# TODO: Enum for Invoice Type
 
 CATEGORY_CONDITIONS = {
     GSTR1_Categories.B2B.value: {
@@ -350,24 +347,24 @@ class GSTR1Subcategory(GSTR1CategoryConditions):
 
     def _set_invoice_type_for_b2b_and_cdnr(self, invoice):
         if invoice.gst_category == "Deemed Export":
-            invoice.invoice_type = "Deemed Exp"
+            invoice.invoice_type = GSTR1_B2B_InvoiceTypes.DE.value
             invoice.invoice_sub_category = GSTR1_SubCategories.DE.value
 
         elif invoice.gst_category == "SEZ":
             if invoice.is_export_with_gst:
-                invoice.invoice_type = "SEZ supplies with payment"
+                invoice.invoice_type = GSTR1_B2B_InvoiceTypes.SEWP.value
                 invoice.invoice_sub_category = GSTR1_SubCategories.SEZWP.value
 
             else:
-                invoice.invoice_type = "SEZ supplies without payment"
+                invoice.invoice_type = GSTR1_B2B_InvoiceTypes.SEWOP.value
                 invoice.invoice_sub_category = GSTR1_SubCategories.SEZWOP.value
 
         elif invoice.is_reverese_charge:
-            invoice.invoice_type = "Regular B2B"
+            invoice.invoice_type = GSTR1_B2B_InvoiceTypes.R.value
             invoice.invoice_sub_category = GSTR1_SubCategories.B2B_REVERSE_CHARGE.value
 
         else:
-            invoice.invoice_type = "Regular B2B"
+            invoice.invoice_type = GSTR1_B2B_InvoiceTypes.R.value
             invoice.invoice_sub_category = GSTR1_SubCategories.B2B_REGULAR.value
 
 

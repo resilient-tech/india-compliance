@@ -10,6 +10,7 @@ from india_compliance.gst_india.utils.gstr_1 import (
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
     GovDataFields,
+    GSTR1_B2B_InvoiceTypes,
     GSTR1_Categories,
     GSTR1_DataFields,
     GSTR1_Gov_Categories,
@@ -181,10 +182,10 @@ class B2B(DataMapper):
 
     # value formatting constants
     DOCUMENT_CATEGORIES = {
-        "R": "Regular B2B",
-        "SEWP": "SEZ supplies with payment",
-        "SEWOP": "SEZ supplies without payment",
-        "DE": "Deemed Exports",
+        "R": GSTR1_B2B_InvoiceTypes.R.value,
+        "SEWP": GSTR1_B2B_InvoiceTypes.SEWP.value,
+        "SEWOP": GSTR1_B2B_InvoiceTypes.SEWOP.value,
+        "DE": GSTR1_B2B_InvoiceTypes.DE.value,
     }
 
     SUBCATEGORIES = {

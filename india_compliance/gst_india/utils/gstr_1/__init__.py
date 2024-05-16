@@ -216,6 +216,13 @@ class GSTR1_ItemFields(Enum):
     ADDITIONAL_AMOUNT = "additional_amount"
 
 
+class GSTR1_B2B_InvoiceTypes(Enum):
+    R = "Regular B2B"
+    SEWP = "SEZ supplies with payment"
+    SEWOP = "SEZ supplies without payment"
+    DE = "Deemed Exp"
+
+
 class GSTR1_ExcelFields(Enum):
     CUST_GSTIN = "GSTIN/UIN of Recipient"
     CUST_NAME = "Receiver Name"

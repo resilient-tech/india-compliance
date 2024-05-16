@@ -3,6 +3,7 @@ from frappe.tests.utils import FrappeTestCase
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
     GovDataFields,
+    GSTR1_B2B_InvoiceTypes,
     GSTR1_DataFields,
     GSTR1_ItemFields,
     GSTR1_SubCategories,
@@ -158,7 +159,7 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "N",
                     GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
-                    GSTR1_DataFields.DOC_TYPE.value: "Regular B2B",
+                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.R.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
@@ -197,7 +198,7 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "Y",
                     GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
-                    GSTR1_DataFields.DOC_TYPE.value: "Regular B2B",
+                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.R.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
@@ -228,7 +229,7 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "N",
                     GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
-                    GSTR1_DataFields.DOC_TYPE.value: "SEZ supplies with payment",
+                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.SEWP.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
@@ -259,7 +260,7 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "N",
                     GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
-                    GSTR1_DataFields.DOC_TYPE.value: "Deemed Exports",
+                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.DE.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
