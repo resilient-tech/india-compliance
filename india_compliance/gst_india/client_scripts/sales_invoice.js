@@ -54,6 +54,25 @@ frappe.ui.form.on(DOCTYPE, {
             10
         );
     },
+    supply_liable_to(frm) {
+        if (frm.doc.supply_liable_to && !gst_settings.enable_sales_through_ecommerce_operators) {
+            let supply_liable_to=frm.doc.supply_liable_to;
+            frm.set_value("supply_liable_to","")
+            frappe.throw(
+                __(
+                    `Enable Sales through E-commerce Operators in GST Settings to set Supply Liable to ${supply_liable_to}`
+                ),
+            );
+            return;
+        }
+        if(frm.doc.supply_liable_to==="Reverse Charge u/s 9(5)"){
+            frm.set_value("is_reverse_charge",1)
+        }
+        else{
+            frm.set_value("is_reverse_charge",0)
+        }
+
+    }
 });
 
 async function gst_invoice_warning(frm) {
