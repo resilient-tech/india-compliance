@@ -9,6 +9,7 @@
   "hsn_wise_tax_breakup",
   "enable_reverse_charge_in_sales",
   "enable_overseas_transactions",
+  "enable_sales_through_ecommerce_operators",
   "round_off_gst_values",
   "require_supplier_invoice_no",
   "column_break_4",
@@ -568,6 +569,12 @@
    "label": "Is Retry e-Invoice/e-Waybill Pending"
   },
   {
+   "default": "0",
+   "fieldname": "enable_sales_through_ecommerce_operators",
+   "fieldtype": "Check",
+   "label": "Enable Sales through E-commerce Operators"
+  },
+  {
    "fieldname": "gstr_1_section_break",
    "fieldtype": "Section Break",
    "label": "GSTR-1"
@@ -609,7 +616,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-06-09 17:27:54.720233",
+ "modified": "2024-06-09 17:28:54.720233",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",
@@ -635,7 +642,7 @@
   }
  ],
  "quick_entry": 1,
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "track_changes": 1

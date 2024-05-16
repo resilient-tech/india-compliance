@@ -266,6 +266,26 @@ def get_applicable_gst_accounts(
     return all_gst_accounts, applicable_gst_accounts
 
 
+def validate_supply_liable_to(doc):
+    gst_settings = frappe.get_cached_doc("GST Settings")
+
+    if (
+        not gst_settings.enable_sales_through_ecommerce_operators
+        and doc.supply_liable_to
+    ):
+        frappe.throw(
+            f"Enable Sales through E-commerce Operators in GST Settings to set Supply Liable to {doc.supply_liable_to}"
+        )
+
+    if doc.supply_liable_to == "Reverse Charge u/s 9(5)" and not doc.is_reverse_charge:
+        frappe.throw(
+            "Reverse Charge is not set for Supply Liable to Reverse Charge u/s 9(5)"
+        )
+
+    if doc.supply_liable_to == "Collect Tax u/s 52" and doc.is_reverse_charge:
+        frappe.throw("Reverse Charge is set for Supply Liable to Collect Tax u/s 52")
+
+
 @frappe.whitelist()
 def get_valid_gst_accounts(company):
     frappe.has_permission("Item Tax Template", "read", throw=True)
@@ -1515,7 +1535,7 @@ def validate_transaction(doc, method=None):
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
-
+    validate_supply_liable_to(doc)
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)
