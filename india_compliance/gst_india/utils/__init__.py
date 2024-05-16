@@ -634,6 +634,8 @@ def join_list_with_custom_separators(input, separator=", ", last_separator=" or 
 
 
 def titlecase(value):
+    if not value:
+        return
     return _titlecase(value, callback=get_titlecase_version)
 
 
