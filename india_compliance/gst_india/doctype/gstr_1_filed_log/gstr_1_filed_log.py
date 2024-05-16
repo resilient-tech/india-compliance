@@ -16,6 +16,7 @@ from frappe.utils import (
     getdate,
 )
 
+from india_compliance.gst_india.utils import is_production_api_enabled
 from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
@@ -138,11 +139,14 @@ class GSTR1FiledLog(Document):
         return data
 
     # GSTR 1 UTILITY
-    def is_sek_needed(self, settings=None):
+    def is_gstr1_api_enabled(self, settings=None):
         if not settings:
             settings = frappe.get_cached_doc("GST Settings")
 
-        if not settings.analyze_filed_data:
+        return is_production_api_enabled(settings) and settings.analyze_filed_data
+
+    def is_sek_needed(self, settings=None):
+        if not self.is_gstr1_api_enabled(settings):
             return False
 
         if not self.unfiled or self.filing_status != "Filed":
@@ -181,12 +185,9 @@ class GSTR1FiledLog(Document):
         return all(getattr(self, file_field) for file_field in file_fields)
 
     def get_applicable_file_fields(self, settings=None):
-        if not settings:
-            settings = frappe.get_cached_doc("GST Settings")
-
         fields = ["books", "books_summary"]
 
-        if settings.analyze_filed_data:
+        if self.is_gstr1_api_enabled(settings):
             fields.extend(["reconcile", "reconcile_summary"])
 
             if self.filing_status == "Filed":

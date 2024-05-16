@@ -145,7 +145,6 @@ class GSTR1Beta(Document):
             return
 
         self.gstr1_log = gstr1_log
-        self.settings = settings
 
         # generate gstr1
         gstr1_log.update_status("In Progress")
@@ -213,7 +212,7 @@ class GSTR1Beta(Document):
                 data[field] = summary_data
 
         # APIs Disabled
-        if not self.settings.analyze_filed_data:
+        if not self.gstr1_log.is_gstr1_api_enabled():
             books_data = compute_books_gstr1_data(self)
 
             data["status"] = "Not Filed"
