@@ -270,16 +270,18 @@ def validate_supply_liable_to(doc):
         and doc.supply_liable_to
     ):
         frappe.throw(
-            f"Enable Sales through E-commerce Operators in GST Settings to set Supply Liable to {doc.supply_liable_to}"
+            _(
+                "Enable Sales through E-commerce Operators in GST Settings to set Supply Liable to {0}"
+            ).format(doc.supply_liable_to)
         )
 
     if doc.supply_liable_to == "Reverse Charge u/s 9(5)" and not doc.is_reverse_charge:
         frappe.throw(
-            "Reverse Charge is not set for Supply Liable to Reverse Charge u/s 9(5)"
+            _("Reverse Charge is not set for Supply Liable to Reverse Charge u/s 9(5)")
         )
 
     if doc.supply_liable_to == "Collect Tax u/s 52" and doc.is_reverse_charge:
-        frappe.throw("Reverse Charge is set for Supply Liable to Collect Tax u/s 52")
+        frappe.throw(_("Reverse Charge is set for Supply Liable to Collect Tax u/s 52"))
 
 
 @frappe.whitelist()
