@@ -1,22 +1,22 @@
 frappe.provide("india_compliance");
 
 india_compliance.ViewGroup = class ViewGroup {
-	constructor(options) {
-		Object.assign(this, options);
-		this.views = {};
-		this.render();
-	}
+    constructor(options) {
+        Object.assign(this, options);
+        this.views = {};
+        this.render();
+    }
 
-	render() {
-		$(this.$wrapper).append(
-			`
+    render() {
+        $(this.$wrapper).append(
+            `
             <div class= "view-group">
                 <div class="view-switch"></div>
             </div>
             `
-		);
+        );
 
-		this.view_group_container = $(`
+        this.view_group_container = $(`
             <ul
                 class= "nav custom-tabs rounded-sm border d-inline-flex"
                 id = "custom-tabs"
@@ -24,19 +24,19 @@ india_compliance.ViewGroup = class ViewGroup {
             ></ul>
         `).appendTo(this.$wrapper.find(`.view-switch`));
 
-		this.make_views();
-		this.setup_events();
-	}
+        this.make_views();
+        this.setup_events();
+    }
 
-	set_active_view(view) {
-		this.active_view = view;
-		this.views[`${view}_view`].children().tab("show");
-	}
+    set_active_view(view) {
+        this.active_view = view;
+        this.views[`${view}_view`].children().tab("show");
+    }
 
-	make_views() {
-		this.view_names.forEach(view => {
-			this.views[`${view}_view`] = $(
-				`
+    make_views() {
+        this.view_names.forEach(view => {
+            this.views[`${view}_view`] = $(
+                `
                 <li class="nav-item show">
                     <a
                         class="nav-link ${this.active_view === view ? "active" : ""}"
@@ -52,18 +52,18 @@ india_compliance.ViewGroup = class ViewGroup {
                     </a>
                 </li>
             `
-			).appendTo(this.view_group_container);
-		});
-	}
+            ).appendTo(this.view_group_container);
+        });
+    }
 
-	setup_events() {
-		this.view_group_container.off("click").on("click", ".nav-link", e => {
-			e.preventDefault();
-			e.stopImmediatePropagation();
+    setup_events() {
+        this.view_group_container.off("click").on("click", ".nav-link", e => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
 
-			this.target = $(e.currentTarget);
-			const target_view = this.target.attr("data-fieldname");
-			this.callback && this.callback(this, target_view);
-		});
-	}
+            this.target = $(e.currentTarget);
+            const target_view = this.target.attr("data-fieldname");
+            this.callback && this.callback(this, target_view);
+        });
+    }
 }
