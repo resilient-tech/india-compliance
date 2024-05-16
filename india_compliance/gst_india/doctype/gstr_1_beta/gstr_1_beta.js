@@ -1359,7 +1359,7 @@ class BooksTab extends TabManager {
 
     download_books_as_excel() {
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_books_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_books_as_excel";
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
@@ -1518,7 +1518,7 @@ class FiledTab extends TabManager {
 
     download_filed_as_excel() {
         const url =
-            "india_compliance.gst_india.utils.gstr_1.gstr_1_export.export_gstr_1_to_excel";
+            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_filed_as_excel";
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
@@ -1544,7 +1544,7 @@ class FiledTab extends TabManager {
             const doc = me.instance.frm.doc;
 
             frappe.call({
-                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_gstr_1_json",
+                method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_gstr_1_json",
                 args: {
                     company_gstin: doc.company_gstin,
                     include_uploaded,
@@ -1756,9 +1756,8 @@ class ReconcileTab extends FiledTab {
     }
 
     download_reconcile_as_excel() {
-        console.log(this);
         const url =
-            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.download_reconcile_as_excel";
+            "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_reconcile_as_excel";
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
@@ -1983,7 +1982,7 @@ function render_empty_state(frm) {
 }
 
 async function get_output_gst_legder(frm) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_output_gst_balance",
             args: {

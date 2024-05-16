@@ -197,117 +197,116 @@ class GSTR1FiledLog(Document):
 
         return fields
 
-
-def summarize_data(data, for_books=False):
-    """
-    Helper function to summarize data for each sub-category
-    """
-    subcategory_summary = {}
-    AMOUNT_FIELDS = {
-        "total_taxable_value": 0,
-        "total_igst_amount": 0,
-        "total_cgst_amount": 0,
-        "total_sgst_amount": 0,
-        "total_cess_amount": 0,
-    }
-
-    # Sub-category wise
-    for subcategory in GSTR1_SubCategories:
-        subcategory = subcategory.value
-        if subcategory not in data:
-            continue
-
-        summary_row = subcategory_summary.setdefault(
-            subcategory,
-            {
-                "description": subcategory,
-                "no_of_records": 0,
-                "indent": 1,
-                "consider_in_total_taxable_value": (
-                    False
-                    if subcategory
-                    in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
-                    else True
-                ),
-                "consider_in_total_tax": (
-                    False
-                    if subcategory in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
-                    else True
-                ),
-                "unique_records": set(),
-                **AMOUNT_FIELDS,
-            },
-        )
-
-        _data = data[subcategory]
-        for row in _data:
-            if row.get("upload_status") == "Missing in Books":
-                continue
-
-            for key in AMOUNT_FIELDS:
-                summary_row[key] += row.get(key, 0)
-
-            if doc_num := row.get("document_number"):
-                summary_row["unique_records"].add(doc_num)
-
-            if subcategory == GSTR1_SubCategories.DOC_ISSUE.value:
-                count_doc_issue_summary(summary_row, row)
-
-            if subcategory == GSTR1_SubCategories.HSN.value:
-                count_hsn_summary(summary_row)
-
-    for subcategory in subcategory_summary.keys():
-        summary_row = subcategory_summary[subcategory]
-        count = len(summary_row["unique_records"])
-        if count:
-            summary_row["no_of_records"] = count
-
-        summary_row.pop("unique_records")
-
-    # Category wise
-    cateogory_summary = []
-    for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
-        # Init category row
-        category = category.value
-        summary_row = {
-            "description": category,
-            "no_of_records": 0,
-            "indent": 0,
-            **AMOUNT_FIELDS,
+    def summarize_data(self, data):
+        """
+        Helper function to summarize data for each sub-category
+        """
+        subcategory_summary = {}
+        AMOUNT_FIELDS = {
+            "total_taxable_value": 0,
+            "total_igst_amount": 0,
+            "total_cgst_amount": 0,
+            "total_sgst_amount": 0,
+            "total_cess_amount": 0,
         }
 
-        cateogory_summary.append(summary_row)
-        remove_category_row = True
-
-        for subcategory in sub_categories:
-            # update category row
+        # Sub-category wise
+        for subcategory in GSTR1_SubCategories:
             subcategory = subcategory.value
-            if subcategory not in subcategory_summary:
+            if subcategory not in data:
                 continue
 
-            subcategory_row = subcategory_summary[subcategory]
-            summary_row["no_of_records"] += subcategory_row["no_of_records"] or 0
+            summary_row = subcategory_summary.setdefault(
+                subcategory,
+                {
+                    "description": subcategory,
+                    "no_of_records": 0,
+                    "indent": 1,
+                    "consider_in_total_taxable_value": (
+                        False
+                        if subcategory
+                        in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE
+                        else True
+                    ),
+                    "consider_in_total_tax": (
+                        False
+                        if subcategory in SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX
+                        else True
+                    ),
+                    "unique_records": set(),
+                    **AMOUNT_FIELDS,
+                },
+            )
 
-            for key in AMOUNT_FIELDS:
-                summary_row[key] += subcategory_row[key]
+            _data = data[subcategory]
+            for row in _data:
+                if row.get("upload_status") == "Missing in Books":
+                    continue
 
-            # add subcategory row
-            cateogory_summary.append(subcategory_row)
-            remove_category_row = False
+                for key in AMOUNT_FIELDS:
+                    summary_row[key] += row.get(key, 0)
 
-        if not summary_row["no_of_records"]:
-            summary_row["no_of_records"] = ""
+                if doc_num := row.get("document_number"):
+                    summary_row["unique_records"].add(doc_num)
 
-        if remove_category_row:
-            cateogory_summary.remove(summary_row)
+                if subcategory == GSTR1_SubCategories.DOC_ISSUE.value:
+                    count_doc_issue_summary(summary_row, row)
 
-    # Round Values
-    for row in cateogory_summary:
-        for key, value in row.items():
-            if isinstance(value, (int, float)):
-                row[key] = flt(value, 2)
+                if subcategory == GSTR1_SubCategories.HSN.value:
+                    count_hsn_summary(summary_row)
 
-    return cateogory_summary
+        for subcategory in subcategory_summary.keys():
+            summary_row = subcategory_summary[subcategory]
+            count = len(summary_row["unique_records"])
+            if count:
+                summary_row["no_of_records"] = count
+
+            summary_row.pop("unique_records")
+
+        # Category wise
+        cateogory_summary = []
+        for category, sub_categories in CATEGORY_SUB_CATEGORY_MAPPING.items():
+            # Init category row
+            category = category.value
+            summary_row = {
+                "description": category,
+                "no_of_records": 0,
+                "indent": 0,
+                **AMOUNT_FIELDS,
+            }
+
+            cateogory_summary.append(summary_row)
+            remove_category_row = True
+
+            for subcategory in sub_categories:
+                # update category row
+                subcategory = subcategory.value
+                if subcategory not in subcategory_summary:
+                    continue
+
+                subcategory_row = subcategory_summary[subcategory]
+                summary_row["no_of_records"] += subcategory_row["no_of_records"] or 0
+
+                for key in AMOUNT_FIELDS:
+                    summary_row[key] += subcategory_row[key]
+
+                # add subcategory row
+                cateogory_summary.append(subcategory_row)
+                remove_category_row = False
+
+            if not summary_row["no_of_records"]:
+                summary_row["no_of_records"] = ""
+
+            if remove_category_row:
+                cateogory_summary.remove(summary_row)
+
+        # Round Values
+        for row in cateogory_summary:
+            for key, value in row.items():
+                if isinstance(value, (int, float)):
+                    row[key] = flt(value, 2)
+
+        return cateogory_summary
 
 
 def count_doc_issue_summary(summary_row, data_row):

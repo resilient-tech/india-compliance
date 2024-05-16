@@ -24,7 +24,7 @@ UNFILED_ACTIONS = [
     "NIL",
     "AT",
     "TXP",
-    "SUPECO",
+    # "SUPECO", # 403 Forbidden TODO: Check when this is active
 ]
 
 FILED_ACTIONS = [*UNFILED_ACTIONS, "HSNSUM", "DOCISS", "RETSUM"]
