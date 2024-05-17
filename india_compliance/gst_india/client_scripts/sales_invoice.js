@@ -54,22 +54,21 @@ frappe.ui.form.on(DOCTYPE, {
             10
         );
     },
-    supply_liable_to(frm) {
-        if (frm.doc.supply_liable_to && !gst_settings.enable_sales_through_ecommerce_operators) {
-            let supply_liable_to=frm.doc.supply_liable_to;
-            frm.set_value("supply_liable_to","")
-            frappe.throw(
-                __(
-                    "Enable Sales through E-commerce Operators in <a href='{0}'>GST Settings</a> to set Supply Liable to {1}",[frappe.utils.get_form_link("GST Settings","GST Settings"),supply_liable_to]
-                ),
-            );
-            return;
+
+    is_reverse_charge(frm) {
+        if (frm.doc.ecommerce_gstin) {
+            set_supply_liable_to(frm)
         }
-        if(frm.doc.supply_liable_to==="Reverse Charge u/s 9(5)"){
-            frm.set_value("is_reverse_charge",1)
+    },
+    ecommerce_gstin(frm) {
+        if (!frm.doc.ecommerce_gstin) {
+            frm.set_value("supply_liable_to", "")
+            frm.set_df_property("supply_liable_to", "hidden", 1)
+
         }
-        else{
-            frm.set_value("is_reverse_charge",0)
+        else {
+            frm.set_df_property("supply_liable_to", "hidden", 0)
+            set_supply_liable_to(frm)
         }
 
     }
@@ -130,4 +129,13 @@ async function _get_account_options(company) {
     }
 
     return frappe.flags.gst_accounts[company];
+}
+
+function set_supply_liable_to(frm) {
+    if (frm.doc.is_reverse_charge) {
+        frm.set_value("supply_liable_to", "Reverse Charge u/s 9(5)")
+    }
+    else {
+        frm.set_value("supply_liable_to", "Collect Tax u/s 52")
+    }
 }
