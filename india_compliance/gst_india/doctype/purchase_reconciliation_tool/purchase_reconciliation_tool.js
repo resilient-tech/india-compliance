@@ -1214,10 +1214,8 @@ class ImportDialog {
         });
 
         // TODO: modify HTML for case: company_gstin == "All"
-        if (!message || this.company_gstin == "All") return;
-        this.dialog.fields_dict.history.html(
-            frappe.render_template("gstr_download_history", message)
-        );
+        let html = (!message || this.company_gstin == "All") ? '' : frappe.render_template("gstr_download_history", message)
+        this.dialog.fields_dict.history.html(html);
     }
 
     async update_return_period() {
