@@ -144,71 +144,6 @@ class GovExcel:
                 "fieldname": f"_{GSTR1_DataFields.ECOMMERCE_GSTIN.value}",
             },
             {
-                "label": "Taxable Value",
-                "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
-                "data_format": self.AMOUNT_DATA_FORMAT,
-            },
-            {
-                "label": "Rate",
-                "fieldname": GSTR1_DataFields.TAX_RATE.value,
-                "data_format": self.PERCENTAGE_DATA_FORMAT,
-                "header_format": {
-                    "width": ExcelWidth.TAX_RATE.value,
-                },
-            },
-            {
-                "label": "Cess Amount",
-                "fieldname": GSTR1_ItemFields.CESS.value,
-                "data_format": self.AMOUNT_DATA_FORMAT,
-            },
-        ]
-
-    def get_exp_headers(self):
-        return [
-            {
-                "label": "Export Type",
-                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
-            },
-            {
-                "label": "Invoice Number",
-                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
-                "header_format": {
-                    "width": ExcelWidth.INVOICE_NUMBER.value,
-                },
-            },
-            {
-                "label": "Invoice date",
-                "fieldname": GSTR1_DataFields.DOC_DATE.value,
-                "data_format": self.DATE_FORMAT,
-                "header_format": {
-                    "width": ExcelWidth.DATE.value,
-                },
-            },
-            {
-                "label": "Invoice Value",
-                "fieldname": GSTR1_DataFields.DOC_VALUE.value,
-                "data_format": self.AMOUNT_DATA_FORMAT,
-            },
-            {
-                "label": "Port Code",
-                "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE.value,
-            },
-            {
-                "label": "Shipping Bill Number",
-                "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
-                "header_format": {
-                    "width": ExcelWidth.INVOICE_NUMBER.value,
-                },
-            },
-            {
-                "label": "Shipping Bill Date",
-                "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
-                "data_format": self.DATE_FORMAT,
-                "header_format": {
-                    "width": ExcelWidth.DATE.value,
-                },
-            },
-            {
                 "label": "Rate",
                 "fieldname": GSTR1_DataFields.TAX_RATE.value,
                 "data_format": self.PERCENTAGE_DATA_FORMAT,
@@ -333,29 +268,6 @@ class GovExcel:
                 "label": "E-Commerce GSTIN",
                 # Ignore value, just keep the column
                 "fieldname": f"_{GSTR1_DataFields.ECOMMERCE_GSTIN.value}",
-            },
-        ]
-
-    def get_nil_headers(self):
-        return [
-            {
-                "label": "Description",
-                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
-            },
-            {
-                "label": "Nil Rated Supplies",
-                "fieldname": GSTR1_DataFields.NIL_RATED_AMOUNT.value,
-                "data_format": self.AMOUNT_DATA_FORMAT,
-            },
-            {
-                "label": "Exempted(other than nil rated/non GST supply)",
-                "fieldname": GSTR1_DataFields.EXEMPTED_AMOUNT.value,
-                "data_format": self.AMOUNT_DATA_FORMAT,
-            },
-            {
-                "label": "Non-GST Supplies",
-                "fieldname": GSTR1_DataFields.NON_GST_AMOUNT.value,
-                "data_format": self.AMOUNT_DATA_FORMAT,
             },
         ]
 
@@ -511,6 +423,71 @@ class GovExcel:
             },
         ]
 
+    def get_exp_headers(self):
+        return [
+            {
+                "label": "Export Type",
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+            },
+            {
+                "label": "Invoice Number",
+                "fieldname": GSTR1_DataFields.DOC_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
+            },
+            {
+                "label": "Invoice date",
+                "fieldname": GSTR1_DataFields.DOC_DATE.value,
+                "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
+            },
+            {
+                "label": "Invoice Value",
+                "fieldname": GSTR1_DataFields.DOC_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+            {
+                "label": "Port Code",
+                "fieldname": GSTR1_DataFields.SHIPPING_PORT_CODE.value,
+            },
+            {
+                "label": "Shipping Bill Number",
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_NUMBER.value,
+                "header_format": {
+                    "width": ExcelWidth.INVOICE_NUMBER.value,
+                },
+            },
+            {
+                "label": "Shipping Bill Date",
+                "fieldname": GSTR1_DataFields.SHIPPING_BILL_DATE.value,
+                "data_format": self.DATE_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DATE.value,
+                },
+            },
+            {
+                "label": "Rate",
+                "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
+            },
+            {
+                "label": "Taxable Value",
+                "fieldname": GSTR1_ItemFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+            {
+                "label": "Cess Amount",
+                "fieldname": GSTR1_ItemFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+        ]
+
     def get_at_headers(self):
         return [
             {
@@ -549,7 +526,64 @@ class GovExcel:
         ]
 
     def get_txpd_headers(self):
-        return self.get_at_headers()
+        return [
+            {
+                "label": "Place Of Supply",
+                "fieldname": GSTR1_DataFields.POS.value,
+                "header_format": {
+                    "width": ExcelWidth.POS.value,
+                },
+            },
+            {
+                "label": "Applicable % of Tax Rate",
+                "fieldname": GSTR1_DataFields.DIFF_PERCENTAGE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.DIFF_PERCENTAGE.value,
+                },
+            },
+            {
+                "label": "Rate",
+                "fieldname": GSTR1_DataFields.TAX_RATE.value,
+                "data_format": self.PERCENTAGE_DATA_FORMAT,
+                "header_format": {
+                    "width": ExcelWidth.TAX_RATE.value,
+                },
+            },
+            {
+                "label": "Gross Advance Adjusted",
+                "fieldname": GSTR1_DataFields.TAXABLE_VALUE.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+            {
+                "label": "Cess Amount",
+                "fieldname": GSTR1_DataFields.CESS.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+        ]
+
+    def get_nil_headers(self):
+        return [
+            {
+                "label": "Description",
+                "fieldname": GSTR1_DataFields.DOC_TYPE.value,
+            },
+            {
+                "label": "Nil Rated Supplies",
+                "fieldname": GSTR1_DataFields.NIL_RATED_AMOUNT.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+            {
+                "label": "Exempted(other than nil rated/non GST supply)",
+                "fieldname": GSTR1_DataFields.EXEMPTED_AMOUNT.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+            {
+                "label": "Non-GST Supplies",
+                "fieldname": GSTR1_DataFields.NON_GST_AMOUNT.value,
+                "data_format": self.AMOUNT_DATA_FORMAT,
+            },
+        ]
 
     def get_hsn_headers(self):
         return [

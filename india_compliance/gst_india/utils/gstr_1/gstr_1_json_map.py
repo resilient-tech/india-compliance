@@ -520,15 +520,16 @@ class B2CS(GovDataMapper):
         for invoice in input_data:
             invoice_data = self.format_data(invoice)
 
-            output[
+            output.setdefault(
                 " - ".join(
                     (
                         invoice_data.get(GSTR1_DataFields.POS.value, ""),
                         str(flt(invoice_data.get(GSTR1_DataFields.TAX_RATE.value, ""))),
                         # invoice_data.get(GSTR1_DataFields.ECOMMERCE_GSTIN.value, ""),
                     )
-                )
-            ] = [invoice_data]
+                ),
+                [],
+            ).append(invoice_data)
 
         return {self.SUBCATEGORY: output}
 

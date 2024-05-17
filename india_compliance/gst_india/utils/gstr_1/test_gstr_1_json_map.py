@@ -41,7 +41,6 @@ class TestB2B(FrappeTestCase):
                         GovDataFields.DOC_VALUE.value: 729248.16,
                         GovDataFields.POS.value: "06",
                         GovDataFields.REVERSE_CHARGE.value: "N",
-                        GovDataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                         GovDataFields.INVOICE_TYPE.value: "R",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
@@ -75,7 +74,6 @@ class TestB2B(FrappeTestCase):
                         GovDataFields.DOC_VALUE.value: 729248.16,
                         GovDataFields.POS.value: "06",
                         GovDataFields.REVERSE_CHARGE.value: "Y",
-                        GovDataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                         GovDataFields.INVOICE_TYPE.value: "R",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
@@ -103,7 +101,6 @@ class TestB2B(FrappeTestCase):
                         GovDataFields.DOC_VALUE.value: 729248.16,
                         GovDataFields.POS.value: "06",
                         GovDataFields.REVERSE_CHARGE.value: "N",
-                        GovDataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                         GovDataFields.INVOICE_TYPE.value: "SEWP",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
@@ -126,7 +123,6 @@ class TestB2B(FrappeTestCase):
                         GovDataFields.DOC_VALUE.value: 729248.16,
                         GovDataFields.POS.value: "06",
                         GovDataFields.REVERSE_CHARGE.value: "N",
-                        GovDataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                         GovDataFields.INVOICE_TYPE.value: "DE",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
@@ -158,7 +154,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DOC_VALUE.value: 729248.16,
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "N",
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                     GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.R.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
@@ -197,7 +192,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DOC_VALUE.value: 729248.16,
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "Y",
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                     GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.R.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
@@ -228,7 +222,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DOC_VALUE.value: 729248.16,
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "N",
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                     GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.SEWP.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
@@ -259,7 +252,6 @@ class TestB2B(FrappeTestCase):
                     GSTR1_DataFields.DOC_VALUE.value: 729248.16,
                     GSTR1_DataFields.POS.value: "06-Haryana",
                     GSTR1_DataFields.REVERSE_CHARGE.value: "N",
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
                     GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.DE.value,
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
@@ -302,7 +294,6 @@ class TestB2CL(FrappeTestCase):
                         GovDataFields.DOC_NUMBER.value: "92661",
                         GovDataFields.DOC_DATE.value: "10-01-2016",
                         GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
                             {
@@ -329,7 +320,6 @@ class TestB2CL(FrappeTestCase):
                         GovDataFields.DOC_NUMBER.value: "92662",
                         GovDataFields.DOC_DATE.value: "10-01-2016",
                         GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
                             {
@@ -352,7 +342,6 @@ class TestB2CL(FrappeTestCase):
                         GovDataFields.DOC_NUMBER.value: "92663",
                         GovDataFields.DOC_DATE.value: "10-01-2016",
                         GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
                             {
@@ -379,7 +368,6 @@ class TestB2CL(FrappeTestCase):
                         GovDataFields.DOC_NUMBER.value: "92664",
                         GovDataFields.DOC_DATE.value: "10-01-2016",
                         GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                         GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                         GovDataFields.ITEMS.value: [
                             {
@@ -404,7 +392,6 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DOC_NUMBER.value: "92661",
                     GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
                     GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
@@ -430,7 +417,6 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DOC_NUMBER.value: "92662",
                     GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
                     GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
@@ -450,7 +436,6 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DOC_NUMBER.value: "92663",
                     GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
                     GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
@@ -476,7 +461,6 @@ class TestB2CL(FrappeTestCase):
                     GSTR1_DataFields.DOC_NUMBER.value: "92664",
                     GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
                     GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "27AHQPA8875L1CU",
                     GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                     GSTR1_DataFields.ITEMS.value: [
                         {
@@ -615,8 +599,7 @@ class TestB2CS(FrappeTestCase):
                 GovDataFields.SUPPLY_TYPE.value: "INTER",
                 GovDataFields.DIFF_PERCENTAGE.value: 0.65,
                 GovDataFields.TAX_RATE.value: 5,
-                GovDataFields.TYPE.value: "E",
-                GovDataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
+                GovDataFields.TYPE.value: "OE",
                 GovDataFields.POS.value: "05",
                 GovDataFields.TAXABLE_VALUE.value: 110,
                 GovDataFields.IGST.value: 10,
@@ -634,16 +617,15 @@ class TestB2CS(FrappeTestCase):
                 GovDataFields.CGST.value: 0,
                 GovDataFields.SGST.value: 0,
                 GovDataFields.CESS.value: 10,
-                GovDataFields.POS.value: "05",
+                GovDataFields.POS.value: "06",
             },
         ]
         cls.mapped_data = {
             GSTR1_SubCategories.B2CS.value: {
-                "05-Uttarakhand - 5.0 - 01AABCE5507R1C4": [
+                "05-Uttarakhand - 5.0": [
                     {
                         GSTR1_DataFields.TAXABLE_VALUE.value: 110,
-                        GSTR1_DataFields.DOC_TYPE.value: "E",
-                        GSTR1_DataFields.ECOMMERCE_GSTIN.value: "01AABCE5507R1C4",
+                        GSTR1_DataFields.DOC_TYPE.value: "OE",
                         GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
                         GSTR1_DataFields.POS.value: "05-Uttarakhand",
                         GSTR1_DataFields.TAX_RATE.value: 5,
@@ -653,12 +635,12 @@ class TestB2CS(FrappeTestCase):
                         GSTR1_DataFields.SGST.value: 0,
                     },
                 ],
-                "05-Uttarakhand - 5.0 - ": [
+                "06-Haryana - 5.0": [
                     {
                         GSTR1_DataFields.TAXABLE_VALUE.value: 100,
                         GSTR1_DataFields.DOC_TYPE.value: "OE",
                         GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GSTR1_DataFields.POS.value: "05-Uttarakhand",
+                        GSTR1_DataFields.POS.value: "06-Haryana",
                         GSTR1_DataFields.TAX_RATE.value: 5,
                         GSTR1_DataFields.IGST.value: 10,
                         GSTR1_DataFields.CESS.value: 10,
@@ -909,7 +891,7 @@ class TestHSNSUM(FrappeTestCase):
                 },
                 {
                     GovDataFields.INDEX.value: 2,
-                    GovDataFields.HSN_CODE.value: "999512",
+                    GovDataFields.HSN_CODE.value: "1011",
                     GovDataFields.DESCRIPTION.value: "Goods Description",
                     GovDataFields.UOM.value: "NOS",
                     GovDataFields.QUANTITY.value: 2.05,
@@ -933,8 +915,8 @@ class TestHSNSUM(FrappeTestCase):
                     GSTR1_DataFields.CESS.value: 500,
                     GSTR1_DataFields.TAX_RATE.value: 0.1,
                 },
-                "999512 - NOS-NUMBERS - 5.0": {
-                    GSTR1_DataFields.HSN_CODE.value: "999512",
+                "1011 - NOS-NUMBERS - 5.0": {
+                    GSTR1_DataFields.HSN_CODE.value: "1011",
                     GSTR1_DataFields.DESCRIPTION.value: "Goods Description",
                     GSTR1_DataFields.UOM.value: "NOS-NUMBERS",
                     GSTR1_DataFields.QUANTITY.value: 2.05,
