@@ -146,7 +146,6 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             doctype="Purchase Reconciliation Tool",
         )
 
-        # TODO: skip if today is not greater than 14th return period's next months
         response = api.get_data(return_period, otp)
         if response.error_type in ["otp_requested", "invalid_otp"]:
             return response
