@@ -4,7 +4,6 @@ from collections import defaultdict
 import frappe
 from frappe import _, bold
 from frappe.utils import cint, flt, format_date
-from frappe.utils.data import get_link_to_form
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -265,35 +264,6 @@ def get_applicable_gst_accounts(
             all_gst_accounts.add(account_name)
 
     return all_gst_accounts, applicable_gst_accounts
-
-
-def validate_supply_liable_to(doc):
-    gst_settings = frappe.get_cached_doc("GST Settings")
-
-    if (
-        gst_settings.enable_sales_through_ecommerce_operators
-        and doc.ecommerce_gstin
-        and not doc.supply_liable_to
-    ):
-        frappe.throw(_("Please select Supply Liable to for E-commerce Transaction"))
-
-    if (
-        not gst_settings.enable_sales_through_ecommerce_operators
-        and doc.supply_liable_to
-    ):
-        frappe.throw(
-            _(
-                "Enable Sales through E-commerce Operators in {0} to set Supply Liable to {1}"
-            ).format(get_link_to_form("GST Settings"), doc.supply_liable_to)
-        )
-
-    if doc.supply_liable_to == "Reverse Charge u/s 9(5)" and not doc.is_reverse_charge:
-        frappe.throw(
-            _("Reverse Charge is not set for Supply Liable to Reverse Charge u/s 9(5)")
-        )
-
-    if doc.supply_liable_to == "Collect Tax u/s 52" and doc.is_reverse_charge:
-        frappe.throw(_("Reverse Charge is set for Supply Liable to Collect Tax u/s 52"))
 
 
 @frappe.whitelist()
@@ -1545,7 +1515,6 @@ def validate_transaction(doc, method=None):
     validate_ecommerce_gstin(doc)
 
     validate_gst_category(doc.gst_category, gstin)
-    validate_supply_liable_to(doc)
     valid_accounts = validate_gst_accounts(doc, is_sales_transaction) or ()
     update_taxable_values(doc, valid_accounts)
     validate_item_wise_tax_detail(doc, valid_accounts)

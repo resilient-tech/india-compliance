@@ -1,23 +1,6 @@
-const DOCTYPE = "Delivery Note";
-setup_e_waybill_actions(DOCTYPE);
+const DOCTYPE = "Sales Order";
 
 frappe.ui.form.on(DOCTYPE, {
-    refresh(frm) {
-        if (!gst_settings.enable_e_waybill || !gst_settings.enable_e_waybill_from_dn)
-            return;
-        show_sandbox_mode_indicator();
-    },
-
-    after_save(frm) {
-        if (is_e_waybill_applicable(frm) && !is_e_waybill_generatable(frm))
-            frappe.show_alert(
-                {
-                    message: __("Billing Address is required to create e-Waybill"),
-                    indicator: "yellow",
-                },
-                10
-            );
-    },
     is_reverse_charge(frm) {
         if (frm.doc.ecommerce_gstin) {
             set_supply_liable_to(frm)
@@ -35,7 +18,7 @@ frappe.ui.form.on(DOCTYPE, {
         }
 
     }
-});
+})
 
 function set_supply_liable_to(frm) {
     if (frm.doc.is_reverse_charge) {
