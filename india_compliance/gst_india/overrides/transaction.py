@@ -4,6 +4,7 @@ from collections import defaultdict
 import frappe
 from frappe import _, bold
 from frappe.utils import cint, flt, format_date
+from frappe.utils.data import get_link_to_form
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import (
     get_itemised_tax,
@@ -270,13 +271,20 @@ def validate_supply_liable_to(doc):
     gst_settings = frappe.get_cached_doc("GST Settings")
 
     if (
+        gst_settings.enable_sales_through_ecommerce_operators
+        and doc.ecommerce_gstin
+        and not doc.supply_liable_to
+    ):
+        frappe.throw(_("Please select Supply Liable to for E-commerce Transaction"))
+
+    if (
         not gst_settings.enable_sales_through_ecommerce_operators
         and doc.supply_liable_to
     ):
         frappe.throw(
             _(
-                "Enable Sales through E-commerce Operators in GST Settings to set Supply Liable to {0}"
-            ).format(doc.supply_liable_to)
+                "Enable Sales through E-commerce Operators in {0} to set Supply Liable to {1}"
+            ).format(get_link_to_form("GST Settings"), doc.supply_liable_to)
         )
 
     if doc.supply_liable_to == "Reverse Charge u/s 9(5)" and not doc.is_reverse_charge:

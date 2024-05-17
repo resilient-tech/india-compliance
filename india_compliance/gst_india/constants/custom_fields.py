@@ -230,7 +230,7 @@ CUSTOM_FIELDS = {
             "label": "Supply Liable to",
             "fieldtype": "Select",
             "options": "\nCollect Tax u/s 52\nReverse Charge u/s 9(5)",
-            "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators",
+            "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators && doc.ecommerce_gstin",
             "insert_after": "ecommerce_gstin",
             "print_hide": 1,
             "translatable": 0,

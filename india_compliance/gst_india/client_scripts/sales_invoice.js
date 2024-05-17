@@ -60,7 +60,7 @@ frappe.ui.form.on(DOCTYPE, {
             frm.set_value("supply_liable_to","")
             frappe.throw(
                 __(
-                    "Enable Sales through E-commerce Operators in GST Settings to set Supply Liable to {0}",[supply_liable_to]
+                    "Enable Sales through E-commerce Operators in <a href='{0}'>GST Settings</a> to set Supply Liable to {1}",[frappe.utils.get_form_link("GST Settings","GST Settings"),supply_liable_to]
                 ),
             );
             return;
