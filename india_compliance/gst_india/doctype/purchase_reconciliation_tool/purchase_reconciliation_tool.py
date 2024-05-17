@@ -854,6 +854,7 @@ class BuildExcel:
             prefix="inward_supply",
         )
 
+        # remove special characters (not allowed in excel sheet name)
         self.supplier_name = re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name"))
         self.supplier_gstin = data[0].get("supplier_gstin")
 
