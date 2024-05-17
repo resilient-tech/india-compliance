@@ -202,12 +202,16 @@ frappe.ui.form.on(DOCTYPE, {
 
     async after_save(frm) {
         const data = frm.doc.__onload?.data;
-        if (data == "otp_requested") {
+        if (!frm._otp_requested && data == "otp_requested") {
+            frm._otp_requested = true;
+
             india_compliance
                 .authenticate_otp(frm.doc.company_gstin)
                 .then(() => frm.save());
             return;
         }
+
+        frm._otp_requested = false;
 
         if (!data?.status) return;
         frm.gstr1.status = data.status;
@@ -1982,7 +1986,7 @@ function render_empty_state(frm) {
 }
 
 async function get_output_gst_legder(frm) {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
         frappe.call({
             method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_output_gst_balance",
             args: {
