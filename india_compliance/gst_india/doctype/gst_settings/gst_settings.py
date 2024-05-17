@@ -13,6 +13,7 @@ from india_compliance.gst_india.constants.custom_fields import (
     E_WAYBILL_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
+from india_compliance.gst_india.doctype.gstin.gstin import get_gstr_1_filed_upto
 from india_compliance.gst_india.page.india_compliance_account import (
     _disable_api_promo,
     post_login,
@@ -423,7 +424,12 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
     if not gst_settings.restrict_changes_after_gstr_1:
         restrict = False
 
-    if posting_date > getdate(gst_settings.gstr_1_filed_upto):
+    gstr_1_filed_upto = get_gstr_1_filed_upto(company_gstin)
+
+    if not gstr_1_filed_upto:
+        return False
+
+    if posting_date > getdate(gstr_1_filed_upto):
         restrict = False
 
     if (
@@ -433,7 +439,12 @@ def restrict_gstr_1_transaction_for(posting_date, company_gstin, gst_settings=No
         restrict = False
 
     if restrict:
-        return gst_settings.gstr_1_filed_upto
+        return gstr_1_filed_upto
+
+    frappe.msgprint(
+        _("You are modifying transaction after the GSTR-1 is filed for the period."),
+        indicator="yellow",
+    )
 
     update_is_not_latest_gstr1_data(posting_date, company_gstin)
 

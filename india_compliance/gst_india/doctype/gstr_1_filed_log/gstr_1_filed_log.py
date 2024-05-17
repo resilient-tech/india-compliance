@@ -337,13 +337,17 @@ def process_gstr_1_returns_info(company, gstin, response):
         )
     )
 
-    existing_gstr_1_filed_upto = getdate(
-        frappe.get_cached_value("GST Settings", None, "gstr_1_filed_upto")
-    )
+    # update gstr-1 filed upto
+    gstin_doc = frappe.get_doc("GSTIN", gstin)
+    if not gstin_doc:
+        gstin_doc = frappe.new_doc("GSTIN", gstin=gstin, status="Active")
 
     def _update_gstr_1_filed_upto(filing_date):
-        if not existing_gstr_1_filed_upto or filing_date > existing_gstr_1_filed_upto:
-            frappe.db.set_value("GST Settings", None, "gstr_1_filed_upto", filing_date)
+        if not gstin_doc.gstr_1_filed_upto or filing_date > getdate(
+            gstin_doc.gstr_1_filed_upto
+        ):
+            gstin_doc.gstr_1_filed_upto = filing_date
+            gstin_doc.save()
 
     # create or update filed logs
     for key, info in return_info.items():
