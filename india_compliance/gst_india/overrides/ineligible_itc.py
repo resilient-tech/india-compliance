@@ -318,7 +318,7 @@ class IneligibleITC:
             },
             {
                 "gross_purchase_amount": flt(item.valuation_rate),
-                "purchase_receipt_amount": flt(item.valuation_rate),
+                "purchase_amount": flt(item.valuation_rate),
             },
         )
 
