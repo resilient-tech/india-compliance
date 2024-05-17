@@ -1736,7 +1736,6 @@ class UnfiledTab extends FiledTab {
 
     set_default_title() {
         this.DEFAULT_TITLE = "Summary of Invoices as on Portal";
-        this.DEFAULT_SUBTITLE = "Excluding B2CS, Nil-Exempt";
         TabManager.prototype.set_default_title.call(this);
     }
 }

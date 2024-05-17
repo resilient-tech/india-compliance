@@ -332,13 +332,13 @@ def process_gstr_1_returns_info(company, gstin, response):
         frappe.get_all(
             "GSTR-1 Filed Log",
             filters={"name": ("in", list(return_info.keys()))},
-            fields=["name", "filing_status"],
+            fields=["name", "acknowledgement_number"],
             as_list=1,
         )
     )
 
-    existing_gstr_1_filed_upto = frappe.get_cached_value(
-        "GST Settings", None, "gstr_1_filed_upto"
+    existing_gstr_1_filed_upto = getdate(
+        frappe.get_cached_value("GST Settings", None, "gstr_1_filed_upto")
     )
 
     def _update_gstr_1_filed_upto(filing_date):
@@ -358,7 +358,7 @@ def process_gstr_1_returns_info(company, gstin, response):
         )
 
         if key in filed_logs:
-            if filed_logs[key] != info["status"]:
+            if filed_logs[key] != info["arn"]:
                 frappe.db.set_value("GSTR-1 Filed Log", key, filing_details)
                 _update_gstr_1_filed_upto(filed_upto)
 

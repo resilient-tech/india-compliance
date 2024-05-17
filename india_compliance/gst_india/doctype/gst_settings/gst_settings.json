@@ -595,7 +595,7 @@
    "fieldname": "role_allowed_to_modify",
    "fieldtype": "Link",
    "label": "Role Allowed to Modify Transactions",
-   "options": "User Role Profile"
+   "options": "Role"
   },
   {
    "fieldname": "gstr_1_filed_upto",
@@ -615,7 +615,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-05-03 15:45:20.672133",
+ "modified": "2024-05-17 13:18:44.278312",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GST Settings",

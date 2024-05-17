@@ -1,6 +1,6 @@
 {
  "actions": [],
- "allow_rename": 1,
+ "beta": 1,
  "creation": "2024-03-27 17:59:36.078726",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -89,7 +89,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-04-18 11:48:42.958572",
+ "modified": "2024-05-17 14:27:48.772651",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",
@@ -97,12 +97,30 @@
  "permissions": [
   {
    "create": 1,
-   "delete": 1,
-   "email": 1,
-   "print": 1,
+   "export": 1,
    "read": 1,
    "role": "System Manager",
-   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "role": "Accounts Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "role": "Accounts User",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "read": 1,
+   "role": "Auditor",
    "write": 1
   }
  ],
