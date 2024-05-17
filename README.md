@@ -1,7 +1,6 @@
 <div align="center">
 
-<!-- TODO: add link to website once it is ready -->
-<h1>India Compliance</h1>
+<h1><a href="https://indiacompliance.app">India Compliance</a></h1>
 
 Simple, yet powerful compliance solutions for Indian businesses
 

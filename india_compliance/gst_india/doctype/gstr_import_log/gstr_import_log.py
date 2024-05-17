@@ -49,7 +49,6 @@ def _create_import_log(
         "return_period": return_period,
     }
 
-    # TODO: change classification to gstr_category
     if classification:
         fields["classification"] = classification
 

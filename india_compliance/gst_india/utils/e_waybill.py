@@ -1204,7 +1204,6 @@ class EWaybillData(GSTTransactionData):
         return extension_details
 
     def validate_transaction(self):
-        # TODO: Add Support for Delivery Note
 
         super().validate_transaction()
 

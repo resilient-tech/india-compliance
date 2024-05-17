@@ -97,7 +97,6 @@ def validate_state(doc):
             title=_("Invalid State"),
         )
 
-    # TODO: deprecate these fields
     doc.gst_state = doc.state
     doc.gst_state_number = STATE_NUMBERS[doc.state]
 
