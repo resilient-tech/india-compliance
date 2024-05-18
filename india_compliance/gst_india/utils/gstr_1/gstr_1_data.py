@@ -15,10 +15,6 @@ from india_compliance.gst_india.utils.gstr_1 import (
     GSTR1_SubCategories,
 )
 
-"""
-Compile data as per books of accounts for GSTR-1
-"""
-
 B2C_LIMIT = 2_50_000
 
 CATEGORY_CONDITIONS = {

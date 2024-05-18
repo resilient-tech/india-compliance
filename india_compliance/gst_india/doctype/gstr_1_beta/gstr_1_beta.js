@@ -735,7 +735,7 @@ class TabManager {
                 hooks: {
                     columnTotal: (_, row) => {
                         if (this.instance.active_view !== "Summary")
-                            return;
+                            return null;
 
                         if (row.colIndex === 1)
                             return (row.content = "Total Liability");

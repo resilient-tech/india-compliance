@@ -26,8 +26,8 @@ div[data-page-route="GSTR-1 Beta"]
     [data-fieldname="tabs_html"]
     .form-tabs-list
     .inner-group-button,
-.filter-selector,
-.view-group {
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .filter-selector,
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .view-group {
     margin-bottom: 8px;
     margin-left: 8px;
 }
@@ -75,16 +75,6 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] > img {
     max-height: 100px;
 }
 
-div[data-page-route="GSTR-1 Beta"] .books_view_group,
-.reconcile_view_group,
-.filed_view_group {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: var(--margin-md);
-}
-
 div[data-page-route="GSTR-1 Beta"] .tab-actions {
     display: flex;
     flex-direction: row;
@@ -97,45 +87,46 @@ div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
     margin-right: -15px;
 }
 
-.custom-tabs > .nav-item > .nav-link {
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link {
     padding: 4px 8px;
 }
 
-.custom-tabs > .nav-item > .nav-link.active {
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active {
     background-color: #e2e2e2;
     color: var(--primary);
 }
-.custom-tabs > .nav-item:first-child:hover {
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:first-child:hover {
     background-color: var(--btn-default-hover-bg);
     border-radius: 0.4rem 0 0 0.4rem;
     color: var(--text-color);
 }
 
-.custom-tabs > .nav-item:last-child:hover {
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:last-child:hover {
     background-color: var(--btn-default-hover-bg);
     border-radius: 0 0.4rem 0.4rem 0;
     color: var(--text-color);
 }
 
-.custom-tabs > .nav-item > .nav-link.active:hover {
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active:hover {
     background-color: #ededed;
     color: var(--primary);
 }
 
-.custom-tabs > .nav-item:first-child > .nav-link {
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:first-child > .nav-link {
     border-radius: 0.4rem 0 0 0.4rem;
 }
 
-.custom-tabs > .nav-item:last-child > .nav-link {
+div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:last-child > .nav-link {
     border-radius: 0 0.4rem 0.4rem 0;
 }
 
-.reconcile-row {
+div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_html"] .reconcile-row {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
 }
+
 .not-matched {
     color: red;
 }

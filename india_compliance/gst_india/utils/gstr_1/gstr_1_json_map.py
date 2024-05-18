@@ -785,9 +785,10 @@ class CDNR(GovDataMapper):
 
         return formatted_items
 
-    def format_item_wise_internal_data(self, items, data):
-        formatted_items = super().format_item_wise_internal_data(items)
+    def format_item_wise_internal_data(self, items, *args):
+        formatted_items = super().format_item_wise_internal_data(items, *args)
 
+        data = args[0]
         if data[GSTR1_DataFields.TRANSACTION_TYPE.value] == "Debit Note":
             return formatted_items
 
@@ -902,9 +903,10 @@ class CDNUR(GovDataMapper):
 
         return formatted_items
 
-    def format_item_wise_internal_data(self, items, data):
-        formatted_items = super().format_item_wise_internal_data(items)
+    def format_item_wise_internal_data(self, items, *args):
+        formatted_items = super().format_item_wise_internal_data(items, *args)
 
+        data = args[0]
         if data[GSTR1_DataFields.TRANSACTION_TYPE.value] == "Debit Note":
             return formatted_items
 
