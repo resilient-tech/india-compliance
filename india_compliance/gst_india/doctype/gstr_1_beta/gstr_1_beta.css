@@ -26,7 +26,8 @@ div[data-page-route="GSTR-1 Beta"]
     [data-fieldname="tabs_html"]
     .form-tabs-list
     .inner-group-button,
-.filter-selector, .view-group{
+.filter-selector,
+.view-group {
     margin-bottom: 8px;
     margin-left: 8px;
 }
@@ -74,7 +75,6 @@ div[data-page-route="GSTR-1 Beta"] [data-fieldname="tabs_no_data"] > img {
     max-height: 100px;
 }
 
-
 div[data-page-route="GSTR-1 Beta"] .books_view_group,
 .reconcile_view_group,
 .filed_view_group {
@@ -105,20 +105,23 @@ div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
     background-color: #e2e2e2;
     color: var(--primary);
 }
-.custom-tabs > .nav-item:first-child:hover{
+.custom-tabs > .nav-item:first-child:hover {
     background-color: var(--btn-default-hover-bg);
     border-radius: 0.4rem 0 0 0.4rem;
     color: var(--text-color);
 }
-.custom-tabs > .nav-item:last-child:hover{
+
+.custom-tabs > .nav-item:last-child:hover {
     background-color: var(--btn-default-hover-bg);
     border-radius: 0 0.4rem 0.4rem 0;
     color: var(--text-color);
 }
-.custom-tabs > .nav-item> .nav-link.active:hover{
+
+.custom-tabs > .nav-item > .nav-link.active:hover {
     background-color: #ededed;
     color: var(--primary);
 }
+
 .custom-tabs > .nav-item:first-child > .nav-link {
     border-radius: 0.4rem 0 0 0.4rem;
 }
@@ -127,13 +130,12 @@ div[data-page-route="GSTR-1 Beta"] .frappe-control [data-fieldtype="HTML"] {
     border-radius: 0 0.4rem 0.4rem 0;
 }
 
-
-.reconcile-row{
+.reconcile-row {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
 }
-.not-matched{
+.not-matched {
     color: red;
 }

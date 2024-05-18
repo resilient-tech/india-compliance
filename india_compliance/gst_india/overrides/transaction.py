@@ -12,6 +12,9 @@ from india_compliance.gst_india.constants import (
     STATE_NUMBERS,
 )
 from india_compliance.gst_india.constants.custom_fields import E_WAYBILL_INV_FIELDS
+from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
+    restrict_gstr_1_transaction_for,
+)
 from india_compliance.gst_india.doctype.gstin.gstin import (
     _validate_gst_transporter_id_info,
     _validate_gstin_info,
@@ -31,9 +34,6 @@ from india_compliance.gst_india.utils import (
 )
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
-)
-from india_compliance.gst_india.doctype.gst_settings.gst_settings import (
-    restrict_gstr_1_transaction_for,
 )
 
 DOCTYPES_WITH_GST_DETAIL = {

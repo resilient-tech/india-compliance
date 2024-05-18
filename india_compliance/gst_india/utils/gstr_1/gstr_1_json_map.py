@@ -766,9 +766,10 @@ class CDNR(GovDataMapper):
 
         return list(customer_data.values())
 
-    def format_item_wise_json_data(self, items, data):
-        formatted_items = super().format_item_wise_json_data(items)
+    def format_item_wise_json_data(self, items, *args):
+        formatted_items = super().format_item_wise_json_data(items, *args)
 
+        data = args[0]
         if data[GovDataFields.NOTE_TYPE.value] == "D":
             return formatted_items
 
@@ -882,9 +883,10 @@ class CDNUR(GovDataMapper):
         input_data = list(input_data[self.SUBCATEGORY].values())
         return [self.format_data(invoice, reverse=True) for invoice in input_data]
 
-    def format_item_wise_json_data(self, items, data):
-        formatted_items = super().format_item_wise_json_data(items)
+    def format_item_wise_json_data(self, items, *args):
+        formatted_items = super().format_item_wise_json_data(items, *args)
 
+        data = args[0]
         if data[GovDataFields.NOTE_TYPE.value] == "D":
             return formatted_items
 

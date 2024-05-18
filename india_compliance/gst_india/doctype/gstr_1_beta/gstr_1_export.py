@@ -879,9 +879,8 @@ class BooksExcel:
                 continue
 
             for row in values:
-                dict = row
                 for item in row["items"]:
-                    category_data.extend([{**dict, **item}])
+                    category_data.extend([{**row, **item}])
 
         return category_data
 

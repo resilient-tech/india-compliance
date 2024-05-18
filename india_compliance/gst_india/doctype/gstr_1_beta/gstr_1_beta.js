@@ -734,9 +734,11 @@ class TabManager {
                 ],
                 hooks: {
                     columnTotal: (_, row) => {
+                        if (this.instance.active_view !== "Summary")
+                            return;
+
                         if (row.colIndex === 1)
                             return (row.content = "Total Liability");
-                        if (this.instance.active_view !== "Summary") return;
 
                         const column_field = row.column.fieldname;
                         const total = this.summary.reduce((acc, row) => {
@@ -1551,11 +1553,10 @@ class FiledTab extends TabManager {
                 method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_gstr_1_json",
                 args: {
                     company_gstin: doc.company_gstin,
-                    include_uploaded,
-                    delete_missing,
                     year: doc.year,
                     month_or_quarter: doc.month_or_quarter,
-                    company_gstin: doc.company_gstin,
+                    include_uploaded,
+                    delete_missing,
                 },
                 callback: r => {
                     india_compliance.trigger_file_download(

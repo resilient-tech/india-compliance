@@ -10,10 +10,6 @@ from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     convert_to_internal_data_format,
 )
 
-"""
-Download GSTR-1 and Unfiled GSTR1 data from GST Portal
-"""
-
 UNFILED_ACTIONS = [
     "B2B",
     "B2CL",
@@ -31,6 +27,9 @@ FILED_ACTIONS = [*UNFILED_ACTIONS, "HSNSUM", "DOCISS", "RETSUM"]
 
 
 def download_gstr1_json_data(gstr1_log):
+    """
+    Download GSTR-1 and Unfiled GSTR1 data from GST Portal
+    """
     gstin = gstr1_log.gstin
     return_period = gstr1_log.return_period
 

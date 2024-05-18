@@ -205,18 +205,16 @@ def get_gstr_1_return_status(
         )
 
     for info in response.get("EFiledlist"):
-        # TODO: Check for quarterly with iff
         if info["rtntype"] == "GSTR1" and info["ret_prd"] == period:
             return info["status"]
 
-    else:
-        # late filing possibility (limitation: only checks for the next FY: good enough)
-        if not year_increment and get_current_fy() != fy:
-            get_gstr_1_return_status(
-                company, gstin, period, process_info=process_info, year_increment=1
-            )
+    # late filing possibility (limitation: only checks for the next FY: good enough)
+    if not year_increment and get_current_fy() != fy:
+        get_gstr_1_return_status(
+            company, gstin, period, process_info=process_info, year_increment=1
+        )
 
-        return "Not Filed"
+    return "Not Filed"
 
 
 def get_fy(period, year_increment=0):
