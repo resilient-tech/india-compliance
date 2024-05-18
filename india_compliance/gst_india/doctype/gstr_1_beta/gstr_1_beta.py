@@ -120,7 +120,7 @@ class GSTR1Beta(Document):
         # generate gstr1
         gstr1_log.update_status("In Progress")
         frappe.enqueue(self.generate_gstr1, queue="short")
-        frappe.msgprint("GSTR-1 is being prepared", alert=True)
+        frappe.msgprint(_("GSTR-1 is being prepared"), alert=True)
 
     def generate_gstr1(self):
         filters = {

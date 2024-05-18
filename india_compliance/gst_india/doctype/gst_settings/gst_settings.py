@@ -461,4 +461,5 @@ def update_is_not_latest_gstr1_data(posting_date, company_gstin):
     frappe.publish_realtime(
         "is_not_latest_data",
         message={"filters": {"company_gstin": company_gstin, "period": period}},
+        doctype="GSTR-1 Beta",
     )
