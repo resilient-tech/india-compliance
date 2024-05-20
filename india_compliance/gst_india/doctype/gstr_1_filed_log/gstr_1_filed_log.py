@@ -17,12 +17,12 @@ from frappe.utils import (
 )
 
 from india_compliance.gst_india.utils import is_production_api_enabled
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
+from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategory
 from india_compliance.gst_india.utils.gstr_1.__init__ import (
     CATEGORY_SUB_CATEGORY_MAPPING,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAX,
     SUBCATEGORIES_NOT_CONSIDERED_IN_TOTAL_TAXABLE_VALUE,
-    GSTR1_DataFields,
+    GSTR1_DataField,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     download_gstr1_json_data,
@@ -118,7 +118,7 @@ class SummarizeGSTR1:
         """
         subcategory_summary = {}
 
-        for subcategory in GSTR1_SubCategories:
+        for subcategory in GSTR1_SubCategory:
             subcategory = subcategory.value
             if subcategory not in data:
                 continue
@@ -138,10 +138,10 @@ class SummarizeGSTR1:
                 if doc_num := row.get("document_number"):
                     summary_row["unique_records"].add(doc_num)
 
-                elif subcategory == GSTR1_SubCategories.DOC_ISSUE.value:
+                elif subcategory == GSTR1_SubCategory.DOC_ISSUE.value:
                     self.count_doc_issue_summary(summary_row, row)
 
-                elif subcategory == GSTR1_SubCategories.HSN.value:
+                elif subcategory == GSTR1_SubCategory.HSN.value:
                     self.count_hsn_summary(summary_row)
 
         for subcategory in subcategory_summary.keys():
@@ -186,8 +186,8 @@ class SummarizeGSTR1:
 
     def count_doc_issue_summary(self, summary_row, data_row):
         summary_row["no_of_records"] += data_row.get(
-            GSTR1_DataFields.TOTAL_COUNT.value, 0
-        ) - data_row.get(GSTR1_DataFields.CANCELLED_COUNT.value, 0)
+            GSTR1_DataField.TOTAL_COUNT.value, 0
+        ) - data_row.get(GSTR1_DataField.CANCELLED_COUNT.value, 0)
 
     def count_hsn_summary(self, summary_row):
         summary_row["no_of_records"] += 1
@@ -208,7 +208,7 @@ class ReconcileGSTR1:
         else:
             update_books_match = True
 
-        for subcategory in GSTR1_SubCategories:
+        for subcategory in GSTR1_SubCategory:
             subcategory = subcategory.value
             books_subdata = books_data.get(subcategory) or {}
             gov_subdata = gov_data.get(subcategory) or {}
@@ -217,8 +217,8 @@ class ReconcileGSTR1:
                 continue
 
             ignore_upload_status = subcategory in [
-                GSTR1_SubCategories.HSN.value,
-                GSTR1_SubCategories.DOC_ISSUE.value,
+                GSTR1_SubCategory.HSN.value,
+                GSTR1_SubCategory.DOC_ISSUE.value,
             ]
             is_list = False  # Object Type for the subdata_value
 

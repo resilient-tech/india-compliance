@@ -2,11 +2,11 @@ from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
 from india_compliance.gst_india.utils.gstr_1 import (
-    GovDataFields,
-    GSTR1_B2B_InvoiceTypes,
-    GSTR1_DataFields,
-    GSTR1_ItemFields,
-    GSTR1_SubCategories,
+    GovDataField,
+    GSTR1_B2B_InvoiceType,
+    GSTR1_DataField,
+    GSTR1_ItemField,
+    GSTR1_SubCategory,
 )
 from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
     AT,
@@ -33,59 +33,59 @@ class TestB2B(FrappeTestCase):
         super().setUpClass()
         cls.json_data = [
             {
-                GovDataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
-                GovDataFields.INVOICES.value: [
+                GovDataField.CUST_GSTIN.value: "24AANFA2641L1ZF",
+                GovDataField.INVOICES.value: [
                     {
-                        GovDataFields.DOC_NUMBER.value: "S008400",
-                        GovDataFields.DOC_DATE.value: "24-11-2016",
-                        GovDataFields.DOC_VALUE.value: 729248.16,
-                        GovDataFields.POS.value: "06",
-                        GovDataFields.REVERSE_CHARGE.value: "N",
-                        GovDataFields.INVOICE_TYPE.value: "R",
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "S008400",
+                        GovDataField.DOC_DATE.value: "24-11-2016",
+                        GovDataField.DOC_VALUE.value: 729248.16,
+                        GovDataField.POS.value: "06",
+                        GovDataField.REVERSE_CHARGE.value: "N",
+                        GovDataField.INVOICE_TYPE.value: "R",
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CGST.value: 0,
-                                    GovDataFields.SGST.value: 0,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CGST.value: 0,
+                                    GovDataField.SGST.value: 0,
+                                    GovDataField.CESS.value: 500,
                                 },
                             },
                             {
-                                GovDataFields.INDEX.value: 2,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CGST.value: 0,
-                                    GovDataFields.SGST.value: 0,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 2,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CGST.value: 0,
+                                    GovDataField.SGST.value: 0,
+                                    GovDataField.CESS.value: 500,
                                 },
                             },
                         ],
                     },
                     {
-                        GovDataFields.DOC_NUMBER.value: "S008401",
-                        GovDataFields.DOC_DATE.value: "24-11-2016",
-                        GovDataFields.DOC_VALUE.value: 729248.16,
-                        GovDataFields.POS.value: "06",
-                        GovDataFields.REVERSE_CHARGE.value: "Y",
-                        GovDataFields.INVOICE_TYPE.value: "R",
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "S008401",
+                        GovDataField.DOC_DATE.value: "24-11-2016",
+                        GovDataField.DOC_VALUE.value: 729248.16,
+                        GovDataField.POS.value: "06",
+                        GovDataField.REVERSE_CHARGE.value: "Y",
+                        GovDataField.INVOICE_TYPE.value: "R",
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CGST.value: 0,
-                                    GovDataFields.SGST.value: 0,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CGST.value: 0,
+                                    GovDataField.SGST.value: 0,
+                                    GovDataField.CESS.value: 500,
                                 },
                             }
                         ],
@@ -93,48 +93,48 @@ class TestB2B(FrappeTestCase):
                 ],
             },
             {
-                GovDataFields.CUST_GSTIN.value: "29AABCR1718E1ZL",
-                GovDataFields.INVOICES.value: [
+                GovDataField.CUST_GSTIN.value: "29AABCR1718E1ZL",
+                GovDataField.INVOICES.value: [
                     {
-                        GovDataFields.DOC_NUMBER.value: "S008402",
-                        GovDataFields.DOC_DATE.value: "24-11-2016",
-                        GovDataFields.DOC_VALUE.value: 729248.16,
-                        GovDataFields.POS.value: "06",
-                        GovDataFields.REVERSE_CHARGE.value: "N",
-                        GovDataFields.INVOICE_TYPE.value: "SEWP",
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "S008402",
+                        GovDataField.DOC_DATE.value: "24-11-2016",
+                        GovDataField.DOC_VALUE.value: 729248.16,
+                        GovDataField.POS.value: "06",
+                        GovDataField.REVERSE_CHARGE.value: "N",
+                        GovDataField.INVOICE_TYPE.value: "SEWP",
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CGST.value: 0,
-                                    GovDataFields.SGST.value: 0,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CGST.value: 0,
+                                    GovDataField.SGST.value: 0,
+                                    GovDataField.CESS.value: 500,
                                 },
                             }
                         ],
                     },
                     {
-                        GovDataFields.DOC_NUMBER.value: "S008403",
-                        GovDataFields.DOC_DATE.value: "24-11-2016",
-                        GovDataFields.DOC_VALUE.value: 729248.16,
-                        GovDataFields.POS.value: "06",
-                        GovDataFields.REVERSE_CHARGE.value: "N",
-                        GovDataFields.INVOICE_TYPE.value: "DE",
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "S008403",
+                        GovDataField.DOC_DATE.value: "24-11-2016",
+                        GovDataField.DOC_VALUE.value: 729248.16,
+                        GovDataField.POS.value: "06",
+                        GovDataField.REVERSE_CHARGE.value: "N",
+                        GovDataField.INVOICE_TYPE.value: "DE",
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CGST.value: 0,
-                                    GovDataFields.SGST.value: 0,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CGST.value: 0,
+                                    GovDataField.SGST.value: 0,
+                                    GovDataField.CESS.value: 500,
                                 },
                             }
                         ],
@@ -143,132 +143,132 @@ class TestB2B(FrappeTestCase):
             },
         ]
         cls.mapped_data = {
-            GSTR1_SubCategories.B2B_REGULAR.value: {
+            GSTR1_SubCategory.B2B_REGULAR.value: {
                 "S008400": {
-                    GSTR1_DataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
-                    GSTR1_DataFields.CUST_NAME.value: get_party_for_gstin(
+                    GSTR1_DataField.CUST_GSTIN.value: "24AANFA2641L1ZF",
+                    GSTR1_DataField.CUST_NAME.value: get_party_for_gstin(
                         "24AANFA2641L1ZF"
                     ),
-                    GSTR1_DataFields.DOC_NUMBER.value: "S008400",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-11-24",
-                    GSTR1_DataFields.DOC_VALUE.value: 729248.16,
-                    GSTR1_DataFields.POS.value: "06-Haryana",
-                    GSTR1_DataFields.REVERSE_CHARGE.value: "N",
-                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.R.value,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.DOC_NUMBER.value: "S008400",
+                    GSTR1_DataField.DOC_DATE.value: "2016-11-24",
+                    GSTR1_DataField.DOC_VALUE.value: 729248.16,
+                    GSTR1_DataField.POS.value: "06-Haryana",
+                    GSTR1_DataField.REVERSE_CHARGE.value: "N",
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_B2B_InvoiceType.R.value,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CGST.value: 0,
-                            GSTR1_ItemFields.SGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CGST.value: 0,
+                            GSTR1_ItemField.SGST.value: 0,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         },
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CGST.value: 0,
-                            GSTR1_ItemFields.SGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CGST.value: 0,
+                            GSTR1_ItemField.SGST.value: 0,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         },
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 20000,
-                    GSTR1_DataFields.IGST.value: 650,
-                    GSTR1_DataFields.CGST.value: 0,
-                    GSTR1_DataFields.SGST.value: 0,
-                    GSTR1_DataFields.CESS.value: 1000,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 20000,
+                    GSTR1_DataField.IGST.value: 650,
+                    GSTR1_DataField.CGST.value: 0,
+                    GSTR1_DataField.SGST.value: 0,
+                    GSTR1_DataField.CESS.value: 1000,
                 }
             },
-            GSTR1_SubCategories.B2B_REVERSE_CHARGE.value: {
+            GSTR1_SubCategory.B2B_REVERSE_CHARGE.value: {
                 "S008401": {
-                    GSTR1_DataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
-                    GSTR1_DataFields.CUST_NAME.value: get_party_for_gstin(
+                    GSTR1_DataField.CUST_GSTIN.value: "24AANFA2641L1ZF",
+                    GSTR1_DataField.CUST_NAME.value: get_party_for_gstin(
                         "24AANFA2641L1ZF"
                     ),
-                    GSTR1_DataFields.DOC_NUMBER.value: "S008401",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-11-24",
-                    GSTR1_DataFields.DOC_VALUE.value: 729248.16,
-                    GSTR1_DataFields.POS.value: "06-Haryana",
-                    GSTR1_DataFields.REVERSE_CHARGE.value: "Y",
-                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.R.value,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.DOC_NUMBER.value: "S008401",
+                    GSTR1_DataField.DOC_DATE.value: "2016-11-24",
+                    GSTR1_DataField.DOC_VALUE.value: 729248.16,
+                    GSTR1_DataField.POS.value: "06-Haryana",
+                    GSTR1_DataField.REVERSE_CHARGE.value: "Y",
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_B2B_InvoiceType.R.value,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CGST.value: 0,
-                            GSTR1_ItemFields.SGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CGST.value: 0,
+                            GSTR1_ItemField.SGST.value: 0,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_DataFields.IGST.value: 325,
-                    GSTR1_DataFields.CGST.value: 0,
-                    GSTR1_DataFields.SGST.value: 0,
-                    GSTR1_DataFields.CESS.value: 500,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_DataField.IGST.value: 325,
+                    GSTR1_DataField.CGST.value: 0,
+                    GSTR1_DataField.SGST.value: 0,
+                    GSTR1_DataField.CESS.value: 500,
                 }
             },
-            GSTR1_SubCategories.SEZWP.value: {
+            GSTR1_SubCategory.SEZWP.value: {
                 "S008402": {
-                    GSTR1_DataFields.CUST_GSTIN.value: "29AABCR1718E1ZL",
-                    GSTR1_DataFields.CUST_NAME.value: get_party_for_gstin(
+                    GSTR1_DataField.CUST_GSTIN.value: "29AABCR1718E1ZL",
+                    GSTR1_DataField.CUST_NAME.value: get_party_for_gstin(
                         "29AABCR1718E1ZL"
                     ),
-                    GSTR1_DataFields.DOC_NUMBER.value: "S008402",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-11-24",
-                    GSTR1_DataFields.DOC_VALUE.value: 729248.16,
-                    GSTR1_DataFields.POS.value: "06-Haryana",
-                    GSTR1_DataFields.REVERSE_CHARGE.value: "N",
-                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.SEWP.value,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.DOC_NUMBER.value: "S008402",
+                    GSTR1_DataField.DOC_DATE.value: "2016-11-24",
+                    GSTR1_DataField.DOC_VALUE.value: 729248.16,
+                    GSTR1_DataField.POS.value: "06-Haryana",
+                    GSTR1_DataField.REVERSE_CHARGE.value: "N",
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_B2B_InvoiceType.SEWP.value,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CGST.value: 0,
-                            GSTR1_ItemFields.SGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CGST.value: 0,
+                            GSTR1_ItemField.SGST.value: 0,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_DataFields.IGST.value: 325,
-                    GSTR1_DataFields.CGST.value: 0,
-                    GSTR1_DataFields.SGST.value: 0,
-                    GSTR1_DataFields.CESS.value: 500,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_DataField.IGST.value: 325,
+                    GSTR1_DataField.CGST.value: 0,
+                    GSTR1_DataField.SGST.value: 0,
+                    GSTR1_DataField.CESS.value: 500,
                 }
             },
-            GSTR1_SubCategories.DE.value: {
+            GSTR1_SubCategory.DE.value: {
                 "S008403": {
-                    GSTR1_DataFields.CUST_GSTIN.value: "29AABCR1718E1ZL",
-                    GSTR1_DataFields.CUST_NAME.value: get_party_for_gstin(
+                    GSTR1_DataField.CUST_GSTIN.value: "29AABCR1718E1ZL",
+                    GSTR1_DataField.CUST_NAME.value: get_party_for_gstin(
                         "29AABCR1718E1ZL"
                     ),
-                    GSTR1_DataFields.DOC_NUMBER.value: "S008403",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-11-24",
-                    GSTR1_DataFields.DOC_VALUE.value: 729248.16,
-                    GSTR1_DataFields.POS.value: "06-Haryana",
-                    GSTR1_DataFields.REVERSE_CHARGE.value: "N",
-                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_B2B_InvoiceTypes.DE.value,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.DOC_NUMBER.value: "S008403",
+                    GSTR1_DataField.DOC_DATE.value: "2016-11-24",
+                    GSTR1_DataField.DOC_VALUE.value: 729248.16,
+                    GSTR1_DataField.POS.value: "06-Haryana",
+                    GSTR1_DataField.REVERSE_CHARGE.value: "N",
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_B2B_InvoiceType.DE.value,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CGST.value: 0,
-                            GSTR1_ItemFields.SGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CGST.value: 0,
+                            GSTR1_ItemField.SGST.value: 0,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_DataFields.IGST.value: 325,
-                    GSTR1_DataFields.CGST.value: 0,
-                    GSTR1_DataFields.SGST.value: 0,
-                    GSTR1_DataFields.CESS.value: 500,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_DataField.IGST.value: 325,
+                    GSTR1_DataField.CGST.value: 0,
+                    GSTR1_DataField.SGST.value: 0,
+                    GSTR1_DataField.CESS.value: 500,
                 }
             },
         }
@@ -288,47 +288,47 @@ class TestB2CL(FrappeTestCase):
         super().setUpClass()
         cls.json_data = [
             {
-                GovDataFields.POS.value: "05",
-                GovDataFields.INVOICES.value: [
+                GovDataField.POS.value: "05",
+                GovDataField.INVOICES.value: [
                     {
-                        GovDataFields.DOC_NUMBER.value: "92661",
-                        GovDataFields.DOC_DATE.value: "10-01-2016",
-                        GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "92661",
+                        GovDataField.DOC_DATE.value: "10-01-2016",
+                        GovDataField.DOC_VALUE.value: 784586.33,
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CESS.value: 500,
                                 },
                             },
                             {
-                                GovDataFields.INDEX.value: 2,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 2,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CESS.value: 500,
                                 },
                             },
                         ],
                     },
                     {
-                        GovDataFields.DOC_NUMBER.value: "92662",
-                        GovDataFields.DOC_DATE.value: "10-01-2016",
-                        GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "92662",
+                        GovDataField.DOC_DATE.value: "10-01-2016",
+                        GovDataField.DOC_VALUE.value: 784586.33,
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CESS.value: 500,
                                 },
                             }
                         ],
@@ -336,47 +336,47 @@ class TestB2CL(FrappeTestCase):
                 ],
             },
             {
-                GovDataFields.POS.value: "24",
-                GovDataFields.INVOICES.value: [
+                GovDataField.POS.value: "24",
+                GovDataField.INVOICES.value: [
                     {
-                        GovDataFields.DOC_NUMBER.value: "92663",
-                        GovDataFields.DOC_DATE.value: "10-01-2016",
-                        GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "92663",
+                        GovDataField.DOC_DATE.value: "10-01-2016",
+                        GovDataField.DOC_VALUE.value: 784586.33,
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CESS.value: 500,
                                 },
                             },
                             {
-                                GovDataFields.INDEX.value: 2,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 2,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CESS.value: 500,
                                 },
                             },
                         ],
                     },
                     {
-                        GovDataFields.DOC_NUMBER.value: "92664",
-                        GovDataFields.DOC_DATE.value: "10-01-2016",
-                        GovDataFields.DOC_VALUE.value: 784586.33,
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "92664",
+                        GovDataField.DOC_DATE.value: "10-01-2016",
+                        GovDataField.DOC_VALUE.value: 784586.33,
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 5,
-                                    GovDataFields.TAXABLE_VALUE.value: 10000,
-                                    GovDataFields.IGST.value: 325,
-                                    GovDataFields.CESS.value: 500,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 5,
+                                    GovDataField.TAXABLE_VALUE.value: 10000,
+                                    GovDataField.IGST.value: 325,
+                                    GovDataField.CESS.value: 500,
                                 },
                             }
                         ],
@@ -385,94 +385,94 @@ class TestB2CL(FrappeTestCase):
             },
         ]
         cls.mapped_data = {
-            GSTR1_SubCategories.B2CL.value: {
+            GSTR1_SubCategory.B2CL.value: {
                 "92661": {
-                    GSTR1_DataFields.POS.value: "05-Uttarakhand",
-                    GSTR1_DataFields.DOC_TYPE.value: "B2C (Large)",
-                    GSTR1_DataFields.DOC_NUMBER.value: "92661",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
-                    GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.POS.value: "05-Uttarakhand",
+                    GSTR1_DataField.DOC_TYPE.value: "B2C (Large)",
+                    GSTR1_DataField.DOC_NUMBER.value: "92661",
+                    GSTR1_DataField.DOC_DATE.value: "2016-01-10",
+                    GSTR1_DataField.DOC_VALUE.value: 784586.33,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         },
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         },
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 20000,
-                    GSTR1_DataFields.IGST.value: 650,
-                    GSTR1_DataFields.CESS.value: 1000,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 20000,
+                    GSTR1_DataField.IGST.value: 650,
+                    GSTR1_DataField.CESS.value: 1000,
                 },
                 "92662": {
-                    GSTR1_DataFields.POS.value: "05-Uttarakhand",
-                    GSTR1_DataFields.DOC_TYPE.value: "B2C (Large)",
-                    GSTR1_DataFields.DOC_NUMBER.value: "92662",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
-                    GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.POS.value: "05-Uttarakhand",
+                    GSTR1_DataField.DOC_TYPE.value: "B2C (Large)",
+                    GSTR1_DataField.DOC_NUMBER.value: "92662",
+                    GSTR1_DataField.DOC_DATE.value: "2016-01-10",
+                    GSTR1_DataField.DOC_VALUE.value: 784586.33,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_DataFields.IGST.value: 325,
-                    GSTR1_DataFields.CESS.value: 500,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_DataField.IGST.value: 325,
+                    GSTR1_DataField.CESS.value: 500,
                 },
                 "92663": {
-                    GSTR1_DataFields.POS.value: "24-Gujarat",
-                    GSTR1_DataFields.DOC_TYPE.value: "B2C (Large)",
-                    GSTR1_DataFields.DOC_NUMBER.value: "92663",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
-                    GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.POS.value: "24-Gujarat",
+                    GSTR1_DataField.DOC_TYPE.value: "B2C (Large)",
+                    GSTR1_DataField.DOC_NUMBER.value: "92663",
+                    GSTR1_DataField.DOC_DATE.value: "2016-01-10",
+                    GSTR1_DataField.DOC_VALUE.value: 784586.33,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         },
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         },
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 20000,
-                    GSTR1_DataFields.IGST.value: 650,
-                    GSTR1_DataFields.CESS.value: 1000,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 20000,
+                    GSTR1_DataField.IGST.value: 650,
+                    GSTR1_DataField.CESS.value: 1000,
                 },
                 "92664": {
-                    GSTR1_DataFields.POS.value: "24-Gujarat",
-                    GSTR1_DataFields.DOC_TYPE.value: "B2C (Large)",
-                    GSTR1_DataFields.DOC_NUMBER.value: "92664",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-01-10",
-                    GSTR1_DataFields.DOC_VALUE.value: 784586.33,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.POS.value: "24-Gujarat",
+                    GSTR1_DataField.DOC_TYPE.value: "B2C (Large)",
+                    GSTR1_DataField.DOC_NUMBER.value: "92664",
+                    GSTR1_DataField.DOC_DATE.value: "2016-01-10",
+                    GSTR1_DataField.DOC_VALUE.value: 784586.33,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 325,
-                            GSTR1_ItemFields.CESS.value: 500,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 325,
+                            GSTR1_ItemField.CESS.value: 500,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_DataFields.IGST.value: 325,
-                    GSTR1_DataFields.CESS.value: 500,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_DataField.IGST.value: 325,
+                    GSTR1_DataField.CESS.value: 500,
                 },
             }
         }
@@ -492,42 +492,42 @@ class TestExports(FrappeTestCase):
         super().setUpClass()
         cls.json_data = [
             {
-                GovDataFields.EXPORT_TYPE.value: "WPAY",
-                GovDataFields.INVOICES.value: [
+                GovDataField.EXPORT_TYPE.value: "WPAY",
+                GovDataField.INVOICES.value: [
                     {
-                        GovDataFields.DOC_NUMBER.value: "81542",
-                        GovDataFields.DOC_DATE.value: "12-02-2016",
-                        GovDataFields.DOC_VALUE.value: 995048.36,
-                        GovDataFields.SHIPPING_PORT_CODE.value: "ASB991",
-                        GovDataFields.SHIPPING_BILL_NUMBER.value: "7896542",
-                        GovDataFields.SHIPPING_BILL_DATE.value: "04-10-2016",
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "81542",
+                        GovDataField.DOC_DATE.value: "12-02-2016",
+                        GovDataField.DOC_VALUE.value: 995048.36,
+                        GovDataField.SHIPPING_PORT_CODE.value: "ASB991",
+                        GovDataField.SHIPPING_BILL_NUMBER.value: "7896542",
+                        GovDataField.SHIPPING_BILL_DATE.value: "04-10-2016",
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.TAXABLE_VALUE.value: 10000,
-                                GovDataFields.TAX_RATE.value: 5,
-                                GovDataFields.IGST.value: 833.33,
-                                GovDataFields.CESS.value: 100,
+                                GovDataField.TAXABLE_VALUE.value: 10000,
+                                GovDataField.TAX_RATE.value: 5,
+                                GovDataField.IGST.value: 833.33,
+                                GovDataField.CESS.value: 100,
                             }
                         ],
                     }
                 ],
             },
             {
-                GovDataFields.EXPORT_TYPE.value: "WOPAY",
-                GovDataFields.INVOICES.value: [
+                GovDataField.EXPORT_TYPE.value: "WOPAY",
+                GovDataField.INVOICES.value: [
                     {
-                        GovDataFields.DOC_NUMBER.value: "81543",
-                        GovDataFields.DOC_DATE.value: "12-02-2016",
-                        GovDataFields.DOC_VALUE.value: 995048.36,
-                        GovDataFields.SHIPPING_PORT_CODE.value: "ASB981",
-                        GovDataFields.SHIPPING_BILL_NUMBER.value: "7896542",
-                        GovDataFields.SHIPPING_BILL_DATE.value: "04-10-2016",
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.DOC_NUMBER.value: "81543",
+                        GovDataField.DOC_DATE.value: "12-02-2016",
+                        GovDataField.DOC_VALUE.value: 995048.36,
+                        GovDataField.SHIPPING_PORT_CODE.value: "ASB981",
+                        GovDataField.SHIPPING_BILL_NUMBER.value: "7896542",
+                        GovDataField.SHIPPING_BILL_DATE.value: "04-10-2016",
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.TAXABLE_VALUE.value: 10000,
-                                GovDataFields.TAX_RATE.value: 0,
-                                GovDataFields.IGST.value: 0,
-                                GovDataFields.CESS.value: 100,
+                                GovDataField.TAXABLE_VALUE.value: 10000,
+                                GovDataField.TAX_RATE.value: 0,
+                                GovDataField.IGST.value: 0,
+                                GovDataField.CESS.value: 100,
                             }
                         ],
                     }
@@ -535,48 +535,48 @@ class TestExports(FrappeTestCase):
             },
         ]
         cls.mapped_data = {
-            GSTR1_SubCategories.EXPWP.value: {
+            GSTR1_SubCategory.EXPWP.value: {
                 "81542": {
-                    GSTR1_DataFields.DOC_TYPE.value: "WPAY",
-                    GSTR1_DataFields.DOC_NUMBER.value: "81542",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-02-12",
-                    GSTR1_DataFields.DOC_VALUE.value: 995048.36,
-                    GSTR1_DataFields.SHIPPING_PORT_CODE.value: "ASB991",
-                    GSTR1_DataFields.SHIPPING_BILL_NUMBER.value: "7896542",
-                    GSTR1_DataFields.SHIPPING_BILL_DATE.value: "2016-10-04",
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.DOC_TYPE.value: "WPAY",
+                    GSTR1_DataField.DOC_NUMBER.value: "81542",
+                    GSTR1_DataField.DOC_DATE.value: "2016-02-12",
+                    GSTR1_DataField.DOC_VALUE.value: 995048.36,
+                    GSTR1_DataField.SHIPPING_PORT_CODE.value: "ASB991",
+                    GSTR1_DataField.SHIPPING_BILL_NUMBER.value: "7896542",
+                    GSTR1_DataField.SHIPPING_BILL_DATE.value: "2016-10-04",
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 833.33,
-                            GSTR1_ItemFields.CESS.value: 100,
-                            GSTR1_DataFields.TAX_RATE.value: 5,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 833.33,
+                            GSTR1_ItemField.CESS.value: 100,
+                            GSTR1_DataField.TAX_RATE.value: 5,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_DataFields.IGST.value: 833.33,
-                    GSTR1_DataFields.CESS.value: 100,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_DataField.IGST.value: 833.33,
+                    GSTR1_DataField.CESS.value: 100,
                 }
             },
-            GSTR1_SubCategories.EXPWOP.value: {
+            GSTR1_SubCategory.EXPWOP.value: {
                 "81543": {
-                    GSTR1_DataFields.DOC_TYPE.value: "WOPAY",
-                    GSTR1_DataFields.DOC_NUMBER.value: "81543",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-02-12",
-                    GSTR1_DataFields.DOC_VALUE.value: 995048.36,
-                    GSTR1_DataFields.SHIPPING_PORT_CODE.value: "ASB981",
-                    GSTR1_DataFields.SHIPPING_BILL_NUMBER.value: "7896542",
-                    GSTR1_DataFields.SHIPPING_BILL_DATE.value: "2016-10-04",
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.DOC_TYPE.value: "WOPAY",
+                    GSTR1_DataField.DOC_NUMBER.value: "81543",
+                    GSTR1_DataField.DOC_DATE.value: "2016-02-12",
+                    GSTR1_DataField.DOC_VALUE.value: 995048.36,
+                    GSTR1_DataField.SHIPPING_PORT_CODE.value: "ASB981",
+                    GSTR1_DataField.SHIPPING_BILL_NUMBER.value: "7896542",
+                    GSTR1_DataField.SHIPPING_BILL_DATE.value: "2016-10-04",
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: 10000,
-                            GSTR1_ItemFields.IGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: 100,
-                            GSTR1_DataFields.TAX_RATE.value: 0,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: 10000,
+                            GSTR1_ItemField.IGST.value: 0,
+                            GSTR1_ItemField.CESS.value: 100,
+                            GSTR1_DataField.TAX_RATE.value: 0,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_DataFields.IGST.value: 0,
-                    GSTR1_DataFields.CESS.value: 100,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_DataField.IGST.value: 0,
+                    GSTR1_DataField.CESS.value: 100,
                 }
             },
         }
@@ -596,56 +596,56 @@ class TestB2CS(FrappeTestCase):
         super().setUpClass()
         cls.json_data = [
             {
-                GovDataFields.SUPPLY_TYPE.value: "INTER",
-                GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                GovDataFields.TAX_RATE.value: 5,
-                GovDataFields.TYPE.value: "OE",
-                GovDataFields.POS.value: "05",
-                GovDataFields.TAXABLE_VALUE.value: 110,
-                GovDataFields.IGST.value: 10,
-                GovDataFields.CGST.value: 0,
-                GovDataFields.SGST.value: 0,
-                GovDataFields.CESS.value: 10,
+                GovDataField.SUPPLY_TYPE.value: "INTER",
+                GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                GovDataField.TAX_RATE.value: 5,
+                GovDataField.TYPE.value: "OE",
+                GovDataField.POS.value: "05",
+                GovDataField.TAXABLE_VALUE.value: 110,
+                GovDataField.IGST.value: 10,
+                GovDataField.CGST.value: 0,
+                GovDataField.SGST.value: 0,
+                GovDataField.CESS.value: 10,
             },
             {
-                GovDataFields.SUPPLY_TYPE.value: "INTER",
-                GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                GovDataFields.TAX_RATE.value: 5,
-                GovDataFields.TYPE.value: "OE",
-                GovDataFields.TAXABLE_VALUE.value: 100,
-                GovDataFields.IGST.value: 10,
-                GovDataFields.CGST.value: 0,
-                GovDataFields.SGST.value: 0,
-                GovDataFields.CESS.value: 10,
-                GovDataFields.POS.value: "06",
+                GovDataField.SUPPLY_TYPE.value: "INTER",
+                GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                GovDataField.TAX_RATE.value: 5,
+                GovDataField.TYPE.value: "OE",
+                GovDataField.TAXABLE_VALUE.value: 100,
+                GovDataField.IGST.value: 10,
+                GovDataField.CGST.value: 0,
+                GovDataField.SGST.value: 0,
+                GovDataField.CESS.value: 10,
+                GovDataField.POS.value: "06",
             },
         ]
         cls.mapped_data = {
-            GSTR1_SubCategories.B2CS.value: {
+            GSTR1_SubCategory.B2CS.value: {
                 "05-Uttarakhand - 5.0": [
                     {
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 110,
-                        GSTR1_DataFields.DOC_TYPE.value: "OE",
-                        GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GSTR1_DataFields.POS.value: "05-Uttarakhand",
-                        GSTR1_DataFields.TAX_RATE.value: 5,
-                        GSTR1_DataFields.IGST.value: 10,
-                        GSTR1_DataFields.CESS.value: 10,
-                        GSTR1_DataFields.CGST.value: 0,
-                        GSTR1_DataFields.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 110,
+                        GSTR1_DataField.DOC_TYPE.value: "OE",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.POS.value: "05-Uttarakhand",
+                        GSTR1_DataField.TAX_RATE.value: 5,
+                        GSTR1_DataField.IGST.value: 10,
+                        GSTR1_DataField.CESS.value: 10,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
                     },
                 ],
                 "06-Haryana - 5.0": [
                     {
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 100,
-                        GSTR1_DataFields.DOC_TYPE.value: "OE",
-                        GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GSTR1_DataFields.POS.value: "06-Haryana",
-                        GSTR1_DataFields.TAX_RATE.value: 5,
-                        GSTR1_DataFields.IGST.value: 10,
-                        GSTR1_DataFields.CESS.value: 10,
-                        GSTR1_DataFields.CGST.value: 0,
-                        GSTR1_DataFields.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 100,
+                        GSTR1_DataField.DOC_TYPE.value: "OE",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.POS.value: "06-Haryana",
+                        GSTR1_DataField.TAX_RATE.value: 5,
+                        GSTR1_DataField.IGST.value: 10,
+                        GSTR1_DataField.CESS.value: 10,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
                     }
                 ],
             }
@@ -665,40 +665,40 @@ class TestNilRated(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.json_data = {
-            GovDataFields.INVOICES.value: [
+            GovDataField.INVOICES.value: [
                 {
-                    GovDataFields.SUPPLY_TYPE.value: "INTRB2B",
-                    GovDataFields.EXEMPTED_AMOUNT.value: 123.45,
-                    GovDataFields.NIL_RATED_AMOUNT.value: 1470.85,
-                    GovDataFields.NON_GST_AMOUNT.value: 1258.5,
+                    GovDataField.SUPPLY_TYPE.value: "INTRB2B",
+                    GovDataField.EXEMPTED_AMOUNT.value: 123.45,
+                    GovDataField.NIL_RATED_AMOUNT.value: 1470.85,
+                    GovDataField.NON_GST_AMOUNT.value: 1258.5,
                 },
                 {
-                    GovDataFields.SUPPLY_TYPE.value: "INTRB2C",
-                    GovDataFields.EXEMPTED_AMOUNT.value: 123.45,
-                    GovDataFields.NIL_RATED_AMOUNT.value: 1470.85,
-                    GovDataFields.NON_GST_AMOUNT.value: 1258.5,
+                    GovDataField.SUPPLY_TYPE.value: "INTRB2C",
+                    GovDataField.EXEMPTED_AMOUNT.value: 123.45,
+                    GovDataField.NIL_RATED_AMOUNT.value: 1470.85,
+                    GovDataField.NON_GST_AMOUNT.value: 1258.5,
                 },
             ]
         }
 
         cls.mapped_data = {
-            GSTR1_SubCategories.NIL_EXEMPT.value: {
+            GSTR1_SubCategory.NIL_EXEMPT.value: {
                 "Inter-State supplies to registered persons": [
                     {
-                        GSTR1_DataFields.DOC_TYPE.value: "Inter-State supplies to registered persons",
-                        GSTR1_DataFields.EXEMPTED_AMOUNT.value: 123.45,
-                        GSTR1_DataFields.NIL_RATED_AMOUNT.value: 1470.85,
-                        GSTR1_DataFields.NON_GST_AMOUNT.value: 1258.5,
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 2852.8,
+                        GSTR1_DataField.DOC_TYPE.value: "Inter-State supplies to registered persons",
+                        GSTR1_DataField.EXEMPTED_AMOUNT.value: 123.45,
+                        GSTR1_DataField.NIL_RATED_AMOUNT.value: 1470.85,
+                        GSTR1_DataField.NON_GST_AMOUNT.value: 1258.5,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 2852.8,
                     }
                 ],
                 "Inter-State supplies to unregistered persons": [
                     {
-                        GSTR1_DataFields.DOC_TYPE.value: "Inter-State supplies to unregistered persons",
-                        GSTR1_DataFields.EXEMPTED_AMOUNT.value: 123.45,
-                        GSTR1_DataFields.NIL_RATED_AMOUNT.value: 1470.85,
-                        GSTR1_DataFields.NON_GST_AMOUNT.value: 1258.5,
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 2852.8,
+                        GSTR1_DataField.DOC_TYPE.value: "Inter-State supplies to unregistered persons",
+                        GSTR1_DataField.EXEMPTED_AMOUNT.value: 123.45,
+                        GSTR1_DataField.NIL_RATED_AMOUNT.value: 1470.85,
+                        GSTR1_DataField.NON_GST_AMOUNT.value: 1258.5,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 2852.8,
                     }
                 ],
             }
@@ -719,38 +719,38 @@ class TestCDNR(FrappeTestCase):
         super().setUpClass()
         cls.json_data = [
             {
-                GovDataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
-                GovDataFields.NOTE_DETAILS.value: [
+                GovDataField.CUST_GSTIN.value: "24AANFA2641L1ZF",
+                GovDataField.NOTE_DETAILS.value: [
                     {
-                        GovDataFields.NOTE_TYPE.value: "C",
-                        GovDataFields.NOTE_NUMBER.value: "533515",
-                        GovDataFields.NOTE_DATE.value: "23-09-2016",
-                        GovDataFields.POS.value: "03",
-                        GovDataFields.REVERSE_CHARGE.value: "Y",
-                        GovDataFields.INVOICE_TYPE.value: "DE",
-                        GovDataFields.DOC_VALUE.value: 123123,
-                        GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GovDataFields.ITEMS.value: [
+                        GovDataField.NOTE_TYPE.value: "C",
+                        GovDataField.NOTE_NUMBER.value: "533515",
+                        GovDataField.NOTE_DATE.value: "23-09-2016",
+                        GovDataField.POS.value: "03",
+                        GovDataField.REVERSE_CHARGE.value: "Y",
+                        GovDataField.INVOICE_TYPE.value: "DE",
+                        GovDataField.DOC_VALUE.value: 123123,
+                        GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                        GovDataField.ITEMS.value: [
                             {
-                                GovDataFields.INDEX.value: 1,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 10,
-                                    GovDataFields.TAXABLE_VALUE.value: 5225.28,
-                                    GovDataFields.SGST.value: 0,
-                                    GovDataFields.CGST.value: 0,
-                                    GovDataFields.IGST.value: 339.64,
-                                    GovDataFields.CESS.value: 789.52,
+                                GovDataField.INDEX.value: 1,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 10,
+                                    GovDataField.TAXABLE_VALUE.value: 5225.28,
+                                    GovDataField.SGST.value: 0,
+                                    GovDataField.CGST.value: 0,
+                                    GovDataField.IGST.value: 339.64,
+                                    GovDataField.CESS.value: 789.52,
                                 },
                             },
                             {
-                                GovDataFields.INDEX.value: 2,
-                                GovDataFields.ITEM_DETAILS.value: {
-                                    GovDataFields.TAX_RATE.value: 10,
-                                    GovDataFields.TAXABLE_VALUE.value: 5225.28,
-                                    GovDataFields.SGST.value: 0,
-                                    GovDataFields.CGST.value: 0,
-                                    GovDataFields.IGST.value: 339.64,
-                                    GovDataFields.CESS.value: 789.52,
+                                GovDataField.INDEX.value: 2,
+                                GovDataField.ITEM_DETAILS.value: {
+                                    GovDataField.TAX_RATE.value: 10,
+                                    GovDataField.TAXABLE_VALUE.value: 5225.28,
+                                    GovDataField.SGST.value: 0,
+                                    GovDataField.CGST.value: 0,
+                                    GovDataField.IGST.value: 339.64,
+                                    GovDataField.CESS.value: 789.52,
                                 },
                             },
                         ],
@@ -759,43 +759,43 @@ class TestCDNR(FrappeTestCase):
             }
         ]
         cls.mappped_data = {
-            GSTR1_SubCategories.CDNR.value: {
+            GSTR1_SubCategory.CDNR.value: {
                 "533515": {
-                    GSTR1_DataFields.CUST_GSTIN.value: "24AANFA2641L1ZF",
-                    GSTR1_DataFields.CUST_NAME.value: get_party_for_gstin(
+                    GSTR1_DataField.CUST_GSTIN.value: "24AANFA2641L1ZF",
+                    GSTR1_DataField.CUST_NAME.value: get_party_for_gstin(
                         "24AANFA2641L1ZF"
                     ),
-                    GSTR1_DataFields.TRANSACTION_TYPE.value: "Credit Note",
-                    GSTR1_DataFields.DOC_NUMBER.value: "533515",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-09-23",
-                    GSTR1_DataFields.POS.value: "03-Punjab",
-                    GSTR1_DataFields.REVERSE_CHARGE.value: "Y",
-                    GSTR1_DataFields.DOC_TYPE.value: "Deemed Exports",
-                    GSTR1_DataFields.DOC_VALUE.value: -123123,
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.TRANSACTION_TYPE.value: "Credit Note",
+                    GSTR1_DataField.DOC_NUMBER.value: "533515",
+                    GSTR1_DataField.DOC_DATE.value: "2016-09-23",
+                    GSTR1_DataField.POS.value: "03-Punjab",
+                    GSTR1_DataField.REVERSE_CHARGE.value: "Y",
+                    GSTR1_DataField.DOC_TYPE.value: "Deemed Exports",
+                    GSTR1_DataField.DOC_VALUE.value: -123123,
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: -5225.28,
-                            GSTR1_ItemFields.IGST.value: -339.64,
-                            GSTR1_ItemFields.CGST.value: 0,
-                            GSTR1_ItemFields.SGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: -789.52,
-                            GSTR1_DataFields.TAX_RATE.value: 10,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: -5225.28,
+                            GSTR1_ItemField.IGST.value: -339.64,
+                            GSTR1_ItemField.CGST.value: 0,
+                            GSTR1_ItemField.SGST.value: 0,
+                            GSTR1_ItemField.CESS.value: -789.52,
+                            GSTR1_DataField.TAX_RATE.value: 10,
                         },
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: -5225.28,
-                            GSTR1_ItemFields.IGST.value: -339.64,
-                            GSTR1_ItemFields.CGST.value: 0,
-                            GSTR1_ItemFields.SGST.value: 0,
-                            GSTR1_ItemFields.CESS.value: -789.52,
-                            GSTR1_DataFields.TAX_RATE.value: 10,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: -5225.28,
+                            GSTR1_ItemField.IGST.value: -339.64,
+                            GSTR1_ItemField.CGST.value: 0,
+                            GSTR1_ItemField.SGST.value: 0,
+                            GSTR1_ItemField.CESS.value: -789.52,
+                            GSTR1_DataField.TAX_RATE.value: 10,
                         },
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: -10450.56,
-                    GSTR1_DataFields.IGST.value: -679.28,
-                    GSTR1_DataFields.CGST.value: 0,
-                    GSTR1_DataFields.SGST.value: 0,
-                    GSTR1_DataFields.CESS.value: -1579.04,
+                    GSTR1_DataField.TAXABLE_VALUE.value: -10450.56,
+                    GSTR1_DataField.IGST.value: -679.28,
+                    GSTR1_DataField.CGST.value: 0,
+                    GSTR1_DataField.SGST.value: 0,
+                    GSTR1_DataField.CESS.value: -1579.04,
                 }
             }
         }
@@ -816,21 +816,21 @@ class TestCDNUR(FrappeTestCase):
 
         cls.json_data = [
             {
-                GovDataFields.TYPE.value: "B2CL",
-                GovDataFields.NOTE_TYPE.value: "C",
-                GovDataFields.NOTE_NUMBER.value: "533515",
-                GovDataFields.NOTE_DATE.value: "23-09-2016",
-                GovDataFields.POS.value: "03",
-                GovDataFields.DOC_VALUE.value: 64646,
-                GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                GovDataFields.ITEMS.value: [
+                GovDataField.TYPE.value: "B2CL",
+                GovDataField.NOTE_TYPE.value: "C",
+                GovDataField.NOTE_NUMBER.value: "533515",
+                GovDataField.NOTE_DATE.value: "23-09-2016",
+                GovDataField.POS.value: "03",
+                GovDataField.DOC_VALUE.value: 64646,
+                GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                GovDataField.ITEMS.value: [
                     {
-                        GovDataFields.INDEX.value: 1,
-                        GovDataFields.ITEM_DETAILS.value: {
-                            GovDataFields.TAX_RATE.value: 10,
-                            GovDataFields.TAXABLE_VALUE.value: 5225.28,
-                            GovDataFields.IGST.value: 339.64,
-                            GovDataFields.CESS.value: 789.52,
+                        GovDataField.INDEX.value: 1,
+                        GovDataField.ITEM_DETAILS.value: {
+                            GovDataField.TAX_RATE.value: 10,
+                            GovDataField.TAXABLE_VALUE.value: 5225.28,
+                            GovDataField.IGST.value: 339.64,
+                            GovDataField.CESS.value: 789.52,
                         },
                     }
                 ],
@@ -838,26 +838,26 @@ class TestCDNUR(FrappeTestCase):
         ]
 
         cls.mapped_data = {
-            GSTR1_SubCategories.CDNUR.value: {
+            GSTR1_SubCategory.CDNUR.value: {
                 "533515": {
-                    GSTR1_DataFields.TRANSACTION_TYPE.value: "Credit Note",
-                    GSTR1_DataFields.DOC_TYPE.value: "B2CL",
-                    GSTR1_DataFields.DOC_NUMBER.value: "533515",
-                    GSTR1_DataFields.DOC_DATE.value: "2016-09-23",
-                    GSTR1_DataFields.DOC_VALUE.value: -64646,
-                    GSTR1_DataFields.POS.value: "03-Punjab",
-                    GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                    GSTR1_DataFields.ITEMS.value: [
+                    GSTR1_DataField.TRANSACTION_TYPE.value: "Credit Note",
+                    GSTR1_DataField.DOC_TYPE.value: "B2CL",
+                    GSTR1_DataField.DOC_NUMBER.value: "533515",
+                    GSTR1_DataField.DOC_DATE.value: "2016-09-23",
+                    GSTR1_DataField.DOC_VALUE.value: -64646,
+                    GSTR1_DataField.POS.value: "03-Punjab",
+                    GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                    GSTR1_DataField.ITEMS.value: [
                         {
-                            GSTR1_ItemFields.TAXABLE_VALUE.value: -5225.28,
-                            GSTR1_ItemFields.IGST.value: -339.64,
-                            GSTR1_ItemFields.CESS.value: -789.52,
-                            GSTR1_DataFields.TAX_RATE.value: 10,
+                            GSTR1_ItemField.TAXABLE_VALUE.value: -5225.28,
+                            GSTR1_ItemField.IGST.value: -339.64,
+                            GSTR1_ItemField.CESS.value: -789.52,
+                            GSTR1_DataField.TAX_RATE.value: 10,
                         }
                     ],
-                    GSTR1_DataFields.TAXABLE_VALUE.value: -5225.28,
-                    GSTR1_DataFields.IGST.value: -339.64,
-                    GSTR1_DataFields.CESS.value: -789.52,
+                    GSTR1_DataField.TAXABLE_VALUE.value: -5225.28,
+                    GSTR1_DataField.IGST.value: -339.64,
+                    GSTR1_DataField.CESS.value: -789.52,
                 }
             }
         }
@@ -877,53 +877,53 @@ class TestHSNSUM(FrappeTestCase):
         super().setUpClass()
 
         cls.json_data = {
-            GovDataFields.HSN_DATA.value: [
+            GovDataField.HSN_DATA.value: [
                 {
-                    GovDataFields.INDEX.value: 1,
-                    GovDataFields.HSN_CODE.value: "1010",
-                    GovDataFields.DESCRIPTION.value: "Goods Description",
-                    GovDataFields.UOM.value: "KGS",
-                    GovDataFields.QUANTITY.value: 2.05,
-                    GovDataFields.TAXABLE_VALUE.value: 10.23,
-                    GovDataFields.IGST.value: 14.52,
-                    GovDataFields.CESS.value: 500,
-                    GovDataFields.TAX_RATE.value: 0.1,
+                    GovDataField.INDEX.value: 1,
+                    GovDataField.HSN_CODE.value: "1010",
+                    GovDataField.DESCRIPTION.value: "Goods Description",
+                    GovDataField.UOM.value: "KGS",
+                    GovDataField.QUANTITY.value: 2.05,
+                    GovDataField.TAXABLE_VALUE.value: 10.23,
+                    GovDataField.IGST.value: 14.52,
+                    GovDataField.CESS.value: 500,
+                    GovDataField.TAX_RATE.value: 0.1,
                 },
                 {
-                    GovDataFields.INDEX.value: 2,
-                    GovDataFields.HSN_CODE.value: "1011",
-                    GovDataFields.DESCRIPTION.value: "Goods Description",
-                    GovDataFields.UOM.value: "NOS",
-                    GovDataFields.QUANTITY.value: 2.05,
-                    GovDataFields.TAXABLE_VALUE.value: 10.23,
-                    GovDataFields.IGST.value: 14.52,
-                    GovDataFields.CESS.value: 500,
-                    GovDataFields.TAX_RATE.value: 5.0,
+                    GovDataField.INDEX.value: 2,
+                    GovDataField.HSN_CODE.value: "1011",
+                    GovDataField.DESCRIPTION.value: "Goods Description",
+                    GovDataField.UOM.value: "NOS",
+                    GovDataField.QUANTITY.value: 2.05,
+                    GovDataField.TAXABLE_VALUE.value: 10.23,
+                    GovDataField.IGST.value: 14.52,
+                    GovDataField.CESS.value: 500,
+                    GovDataField.TAX_RATE.value: 5.0,
                 },
             ]
         }
 
         cls.mapped_data = {
-            GSTR1_SubCategories.HSN.value: {
+            GSTR1_SubCategory.HSN.value: {
                 "1010 - KGS-KILOGRAMS - 0.1": {
-                    GSTR1_DataFields.HSN_CODE.value: "1010",
-                    GSTR1_DataFields.DESCRIPTION.value: "Goods Description",
-                    GSTR1_DataFields.UOM.value: "KGS-KILOGRAMS",
-                    GSTR1_DataFields.QUANTITY.value: 2.05,
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10.23,
-                    GSTR1_DataFields.IGST.value: 14.52,
-                    GSTR1_DataFields.CESS.value: 500,
-                    GSTR1_DataFields.TAX_RATE.value: 0.1,
+                    GSTR1_DataField.HSN_CODE.value: "1010",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
+                    GSTR1_DataField.UOM.value: "KGS-KILOGRAMS",
+                    GSTR1_DataField.QUANTITY.value: 2.05,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10.23,
+                    GSTR1_DataField.IGST.value: 14.52,
+                    GSTR1_DataField.CESS.value: 500,
+                    GSTR1_DataField.TAX_RATE.value: 0.1,
                 },
                 "1011 - NOS-NUMBERS - 5.0": {
-                    GSTR1_DataFields.HSN_CODE.value: "1011",
-                    GSTR1_DataFields.DESCRIPTION.value: "Goods Description",
-                    GSTR1_DataFields.UOM.value: "NOS-NUMBERS",
-                    GSTR1_DataFields.QUANTITY.value: 2.05,
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10.23,
-                    GSTR1_DataFields.IGST.value: 14.52,
-                    GSTR1_DataFields.CESS.value: 500,
-                    GSTR1_DataFields.TAX_RATE.value: 5,
+                    GSTR1_DataField.HSN_CODE.value: "1011",
+                    GSTR1_DataField.DESCRIPTION.value: "Goods Description",
+                    GSTR1_DataField.UOM.value: "NOS-NUMBERS",
+                    GSTR1_DataField.QUANTITY.value: 2.05,
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10.23,
+                    GSTR1_DataField.IGST.value: 14.52,
+                    GSTR1_DataField.CESS.value: 500,
+                    GSTR1_DataField.TAX_RATE.value: 5,
                 },
             }
         }
@@ -944,101 +944,101 @@ class TestAT(FrappeTestCase):
 
         cls.json_data = [
             {
-                GovDataFields.POS.value: "05",
-                GovDataFields.SUPPLY_TYPE.value: "INTER",
-                GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                GovDataFields.ITEMS.value: [
+                GovDataField.POS.value: "05",
+                GovDataField.SUPPLY_TYPE.value: "INTER",
+                GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                GovDataField.ITEMS.value: [
                     {
-                        GovDataFields.TAX_RATE.value: 5,
-                        GovDataFields.ADDITIONAL_AMOUNT.value: 100,
-                        GovDataFields.IGST.value: 9400,
-                        GovDataFields.CGST.value: 0,
-                        GovDataFields.SGST.value: 0,
-                        GovDataFields.CESS.value: 500,
+                        GovDataField.TAX_RATE.value: 5,
+                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
                     },
                     {
-                        GovDataFields.TAX_RATE.value: 6,
-                        GovDataFields.ADDITIONAL_AMOUNT.value: 100,
-                        GovDataFields.IGST.value: 9400,
-                        GovDataFields.CGST.value: 0,
-                        GovDataFields.SGST.value: 0,
-                        GovDataFields.CESS.value: 500,
+                        GovDataField.TAX_RATE.value: 6,
+                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
                     },
                 ],
             },
             {
-                GovDataFields.POS.value: "24",
-                GovDataFields.SUPPLY_TYPE.value: "INTER",
-                GovDataFields.DIFF_PERCENTAGE.value: 0.65,
-                GovDataFields.ITEMS.value: [
+                GovDataField.POS.value: "24",
+                GovDataField.SUPPLY_TYPE.value: "INTER",
+                GovDataField.DIFF_PERCENTAGE.value: 0.65,
+                GovDataField.ITEMS.value: [
                     {
-                        GovDataFields.TAX_RATE.value: 5,
-                        GovDataFields.ADDITIONAL_AMOUNT.value: 100,
-                        GovDataFields.IGST.value: 9400,
-                        GovDataFields.CGST.value: 0,
-                        GovDataFields.SGST.value: 0,
-                        GovDataFields.CESS.value: 500,
+                        GovDataField.TAX_RATE.value: 5,
+                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
                     },
                     {
-                        GovDataFields.TAX_RATE.value: 6,
-                        GovDataFields.ADDITIONAL_AMOUNT.value: 100,
-                        GovDataFields.IGST.value: 9400,
-                        GovDataFields.CGST.value: 0,
-                        GovDataFields.SGST.value: 0,
-                        GovDataFields.CESS.value: 500,
+                        GovDataField.TAX_RATE.value: 6,
+                        GovDataField.ADDITIONAL_AMOUNT.value: 100,
+                        GovDataField.IGST.value: 9400,
+                        GovDataField.CGST.value: 0,
+                        GovDataField.SGST.value: 0,
+                        GovDataField.CESS.value: 500,
                     },
                 ],
             },
         ]
 
         cls.mapped_data = {
-            GSTR1_SubCategories.AT.value: {
+            GSTR1_SubCategory.AT.value: {
                 "05-Uttarakhand - 5.0": [
                     {
-                        GSTR1_DataFields.POS.value: "05-Uttarakhand",
-                        GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GSTR1_DataFields.IGST.value: 9400,
-                        GSTR1_DataFields.CESS.value: 500,
-                        GSTR1_DataFields.CGST.value: 0,
-                        GSTR1_DataFields.SGST.value: 0,
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 100,
-                        GSTR1_DataFields.TAX_RATE.value: 5,
+                        GSTR1_DataField.POS.value: "05-Uttarakhand",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: 9400,
+                        GSTR1_DataField.CESS.value: 500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 100,
+                        GSTR1_DataField.TAX_RATE.value: 5,
                     },
                 ],
                 "05-Uttarakhand - 6.0": [
                     {
-                        GSTR1_DataFields.POS.value: "05-Uttarakhand",
-                        GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GSTR1_DataFields.IGST.value: 9400,
-                        GSTR1_DataFields.CESS.value: 500,
-                        GSTR1_DataFields.CGST.value: 0,
-                        GSTR1_DataFields.SGST.value: 0,
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 100,
-                        GSTR1_DataFields.TAX_RATE.value: 6,
+                        GSTR1_DataField.POS.value: "05-Uttarakhand",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: 9400,
+                        GSTR1_DataField.CESS.value: 500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 100,
+                        GSTR1_DataField.TAX_RATE.value: 6,
                     }
                 ],
                 "24-Gujarat - 5.0": [
                     {
-                        GSTR1_DataFields.POS.value: "24-Gujarat",
-                        GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GSTR1_DataFields.IGST.value: 9400,
-                        GSTR1_DataFields.CESS.value: 500,
-                        GSTR1_DataFields.CGST.value: 0,
-                        GSTR1_DataFields.SGST.value: 0,
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 100,
-                        GSTR1_DataFields.TAX_RATE.value: 5,
+                        GSTR1_DataField.POS.value: "24-Gujarat",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: 9400,
+                        GSTR1_DataField.CESS.value: 500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 100,
+                        GSTR1_DataField.TAX_RATE.value: 5,
                     }
                 ],
                 "24-Gujarat - 6.0": [
                     {
-                        GSTR1_DataFields.POS.value: "24-Gujarat",
-                        GSTR1_DataFields.DIFF_PERCENTAGE.value: 0.65,
-                        GSTR1_DataFields.IGST.value: 9400,
-                        GSTR1_DataFields.CESS.value: 500,
-                        GSTR1_DataFields.CGST.value: 0,
-                        GSTR1_DataFields.SGST.value: 0,
-                        GSTR1_DataFields.TAXABLE_VALUE.value: 100,
-                        GSTR1_DataFields.TAX_RATE.value: 6,
+                        GSTR1_DataField.POS.value: "24-Gujarat",
+                        GSTR1_DataField.DIFF_PERCENTAGE.value: 0.65,
+                        GSTR1_DataField.IGST.value: 9400,
+                        GSTR1_DataField.CESS.value: 500,
+                        GSTR1_DataField.CGST.value: 0,
+                        GSTR1_DataField.SGST.value: 0,
+                        GSTR1_DataField.TAXABLE_VALUE.value: 100,
+                        GSTR1_DataField.TAX_RATE.value: 6,
                     }
                 ],
             }
@@ -1058,80 +1058,80 @@ class TestDOC_ISSUE(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.json_data = {
-            GovDataFields.DOC_ISSUE_DETAILS.value: [
+            GovDataField.DOC_ISSUE_DETAILS.value: [
                 {
-                    GovDataFields.DOC_ISSUE_NUMBER.value: 1,
-                    GovDataFields.DOC_ISSUE_LIST.value: [
+                    GovDataField.DOC_ISSUE_NUMBER.value: 1,
+                    GovDataField.DOC_ISSUE_LIST.value: [
                         {
-                            GovDataFields.INDEX.value: 1,
-                            GovDataFields.FROM_SR.value: "1",
-                            GovDataFields.TO_SR.value: "10",
-                            GovDataFields.TOTAL_COUNT.value: 10,
-                            GovDataFields.CANCELLED_COUNT.value: 0,
-                            GovDataFields.NET_ISSUE.value: 10,
+                            GovDataField.INDEX.value: 1,
+                            GovDataField.FROM_SR.value: "1",
+                            GovDataField.TO_SR.value: "10",
+                            GovDataField.TOTAL_COUNT.value: 10,
+                            GovDataField.CANCELLED_COUNT.value: 0,
+                            GovDataField.NET_ISSUE.value: 10,
                         },
                         {
-                            GovDataFields.INDEX.value: 2,
-                            GovDataFields.FROM_SR.value: "11",
-                            GovDataFields.TO_SR.value: "20",
-                            GovDataFields.TOTAL_COUNT.value: 10,
-                            GovDataFields.CANCELLED_COUNT.value: 0,
-                            GovDataFields.NET_ISSUE.value: 10,
+                            GovDataField.INDEX.value: 2,
+                            GovDataField.FROM_SR.value: "11",
+                            GovDataField.TO_SR.value: "20",
+                            GovDataField.TOTAL_COUNT.value: 10,
+                            GovDataField.CANCELLED_COUNT.value: 0,
+                            GovDataField.NET_ISSUE.value: 10,
                         },
                     ],
                 },
                 {
-                    GovDataFields.DOC_ISSUE_NUMBER.value: 2,
-                    GovDataFields.DOC_ISSUE_LIST.value: [
+                    GovDataField.DOC_ISSUE_NUMBER.value: 2,
+                    GovDataField.DOC_ISSUE_LIST.value: [
                         {
-                            GovDataFields.INDEX.value: 1,
-                            GovDataFields.FROM_SR.value: "1",
-                            GovDataFields.TO_SR.value: "10",
-                            GovDataFields.TOTAL_COUNT.value: 10,
-                            GovDataFields.CANCELLED_COUNT.value: 0,
-                            GovDataFields.NET_ISSUE.value: 10,
+                            GovDataField.INDEX.value: 1,
+                            GovDataField.FROM_SR.value: "1",
+                            GovDataField.TO_SR.value: "10",
+                            GovDataField.TOTAL_COUNT.value: 10,
+                            GovDataField.CANCELLED_COUNT.value: 0,
+                            GovDataField.NET_ISSUE.value: 10,
                         },
                         {
-                            GovDataFields.INDEX.value: 2,
-                            GovDataFields.FROM_SR.value: "11",
-                            GovDataFields.TO_SR.value: "20",
-                            GovDataFields.TOTAL_COUNT.value: 10,
-                            GovDataFields.CANCELLED_COUNT.value: 0,
-                            GovDataFields.NET_ISSUE.value: 10,
+                            GovDataField.INDEX.value: 2,
+                            GovDataField.FROM_SR.value: "11",
+                            GovDataField.TO_SR.value: "20",
+                            GovDataField.TOTAL_COUNT.value: 10,
+                            GovDataField.CANCELLED_COUNT.value: 0,
+                            GovDataField.NET_ISSUE.value: 10,
                         },
                     ],
                 },
             ]
         }
         cls.mapped_data = {
-            GSTR1_SubCategories.DOC_ISSUE.value: {
+            GSTR1_SubCategory.DOC_ISSUE.value: {
                 "Invoices for outward supply - 1": {
-                    GSTR1_DataFields.DOC_TYPE.value: "Invoices for outward supply",
-                    GSTR1_DataFields.FROM_SR.value: "1",
-                    GSTR1_DataFields.TO_SR.value: "10",
-                    GSTR1_DataFields.TOTAL_COUNT.value: 10,
-                    GSTR1_DataFields.CANCELLED_COUNT.value: 0,
+                    GSTR1_DataField.DOC_TYPE.value: "Invoices for outward supply",
+                    GSTR1_DataField.FROM_SR.value: "1",
+                    GSTR1_DataField.TO_SR.value: "10",
+                    GSTR1_DataField.TOTAL_COUNT.value: 10,
+                    GSTR1_DataField.CANCELLED_COUNT.value: 0,
                 },
                 "Invoices for outward supply - 11": {
-                    GSTR1_DataFields.DOC_TYPE.value: "Invoices for outward supply",
-                    GSTR1_DataFields.FROM_SR.value: "11",
-                    GSTR1_DataFields.TO_SR.value: "20",
-                    GSTR1_DataFields.TOTAL_COUNT.value: 10,
-                    GSTR1_DataFields.CANCELLED_COUNT.value: 0,
+                    GSTR1_DataField.DOC_TYPE.value: "Invoices for outward supply",
+                    GSTR1_DataField.FROM_SR.value: "11",
+                    GSTR1_DataField.TO_SR.value: "20",
+                    GSTR1_DataField.TOTAL_COUNT.value: 10,
+                    GSTR1_DataField.CANCELLED_COUNT.value: 0,
                 },
                 "Invoices for inward supply from unregistered person - 1": {
-                    GSTR1_DataFields.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
-                    GSTR1_DataFields.FROM_SR.value: "1",
-                    GSTR1_DataFields.TO_SR.value: "10",
-                    GSTR1_DataFields.TOTAL_COUNT.value: 10,
-                    GSTR1_DataFields.CANCELLED_COUNT.value: 0,
+                    GSTR1_DataField.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
+                    GSTR1_DataField.FROM_SR.value: "1",
+                    GSTR1_DataField.TO_SR.value: "10",
+                    GSTR1_DataField.TOTAL_COUNT.value: 10,
+                    GSTR1_DataField.CANCELLED_COUNT.value: 0,
                 },
                 "Invoices for inward supply from unregistered person - 11": {
-                    GSTR1_DataFields.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
-                    GSTR1_DataFields.FROM_SR.value: "11",
-                    GSTR1_DataFields.TO_SR.value: "20",
-                    GSTR1_DataFields.TOTAL_COUNT.value: 10,
-                    GSTR1_DataFields.CANCELLED_COUNT.value: 0,
+                    GSTR1_DataField.DOC_TYPE.value: "Invoices for inward supply from unregistered person",
+                    GSTR1_DataField.FROM_SR.value: "11",
+                    GSTR1_DataField.TO_SR.value: "20",
+                    GSTR1_DataField.TOTAL_COUNT.value: 10,
+                    GSTR1_DataField.CANCELLED_COUNT.value: 0,
                 },
             }
         }
@@ -1150,20 +1150,20 @@ class TestSUPECOM(FrappeTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.json_data = {
-            GovDataFields.SUPECOM_52.value: [
+            GovDataField.SUPECOM_52.value: [
                 {
-                    GovDataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
-                    GovDataFields.NET_TAXABLE_VALUE.value: 10000,
+                    GovDataField.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    GovDataField.NET_TAXABLE_VALUE.value: 10000,
                     "igst": 1000,
                     "cgst": 0,
                     "sgst": 0,
                     "cess": 0,
                 }
             ],
-            GovDataFields.SUPECOM_9_5.value: [
+            GovDataField.SUPECOM_9_5.value: [
                 {
-                    GovDataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
-                    GovDataFields.NET_TAXABLE_VALUE.value: 10000,
+                    GovDataField.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    GovDataField.NET_TAXABLE_VALUE.value: 10000,
                     "igst": 1000,
                     "cgst": 0,
                     "sgst": 0,
@@ -1173,26 +1173,26 @@ class TestSUPECOM(FrappeTestCase):
         }
 
         cls.mapped_data = {
-            GSTR1_SubCategories.SUPECOM_52.value: {
+            GSTR1_SubCategory.SUPECOM_52.value: {
                 "20ALYPD6528PQC5": {
-                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_SubCategories.SUPECOM_52.value,
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_ItemFields.IGST.value: 1000,
-                    GSTR1_ItemFields.CGST.value: 0,
-                    GSTR1_ItemFields.SGST.value: 0,
-                    GSTR1_ItemFields.CESS.value: 0,
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.SUPECOM_52.value,
+                    GSTR1_DataField.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_ItemField.IGST.value: 1000,
+                    GSTR1_ItemField.CGST.value: 0,
+                    GSTR1_ItemField.SGST.value: 0,
+                    GSTR1_ItemField.CESS.value: 0,
                 }
             },
-            GSTR1_SubCategories.SUPECOM_9_5.value: {
+            GSTR1_SubCategory.SUPECOM_9_5.value: {
                 "20ALYPD6528PQC5": {
-                    GSTR1_DataFields.DOC_TYPE.value: GSTR1_SubCategories.SUPECOM_9_5.value,
-                    GSTR1_DataFields.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
-                    GSTR1_DataFields.TAXABLE_VALUE.value: 10000,
-                    GSTR1_ItemFields.IGST.value: 1000,
-                    GSTR1_ItemFields.CGST.value: 0,
-                    GSTR1_ItemFields.SGST.value: 0,
-                    GSTR1_ItemFields.CESS.value: 0,
+                    GSTR1_DataField.DOC_TYPE.value: GSTR1_SubCategory.SUPECOM_9_5.value,
+                    GSTR1_DataField.ECOMMERCE_GSTIN.value: "20ALYPD6528PQC5",
+                    GSTR1_DataField.TAXABLE_VALUE.value: 10000,
+                    GSTR1_ItemField.IGST.value: 1000,
+                    GSTR1_ItemField.CGST.value: 0,
+                    GSTR1_ItemField.SGST.value: 0,
+                    GSTR1_ItemField.CESS.value: 0,
                 }
             },
         }
