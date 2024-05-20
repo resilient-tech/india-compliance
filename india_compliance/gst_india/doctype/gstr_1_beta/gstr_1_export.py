@@ -728,34 +728,6 @@ class BooksExcel(DataProcessor):
     PERCENT_FORMAT = "0.00"
     DEFAULT_DATA_FORMAT = {"height": 15}
 
-    AMOUNT_HEADERS = [
-        {
-            "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
-            "label": _("Taxable Value"),
-            "data_format": {"number_format": AMOUNT_FORMAT},
-        },
-        {
-            "fieldname": GSTR1_DataField.IGST.value,
-            "label": _("IGST"),
-            "data_format": {"number_format": AMOUNT_FORMAT},
-        },
-        {
-            "fieldname": GSTR1_DataField.CGST.value,
-            "label": _("CGST"),
-            "data_format": {"number_format": AMOUNT_FORMAT},
-        },
-        {
-            "fieldname": GSTR1_DataField.SGST.value,
-            "label": _("SGST"),
-            "data_format": {"number_format": AMOUNT_FORMAT},
-        },
-        {
-            "fieldname": GSTR1_DataField.CESS.value,
-            "label": _("CESS"),
-            "data_format": {"number_format": AMOUNT_FORMAT},
-        },
-    ]
-
     def __init__(self, company_gstin, month_or_quarter, year):
         self.company_gstin = company_gstin
         self.month_or_quarter = month_or_quarter
@@ -931,7 +903,7 @@ class BooksExcel(DataProcessor):
                 "fieldname": GSTR1_DataField.POS.value,
                 "header_format": {"width": ExcelWidth.POS.value},
             },
-            *self.AMOUNT_HEADERS,
+            *self.get_amount_headers(),
             {
                 "label": _("Amount Received"),
                 "fieldname": GSTR1_DataField.DOC_VALUE.value,
@@ -951,7 +923,7 @@ class BooksExcel(DataProcessor):
                 "header_format": {"width": ExcelWidth.INVOICE_NUMBER.value},
             },
             {
-                "label": _("Customer "),
+                "label": _("Customer"),
                 "fieldname": GSTR1_DataField.CUST_NAME,
                 "header_format": {"width": ExcelWidth.NAME.value},
             },
@@ -960,7 +932,7 @@ class BooksExcel(DataProcessor):
                 "fieldname": GSTR1_DataField.POS,
                 "header_format": {"width": ExcelWidth.POS.value},
             },
-            *self.AMOUNT_HEADERS,
+            *self.get_amount_headers(),
             {
                 "label": _("Amount Adjusted"),
                 "fieldname": GSTR1_DataField.DOC_VALUE,
@@ -987,7 +959,7 @@ class BooksExcel(DataProcessor):
                 "fieldname": GSTR1_DataField.QUANTITY.value,
                 "header_format": {"width": ExcelWidth.QUANTITY.value},
             },
-            *self.AMOUNT_HEADERS,
+            *self.get_amount_headers(),
         ]
 
     def get_doc_issue_headers(self):
@@ -1018,6 +990,35 @@ class BooksExcel(DataProcessor):
                 "label": _("Cancelled Count"),
                 "fieldname": GSTR1_DataField.CANCELLED_COUNT.value,
                 "header_format": {"width": ExcelWidth.INVOICE_COUNT.value},
+            },
+        ]
+
+    def get_amount_headers(self):
+        return [
+            {
+                "fieldname": GSTR1_DataField.TAXABLE_VALUE.value,
+                "label": _("Taxable Value"),
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "fieldname": GSTR1_DataField.IGST.value,
+                "label": _("IGST"),
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "fieldname": GSTR1_DataField.CGST.value,
+                "label": _("CGST"),
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "fieldname": GSTR1_DataField.SGST.value,
+                "label": _("SGST"),
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
+            },
+            {
+                "fieldname": GSTR1_DataField.CESS.value,
+                "label": _("CESS"),
+                "data_format": {"number_format": self.AMOUNT_FORMAT},
             },
         ]
 
