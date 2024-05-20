@@ -41,12 +41,14 @@
   {
    "fieldname": "filing_status",
    "fieldtype": "Data",
-   "label": "Filing Status"
+   "label": "Filing Status",
+   "read_only": 1
   },
   {
    "fieldname": "return_period",
    "fieldtype": "Data",
-   "label": "Return Period"
+   "label": "Return Period",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_sqwh",
@@ -55,12 +57,14 @@
   {
    "fieldname": "filing_date",
    "fieldtype": "Date",
-   "label": "Filing Date"
+   "label": "Filing Date",
+   "read_only": 1
   },
   {
    "fieldname": "acknowledgement_number",
    "fieldtype": "Data",
-   "label": "Acknowledgement Number"
+   "label": "Acknowledgement Number",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_oisv",
@@ -70,7 +74,8 @@
   {
    "fieldname": "gstin",
    "fieldtype": "Data",
-   "label": "GSTIN"
+   "label": "GSTIN",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_hxfu",
@@ -95,7 +100,8 @@
    "default": "0",
    "fieldname": "is_latest_data",
    "fieldtype": "Check",
-   "label": "Is Latest Data"
+   "label": "Is Latest Data",
+   "read_only": 1
   },
   {
    "fieldname": "generation_status",
@@ -108,42 +114,50 @@
   {
    "fieldname": "filed",
    "fieldtype": "Attach",
-   "label": "Filed Data"
+   "label": "Filed Data",
+   "read_only": 1
   },
   {
    "fieldname": "filed_summary",
    "fieldtype": "Attach",
-   "label": "Filed Summary"
+   "label": "Filed Summary",
+   "read_only": 1
   },
   {
    "fieldname": "books",
    "fieldtype": "Attach",
-   "label": "Books Data"
+   "label": "Books Data",
+   "read_only": 1
   },
   {
    "fieldname": "books_summary",
    "fieldtype": "Attach",
-   "label": "Books Summary"
+   "label": "Books Summary",
+   "read_only": 1
   },
   {
    "fieldname": "reconcile",
    "fieldtype": "Attach",
-   "label": "Reconcile GSTR-1"
+   "label": "Reconcile GSTR-1",
+   "read_only": 1
   },
   {
    "fieldname": "reconcile_summary",
    "fieldtype": "Attach",
-   "label": "Reconcile Summary"
+   "label": "Reconcile Summary",
+   "read_only": 1
   },
   {
    "fieldname": "unfiled",
    "fieldtype": "Attach",
-   "label": "Unfiled Invoices"
+   "label": "Unfiled Invoices",
+   "read_only": 1
   },
   {
    "fieldname": "unfiled_summary",
    "fieldtype": "Attach",
-   "label": "Unfiled Summary"
+   "label": "Unfiled Summary",
+   "read_only": 1
   },
   {
    "fieldname": "section_break_emlz",
@@ -157,13 +171,14 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
-   "options": "Company"
+   "options": "Company",
+   "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-05-17 14:34:50.943924",
+ "modified": "2024-05-20 15:07:08.835107",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Filed Log",
