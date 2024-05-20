@@ -152,6 +152,8 @@ class SummarizeGSTR1:
 
             summary_row.pop("unique_records")
 
+        return subcategory_summary
+
     def default_subcategory_summary(self, subcategory):
         """
         Considered in total taxable value:
@@ -476,7 +478,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
 
     def get_books_gstr1_data(self, filters):
         from india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta import (
-            get_from_and_to_date,
+            get_gstr_1_from_and_to_date,
         )
 
         # Query / Process / Map / Sumarize / Optionally Save & Return
@@ -489,7 +491,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
             if mapped_data:
                 return mapped_data
 
-        from_date, to_date = get_from_and_to_date(
+        from_date, to_date = get_gstr_1_from_and_to_date(
             filters.month_or_quarter, filters.year
         )
 

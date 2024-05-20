@@ -166,7 +166,7 @@ def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
 
     frappe.has_permission("GSTR-1 Beta", throw=True)
 
-    from_date, to_date = get_from_and_to_date(month_or_quarter, year)
+    from_date, to_date = get_gstr_1_from_and_to_date(month_or_quarter, year)
 
     filters = frappe._dict(
         {
@@ -222,25 +222,21 @@ def get_period(month_or_quarter: str, year: str) -> str:
     return f"{month_number}{year}"
 
 
-def get_from_and_to_date(month_or_quarter: str, year: str) -> tuple:
+def get_gstr_1_from_and_to_date(month_or_quarter: str, year: str) -> tuple:
     """
     Returns the from and to date for the given month or quarter and year
     This is used to filter the data for the given period in Books
     """
 
-    filing_frequency = get_gstr1_filing_frequency()
+    filing_frequency = frappe.get_cached_value("GST Settings", None, "filing_frequency")
 
-    if filing_frequency == "Monthly":
-        from_date = getdate(f"{year}-{month_or_quarter}-01")
-        to_date = get_last_day(from_date)
-    else:
+    if filing_frequency == "Quarterly":
         start_month, end_month = month_or_quarter.split("-")
         from_date = getdate(f"{year}-{start_month}-01")
         to_date = get_last_day(f"{year}-{end_month}-01")
+    else:
+        # Monthly (default)
+        from_date = getdate(f"{year}-{month_or_quarter}-01")
+        to_date = get_last_day(from_date)
 
     return from_date, to_date
-
-
-def get_gstr1_filing_frequency():
-    gst_settings = frappe.get_cached_doc("GST Settings")
-    return gst_settings.filing_frequency
