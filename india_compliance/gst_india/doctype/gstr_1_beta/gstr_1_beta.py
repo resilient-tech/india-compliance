@@ -4,22 +4,14 @@
 from datetime import datetime
 
 import frappe
-from frappe import _, unscrub
+from frappe import _
 from frappe.desk.form.load import run_onload
 from frappe.model.document import Document
 from frappe.query_builder.functions import Date, Sum
-from frappe.utils import flt, get_last_day, getdate
+from frappe.utils import get_last_day, getdate
 
 from india_compliance.gst_india.utils import get_gst_accounts_by_type
 from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
-from india_compliance.gst_india.utils.gstr_1 import GSTR1_SubCategories
-from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
-    download_gstr1_json_data,
-)
-from india_compliance.gst_india.utils.gstr_1.gstr_1_json_map import (
-    GSTR1BooksData,
-    summarize_retsum_data,
-)
 from india_compliance.gst_india.utils.gstr_utils import request_otp
 
 
@@ -123,14 +115,19 @@ class GSTR1Beta(Document):
         frappe.msgprint(_("GSTR-1 is being prepared"), alert=True)
 
     def generate_gstr1(self):
-        filters = {
-            "company_gstin": self.company_gstin,
-            "month_or_quarter": self.month_or_quarter,
-            "year": self.year,
-        }
+        """
+        Try to generate GSTR-1 data. Wrapper for generating GSTR-1 data
+        """
+
+        filters = frappe._dict(
+            company=self.company,
+            company_gstin=self.company_gstin,
+            month_or_quarter=self.month_or_quarter,
+            year=self.year,
+        )
 
         try:
-            self._generate_gstr1_data(filters)
+            self.gstr1_log.generate_gstr1_data(filters, callback=self.on_generate)
 
         except Exception as e:
             self.gstr1_log.update_status("Failed", commit=True)
@@ -144,316 +141,21 @@ class GSTR1Beta(Document):
 
             raise e
 
-    def _generate_gstr1_data(self, filters):
-        data = {}
+    def on_generate(self, data, filters):
+        """
+        Once data is generated, update the status and publish the data
+        """
+        self.gstr1_log.db_set({"generation_status": "Generated", "is_latest_data": 1})
 
-        def on_generate():
-            self.gstr1_log.db_set(
-                {"generation_status": "Generated", "is_latest_data": 1}
-            )
-
-            frappe.publish_realtime(
-                "gstr1_data_prepared",
-                message={"data": data, "filters": filters},
-                user=frappe.session.user,
-                doctype=self.doctype,
-            )
-
-        def summarize_data(gov_data_field=None):
-            summary_fields = {
-                "reconcile": "reconcile_summary",
-                f"{gov_data_field}": f"{gov_data_field}_summary",
-                "books": "books_summary",
-            }
-
-            for key, field in summary_fields.items():
-                if not data.get(key):
-                    continue
-
-                if self.gstr1_log.is_latest_data and self.gstr1_log.get(field):
-                    data[field] = self.gstr1_log.get_json_for(field)
-                    continue
-
-                if key == "filed":
-                    summary_data = summarize_retsum_data(data[key].get("summary"))
-                else:
-                    summary_data = self.gstr1_log.summarize_data(data[key])
-
-                self.gstr1_log.update_json_for(field, summary_data)
-                data[field] = summary_data
-
-        # APIs Disabled
-        if not self.gstr1_log.is_gstr1_api_enabled():
-            books_data = get_books_gstr1_data(self)
-
-            data["status"] = "Not Filed"
-            data["books"] = self.gstr1_log.normalize_data(books_data)
-
-            summarize_data()
-            on_generate()
-            return
-
-        # APIs Enabled
-        status = self.gstr1_log.filing_status
-        if not status:
-            status = get_gstr_1_return_status(
-                self.gstr1_log.company,
-                self.gstr1_log.gstin,
-                self.gstr1_log.return_period,
-            )
-            self.gstr1_log.filing_status = status
-
-        if status == "Filed":
-            gov_data_field = "filed"
-        else:
-            gov_data_field = "unfiled"
-
-        # Get Data
-        gov_data, is_enqueued = get_gov_gstr1_data(self.gstr1_log)
-
-        if error_type := gov_data.get("error_type"):
-            # otp_requested, invalid_otp
-
-            if error_type == "invalid_otp":
-                request_otp(self.company_gstin)
-
-            data = "otp_requested"
-            on_generate()
-            return
-
-        books_data = get_books_gstr1_data(self)
-
-        if is_enqueued:
-            return
-
-        reconcile_data = get_reconcile_gstr1_data(self.gstr1_log, gov_data, books_data)
-
-        # Compile Data
-        data["status"] = status
-
-        data["reconcile"] = self.gstr1_log.normalize_data(reconcile_data)
-        data[gov_data_field] = self.gstr1_log.normalize_data(gov_data)
-        data["books"] = self.gstr1_log.normalize_data(books_data)
-
-        summarize_data(gov_data_field)
-        on_generate()
+        frappe.publish_realtime(
+            "gstr1_data_prepared",
+            message={"data": data, "filters": filters},
+            user=frappe.session.user,
+            doctype=self.doctype,
+        )
 
 
 ####### DATA ######################################################################################
-
-
-def get_gov_gstr1_data(gstr1_log):
-    if gstr1_log.filing_status == "Filed":
-        data_field = "filed"
-
-    else:
-        data_field = "unfiled"
-
-    # data exists
-    if gstr1_log.get(data_field):
-        mapped_data = gstr1_log.get_json_for(data_field)
-        if mapped_data:
-            return mapped_data, False
-
-    # download data
-    return download_gstr1_json_data(gstr1_log)
-
-
-def get_books_gstr1_data(filters):
-    # Query / Process / Map / Sumarize / Optionally Save & Return
-    data_field = "books"
-    gstr1_log = filters.gstr1_log
-
-    # data exists
-    if gstr1_log.is_latest_data and gstr1_log.get(data_field):
-        mapped_data = gstr1_log.get_json_for(data_field)
-
-        if mapped_data:
-            return mapped_data
-
-    from_date, to_date = get_from_and_to_date(filters.month_or_quarter, filters.year)
-
-    _filters = frappe._dict(
-        {
-            "company": filters.company,
-            "company_gstin": filters.company_gstin,
-            "from_date": from_date,
-            "to_date": to_date,
-        }
-    )
-
-    # compute data
-    mapped_data = GSTR1BooksData(_filters).prepare_mapped_data()
-
-    gstr1_log.update_json_for(data_field, mapped_data)
-
-    return mapped_data
-
-
-def get_reconcile_gstr1_data(gstr1_log, gov_data, books_data):
-    # Everything from gov_data compared with books_data
-    # Missing in gov_data
-    # Update books data (optionally if not filed)
-    # Prepare data / Sumarize / Save & Return / Optionally save books data
-    if gstr1_log.is_latest_data and gstr1_log.reconcile:
-        return gstr1_log.get_json_for("reconcile")
-
-    reconciled_data = {}
-    if gstr1_log.filing_status == "Filed":
-        update_books_match = False
-    else:
-        update_books_match = True
-
-    for subcategory in GSTR1_SubCategories:
-        subcategory = subcategory.value
-        books_subdata = books_data.get(subcategory) or {}
-        gov_subdata = gov_data.get(subcategory) or {}
-
-        if not books_subdata and not gov_subdata:
-            continue
-
-        ignore_upload_status = subcategory in [
-            GSTR1_SubCategories.HSN.value,
-            GSTR1_SubCategories.DOC_ISSUE.value,
-        ]
-        is_list = False  # Object Type for the subdata_value
-
-        reconcile_subdata = {}
-
-        # Books vs Gov
-        for key, books_value in books_subdata.items():
-            if not reconcile_subdata:
-                is_list = isinstance(books_value, list)
-
-            gov_value = gov_subdata.get(key)
-            reconcile_row = get_reconciled_row(books_value, gov_value)
-
-            if reconcile_row:
-                reconcile_subdata[key] = reconcile_row
-
-            if not update_books_match or ignore_upload_status:
-                continue
-
-            books_value = books_value[0] if is_list else books_value
-
-            if books_value.get("upload_status"):
-                update_books_match = False
-
-            # Update Books Data
-            if not gov_value:
-                books_value["upload_status"] = "Not Uploaded"
-
-            if reconcile_row:
-                books_value["upload_status"] = "Mismatch"
-            else:
-                books_value["upload_status"] = "Uploaded"
-
-        # In Gov but not in Books
-        for key, gov_value in gov_subdata.items():
-            if key in books_subdata:
-                continue
-
-            if not reconcile_subdata:
-                is_list = isinstance(gov_value, list)
-
-            reconcile_subdata[key] = get_reconciled_row(None, gov_value)
-
-            if not update_books_match or ignore_upload_status:
-                continue
-
-            books_empty_row = get_empty_row(gov_value[0] if is_list else gov_value)
-            books_empty_row["upload_status"] = "Missing in Books"
-
-            books_subdata[key] = [books_empty_row] if is_list else books_empty_row
-
-        if update_books_match and not books_data.get(subcategory):
-            books_data[subcategory] = books_subdata
-
-        if reconcile_subdata:
-            reconciled_data[subcategory] = reconcile_subdata
-
-    if update_books_match:
-        gstr1_log.update_json_for("books", books_data)
-
-    gstr1_log.update_json_for("reconcile", reconciled_data)
-
-    return reconciled_data
-
-
-def get_reconciled_row(books_row, gov_row):
-    """
-    Compare books_row with gov_row and return the difference
-
-    Args:
-        books_row (dict|list): Books Row Data
-        gov_row (dict|list): Gov Row Data
-
-    Returns:
-        dict|list: Reconciled Row Data
-
-    Steps:
-        1. Get Empty Row with all values as 0
-        2. Prefer Gov Row if available to compute empty row
-        3. Compute comparable Gov and Books Row
-        4. Compare the rows
-        5. Compute match status and differences
-        6. Return the reconciled row only if there are differences
-    """
-    is_list = isinstance(gov_row if gov_row else books_row, list)
-
-    # Get Empty Row
-    if is_list:
-        reconcile_row = get_empty_row(gov_row[0] if gov_row else books_row[0])
-        gov_row = gov_row[0] if gov_row else {}
-        books_row = get_aggregated_row(books_row) if books_row else {}
-
-    else:
-        reconcile_row = get_empty_row(gov_row or books_row)
-        gov_row = gov_row or {}
-        books_row = books_row or {}
-
-    # Default Status
-    reconcile_row["match_status"] = "Matched"
-    reconcile_row["differences"] = []
-
-    if not gov_row:
-        reconcile_row["match_status"] = "Missing in GSTR-1"
-
-    if not books_row:
-        reconcile_row["match_status"] = "Missing in Books"
-
-    # Compute Differences
-    for key, value in reconcile_row.items():
-        if isinstance(value, (int, float)) and key not in ("tax_rate"):
-            reconcile_row[key] = flt(
-                (books_row.get(key) or 0) - (gov_row.get(key) or 0), 2
-            )
-            has_different_value = reconcile_row[key] != 0
-
-        elif key in ("customer_gstin", "place_of_supply"):
-            has_different_value = books_row.get(key) != gov_row.get(key)
-
-        else:
-            continue
-
-        if not has_different_value:
-            continue
-
-        if "Missing" not in reconcile_row["match_status"]:
-            reconcile_row["match_status"] = "Mismatch"
-            reconcile_row["differences"].append(unscrub(key))
-
-    # Return
-    if reconcile_row["match_status"] == "Matched":
-        return
-
-    reconcile_row["books"] = books_row
-    reconcile_row["gov"] = gov_row
-
-    if is_list:
-        return [reconcile_row]
-
-    return reconcile_row
 
 
 @frappe.whitelist()
@@ -542,35 +244,3 @@ def get_from_and_to_date(month_or_quarter: str, year: str) -> tuple:
 def get_gstr1_filing_frequency():
     gst_settings = frappe.get_cached_doc("GST Settings")
     return gst_settings.filing_frequency
-
-
-def get_empty_row(row: dict):
-    """
-    Row with all values as 0
-    """
-    empty_row = row.copy()
-
-    for key, value in empty_row.items():
-        if isinstance(value, (int, float)):
-            empty_row[key] = 0
-
-    return empty_row
-
-
-def get_aggregated_row(books_rows: list) -> dict:
-    """
-    There can be multiple rows in books data for a single row in gov data
-    Aggregate all the rows to a single row
-    """
-    aggregated_row = {}
-
-    for row in books_rows:
-        if not aggregated_row:
-            aggregated_row = row.copy()
-            continue
-
-        for key, value in row.items():
-            if isinstance(value, (int, float)):
-                aggregated_row[key] += value
-
-    return aggregated_row

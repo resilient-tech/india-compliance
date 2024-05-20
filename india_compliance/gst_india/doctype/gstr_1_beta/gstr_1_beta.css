@@ -95,6 +95,7 @@ div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item > .nav-link.active {
     background-color: #e2e2e2;
     color: var(--primary);
 }
+
 div[data-page-route="GSTR-1 Beta"] .custom-tabs > .nav-item:first-child:hover {
     background-color: var(--btn-default-hover-bg);
     border-radius: 0.4rem 0 0 0.4rem;
