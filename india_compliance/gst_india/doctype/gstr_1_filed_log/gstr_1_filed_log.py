@@ -371,6 +371,9 @@ class ReconcileGSTR1:
             if isinstance(value, (int, float)):
                 empty_row[key] = 0
 
+            if key == "items":
+                empty_row[key] = [{}]
+
         return empty_row
 
     @staticmethod

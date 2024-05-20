@@ -204,7 +204,29 @@ class GovExcelField(Enum):
     TAXABLE_VALUE = "Taxable Value"
     ECOMMERCE_GSTIN = "E-Commerce GSTIN"
     TAX_RATE = "Rate"
+    IGST = "Integrated Tax Amount"
+    CGST = "Central Tax Amount"
+    SGST = "State/UT Tax Amount"
     CESS = "Cess Amount"
+
+    NOTE_NO = "Note Number"
+    NOTE_DATE = "Note Date"
+    NOTE_TYPE = "Note Type"
+    NOTE_VALUE = "Note Value"
+
+    PORT_CODE = "Port Code"
+    SHIPPING_BILL_NO = "Shipping Bill Number"
+    SHIPPING_BILL_DATE = "Shipping Bill Date"
+
+    DESCRIPTION = "Description"
+    # NIL_RATED = "Nil Rated Supplies"
+    # EXEMPTED = "Exempted (other than nil rated/non-GST supplies)"
+    # NON_GST = "Non-GST Supplies"
+
+    HSN_CODE = "HSN"
+    UOM = "UQC"
+    QUANTITY = "Total Quantity"
+    TOTAL_VALUE = "Total Value"
 
 
 class GovJsonKey(Enum):

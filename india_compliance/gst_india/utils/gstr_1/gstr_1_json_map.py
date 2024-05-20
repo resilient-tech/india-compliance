@@ -249,11 +249,6 @@ class B2B(GovDataMapper):
         return output
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = [
-            document
-            for documents in input_data.values()
-            for document in documents.values()
-        ]
         customer_data = {}
 
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
@@ -353,11 +348,6 @@ class B2CL(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = [
-            document
-            for documents in input_data.values()
-            for document in documents.values()
-        ]
         pos_data = {}
 
         for invoice in input_data:
@@ -448,11 +438,6 @@ class Exports(GovDataMapper):
         return output
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = [
-            document
-            for documents in input_data.values()
-            for document in documents.values()
-        ]
         export_category_wise_data = {}
 
         for invoice in input_data:
@@ -534,7 +519,7 @@ class B2CS(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
+        input_data = self.aggregate_invoices(input_data)
 
         return [self.format_data(invoice, reverse=True) for invoice in input_data]
 
@@ -609,7 +594,7 @@ class NilRated(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
+        input_data = self.aggregate_invoices(input_data)
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
         return {
@@ -745,7 +730,6 @@ class CDNR(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = list(input_data[self.SUBCATEGORY].values())
         customer_data = {}
 
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
@@ -881,7 +865,6 @@ class CDNUR(GovDataMapper):
 
     def convert_to_gov_data_format(self, input_data):
         self.DOCUMENT_TYPES = self.reverse_dict(self.DOCUMENT_TYPES)
-        input_data = list(input_data[self.SUBCATEGORY].values())
         return [self.format_data(invoice, reverse=True) for invoice in input_data]
 
     def format_item_wise_json_data(self, items, *args):
@@ -977,7 +960,6 @@ class HSNSUM(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = list(input_data[self.SUBCATEGORY].values())
         return {
             GovDataField.HSN_DATA.value: [
                 self.format_data(
@@ -1059,7 +1041,7 @@ class AT(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(input_data[self.SUBCATEGORY])
+        input_data = self.aggregate_invoices(input_data)
 
         pos_wise_data = {}
 
@@ -1195,7 +1177,6 @@ class DOC_ISSUE(GovDataMapper):
         return {GSTR1_SubCategory.DOC_ISSUE.value: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = input_data[GSTR1_SubCategory.DOC_ISSUE.value]
         self.DOCUMENT_NATURE = self.reverse_dict(self.DOCUMENT_NATURE)
 
         output = {GovDataField.DOC_ISSUE_DETAILS.value: []}
@@ -1281,6 +1262,7 @@ class SUPECOM(GovDataMapper):
         return output
 
     def convert_to_gov_data_format(self, input_data):
+        # TODO: fix while converting to govt data format
         output = {}
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
@@ -1454,20 +1436,21 @@ def convert_to_internal_data_format(data):
     return output
 
 
-def get_category_wise_data(data):
+def get_category_wise_data(data, mapping: dict):
     category_wise_data = {}
-    for subcategory, category in SUB_CATEGORY_GOV_CATEGORY_MAPPING.items():
+    for subcategory, category in mapping.items():
         if not data.get(subcategory.value):
             continue
 
-        category_wise_data.setdefault(category.value, {})[subcategory.value] = data.get(
-            subcategory.value, {}
+        category_wise_data.setdefault(category.value, []).extend(
+            data.get(subcategory.value, [])
         )
+
     return category_wise_data
 
 
 def convert_to_gov_data_format(data):
-    category_wise_data = get_category_wise_data(data)
+    category_wise_data = get_category_wise_data(data, SUB_CATEGORY_GOV_CATEGORY_MAPPING)
 
     output = {}
     for category, mapper_class in CLASS_MAP.items():
