@@ -42,7 +42,7 @@ TYPES_OF_BUSINESS = {
     "NIL Rated": "nil",
     "Document Issued Summary": "doc_issue",
     "HSN": "hsn",
-    "Section_14": "ecom",
+    "Section_14": "supeco",
 }
 
 
@@ -578,6 +578,9 @@ class Gstr1Report:
                 Sum(si_item.igst_amount).as_("total_igst_amount"),
                 Sum(si_item.cgst_amount).as_("total_cgst_amount"),
                 Sum(si_item.sgst_amount).as_("total_sgst_amount"),
+                (Sum(si_item.cess_amount) + Sum(si_item.cess_non_advol_amount)).as_(
+                    "total_cess_amount"
+                ),
                 Case()
                 .when(si.is_reverse_charge == 1, "Reverse Charge u/s 9(5)")
                 .else_("Collect Tax u/s 52")
@@ -1127,6 +1130,12 @@ class Gstr1Report:
                     "width": 120,
                 },
                 {
+                    "fieldname": "total_cess_amount",
+                    "label": "Cess Amount",
+                    "fieldtype": "Currency",
+                    "width": 120,
+                },
+                {
                     "fieldname": "supply_liable_to",
                     "label": "Supply Liable to",
                     "width": 180,
@@ -1565,6 +1574,10 @@ def get_json(type_of_business, gstin, data, filters):
     if type_of_business == "HSN":
         return get_hsn_wise_json_data(filters, data)
 
+    if type_of_business == "Section_14":
+        res.setdefault("superco", {})
+        return get_section_14_json(res, data)
+
 
 def set_gst_defaults(filters):
     if isinstance(filters, str):
@@ -1900,6 +1913,24 @@ def get_document_issued_summary_json(data):
         )
 
     return {"doc_det": doc_det}
+
+
+def get_section_14_json(res, data):
+    out = res["superco"]
+    for item in data:
+        key = "clttx" if item["supply_liable_to"] == "Collect Tax u/s 52" else "paytx"
+        out.setdefault(key, []).append(
+            {
+                "etin": item["ecommerce_gstin"],
+                "suppval": item["total_taxable_value"],
+                "igst": item["total_igst_amount"],
+                "cgst": item["total_cgst_amount"],
+                "sgst": item["total_sgst_amount"],
+                "cess": item["total_cess_amount"],
+            }
+        )
+
+    return out
 
 
 def get_invoice_type(row):
