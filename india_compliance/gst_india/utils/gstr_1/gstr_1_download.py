@@ -117,5 +117,5 @@ def save_gstr_1_filed_data(gstin, return_period, json_data):
     save_gstr_1(gstin, return_period, json_data, "GSTR1")
 
 
-def save_gstr_1_invoice_data(gstin, return_period, json_data):
+def save_gstr_1_unfiled_data(gstin, return_period, json_data):
     save_gstr_1(gstin, return_period, json_data, "Unfiled GSTR1")

@@ -12,7 +12,7 @@ from india_compliance.gst_india.doctype.gstr_import_log.gstr_import_log import (
 from india_compliance.gst_india.utils import get_gstin_list
 from india_compliance.gst_india.utils.gstr_1.gstr_1_download import (
     save_gstr_1_filed_data,
-    save_gstr_1_invoice_data,
+    save_gstr_1_unfiled_data,
 )
 
 
@@ -134,7 +134,7 @@ def _download_queued_request(doc):
         ReturnType.GSTR2A.value: _download_gstr_2a,
         ReturnType.GSTR2B.value: save_gstr_2b,
         ReturnType.GSTR1.value: save_gstr_1_filed_data,
-        ReturnType.UnfiledGSTR1.value: save_gstr_1_invoice_data,
+        ReturnType.UnfiledGSTR1.value: save_gstr_1_unfiled_data,
     }
 
     try:
