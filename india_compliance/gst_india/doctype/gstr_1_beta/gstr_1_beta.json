@@ -66,7 +66,7 @@
    "depends_on": "eval: !doc.__onload?.data",
    "fieldname": "tabs_empty_state",
    "fieldtype": "HTML",
-   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Reconcile to view the data\") }}</p>"
+   "options": "<img alt=\"No Data\" src=\"/assets/frappe/images/ui-states/list-empty-state.svg\">\n\t<p class=\"text-muted\">{{ __(\"Generate to view the data\") }}</p>"
   },
   {
    "depends_on": "eval: doc.__onload?.data && Object.keys(doc.__onload.data).length === 0",
@@ -89,7 +89,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-05-17 14:27:48.772651",
+ "modified": "2024-05-20 14:42:40.601964",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",
