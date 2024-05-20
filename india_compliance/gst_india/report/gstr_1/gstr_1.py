@@ -1106,47 +1106,47 @@ class Gstr1Report:
             self.columns = [
                 {
                     "fieldname": "ecommerce_gstin",
-                    "label": "Ecommerce GSTIN",
+                    "label": _("Ecommerce GSTIN"),
                     "width": 180,
                 },
                 {
                     "fieldname": "is_reverse_charge",
-                    "label": "Reverse Charge",
+                    "label": _("Reverse Charge"),
                     "width": 120,
                 },
                 {
                     "fieldname": "total_taxable_value",
-                    "label": "Taxable Value",
+                    "label": _("Taxable Value"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
                 {
                     "fieldname": "total_igst_amount",
-                    "label": "IGST Amount",
+                    "label": _("IGST Amount"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
                 {
                     "fieldname": "total_sgst_amount",
-                    "label": "CGST Amount",
+                    "label": _("CGST Amount"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
                 {
                     "fieldname": "total_sgst_amount",
-                    "label": "SGST Amount",
+                    "label": _("SGST Amount"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
                 {
                     "fieldname": "total_cess_amount",
-                    "label": "Cess Amount",
+                    "label": _("Cess Amount"),
                     "fieldtype": "Currency",
                     "width": 120,
                 },
                 {
                     "fieldname": "supply_liable_to",
-                    "label": "Supply Liable to",
+                    "label": _("Supply Liable to"),
                     "width": 180,
                 },
             ]
