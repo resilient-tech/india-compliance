@@ -8,7 +8,7 @@ from pypika.terms import Case
 import frappe
 from frappe import _
 from frappe.query_builder import Criterion
-from frappe.query_builder.functions import IfNull, Sum
+from frappe.query_builder.functions import Date, IfNull, Sum
 from frappe.utils import cint, flt, formatdate, getdate
 
 from india_compliance.gst_india.report.hsn_wise_summary_of_outward_supplies.hsn_wise_summary_of_outward_supplies import (
@@ -38,6 +38,7 @@ TYPES_OF_BUSINESS = {
     "NIL Rated": "nil",
     "Document Issued Summary": "doc_issue",
     "HSN": "hsn",
+    "Section_14": "ecom",
 }
 
 INDEX_FOR_NIL_EXEMPT_DICT = {"Nil-Rated": 0, "Exempted": 1, "Non-GST": 2}
@@ -107,6 +108,8 @@ class Gstr1Report:
             self.get_documents_issued_data()
         elif self.filters.get("type_of_business") == "HSN":
             self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
+        elif self.filters.get("type_of_business") == "Section_14":
+            self.data = self.get_section_14_data()
         elif self.invoices:
             for inv, items_based_on_rate in self.invoice_tax_rate_info.items():
                 invoice_details = self.invoices.get(inv)
@@ -565,6 +568,37 @@ class Gstr1Report:
             )
 
         return invoice_item_wise_tax_details
+
+    def get_section_14_data(self):
+        si = frappe.qb.DocType("Sales Invoice")
+        si_item = frappe.qb.DocType("Sales Invoice Item")
+
+        return (
+            frappe.qb.from_(si)
+            .inner_join(si_item)
+            .on(si.name == si_item.parent)
+            .select(
+                si.ecommerce_gstin,
+                Case()
+                .when(si.is_reverse_charge == 1, "Y")
+                .else_("N")
+                .as_("is_reverse_charge"),
+                Sum(si_item.taxable_value).as_("total_taxable_value"),
+                Sum(si_item.igst_amount).as_("total_igst_amount"),
+                Sum(si_item.cgst_amount).as_("total_cgst_amount"),
+                Sum(si_item.sgst_amount).as_("total_sgst_amount"),
+                Case()
+                .when(si.is_reverse_charge == 1, "Reverse Charge u/s 9(5)")
+                .else_("Collect Tax u/s 52")
+                .as_("supply_liable_to"),
+            )
+            .where(si.company == self.filters.company)
+            .where(si.company_gstin == self.filters.company_gstin)
+            .where(Date(si.posting_date) >= getdate(self.filters.from_date))
+            .where(Date(si.posting_date) <= getdate(self.filters.to_date))
+            .where(IfNull(si.ecommerce_gstin, "") != "")
+            .groupby(si.is_reverse_charge, si.ecommerce_gstin)
+        ).run(as_dict=True)
 
     def get_columns(self):
         self.other_columns = []
@@ -1065,7 +1099,49 @@ class Gstr1Report:
         elif self.filters.get("type_of_business") == "HSN":
             self.columns = get_hsn_columns()
             return
-
+        elif self.filters.get("type_of_business") == "Section_14":
+            self.columns = [
+                {
+                    "fieldname": "ecommerce_gstin",
+                    "label": "Ecommerce GSTIN",
+                    "width": 180,
+                },
+                {
+                    "fieldname": "is_reverse_charge",
+                    "label": "Reverse Charge",
+                    "width": 120,
+                },
+                {
+                    "fieldname": "total_taxable_value",
+                    "label": "Taxable Value",
+                    "fieldtype": "Currency",
+                    "width": 120,
+                },
+                {
+                    "fieldname": "total_igst_amount",
+                    "label": "IGST Amount",
+                    "fieldtype": "Currency",
+                    "width": 120,
+                },
+                {
+                    "fieldname": "total_sgst_amount",
+                    "label": "CGST Amount",
+                    "fieldtype": "Currency",
+                    "width": 120,
+                },
+                {
+                    "fieldname": "total_sgst_amount",
+                    "label": "SGST Amount",
+                    "fieldtype": "Currency",
+                    "width": 120,
+                },
+                {
+                    "fieldname": "supply_liable_to",
+                    "label": "Supply Liable to",
+                    "width": 180,
+                },
+            ]
+            return
         self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 
 
