@@ -82,6 +82,10 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
+            if response.error_type == "not_generated":
+                frappe.msgprint("No data has found for {0}".format(return_period))
+                continue
+
             if response.error_type == "no_docs_found":
                 create_import_log(
                     gstin,
@@ -149,6 +153,10 @@ def download_gstr_2b(gstin, return_periods, otp=None):
         response = api.get_data(return_period, otp)
         if response.error_type in ["otp_requested", "invalid_otp"]:
             return response
+
+        if response.error_type == "not_generated":
+            frappe.msgprint("No data has found for {0}".format(return_period))
+            continue
 
         if response.error_type == "no_docs_found":
             create_import_log(
