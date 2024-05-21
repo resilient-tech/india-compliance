@@ -229,7 +229,7 @@ CUSTOM_FIELDS = {
             "fieldname": "supply_liable_to",
             "label": "Supply Liable to",
             "fieldtype": "Data",
-            "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators",
+            "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators && doc.ecommerce_gstin",
             "insert_after": "ecommerce_gstin",
             "print_hide": 1,
             "translatable": 0,
