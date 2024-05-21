@@ -16,6 +16,7 @@ def execute():
     enable_overseas_transactions(new_settings)
     enable_reverse_charge_in_sales(new_settings)
     enable_e_waybill_from_dn(new_settings)
+    enable_sales_through_ecommerce_operators(new_settings)
 
     if new_settings:
         frappe.db.set_single_value("GST Settings", new_settings)
@@ -50,3 +51,10 @@ def enable_reverse_charge_in_sales(settings):
 
     settings["enable_reverse_charge_in_sales"] = 1
     toggle_custom_fields(SALES_REVERSE_CHARGE_FIELDS, True)
+
+
+def enable_sales_through_ecommerce_operators(settings=None):
+    for doctype in ["Sales Invoice", "Sales Order", "Delivery Note"]:
+        if frappe.db.exists(doctype, {"ecommerce_gstin": ["!=", ""]}):
+            settings["enable_sales_through_ecommerce_operators"] = 1
+            return
