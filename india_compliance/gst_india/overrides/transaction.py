@@ -1621,8 +1621,12 @@ def before_update_after_submit(doc, method=None):
 
 def set_supply_liable_to(doc):
     gst_settings = frappe.get_cached_doc("GST Settings")
-    if gst_settings.enable_sales_through_ecommerce_operators and doc.ecommerce_gstin:
-        if doc.is_reverse_charge:
-            doc.supply_liable_to = "Reverse Charge u/s 9(5)"
-        else:
-            doc.supply_liable_to = "Collect Tax u/s 52"
+    if not (
+        gst_settings.enable_sales_through_ecommerce_operators and doc.ecommerce_gstin
+    ):
+        return
+
+    if doc.is_reverse_charge:
+        doc.supply_liable_to = "Reverse Charge u/s 9(5)"
+    else:
+        doc.supply_liable_to = "Collect Tax u/s 52"

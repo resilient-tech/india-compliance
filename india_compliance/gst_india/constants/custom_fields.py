@@ -221,6 +221,7 @@ CUSTOM_FIELDS = {
             "label": "E-commerce GSTIN",
             "length": 15,
             "fieldtype": "Data",
+            "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators",
             "insert_after": "gst_section",
             "print_hide": 1,
             "translatable": 0,

@@ -54,7 +54,6 @@ def enable_reverse_charge_in_sales(settings):
 
 
 def enable_sales_through_ecommerce_operators(settings=None):
-    for doctype in ["Sales Invoice", "Sales Order", "Delivery Note"]:
-        if frappe.db.exists(doctype, {"ecommerce_gstin": ["!=", ""]}):
-            settings["enable_sales_through_ecommerce_operators"] = 1
-            return
+    if frappe.db.exists("Sales Invoice", {"ecommerce_gstin": ["!=", ""]}):
+        settings["enable_sales_through_ecommerce_operators"] = 1
+        return
