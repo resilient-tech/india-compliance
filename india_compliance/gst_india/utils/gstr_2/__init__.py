@@ -83,7 +83,12 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
                 return response
 
             if response.error_type == "not_generated":
-                frappe.msgprint("No data has found for {0}".format(return_period))
+                frappe.msgprint(
+                    _(
+                        "No record is found in GSTR-2B or generation is still in progress"
+                    ),
+                    title=_("Not Generated"),
+                )
                 continue
 
             if response.error_type == "no_docs_found":
@@ -155,7 +160,10 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             return response
 
         if response.error_type == "not_generated":
-            frappe.msgprint("No data has found for {0}".format(return_period))
+            frappe.msgprint(
+                _("No record is found in GSTR-2B or generation is still in progress"),
+                title=_("Not Generated"),
+            )
             continue
 
         if response.error_type == "no_docs_found":
