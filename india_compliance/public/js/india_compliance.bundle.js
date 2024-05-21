@@ -5,3 +5,4 @@ import "./audit_trail_notification";
 import "./item_tax_template_notification";
 import "./quick_info_popover";
 import "./custom_number_card";
+import "./sales_transaction/sales_transaction"
