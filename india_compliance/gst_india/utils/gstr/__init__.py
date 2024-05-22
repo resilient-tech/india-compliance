@@ -56,6 +56,7 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
     total_expected_requests = len(return_periods) * len(ACTIONS)
     requests_made = 0
     queued_message = False
+    flag = True
     settings = frappe.get_cached_doc("GST Settings")
 
     return_type = ReturnType.GSTR2A
@@ -130,15 +131,21 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
             json_data[action.lower()] = data
 
         save_gstr_2a(gstin, return_period, json_data)
+        if return_period == return_periods[-1]:
+            flag = False
 
     if queued_message:
         show_queued_message()
+
+    if flag:
+        end_transaction_progress(return_periods[-1])
 
 
 def download_gstr_2b(gstin, return_periods, otp=None):
     total_expected_requests = len(return_periods)
     requests_made = 0
     queued_message = False
+    flag = True
 
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
@@ -188,9 +195,27 @@ def download_gstr_2b(gstin, return_periods, otp=None):
             continue  # skip first response if file_count is greater than 1
 
         save_gstr_2b(gstin, return_period, response)
+        if return_period == return_periods[-1]:
+            flag = False
 
     if queued_message:
         show_queued_message()
+
+    if flag:
+        end_transaction_progress(return_periods[-1])
+
+
+def end_transaction_progress(return_period):
+    frappe.publish_realtime(
+        "update_transactions_progress",
+        {
+            "current_progress": 100,
+            "return_period": return_period,
+            "is_last_period": True,
+        },
+        user=frappe.session.user,
+        doctype="Purchase Reconciliation Tool",
+    )
 
 
 def save_gstr_2a(gstin, return_period, json_data):
