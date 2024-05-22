@@ -1262,14 +1262,14 @@ class SUPECOM(GovDataMapper):
         return output
 
     def convert_to_gov_data_format(self, input_data):
-        # TODO: fix while converting to govt data format
         output = {}
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
-        for section, invoices in input_data.items():
-            output[self.DOCUMENT_CATEGORIES.get(section, section)] = [
-                self.format_data(invoice, reverse=True) for invoice in invoices.values()
-            ]
+        for invoice in input_data:
+            section = invoice[GSTR1_DataField.DOC_TYPE.value]
+            output.setdefault(
+                self.DOCUMENT_CATEGORIES.get(section, section), []
+            ).append(self.format_data(invoice, reverse=True))
 
         return output
 
