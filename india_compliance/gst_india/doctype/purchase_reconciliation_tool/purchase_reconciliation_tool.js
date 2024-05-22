@@ -36,6 +36,12 @@ const ReturnType = {
     GSTR2B: "GSTR2b",
 };
 
+let last_year = frappe.datetime.add_months(frappe.datetime.get_today(),-12)
+let fiscal_year = erpnext.utils.get_fiscal_year(last_year, true)
+let fiscal_start = frappe.datetime.str_to_user(fiscal_year[1], null,  frappe.datetime.get_user_date_fmt())
+let fiscal_end = frappe.datetime.str_to_user(fiscal_year[2], null,  frappe.datetime.get_user_date_fmt())
+
+
 function remove_gstr2b_alert(alert) {
     if (alert.length === 0) return;
     $(alert).remove();
@@ -143,9 +149,14 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     purchase_period(frm) {
         fetch_date_range(frm, "purchase");
+        let description = frm.doc.purchase_period == "Last Fiscal Year" ? fiscal_start +' to '+ fiscal_end : ""
+        frm.get_field("purchase_period").set_description(description);
     },
 
     async inward_supply_period(frm) {
+        let description = frm.doc.inward_supply_period == "Last Fiscal Year" ? fiscal_start +' to '+ fiscal_end : ""
+        frm.get_field("inward_supply_period").set_description(description);
+
         await fetch_date_range(
             frm,
             "inward_supply",
