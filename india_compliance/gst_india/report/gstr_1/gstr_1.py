@@ -89,7 +89,7 @@ class Gstr1Report:
 
         if self.invoices:
             self.get_invoice_items()
-            self.get_items_based_on_tax_rate()
+            self.get_invoice_tax_rate_info()
             self.invoice_fields = [d["fieldname"] for d in self.invoice_columns]
 
         self.get_data()
@@ -108,7 +108,7 @@ class Gstr1Report:
         elif self.filters.get("type_of_business") == "HSN":
             self.data = get_hsn_data(self.filters, self.columns, self.gst_accounts)
         elif self.invoices:
-            for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
+            for inv, items_based_on_rate in self.invoice_tax_rate_info.items():
                 invoice_details = self.invoices.get(inv)
                 for rate, item_detail in items_based_on_rate.items():
                     row = self.get_row_data_for_invoice(
@@ -184,7 +184,7 @@ class Gstr1Report:
         b2c_output = {}
 
         if self.invoices:
-            for inv, items_based_on_rate in self.items_based_on_tax_rate.items():
+            for inv, items_based_on_rate in self.invoice_tax_rate_info.items():
                 invoice_details = self.invoices.get(inv)
 
                 # for B2C Small, skip if B2CL CDN
@@ -251,6 +251,11 @@ class Gstr1Report:
         return grand_total > B2C_LIMIT
 
     def get_row_data_for_invoice(self, invoice_details, tax_rate, item_detail):
+        """
+        Build row for GSTR-1
+
+        Value mapping from books to GSTR-1 Excel.
+        """
         row = {}
         for fieldname in self.invoice_fields:
             if (
@@ -389,6 +394,21 @@ class Gstr1Report:
         return conditions
 
     def get_invoice_items(self):
+        """
+        Creates object invoice_items and nil_exempt_non_gst.
+
+        Example invoice_items:
+            {
+                "INV-001": {
+                    "item_code": taxable_value
+                }
+            }
+
+        Example nil_exempt_non_gst:
+            {
+                "INV-001": [nil_rated, exempted, non_gst]
+            }
+        """
         self.invoice_items = frappe._dict()
         self.nil_exempt_non_gst = {}
 
@@ -419,8 +439,21 @@ class Gstr1Report:
 
             self.nil_exempt_non_gst[parent][index] += flt(d.get("taxable_value", 0), 2)
 
-    def get_items_based_on_tax_rate(self):
-        self.items_based_on_tax_rate = {}
+    def get_invoice_tax_rate_info(self):
+        """
+        Creates object invoice_tax_rate_info.
+
+        Example:
+            {
+                "INV-001": {
+                    "5": {
+                        "cess_amount": 0,
+                        "taxable_value": 0
+                    },
+                }
+            }
+        """
+        self.invoice_tax_rate_info = {}
         default_dict = {
             "tax_amount": 0,
             "tax_rate": 0,
@@ -434,7 +467,7 @@ class Gstr1Report:
         # creating invoice-item wise tax details
         invoice_wise_tax_details = self.get_invoice_wise_tax_details(default_dict)
 
-        # creating invoice-tax_rate wise invoice details
+        # creating invoice-tax_rate wise invoice details and updating taxable value
         for invoice_no, items in self.invoice_items.items():
             invoice_tax_details = invoice_wise_tax_details.get(invoice_no, {})
             for item, taxable_amount in items.items():
@@ -443,12 +476,12 @@ class Gstr1Report:
 
                 item_tax_details = invoice_tax_details.get(item, {})
                 tax_rate = item_tax_details.get("tax_rate", 0)
-                self.items_based_on_tax_rate.setdefault(invoice_no, {}).setdefault(
+                self.invoice_tax_rate_info.setdefault(invoice_no, {}).setdefault(
                     tax_rate, default_dict
                 )
 
                 # cumulative figures for tax_rate
-                row = self.items_based_on_tax_rate[invoice_no][tax_rate]
+                row = self.invoice_tax_rate_info[invoice_no][tax_rate]
                 row["taxable_value"] += taxable_amount
 
                 for key in default_dict.keys():
@@ -459,6 +492,23 @@ class Gstr1Report:
                     row[key] += item_tax_details.get(key, 0)
 
     def get_invoice_wise_tax_details(self, default_dict):
+        """
+        Returns item wise tax details for each invoice.
+
+        Important: Only Updates Tax amounts and Tax Rates.
+        Taxable value is updated in get_invoice_tax_rate_info
+
+        Example:
+            {
+                "INV-001": {
+                    "item_code": {
+                        "tax_rate": 5,
+                        "cess_amount": 0,
+                        "taxable_value": 0
+                    }
+                }
+            }
+        """
         unidentified_gst_accounts = set()
         invoice_tax_details = frappe.db.sql(
             """
