@@ -1260,9 +1260,9 @@ class ImportDialog {
                     { label: "GSTR 2B", value: ReturnType.GSTR2B },
                 ],
                 onchange: () => {
+                    this.return_type = this.dialog.get_value("return_type");
                     this.fetch_import_history();
                     this.setup_dialog_actions();
-                    this.return_type = this.dialog.get_value("return_type");
                 },
             },
             {
