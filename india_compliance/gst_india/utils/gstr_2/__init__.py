@@ -82,15 +82,6 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
             if response.error_type in ["otp_requested", "invalid_otp"]:
                 return response
 
-            if response.error_type == "not_generated":
-                frappe.msgprint(
-                    _(
-                        "No record is found in GSTR-2B or generation is still in progress"
-                    ),
-                    title=_("Not Generated"),
-                )
-                continue
-
             if response.error_type == "no_docs_found":
                 create_import_log(
                     gstin,
