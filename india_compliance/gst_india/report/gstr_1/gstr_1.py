@@ -562,37 +562,83 @@ class Gstr1Report:
 
     def get_section_14_data(self):
         si = frappe.qb.DocType("Sales Invoice")
-        si_item = frappe.qb.DocType("Sales Invoice Item")
-
+        tax_table = frappe.qb.DocType("Sales Taxes and Charges")
         return (
             frappe.qb.from_(si)
-            .inner_join(si_item)
-            .on(si.name == si_item.parent)
+            .left_join(tax_table)
+            .on(si.name == tax_table.parent)
             .select(
                 si.ecommerce_gstin,
                 Case()
                 .when(si.is_reverse_charge == 1, "Y")
                 .else_("N")
                 .as_("is_reverse_charge"),
-                Sum(si_item.taxable_value).as_("total_taxable_value"),
-                Sum(si_item.igst_amount).as_("total_igst_amount"),
-                Sum(si_item.cgst_amount).as_("total_cgst_amount"),
-                Sum(si_item.sgst_amount).as_("total_sgst_amount"),
-                (Sum(si_item.cess_amount) + Sum(si_item.cess_non_advol_amount)).as_(
-                    "total_cess_amount"
-                ),
+                Sum(si.base_total).as_("total_taxable_value"),
+                Sum(
+                    Case()
+                    .when(
+                        tax_table.account_head == self.gst_accounts.igst_account,
+                        (tax_table.tax_amount),
+                    )
+                    .else_(0)
+                ).as_("total_igst_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        tax_table.account_head == self.gst_accounts.igst_account,
+                        (tax_table.tax_amount),
+                    )
+                    .else_(0)
+                ).as_("total_igst_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        tax_table.account_head == self.gst_accounts.cgst_account,
+                        (tax_table.tax_amount),
+                    )
+                    .else_(0)
+                ).as_("total_cgst_amount"),
+                Sum(
+                    Case()
+                    .when(
+                        tax_table.account_head == self.gst_accounts.sgst_account,
+                        (tax_table.tax_amount),
+                    )
+                    .else_(0)
+                ).as_("total_sgst_amount"),
+                (
+                    Sum(
+                        Case()
+                        .when(
+                            tax_table.account_head == self.gst_accounts.cess_account,
+                            (tax_table.tax_amount),
+                        )
+                        .else_(0)
+                    )
+                    + Sum(
+                        Case()
+                        .when(
+                            tax_table.account_head
+                            == self.gst_accounts.cess_non_advol_Account,
+                            (tax_table.tax_amount),
+                        )
+                        .else_(0)
+                    )
+                ).as_("total_cess_amount"),
                 Case()
                 .when(si.is_reverse_charge == 1, "Reverse Charge u/s 9(5)")
                 .else_("Collect Tax u/s 52")
                 .as_("supply_liable_to"),
             )
-            .where(si.company == self.filters.company)
-            .where(si.company_gstin == self.filters.company_gstin)
+            .where(
+                si.company == self.filters.company
+                or si.company_gstin == self.filters.company_gstin
+            )
             .where(Date(si.posting_date) >= getdate(self.filters.from_date))
             .where(Date(si.posting_date) <= getdate(self.filters.to_date))
             .where(IfNull(si.ecommerce_gstin, "") != "")
             .groupby(si.is_reverse_charge, si.ecommerce_gstin)
-        ).run(as_dict=True)
+        ).run(as_dict=True, debug=True)
 
     def get_columns(self):
         self.other_columns = []
