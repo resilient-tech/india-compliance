@@ -322,8 +322,8 @@ function _set_e_commerce_supply_liable_to(frm) {
     }
 
     if (frm.doc.is_reverse_charge) {
-        frm.set_value("supply_liable_to", "Reverse Charge u/s 9(5)");
+        frm.set_value("supply_liable_to", "Liable to pay tax u/s 9(5)");
     } else {
-        frm.set_value("supply_liable_to", "Collect Tax u/s 52");
+        frm.set_value("supply_liable_to", "Liable to collect tax u/s 52(TCS)");
     }
 }
