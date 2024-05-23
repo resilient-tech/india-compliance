@@ -1532,8 +1532,8 @@ def before_print(doc, method=None, print_settings=None):
 
 
 def onload(doc, method=None):
-    if doc.doctype in ["Sales Order", "Sales Invoice", "Delivery Note"]:
-        set_supply_liable_to(doc)
+
+    set_supply_liable_to(doc)
 
     if (
         ignore_gst_validations(doc, throw=False)
@@ -1620,6 +1620,9 @@ def before_update_after_submit(doc, method=None):
 
 
 def set_supply_liable_to(doc):
+    if doc.doctype not in ["Sales Order", "Sales Invoice", "Delivery Note"]:
+        return
+
     gst_settings = frappe.get_cached_doc("GST Settings")
     if not (
         gst_settings.enable_sales_through_ecommerce_operators and doc.ecommerce_gstin
