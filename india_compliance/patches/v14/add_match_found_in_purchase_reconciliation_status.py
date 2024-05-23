@@ -1,19 +1,28 @@
 import frappe
 
+DOCTYPES = ("Purchase Invoice", "Bill of Entry")
+
 
 def execute():
-    pi_and_boe_list = frappe.get_all(
-        "GST Inward Supply",
-        filters={"action": "No Action", "link_name": ("!=", "")},
-        pluck="link_name",
-    )
-    if not pi_and_boe_list:
-        return
-
-    for doc in ("Purchase Invoice", "Bill of Entry"):
+    for doctype in DOCTYPES:
+        docs = get_inward_supply(doctype)
+        if not docs:
+            continue
         frappe.db.set_value(
-            doc,
-            {"name": ("in", pi_and_boe_list)},
+            doctype,
+            {"name": ("in", docs)},
             "reconciliation_status",
             "Match Found",
         )
+
+
+def get_inward_supply(doctype):
+    return frappe.get_all(
+        "GST Inward Supply",
+        filters={
+            "action": "No Action",
+            "link_name": ("!=", ""),
+            "link_doctype": doctype,
+        },
+        pluck="link_name",
+    )

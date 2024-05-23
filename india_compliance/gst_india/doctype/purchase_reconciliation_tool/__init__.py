@@ -331,6 +331,8 @@ class InwardSupply:
             "company_gstin",
             "is_reverse_charge",
             "place_of_supply",
+            "action",
+            "link_name",
         ]
 
         if additional_fields:
@@ -810,6 +812,7 @@ class Reconciler(BaseReconciliation):
         - Where a match is found, update Inward Supply and Purchase Invoice.
         """
 
+        match_found = []
         for supplier_gstin in purchases:
             if not inward_supplies.get(supplier_gstin):
                 continue
@@ -820,6 +823,14 @@ class Reconciler(BaseReconciliation):
                 for inward_supply_name, inward_supply in (
                     inward_supplies[supplier_gstin].copy().items()
                 ):
+                    doc_name = inward_supply.get("link_name")
+                    if (
+                        inward_supply.get("action") == "No Action"
+                        and doc_name != ""
+                        and doc_name not in match_found
+                    ):
+                        match_found.append(doc_name)
+
                     if match_status == "Residual Match":
                         if (
                             abs((purchase.bill_date - inward_supply.bill_date).days)
@@ -841,6 +852,14 @@ class Reconciler(BaseReconciliation):
                     purchases[supplier_gstin].pop(purchase_invoice_name)
                     inward_supplies[supplier_gstin].pop(inward_supply_name)
                     break
+
+        for doc in ("Purchase Invoice", "Bill of Entry"):
+            frappe.db.set_value(
+                doc,
+                {"name": ("in", match_found)},
+                "reconciliation_status",
+                "Match Found",
+            )
 
     def is_doc_matching(self, purchase, inward_supply, rules):
         """
@@ -1137,8 +1156,6 @@ class ReconciledData(BaseReconciliation):
             "classification": "",
         }
 
-        match_found = []
-
         for data in reconciliation_data:
             data.update(default_dict)
             method = data.get if retain_doc else data.pop
@@ -1146,27 +1163,12 @@ class ReconciledData(BaseReconciliation):
             purchase = method("_purchase_invoice", frappe._dict())
             inward_supply = method("_inward_supply", frappe._dict())
 
-            if (
-                inward_supply
-                and inward_supply.get("action") == "No Action"
-                and inward_supply.get("link_name") != ""
-            ):
-                match_found.append(inward_supply.get("link_name"))
-
             self.update_fields(data, purchase, inward_supply)
             self.update_amount_difference(data, purchase, inward_supply)
             self.update_differences(data, purchase, inward_supply)
 
             if retain_doc and purchase:
                 BaseUtil.update_cess_amount(purchase)
-
-        for doc in ("Purchase Invoice", "Bill of Entry"):
-            frappe.db.set_value(
-                doc,
-                {"name": ("in", match_found)},
-                "reconciliation_status",
-                "Match Found",
-            )
 
     def update_fields(self, data, purchase, inward_supply):
         for field in ("supplier_name", "supplier_gstin", "bill_no", "bill_date"):
