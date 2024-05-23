@@ -57,7 +57,6 @@ doctype_js = {
         "gst_india/client_scripts/e_waybill_actions.js",
         "gst_india/client_scripts/sales_invoice.js",
     ],
-    "Sales Order": "gst_india/client_scripts/sales_order.js",
     "Supplier": "gst_india/client_scripts/supplier.js",
     "Accounts Settings": "audit_trail/client_scripts/accounts_settings.js",
     "Customize Form": "audit_trail/client_scripts/customize_form.js",

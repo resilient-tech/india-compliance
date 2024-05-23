@@ -54,14 +54,6 @@ frappe.ui.form.on(DOCTYPE, {
             10
         );
     },
-
-    is_reverse_charge(frm) {
-        india_compliance.toggle_and_set_supply_liable_to(frm)
-
-    },
-    ecommerce_gstin(frm) {
-        india_compliance.toggle_and_set_supply_liable_to(frm)
-    }
 });
 
 async function gst_invoice_warning(frm) {
