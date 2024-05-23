@@ -14,12 +14,18 @@ GST_CATEGORIES = {
     "Input Service Distributor (ISD)": "Registered Regular",
     "Composition": "Registered Composition",
     "Tax Deductor": "Tax Deductor",
+    "Tax Collector (Electronic Commerce Operator)": "Tax Collector",
     "SEZ Unit": "SEZ",
     "SEZ Developer": "SEZ",
     "United Nation Body": "UIN Holders",
     "Consulate or Embassy of Foreign Country": "UIN Holders",
     "URP": "Unregistered",
 }
+
+# order of address keys is important
+KEYS_TO_SANITIZE = ("dst", "stcd", "pncd", "bno", "flno", "bnm", "st", "loc", "city")
+KEYS_TO_FILTER_DUPLICATES = frozenset(("dst", "bnm", "st", "loc", "city"))
+CHARACTERS_TO_STRIP = f"{whitespace},"
 
 
 @frappe.whitelist()
@@ -120,9 +126,21 @@ def _get_address(address):
 
 def _extract_address_lines(address):
     """merge and divide address into exactly two lines"""
+    unique_values = set()
 
-    for key in address:
-        address[key] = address[key].strip(f"{whitespace},")
+    for key in KEYS_TO_SANITIZE:
+        value = address.get(key, "").strip(CHARACTERS_TO_STRIP)
+
+        if key not in KEYS_TO_FILTER_DUPLICATES:
+            address[key] = value
+            continue
+
+        if value not in unique_values:
+            address[key] = value
+            unique_values.add(value)
+            continue
+
+        address[key] = ""
 
     address_line1 = ", ".join(
         titlecase(value)
@@ -153,9 +171,9 @@ def _extract_address_lines(address):
 # "SEZ Developer"                           27AAJCS5738D1Z6
 # "United Nation Body"                      0717UNO00157UNO 0717UNO00211UN2 2117UNO00002UNF
 # "Consulate or Embassy of Foreign Country" 0717UNO00154UNU
+# "Tax Collector (e-Commerce Operator)"     29AABCF8078M1C8 27AAECG3736E1C2 29AAFCB7707D1C1
 
 # ###### CANNOT BE A PART OF GSTR1 ######
-# "Tax Collector (e-Commerce Operator)"     29AABCF8078M1C8 27AAECG3736E1C2
 # "Non Resident Online Services Provider"   9917SGP29001OST      Google
 
 # "Non Resident Taxable Person"

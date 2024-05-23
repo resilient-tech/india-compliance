@@ -152,7 +152,7 @@ class GSTR1Query:
                 self.si.customer_name,
                 self.si.name.as_("invoice_no"),
                 self.si.posting_date,
-                self.si.place_of_supply,
+                IfNull(self.si.place_of_supply, "").as_("place_of_supply"),
                 self.si.is_reverse_charge,
                 self.si.is_export_with_gst,
                 self.si.is_return,
@@ -288,6 +288,10 @@ class GSTR1Conditions:
 
     @cache_invoice_condition
     def is_inter_state(self, invoice):
+        # if pos is not avaialble default to False
+        if not invoice.place_of_supply:
+            return False
+
         return invoice.company_gstin[:2] != invoice.place_of_supply[:2]
 
     @cache_invoice_condition
@@ -302,7 +306,7 @@ class GSTR1Conditions:
 
     @cache_invoice_condition
     def is_b2cl_inv(self, invoice):
-        return abs(invoice.total_amount) > B2C_LIMIT and self.is_inter_state(invoice)
+        return abs(invoice.invoice_total) > B2C_LIMIT and self.is_inter_state(invoice)
 
 
 class GSTR1CategoryConditions(GSTR1Conditions):

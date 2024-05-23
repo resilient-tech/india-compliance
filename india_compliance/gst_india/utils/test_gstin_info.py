@@ -14,7 +14,7 @@ class TestGstinInfo(unittest.TestCase):
                     "addr": {
                         "bnm": "",
                         "bno": "8-A",
-                        "city": "",
+                        "city": "Vadodara",
                         "dst": "Vadodara",
                         "flno": "Saimee society No.2",
                         "lg": "",
@@ -167,7 +167,7 @@ class TestGstinInfo(unittest.TestCase):
             {
                 "gstin": "29AABCF8078M1C8",
                 "business_name": "Flipkart India Private Limited",
-                "gst_category": "",
+                "gst_category": "Tax Collector",
                 "status": "Active",
                 "all_addresses": [
                     {

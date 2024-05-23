@@ -4,6 +4,7 @@ import {
     OVERSEAS_REGEX,
     UNBODY_REGEX,
     TDS_REGEX,
+    TCS_REGEX,
     GST_INVOICE_NUMBER_FORMAT,
 } from "./regex_constants";
 
@@ -209,6 +210,7 @@ Object.assign(india_compliance, {
         }
 
         if (TDS_REGEX.test(gstin)) return "Tax Deductor";
+        if (TCS_REGEX.test(gstin)) return "Tax Collector";
         if (REGISTERED_REGEX.test(gstin)) return "Registered Regular";
         if (UNBODY_REGEX.test(gstin)) return "UIN Holders";
         if (OVERSEAS_REGEX.test(gstin)) return "Overseas";
