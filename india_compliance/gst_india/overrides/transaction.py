@@ -1521,8 +1521,9 @@ def validate_transaction(doc, method=None):
 
 
 def before_print(doc, method=None, print_settings=None):
+    set_supply_liable_to(doc)
     if (
-        ignore_gst_validations(doc, throw=False)
+        ignore_gst_validations(doc, throw=True)
         or not doc.place_of_supply
         or not doc.company_gstin
     ):
@@ -1532,7 +1533,6 @@ def before_print(doc, method=None, print_settings=None):
 
 
 def onload(doc, method=None):
-
     set_supply_liable_to(doc)
 
     if (
@@ -1620,13 +1620,13 @@ def before_update_after_submit(doc, method=None):
 
 
 def set_supply_liable_to(doc):
-    if doc.doctype not in ["Sales Order", "Sales Invoice", "Delivery Note"]:
+    """
+    - Set GSTR-1 E-commerce section for virtual field supply_liable_to
+    """
+    if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
         return
 
-    gst_settings = frappe.get_cached_doc("GST Settings")
-    if not (
-        gst_settings.enable_sales_through_ecommerce_operators and doc.ecommerce_gstin
-    ):
+    if not doc.ecommerce_gstin:
         return
 
     if doc.is_reverse_charge:
