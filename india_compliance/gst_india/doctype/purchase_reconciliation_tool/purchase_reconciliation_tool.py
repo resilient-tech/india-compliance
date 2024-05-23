@@ -103,7 +103,13 @@ class PurchaseReconciliationTool(Document):
 
     @frappe.whitelist()
     def download_gstr(
-        self, company_gstins, date_range, return_type=None, force=False, otp=None
+        self,
+        company_gstins,
+        date_range,
+        return_type=None,
+        force=False,
+        otp=None,
+        gst_categories=None,
     ):
         frappe.has_permission("Purchase Reconciliation Tool", "write", throw=True)
 
@@ -113,6 +119,7 @@ class PurchaseReconciliationTool(Document):
             return_type=return_type,
             force=force,
             otp=otp,
+            gst_categories=gst_categories,
         )
 
     @frappe.whitelist()
@@ -126,68 +133,75 @@ class PurchaseReconciliationTool(Document):
 
         return_type = ReturnType(return_type)
         periods = BaseUtil.get_periods(date_range, return_type, True)
+        if company_gstin == "All":
+            company_gstin = frappe.get_all(
+                "Address",
+                filters=[
+                    ["Dynamic Link", "link_doctype", "=", "Company"],
+                    ["Dynamic Link", "link_name", "=", self.company],
+                ],
+                pluck="gstin",
+            )
+        else:
+            company_gstin = [company_gstin]
         history = get_import_history(company_gstin, return_type, periods)
-
-        columns = [
-            "Period",
-            "Classification",
-            "Status",
-            f"{'Downloaded' if for_download else 'Uploaded'} On",
-        ]
 
         settings = frappe.get_cached_doc("GST Settings")
 
         data = {}
-        for period in periods:
-            data[period] = []
-            status = "🟢 &nbsp; Downloaded"
-            for category in GSTRCategory:
-                if category.value == "ISDA" and return_type == ReturnType.GSTR2A:
-                    continue
+        for gst_no in company_gstin:
+            data[gst_no] = {}
+            for period in periods:
+                data[gst_no][period] = []
+                status = "🟢 &nbsp; Downloaded"
+                for category in GSTRCategory:
+                    if category.value == "ISDA" and return_type == ReturnType.GSTR2A:
+                        continue
 
-                if (
-                    not settings.enable_overseas_transactions
-                    and category.value in IMPORT_CATEGORY
-                ):
-                    continue
+                    if (
+                        not settings.enable_overseas_transactions
+                        and category.value in IMPORT_CATEGORY
+                    ):
+                        continue
 
-                download = next(
-                    (
-                        log
-                        for log in history
-                        if log.return_period == period
-                        and log.classification in (category.value, "")
-                    ),
-                    None,
-                )
+                    download = next(
+                        (
+                            log
+                            for log in history
+                            if log.return_period == period
+                            and log.classification in (category.value, "")
+                            and log.gstin == gst_no
+                        ),
+                        None,
+                    )
 
-                status = "🟠 &nbsp; Not Downloaded"
-                if download:
-                    status = "🟢 &nbsp; Downloaded"
-                    if download.data_not_found:
-                        status = "🔵 &nbsp; Data Not Found"
-                    if download.request_id:
-                        status = "🔵 &nbsp; Queued"
+                    status = "🟠 &nbsp; Not Downloaded"
+                    action_type = "Downloaded On"
+                    if download:
+                        status = "🟢 &nbsp; Downloaded"
+                        if download.data_not_found:
+                            status = "🔵 &nbsp; Data Not Found"
+                        if download.request_id:
+                            status = "🔵 &nbsp; Queued"
 
-                if not for_download:
-                    status = status.replace("Downloaded", "Uploaded")
+                    if not for_download:
+                        status = status.replace("Downloaded", "Uploaded")
+                        action_type = action_type.replace("Downloaded", "Uploaded")
 
-                _dict = {
-                    "Classification": (
-                        category.value if return_type is ReturnType.GSTR2A else "ALL"
-                    ),
-                    "Status": status,
-                    columns[-1]: (
-                        "✅ &nbsp;"
-                        + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
-                        if download
-                        else ""
-                    ),
-                }
-                if _dict not in data[period]:
-                    data[period].append(_dict)
+                    _dict = {
+                        "Status": status,
+                        action_type: (
+                            "✅ &nbsp;"
+                            + download.last_updated_on.strftime("%d-%m-%Y %H:%M:%S")
+                            if download
+                            else ""
+                        ),
+                    }
 
-        return {"columns": columns, "data": data}
+                    if _dict not in data[gst_no][period]:
+                        data[gst_no][period].append(_dict)
+
+        return {"data": data}
 
     @frappe.whitelist()
     def get_return_period_from_file(self, return_type, file_path):
@@ -513,7 +527,12 @@ def get_periods_to_download(company_gstin, return_type, periods):
 
 
 def get_import_history(
-    company_gstin, return_type: ReturnType, periods: List[str], fields=None, pluck=None
+    company_gstin,
+    return_type: ReturnType,
+    periods: List[str],
+    fields=None,
+    pluck=None,
+    company_name=None,
 ):
     if not (fields or pluck):
         fields = (
@@ -522,12 +541,13 @@ def get_import_history(
             "data_not_found",
             "last_updated_on",
             "request_id",
+            "gstin",
         )
 
     return frappe.db.get_all(
         "GSTR Import Log",
         filters={
-            "gstin": company_gstin,
+            "gstin": ("in", company_gstin),
             "return_type": return_type.value,
             "return_period": ("in", periods),
         },

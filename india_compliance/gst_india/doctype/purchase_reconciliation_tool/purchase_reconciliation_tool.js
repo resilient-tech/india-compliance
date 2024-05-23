@@ -1131,7 +1131,12 @@ class ImportDialog {
     _init_download_dialog() {
         this.dialog = new frappe.ui.Dialog({
             title: __("Download Data from GSTN"),
-            fields: [...this.get_gstr_fields(), ...this.get_history_fields()],
+            fields: [
+                ...this.get_gstr_fields(),
+                ...this.get_gstr2a_checkbox(),
+                ...this.get_pending_fields(),
+                ...this.get_history_fields(),
+            ],
         });
     }
 
@@ -1173,12 +1178,32 @@ class ImportDialog {
             if (this.return_type === ReturnType.GSTR2A) {
                 this.dialog.$wrapper.find(".btn-secondary").removeClass("hidden");
                 this.dialog.set_primary_action(__("Download All"), () => {
-                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, false);
+                    let gst_categories = this.get_marked_gst_category();
+
+                    download_gstr(
+                        this.frm,
+                        this.date_range,
+                        this.return_type,
+                        this.company_gstin,
+                        false,
+                        null,
+                        gst_categories
+                    );
                     this.dialog.hide();
                 });
                 this.dialog.set_secondary_action_label(__("Download Missing"));
                 this.dialog.set_secondary_action(() => {
-                    download_gstr(this.frm, this.date_range, this.return_type, this.company_gstin, true);
+                    let gst_categories = this.get_marked_gst_category();
+
+                    download_gstr(
+                        this.frm,
+                        this.date_range,
+                        this.return_type,
+                        this.company_gstin,
+                        true,
+                        null,
+                        gst_categories
+                    );
                     this.dialog.hide();
                 });
             } else if (this.return_type === ReturnType.GSTR2B) {
@@ -1205,6 +1230,26 @@ class ImportDialog {
         }
     }
 
+    get_marked_gst_category() {
+        let gstcategory = [
+            "B2B",
+            "B2BA",
+            "CDNR",
+            "CDNRA",
+            "ISD",
+            "ISDA",
+            "IMPG",
+            "IMPGSEZ",
+        ];
+        let gst_categories = [];
+        for (let i = 0; i < gstcategory.length; i++) {
+            if (this.dialog.fields_dict[gstcategory[i]].value == 1) {
+                gst_categories.push(gstcategory[i]);
+            }
+        }
+        return gst_categories;
+    }
+
     async fetch_import_history() {
         const { message } = await this.frm.call("get_import_history", {
             company_gstin: this.company_gstin,
@@ -1213,8 +1258,55 @@ class ImportDialog {
             for_download: this.for_download,
         });
 
-        // TODO: modify HTML for case: company_gstin == "All"
-        let html = (!message || this.company_gstin == "All") ? '' : frappe.render_template("gstr_download_history", message)
+        let pending_download_data = {};
+        let download_history_data = {};
+
+        for (let gst_no in message.data) {
+            let periods = message.data[gst_no];
+
+            for (let period in periods) {
+                let array = periods[period];
+
+                for (let obj of array) {
+                    if (obj["Status"] === "🟠 &nbsp; Not Downloaded") {
+                        if (!pending_download_data[period]) {
+                            pending_download_data[period] = [];
+                        }
+                        pending_download_data[period].push(gst_no);
+                    }
+                    if (
+                        (obj["Status"] === "🟢 &nbsp; Downloaded") &
+                        (this.company_gstin != "All")
+                    ) {
+                        if (!download_history_data[period]) {
+                            download_history_data[period] = [];
+                        }
+                        download_history_data[period].push(obj["Downloaded On"]);
+                    }
+                }
+            }
+        }
+
+        let pending_download = {
+            label: "Pending Download",
+            columns: ["Period", "GSTIN"],
+            data: pending_download_data,
+        };
+        let download_history = {
+            label: this.for_download ? "Download History" : "Upload History",
+            columns: ["Period", "Downloded On"],
+            data: download_history_data,
+        };
+
+        this.dialog.fields_dict.pending_download.html(
+            frappe.render_template("gstr_download_history", pending_download)
+        );
+
+        let html =
+            this.company_gstin === "All" ||
+            Object.keys(download_history_data).length === 0
+                ? ""
+                : frappe.render_template("gstr_download_history", download_history);
         this.dialog.fields_dict.history.html(html);
     }
 
@@ -1260,9 +1352,9 @@ class ImportDialog {
                     { label: "GSTR 2B", value: ReturnType.GSTR2B },
                 ],
                 onchange: () => {
+                    this.return_type = this.dialog.get_value("return_type");
                     this.fetch_import_history();
                     this.setup_dialog_actions();
-                    this.return_type = this.dialog.get_value("return_type");
                 },
             },
             {
@@ -1319,12 +1411,98 @@ class ImportDialog {
         ];
     }
 
+    get_pending_fields() {
+        const label = "Pending Download";
+        return [
+            { label, fieldtype: "Section Break" },
+            { label, fieldname: "pending_download", fieldtype: "HTML" },
+        ];
+    }
+
     get_history_fields() {
         const label = this.for_download ? "Download History" : "Upload History";
 
         return [
-            { label, fieldtype: "Section Break" },
+            {
+                label,
+                fieldtype: "Section Break",
+                depends_on: "eval:doc.company_gstin != 'All'",
+            },
             { label, fieldname: "history", fieldtype: "HTML" },
+        ];
+    }
+
+    get_gstr2a_checkbox() {
+        return [
+            {
+                label: "",
+                fieldtype: "Section Break",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "B2B",
+                fieldname: "B2B",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "B2BA",
+                fieldname: "B2BA",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "",
+                fieldtype: "Column Break",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "CDNR",
+                fieldname: "CDNR",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "CDNRA",
+                fieldname: "CDNRA",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "",
+                fieldtype: "Column Break",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "ISD",
+                fieldname: "ISD",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "ISDA",
+                fieldname: "ISDA",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "",
+                fieldtype: "Column Break",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "IMPG",
+                fieldname: "IMPG",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            {
+                label: "IMPGSEZ",
+                fieldname: "IMPGSEZ",
+                fieldtype: "Check",
+                depends_on: "eval:doc.return_type == 'GSTR2a'",
+            },
+            { label: "", fieldtype: "Section Break" },
         ];
     }
 }
@@ -1335,8 +1513,14 @@ async function download_gstr(
     return_type,
     company_gstin,
     only_missing = true,
-    otp = null
+    otp = null,
+    gst_categories = null
 ) {
+    //if no category is selected then show error message
+    if (return_type == "GSTR2a" && gst_categories.length === 0) {
+        frappe.throw(__("Please select at least one Category to Download"));
+    }
+
     const authenticated_company_gstins =
         await india_compliance.authenticate_company_gstins(
             frm.doc.company,
@@ -1349,6 +1533,7 @@ async function download_gstr(
         date_range: date_range,
         force: !only_missing,
         otp,
+        gst_categories,
     };
     frm.events.show_progress(frm, "download");
     await frm.call("download_gstr", args);
