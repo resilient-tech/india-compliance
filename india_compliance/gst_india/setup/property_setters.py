@@ -63,12 +63,6 @@ def get_property_setters():
             ),
         },
         {
-            "doctype": "e-Waybill Log",
-            "doctype_or_field": "DocType",
-            "property": "default_print_format",
-            "value": "e-Waybill",
-        },
-        {
             "doctype": "Address",
             "doctype_or_field": "DocType",
             "property": "quick_entry",
@@ -108,6 +102,21 @@ def get_property_setters():
         *TRANSPORTER_NAME_PROPERTIES,
         *LR_NO_PROPERTIES,
         *LR_DATE_PROPERTIES,
+    ]
+
+
+def get_default_property_setters():
+    """
+    Customizable property setters that are set by default.
+    Only set once during the first install.
+    """
+    return [
+        {
+            "doctype": "e-Waybill Log",
+            "doctype_or_field": "DocType",
+            "property": "default_print_format",
+            "value": "e-Waybill",
+        },
     ]
 
 
