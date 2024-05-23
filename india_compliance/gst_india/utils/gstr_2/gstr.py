@@ -107,7 +107,6 @@ class GSTR:
         transaction = frappe._dict(
             company=self.company,
             company_gstin=self.gstin,
-            # TODO: change classification to gstr_category
             classification=category.value,
             **self.get_supplier_details(supplier),
             **self.get_invoice_details(invoice),

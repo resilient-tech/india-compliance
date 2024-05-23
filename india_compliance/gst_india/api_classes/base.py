@@ -217,7 +217,6 @@ class BaseAPI:
         pass
 
     def handle_http_code(self, status_code, response_json):
-        # TODO: add link to account page / support email
 
         # GSP connectivity issues
         if status_code == 401 or (
@@ -226,10 +225,9 @@ class BaseAPI:
             and response_json.get("error") == "access_denied"
         ):
             frappe.throw(
-                _("Error establishing connection to GSP. Please contact {0}.").format(
-                    _("your Service Provider")
-                    if frappe.conf.ic_api_key
-                    else _("India Compliance API Support")
+                _(
+                    "Error establishing connection to GSP. Please contact India"
+                    " Compliance API support at <strong>api-support@indiacompliance.app</strong>."
                 ),
                 title=_("GSP Connection Error"),
             )
