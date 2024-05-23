@@ -36,12 +36,6 @@ const ReturnType = {
     GSTR2B: "GSTR2b",
 };
 
-let last_year = frappe.datetime.add_months(frappe.datetime.get_today(),-12)
-let fiscal_year = erpnext.utils.get_fiscal_year(last_year, true)
-let fiscal_start = frappe.datetime.str_to_user(fiscal_year[1], null,  frappe.datetime.get_user_date_fmt())
-let fiscal_end = frappe.datetime.str_to_user(fiscal_year[2], null,  frappe.datetime.get_user_date_fmt())
-
-
 function remove_gstr2b_alert(alert) {
     if (alert.length === 0) return;
     $(alert).remove();
@@ -149,13 +143,9 @@ frappe.ui.form.on("Purchase Reconciliation Tool", {
 
     purchase_period(frm) {
         fetch_date_range(frm, "purchase");
-        let description = frm.doc.purchase_period == "Last Fiscal Year" ? fiscal_start +' to '+ fiscal_end : ""
-        frm.get_field("purchase_period").set_description(description);
     },
 
     async inward_supply_period(frm) {
-        let description = frm.doc.inward_supply_period == "Last Fiscal Year" ? fiscal_start +' to '+ fiscal_end : ""
-        frm.get_field("inward_supply_period").set_description(description);
 
         await fetch_date_range(
             frm,
@@ -1442,10 +1432,15 @@ async function fetch_date_range(frm, field_prefix, method) {
     const from_date_field = field_prefix + "_from_date";
     const to_date_field = field_prefix + "_to_date";
     const period = frm.doc[field_prefix + "_period"];
-    if (!period) return;
-
+    const field_name = field_prefix + "_period"
+    if (!period || period == "Custom") {
+        frm.get_field(field_name).set_description("");
+        return;
+    }
     const { message } = await frm.call(method || "get_date_range", { period });
-    if (!message) return;
+
+    const description = frappe.datetime.str_to_user(message[0]) +' to '+ frappe.datetime.str_to_user(message[1])
+    frm.get_field(field_name).set_description(description);
 
     frm.set_value(from_date_field, message[0]);
     frm.set_value(to_date_field, message[1]);
