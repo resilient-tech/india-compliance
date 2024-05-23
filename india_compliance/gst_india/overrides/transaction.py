@@ -32,6 +32,7 @@ from india_compliance.gst_india.utils import (
     validate_gst_category,
     validate_gstin,
 )
+from india_compliance.gst_india.utils.gstr_1.gstr_1_data import SUPECOM
 from india_compliance.income_tax_india.overrides.tax_withholding_category import (
     get_tax_withholding_accounts,
 )
@@ -1630,6 +1631,6 @@ def set_supply_liable_to(doc):
         return
 
     if doc.is_reverse_charge:
-        doc.supply_liable_to = "Reverse Charge u/s 9(5)"
+        doc.supply_liable_to = SUPECOM.US_9_5.value
     else:
-        doc.supply_liable_to = "Collect Tax u/s 52"
+        doc.supply_liable_to = SUPECOM.US_52.value
