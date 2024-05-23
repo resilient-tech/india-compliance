@@ -55,6 +55,7 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
         is_last_period = return_periods[-1] == return_period
 
         json_data = frappe._dict({"gstin": gstin, "fp": return_period})
+        has_data = False
         for action, category in ACTIONS.items():
             requests_made += 1
 
@@ -119,11 +120,15 @@ def download_gstr_2a(gstin, return_periods, otp=None, gst_categories=None):
 
             # making consistent with GSTR2a upload
             json_data[action.lower()] = data
+            has_data = True
 
         save_gstr_2a(gstin, return_period, json_data)
 
     if queued_message:
         show_queued_message()
+
+    if not has_data:
+        end_transaction_progress(return_period)
 
 
 def download_gstr_2b(gstin, return_periods, otp=None):
@@ -133,6 +138,7 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
     api = GSTR2bAPI(gstin)
     for return_period in return_periods:
+        has_data = False
         is_last_period = return_periods[-1] == return_period
         requests_made += 1
         frappe.publish_realtime(
@@ -170,6 +176,8 @@ def download_gstr_2b(gstin, return_periods, otp=None):
         if response.error_type:
             continue
 
+        has_data = True
+
         # Handle multiple files for GSTR2B
         if response.data and (file_count := response.data.get("fc")):
             for file_num in range(1, file_count + 1):
@@ -182,6 +190,9 @@ def download_gstr_2b(gstin, return_periods, otp=None):
 
     if queued_message:
         show_queued_message()
+
+    if not has_data:
+        end_transaction_progress(return_period)
 
 
 def save_gstr_2a(gstin, return_period, json_data):
@@ -314,4 +325,22 @@ def show_queued_message():
             " We will retry download every few minutes until it succeeds.<br><br>"
             "You can track download status from download dialog."
         )
+    )
+
+
+def end_transaction_progress(return_period):
+    """
+    For last period, set progress to 100% if no data is found
+    This will update the progress bar to 100% in the frontend
+    """
+
+    frappe.publish_realtime(
+        "update_transactions_progress",
+        {
+            "current_progress": 100,
+            "return_period": return_period,
+            "is_last_period": True,
+        },
+        user=frappe.session.user,
+        doctype="Purchase Reconciliation Tool",
     )
