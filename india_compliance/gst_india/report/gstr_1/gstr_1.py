@@ -285,8 +285,7 @@ class Gstr1Report:
             else:
                 row[fieldname] = invoice_details.get(fieldname)
 
-        row.update({"rate": tax_rate, "applicable_tax_rate": 0})
-        row.update(item_detail)
+        row.update({"rate": tax_rate, "applicable_tax_rate": 0, **item_detail})
 
         return row
 
@@ -426,15 +425,17 @@ class Gstr1Report:
         for d in items:
             item_code = d.item_code or d.item_name
             parent = d.parent
+            gst_treatment = d.gst_treatment
             self.invoice_items.setdefault(parent, {}).setdefault(item_code, 0.0)
-            if d.gst_treatment in ("Taxable", "Zero-Rated"):
+            if gst_treatment in ("Taxable", "Zero-Rated"):
                 self.invoice_items[parent][item_code] += d.get("taxable_value", 0)
                 continue
 
             self.nil_exempt_non_gst.setdefault(parent, [0.0, 0.0, 0.0])
-            index = INDEX_FOR_NIL_EXEMPT_DICT.get(d.get("gst_treatment", ""))
+            index = INDEX_FOR_NIL_EXEMPT_DICT.get(gst_treatment)
 
-            if not index:
+            # gst treatment is not set
+            if index is None:
                 continue
 
             self.nil_exempt_non_gst[parent][index] += flt(d.get("taxable_value", 0), 2)
@@ -454,18 +455,9 @@ class Gstr1Report:
             }
         """
         self.invoice_tax_rate_info = {}
-        default_dict = {
-            "tax_amount": 0,
-            "tax_rate": 0,
-            "cess_amount": 0,
-            "cgst_amount": 0,
-            "sgst_amount": 0,
-            "igst_amount": 0,
-            "taxable_value": 0,
-        }
 
         # creating invoice-item wise tax details
-        invoice_wise_tax_details = self.get_invoice_wise_tax_details(default_dict)
+        invoice_wise_tax_details = self.get_invoice_wise_tax_details()
 
         # creating invoice-tax_rate wise invoice details and updating taxable value
         for invoice_no, items in self.invoice_items.items():
@@ -476,22 +468,14 @@ class Gstr1Report:
 
                 item_tax_details = invoice_tax_details.get(item, {})
                 tax_rate = item_tax_details.get("tax_rate", 0)
-                self.invoice_tax_rate_info.setdefault(invoice_no, {}).setdefault(
-                    tax_rate, default_dict
-                )
+                tax_dict = self.invoice_tax_rate_info.setdefault(
+                    invoice_no, {}
+                ).setdefault(tax_rate, {"cess_amount": 0, "taxable_value": 0})
 
-                # cumulative figures for tax_rate
-                row = self.invoice_tax_rate_info[invoice_no][tax_rate]
-                row["taxable_value"] += taxable_amount
+                tax_dict["taxable_value"] += taxable_amount
+                tax_dict["cess_amount"] += item_tax_details.get("cess_amount", 0)
 
-                for key in default_dict.keys():
-                    # tax_rate will be constant
-                    if key == "tax_rate":
-                        continue
-
-                    row[key] += item_tax_details.get(key, 0)
-
-    def get_invoice_wise_tax_details(self, default_dict):
+    def get_invoice_wise_tax_details(self):
         """
         Returns item wise tax details for each invoice.
 
@@ -524,14 +508,6 @@ class Gstr1Report:
             tuple([self.doctype] + list(self.invoices.keys())),
         )
         invoice_item_wise_tax_details = frappe._dict()
-        account_head_gst_map = {}
-
-        # creating reverse account mapping for gst_accounts
-        for key, value in self.gst_accounts.items():
-            gst_type = key.split("_")[0]
-            new_key = f"{gst_type}_amount"
-            if value is not None:
-                account_head_gst_map[value] = new_key
 
         for parent, account, item_wise_tax_detail in invoice_tax_details:
             if not item_wise_tax_detail:
@@ -547,29 +523,30 @@ class Gstr1Report:
             except ValueError:
                 continue
 
-            is_cess = account == self.gst_accounts.cess_account
+            is_cess = account in (
+                self.gst_accounts.cess_account,
+                self.gst_accounts.cess_non_advol_account,
+            )
             is_cgst_or_sgst = (
                 account == self.gst_accounts.cgst_account
                 or account == self.gst_accounts.sgst_account
             )
 
-            invoice_item_wise_tax_details.setdefault(parent, {})
+            parent_dict = invoice_item_wise_tax_details.setdefault(parent, {})
             for item_code, invoice_tax_details in item_wise_tax_detail.items():
                 tax_rate = flt(invoice_tax_details[0])
-                gst_rate = flt(tax_rate * 2 if is_cgst_or_sgst else tax_rate)
+                tax_rate = flt(tax_rate * 2 if is_cgst_or_sgst else tax_rate)
                 tax_amount = flt(invoice_tax_details[1])
 
-                parent_dict = invoice_item_wise_tax_details[parent]
-                parent_dict.setdefault(item_code, default_dict)
-                item_dict = parent_dict[item_code]
-                item_dict["tax_rate"] = gst_rate
+                item_dict = parent_dict.setdefault(
+                    item_code, {"tax_rate": 0, "cess_amount": 0, "taxable_value": 0}
+                )
 
                 if is_cess:
                     item_dict["cess_amount"] += tax_amount
                     continue
 
-                item_dict["tax_amount"] += tax_amount
-                item_dict[account_head_gst_map.get(account)] += tax_amount
+                item_dict["tax_rate"] = tax_rate
 
         if unidentified_gst_accounts:
             frappe.msgprint(
