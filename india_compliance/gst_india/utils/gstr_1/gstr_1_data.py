@@ -36,6 +36,12 @@ class GSTR1_Categories(Enum):
     HSN = "HSN Summary"
 
 
+# TODO: Move to GSTR1_Categories and Suncategories
+class SUPECOM(Enum):
+    US_9_5 = "Liable to pay tax u/s 9(5)"
+    US_52 = "Liable to collect tax u/s 52(TCS)"
+
+
 class GSTR1_SubCategories(Enum):
     """
     Summary Page of GSTR-1
