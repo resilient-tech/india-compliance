@@ -563,7 +563,7 @@ class Gstr1Report:
     def get_section_14_data(self):
         si = frappe.qb.DocType("Sales Invoice")
         tax_table = frappe.qb.DocType("Sales Taxes and Charges")
-        return (
+        query = (
             frappe.qb.from_(si)
             .left_join(tax_table)
             .on(si.name == tax_table.parent)
@@ -574,14 +574,6 @@ class Gstr1Report:
                 .else_("N")
                 .as_("is_reverse_charge"),
                 Sum(si.base_total).as_("total_taxable_value"),
-                Sum(
-                    Case()
-                    .when(
-                        tax_table.account_head == self.gst_accounts.igst_account,
-                        (tax_table.tax_amount),
-                    )
-                    .else_(0)
-                ).as_("total_igst_amount"),
                 Sum(
                     Case()
                     .when(
@@ -619,7 +611,7 @@ class Gstr1Report:
                         Case()
                         .when(
                             tax_table.account_head
-                            == self.gst_accounts.cess_non_advol_Account,
+                            == self.gst_accounts.cess_non_advol_account,
                             (tax_table.tax_amount),
                         )
                         .else_(0)
@@ -630,15 +622,27 @@ class Gstr1Report:
                 .else_("Collect Tax u/s 52")
                 .as_("supply_liable_to"),
             )
-            .where(
-                si.company == self.filters.company
-                or si.company_gstin == self.filters.company_gstin
-            )
-            .where(Date(si.posting_date) >= getdate(self.filters.from_date))
-            .where(Date(si.posting_date) <= getdate(self.filters.to_date))
+            .where(si.is_opening == "No")
             .where(IfNull(si.ecommerce_gstin, "") != "")
+            .where(IfNull(si.billing_address_gstin, "") != si.company_gstin)
             .groupby(si.is_reverse_charge, si.ecommerce_gstin)
-        ).run(as_dict=True, debug=True)
+            .orderby(si.ecommerce_gstin, si.is_reverse_charge)
+        )
+
+        if self.filters.from_date:
+            query = query.where(
+                Date(si.posting_date) >= getdate(self.filters.from_date)
+            )
+        if self.filters.to_date:
+            query = query.where(Date(si.posting_date) <= getdate(self.filters.to_date))
+
+        if self.filters.company:
+            query = query.where(si.company == self.filters.company)
+
+        if self.filters.company_gstin:
+            query = query.where(si.company_gstin == self.filters.company_gstin)
+
+        return query.run(as_dict=True)
 
     def get_columns(self):
         self.other_columns = []
