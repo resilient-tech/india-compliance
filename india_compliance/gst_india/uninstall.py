@@ -4,6 +4,7 @@ from india_compliance.gst_india.setup import (
     HRMS_CUSTOM_FIELDS,
     ITEM_VARIANT_FIELDNAMES,
     get_all_custom_fields,
+    get_default_property_setters,
     get_property_setters,
 )
 from india_compliance.gst_india.utils.custom_fields import delete_custom_fields
@@ -27,7 +28,9 @@ def delete_property_setters():
         "fieldname": "field_name",
     }
 
-    for property_setter in get_property_setters():
+    property_setters = get_property_setters() + get_default_property_setters()
+
+    for property_setter in property_setters:
         for key, fieldname in field_map.items():
             if key in property_setter:
                 property_setter[fieldname] = property_setter.pop(key)
