@@ -196,6 +196,7 @@ class GSTR3BReport(Document):
             FROM `tabPurchase Invoice`
             WHERE docstatus = 1
             and is_opening = 'No'
+            and company_gstin != supplier_gstin
             and month(posting_date) = %s and year(posting_date) = %s and company = %s
             and company_gstin = %s
             GROUP BY itc_classification
@@ -256,6 +257,7 @@ class GSTR3BReport(Document):
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
             and p.is_opening = 'No'
+            and p.supplier_gstin != p.company_gstin
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) = %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
@@ -410,6 +412,13 @@ class GSTR3BReport(Document):
 
         if reverse_charge:
             query = query.where(invoice.is_reverse_charge == 1)
+
+        condition = (
+            (invoice.billing_address_gstin != invoice.company_gstin)
+            if doctype == "Sales Invoice"
+            else (invoice.supplier_gstin != invoice.company_gstin)
+        )
+        query = query.where(condition)
 
         invoice_details = query.orderby(invoice.name).run(as_dict=True)
         self.invoice_map = {d.name: d for d in invoice_details}
@@ -593,12 +602,18 @@ class GSTR3BReport(Document):
         missing_field_invoices = []
 
         for doctype in INVOICE_DOCTYPES:
+            billing_gstin = (
+                "billing_address_gstin"
+                if doctype == "Sales Invoice"
+                else "supplier_gstin"
+            )
             docnames = frappe.db.sql(
                 f"""
                     SELECT name FROM `tab{doctype}`
                     WHERE docstatus = 1 and is_opening = 'No'
                     and month(posting_date) = %s and year(posting_date) = %s
                     and company = %s and place_of_supply IS NULL
+                    and {billing_gstin} != company_gstin
                     and gst_category != 'Overseas'
                 """,
                 (self.month_no, self.year, self.company),
