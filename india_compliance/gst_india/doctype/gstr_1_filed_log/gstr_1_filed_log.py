@@ -195,10 +195,16 @@ class SummarizeGSTR1:
 
 class ReconcileGSTR1:
     def get_reconcile_gstr1_data(self, gov_data, books_data):
-        # Everything from gov_data compared with books_data
-        # Missing in gov_data
-        # Update books data (optionally if not filed)
-        # Prepare data / Sumarize / Save & Return / Optionally save books data
+        """
+        This function reconciles the data between Books and Gov Data
+
+        Steps:
+        1. If already reconciled, return the reconciled data
+        2. Update Upload Status for Books Data (if return is not filed)
+        3. Reconcile for each subcategory
+            - For each row in Books Data, compare with Gov Data
+            - For each row in Gov Data (if not in Books Data)
+        """
         if self.is_latest_data and self.reconcile:
             return self.get_json_for("reconcile")
 
@@ -413,8 +419,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
 
         # APIs Disabled
         if not self.is_gstr1_api_enabled():
-            self.generate_only_books_data(data, filters, callback)
-            return
+            return self.generate_only_books_data(data, filters, callback)
 
         # APIs Enabled
         status = self.get_return_status()
@@ -434,8 +439,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
                 request_otp(filters.company_gstin)
 
             data = "otp_requested"
-            callback and callback(data, filters)
-            return
+            return callback and callback(data, filters)
 
         books_data = self.get_books_gstr1_data(filters)
 
@@ -452,7 +456,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
         data["books"] = self.normalize_data(books_data)
 
         self.summarize_data(data, gov_data_field)
-        callback and callback(data, filters)
+        return callback and callback(data, filters)
 
     def generate_only_books_data(self, data, filters, callback=None):
         books_data = self.get_books_gstr1_data(filters)
@@ -461,7 +465,7 @@ class GenerateGSTR1(SummarizeGSTR1, ReconcileGSTR1):
         data["books"] = self.normalize_data(books_data)
 
         self.summarize_data(data)
-        callback and callback(data, filters)
+        return callback and callback(data, filters)
 
     # GET DATA
     def get_gov_gstr1_data(self):
@@ -699,7 +703,7 @@ class GSTR1FiledLog(GenerateGSTR1, Document):
     def get_return_status(self):
         from india_compliance.gst_india.utils.gstin_info import get_gstr_1_return_status
 
-        status = self.filing_status
+        status = self.get("filing_status")
         if not status:
             status = get_gstr_1_return_status(
                 self.company,

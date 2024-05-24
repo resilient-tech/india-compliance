@@ -1321,7 +1321,7 @@ class ReconcileExcel:
                     "width": ExcelWidth.POS.value,
                 },
             },
-            *self.get_tax_details_columns(for_books=True, only_igst=True),
+            *self.get_tax_details_columns(for_books=True),
             {
                 "fieldname": "gstr_1_" + GSTR1_DataField.POS.value,
                 "label": _(GovExcelField.POS.value),
