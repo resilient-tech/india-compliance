@@ -565,6 +565,11 @@ class Gstr1Report:
         si = frappe.qb.DocType("Sales Invoice")
         si_item = frappe.qb.DocType("Sales Invoice Item")
         taxes = frappe.qb.DocType("Sales Taxes and Charges")
+        igst_account = get_escaped_name(self.gst_accounts.igst_account)
+        cgst_account = get_escaped_name(self.gst_accounts.cgst_account)
+        sgst_account = get_escaped_name(self.gst_accounts.sgst_account)
+        cess_account = get_escaped_name(self.gst_accounts.cess_account)
+        cess_non_advol = get_escaped_name(self.gst_accounts.cess_non_advol_account)
 
         taxable_value_query = (
             frappe.qb.from_(si_item)
@@ -582,7 +587,7 @@ class Gstr1Report:
                 Sum(
                     Case()
                     .when(
-                        taxes.account_head == self.gst_accounts.igst_account,
+                        taxes.account_head == igst_account,
                         taxes.tax_amount,
                     )
                     .else_(0)
@@ -590,7 +595,7 @@ class Gstr1Report:
                 Sum(
                     Case()
                     .when(
-                        taxes.account_head == self.gst_accounts.cgst_account,
+                        taxes.account_head == cgst_account,
                         taxes.tax_amount,
                     )
                     .else_(0)
@@ -598,7 +603,7 @@ class Gstr1Report:
                 Sum(
                     Case()
                     .when(
-                        taxes.account_head == self.gst_accounts.sgst_account,
+                        taxes.account_head == sgst_account,
                         taxes.tax_amount,
                     )
                     .else_(0)
@@ -607,7 +612,7 @@ class Gstr1Report:
                     Sum(
                         Case()
                         .when(
-                            taxes.account_head == self.gst_accounts.cess_account,
+                            taxes.account_head == cess_account,
                             taxes.tax_amount,
                         )
                         .else_(0)
@@ -615,8 +620,7 @@ class Gstr1Report:
                     + Sum(
                         Case()
                         .when(
-                            taxes.account_head
-                            == self.gst_accounts.cess_non_advol_account,
+                            taxes.account_head == cess_non_advol,
                             taxes.tax_amount,
                         )
                         .else_(0)
