@@ -575,24 +575,24 @@ class Gstr1Report:
         si_item = frappe.qb.DocType("Sales Invoice Item")
         taxes = frappe.qb.DocType("Sales Taxes and Charges")
 
-        query = (
-            frappe.qb.from_(si)
-            .left_join(si_item)
-            .on(si.name == si_item.parent)
-            .left_join(taxes)
-            .on(si.name == taxes.parent)
+        taxable_value_query = (
+            frappe.qb.from_(si_item)
             .select(
-                si.ecommerce_gstin,
-                Case()
-                .when(si.is_reverse_charge == 1, "Y")
-                .else_("N")
-                .as_("is_reverse_charge"),
+                si_item.parent,
                 Sum(si_item.taxable_value).as_("total_taxable_value"),
+            )
+            .groupby(si_item.parent)
+        )
+
+        taxes_query = (
+            frappe.qb.from_(taxes)
+            .select(
+                taxes.parent,
                 Sum(
                     Case()
                     .when(
                         taxes.account_head == self.gst_accounts.igst_account,
-                        (taxes.tax_amount),
+                        taxes.tax_amount,
                     )
                     .else_(0)
                 ).as_("total_igst_amount"),
@@ -600,7 +600,7 @@ class Gstr1Report:
                     Case()
                     .when(
                         taxes.account_head == self.gst_accounts.cgst_account,
-                        (taxes.tax_amount),
+                        taxes.tax_amount,
                     )
                     .else_(0)
                 ).as_("total_cgst_amount"),
@@ -608,7 +608,7 @@ class Gstr1Report:
                     Case()
                     .when(
                         taxes.account_head == self.gst_accounts.sgst_account,
-                        (taxes.tax_amount),
+                        taxes.tax_amount,
                     )
                     .else_(0)
                 ).as_("total_sgst_amount"),
@@ -617,7 +617,7 @@ class Gstr1Report:
                         Case()
                         .when(
                             taxes.account_head == self.gst_accounts.cess_account,
-                            (taxes.tax_amount),
+                            taxes.tax_amount,
                         )
                         .else_(0)
                     )
@@ -626,11 +626,30 @@ class Gstr1Report:
                         .when(
                             taxes.account_head
                             == self.gst_accounts.cess_non_advol_account,
-                            (taxes.tax_amount),
+                            taxes.tax_amount,
                         )
                         .else_(0)
                     )
                 ).as_("total_cess_amount"),
+            )
+            .groupby(taxes.parent)
+        )
+
+        query = (
+            frappe.qb.from_(si)
+            .left_join(taxable_value_query)
+            .on(si.name == taxable_value_query.parent)
+            .left_join(taxes_query)
+            .on(si.name == taxes_query.parent)
+            .select(
+                si.ecommerce_gstin,
+                IfNull(taxable_value_query.total_taxable_value, 0).as_(
+                    "total_taxable_value"
+                ),
+                IfNull(taxes_query.total_igst_amount, 0).as_("total_igst_amount"),
+                IfNull(taxes_query.total_cgst_amount, 0).as_("total_cgst_amount"),
+                IfNull(taxes_query.total_sgst_amount, 0).as_("total_sgst_amount"),
+                IfNull(taxes_query.total_cess_amount, 0).as_("total_cess_amount"),
                 Case()
                 .when(si.is_reverse_charge == 1, SUPECOM.US_9_5.value)
                 .else_(SUPECOM.US_52.value)
