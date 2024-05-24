@@ -634,19 +634,20 @@ class Gstr1Report:
             .on(si.name == taxes_query.parent)
             .select(
                 si.ecommerce_gstin,
-                IfNull(taxable_value_query.total_taxable_value, 0).as_(
+                Sum(IfNull(taxable_value_query.total_taxable_value, 0)).as_(
                     "total_taxable_value"
                 ),
-                IfNull(taxes_query.total_igst_amount, 0).as_("total_igst_amount"),
-                IfNull(taxes_query.total_cgst_amount, 0).as_("total_cgst_amount"),
-                IfNull(taxes_query.total_sgst_amount, 0).as_("total_sgst_amount"),
-                IfNull(taxes_query.total_cess_amount, 0).as_("total_cess_amount"),
+                Sum(IfNull(taxes_query.total_igst_amount, 0)).as_("total_igst_amount"),
+                Sum(IfNull(taxes_query.total_cgst_amount, 0)).as_("total_cgst_amount"),
+                Sum(IfNull(taxes_query.total_sgst_amount, 0)).as_("total_sgst_amount"),
+                Sum(IfNull(taxes_query.total_cess_amount, 0)).as_("total_cess_amount"),
                 Case()
                 .when(si.is_reverse_charge == 1, SUPECOM.US_9_5.value)
                 .else_(SUPECOM.US_52.value)
                 .as_("supply_liable_to"),
             )
             .where(si.is_opening == "No")
+            .where(si.docstatus == 1)
             .where(IfNull(si.ecommerce_gstin, "") != "")
             .where(IfNull(si.billing_address_gstin, "") != si.company_gstin)
             .where(
