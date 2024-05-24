@@ -58,14 +58,31 @@ class GovDataMapper:
     def __init__(self):
         self.set_total_defaults()
 
-        self.json_value_formatters = {}
-        self.data_value_formatters = {}
+        self.value_formatters_for_internal = {}
+        self.value_formatters_for_gov = {}
         self.gstin_party_map = {}
         # value formatting constants
 
         self.STATE_NUMBERS = self.reverse_dict(STATE_NUMBERS)
 
-    def format_data(self, data, default_data=None, reverse=False):
+    def format_data(
+        self, data: dict, default_data: dict = None, for_gov: bool = False
+    ) -> dict:
+        """
+        Objective: Convert Object from one format to another.
+            eg: Govt JSON to Internal Data Structure
+
+        Args:
+            data (dict): Data to be converted
+            default_data (dict, optional): Default Data to be added. Hardcoded values.
+            for_gov (bool, optional): If the data is to be converted to Govt JSON. Defaults to False.
+                else it will be converted to Internal Data Structure.
+
+        Steps:
+            1. Use key mapping to map the keys from one format to another.
+            2. Use value formatters to format the values of the keys.
+            3. Round values
+        """
         output = {}
 
         if default_data:
@@ -73,11 +90,13 @@ class GovDataMapper:
 
         key_mapping = self.KEY_MAPPING.copy()
 
-        if reverse:
+        if for_gov:
             key_mapping = self.reverse_dict(key_mapping)
 
         value_formatters = (
-            self.data_value_formatters if reverse else self.json_value_formatters
+            self.value_formatters_for_gov
+            if for_gov
+            else self.value_formatters_for_internal
         )
 
         for old_key, new_key in key_mapping.items():
@@ -87,6 +106,7 @@ class GovDataMapper:
                 continue
 
             if not (invoice_data_value or invoice_data_value == 0):
+                # continue if value is None or empty object
                 continue
 
             value_formatter = value_formatters.get(old_key)
@@ -104,6 +124,9 @@ class GovDataMapper:
     # common utils
 
     def update_totals(self, invoice, items):
+        """
+        Update item totals to the invoice row
+        """
         total_data = self.TOTAL_DEFAULTS.copy()
 
         for item in items:
@@ -130,7 +153,7 @@ class GovDataMapper:
 
         return pos.split("-")[0]
 
-    def format_item_wise_json_data(self, items, *args):
+    def format_item_for_internal(self, items, *args):
         return [
             {
                 **self.DEFAULT_ITEM_AMOUNTS.copy(),
@@ -139,11 +162,11 @@ class GovDataMapper:
             for item in items
         ]
 
-    def format_item_wise_internal_data(self, items, *args):
+    def format_item_for_gov(self, items, *args):
         return [
             {
                 GovDataField.INDEX.value: index + 1,
-                GovDataField.ITEM_DETAILS.value: self.format_data(item, reverse=True),
+                GovDataField.ITEM_DETAILS.value: self.format_data(item, for_gov=True),
             }
             for index, item in enumerate(items)
         ]
@@ -156,10 +179,10 @@ class GovDataMapper:
             gstin, get_party_for_gstin(gstin, "Customer") or "Unknown"
         )
 
-    def format_date(self, date, *args):
+    def format_date_for_internal(self, date, *args):
         return datetime.strptime(date, "%d-%m-%Y").strftime("%Y-%m-%d")
 
-    def format_date_reverse(self, date, *args):
+    def format_date_for_gov(self, date, *args):
         return datetime.strptime(date, "%Y-%m-%d").strftime("%d-%m-%Y")
 
 
@@ -206,18 +229,18 @@ class B2B(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
-            GovDataField.ITEMS.value: self.format_item_wise_json_data,
+        self.value_formatters_for_internal = {
+            GovDataField.ITEMS.value: self.format_item_for_internal,
             GovDataField.INVOICE_TYPE.value: self.document_category_mapping,
             GovDataField.POS.value: self.map_place_of_supply,
-            GovDataField.DOC_DATE.value: self.format_date,
+            GovDataField.DOC_DATE.value: self.format_date_for_internal,
         }
 
-        self.data_value_formatters = {
-            GSTR1_DataField.ITEMS.value: self.format_item_wise_internal_data,
+        self.value_formatters_for_gov = {
+            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
             GSTR1_DataField.DOC_TYPE.value: self.document_category_mapping,
             GSTR1_DataField.POS.value: self.map_place_of_supply,
-            GSTR1_DataField.DOC_DATE.value: self.format_date_reverse,
+            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -265,7 +288,7 @@ class B2B(GovDataMapper):
             )
 
             customer[GovDataField.INVOICES.value].append(
-                self.format_data(invoice, reverse=True)
+                self.format_data(invoice, for_gov=True)
             )
 
         return list(customer_data.values())
@@ -314,13 +337,13 @@ class B2CL(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
-            GovDataField.ITEMS.value: self.format_item_wise_json_data,
-            GovDataField.DOC_DATE.value: self.format_date,
+        self.value_formatters_for_internal = {
+            GovDataField.ITEMS.value: self.format_item_for_internal,
+            GovDataField.DOC_DATE.value: self.format_date_for_internal,
         }
-        self.data_value_formatters = {
-            GSTR1_DataField.ITEMS.value: self.format_item_wise_internal_data,
-            GSTR1_DataField.DOC_DATE.value: self.format_date_reverse,
+        self.value_formatters_for_gov = {
+            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
+            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -362,7 +385,7 @@ class B2CL(GovDataMapper):
             )
 
             pos[GovDataField.INVOICES.value].append(
-                self.format_data(invoice, reverse=True)
+                self.format_data(invoice, for_gov=True)
             )
 
         return list(pos_data.values())
@@ -400,15 +423,15 @@ class Exports(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
-            GovDataField.ITEMS.value: self.format_item_wise_json_data,
-            GovDataField.DOC_DATE.value: self.format_date,
-            GovDataField.SHIPPING_BILL_DATE.value: self.format_date,
+        self.value_formatters_for_internal = {
+            GovDataField.ITEMS.value: self.format_item_for_internal,
+            GovDataField.DOC_DATE.value: self.format_date_for_internal,
+            GovDataField.SHIPPING_BILL_DATE.value: self.format_date_for_internal,
         }
-        self.data_value_formatters = {
-            GSTR1_DataField.ITEMS.value: self.format_item_wise_internal_data,
-            GSTR1_DataField.DOC_DATE.value: self.format_date_reverse,
-            GSTR1_DataField.SHIPPING_BILL_DATE.value: self.format_date_reverse,
+        self.value_formatters_for_gov = {
+            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
+            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
+            GSTR1_DataField.SHIPPING_BILL_DATE.value: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -452,12 +475,12 @@ class Exports(GovDataMapper):
             )
 
             export_category[GovDataField.INVOICES.value].append(
-                self.format_data(invoice, reverse=True)
+                self.format_data(invoice, for_gov=True)
             )
 
         return list(export_category_wise_data.values())
 
-    def format_item_wise_json_data(self, items, *args):
+    def format_item_for_internal(self, items, *args):
         return [
             {
                 **self.DEFAULT_ITEM_AMOUNTS.copy(),
@@ -466,8 +489,8 @@ class Exports(GovDataMapper):
             for item in items
         ]
 
-    def format_item_wise_internal_data(self, items, *args):
-        return [self.format_data(item, reverse=True) for item in items]
+    def format_item_for_gov(self, items, *args):
+        return [self.format_data(item, for_gov=True) for item in items]
 
 
 class B2CS(GovDataMapper):
@@ -490,12 +513,12 @@ class B2CS(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
-            GovDataField.ITEMS.value: self.format_item_wise_json_data,
+        self.value_formatters_for_internal = {
+            GovDataField.ITEMS.value: self.format_item_for_internal,
             GovDataField.POS.value: self.map_place_of_supply,
         }
-        self.data_value_formatters = {
-            GSTR1_DataField.ITEMS.value: self.format_item_wise_internal_data,
+        self.value_formatters_for_gov = {
+            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
             GSTR1_DataField.POS.value: self.map_place_of_supply,
         }
 
@@ -521,11 +544,11 @@ class B2CS(GovDataMapper):
     def convert_to_gov_data_format(self, input_data):
         input_data = self.aggregate_invoices(input_data)
 
-        return [self.format_data(invoice, reverse=True) for invoice in input_data]
+        return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
-    def format_data(self, data, default_data=None, reverse=False):
-        data = super().format_data(data, default_data, reverse)
-        if not reverse:
+    def format_data(self, data, default_data=None, for_gov=False):
+        data = super().format_data(data, default_data, for_gov)
+        if not for_gov:
             return data
 
         data[GovDataField.SUPPLY_TYPE.value] = (
@@ -571,10 +594,10 @@ class NilRated(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
+        self.value_formatters_for_internal = {
             GovDataField.SUPPLY_TYPE.value: self.document_category_mapping
         }
-        self.data_value_formatters = {
+        self.value_formatters_for_gov = {
             GSTR1_DataField.DOC_TYPE.value: self.document_category_mapping
         }
 
@@ -599,16 +622,17 @@ class NilRated(GovDataMapper):
 
         return {
             GovDataField.INVOICES.value: [
-                self.format_data(invoice, reverse=True) for invoice in input_data
+                self.format_data(invoice, for_gov=True) for invoice in input_data
             ]
         }
 
-    def format_data(self, data, default_data=None, reverse=False):
-        invoice_data = super().format_data(data, default_data, reverse)
+    def format_data(self, data, default_data=None, for_gov=False):
+        invoice_data = super().format_data(data, default_data, for_gov)
 
-        if reverse:
+        if for_gov:
             return invoice_data
 
+        # No need to discard if zero fields
         amounts = [
             invoice_data.get(GSTR1_DataField.EXEMPTED_AMOUNT.value, 0),
             invoice_data.get(GSTR1_DataField.NIL_RATED_AMOUNT.value, 0),
@@ -624,6 +648,7 @@ class NilRated(GovDataMapper):
     def aggregate_invoices(self, input_data):
         output = []
 
+        # TODO: DEFAULT_EXTEND
         keys = [
             GSTR1_DataField.EXEMPTED_AMOUNT.value,
             GSTR1_DataField.NIL_RATED_AMOUNT.value,
@@ -688,22 +713,22 @@ class CDNR(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
-            GovDataField.ITEMS.value: self.format_item_wise_json_data,
+        self.value_formatters_for_internal = {
+            GovDataField.ITEMS.value: self.format_item_for_internal,
             GovDataField.NOTE_TYPE.value: self.document_type_mapping,
             GovDataField.POS.value: self.map_place_of_supply,
             GovDataField.INVOICE_TYPE.value: self.document_category_mapping,
             GovDataField.DOC_VALUE.value: self.format_doc_value,
-            GovDataField.NOTE_DATE.value: self.format_date,
+            GovDataField.NOTE_DATE.value: self.format_date_for_internal,
         }
 
-        self.data_value_formatters = {
-            GSTR1_DataField.ITEMS.value: self.format_item_wise_internal_data,
+        self.value_formatters_for_gov = {
+            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
             GSTR1_DataField.TRANSACTION_TYPE.value: self.document_type_mapping,
             GSTR1_DataField.POS.value: self.map_place_of_supply,
             GSTR1_DataField.DOC_TYPE.value: self.document_category_mapping,
             GSTR1_DataField.DOC_VALUE.value: lambda val, *args: abs(val),
-            GSTR1_DataField.DOC_DATE.value: self.format_date_reverse,
+            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -745,13 +770,13 @@ class CDNR(GovDataMapper):
                 },
             )
             customer[GovDataField.NOTE_DETAILS.value].append(
-                self.format_data(document, reverse=True)
+                self.format_data(document, for_gov=True)
             )
 
         return list(customer_data.values())
 
-    def format_item_wise_json_data(self, items, *args):
-        formatted_items = super().format_item_wise_json_data(items, *args)
+    def format_item_for_internal(self, items, *args):
+        formatted_items = super().format_item_for_internal(items, *args)
 
         data = args[0]
         if data[GovDataField.NOTE_TYPE.value] == "D":
@@ -761,7 +786,7 @@ class CDNR(GovDataMapper):
         for item in formatted_items:
             item.update(
                 {
-                    key: -value
+                    key: value * -1
                     for key, value in item.items()
                     if key in list(self.DEFAULT_ITEM_AMOUNTS.keys())
                 }
@@ -769,13 +794,14 @@ class CDNR(GovDataMapper):
 
         return formatted_items
 
-    def format_item_wise_internal_data(self, items, *args):
-        formatted_items = super().format_item_wise_internal_data(items, *args)
+    def format_item_for_gov(self, items, *args):
+        formatted_items = super().format_item_for_gov(items, *args)
 
         data = args[0]
         if data[GSTR1_DataField.TRANSACTION_TYPE.value] == "Debit Note":
             return formatted_items
 
+        # TODO: First format then super
         # for credit notes amounts -ve
         for item in formatted_items:
             item[GovDataField.ITEM_DETAILS.value].update(
@@ -802,7 +828,7 @@ class CDNR(GovDataMapper):
         return self.DOCUMENT_CATEGORIES.get(doc_category, doc_category)
 
     def format_doc_value(self, value, data):
-        return -value if data[GovDataField.NOTE_TYPE.value] == "C" else value
+        return value * -1 if data[GovDataField.NOTE_TYPE.value] == "C" else value
 
 
 class CDNUR(GovDataMapper):
@@ -835,20 +861,20 @@ class CDNUR(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
-            GovDataField.ITEMS.value: self.format_item_wise_json_data,
+        self.value_formatters_for_internal = {
+            GovDataField.ITEMS.value: self.format_item_for_internal,
             GovDataField.NOTE_TYPE.value: self.document_type_mapping,
             GovDataField.POS.value: self.map_place_of_supply,
             GovDataField.DOC_VALUE.value: self.format_doc_value,
-            GovDataField.NOTE_DATE.value: self.format_date,
+            GovDataField.NOTE_DATE.value: self.format_date_for_internal,
         }
 
-        self.data_value_formatters = {
-            GSTR1_DataField.ITEMS.value: self.format_item_wise_internal_data,
+        self.value_formatters_for_gov = {
+            GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
             GSTR1_DataField.TRANSACTION_TYPE.value: self.document_type_mapping,
             GSTR1_DataField.POS.value: self.map_place_of_supply,
             GSTR1_DataField.DOC_VALUE.value: lambda x, *args: abs(x),
-            GSTR1_DataField.DOC_DATE.value: self.format_date_reverse,
+            GSTR1_DataField.DOC_DATE.value: self.format_date_for_gov,
         }
 
     def convert_to_internal_data_format(self, input_data):
@@ -865,10 +891,10 @@ class CDNUR(GovDataMapper):
 
     def convert_to_gov_data_format(self, input_data):
         self.DOCUMENT_TYPES = self.reverse_dict(self.DOCUMENT_TYPES)
-        return [self.format_data(invoice, reverse=True) for invoice in input_data]
+        return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
-    def format_item_wise_json_data(self, items, *args):
-        formatted_items = super().format_item_wise_json_data(items, *args)
+    def format_item_for_internal(self, items, *args):
+        formatted_items = super().format_item_for_internal(items, *args)
 
         data = args[0]
         if data[GovDataField.NOTE_TYPE.value] == "D":
@@ -878,7 +904,7 @@ class CDNUR(GovDataMapper):
         for item in formatted_items:
             item.update(
                 {
-                    key: -value
+                    key: value * -1
                     for key, value in item.items()
                     if key in list(self.DEFAULT_ITEM_AMOUNTS.keys())
                 }
@@ -886,13 +912,14 @@ class CDNUR(GovDataMapper):
 
         return formatted_items
 
-    def format_item_wise_internal_data(self, items, *args):
-        formatted_items = super().format_item_wise_internal_data(items, *args)
+    def format_item_for_gov(self, items, *args):
+        formatted_items = super().format_item_for_gov(items, *args)
 
         data = args[0]
         if data[GSTR1_DataField.TRANSACTION_TYPE.value] == "Debit Note":
             return formatted_items
 
+        # TODO: First format then super
         # for credit notes amounts -ve
         for item in formatted_items:
             item[GovDataField.ITEM_DETAILS.value].update(
@@ -915,7 +942,7 @@ class CDNUR(GovDataMapper):
         return self.DOCUMENT_TYPES.get(doc_type, doc_type)
 
     def format_doc_value(self, value, data):
-        return -value if data[GovDataField.NOTE_TYPE.value] == "C" else value
+        return value * -1 if data[GovDataField.NOTE_TYPE.value] == "C" else value
 
 
 class HSNSUM(GovDataMapper):
@@ -937,8 +964,8 @@ class HSNSUM(GovDataMapper):
 
     def __init__(self):
         super().__init__()
-        self.json_value_formatters = {GovDataField.UOM.value: self.map_uom}
-        self.data_value_formatters = {
+        self.value_formatters_for_internal = {GovDataField.UOM.value: self.map_uom}
+        self.value_formatters_for_gov = {
             GSTR1_DataField.UOM.value: self.map_uom,
             GSTR1_DataField.DESCRIPTION.value: lambda x, *args: x[:30],
         }
@@ -963,7 +990,7 @@ class HSNSUM(GovDataMapper):
         return {
             GovDataField.HSN_DATA.value: [
                 self.format_data(
-                    invoice, {GovDataField.INDEX.value: index + 1}, reverse=True
+                    invoice, {GovDataField.INDEX.value: index + 1}, for_gov=True
                 )
                 for index, invoice in enumerate(input_data)
             ]
@@ -1009,13 +1036,13 @@ class AT(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
-            GovDataField.ITEMS.value: self.format_item_wise_json_data,
+        self.value_formatters_for_internal = {
+            GovDataField.ITEMS.value: self.format_item_for_internal,
             GovDataField.POS.value: self.map_place_of_supply,
         }
 
-        self.data_value_formatters = {
-            GSTR1_DataField.ITEMS.value: self.format_item_wise_internal_data,
+        self.value_formatters_for_gov = {
+            # GSTR1_DataField.ITEMS.value: self.format_item_for_gov,
             GSTR1_DataField.POS.value: self.map_place_of_supply,
         }
 
@@ -1046,30 +1073,21 @@ class AT(GovDataMapper):
         pos_wise_data = {}
 
         for invoice in input_data:
-            formatted_data = self.format_data(invoice, reverse=True)
-            formatted_data.update(self.set_item_details(formatted_data))
+            formatted_data = self.format_data(invoice, for_gov=True)
+            rate_wise_taxes = self.get_item_details(formatted_data)
 
             pos_data = pos_wise_data.setdefault(
-                invoice[GSTR1_DataField.POS.value],
-                {
-                    GovDataField.POS.value: formatted_data[GovDataField.POS.value],
-                    GovDataField.SUPPLY_TYPE.value: formatted_data[
-                        GovDataField.SUPPLY_TYPE.value
-                    ],
-                    GovDataField.DIFF_PERCENTAGE.value: formatted_data[
-                        GovDataField.DIFF_PERCENTAGE.value
-                    ],
-                    GovDataField.ITEMS.value: [],
-                },
+                invoice[GSTR1_DataField.POS.value], formatted_data
             )
 
-            pos_data[GovDataField.ITEMS.value].extend(
-                formatted_data[GovDataField.ITEMS.value]
-            )
+            pos_data.setdefault(GovDataField.ITEMS.value, []).extend(rate_wise_taxes)
 
         return list(pos_wise_data.values())
 
-    def set_item_details(self, invoice):
+    def get_item_details(self, invoice):
+        """
+        Transfer document values to item level (by POS and tax rate)
+        """
         return {
             GovDataField.ITEMS.value: [
                 {
@@ -1086,9 +1104,9 @@ class AT(GovDataMapper):
             ]
         }
 
-    def format_data(self, data, default_data=None, reverse=False):
-        data = super().format_data(data, default_data, reverse)
-        if not reverse:
+    def format_data(self, data, default_data=None, for_gov=False):
+        data = super().format_data(data, default_data, for_gov)
+        if not for_gov:
             return data
 
         data[GovDataField.SUPPLY_TYPE.value] = (
@@ -1097,6 +1115,9 @@ class AT(GovDataMapper):
         return data
 
     def aggregate_invoices(self, input_data):
+        """
+        TODO: Common method
+        """
         keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
 
         output = []
@@ -1113,7 +1134,7 @@ class AT(GovDataMapper):
 
         return output
 
-    def format_item_wise_json_data(self, items, *args):
+    def format_item_for_internal(self, items, *args):
         return [
             {
                 **self.DEFAULT_ITEM_AMOUNTS.copy(),
@@ -1122,8 +1143,8 @@ class AT(GovDataMapper):
             for item in items
         ]
 
-    def format_item_wise_internal_data(self, items, *args):
-        return [self.format_data(item, reverse=True) for item in items]
+    def format_item_for_gov(self, items, *args):
+        return [self.format_data(item, for_gov=True) for item in items]
 
 
 class TXPD(AT):
@@ -1137,6 +1158,7 @@ class DOC_ISSUE(GovDataMapper):
         GovDataField.TO_SR.value: GSTR1_DataField.TO_SR.value,
         GovDataField.TOTAL_COUNT.value: GSTR1_DataField.TOTAL_COUNT.value,
         GovDataField.CANCELLED_COUNT.value: GSTR1_DataField.CANCELLED_COUNT.value,
+        GovDataField.NET_ISSUE.value: "net_issue",
     }
     DOCUMENT_NATURE = {
         1: "Invoices for outward supply",
@@ -1177,6 +1199,9 @@ class DOC_ISSUE(GovDataMapper):
         return {GSTR1_SubCategory.DOC_ISSUE.value: output}
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        TODO: Update example input data and output data
+        """
         self.DOCUMENT_NATURE = self.reverse_dict(self.DOCUMENT_NATURE)
 
         output = {GovDataField.DOC_ISSUE_DETAILS.value: []}
@@ -1199,7 +1224,7 @@ class DOC_ISSUE(GovDataMapper):
                         self.format_data(
                             document,
                             {GovDataField.INDEX.value: index + 1},
-                            reverse=True,
+                            for_gov=True,
                         )
                         for index, document in enumerate(documents)
                     ],
@@ -1210,20 +1235,19 @@ class DOC_ISSUE(GovDataMapper):
 
         return output
 
-    def format_data(self, data, additional_data=None, reverse=False):
-        if not reverse:
+    def format_data(self, data, additional_data=None, for_gov=False):
+        if not for_gov:
             return super().format_data(data, additional_data)
 
+        # compute additional data
         data[GSTR1_DataField.CANCELLED_COUNT.value] += data.get(
             GSTR1_DataField.DRAFT_COUNT.value, 0
         )
+        data["net_issue"] = data[GSTR1_DataField.TOTAL_COUNT.value] - data.get(
+            GSTR1_DataField.CANCELLED_COUNT.value, 0
+        )
 
-        formatted_data = super().format_data(data, additional_data, reverse)
-        formatted_data[GovDataField.NET_ISSUE.value] = formatted_data.get(
-            GovDataField.TOTAL_COUNT.value, 0
-        ) - formatted_data.get(GovDataField.CANCELLED_COUNT.value, 0)
-
-        return formatted_data
+        return super().format_data(data, additional_data, for_gov)
 
     def get_document_nature(self, doc_nature, *args):
         return self.DOCUMENT_NATURE.get(doc_nature, doc_nature)
@@ -1269,12 +1293,21 @@ class SUPECOM(GovDataMapper):
             section = invoice[GSTR1_DataField.DOC_TYPE.value]
             output.setdefault(
                 self.DOCUMENT_CATEGORIES.get(section, section), []
-            ).append(self.format_data(invoice, reverse=True))
+            ).append(self.format_data(invoice, for_gov=True))
 
         return output
 
 
 class RETSUM(GovDataMapper):
+    """
+    Convert GSTR-1 Summary as returned by the API to the internal format
+
+    Usecase: Compute amendment liability for GSTR-1 Summary
+
+    Exceptions:
+        - Only supports latest summary format v4.0 and above
+    """
+
     KEY_MAPPING = {
         "sec_nm": GSTR1_DataField.DESCRIPTION.value,
         "typ": GSTR1_DataField.DESCRIPTION.value,
@@ -1367,7 +1400,7 @@ class RETSUM(GovDataMapper):
     def __init__(self):
         super().__init__()
 
-        self.json_value_formatters = {
+        self.value_formatters_for_internal = {
             "sec_nm": self.map_document_types,
             "typ": self.map_document_types,
         }
@@ -1427,35 +1460,51 @@ CLASS_MAP = {
 }
 
 
-def convert_to_internal_data_format(data):
+def convert_to_internal_data_format(gov_data):
+    """
+    Converts Gov data format to internal data format for all categories
+    """
     output = {}
 
     for category, mapper_class in CLASS_MAP.items():
-        if not data.get(category):
+        if not gov_data.get(category):
             continue
 
         output.update(
-            mapper_class().convert_to_internal_data_format(data.get(category))
+            mapper_class().convert_to_internal_data_format(gov_data.get(category))
         )
 
     return output
 
 
-def get_category_wise_data(data, mapping: dict):
+def get_category_wise_data(subcategory_wise_data: dict, mapping: dict) -> dict:
+    """
+    returns category wise data from subcategory wise data
+
+    Args:
+        subcategory_wise_data (dict): subcategory wise data
+        mapping (dict): subcategory to category mapping
+    """
     category_wise_data = {}
     for subcategory, category in mapping.items():
-        if not data.get(subcategory.value):
+        if not subcategory_wise_data.get(subcategory.value):
             continue
 
         category_wise_data.setdefault(category.value, []).extend(
-            data.get(subcategory.value, [])
+            subcategory_wise_data.get(subcategory.value, [])
         )
 
     return category_wise_data
 
 
-def convert_to_gov_data_format(data):
-    category_wise_data = get_category_wise_data(data, SUB_CATEGORY_GOV_CATEGORY_MAPPING)
+def convert_to_gov_data_format(internal_data: dict) -> dict:
+    """
+    converts internal data format to Gov data format for all categories
+    """
+
+    category_wise_data = get_category_wise_data(
+        internal_data, SUB_CATEGORY_GOV_CATEGORY_MAPPING
+    )
 
     output = {}
     for category, mapper_class in CLASS_MAP.items():
@@ -1531,6 +1580,7 @@ def summarize_retsum_data(input_data):
                 }
             )
 
+    # add total amendment liability
     if _sum(amended_data) != 0:
         summarized_data.extend(
             [
