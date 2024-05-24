@@ -1541,8 +1541,8 @@ def onload(doc, method=None):
         or not doc.company_gstin
     ):
         return
-    set_ecommerce_supply_type(doc)
 
+    set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
 
 
