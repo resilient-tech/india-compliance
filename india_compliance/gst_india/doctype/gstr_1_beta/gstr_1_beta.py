@@ -159,9 +159,9 @@ class GSTR1Beta(Document):
 
 
 @frappe.whitelist()
-def get_output_gst_balance(company, company_gstin, month_or_quarter, year):
+def get_net_gst_liability(company, company_gstin, month_or_quarter, year):
     """
-    Returns the net output balance for the given return period
+    Returns the net output balance for the given return period as per ledger entries
     """
 
     frappe.has_permission("GSTR-1 Beta", throw=True)

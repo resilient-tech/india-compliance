@@ -18,6 +18,7 @@ const GSTR1_Category = {
     HSN: "HSN Summary",
     DOC_ISSUE: "Document Issued",
 };
+
 const GSTR1_SubCategory = {
     B2B_REGULAR: "B2B Regular",
     B2B_REVERSE_CHARGE: "B2B Reverse Charge",
@@ -100,7 +101,6 @@ const GSTR1_DataField = {
     CANCELLED_COUNT: "cancelled_count",
 };
 
-let net_balance_during_period;
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
         // patch_set_active_tab(frm);
@@ -166,10 +166,6 @@ frappe.ui.form.on(DOCTYPE, {
         });
     },
 
-    show_gstr1(frm, month_or_quarter, year, gstin) {
-        console.log("show_gstr1", month_or_quarter, year, gstin);
-    },
-
     async company(frm) {
         render_empty_state(frm);
 
@@ -215,8 +211,6 @@ frappe.ui.form.on(DOCTYPE, {
 
         if (!data?.status) return;
         frm.gstr1.status = data.status;
-        await get_output_gst_legder(frm);
-        frm.gstr1.set_output_gst_ledger();
         frm.gstr1.refresh_data(data);
     },
 });
@@ -266,11 +260,14 @@ class GSTR1 {
         this.filter_group.filter_x_button.click();
 
         if (data) this.data = data;
+
+        // set data for filing return
         if (!this.data["filed"]) {
             this.data["filed"] = this.data["books"];
             this.data["filed_summary"] = this.data["books_summary"];
         }
 
+        // set idx for reconcile rows (for detail view)
         if (this.data["reconcile"]) {
             Object.values(this.data["reconcile"]).forEach(category => {
                 category instanceof Array &&
@@ -280,24 +277,31 @@ class GSTR1 {
             });
         }
 
-        this.TABS.forEach(tab => {
-            if (!this.data[tab.name]) {
-                this.hide_tab(tab.name);
-                tab.shown = false;
+        this.set_output_gst_balances();
+
+        // refresh tabs
+        this.TABS.forEach(_tab => {
+            const tab_name = _tab.name;
+            const tab = this.tabs[`${tab_name}_tab`];
+
+            if (!this.data[tab_name]) {
+                tab.hide();
+                _tab.shown = false;
                 return;
             }
 
-            this.show_tab(tab.name);
-            tab.shown = true;
-            this.tabs[`${tab.name}_tab`].tabmanager.refresh_data(
-                this.data[tab.name],
-                this.data[`${tab.name}_summary`],
+            tab.show();
+            _tab.shown = true;
+            tab.tabmanager.refresh_data(
+                this.data[tab_name],
+                this.data[`${tab_name}_summary`],
                 this.status
             );
         });
     }
 
     refresh_view() {
+        // for change in view (Summary/Details)
         this.viewgroup.set_active_view(this.active_view);
         this.TABS.forEach(tab => {
             if (!tab.shown) return;
@@ -445,27 +449,7 @@ class GSTR1 {
         });
     }
 
-    // ACTIONS
-
-    download_books_as_excel() { }
-
-    mark_as_filed() { }
-
     // UTILS
-
-    hide_tab(tab_name) {
-        this.$wrapper
-            .find(`[data-fieldname="${tab_name}_tab"]`)
-            .closest(".nav-item")
-            .hide();
-    }
-
-    show_tab(tab_name) {
-        this.$wrapper
-            .find(`[data-fieldname="${tab_name}_tab"]`)
-            .closest(".nav-item")
-            .show();
-    }
 
     get_filter_fields() {
         const fields = [
@@ -539,49 +523,56 @@ class GSTR1 {
         dialog.show();
     }
 
-    set_output_gst_ledger() {
+    async set_output_gst_balances() {
         //Checks if gst-ledger-difference element is there and removes if already present
+        const gst_liability = await get_net_gst_liability(this.frm);
+
         if ($(".gst-ledger-difference").length) {
             $(".gst-ledger-difference").remove();
         }
+
         $(function () {
             $('[data-toggle="tooltip"]').tooltip();
         });
 
         const net_transactions = {
-            IGST: net_balance_during_period["total_igst_amount"] || 0,
-            CGST: net_balance_during_period["total_cgst_amount"] || 0,
-            SGST: net_balance_during_period["total_sgst_amount"] || 0,
-            CESS: net_balance_during_period["total_cess_amount"] || 0,
+            IGST: gst_liability["total_igst_amount"] || 0,
+            CGST: gst_liability["total_cgst_amount"] || 0,
+            SGST: gst_liability["total_sgst_amount"] || 0,
+            CESS: gst_liability["total_cess_amount"] || 0,
         };
 
-        // <div class="m-2 text-center"><h6>Net Transactions (Credit - Debit) during the period</h6></div>
-        //prepending the gst-legder-difference element
-        let output_gst_ledger_html = `
-        <div class="gst-ledger-difference w-100" style="border-bottom: 1px solid var(--border-color);">
-            <div class="m-3 d-flex justify-content-around align-items-center">
-                ${Object.entries(net_transactions)
+        const ledger_balance_cards = Object.entries(net_transactions)
             .map(
                 ([type, net_amount]) => `
-                    <div>
-                        <h5>${type} Account&nbsp;
-                            <i
-                            class="fa fa-info-circle info-icon"
-                            style="font-size: small;"
-                            data-toggle="tooltip"
-                            data-placement="top" title="Net Transactions (Credit - Debit) during the selected period in ${type} Account"
-                            ></i>
-                        </h5>
-                        <h4 class="text-center">${format_currency(net_amount)}</h4>
-                    </div>
-                `
-        )
-            .join("")}
+            <div>
+                <h5>${type} Account&nbsp;
+                    <i
+                        class="fa fa-info-circle info-icon"
+                        style="font-size: small;"
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        title="Net Transactions (Credit - Debit) during the selected period in ${type} Account"
+                    ></i>
+                </h5>
+                <h4 class="text-center">
+                    ${format_currency(net_amount)}</h4>
+            </div>`
+            )
+            .join("");
+
+        const gst_liability_html = `
+        <div
+            class="gst-ledger-difference w-100"
+            style="border-bottom: 1px solid var(--border-color);"
+        >
+            <div class="m-3 d-flex justify-content-around align-items-center">
+                ${ledger_balance_cards}
             </div>
-        </div>
-        `;
+        </div>`;
+
         let element = $('[data-fieldname="data_section"]');
-        element.prepend(output_gst_ledger_html);
+        element.prepend(gst_liability_html);
     }
 }
 
@@ -696,11 +687,11 @@ class TabManager {
             </div>
             <div class="data-table"></div>
             <div class="report-footer" style="padding: var(--padding-sm)">
-        <button class="btn btn-xs btn-default expand" data-action="expand_all_rows">
-            ${__("Expand All")}</button>
-        <button class="btn btn-xs btn-default collapse" data-action="collapse_all_rows">
-            ${__("Collapse All")}</button>
-    </div>
+                <button class="btn btn-xs btn-default expand" data-action="expand_all_rows">
+                    ${__("Expand All")}</button>
+                <button class="btn btn-xs btn-default collapse" data-action="collapse_all_rows">
+                    ${__("Collapse All")}</button>
+            </div>
         `);
     }
 
@@ -734,8 +725,7 @@ class TabManager {
                 ],
                 hooks: {
                     columnTotal: (_, row) => {
-                        if (this.instance.active_view !== "Summary")
-                            return null;
+                        if (this.instance.active_view !== "Summary") return null;
 
                         if (row.colIndex === 1)
                             return (row.content = "Total Liability");
@@ -766,41 +756,6 @@ class TabManager {
         this.setup_datatable_listeners();
     }
 
-    setup_footer(wrapper) {
-        const treeView = this.instance.active_view === "Summary";
-        if (!treeView) {
-            $(wrapper).find("[data-action=collapse_all_rows]").hide();
-            $(wrapper).find("[data-action=expand_all_rows]").hide();
-        } else {
-            $(wrapper).find("[data-action=collapse_all_rows]").show();
-            $(wrapper).find("[data-action=expand_all_rows]").hide();
-        }
-
-        this.setup_footer_actions(wrapper);
-    }
-    setup_footer_actions(wrapper) {
-        this.expand_all_rows(wrapper);
-        this.collapse_all_rows(wrapper);
-    }
-    expand_all_rows(wrapper) {
-        const me = this;
-        $(wrapper).on("click", ".expand", function (e) {
-            e.preventDefault();
-            me.datatable.datatable.rowmanager.expandAllNodes();
-            $(wrapper).find("[data-action=collapse_all_rows]").show();
-            $(wrapper).find("[data-action=expand_all_rows]").hide();
-        });
-    }
-
-    collapse_all_rows(wrapper) {
-        const me = this;
-        $(wrapper).on("click", ".collapse", function (e) {
-            e.preventDefault();
-            me.datatable.datatable.rowmanager.collapseAllNodes();
-            $(wrapper).find("[data-action=collapse_all_rows]").hide();
-            $(wrapper).find("[data-action=expand_all_rows]").show();
-        });
-    }
     setup_datatable_listeners() {
         const me = this;
         this.datatable.$datatable.on(
@@ -813,6 +768,31 @@ class TabManager {
                 me.callback && me.callback(summary_description);
             }
         );
+    }
+
+    setup_footer(wrapper) {
+        const treeView = this.instance.active_view === "Summary";
+        if (!treeView) {
+            $(wrapper).find("[data-action=collapse_all_rows]").hide();
+            $(wrapper).find("[data-action=expand_all_rows]").hide();
+        } else {
+            $(wrapper).find("[data-action=collapse_all_rows]").show();
+            $(wrapper).find("[data-action=expand_all_rows]").hide();
+        }
+
+        this.setup_footer_actions(wrapper);
+    }
+
+    setup_footer_actions(wrapper) {
+        const me = this;
+        ["expand", "collapse"].forEach(action => {
+            $(wrapper).on("click", `.${action}`, function (e) {
+                e.preventDefault();
+                me.datatable.datatable.rowmanager[`${action}AllNodes`]();
+                $(wrapper).find("[data-action=collapse_all_rows]").toggle();
+                $(wrapper).find("[data-action=expand_all_rows]").toggle();
+            });
+        });
     }
 
     set_creation_time_string() {
@@ -838,8 +818,6 @@ class TabManager {
 
         return `Created ${creation}`;
     }
-
-    setup_actions() { }
 
     // UTILS
 
@@ -883,8 +861,19 @@ class TabManager {
         return value;
     }
 
-    // DATA
+    get_icon(value, column, data, icon) {
+        if (!data) return "";
+        return `
+        <button
+            class="btn ${icon} reconcile-row"
+            data-row-index='${data.idx}'
+        >
+            <i class="fa fa-${icon}"></i>
+        </button>`;
+    }
+}
 
+class GSTR1_TabManager extends TabManager {
     // COLUMNS
     get_summary_columns() {
         return [
@@ -1120,6 +1109,7 @@ class TabManager {
                 fieldname: GSTR1_DataField.UOM,
                 width: 100,
             },
+            ...this.get_match_columns(),
             {
                 name: "Total Quantity",
                 fieldname: GSTR1_DataField.QUANTITY,
@@ -1183,6 +1173,7 @@ class TabManager {
                 fieldname: GSTR1_DataField.TO_SR,
                 width: 150,
             },
+            ...this.get_match_columns(),
             {
                 name: "Total Count",
                 fieldname: GSTR1_DataField.TOTAL_COUNT,
@@ -1203,6 +1194,8 @@ class TabManager {
 
     get_advances_received_columns() {
         return [
+            ...this.get_detailed_view_column(),
+            ...this.get_match_columns(),
             ...this.get_tax_columns(),
             {
                 name: "Amount Received",
@@ -1215,6 +1208,8 @@ class TabManager {
 
     get_advances_adjusted_columns() {
         [
+            ...this.get_detailed_view_column(),
+            ...this.get_match_columns(),
             ...this.get_tax_columns(),
             {
                 name: "Amount Adjusted",
@@ -1322,7 +1317,7 @@ class TabManager {
     }
 }
 
-class BooksTab extends TabManager {
+class BooksTab extends GSTR1_TabManager {
     CATEGORY_COLUMNS = {
         // [GSTR1_Categories.NIL_EXEMPT]: this.get_document_columns,
 
@@ -1366,6 +1361,7 @@ class BooksTab extends TabManager {
     download_books_as_excel() {
         const url =
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_books_as_excel";
+
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
@@ -1406,10 +1402,9 @@ class BooksTab extends TabManager {
         let columns = this.get_document_columns();
         columns = columns.filter(
             col =>
-                ![
-                    GSTR1_DataField.CUST_GSTIN,
-                    GSTR1_DataField.REVERSE_CHARGE,
-                ].includes(col.fieldname)
+                ![GSTR1_DataField.CUST_GSTIN, GSTR1_DataField.REVERSE_CHARGE].includes(
+                    col.fieldname
+                )
         );
 
         return columns;
@@ -1470,7 +1465,7 @@ class BooksTab extends TabManager {
     }
 }
 
-class FiledTab extends TabManager {
+class FiledTab extends GSTR1_TabManager {
     CATEGORY_COLUMNS = {
         [GSTR1_SubCategory.B2B_REGULAR]: this.get_invoice_columns,
         [GSTR1_SubCategory.B2B_REVERSE_CHARGE]: this.get_invoice_columns,
@@ -1525,6 +1520,7 @@ class FiledTab extends TabManager {
     download_filed_as_excel() {
         const url =
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_filed_as_excel";
+
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
@@ -1614,6 +1610,7 @@ class FiledTab extends TabManager {
 
     get_b2cl_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "Invoice Date",
                 fieldname: GSTR1_DataField.DOC_DATE,
@@ -1632,6 +1629,7 @@ class FiledTab extends TabManager {
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
+            ...this.get_match_columns(),
             ...this.get_igst_tax_columns(true),
             {
                 name: "Invoice Value",
@@ -1644,22 +1642,26 @@ class FiledTab extends TabManager {
 
     get_b2cs_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "Invoice Type",
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 100,
             },
             ...this.get_tax_columns(),
+            ...this.get_match_columns(),
         ];
     }
 
     get_nil_exempt_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "Description",
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 200,
             },
+            ...this.get_match_columns(),
             {
                 name: "Nil-Rated Supplies",
                 fieldname: GSTR1_DataField.NIL_RATED_AMOUNT,
@@ -1689,6 +1691,7 @@ class FiledTab extends TabManager {
 
     get_cdnur_columns() {
         return [
+            ...this.get_detailed_view_column(),
             {
                 name: "Transaction Type",
                 fieldname: GSTR1_DataField.TRANSACTION_TYPE,
@@ -1717,6 +1720,7 @@ class FiledTab extends TabManager {
                 fieldname: GSTR1_DataField.DOC_TYPE,
                 width: 150,
             },
+            ...this.get_match_columns(),
             ...this.get_igst_tax_columns(true),
             {
                 name: "Document Value",
@@ -1762,6 +1766,7 @@ class ReconcileTab extends FiledTab {
     download_reconcile_as_excel() {
         const url =
             "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_export.download_reconcile_as_excel";
+
         open_url_post(`/api/method/${url}`, {
             company_gstin: this.instance.frm.doc.company_gstin,
             month_or_quarter: this.instance.frm.doc.month_or_quarter,
@@ -1769,7 +1774,7 @@ class ReconcileTab extends FiledTab {
         });
     }
 
-    get_creation_time_string() { }
+    get_creation_time_string() { } // pass
 
     get_detailed_view_column() {
         return [
@@ -1781,16 +1786,6 @@ class ReconcileTab extends FiledTab {
                 _value: (...args) => this.get_icon(...args, "eye"),
             },
         ];
-    }
-    get_icon(value, column, data, icon) {
-        if (!data) return "";
-        return `
-        <button
-            class="btn ${icon} reconcile-row"
-            data-row-index='${data.idx}'
-        >
-            <i class="fa fa-${icon}"></i>
-        </button>`;
     }
 
     get_match_columns() {
@@ -1830,9 +1825,15 @@ class DetailViewDialog {
     constructor(data, field_label_map) {
         this.data = data;
         this.field_label_map = field_label_map;
-        this.render_dialog();
+        this.show_dialog();
+    }
+
+    show_dialog() {
+        this.init_dialog();
+        this.render_table();
         this.dialog.show();
     }
+
     init_dialog() {
         this.dialog = new frappe.ui.Dialog({
             title: "Detail View",
@@ -1844,10 +1845,7 @@ class DetailViewDialog {
             ],
         });
     }
-    render_dialog() {
-        this.init_dialog();
-        this.render_table();
-    }
+
     render_table() {
         const detail_table = this.dialog.fields_dict.reconcile_data;
         const field_label_map = this.field_label_map.filter(
@@ -1878,54 +1876,6 @@ class DetailViewDialog {
                 .addClass("not-matched");
         }
     }
-}
-
-function set_options_for_month_or_quarter(frm) {
-    /**
-     * Set options for Month or Quarter based on the year and current date
-     * 1. If the year is current year, then options are till current month
-     * 2. If the year is 2017, then options are from July to December
-     * 3. Else, options are all months or quarters
-     *
-     * @param {Object} frm
-     */
-
-    const today = new Date();
-    const current_year = String(today.getFullYear());
-    const current_month_idx = today.getMonth();
-    let options;
-
-    if (!frm.doc.year) frm.doc.year = current_year;
-
-    if (frm.doc.year === current_year) {
-        // Options for current year till current month
-        if (frm.filing_frequency === "Monthly")
-            options = india_compliance.MONTH.slice(0, current_month_idx + 1);
-        else {
-            let quarter_idx;
-            if (current_month_idx <= 2) quarter_idx = 1;
-            else if (current_month_idx <= 5) quarter_idx = 2;
-            else if (current_month_idx <= 8) quarter_idx = 3;
-            else quarter_idx = 4;
-
-            options = india_compliance.QUARTER.slice(0, quarter_idx);
-        }
-    } else if (frm.doc.year === "2017") {
-        // Options for 2017 from July to December
-        if (frm.filing_frequency === "Monthly")
-            options = india_compliance.MONTH.slice(6);
-        else options = india_compliance.QUARTER.slice(2);
-    } else {
-        if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH;
-        else options = india_compliance.QUARTER;
-    }
-
-    set_field_options("month_or_quarter", options);
-    if (frm.doc.year === current_year)
-        // set second last option as default
-        frm.set_value("month_or_quarter", options[options.length - 2]);
-    // set last option as default
-    else frm.set_value("month_or_quarter", options[options.length - 1]);
 }
 
 // UTILITY FUNCTIONS
@@ -1977,6 +1927,54 @@ function get_year_list(current_date) {
     return options.reverse().map(year => year.toString());
 }
 
+function set_options_for_month_or_quarter(frm) {
+    /**
+     * Set options for Month or Quarter based on the year and current date
+     * 1. If the year is current year, then options are till current month
+     * 2. If the year is 2017, then options are from July to December
+     * 3. Else, options are all months or quarters
+     *
+     * @param {Object} frm
+     */
+
+    const today = new Date();
+    const current_year = String(today.getFullYear());
+    const current_month_idx = today.getMonth();
+    let options;
+
+    if (!frm.doc.year) frm.doc.year = current_year;
+
+    if (frm.doc.year === current_year) {
+        // Options for current year till current month
+        if (frm.filing_frequency === "Monthly")
+            options = india_compliance.MONTH.slice(0, current_month_idx + 1);
+        else {
+            let quarter_idx;
+            if (current_month_idx <= 2) quarter_idx = 1;
+            else if (current_month_idx <= 5) quarter_idx = 2;
+            else if (current_month_idx <= 8) quarter_idx = 3;
+            else quarter_idx = 4;
+
+            options = india_compliance.QUARTER.slice(0, quarter_idx);
+        }
+    } else if (frm.doc.year === "2017") {
+        // Options for 2017 from July to December
+        if (frm.filing_frequency === "Monthly")
+            options = india_compliance.MONTH.slice(6);
+        else options = india_compliance.QUARTER.slice(2);
+    } else {
+        if (frm.filing_frequency === "Monthly") options = india_compliance.MONTH;
+        else options = india_compliance.QUARTER;
+    }
+
+    set_field_options("month_or_quarter", options);
+    if (frm.doc.year === current_year)
+        // set second last option as default
+        frm.set_value("month_or_quarter", options[options.length - 2]);
+    // set last option as default
+    else frm.set_value("month_or_quarter", options[options.length - 1]);
+}
+
 function render_empty_state(frm) {
     if ($(".gst-ledger-difference").length) {
         $(".gst-ledger-difference").remove();
@@ -1985,20 +1983,16 @@ function render_empty_state(frm) {
     frm.refresh();
 }
 
-async function get_output_gst_legder(frm) {
-    return new Promise(resolve => {
-        frappe.call({
-            method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_output_gst_balance",
-            args: {
-                month_or_quarter: frm.doc.month_or_quarter,
-                year: frm.doc.year,
-                company_gstin: frm.doc.company_gstin,
-                company: frm.doc.company,
-            },
-            callback: function (r) {
-                net_balance_during_period = r.message;
-                resolve();
-            },
-        });
+async function get_net_gst_liability(frm) {
+    const response = await frappe.call({
+        method: "india_compliance.gst_india.doctype.gstr_1_beta.gstr_1_beta.get_net_gst_liability",
+        args: {
+            month_or_quarter: frm.doc.month_or_quarter,
+            year: frm.doc.year,
+            company_gstin: frm.doc.company_gstin,
+            company: frm.doc.company,
+        },
     });
+
+    return response?.message;
 }
