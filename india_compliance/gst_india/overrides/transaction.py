@@ -1409,18 +1409,19 @@ def validate_transaction(doc, method=None):
 
 
 def before_print(doc, method=None, print_settings=None):
-    set_supply_liable_to(doc)
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
+    set_ecommerce_supply_type(doc)
     set_gst_breakup(doc)
 
 
 def onload(doc, method=None):
+
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
+    set_ecommerce_supply_type(doc)
 
-    set_supply_liable_to(doc)
     set_gst_breakup(doc)
 
 
@@ -1536,9 +1537,9 @@ def before_update_after_submit(doc, method=None):
     update_gst_details(doc)
 
 
-def set_supply_liable_to(doc):
+def set_ecommerce_supply_type(doc):
     """
-    - Set GSTR-1 E-commerce section for virtual field supply_liable_to
+    - Set GSTR-1 E-commerce section for virtual field ecommerce_supply_type
     """
     if doc.doctype not in ("Sales Order", "Sales Invoice", "Delivery Note"):
         return
@@ -1547,6 +1548,6 @@ def set_supply_liable_to(doc):
         return
 
     if doc.is_reverse_charge:
-        doc.supply_liable_to = SUPECOM.US_9_5.value
+        doc.ecommerce_supply_type = SUPECOM.US_9_5.value
     else:
-        doc.supply_liable_to = SUPECOM.US_52.value
+        doc.ecommerce_supply_type = SUPECOM.US_52.value
