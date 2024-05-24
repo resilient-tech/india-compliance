@@ -47,7 +47,7 @@ class SummarizeGSTR1:
         """
         Helper function to summarize data for each sub-category
         """
-        if is_filed:
+        if is_filed and data.get("summary"):
             return summarize_retsum_data(data.get("summary"))
 
         subcategory_summary = self.get_subcategory_summary(data)

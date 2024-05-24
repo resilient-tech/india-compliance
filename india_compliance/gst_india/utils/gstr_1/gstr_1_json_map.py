@@ -1384,7 +1384,12 @@ class RETSUM(GovDataMapper):
             if section not in self.SECTIONS_WITH_SUBSECTIONS:
                 continue
 
-            for subsection_data in section_data["sub_sections"]:
+            # Unsupported Legacy Summary API. Fallback to self-calculated summary.
+            sub_sections = section_data.get("sub_sections", {})
+            if not sub_sections:
+                return {}
+
+            for subsection_data in sub_sections:
                 formatted_data = self.format_subsection_data(section, subsection_data)
                 output[formatted_data[GSTR1_DataField.DESCRIPTION.value]] = (
                     formatted_data
