@@ -1417,11 +1417,10 @@ def before_print(doc, method=None, print_settings=None):
 
 
 def onload(doc, method=None):
-    set_supply_liable_to(doc)
-
     if ignore_gst_validations(doc) or not doc.place_of_supply or not doc.company_gstin:
         return
 
+    set_supply_liable_to(doc)
     set_gst_breakup(doc)
 
 

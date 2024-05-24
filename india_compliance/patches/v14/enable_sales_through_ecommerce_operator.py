@@ -1,17 +1,14 @@
 import frappe
 
 from india_compliance.patches.post_install.set_default_gst_settings import (
-    POSTING_DATE_CONDITION,
+    enable_sales_through_ecommerce_operators,
 )
 
 
 def execute():
-    if not frappe.db.exists(
-        "Sales Invoice",
-        {"ecommerce_gstin": ("not in", ("", None)), **POSTING_DATE_CONDITION},
-    ):
-        return
+    new_settings = {}
 
-    frappe.db.set_single_value(
-        "GST Settings", "enable_sales_through_ecommerce_operators", 1
-    )
+    enable_sales_through_ecommerce_operators(new_settings)
+
+    if new_settings:
+        frappe.db.set_single_value("GST Settings", new_settings)
