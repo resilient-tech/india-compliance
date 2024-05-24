@@ -717,10 +717,12 @@ def mark_e_waybill_as_cancelled(doctype, docname, values):
 
 
 def attach_e_waybill_pdf(doc, log=None):
+    default_format = frappe.get_meta("e-Waybill Log").default_print_format
+
     pdf_content = frappe.get_print(
         "e-Waybill Log",
         doc.ewaybill,
-        "e-Waybill",
+        default_format,
         doc=log,
         no_letterhead=True,
         as_pdf=True,
@@ -1204,7 +1206,6 @@ class EWaybillData(GSTTransactionData):
         return extension_details
 
     def validate_transaction(self):
-        # TODO: Add Support for Delivery Note
 
         super().validate_transaction()
 

@@ -191,13 +191,18 @@ class GSTSettings(Document):
             for credential in self.credentials
         ):
             frappe.msgprint(
-                # TODO: Add Link to Documentation.
                 _(
                     "Please set credentials for e-Waybill / e-Invoice to use API"
-                    " features"
+                    " features.<br>"
+                    "For more information, refer to the following documentation: {0}"
+                ).format(
+                    """
+                <a href="https://docs.indiacompliance.app/docs/ewaybill-and-einvoice/gst_settings" target="_blank">
+                    Setup Credentials for e-Waybill / e-Invoice
+                </a>
+                """
                 ),
                 indicator="yellow",
-                alert=True,
             )
 
     def validate_app_key(self, credential):

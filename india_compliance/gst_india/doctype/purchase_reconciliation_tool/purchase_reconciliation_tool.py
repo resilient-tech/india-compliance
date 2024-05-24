@@ -1,7 +1,7 @@
 # Copyright (c) 2022, Resilient Tech and contributors
 # For license information, please see license.txt
-
 import json
+import re
 from typing import List
 
 import frappe
@@ -139,7 +139,6 @@ class PurchaseReconciliationTool(Document):
 
         data = {}
         for period in periods:
-            # TODO: skip if today is not greater than 14th return period's next months
             data[period] = []
             status = "🟢 &nbsp; Downloaded"
             for category in GSTRCategory:
@@ -855,8 +854,8 @@ class BuildExcel:
             prefix="inward_supply",
         )
 
-        # TODO: Sanitize supplier name and gstin
-        self.supplier_name = data[0].get("supplier_name")
+        # remove special characters (not allowed in excel sheet name)
+        self.supplier_name = re.sub(r"[<>[\]?:|*]", "", data[0].get("supplier_name"))
         self.supplier_gstin = data[0].get("supplier_gstin")
 
         return self.process_data(data, self.invoice_header)

@@ -208,7 +208,7 @@ def get_items(filters):
     items = frappe.db.sql(
         f"""
         SELECT
-            `tabSales Invoice Item`.gst_hsn_code,
+            COALESCE(`tabSales Invoice Item`.gst_hsn_code, '') AS gst_hsn_code,
             `tabSales Invoice Item`.stock_uom as uqc,
             sum(`tabSales Invoice Item`.stock_qty) AS stock_qty,
             sum(`tabSales Invoice Item`.taxable_value) AS taxable_value,
@@ -221,8 +221,9 @@ def get_items(filters):
             LEFT JOIN `tabGST HSN Code` ON `tabSales Invoice Item`.gst_hsn_code = `tabGST HSN Code`.name
         WHERE
             `tabSales Invoice`.docstatus = 1
-            AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '')
-            AND `tabSales Invoice Item`.gst_hsn_code IS NOT NULL {conditions}
+            AND `tabSales Invoice`.is_opening != 'Yes'
+            AND `tabSales Invoice`.company_gstin != IFNULL(`tabSales Invoice`.billing_address_gstin, '') {conditions}
+
         GROUP BY
             `tabSales Invoice Item`.parent,
             `tabSales Invoice Item`.item_code

@@ -222,7 +222,7 @@ class ReturnsAPI(ReturnsAuthenticate):
         "RET13508": "no_docs_found",
         "RET13509": "no_docs_found",
         "RET13510": "no_docs_found",
-        "RET2B1023": "no_docs_found",
+        "RET2B1023": "not_generated",
         "RET2B1016": "no_docs_found",
         "RT-3BAS1009": "no_docs_found",
         "RET11417": "no_docs_found",  # GSTR-1 Exports

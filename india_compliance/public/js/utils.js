@@ -269,6 +269,7 @@ Object.assign(india_compliance, {
             Unreconciled: "red",
             Ignored: "grey",
             "Not Applicable": "grey",
+            "Match Found": "yellow",
         };
         const color = STATUS_COLORS[frm.doc.reconciliation_status];
 

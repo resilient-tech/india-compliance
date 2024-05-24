@@ -17,7 +17,10 @@ from india_compliance.gst_india.constants.custom_fields import (
     HRMS_CUSTOM_FIELDS,
     SALES_REVERSE_CHARGE_FIELDS,
 )
-from india_compliance.gst_india.setup.property_setters import get_property_setters
+from india_compliance.gst_india.setup.property_setters import (
+    get_default_property_setters,
+    get_property_setters,
+)
 from india_compliance.gst_india.utils import get_data_file_path
 from india_compliance.gst_india.utils.custom_fields import toggle_custom_fields
 
@@ -28,6 +31,7 @@ def after_install():
     create_custom_fields()
     create_accounting_dimension_fields()
     create_property_setters()
+    create_default_property_setters()
     create_address_template()
     create_email_template()
     set_default_gst_settings()
@@ -63,6 +67,11 @@ def create_accounting_dimension_fields():
 
 def create_property_setters():
     for property_setter in get_property_setters():
+        frappe.make_property_setter(property_setter, validate_fields_for_doctype=False)
+
+
+def create_default_property_setters():
+    for property_setter in get_default_property_setters():
         frappe.make_property_setter(property_setter, validate_fields_for_doctype=False)
 
 
