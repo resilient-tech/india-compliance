@@ -810,6 +810,7 @@ class Reconciler(BaseReconciliation):
         - Where a match is found, update Inward Supply and Purchase Invoice.
         """
 
+        matching_purchases = {}
         for supplier_gstin in purchases:
             if not inward_supplies.get(supplier_gstin):
                 continue
@@ -837,10 +838,16 @@ class Reconciler(BaseReconciliation):
                         purchase.doctype,
                     )
 
+                    matching_purchases.setdefault(purchase.doctype, []).append(
+                        purchase.name
+                    )
+
                     # Remove from current data to ensure matching is done only once.
                     purchases[supplier_gstin].pop(purchase_invoice_name)
                     inward_supplies[supplier_gstin].pop(inward_supply_name)
                     break
+
+        self.update_reconciliation_status(matching_purchases)
 
     def is_doc_matching(self, purchase, inward_supply, rules):
         """
@@ -933,6 +940,20 @@ class Reconciler(BaseReconciliation):
         frappe.db.set_value(
             "GST Inward Supply", inward_supply_name, inward_supply_fields
         )
+
+    def update_reconciliation_status(self, matching_purchases: dict):
+        """
+        Update reconciliation status for matched invoices in purchase docs.
+
+        param matching_purchases: dict of doctype and list of matched invoices
+        """
+        for doctype, doc_names in matching_purchases.items():
+            frappe.db.set_value(
+                doctype,
+                {"name": ("in", doc_names)},
+                "reconciliation_status",
+                "Match Found",
+            )
 
     def get_pan_level_data(self, data):
         out = {}
@@ -1035,6 +1056,7 @@ class ReconciledData(BaseReconciliation):
             reconciliation_data.append(frappe._dict({"_purchase_invoice": doc}))
 
         self.process_data(reconciliation_data, retain_doc=retain_doc)
+
         return reconciliation_data
 
     def get_all_inward_supply(

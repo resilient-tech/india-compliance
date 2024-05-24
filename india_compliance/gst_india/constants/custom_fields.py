@@ -586,7 +586,9 @@ CUSTOM_FIELDS = {
             "fieldtype": "Select",
             "insert_after": "ineligibility_reason",
             "print_hide": 1,
-            "options": ("\nNot Applicable\nReconciled\nUnreconciled\nIgnored"),
+            "options": (
+                "\nNot Applicable\nReconciled\nUnreconciled\nIgnored\nMatch Found"
+            ),
             "no_copy": 1,
             "read_only": 1,
         },
