@@ -206,11 +206,11 @@ class GSTBreakup:
                     tax_type,
                     {
                         "tax_rate": flt(item.get(f"{_tax_type}_rate", 0)),
-                        "tax_amount": 0,
+                        "base_tax_amount_after_discount_amount": 0,
                     },
                 )
 
-                tax_details["tax_amount"] += flt(
+                tax_details["base_tax_amount_after_discount_amount"] += flt(
                     item.get(f"{_tax_type}_amount", 0), self.precision
                 )
 
