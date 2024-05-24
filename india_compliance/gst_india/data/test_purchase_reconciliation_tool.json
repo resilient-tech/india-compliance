@@ -37,7 +37,7 @@
                     "classification": "IMPG",
                     "doc_type": "Bill of Entry",
                     "supply_type": "",
-                    "place_of_supply": "24-Gujarat",
+                    "place_of_supply": null,
                     "items": [
                         {
                             "taxable_value": 10000,
