@@ -958,6 +958,8 @@ class Reconciler(BaseReconciliation):
     def get_pan_level_data(self, data):
         out = {}
         for gstin, invoices in data.items():
+            if not gstin:
+                gstin = ""
             pan = gstin[2:-3]
             out.setdefault(pan, {})
             out[pan].update(invoices)
