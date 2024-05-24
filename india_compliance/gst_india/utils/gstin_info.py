@@ -201,7 +201,11 @@ def get_gstr_1_return_status(
 
     if process_info:
         frappe.enqueue(
-            process_gstr_1_returns_info, company=company, gstin=gstin, response=response
+            process_gstr_1_returns_info,
+            company=company,
+            gstin=gstin,
+            response=response,
+            enqueue_after_commit=True,
         )
 
     for info in response.get("EFiledlist"):
