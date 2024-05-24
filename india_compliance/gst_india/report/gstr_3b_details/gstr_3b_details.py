@@ -155,7 +155,10 @@ class GSTR3B_ITC_Details(BaseGSTR3BDetails):
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
-                & (purchase_invoice.company_gstin != purchase_invoice.supplier_gstin)
+                & (
+                    purchase_invoice.company_gstin
+                    != IfNull(purchase_invoice.supplier_gstin, "")
+                )
                 & (Ifnull(purchase_invoice.itc_classification, "") != "")
             )
             .groupby(purchase_invoice.name)
@@ -406,7 +409,10 @@ class GSTR3B_Inward_Nil_Exempt(BaseGSTR3BDetails):
                 & (purchase_invoice.posting_date[self.from_date : self.to_date])
                 & (purchase_invoice.company == self.company)
                 & (purchase_invoice.company_gstin == self.company_gstin)
-                & (purchase_invoice.company_gstin != purchase_invoice.supplier_gstin)
+                & (
+                    purchase_invoice.company_gstin
+                    != IfNull(purchase_invoice.supplier_gstin, "")
+                )
             )
             .groupby(purchase_invoice.name)
         )
@@ -442,7 +448,7 @@ class IneligibleITC:
             )
             .where(IfNull(pi.ineligibility_reason, "") != "")
             .where(pi.name.isin(ineligible_transactions))
-            .where(pi.company_gstin != pi.supplier_gstin)
+            .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
             .groupby(pi[group_by])
             .run(as_dict=1)
         )
@@ -461,7 +467,7 @@ class IneligibleITC:
             )
             .where(IfNull(pi.ineligibility_reason, "") != "")
             .where(pi.name.isin(ineligible_transactions))
-            .where(pi.company_gstin != pi.supplier_gstin)
+            .where(pi.company_gstin != IfNull(pi.supplier_gstin, ""))
             .groupby(pi[group_by])
             .run(as_dict=1)
         )
