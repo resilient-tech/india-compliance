@@ -23,7 +23,7 @@ for (const doctype of ["Sales Invoice", "Delivery Note"]) {
 }
 
 for (const doctype of ["Sales Invoice", "Sales Order", "Delivery Note"]) {
-    set_e_commerce_supply_liable_to(doctype);
+    set_e_commerce_ecommerce_supply_type(doctype);
 }
 
 function fetch_gst_details(doctype) {
@@ -303,27 +303,27 @@ function is_invoice_no_validation_required(transaction_type) {
     );
 }
 
-function set_e_commerce_supply_liable_to(doctype) {
+function set_e_commerce_ecommerce_supply_type(doctype) {
     const event_fields = ["ecommerce_gstin", "is_reverse_charge"];
 
     const events = Object.fromEntries(
-        event_fields.map(field => [field, frm => _set_e_commerce_supply_liable_to(frm)])
+        event_fields.map(field => [field, frm => _set_e_commerce_ecommerce_supply_type(frm)])
     );
 
     frappe.ui.form.on(doctype, events);
 }
 
-function _set_e_commerce_supply_liable_to(frm) {
+function _set_e_commerce_ecommerce_supply_type(frm) {
     if (!gst_settings.enable_sales_through_ecommerce_operators) return;
 
     if (!frm.doc.ecommerce_gstin) {
-        frm.set_value("supply_liable_to", "");
+        frm.set_value("ecommerce_supply_type", "");
         return;
     }
 
     if (frm.doc.is_reverse_charge) {
-        frm.set_value("supply_liable_to", "Liable to pay tax u/s 9(5)");
+        frm.set_value("ecommerce_supply_type", "Liable to pay tax u/s 9(5)");
     } else {
-        frm.set_value("supply_liable_to", "Liable to collect tax u/s 52(TCS)");
+        frm.set_value("ecommerce_supply_type", "Liable to collect tax u/s 52(TCS)");
     }
 }

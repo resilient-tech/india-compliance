@@ -648,7 +648,7 @@ class Gstr1Report:
                 Case()
                 .when(si.is_reverse_charge == 1, SUPECOM.US_9_5.value)
                 .else_(SUPECOM.US_52.value)
-                .as_("supply_liable_to"),
+                .as_("ecommerce_supply_type"),
             )
             .where(si.is_opening == "No")
             .where(si.docstatus == 1)
@@ -1213,7 +1213,7 @@ class Gstr1Report:
                 "width": 120,
             },
             {
-                "fieldname": "supply_liable_to",
+                "fieldname": "ecommerce_supply_type",
                 "label": _("Nature of Supply"),
                 "fieldtype": "Data",
                 "width": 180,
@@ -1994,7 +1994,9 @@ def get_document_issued_summary_json(data):
 def get_section_14_json(res, data):
     out = res["superco"]
     for item in data:
-        key = "clttx" if item["supply_liable_to"] == SUPECOM.US_52.value else "paytx"
+        key = (
+            "clttx" if item["ecommerce_supply_type"] == SUPECOM.US_52.value else "paytx"
+        )
         out.setdefault(key, []).append(
             {
                 "etin": item["ecommerce_gstin"],
