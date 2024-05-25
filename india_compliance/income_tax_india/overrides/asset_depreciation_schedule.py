@@ -42,7 +42,7 @@ def get_wdv_or_dd_depr_amount(
             prev_depreciation_amount,
             has_wdv_or_dd_non_yearly_pro_rata,
             asset_depr_schedule,
-            prev_per_day_depr=0,
+            prev_per_day_depr=prev_per_day_depr,
         )
 
     asset_depr_schedule.flags.wdv_it_act_applied = True
