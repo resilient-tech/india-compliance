@@ -613,16 +613,12 @@ class BillOfEntry:
             self.BOE.posting_date,
             self.BOE.company_gstin,
             self.PI.supplier_name,
-            self.PI.place_of_supply,
             self.PI.is_reverse_charge,
             *tax_fields,
         ]
 
         # In IMPGSEZ supplier details are avaialble in 2A
-        purchase_fields = [
-            "supplier_gstin",
-            "gst_category",
-        ]
+        purchase_fields = ["supplier_gstin", "gst_category", "place_of_supply"]
 
         for field in purchase_fields:
             fields.append(
