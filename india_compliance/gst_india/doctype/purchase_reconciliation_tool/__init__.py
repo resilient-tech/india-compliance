@@ -959,7 +959,8 @@ class Reconciler(BaseReconciliation):
         out = {}
         for gstin, invoices in data.items():
             if not gstin:
-                gstin = ""
+                continue
+
             pan = gstin[2:-3]
             out.setdefault(pan, {})
             out[pan].update(invoices)
