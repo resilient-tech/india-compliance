@@ -195,7 +195,7 @@ CUSTOM_FIELDS = {
         },
         {
             "fieldname": "ecommerce_supply_type",
-            "label": "Ecommerce Supply Type",
+            "label": "E-commerce Supply Type",
             "fieldtype": "Data",
             "depends_on": "eval:gst_settings.enable_sales_through_ecommerce_operators && doc.ecommerce_gstin",
             "insert_after": "ecommerce_gstin",
