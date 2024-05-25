@@ -395,11 +395,11 @@ class GSTR3BReport(Document):
 
         invoice = frappe.qb.DocType(doctype)
         fields = [invoice.name, invoice.gst_category, invoice.place_of_supply]
-        gstin = invoice.supplier_gstin
+        party_gstin = invoice.supplier_gstin
 
         if doctype == "Sales Invoice":
             fields.append(invoice.is_export_with_gst)
-            gstin = invoice.billing_address_gstin
+            party_gstin = invoice.billing_address_gstin
 
         query = (
             frappe.qb.from_(invoice)
@@ -410,7 +410,7 @@ class GSTR3BReport(Document):
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
             .where(invoice.is_opening == "No")
-            .where(invoice.company_gstin != IfNull(gstin, ""))
+            .where(invoice.company_gstin != IfNull(party_gstin, ""))
         )
 
         if reverse_charge:
@@ -598,7 +598,7 @@ class GSTR3BReport(Document):
         missing_field_invoices = []
 
         for doctype in INVOICE_DOCTYPES:
-            billing_gstin = (
+            party_gstin = (
                 "billing_address_gstin"
                 if doctype == "Sales Invoice"
                 else "supplier_gstin"
@@ -609,7 +609,7 @@ class GSTR3BReport(Document):
                     WHERE docstatus = 1 and is_opening = 'No'
                     and month(posting_date) = %s and year(posting_date) = %s
                     and company = %s and place_of_supply IS NULL
-                    and company_gstin != IFNULL({billing_gstin},"")
+                    and company_gstin != IFNULL({party_gstin},"")
                     and gst_category != 'Overseas'
                 """,
                 (self.month_no, self.year, self.company),
