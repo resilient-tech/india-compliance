@@ -143,6 +143,23 @@ class GovDataMapper:
             f"total_{key}": 0 for key in self.DEFAULT_ITEM_AMOUNTS.keys()
         }
 
+    def aggregate_invoices(self, input_data, default_keys=None):
+        if not default_keys:
+            default_keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
+
+        output = []
+
+        for invoices in input_data.values():
+            aggregated_invoice = invoices[0].copy()
+            aggregated_invoice.update(
+                {
+                    key: sum([invoice.get(key, 0) for invoice in invoices])
+                    for key in default_keys
+                }
+            )
+            output.append(aggregated_invoice)
+        return output
+
     def reverse_dict(self, data):
         return {v: k for k, v in data.items()}
 
@@ -244,6 +261,76 @@ class B2B(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Objective: Convert Govt JSON to Internal Data Structure
+        Args:
+            input_data (list): Govt JSON Data
+        Returns:
+            dict: Internal Data Structure
+
+
+        Example:
+            input = [
+                {
+                    'ctin': '24AANFA2641L1ZF',
+                    'inv': [
+                        {
+                            'inum': 'S008400',
+                            'idt': '24-11-2016',
+                            'val': 729248.16,
+                            'pos': '06',
+                            'rchrg': 'N',
+                            'inv_typ': 'R',
+                            'diff_percent': 0.65,
+                            'itms': [
+                                {
+                                    'num': 1,
+                                    'itm_det': {
+                                        'rt': 5,
+                                        'txval': 10000,
+                                        'iamt': 325,
+                                        'camt': 0,
+                                        'samt': 0,
+                                        'csamt': 500
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+
+            output = {
+                'B2B Regular': {
+                    'S008400': {
+                        'customer_gstin': '24AANFA2641L1ZF',
+                        'document_number': 'S008400',
+                        'document_date': '2016-11-24',
+                        'document_value': 729248.16,
+                        'place_of_supply': '06-Haryana',
+                        'reverse_charge': 'N',
+                        'document_type': 'Regular B2B',
+                        'diff_percentage': 0.65,
+                        'items': [
+                            {
+                                'taxable_value': 10000,
+                                'igst_amount': 325,
+                                'cgst_amount': 0,
+                                'sgst_amount': 0,
+                                'cess_amount': 500,
+                                'tax_rate': 5
+                            }
+                        ],
+                        'total_taxable_value': 10000,
+                        'total_igst_amount': 325,
+                        'total_cgst_amount': 0,
+                        'total_sgst_amount': 0,
+                        'total_cess_amount': 500
+                    }
+                }
+            }
+        """
+
         output = {}
 
         for customer_data in input_data:
@@ -272,6 +359,70 @@ class B2B(GovDataMapper):
         return output
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Objective: Convert Internal Data Structure to Govt JSON
+        Args:
+            input_data (dict): Internal Data Structure
+        Returns:
+            list: Govt JSON Data
+
+        Example:
+        input = {
+            'customer_gstin': '24AANFA2641L1ZF',
+            'customer_name': '_Test Registered Customer - 1',
+            'document_number': 'S008400',
+            'document_date': '2016-11-24',
+            'document_value': 729248.16,
+            'place_of_supply': '06-Haryana',
+            'reverse_charge': 'N',
+            'document_type': 'Regular B2B',
+            'diff_percentage': 0.65,
+            'items': [
+                {
+                    'taxable_value': 10000,
+                    'igst_amount': 325,
+                    'cgst_amount': 0,
+                    'sgst_amount': 0,
+                    'cess_amount': 500,
+                    'tax_rate': 5
+                }
+            ],
+            'total_taxable_value': 10000,
+            'total_igst_amount': 325,
+            'total_cgst_amount': 0,
+            'total_sgst_amount': 0,
+            'total_cess_amount': 500
+        }
+
+        output = {
+            'ctin': '24AANFA2641L1ZF',
+            'inv': [
+                {
+                    'inum': 'S008400',
+                    'idt': '24-11-2016',
+                    'val': 729248.16,
+                    'pos': '06',
+                    'rchrg': 'N',
+                    'inv_typ': 'R',
+                    'diff_percent': 0.65,
+                    'itms': [
+                        {
+                            'num': 1,
+                            'itm_det': {
+                                'rt': 5,
+                                'txval': 10000.0,
+                                'iamt': 325.0,
+                                'camt': 0.0,
+                                'samt': 0.0,
+                                'csamt': 500.0
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        """
+
         customer_data = {}
 
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
@@ -347,6 +498,55 @@ class B2CL(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'pos': '05',
+                'inv': [
+                    {
+                        'inum': '92661',
+                        'idt': '10-01-2016',
+                        'val': 784586.33,
+                        'diff_percent': 0.65,
+                        'itms': [
+                            {
+                                'num': 1,
+                                'itm_det': {
+                                    'rt': 5,
+                                    'txval': 10000,
+                                    'iamt': 325,
+                                    'csamt': 500
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            output = {
+                'B2C (Large)': {
+                    '92661': {
+                        'place_of_supply': '05-Uttarakhand',
+                        'document_type': 'B2C (Large)',
+                        'document_number': '92661',
+                        'document_date': '2016-01-10',
+                        'document_value': 784586.33,
+                        'diff_percentage': 0.65,
+                        'items': [
+                            {
+                                'taxable_value': 10000,
+                                'igst_amount': 325,
+                                'cess_amount': 500,
+                                'tax_rate': 5
+                            }
+                        ],
+                        'total_taxable_value': 10000,
+                        'total_igst_amount': 325,
+                        'total_cess_amount': 500
+                    }
+                }
+            }
+        """
         output = {}
 
         for pos_data in input_data:
@@ -371,6 +571,51 @@ class B2CL(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'place_of_supply': '05-Uttarakhand',
+                'document_type': 'B2C (Large)',
+                'document_number': '92661',
+                'document_date': '2016-01-10',
+                'document_value': 784586.33,
+                'diff_percentage': 0.65,
+                'items': [
+                    {
+                        'taxable_value': 10000,
+                        'igst_amount': 325,
+                        'cess_amount': 500,
+                        'tax_rate': 5
+                    }
+                ],
+                'total_taxable_value': 10000,
+                'total_igst_amount': 325,
+                'total_cess_amount': 500
+            }
+
+            output = {
+                'pos': '05',
+                'inv': [
+                    {
+                        'inum': '92661',
+                        'idt': '10-01-2016',
+                        'val': 784586.33,
+                        'diff_percent': 0.65,
+                        'itms': [
+                            {
+                                'num': 1,
+                                'itm_det': {
+                                    'rt': 5,
+                                    'txval': 10000.0,
+                                    'iamt': 325.0,
+                                    'csamt': 500.0
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        """
         pos_data = {}
 
         for invoice in input_data:
@@ -435,6 +680,55 @@ class Exports(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'exp_typ': 'WPAY',
+                'inv': [
+                    {
+                        'inum': '81542',
+                        'idt': '12-02-2016',
+                        'val': 995048.36,
+                        'sbpcode': 'ASB991',
+                        'sbnum': '7896542',
+                        'sbdt': '04-10-2016',
+                        'itms': [
+                            {
+                                'txval': 10000,
+                                'rt': 5,
+                                'iamt': 833.33,
+                                'csamt': 100
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            output = {
+                'Export With Payment of Tax': {
+                    '81542': {
+                        'document_type': 'WPAY',
+                        'document_number': '81542',
+                        'document_date': '2016-02-12',
+                        'document_value': 995048.36,
+                        'shipping_port_code': 'ASB991',
+                        'shipping_bill_number': '7896542',
+                        'shipping_bill_date': '2016-10-04',
+                        'items': [
+                            {
+                                'taxable_value': 10000,
+                                'igst_amount': 833.33,
+                                'cess_amount': 100,
+                                'tax_rate': 5
+                            }
+                        ],
+                        'total_taxable_value': 10000,
+                        'total_igst_amount': 833.33,
+                        'total_cess_amount': 100
+                    }
+                }
+            }
+        """
         output = {}
 
         for export_category in input_data:
@@ -461,6 +755,51 @@ class Exports(GovDataMapper):
         return output
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'document_type': 'WPAY',
+                'document_number': '81542',
+                'document_date': '2016-02-12',
+                'document_value': 995048.36,
+                'shipping_port_code': 'ASB991',
+                'shipping_bill_number': '7896542',
+                'shipping_bill_date': '2016-10-04',
+                'items': [
+                    {
+                        'taxable_value': 10000,
+                        'igst_amount': 833.33,
+                        'cess_amount': 100,
+                        'tax_rate': 5
+                    }
+                ],
+                'total_taxable_value': 10000,
+                'total_igst_amount': 833.33,
+                'total_cess_amount': 100
+            }
+
+            output = {
+                'exp_typ': 'WPAY',
+                'inv': [
+                    {
+                        'inum': '81542',
+                        'idt': '12-02-2016',
+                        'val': 995048.36,
+                        'sbpcode': 'ASB991',
+                        'sbnum': '7896542',
+                        'sbdt': '04-10-2016',
+                        'itms': [
+                            {
+                                'txval': 10000.0,
+                                'rt': 5,
+                                'iamt': 833.33,
+                                'csamt': 100.0
+                            }
+                        ]
+                    }
+                ]
+            }
+        """
         export_category_wise_data = {}
 
         for invoice in input_data:
@@ -523,6 +862,42 @@ class B2CS(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'sply_ty': 'INTER',
+                    'diff_percent': 0.65,
+                    'rt': 5,
+                    'typ': 'OE',
+                    'pos': '05',
+                    'txval': 110,
+                    'iamt': 10,
+                    'camt': 0,
+                    'samt': 0,
+                    'csamt': 10
+                }
+            ]
+
+            output = {
+                'B2C (Others)': {
+                    '05-Uttarakhand - 5.0': [
+                        {
+                            'total_taxable_value': 110,
+                            'document_type': 'OE',
+                            'diff_percentage': 0.65,
+                            'place_of_supply': '05-Uttarakhand',
+                            'tax_rate': 5,
+                            'total_igst_amount': 10,
+                            'total_cgst_amount': 0,
+                            'total_sgst_amount': 0,
+                            'total_cess_amount': 10
+                        }
+                    ]
+                }
+            }
+        """
+
         output = {}
 
         for invoice in input_data:
@@ -542,7 +917,42 @@ class B2CS(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(input_data)
+        """
+        Example:
+            input = [
+                {
+                    'total_taxable_value': 110,
+                    'document_type': 'OE',
+                    'diff_percentage': 0.65,
+                    'place_of_supply': '05-Uttarakhand',
+                    'tax_rate': 5,
+                    'total_igst_amount': 10,
+                    'total_cess_amount': 10,
+                    'total_cgst_amount': 0,
+                    'total_sgst_amount': 0
+                }
+            ]
+
+            output = [
+                {
+                    'txval': 110.0,
+                    'typ': 'OE',
+                    'diff_percent': 0.65,
+                    'pos': '05',
+                    'rt': 5,
+                    'iamt': 10.0,
+                    'camt': 0.0,
+                    'samt': 0.0,
+                    'csamt': 10.0,
+                    'sply_ty': 'INTER'
+                }
+            ]
+        """
+
+        input_data = self.regroup_data(input_data)
+        input_data = self.aggregate_invoices(
+            input_data, list(self.TOTAL_DEFAULTS.keys())
+        )
 
         return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
@@ -556,21 +966,17 @@ class B2CS(GovDataMapper):
         )
         return data
 
-    def aggregate_invoices(self, input_data):
-        output = []
+    def regroup_data(self, input_data):
+        output = {}
 
-        keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
-
-        for invoices in input_data.values():
-            aggregated_invoice = invoices[0].copy()
-            aggregated_invoice.update(
-                {
-                    key: sum([invoice.get(key, 0) for invoice in invoices])
-                    for key in keys
-                }
+        for invoice in input_data:
+            key = " - ".join(
+                (
+                    invoice.get(GSTR1_DataField.POS.value, ""),
+                    str(flt(invoice.get(GSTR1_DataField.TAX_RATE.value, ""))),
+                )
             )
-
-            output.append(aggregated_invoice)
+            output.setdefault(key, []).append(invoice)
 
         return output
 
@@ -602,6 +1008,34 @@ class NilRated(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'inv': [
+                    {
+                        'sply_ty': 'INTRB2B',
+                        'expt_amt': 123.45,
+                        'nil_amt': 1470.85,
+                        'ngsup_amt': 1258.5
+                    }
+                ]
+            }
+
+            output = {
+                'Nil-Rated, Exempted, Non-GST': {
+                    'Inter-State supplies to registered persons': [
+                        {
+                            'document_type': 'Inter-State supplies to registered persons',
+                            'exempted_amount': 123.45,
+                            'nil_rated_amount': 1470.85,
+                            'non_gst_amount': 1258.5,
+                            'total_taxable_value': 2852.8
+                        }
+                    ]
+                }
+            }
+        """
+
         output = {}
 
         for invoice in input_data[GovDataField.INVOICES.value]:
@@ -617,7 +1051,39 @@ class NilRated(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
-        input_data = self.aggregate_invoices(input_data)
+        """
+        Example:
+            input = [
+                {
+                    'document_type': 'Inter-State supplies to registered persons',
+                    'exempted_amount': 123.45,
+                    'nil_rated_amount': 1470.85,
+                    'non_gst_amount': 1258.5,
+                    'total_taxable_value': 2852.8
+                }
+            ]
+
+            output = {
+                'inv': [
+                    {
+                        'sply_ty': 'INTRB2B',
+                        'expt_amt': 123.45,
+                        'nil_amt': 1470.85,
+                        'ngsup_amt': 1258.5
+                    }
+                ]
+            }
+        """
+
+        input_data = self.regroup_data(input_data)
+        input_data = self.aggregate_invoices(
+            input_data,
+            [
+                GSTR1_DataField.EXEMPTED_AMOUNT.value,
+                GSTR1_DataField.NIL_RATED_AMOUNT.value,
+                GSTR1_DataField.NON_GST_AMOUNT.value,
+            ],
+        )
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
         return {
@@ -645,26 +1111,12 @@ class NilRated(GovDataMapper):
         invoice_data[GSTR1_DataField.TAXABLE_VALUE.value] = sum(amounts)
         return invoice_data
 
-    def aggregate_invoices(self, input_data):
-        output = []
+    def regroup_data(self, input_data):
+        output = {}
 
-        # TODO: DEFAULT_EXTEND
-        keys = [
-            GSTR1_DataField.EXEMPTED_AMOUNT.value,
-            GSTR1_DataField.NIL_RATED_AMOUNT.value,
-            GSTR1_DataField.NON_GST_AMOUNT.value,
-        ]
-
-        for invoices in input_data.values():
-            aggregated_invoice = invoices[0].copy()
-            aggregated_invoice.update(
-                {
-                    key: sum([invoice.get(key, 0) for invoice in invoices])
-                    for key in keys
-                }
-            )
-
-            output.append(aggregated_invoice)
+        for invoice in input_data:
+            key = invoice.get(GSTR1_DataField.DOC_TYPE.value)
+            output.setdefault(key, []).append(invoice)
 
         return output
 
@@ -732,6 +1184,72 @@ class CDNR(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'ctin': '24AANFA2641L1ZF',
+                    'nt': [
+                        {
+                            'ntty': 'C',
+                            'nt_num': '533515',
+                            'nt_dt': '23-09-2016',
+                            'pos': '03',
+                            'rchrg': 'Y',
+                            'inv_typ': 'DE',
+                            'val': 123123,
+                            'diff_percent': 0.65,
+                            'itms': [
+                                {
+                                    'num': 1,
+                                    'itm_det': {
+                                        'rt': 10,
+                                        'txval': 5225.28,
+                                        'samt': 0,
+                                        'camt': 0,
+                                        'iamt': 339.64,
+                                        'csamt': 789.52
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+
+            output = {
+                'Credit/Debit Notes (Registered)': {
+                    '533515': {
+                        'customer_gstin': '24AANFA2641L1ZF',
+                        'customer_name': '_Test Registered Customer - 1',
+                        'transaction_type': 'Credit Note',
+                        'document_number': '533515',
+                        'document_date': '2016-09-23',
+                        'place_of_supply': '03-Punjab',
+                        'reverse_charge': 'Y',
+                        'document_type': 'Deemed Exports',
+                        'document_value': -123123,
+                        'diff_percentage': 0.65,
+                        'items': [
+                            {
+                                'taxable_value': -5225.28,
+                                'igst_amount': -339.64,
+                                'cgst_amount': 0,
+                                'sgst_amount': 0,
+                                'cess_amount': -789.52,
+                                'tax_rate': 10
+                            }
+                        ],
+                        'total_taxable_value': -10450.56,
+                        'total_igst_amount': -679.28,
+                        'total_cgst_amount': 0,
+                        'total_sgst_amount': 0,
+                        'total_cess_amount': -1579.04
+                    }
+                }
+            }
+        """
+
         output = {}
 
         for customer_data in input_data:
@@ -755,6 +1273,70 @@ class CDNR(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'customer_gstin': '24AANFA2641L1ZF',
+                    'customer_name': '_Test Registered Customer - 1',
+                    'transaction_type': 'Credit Note',
+                    'document_number': '533515',
+                    'document_date': '2016-09-23',
+                    'place_of_supply': '03-Punjab',
+                    'reverse_charge': 'Y',
+                    'document_type': 'Deemed Exports',
+                    'document_value': -123123,
+                    'diff_percentage': 0.65,
+                    'items': [
+                        {
+                            'taxable_value': -5225.28,
+                            'igst_amount': -339.64,
+                            'cgst_amount': 0,
+                            'sgst_amount': 0,
+                            'cess_amount': -789.52,
+                            'tax_rate': 10
+                        }
+                    ],
+                    'total_taxable_value': -10450.56,
+                    'total_igst_amount': -679.28,
+                    'total_cgst_amount': 0,
+                    'total_sgst_amount': 0,
+                    'total_cess_amount': -1579.04
+                }
+            ]
+
+            output = [
+                {
+                    'ctin': '24AANFA2641L1ZF',
+                    'nt': [
+                        {
+                            'ntty': 'C',
+                            'nt_num': '533515',
+                            'nt_dt': '23-09-2016',
+                            'pos': '03',
+                            'rchrg': 'Y',
+                            'inv_typ': 'DE',
+                            'val': 123123.0,
+                            'diff_percent': 0.65,
+                            'itms': [
+                                {
+                                    'num': 1,
+                                    'itm_det': {
+                                        'rt': 10,
+                                        'txval': 5225.28,
+                                        'iamt': 339.64,
+                                        'samt': 0.0,
+                                        'camt': 0.0,
+                                        'csamt': 789.52
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        """
+
         customer_data = {}
 
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
@@ -795,31 +1377,14 @@ class CDNR(GovDataMapper):
         return formatted_items
 
     def format_item_for_gov(self, items, *args):
-        formatted_items = super().format_item_for_gov(items, *args)
-
-        data = args[0]
-        if data[GSTR1_DataField.TRANSACTION_TYPE.value] == "Debit Note":
-            return formatted_items
-
-        # TODO: First format then super
+        keys = set((self.DEFAULT_ITEM_AMOUNTS.keys()))
         # for credit notes amounts -ve
-        for item in formatted_items:
-            item[GovDataField.ITEM_DETAILS.value].update(
-                {
-                    key: abs(value)
-                    for key, value in item[GovDataField.ITEM_DETAILS.value].items()
-                    if key
-                    in [
-                        GovDataField.TAXABLE_VALUE.value,
-                        GovDataField.IGST.value,
-                        GovDataField.SGST.value,
-                        GovDataField.CGST.value,
-                        GovDataField.CESS.value,
-                    ]
-                }
-            )
+        for item in items:
+            for key, value in item.items():
+                if key in keys:
+                    item[key] = abs(value)
 
-        return formatted_items
+        return super().format_item_for_gov(items, *args)
 
     def document_type_mapping(self, doc_type, data):
         return self.DOCUMENT_TYPES.get(doc_type, doc_type)
@@ -878,6 +1443,57 @@ class CDNUR(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'typ': 'B2CL',
+                    'ntty': 'C',
+                    'nt_num': '533515',
+                    'nt_dt': '23-09-2016',
+                    'pos': '03',
+                    'val': 64646,
+                    'diff_percent': 0.65,
+                    'itms': [
+                        {
+                            'num': 1,
+                            'itm_det': {
+                                'rt': 10,
+                                'txval': 5225.28,
+                                'iamt': 339.64,
+                                'csamt': 789.52
+                            }
+                        }
+                    ]
+                }
+            ]
+
+            output = {
+                'Credit/Debit Notes (Unregistered)': {
+                    '533515': {
+                        'document_type': 'B2CL',
+                        'transaction_type': 'Credit Note',
+                        'document_number': '533515',
+                        'document_date': '2016-09-23',
+                        'document_value': -64646,
+                        'place_of_supply': '03-Punjab',
+                        'diff_percentage': 0.65,
+                        'items': [
+                            {
+                                'taxable_value': -5225.28,
+                                'igst_amount': -339.64,
+                                'cess_amount': -789.52,
+                                'tax_rate': 10
+                            }
+                        ],
+                        'total_taxable_value': -5225.28,
+                        'total_igst_amount': -339.64,
+                        'total_cess_amount': -789.52
+                    }
+                }
+            }
+        """
+
         output = {}
 
         for invoice in input_data:
@@ -890,7 +1506,57 @@ class CDNUR(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'transaction_type': 'Credit Note',
+                    'document_type': 'B2CL',
+                    'document_number': '533515',
+                    'document_date': '2016-09-23',
+                    'document_value': -64646,
+                    'place_of_supply': '03-Punjab',
+                    'diff_percentage': 0.65,
+                    'items': [
+                        {
+                            'taxable_value': -5225.28,
+                            'igst_amount': -339.64,
+                            'cess_amount': -789.52,
+                            'tax_rate': 10
+                        }
+                    ],
+                    'total_taxable_value': -5225.28,
+                    'total_igst_amount': -339.64,
+                    'total_cess_amount': -789.52
+                }
+            ]
+
+            output = [
+                {
+                    'typ': 'B2CL',
+                    'ntty': 'C',
+                    'nt_num': '533515',
+                    'nt_dt': '23-09-2016',
+                    'val': 64646.0,
+                    'pos': '03',
+                    'diff_percent': 0.65,
+                    'itms': [
+                        {
+                            'num': 1,
+                            'itm_det': {
+                                'rt': 10,
+                                'txval': 5225.28,
+                                'iamt': 339.64,
+                                'csamt': 789.52
+                            }
+                        }
+                    ]
+                }
+            ]
+        """
+
         self.DOCUMENT_TYPES = self.reverse_dict(self.DOCUMENT_TYPES)
+
         return [self.format_data(invoice, for_gov=True) for invoice in input_data]
 
     def format_item_for_internal(self, items, *args):
@@ -913,29 +1579,14 @@ class CDNUR(GovDataMapper):
         return formatted_items
 
     def format_item_for_gov(self, items, *args):
-        formatted_items = super().format_item_for_gov(items, *args)
-
-        data = args[0]
-        if data[GSTR1_DataField.TRANSACTION_TYPE.value] == "Debit Note":
-            return formatted_items
-
-        # TODO: First format then super
+        keys = set(self.DEFAULT_ITEM_AMOUNTS.keys())
         # for credit notes amounts -ve
-        for item in formatted_items:
-            item[GovDataField.ITEM_DETAILS.value].update(
-                {
-                    key: abs(value)
-                    for key, value in item[GovDataField.ITEM_DETAILS.value].items()
-                    if key
-                    in [
-                        GovDataField.TAXABLE_VALUE.value,
-                        GovDataField.IGST.value,
-                        GovDataField.CESS.value,
-                    ]
-                }
-            )
+        for item in items:
+            for key, value in item.items():
+                if key in keys:
+                    item[key] = abs(value)
 
-        return formatted_items
+        return super().format_item_for_gov(items, *args)
 
     # value formatters
     def document_type_mapping(self, doc_type, data):
@@ -971,6 +1622,40 @@ class HSNSUM(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'data': [
+                    {
+                        'num': 1,
+                        'hsn_sc': '1010',
+                        'desc': 'Goods Description',
+                        'uqc': 'KGS',
+                        'qty': 2.05,
+                        'txval': 10.23,
+                        'iamt': 14.52,
+                        'csamt': 500,
+                        'rt': 0.1
+                    }
+                ]
+            }
+
+            output = {
+                'HSN Summary': {
+                    '1010 - KGS-KILOGRAMS - 0.1': {
+                        'hsn_code': '1010',
+                        'description': 'Goods Description',
+                        'uom': 'KGS-KILOGRAMS',
+                        'quantity': 2.05,
+                        'total_taxable_value': 10.23,
+                        'total_igst_amount': 14.52,
+                        'total_cess_amount': 500,
+                        'tax_rate': 0.1
+                    }
+                }
+            }
+        """
+
         output = {}
 
         for invoice in input_data[GovDataField.HSN_DATA.value]:
@@ -987,6 +1672,38 @@ class HSNSUM(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'hsn_code': '1010',
+                    'description': 'Goods Description',
+                    'uom': 'KGS-KILOGRAMS',
+                    'quantity': 2.05,
+                    'total_taxable_value': 10.23,
+                    'total_igst_amount': 14.52,
+                    'total_cess_amount': 500,
+                    'tax_rate': 0.1
+                }
+            ]
+
+            output = {
+                'data': [
+                    {
+                        'num': 1,
+                        'hsn_sc': '1010',
+                        'desc': 'Goods Description',
+                        'uqc': 'KGS',
+                        'qty': 2.05,
+                        'txval': 10.23,
+                        'iamt': 14.52,
+                        'csamt': 500.0,
+                        'rt': 0.1
+                    }
+                ]
+            }
+        """
+
         return {
             GovDataField.HSN_DATA.value: [
                 self.format_data(
@@ -1047,6 +1764,44 @@ class AT(GovDataMapper):
         }
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'pos': '05',
+                    'sply_ty': 'INTER',
+                    'diff_percent': 0.65,
+                    'itms': [
+                        {
+                            'rt': 5,
+                            'ad_amt': 100,
+                            'iamt': 9400,
+                            'camt': 0,
+                            'samt': 0,
+                            'csamt': 500
+                        }
+                    ]
+                }
+            ]
+
+            output = {
+                'Advances Received': {
+                    '05-Uttarakhand - 5.0': [
+                        {
+                            'place_of_supply': '05-Uttarakhand',
+                            'diff_percentage': 0.65,
+                            'total_igst_amount': 9400,
+                            'total_cess_amount': 500,
+                            'total_cgst_amount': 0,
+                            'total_sgst_amount': 0,
+                            'total_taxable_value': 100,
+                            'tax_rate': 5
+                        }
+                    ]
+                }
+            }
+        """
+
         output = {}
 
         for invoice in input_data:
@@ -1068,6 +1823,41 @@ class AT(GovDataMapper):
         return {self.SUBCATEGORY: output}
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'place_of_supply': '05-Uttarakhand',
+                    'diff_percentage': 0.65,
+                    'total_igst_amount': 9400,
+                    'total_cess_amount': 500,
+                    'total_cgst_amount': 0,
+                    'total_sgst_amount': 0,
+                    'total_taxable_value': 100,
+                    'tax_rate': 5
+                }
+            ]
+
+            output = [
+                {
+                    'pos': '05',
+                    'diff_percent': 0.65,
+                    'sply_ty': 'INTER',
+                    'itms': [
+                        {
+                            'iamt': 9400.0,
+                            'csamt': 500.0,
+                            'camt': 0.0,
+                            'samt': 0.0,
+                            'ad_amt': 100,
+                            'rt': 5
+                        }
+                    ]
+                }
+            ]
+        """
+
+        input_data = self.regroup_data(input_data)
         input_data = self.aggregate_invoices(input_data)
 
         pos_wise_data = {}
@@ -1080,7 +1870,9 @@ class AT(GovDataMapper):
                 invoice[GSTR1_DataField.POS.value], formatted_data
             )
 
-            pos_data.setdefault(GovDataField.ITEMS.value, []).extend(rate_wise_taxes)
+            pos_data.setdefault(GovDataField.ITEMS.value, []).extend(
+                rate_wise_taxes[GovDataField.ITEMS.value]
+            )
 
         return list(pos_wise_data.values())
 
@@ -1114,23 +1906,17 @@ class AT(GovDataMapper):
         )
         return data
 
-    def aggregate_invoices(self, input_data):
-        """
-        TODO: Common method
-        """
-        keys = list(self.DEFAULT_ITEM_AMOUNTS.keys())
+    def regroup_data(self, input_data):
+        output = {}
 
-        output = []
-
-        for invoices in input_data.values():
-            aggregated_invoice = invoices[0].copy()
-            aggregated_invoice.update(
-                {
-                    key: sum([invoice.get(key, 0) for invoice in invoices])
-                    for key in keys
-                }
+        for invoice in input_data:
+            key = " - ".join(
+                (
+                    invoice.get(GSTR1_DataField.POS.value, ""),
+                    str(flt(invoice.get(GSTR1_DataField.TAX_RATE.value, ""))),
+                )
             )
-            output.append(aggregated_invoice)
+            output.setdefault(key, []).append(invoice)
 
         return output
 
@@ -1179,6 +1965,40 @@ class DOC_ISSUE(GovDataMapper):
         super().__init__()
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'doc_det': [
+                    {
+                        'doc_num': 1,
+                        'docs': [
+                            {
+                                'num': 1,
+                                'from': '1',
+                                'to': '10',
+                                'totnum': 10,
+                                'cancel': 0,
+                                'net_issue': 10
+                            }
+                        ]
+                    }
+                ]
+            }
+
+            output = {
+                'Document Issued': {
+                    'Invoices for outward supply - 1': {
+                        'document_type': 'Invoices for outward supply',
+                        'from_sr_no': '1',
+                        'to_sr_no': '10',
+                        'total_count': 10,
+                        'cancelled_count': 0,
+                        'net_issue': 10
+                    }
+                }
+            }
+        """
+
         output = {}
 
         for document in input_data[GovDataField.DOC_ISSUE_DETAILS.value]:
@@ -1200,14 +2020,42 @@ class DOC_ISSUE(GovDataMapper):
 
     def convert_to_gov_data_format(self, input_data):
         """
-        TODO: Update example input data and output data
+        Example:
+            input = [
+                {
+                    'document_type': 'Invoices for outward supply',
+                    'from_sr_no': '1',
+                    'to_sr_no': '10',
+                    'total_count': 10,
+                    'cancelled_count': 0,
+                    'net_issue': 10
+                }
+            ]
+
+            output = {
+                'doc_det': [
+                    {
+                        'doc_num': 1,
+                        'docs': [
+                            {
+                                'num': 1,
+                                'from': '1',
+                                'to': '10',
+                                'totnum': 10,
+                                'cancel': 0,
+                                'net_issue': 10
+                            }
+                        ]
+                    }
+                ]
+            }
         """
         self.DOCUMENT_NATURE = self.reverse_dict(self.DOCUMENT_NATURE)
 
         output = {GovDataField.DOC_ISSUE_DETAILS.value: []}
         doc_nature_wise_data = {}
 
-        for invoice in input_data.values():
+        for invoice in input_data:
             doc_nature_wise_data.setdefault(
                 invoice[GSTR1_DataField.DOC_TYPE.value], []
             ).append(invoice)
@@ -1272,6 +2120,35 @@ class SUPECOM(GovDataMapper):
         super().__init__()
 
     def convert_to_internal_data_format(self, input_data):
+        """
+        Example:
+            input = {
+                'clttx': [
+                    {
+                        'etin': '20ALYPD6528PQC5',
+                        'suppval': 10000,
+                        'igst': 1000,
+                        'cgst': 0,
+                        'sgst': 0,
+                        'cess': 0
+                    }
+                ]
+            }
+
+            output = {
+                'TCS collected by E-commerce Operator u/s 52': {
+                    '20ALYPD6528PQC5': {
+                        'document_type': 'TCS collected by E-commerce Operator u/s 52',
+                        'ecommerce_gstin': '20ALYPD6528PQC5',
+                        'total_taxable_value': 10000,
+                        'igst_amount': 1000,
+                        'cgst_amount': 0,
+                        'sgst_amount': 0,
+                        'cess_amount': 0
+                    }
+                }
+            }
+        """
         output = {}
 
         for section, invoices in input_data.items():
@@ -1286,6 +2163,33 @@ class SUPECOM(GovDataMapper):
         return output
 
     def convert_to_gov_data_format(self, input_data):
+        """
+        Example:
+            input = [
+                {
+                    'document_type': 'TCS collected by E-commerce Operator u/s 52',
+                    'ecommerce_gstin': '20ALYPD6528PQC5',
+                    'total_taxable_value': 10000,
+                    'igst_amount': 1000,
+                    'cgst_amount': 0,
+                    'sgst_amount': 0,
+                    'cess_amount': 0
+                }
+            ]
+
+            output = {
+                'clttx': [
+                    {
+                        'etin': '20ALYPD6528PQC5',
+                        'suppval': 10000,
+                        'igst': 1000,
+                        'cgst': 0,
+                        'sgst': 0,
+                        'cess': 0
+                    }
+                ]
+            }
+        """
         output = {}
         self.DOCUMENT_CATEGORIES = self.reverse_dict(self.DOCUMENT_CATEGORIES)
 
