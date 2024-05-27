@@ -1,3 +1,5 @@
+import copy
+
 from frappe.tests.utils import FrappeTestCase
 
 from india_compliance.gst_india.utils import get_party_for_gstin as _get_party_for_gstin
@@ -758,7 +760,7 @@ class TestCDNR(FrappeTestCase):
                 ],
             }
         ]
-        cls.mappped_data = {
+        cls.mapped_data = {
             GSTR1_SubCategory.CDNR.value: {
                 "533515": {
                     GSTR1_DataField.CUST_GSTIN.value: "24AANFA2641L1ZF",
@@ -801,11 +803,11 @@ class TestCDNR(FrappeTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = CDNR().convert_to_internal_data_format(self.json_data)
-        self.assertDictEqual(self.mappped_data, output)
+        output = CDNR().convert_to_internal_data_format(copy.deepcopy(self.json_data))
+        self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNR().convert_to_gov_data_format(self.mappped_data)
+        output = CDNR().convert_to_gov_data_format(copy.deepcopy(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 
@@ -863,11 +865,11 @@ class TestCDNUR(FrappeTestCase):
         }
 
     def test_convert_to_internal_data_format(self):
-        output = CDNUR().convert_to_internal_data_format(self.json_data)
+        output = CDNUR().convert_to_internal_data_format(copy.deepcopy(self.json_data))
         self.assertDictEqual(self.mapped_data, output)
 
     def test_convert_to_gov_data_format(self):
-        output = CDNUR().convert_to_gov_data_format(self.mapped_data)
+        output = CDNUR().convert_to_gov_data_format(copy.deepcopy(self.mapped_data))
         self.assertListEqual(self.json_data, output)
 
 

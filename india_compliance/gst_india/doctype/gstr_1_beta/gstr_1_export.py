@@ -143,6 +143,10 @@ class DataProcessor:
 class GovExcel(DataProcessor):
     """
     Export GSTR-1 data to excel
+
+    Excel generated as per the format of Returns Offline Tool Version V3.1.8
+
+    Returns Offline Tool download link - https://www.gst.gov.in/download/returns
     """
 
     AMOUNT_FORMAT = "#,##0.00"
