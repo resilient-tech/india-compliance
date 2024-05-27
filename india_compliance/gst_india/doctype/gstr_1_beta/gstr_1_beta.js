@@ -116,12 +116,6 @@ frappe.ui.form.on(DOCTYPE, {
         set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
 
-        // Set Mandatory Fields
-        // HACK: Cannot set this in doctype as values are mandatory for single doctype
-        ["company", "company_gstin", "year", "month_or_quarter"].forEach(field => {
-            frm.set_df_property(field, "reqd", 1);
-        });
-
         frm.__setup_complete = true;
 
         // Setup Listeners

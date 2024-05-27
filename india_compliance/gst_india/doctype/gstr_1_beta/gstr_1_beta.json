@@ -24,17 +24,18 @@
    "fieldtype": "Section Break"
   },
   {
-   "default": "frappe.defaults.get_user_default(\"Company\")",
    "fieldname": "company",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Company",
-   "options": "Company"
+   "options": "Company",
+   "reqd": 1
   },
   {
    "fieldname": "company_gstin",
    "fieldtype": "Autocomplete",
-   "label": "Company GSTIN"
+   "label": "Company GSTIN",
+   "reqd": 1
   },
   {
    "fieldname": "column_break_ejve",
@@ -51,7 +52,8 @@
   {
    "fieldname": "year",
    "fieldtype": "Autocomplete",
-   "label": "Year"
+   "label": "Year",
+   "reqd": 1
   },
   {
    "depends_on": "eval: doc.__onload?.data && Object.keys(doc.__onload.data).length",
@@ -77,14 +79,15 @@
   {
    "fieldname": "month_or_quarter",
    "fieldtype": "Select",
-   "label": "Month/Quarter"
+   "label": "Month/Quarter",
+   "reqd": 1
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-05-27 19:06:57.813000",
+ "modified": "2024-05-27 19:30:01.074149",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",
