@@ -617,23 +617,13 @@ class Gstr1Report:
                     )
                     .else_(0)
                 ).as_("total_sgst_amount"),
-                (
-                    Sum(
-                        Case()
-                        .when(
-                            taxes.account_head == cess_account,
-                            taxes.tax_amount,
-                        )
-                        .else_(0)
+                Sum(
+                    Case()
+                    .when(
+                        taxes.account_head.isin([cess_account, cess_non_advol]),
+                        taxes.tax_amount,
                     )
-                    + Sum(
-                        Case()
-                        .when(
-                            taxes.account_head == cess_non_advol,
-                            taxes.tax_amount,
-                        )
-                        .else_(0)
-                    )
+                    .else_(0)
                 ).as_("total_cess_amount"),
             )
             .groupby(taxes.parent)
