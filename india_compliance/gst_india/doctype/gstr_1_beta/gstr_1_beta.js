@@ -112,11 +112,20 @@ frappe.ui.form.on(DOCTYPE, {
 
         frm.filing_frequency = gst_settings.filing_frequency;
 
+        // Set Default Values
+        set_default_company_gstin(frm);
+        set_options_for_year(frm);
         set_options_for_month_or_quarter(frm);
-        set_default_fields(frm);
+
+        // Set Mandatory Fields
+        // HACK: Cannot set this in doctype as values are mandatory for single doctype
+        ["company", "company_gstin", "year", "month_or_quarter"].forEach(field => {
+            frm.set_df_property(field, "reqd", 1);
+        });
 
         frm.__setup_complete = true;
 
+        // Setup Listeners
         frappe.realtime.on("is_not_latest_data", message => {
             const { filters } = message;
 
@@ -936,7 +945,7 @@ class GSTR1_TabManager extends TabManager {
 
     get_invoice_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Invoice Date",
                 fieldname: GSTR1_DataField.DOC_DATE,
@@ -984,7 +993,7 @@ class GSTR1_TabManager extends TabManager {
 
     get_export_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Invoice Date",
                 fieldname: GSTR1_DataField.DOC_DATE,
@@ -1040,7 +1049,7 @@ class GSTR1_TabManager extends TabManager {
             match_columns = [];
 
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Transaction Type",
                 fieldname: GSTR1_DataField.TRANSACTION_TYPE,
@@ -1093,7 +1102,7 @@ class GSTR1_TabManager extends TabManager {
 
     get_hsn_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "HSN Code",
                 fieldname: GSTR1_DataField.HSN_CODE,
@@ -1157,7 +1166,7 @@ class GSTR1_TabManager extends TabManager {
 
     get_documents_issued_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Document Type",
                 fieldname: GSTR1_DataField.DOC_TYPE,
@@ -1194,7 +1203,7 @@ class GSTR1_TabManager extends TabManager {
 
     get_advances_received_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             ...this.get_match_columns(),
             ...this.get_tax_columns(),
             {
@@ -1207,8 +1216,8 @@ class GSTR1_TabManager extends TabManager {
     }
 
     get_advances_adjusted_columns() {
-        [
-            ...this.get_detailed_view_column(),
+        return [
+            ...this.get_detail_view_column(),
             ...this.get_match_columns(),
             ...this.get_tax_columns(),
             {
@@ -1312,7 +1321,7 @@ class GSTR1_TabManager extends TabManager {
         return [];
     }
 
-    get_detailed_view_column() {
+    get_detail_view_column() {
         return [];
     }
 }
@@ -1454,13 +1463,7 @@ class BooksTab extends GSTR1_TabManager {
                 fieldname: GSTR1_DataField.CUST_NAME,
                 width: 200,
             },
-            ...this.get_tax_columns(),
-            {
-                name: "Amount Adjusted",
-                fieldname: GSTR1_DataField.DOC_VALUE,
-                fieldtype: "Currency",
-                width: 150,
-            },
+            ...super.get_advances_adjusted_columns(),
         ];
     }
 }
@@ -1584,17 +1587,19 @@ class FiledTab extends GSTR1_TabManager {
                     description: __(
                         `This will include invoices already uploaded (and matching)
                          to GSTN (possibly e-Invoices) and overwrite them in GST Portal.
-                         This is <strong>not recommended</strong> if e-Invoice is applicable to you.`
+                         This is <strong>not recommended</strong> if e-Invoice is applicable to you
+                         as it will overwrite the e-Invoice data in GST Portal.`
                     ),
                     fieldtype: "Check",
                 },
                 {
                     fieldname: "delete_missing",
-                    label: __("Delete Invoices Missing in ERP from GST Portal"),
+                    label: __("Delete records that are missing in the Books from GST Portal"),
                     description: __(
                         "This will delete invoices that are not present in ERP but are present in GST Portal."
                     ),
                     fieldtype: "Check",
+                    default: 1,
                 },
             ],
             primary_action: () => get_json_data(dialog),
@@ -1614,7 +1619,7 @@ class FiledTab extends GSTR1_TabManager {
 
     get_b2cl_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Invoice Date",
                 fieldname: GSTR1_DataField.DOC_DATE,
@@ -1646,7 +1651,7 @@ class FiledTab extends GSTR1_TabManager {
 
     get_b2cs_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Invoice Type",
                 fieldname: GSTR1_DataField.DOC_TYPE,
@@ -1659,7 +1664,7 @@ class FiledTab extends GSTR1_TabManager {
 
     get_nil_exempt_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Description",
                 fieldname: GSTR1_DataField.DOC_TYPE,
@@ -1695,7 +1700,7 @@ class FiledTab extends GSTR1_TabManager {
 
     get_cdnur_columns() {
         return [
-            ...this.get_detailed_view_column(),
+            ...this.get_detail_view_column(),
             {
                 name: "Transaction Type",
                 fieldname: GSTR1_DataField.TRANSACTION_TYPE,
@@ -1782,7 +1787,7 @@ class ReconcileTab extends FiledTab {
 
     get_creation_time_string() { } // pass
 
-    get_detailed_view_column() {
+    get_detail_view_column() {
         return [
             {
                 fieldname: "detail_view",
@@ -1901,10 +1906,6 @@ function patch_set_indicator(frm) {
     frm.toolbar.set_indicator = function () { };
 }
 
-function set_default_fields(frm) {
-    set_default_company_gstin(frm);
-    set_default_year(frm);
-}
 
 async function set_default_company_gstin(frm) {
     frm.set_value("company_gstin", "");
@@ -1920,20 +1921,20 @@ async function set_default_company_gstin(frm) {
     }
 }
 
-function set_default_year(frm) {
-    const year = new Date().getFullYear().toString();
-    frm.set_value("year", year);
-}
 
-function get_year_list(current_date) {
-    const current_year = current_date.getFullYear();
+function set_options_for_year(frm) {
+    const today = new Date();
+    const current_year = today.getFullYear();
     const start_year = 2017;
     const year_range = current_year - start_year + 1;
-    const options = Array.from(
+    let options = Array.from(
         { length: year_range },
         (_, index) => start_year + index
     );
-    return options.reverse().map(year => year.toString());
+    options = options.reverse().map(year => year.toString());
+
+    frm.get_field("year").set_data(options);
+    frm.set_value("year", current_year.toString());
 }
 
 function set_options_for_month_or_quarter(frm) {

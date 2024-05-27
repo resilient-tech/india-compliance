@@ -29,14 +29,12 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Company",
-   "options": "Company",
-   "reqd": 1
+   "options": "Company"
   },
   {
    "fieldname": "company_gstin",
    "fieldtype": "Autocomplete",
-   "label": "Company GSTIN",
-   "reqd": 1
+   "label": "Company GSTIN"
   },
   {
    "fieldname": "column_break_ejve",
@@ -53,9 +51,7 @@
   {
    "fieldname": "year",
    "fieldtype": "Autocomplete",
-   "label": "Year",
-   "options": "2024\n2023\n2022\n2021\n2020\n2019\n2018\n2017",
-   "reqd": 1
+   "label": "Year"
   },
   {
    "depends_on": "eval: doc.__onload?.data && Object.keys(doc.__onload.data).length",
@@ -81,15 +77,14 @@
   {
    "fieldname": "month_or_quarter",
    "fieldtype": "Select",
-   "label": "Month/Quarter",
-   "reqd": 1
+   "label": "Month/Quarter"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-05-20 14:42:40.601964",
+ "modified": "2024-05-27 19:06:57.813000",
  "modified_by": "Administrator",
  "module": "GST India",
  "name": "GSTR-1 Beta",
