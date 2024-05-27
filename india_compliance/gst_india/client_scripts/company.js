@@ -10,6 +10,9 @@ set_gstin_options_and_status(DOCTYPE);
 
 frappe.ui.form.off(DOCTYPE, "make_default_tax_template");
 frappe.ui.form.on(DOCTYPE, {
+    onload(frm){
+        frm.fields_dict.print_table.grid.fields_map.autofield.ignore_validation =1
+    },
     setup(frm) {
         erpnext.company.set_custom_query(frm, [
             "default_customs_expense_account",
