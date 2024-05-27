@@ -1496,14 +1496,18 @@ class FiledTab extends GSTR1_TabManager {
             this.download_filed_as_excel()
         );
 
+        if (this.status !== "Filed")
+            this.add_tab_custom_button("Download JSON", () =>
+                this.download_filed_json()
+            );
+
+        if (!is_gstr1_api_enabled()) return;
+
         if (this.status === "Filed")
             this.add_tab_custom_button("Sync with GSTN", () =>
                 this.sync_with_gstn("filed")
             );
         else {
-            this.add_tab_custom_button("Download JSON", () =>
-                this.download_filed_json()
-            );
             this.add_tab_custom_button("Mark as Filed", () => this.mark_as_filed());
         }
     }
@@ -1565,7 +1569,7 @@ class FiledTab extends GSTR1_TabManager {
         }
 
         // without API
-        if (!gst_settings.analyze_filed_data) {
+        if (!is_gstr1_api_enabled()) {
             get_json_data();
             return;
         }
@@ -1734,6 +1738,8 @@ class FiledTab extends GSTR1_TabManager {
 
 class UnfiledTab extends FiledTab {
     setup_actions() {
+        if (!is_gstr1_api_enabled()) return;
+
         this.add_tab_custom_button("Sync with GSTN", () =>
             this.sync_with_gstn("unfiled")
         );
@@ -1879,6 +1885,9 @@ class DetailViewDialog {
 }
 
 // UTILITY FUNCTIONS
+function is_gstr1_api_enabled() {
+    return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.analyze_filed_data
+}
 
 function patch_set_active_tab(frm) {
     const set_active_tab = frm.set_active_tab;
