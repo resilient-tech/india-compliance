@@ -1,8 +1,8 @@
 import frappe
 
 
-def get_property_setters():
-    return [
+def get_property_setters(*, include_defaults=False):
+    properties = [
         get_options_property_setter(
             "Journal Entry",
             "voucher_type",
@@ -104,20 +104,10 @@ def get_property_setters():
         *LR_DATE_PROPERTIES,
     ]
 
+    if include_defaults:
+        properties.extend(DEFAULT_PROPERTIES)
 
-def get_default_property_setters():
-    """
-    Customizable property setters that are set by default.
-    Only set once during the first install.
-    """
-    return [
-        {
-            "doctype": "e-Waybill Log",
-            "doctype_or_field": "DocType",
-            "property": "default_print_format",
-            "value": "e-Waybill",
-        },
-    ]
+    return properties
 
 
 def get_options_property_setter(doctype, fieldname, new_options, prepend=True):
@@ -234,5 +224,16 @@ LR_DATE_PROPERTIES = [
         "property": "default",
         "property_type": "Text",
         "value": "Today",
+    },
+]
+
+# Customizable property setters that are set by default
+DEFAULT_PROPERTIES = [
+    {
+        "doctype": "e-Waybill Log",
+        "doctype_or_field": "DocType",
+        "property": "default_print_format",
+        "value": "e-Waybill",
+        "is_system_generated": 0,
     },
 ]
