@@ -73,13 +73,14 @@ def update_taxable_values(doc, valid_accounts):
         if any(
             row
             for row in doc.taxes
-            if row.tax_amount and row.account_head in valid_accounts
+            if row.base_tax_amount_after_discount_amount
+            and row.account_head in valid_accounts
         ):
             reference_row_index = next(
                 (
                     cint(row.row_id) - 1
                     for row in doc.taxes
-                    if row.tax_amount
+                    if row.base_tax_amount_after_discount_amount
                     and row.charge_type == "On Previous Row Total"
                     and row.account_head in valid_accounts
                 ),
@@ -189,10 +190,10 @@ def get_tds_amount(doc):
             continue
 
         if row.get("add_deduct_tax") and row.add_deduct_tax == "Deduct":
-            tds_amount -= row.tax_amount
+            tds_amount -= row.base_tax_amount_after_discount_amount
 
         else:
-            tds_amount += row.tax_amount
+            tds_amount += row.base_tax_amount_after_discount_amount
 
     return tds_amount
 
@@ -1148,7 +1149,7 @@ class ItemGSTDetails:
 
         for row in self.doc.taxes:
             if (
-                not row.tax_amount
+                not row.base_tax_amount_after_discount_amount
                 or not row.item_wise_tax_detail
                 or row.account_head not in self.gst_account_map
             ):
@@ -1161,6 +1162,8 @@ class ItemGSTDetails:
 
             old = json.loads(row.item_wise_tax_detail)
 
+            tax_difference = row.base_tax_amount_after_discount_amount
+
             # update item taxes
             for item_name in old:
                 if item_name not in tax_details:
@@ -1171,12 +1174,21 @@ class ItemGSTDetails:
                 item_taxes = tax_details[item_name]
                 tax_rate, tax_amount = old[item_name]
 
+                tax_difference -= tax_amount
+
                 # cases when charge type == "Actual"
                 if tax_amount and not tax_rate:
                     continue
 
                 item_taxes[tax_rate_field] = tax_rate
                 item_taxes[tax_amount_field] += tax_amount
+
+            # Floating point errors
+            tax_difference = flt(tax_difference, 5)
+
+            # Handle rounding errors
+            if tax_difference:
+                item_taxes[tax_amount_field] += tax_difference
 
         self.item_tax_details = tax_details
 
