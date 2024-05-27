@@ -45,7 +45,6 @@ class TestGSTRMixin:
 
 class TestGSTR2a(FrappeTestCase, TestGSTRMixin):
     # Tests as per version 2.1 of GSTR2A Dt: 14-10-2020
-    # TODO: make tests for individual categories
     @classmethod
     def setUpClass(cls):
         cls.gstin = "01AABCE2207R1Z5"

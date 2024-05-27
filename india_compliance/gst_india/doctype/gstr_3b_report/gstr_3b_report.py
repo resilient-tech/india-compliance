@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import DatePart
-from frappe.query_builder.functions import Extract, Sum
+from frappe.query_builder.functions import Extract, IfNull, Sum
 from frappe.utils import cstr, flt, get_date_str, get_first_day, get_last_day
 
 from india_compliance.gst_india.constants import INVOICE_DOCTYPES
@@ -196,6 +196,7 @@ class GSTR3BReport(Document):
             FROM `tabPurchase Invoice`
             WHERE docstatus = 1
             and is_opening = 'No'
+            and company_gstin != IFNULL(supplier_gstin, "")
             and month(posting_date) = %s and year(posting_date) = %s and company = %s
             and company_gstin = %s
             GROUP BY itc_classification
@@ -256,6 +257,7 @@ class GSTR3BReport(Document):
             FROM `tabPurchase Invoice` p , `tabPurchase Invoice Item` i
             WHERE p.docstatus = 1 and p.name = i.parent
             and p.is_opening = 'No'
+            and p.company_gstin != IFNULL(p.supplier_gstin, "")
             and (i.gst_treatment != 'Taxable' or p.gst_category = 'Registered Composition') and
             month(p.posting_date) = %s and year(p.posting_date) = %s
             and p.company = %s and p.company_gstin = %s
@@ -393,9 +395,11 @@ class GSTR3BReport(Document):
 
         invoice = frappe.qb.DocType(doctype)
         fields = [invoice.name, invoice.gst_category, invoice.place_of_supply]
+        party_gstin = invoice.supplier_gstin
 
         if doctype == "Sales Invoice":
             fields.append(invoice.is_export_with_gst)
+            party_gstin = invoice.billing_address_gstin
 
         query = (
             frappe.qb.from_(invoice)
@@ -406,6 +410,7 @@ class GSTR3BReport(Document):
             .where(invoice.company == self.company)
             .where(invoice.company_gstin == self.gst_details.get("gstin"))
             .where(invoice.is_opening == "No")
+            .where(invoice.company_gstin != IfNull(party_gstin, ""))
         )
 
         if reverse_charge:
@@ -593,12 +598,18 @@ class GSTR3BReport(Document):
         missing_field_invoices = []
 
         for doctype in INVOICE_DOCTYPES:
+            party_gstin = (
+                "billing_address_gstin"
+                if doctype == "Sales Invoice"
+                else "supplier_gstin"
+            )
             docnames = frappe.db.sql(
                 f"""
                     SELECT name FROM `tab{doctype}`
                     WHERE docstatus = 1 and is_opening = 'No'
                     and month(posting_date) = %s and year(posting_date) = %s
                     and company = %s and place_of_supply IS NULL
+                    and company_gstin != IFNULL({party_gstin},"")
                     and gst_category != 'Overseas'
                 """,
                 (self.month_no, self.year, self.company),
