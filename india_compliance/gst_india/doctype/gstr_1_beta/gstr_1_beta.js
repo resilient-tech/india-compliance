@@ -103,7 +103,6 @@ const GSTR1_DataField = {
 
 frappe.ui.form.on(DOCTYPE, {
     async setup(frm) {
-        // patch_set_active_tab(frm);
         patch_set_indicator(frm);
         frappe.require("gstr1.bundle.js").then(() => {
             frm.gstr1 = new GSTR1(frm);
@@ -1594,7 +1593,9 @@ class FiledTab extends GSTR1_TabManager {
                 },
                 {
                     fieldname: "delete_missing",
-                    label: __("Delete records that are missing in the Books from GST Portal"),
+                    label: __(
+                        "Delete records that are missing in the Books from GST Portal"
+                    ),
                     description: __(
                         "This will delete invoices that are not present in ERP but are present in GST Portal."
                     ),
@@ -1891,21 +1892,16 @@ class DetailViewDialog {
 
 // UTILITY FUNCTIONS
 function is_gstr1_api_enabled() {
-    return india_compliance.is_api_enabled() && !gst_settings.sandbox_mode && gst_settings.analyze_filed_data
-}
-
-function patch_set_active_tab(frm) {
-    const set_active_tab = frm.set_active_tab;
-    frm.set_active_tab = function (...args) {
-        set_active_tab.apply(this, args);
-        frm.refresh();
-    };
+    return (
+        india_compliance.is_api_enabled() &&
+        !gst_settings.sandbox_mode &&
+        gst_settings.analyze_filed_data
+    );
 }
 
 function patch_set_indicator(frm) {
     frm.toolbar.set_indicator = function () { };
 }
-
 
 async function set_default_company_gstin(frm) {
     frm.set_value("company_gstin", "");
@@ -1921,16 +1917,12 @@ async function set_default_company_gstin(frm) {
     }
 }
 
-
 function set_options_for_year(frm) {
     const today = new Date();
     const current_year = today.getFullYear();
     const start_year = 2017;
     const year_range = current_year - start_year + 1;
-    let options = Array.from(
-        { length: year_range },
-        (_, index) => start_year + index
-    );
+    let options = Array.from({ length: year_range }, (_, index) => start_year + index);
     options = options.reverse().map(year => year.toString());
 
     frm.get_field("year").set_data(options);
